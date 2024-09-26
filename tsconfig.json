@@ -1,0 +1,38 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "outDir": "dist",
+    "sourceMap": true,
+    "declaration": true,
+    "composite": true,
+    "declarationMap": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": [
+      "node",
+      "vite-plugin-vue-layouts/client",
+      "vite-plugin-pwa/vue",
+      "vite-plugin-pwa/pwa-assets",
+      "unplugin-fonts/client",
+      "unplugin-icons/types/vue",
+      "unplugin-vue-router/client",
+      "@intlify/unplugin-vue-i18n/messages"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "vite.config.ts"
+  ],
+  "files": ["components.d.ts", "auto-imports.d.ts", "typed-router.d.ts"]
+}

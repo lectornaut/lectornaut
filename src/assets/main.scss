@@ -1,0 +1,31 @@
+#nprogress {
+  @apply pointer-events-none;
+
+  .bar {
+    @apply fixed;
+    @apply bottom-0;
+    @apply left-0;
+    @apply w-full;
+    @apply h-0.5;
+    @apply z-50;
+
+    background-image: linear-gradient(
+      to right,
+      #27c4f5,
+      #a307ba,
+      #fd8d32,
+      #70c050,
+      #27c4f5
+    );
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  appearance: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
