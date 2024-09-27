@@ -74,6 +74,7 @@ export default defineConfig(async () => ({
       imports: [
         "vue",
         "@vueuse/core",
+        "@vueuse/math",
         "vue-i18n",
         unheadVueComposablesImports,
         VueRouterAutoImports,

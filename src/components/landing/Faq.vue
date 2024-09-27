@@ -47,9 +47,9 @@ const accordionItems = [
           </AccordionItem>
         </Accordion>
         <DrawerFooter class="mb-safe-bottom">
-          <RouterLink to="/enter" class="w-full">
-            <Button class="w-full"> Enter </Button>
-          </RouterLink>
+          <Button class="w-full" as-child>
+            <RouterLink to="/enter" class="w-full"> Enter </RouterLink>
+          </Button>
           <DrawerClose as-child>
             <Button variant="outline"> Close </Button>
           </DrawerClose>

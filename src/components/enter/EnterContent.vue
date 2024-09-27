@@ -83,6 +83,11 @@ const authenticateApple = async () => {
     <div class="flex flex-col gap-4 p-4">
       <div class="flex flex-col gap-2">
         <div class="relative w-full items-center">
+          <span
+            class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+          >
+            <icon-lucide-mail class="text-muted-foreground" />
+          </span>
           <Input
             v-model="email"
             type="email"
@@ -91,11 +96,6 @@ const authenticateApple = async () => {
             :disabled="authenticateViaEmailInProgress"
             required
           />
-          <span
-            class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-          >
-            <icon-lucide-mail class="text-muted-foreground" />
-          </span>
         </div>
         <Button
           type="submit"

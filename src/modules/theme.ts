@@ -11,6 +11,8 @@ const initSidebars = () => {
   useStorage("leftSidebarVisibility", true)
 }
 
+export const leftSidebarVisibility = useStorage("leftSidebarVisibility", true)
+
 export const initTheme = () => {
   initMode()
   initSidebars()

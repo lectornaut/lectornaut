@@ -32,12 +32,10 @@ onMounted(async () => {
           leave-to-class="opacity-0"
           mode="out-in"
         >
-          <!-- <KeepAlive> -->
           <Suspense>
             <Component :is="Component" />
             <template #fallback> Loading... </template>
           </Suspense>
-          <!-- </KeepAlive> -->
         </Transition>
       </template>
     </RouterView>

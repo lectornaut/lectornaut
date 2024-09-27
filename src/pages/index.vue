@@ -66,7 +66,7 @@ useHead({
         </div>
         <TabsContent
           value="personal"
-          class="max-w-d mt-0 w-full rounded-2xl px-8 py-4 transition animate-in fade-in"
+          class="max-w-d mt-0 w-full rounded-2xl px-8 py-4 transition duration-300 animate-in fade-in"
           tabindex="-1"
         >
           <Features />
@@ -175,7 +175,7 @@ useHead({
         </TabsContent>
         <TabsContent
           value="team"
-          class="max-w-d mt-0 w-full rounded-2xl px-8 py-4 transition animate-in fade-in"
+          class="max-w-d mt-0 w-full rounded-2xl px-8 py-4 transition duration-300 animate-in fade-in"
           tabindex="-1"
         >
           <div
