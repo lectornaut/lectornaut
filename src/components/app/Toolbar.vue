@@ -1,40 +1,54 @@
 <script setup lang="ts">
 import { isTauri } from "@/helpers/utilities"
-import { leftSidebarVisibility } from "@/modules/theme"
+import emitter from "@/modules/mitt"
+import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
 </script>
 
 <template>
   <div
     data-tauri-drag-region
-    class="flex items-center justify-between gap-2 p-4"
+    class="sticky top-0 z-10 flex items-center justify-between gap-2 border-b p-2"
+    :class="{ 'pl-20': !leftSidebarVisibility && isTauri }"
   >
-    <div
-      class="flex grow items-center gap-2"
-      :class="{ 'pl-16': !leftSidebarVisibility && isTauri }"
-    >
-      <TooltipProvider>
+    <span class="flex items-center gap-2">
+      <TooltipProvider v-if="!leftSidebarVisibility">
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
-              v-if="!leftSidebarVisibility"
               v-motion-fade
               variant="ghost"
               size="xs"
-              @click="leftSidebarVisibility = true"
+              @click="emitter.emit('Sidebar.Left.Toggle')"
             >
-              <icon-lucide-chevrons-right />
+              <icon-lucide-panel-left />
             </Button>
           </TooltipTrigger>
           <TooltipContent> Expand Sidebar </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       <CommandK />
-    </div>
-    <div class="flex items-center gap-2">
+    </span>
+    <span class="flex items-center gap-2">
       <ColorMode />
-      <ExitTrigger
-        ><Button size="xs" variant="secondary">Logout</Button></ExitTrigger
-      >
-    </div>
+      <ExitTrigger>
+        <Button size="xs" variant="ghost">Logout</Button>
+      </ExitTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button
+              v-motion-fade
+              variant="ghost"
+              size="xs"
+              @click="emitter.emit('Sidebar.Right.Toggle')"
+            >
+              <icon-mingcute-ai-fill v-if="rightSidebarVisibility" />
+              <icon-mingcute-ai-line v-else />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> Expand Sidebar </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </span>
   </div>
 </template>

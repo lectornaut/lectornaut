@@ -40,25 +40,26 @@ const links = [
 </script>
 
 <template>
-  <nav class="flex flex-col gap-1">
+  <nav class="flex flex-col p-2">
     <template v-for="(link, index) of links" :key="`1-${index}`">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
-            <RouterLink v-slot="{ isActive }" :to="link.to" class="flex grow">
-              <Button
-                :variant="isActive ? '' : 'ghost'"
-                class="grow justify-start gap-3 truncate"
-                size="sm"
-              >
+            <Button
+              variant="ghost"
+              class="grow justify-start gap-3 truncate font-normal text-muted-foreground"
+              size="sm"
+              as-child
+            >
+              <RouterLink :to="link.to">
                 <Component :is="link.icon" />
                 <span class="truncate">{{ link.title }}</span>
-              </Button>
-            </RouterLink>
+              </RouterLink>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="right" class="flex items-center gap-2">
             {{ link.title }}
-            <span class="ml-auto text-muted-foreground">
+            <span class="text-muted-foreground">
               {{ link.label }}
             </span>
           </TooltipContent>
@@ -67,3 +68,12 @@ const links = [
     </template>
   </nav>
 </template>
+
+<style lang="scss" scoped>
+.router-link-exact-active,
+.router-link-active {
+  @apply bg-primary;
+  @apply text-primary-foreground;
+  @apply hover:bg-primary/90;
+}
+</style>

@@ -1,37 +1,60 @@
 <script setup lang="ts">
 import { ResizablePanel } from "@/components/ui/resizable"
-import { leftSidebarVisibility } from "@/modules/theme"
+import emitter from "@/modules/mitt"
+import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
 
-const sidebar = ref<InstanceType<typeof ResizablePanel>>()
+const leftSidebar = ref<InstanceType<typeof ResizablePanel>>()
+const rightSidebar = ref<InstanceType<typeof ResizablePanel>>()
+
+emitter.on("Sidebar.Left.Toggle", () => {
+  leftSidebarVisibility.value = !leftSidebarVisibility.value
+})
+
+emitter.on("Sidebar.Right.Toggle", () => {
+  rightSidebarVisibility.value = !rightSidebarVisibility.value
+})
 
 watch(leftSidebarVisibility, (value) => {
   if (value) {
-    sidebar.value?.expand()
+    leftSidebar.value?.expand()
   } else {
-    sidebar.value?.collapse()
+    leftSidebar.value?.collapse()
+  }
+})
+
+watch(rightSidebarVisibility, (value) => {
+  if (value) {
+    rightSidebar.value?.expand()
+  } else {
+    rightSidebar.value?.collapse()
   }
 })
 </script>
 
 <template>
-  <ResizablePanelGroup direction="horizontal" auto-save-id="app">
+  <ResizablePanelGroup
+    direction="horizontal"
+    auto-save-id="app"
+    class="flex h-full w-full"
+  >
     <ResizablePanel
-      ref="sidebar"
-      class="bg-muted transition-all"
-      :default-size="20"
-      :min-size="15"
-      :max-size="25"
+      ref="leftSidebar"
+      class="flex flex-col bg-muted/50"
+      :default-size="15"
+      :min-size="10"
+      :max-size="20"
       collapsible
       @collapse="leftSidebarVisibility = false"
       @expand="leftSidebarVisibility = true"
     >
-      <Sidebar v-if="leftSidebarVisibility" v-motion-fade />
+      <LeftSidebar v-if="leftSidebarVisibility" v-motion-fade />
     </ResizablePanel>
     <ResizableHandle
-      class="invisible"
-      @dblclick="leftSidebarVisibility = !leftSidebarVisibility"
+      :class="{ invisible: !leftSidebarVisibility }"
+      class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
+      @dblclick="emitter.emit('Sidebar.Left.Toggle')"
     />
-    <ResizablePanel :default-size="80" :min-size="75">
+    <ResizablePanel :default-size="60" :min-size="50" class="flex flex-col">
       <Toolbar />
       <RouterView v-slot="{ Component, route }">
         <Transition
@@ -48,6 +71,23 @@ watch(leftSidebarVisibility, (value) => {
           </template>
         </Transition>
       </RouterView>
+    </ResizablePanel>
+    <ResizableHandle
+      :class="{ invisible: !rightSidebarVisibility }"
+      class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
+      @dblclick="emitter.emit('Sidebar.Right.Toggle')"
+    />
+    <ResizablePanel
+      ref="rightSidebar"
+      class="flex flex-col bg-muted/50"
+      :default-size="25"
+      :min-size="20"
+      :max-size="30"
+      collapsible
+      @collapse="rightSidebarVisibility = false"
+      @expand="rightSidebarVisibility = true"
+    >
+      <RightSidebar v-if="rightSidebarVisibility" v-motion-fade />
     </ResizablePanel>
   </ResizablePanelGroup>
 </template>

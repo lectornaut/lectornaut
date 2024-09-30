@@ -13,7 +13,7 @@ useHead({
 <route lang="json">
 {
   "meta": {
-    "requiresGuest": true
+    "requiresUser": true
   }
 }
 </route>

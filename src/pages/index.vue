@@ -10,6 +10,7 @@ useHead({
     <div
       class="mx-auto mb-44 mt-12 flex w-full max-w-2xl grow flex-col items-center"
     >
+      <RouterLink to="/home">Home</RouterLink>
       <Tabs default-value="personal" class="flex flex-col items-center">
         <TabsList class="m-4 rounded-xl">
           <TabsTrigger class="rounded-lg px-3 py-2" value="personal">

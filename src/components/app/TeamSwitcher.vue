@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { isTauri } from "@/helpers/utilities"
-import { leftSidebarVisibility } from "@/modules/theme"
+import emitter from "@/modules/mitt"
 
 const groups = [
   {
@@ -36,15 +36,15 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
 
 <template>
   <div
-    class="flex gap-2"
-    :class="isTauri ? 'flex-col-reverse items-stretch' : 'items-center'"
+    class="flex gap-2 p-2"
+    :class="isTauri ? 'flex-col-reverse' : 'items-center'"
   >
     <Dialog v-model:open="showNewTeamDialog">
       <Popover v-model:open="open">
         <PopoverTrigger as-child>
           <Button
             variant="ghost"
-            class="grow justify-start gap-3 truncate"
+            class="grow justify-start gap-3 truncate data-[state=open]:bg-muted"
             size="xs"
           >
             <Avatar class="h-4 w-4">
@@ -55,10 +55,10 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
               <AvatarFallback>SC</AvatarFallback>
             </Avatar>
             <span class="truncate">{{ selectedTeam.label }}</span>
-            <icon-lucide-chevron-down class="ml-auto" />
+            <icon-lucide-chevron-down />
           </Button>
         </PopoverTrigger>
-        <PopoverContent class="p-0" align="start">
+        <PopoverContent class="w-auto p-0" align="start">
           <Command
             :filter-function="
               (list, term) =>
@@ -118,7 +118,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
                       }
                     "
                   >
-                    <icon-lucide-plus-circle class="h-4 w-4 opacity-50" />
+                    <icon-lucide-plus-circle />
                     Create Team
                   </CommandItem>
                 </DialogTrigger>
@@ -179,13 +179,64 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
     <div data-tauri-drag-region class="flex justify-end">
       <TooltipProvider>
         <Tooltip>
+          <DropdownMenu>
+            <TooltipTrigger as-child>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  class="text-muted-foreground data-[state=open]:bg-muted"
+                >
+                  <icon-lucide-bolt />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent> Settings </TooltipContent>
+            <DropdownMenuContent class="w-48" align="start">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem class="gap-2">
+                  <icon-lucide-user />
+                  <span>Profile</span>
+                  <DropdownMenuShortcut>⇧ ⌘ P</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="gap-2"
+                  @click="emitter.emit('Modal.Settings.Open')"
+                >
+                  <icon-lucide-settings />
+                  <span>Preferences</span>
+                  <DropdownMenuShortcut>⌘ ,</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <ExitTrigger>
+                  <DropdownMenuItem
+                    class="gap-2"
+                    @click="emitter.emit('Dialog.Exit.Open')"
+                  >
+                    <icon-lucide-log-out />
+                    <span>Logout</span>
+                    <DropdownMenuShortcut>⇧ ⌘ Q</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </ExitTrigger>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </Tooltip>
+      </TooltipProvider>
+      <TooltipProvider>
+        <Tooltip>
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
               size="xs"
-              @click="leftSidebarVisibility = false"
+              class="text-muted-foreground"
+              @click="emitter.emit('Sidebar.Left.Toggle')"
             >
-              <icon-lucide-chevrons-left />
+              <icon-lucide-panel-left />
             </Button>
           </TooltipTrigger>
           <TooltipContent> Collapse Sidebar </TooltipContent>

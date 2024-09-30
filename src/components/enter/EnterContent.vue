@@ -6,7 +6,7 @@ import {
 } from "@/modules/auth"
 
 const email = ref("")
-const authenticateError = ref("")
+const authenticateError = ref<string | boolean>(false)
 const sendAuthenticateViaEmailSuccess = ref(false)
 
 const authenticateViaEmailInProgress = ref(false)
@@ -19,7 +19,7 @@ const authenticateViaEmail = async () => {
       sendAuthenticateViaEmailSuccess.value = true
     })
     .catch((error) => {
-      authenticateError.value = error
+      authenticateError.value = String(error)
     })
     .finally(() => {
       authenticateViaEmailInProgress.value = false
@@ -36,7 +36,7 @@ const authenticateGoogle = async () => {
       authenticateGoogleInProgress.value = true
     })
     .catch((error) => {
-      authenticateError.value = error
+      authenticateError.value = String(error)
     })
     .finally(() => {
       authenticateGoogleInProgress.value = false
@@ -68,7 +68,7 @@ const authenticateApple = async () => {
   try {
     await new Promise((resolve) => setTimeout(resolve, 2000))
   } catch (error) {
-    authenticateError.value = error
+    authenticateError.value = String(error)
   } finally {
     authenticateAppleInProgress.value = false
   }

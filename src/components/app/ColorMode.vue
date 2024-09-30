@@ -7,18 +7,22 @@ import { store } from "@/modules/theme"
   <TooltipProvider>
     <Tooltip>
       <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <TooltipTrigger as-child>
-            <Button variant="ghost" size="xs">
+        <TooltipTrigger as-child>
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="ghost"
+              size="xs"
+              class="data-[state=open]:bg-muted"
+            >
               <icon-lucide-sun v-if="store == 'light'" />
               <icon-lucide-moon v-if="store == 'dark'" />
               <icon-lucide-monitor v-if="store == 'auto'" />
               <span class="sr-only">{{ store }}</span>
             </Button>
-          </TooltipTrigger>
-          <TooltipContent> Change theme </TooltipContent>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent> Change theme </TooltipContent>
+        <DropdownMenuContent align="start">
           <DropdownMenuLabel>Theme</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuRadioGroup v-model="store">

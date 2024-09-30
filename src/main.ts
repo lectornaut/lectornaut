@@ -3,6 +3,7 @@ import "@/assets/index.css"
 import "@/assets/main.scss"
 import "@/assets/theme.scss"
 import { firebaseApp } from "@/modules/firebase"
+import { initHotkeys } from "@/modules/hotkeys"
 import { i18n } from "@/modules/i18n"
 import { initPwa } from "@/modules/pwa"
 import { router } from "@/modules/router"
@@ -32,4 +33,5 @@ app.use(i18n)
 app.mount("#app")
 
 initTheme()
+initHotkeys()
 initPwa()

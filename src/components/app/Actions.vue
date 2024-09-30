@@ -1,5 +1,6 @@
 <template>
   <Sonner offset="8px" :theme="state" />
+  <Shortcuts />
 </template>
 
 <script setup lang="ts">
@@ -60,13 +61,13 @@ watch(needRefresh, (value) => {
   }
 })
 
-useEventListener(
-  document,
-  "contextmenu",
-  (e) => {
-    e.preventDefault()
-    return false
-  },
-  { capture: true }
-)
+// useEventListener(
+//   document,
+//   "contextmenu",
+//   (e) => {
+//     e.preventDefault()
+//     return false
+//   },
+//   { capture: true }
+// )
 </script>
