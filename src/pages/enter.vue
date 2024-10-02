@@ -47,7 +47,7 @@ onMounted(async () => {
         <h1 class="text-lg font-semibold leading-none tracking-tight">
           Enter Hyperjump
         </h1>
-        <p class="text-xs text-muted-foreground">
+        <p class="text-muted-foreground">
           Create an account or sign in to continue.
         </p>
       </div>

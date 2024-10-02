@@ -121,7 +121,7 @@ const filteredShortcuts = computed(() => {
                   {{ step }}
                 </span>
               </div>
-              <span class="flex space-x-8">
+              <span class="flex gap-8">
                 <div
                   v-for="keys in shortcut.keys"
                   :key="keys.toString()"

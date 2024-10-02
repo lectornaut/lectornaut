@@ -76,7 +76,7 @@ export const columns: ColumnDef<Task>[] = [
       if (!status) return null
 
       return h("div", { class: "flex truncate gap-2 items-center" }, [
-        status.icon && h(status.icon, { class: "text-muted-foreground" }),
+        status.icon && h(status.icon),
         h("span", status.label),
       ])
     },
@@ -96,7 +96,7 @@ export const columns: ColumnDef<Task>[] = [
       if (!priority) return null
 
       return h("div", { class: "flex truncate gap-2 items-center" }, [
-        priority.icon && h(priority.icon, { class: "text-muted-foreground" }),
+        priority.icon && h(priority.icon),
         h("span", {}, priority.label),
       ])
     },

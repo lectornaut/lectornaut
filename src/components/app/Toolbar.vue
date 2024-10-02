@@ -29,10 +29,6 @@ import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
       <CommandK />
     </span>
     <span class="flex items-center gap-2">
-      <ColorMode />
-      <ExitTrigger>
-        <Button size="xs" variant="ghost">Logout</Button>
-      </ExitTrigger>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>

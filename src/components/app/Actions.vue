@@ -1,10 +1,6 @@
-<template>
-  <Sonner offset="8px" :theme="state" />
-  <Shortcuts />
-</template>
-
 <script setup lang="ts">
-import { state } from "@/modules/theme"
+import emitter from "@/modules/mitt"
+import { state, store } from "@/modules/theme"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
 
@@ -26,6 +22,10 @@ watch(state, (value) => {
       },
     ],
   })
+})
+
+emitter.on("Theme.Change", (newTheme) => {
+  store.value = newTheme as "light" | "dark" | "auto"
 })
 
 const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW()
@@ -61,13 +61,18 @@ watch(needRefresh, (value) => {
   }
 })
 
-// useEventListener(
-//   document,
-//   "contextmenu",
-//   (e) => {
-//     e.preventDefault()
-//     return false
-//   },
-//   { capture: true }
-// )
+useEventListener(
+  document,
+  "contextmenu",
+  (e) => {
+    e.preventDefault()
+    return false
+  },
+  { capture: true }
+)
 </script>
+
+<template>
+  <Sonner offset="8px" :theme="state" />
+  <Shortcuts />
+</template>

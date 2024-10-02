@@ -1,9 +1,10 @@
 import type { FunctionalComponent, SVGAttributes } from "vue"
 import IconLucideCheckSquare2 from "~icons/lucide/check-square-2"
+import IconLucideCircleUser from "~icons/lucide/circle-user"
 import IconLucideHelpCircle from "~icons/lucide/help-circle"
 import IconLucideLogout from "~icons/lucide/log-out"
 import IconLucideMinusSquare from "~icons/lucide/minus-square"
-import IconLucideMonitorSmartphone from "~icons/lucide/monitor-smartphone"
+import IconLucideMonitor from "~icons/lucide/monitor"
 import IconLucideMoon from "~icons/lucide/moon"
 import IconLucidePanelLeft from "~icons/lucide/panel-left"
 import IconLucidePanelRight from "~icons/lucide/panel-right"
@@ -132,7 +133,7 @@ export const shortcuts: ShortcutCategory[] = [
         tags: ["tab", "close", "remove", "others"],
       },
       {
-        description: ["Select nth tab"],
+        description: ["Select Nth tab"],
         keys: [[getPlatformSpecialKey(), "1, 2, 3...n"]],
         hotkeys: "",
         event: "Tabs.Select",
@@ -149,12 +150,21 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Logout"],
-        keys: [[getPlatformSpecialKey(), "shift", "l"]],
-        hotkeys: "cmd+shift+l,ctrl+shift+l",
+        keys: [],
+        hotkeys: "",
         event: "Dialog.Exit.Open",
         parameters: undefined,
         icon: IconLucideLogout,
         tags: ["logout", "sign out"],
+      },
+      {
+        description: ["Settings", "Account"],
+        keys: [],
+        hotkeys: "",
+        event: "Dialog.Settings.Open",
+        parameters: "account",
+        icon: IconLucideCircleUser,
+        tags: ["settings", "account"],
       },
     ],
     hidden: [],
@@ -165,7 +175,7 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Change theme", "Light"],
-        keys: [[]],
+        keys: [],
         hotkeys: "",
         event: "Theme.Change",
         parameters: "light",
@@ -174,7 +184,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Change theme", "Dark"],
-        keys: [[]],
+        keys: [],
         hotkeys: "",
         event: "Theme.Change",
         parameters: "dark",
@@ -183,18 +193,18 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Change theme", "Auto"],
-        keys: [[]],
+        keys: [],
         hotkeys: "",
         event: "Theme.Change",
         parameters: "auto",
-        icon: IconLucideMonitorSmartphone,
+        icon: IconLucideMonitor,
         tags: ["settings", "theme", "auto"],
       },
       {
         description: ["Settings", "Appearance"],
-        keys: [[]],
+        keys: [],
         hotkeys: "",
-        event: "Modal.Settings.Open",
+        event: "Dialog.Settings.Open",
         parameters: "appearance",
         icon: IconLucideSettings,
         tags: ["settings", "theme"],

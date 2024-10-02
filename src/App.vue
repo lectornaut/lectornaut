@@ -5,17 +5,17 @@ const user = useCurrentUser()
 const router = useRouter()
 const route = useRoute()
 
-onMounted(async () => {
-  watch(user, async (currentUser, previousUser) => {
-    if (!currentUser && previousUser && route.meta.requiresUser) {
-      console.log("redirecting to /", router)
-      return await router.push("/")
-    }
-    if (currentUser && route.meta.requiresGuest) {
-      console.log("redirecting to /home", router)
-      return await router.push(route.query?.redirect || "/home")
-    }
-  })
+watch(user, async (currentUser, previousUser) => {
+  if (!currentUser && previousUser && route.meta.requiresUser) {
+    console.log("redirecting to /", router)
+    return await router.push("/")
+  }
+  if (currentUser && route.meta.requiresGuest) {
+    console.log("redirecting to /home", router)
+    return await router.push(
+      typeof route.query?.redirect === "string" ? route.query.redirect : "/home"
+    )
+  }
 })
 </script>
 

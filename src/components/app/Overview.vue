@@ -69,7 +69,8 @@ const data = [
     index="Name"
     :categories="['Income', 'Expenses']"
     :show-grid-line="false"
-    :rounded-corners="4"
+    :rounded-corners="100"
+    :show-legend="false"
     :y-formatter="
       (tick, i) => {
         return typeof tick === 'number'

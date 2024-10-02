@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import type { Task } from "@/data/schema"
-import { cn } from "@/lib/utils"
 import type { Column } from "@tanstack/vue-table"
 import type { Component } from "vue"
-import CheckIcon from "~icons/lucide/check"
-import PlusCircledIcon from "~icons/lucide/plus-circle"
 
 interface DataTableFacetedFilter {
   column?: Column<Task, unknown>
@@ -28,7 +25,7 @@ const selectedValues = computed(
   <Popover>
     <PopoverTrigger as-child>
       <Button variant="outline" size="sm" class="gap-2 border-dashed">
-        <PlusCircledIcon />
+        <icon-lucide-plus-circle />
         {{ title }}
         <template v-if="selectedValues.size > 0">
           <Separator orientation="vertical" class="mx-2 h-4" />
@@ -64,12 +61,7 @@ const selectedValues = computed(
       </Button>
     </PopoverTrigger>
     <PopoverContent class="w-auto p-0" align="start">
-      <Command
-        :filter-function="
-          (list: DataTableFacetedFilter['options'], term) =>
-            list.filter((i) => i.label.toLowerCase()?.includes(term))
-        "
-      >
+      <Command>
         <CommandInput
           :placeholder="title"
           class="border-none focus:border-inherit focus:ring-0"
@@ -80,10 +72,10 @@ const selectedValues = computed(
             <CommandItem
               v-for="option in options"
               :key="option.value"
-              :value="option"
+              :value="option.label"
+              class="gap-2"
               @select="
                 (e) => {
-                  console.log(e.detail.value)
                   const isSelected = selectedValues.has(option.value)
                   if (isSelected) {
                     selectedValues.delete(option.value)
@@ -97,33 +89,17 @@ const selectedValues = computed(
                 }
               "
             >
-              <div
-                :class="
-                  cn(
-                    'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
-                    selectedValues.has(option.value)
-                      ? 'bg-primary text-primary-foreground'
-                      : 'opacity-50 [&_svg]:invisible'
-                  )
-                "
-              >
-                <CheckIcon :class="cn('h-4 w-4')" />
-              </div>
-              <component
-                :is="option.icon"
-                v-if="option.icon"
-                class="mr-2 h-4 w-4 text-muted-foreground"
+              <Checkbox
+                :checked="selectedValues.has(option.value)"
+                class="flex aspect-square h-3 w-3 rounded-sm"
               />
+              <Component :is="option.icon" v-if="option.icon" />
               <span>{{ option.label }}</span>
-              <span
-                v-if="facets?.get(option.value)"
-                class="ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs"
-              >
+              <CommandShortcut v-if="facets?.get(option.value)">
                 {{ facets.get(option.value) }}
-              </span>
+              </CommandShortcut>
             </CommandItem>
           </CommandGroup>
-
           <template v-if="selectedValues.size > 0">
             <CommandSeparator />
             <CommandGroup>

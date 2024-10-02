@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import type { Column } from "@tanstack/vue-table"
-import type { Task } from "../data/schema"
-import ArrowDownIcon from "~icons/lucide/arrow-down"
-import ArrowUpIcon from "~icons/lucide/arrow-up"
-import CaretSortIcon from "~icons/lucide/chevrons-up-down"
-import EyeNoneIcon from "~icons/lucide/eye-off"
+import type { Task } from "@/data/schema"
 
 import { cn } from "@/lib/utils"
 
@@ -25,7 +21,7 @@ export default {
 <template>
   <div
     v-if="column.getCanSort()"
-    :class="cn('flex items-center space-x-2', $attrs.class ?? '')"
+    :class="cn('flex items-center gap-2', $attrs.class ?? '')"
   >
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
@@ -35,23 +31,23 @@ export default {
           class="-ml-3 h-8 gap-2 data-[state=open]:bg-accent"
         >
           <span>{{ title }}</span>
-          <ArrowDownIcon v-if="column.getIsSorted() === 'desc'" />
-          <ArrowUpIcon v-else-if="column.getIsSorted() === 'asc'" />
-          <CaretSortIcon v-else />
+          <icon-lucide-arrow-down v-if="column.getIsSorted() === 'desc'" />
+          <icon-lucide-arrow-up v-else-if="column.getIsSorted() === 'asc'" />
+          <icon-lucide-chevrons-up-down v-else />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuItem @click="column.toggleSorting(false)">
-          <ArrowUpIcon class="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+        <DropdownMenuItem class="gap-2" @click="column.toggleSorting(false)">
+          <icon-lucide-arrow-up />
           Asc
         </DropdownMenuItem>
-        <DropdownMenuItem @click="column.toggleSorting(true)">
-          <ArrowDownIcon class="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+        <DropdownMenuItem class="gap-2" @click="column.toggleSorting(true)">
+          <icon-lucide-arrow-down />
           Desc
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem @click="column.toggleVisibility(false)">
-          <EyeNoneIcon class="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+        <DropdownMenuItem class="gap-2" @click="column.toggleVisibility(false)">
+          <icon-lucide-eye-off />
           Hide
         </DropdownMenuItem>
       </DropdownMenuContent>

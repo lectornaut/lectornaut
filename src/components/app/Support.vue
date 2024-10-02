@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import emitter from "@/modules/mitt"
+
+const openSupport = ref(false)
+
+emitter.on("Menu.Help.Toggle", () => {
+  openSupport.value = !openSupport.value
+})
 </script>
 
 <template>
   <TooltipProvider>
     <Tooltip>
-      <DropdownMenu>
+      <DropdownMenu v-model:open="openSupport">
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
             <Button

@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
+import { useCurrentUser } from "vuefire"
 
-const groups = [
+const user = useCurrentUser()
+
+const groups = computed(() => [
   {
     label: "Personal Account",
     teams: [
       {
-        label: "Alicia Koch",
+        label: user.value?.displayName || "Personal",
         value: "personal",
       },
     ],
@@ -25,13 +28,15 @@ const groups = [
       },
     ],
   },
-]
+])
 
-type Team = (typeof groups)[number]["teams"][number]
+type Team = (typeof groups.value)[number]["teams"][number]
 
-const open = ref(false)
+const openAccountSwitcher = ref(false)
 const showNewTeamDialog = ref(false)
-const selectedTeam = ref<Team>(groups[0].teams[0])
+const selectedTeam = ref<Team>(
+  groups.value[0]?.teams[0] ?? { label: "", value: "" }
+)
 </script>
 
 <template>
@@ -40,7 +45,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
     :class="isTauri ? 'flex-col-reverse' : 'items-center'"
   >
     <Dialog v-model:open="showNewTeamDialog">
-      <Popover v-model:open="open">
+      <Popover v-model:open="openAccountSwitcher">
         <PopoverTrigger as-child>
           <Button
             variant="ghost"
@@ -49,27 +54,27 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
           >
             <Avatar class="h-4 w-4">
               <AvatarImage
-                :src="`https://avatar.vercel.sh/${selectedTeam.value}.png`"
+                :src="
+                  selectedTeam.value === 'personal'
+                    ? user?.photoURL!
+                    : `https://avatar.vercel.sh/${selectedTeam.value}.png`
+                "
+                referrerpolicy="no-referrer"
                 :alt="selectedTeam.label"
               />
-              <AvatarFallback>SC</AvatarFallback>
+              <AvatarFallback>{{ selectedTeam.label }}</AvatarFallback>
             </Avatar>
             <span class="truncate">{{ selectedTeam.label }}</span>
             <icon-lucide-chevron-down />
           </Button>
         </PopoverTrigger>
         <PopoverContent class="w-auto p-0" align="start">
-          <Command
-            :filter-function="
-              (list, term) =>
-                list.filter((i) => i.label?.toLowerCase()?.includes(term))
-            "
-          >
+          <Command>
+            <CommandInput
+              placeholder="Search team..."
+              class="border-none focus:border-inherit focus:ring-0"
+            />
             <CommandList>
-              <CommandInput
-                placeholder="Search team..."
-                class="border-none focus:border-inherit focus:ring-0"
-              />
               <CommandEmpty>No team found.</CommandEmpty>
               <CommandGroup
                 v-for="group in groups"
@@ -79,22 +84,26 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
                 <CommandItem
                   v-for="team in group.teams"
                   :key="team.value"
-                  :value="team"
+                  :value="team.label"
                   class="grow justify-start gap-3 truncate"
                   @select="
                     () => {
                       selectedTeam = team
-                      open = false
+                      openAccountSwitcher = false
                     }
                   "
                 >
                   <Avatar class="h-4 w-4">
                     <AvatarImage
-                      :src="`https://avatar.vercel.sh/${team.value}.png`"
+                      :src="
+                        team.value === 'personal'
+                          ? user?.photoURL!
+                          : `https://avatar.vercel.sh/${selectedTeam.value}.png`
+                      "
+                      referrerpolicy="no-referrer"
                       :alt="team.label"
-                      class="grayscale"
                     />
-                    <AvatarFallback>SC</AvatarFallback>
+                    <AvatarFallback>{{ team.label }}</AvatarFallback>
                   </Avatar>
                   <span class="truncate">{{ team.label }}</span>
                   <icon-lucide-check
@@ -113,7 +122,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
                     class="grow justify-start gap-3 truncate"
                     @select="
                       () => {
-                        open = false
+                        openAccountSwitcher = false
                         showNewTeamDialog = true
                       }
                     "
@@ -203,7 +212,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   class="gap-2"
-                  @click="emitter.emit('Modal.Settings.Open')"
+                  @click="emitter.emit('Dialog.Settings.Open')"
                 >
                   <icon-lucide-settings />
                   <span>Preferences</span>
@@ -212,16 +221,13 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <ExitTrigger>
-                  <DropdownMenuItem
-                    class="gap-2"
-                    @click="emitter.emit('Dialog.Exit.Open')"
-                  >
-                    <icon-lucide-log-out />
-                    <span>Logout</span>
-                    <DropdownMenuShortcut>⇧ ⌘ Q</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </ExitTrigger>
+                <DropdownMenuItem
+                  class="gap-2"
+                  @click="emitter.emit('Dialog.Exit.Open')"
+                >
+                  <icon-lucide-log-out />
+                  <span>Logout</span>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>

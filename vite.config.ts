@@ -5,6 +5,7 @@ import Vue from "@vitejs/plugin-vue"
 import autoprefixer from "autoprefixer"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath, URL } from "node:url"
+import RadixVueResolver from "radix-vue/resolver"
 import tailwind from "tailwindcss"
 import AutoImport from "unplugin-auto-import/vite"
 import Unfonts from "unplugin-fonts/vite"
@@ -65,6 +66,7 @@ export default defineConfig(async () => ({
     }),
     Components({
       resolvers: [
+        RadixVueResolver(),
         IconsResolver({
           prefix: "icon",
         }),
@@ -74,7 +76,6 @@ export default defineConfig(async () => ({
       imports: [
         "vue",
         "@vueuse/core",
-        "@vueuse/math",
         "vue-i18n",
         unheadVueComposablesImports,
         VueRouterAutoImports,

@@ -3,7 +3,6 @@ import { labels } from "@/data/data"
 import { taskSchema } from "@/data/schema"
 import type { Task } from "@/data/schema"
 import type { Row } from "@tanstack/vue-table"
-import DotsHorizontalIcon from "~icons/lucide/ellipsis"
 
 interface DataTableRowActionsProps {
   row: Row<Task>
@@ -17,7 +16,7 @@ const task = computed(() => taskSchema.parse(props.row.original))
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" class="data-[state=open]:bg-muted" size="xs">
-        <DotsHorizontalIcon />
+        <icon-lucide-ellipsis />
         <span class="sr-only">Open menu</span>
       </Button>
     </DropdownMenuTrigger>

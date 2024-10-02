@@ -33,3 +33,20 @@
 
   @apply overscroll-none;
 }
+
+.shortcut-key {
+  @apply inline-flex;
+  @apply min-h-4;
+  @apply min-w-4;
+  @apply items-center;
+  @apply justify-center;
+  @apply rounded;
+  @apply border;
+  @apply border-b-2;
+  @apply bg-primary/5;
+  @apply font-sans;
+  @apply capitalize;
+  @apply text-muted-foreground;
+  @apply tracking-tight;
+  @apply font-medium;
+}

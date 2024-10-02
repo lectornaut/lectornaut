@@ -67,184 +67,188 @@ useHead({
         </div>
         <TabsContent
           value="personal"
-          class="max-w-d mt-0 w-full rounded-2xl px-8 py-4 transition duration-300 animate-in fade-in"
+          class="transition duration-300 animate-in fade-in"
           tabindex="-1"
         >
-          <Features />
-          <div class="mt-12 flex w-full flex-col gap-4 sm:flex-row">
-            <RouterLink
-              to="/enter"
-              class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <Alert
-                class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+          <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">
+            <Features />
+            <div class="mt-12 flex w-full flex-col gap-4 sm:flex-row">
+              <RouterLink
+                to="/enter"
+                class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <AlertTitle class="flex justify-between gap-2">
-                  <span class="flex items-center gap-1.5 font-semibold">
-                    <span class="text-sm">Free</span>
-                  </span>
-                </AlertTitle>
-                <AlertDescription class="flex flex-col gap-4">
-                  <ul class="flex flex-col gap-2.5">
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Unlimited notes, upto 10MB per note.
-                      </p>
-                    </li>
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Basic AI model and features.
-                      </p>
-                    </li>
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        100MB storage.
-                      </p>
-                    </li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            </RouterLink>
-            <RouterLink
-              to="/enter"
-              class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <div
-                className="absolute animate-pulse transition -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
-              ></div>
-              <Alert
-                class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
-              >
-                <AlertTitle class="flex justify-between gap-2">
-                  <span class="flex items-center gap-1.5 font-semibold">
-                    <span class="text-sm">Pro</span>
-                    <Badge class="gap-0.5 rounded-sm px-1 py-0">
-                      <icon-heroicons-sparkles-solid />
-                      AI
-                    </Badge>
-                  </span>
-                  <Badge
-                    variant="secondary"
-                    class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
-                  >
-                    <span class="truncate text-muted-foreground line-through">
-                      $10/mo
+                <Alert
+                  class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                >
+                  <AlertTitle class="flex justify-between gap-2">
+                    <span class="flex items-center gap-1.5 font-semibold">
+                      <span class="text-sm">Free</span>
                     </span>
-                    <span class="truncate text-primary">$50/one-time</span>
-                  </Badge>
-                </AlertTitle>
-                <AlertDescription class="flex flex-col gap-4">
-                  <ul class="flex flex-col gap-2.5">
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Unlimited notes.
-                      </p>
-                    </li>
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Smarter AI with more features.
-                      </p>
-                    </li>
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Limitless storage for images and files.
-                      </p>
-                    </li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            </RouterLink>
+                  </AlertTitle>
+                  <AlertDescription class="flex flex-col gap-4">
+                    <ul class="flex flex-col gap-2.5">
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Unlimited notes, upto 10MB per note.
+                        </p>
+                      </li>
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Basic AI model and features.
+                        </p>
+                      </li>
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          100MB storage.
+                        </p>
+                      </li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              </RouterLink>
+              <RouterLink
+                to="/enter"
+                class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <div
+                  className="absolute animate-pulse transition -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
+                ></div>
+                <Alert
+                  class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                >
+                  <AlertTitle class="flex justify-between gap-2">
+                    <span class="flex items-center gap-1.5 font-semibold">
+                      <span class="text-sm">Pro</span>
+                      <Badge class="gap-0.5 rounded-sm px-1 py-0">
+                        <icon-heroicons-sparkles-solid />
+                        AI
+                      </Badge>
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
+                    >
+                      <span class="truncate text-muted-foreground line-through">
+                        $10/mo
+                      </span>
+                      <span class="truncate text-primary">$50/one-time</span>
+                    </Badge>
+                  </AlertTitle>
+                  <AlertDescription class="flex flex-col gap-4">
+                    <ul class="flex flex-col gap-2.5">
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Unlimited notes.
+                        </p>
+                      </li>
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Smarter AI with more features.
+                        </p>
+                      </li>
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Limitless storage for images and files.
+                        </p>
+                      </li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              </RouterLink>
+            </div>
           </div>
         </TabsContent>
         <TabsContent
           value="team"
-          class="max-w-d mt-0 w-full rounded-2xl px-8 py-4 transition duration-300 animate-in fade-in"
+          class="transition duration-300 animate-in fade-in"
           tabindex="-1"
         >
-          <div
-            class="mx-auto mb-16 flex w-full max-w-sm flex-col gap-4 sm:flex-row"
-          >
-            <RouterLink
-              to="/enter"
-              class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">
+            <div
+              class="mx-auto mb-16 flex w-full max-w-sm flex-col gap-4 sm:flex-row"
             >
-              <div
-                className="absolute animate-pulse transition -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
-              ></div>
-              <Alert
-                class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+              <RouterLink
+                to="/enter"
+                class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <AlertTitle class="flex justify-between gap-2">
-                  <span class="flex items-center gap-1.5 font-semibold">
-                    <span class="text-sm">Team</span>
-                    <Badge class="gap-0.5 rounded-sm px-1 py-0">
-                      <icon-heroicons-sparkles-solid />
-                      AI
-                    </Badge>
-                  </span>
-                  <Badge
-                    variant="secondary"
-                    class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
-                  >
-                    <span class="truncate text-muted-foreground line-through">
-                      $8/user/mo
+                <div
+                  className="absolute animate-pulse transition -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
+                ></div>
+                <Alert
+                  class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                >
+                  <AlertTitle class="flex justify-between gap-2">
+                    <span class="flex items-center gap-1.5 font-semibold">
+                      <span class="text-sm">Team</span>
+                      <Badge class="gap-0.5 rounded-sm px-1 py-0">
+                        <icon-heroicons-sparkles-solid />
+                        AI
+                      </Badge>
                     </span>
-                    <span class="truncate text-primary">$5/user/mo</span>
-                  </Badge>
-                </AlertTitle>
-                <AlertDescription class="flex flex-col gap-4">
-                  <ul class="flex flex-col gap-2.5">
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Unlimited notes.
-                      </p>
-                    </li>
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Smarter AI with more features.
-                      </p>
-                    </li>
-                    <li class="flex items-start gap-2 leading-none">
-                      <icon-lucide-check />
-                      <p
-                        class="leading-loose text-muted-foreground first-line:leading-none"
-                      >
-                        Limitless storage for images and files.
-                      </p>
-                    </li>
-                  </ul>
-                  <Button class="rounded-lg">
-                    Get Template App for my team
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            </RouterLink>
+                    <Badge
+                      variant="secondary"
+                      class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
+                    >
+                      <span class="truncate text-muted-foreground line-through">
+                        $8/user/mo
+                      </span>
+                      <span class="truncate text-primary">$5/user/mo</span>
+                    </Badge>
+                  </AlertTitle>
+                  <AlertDescription class="flex flex-col gap-4">
+                    <ul class="flex flex-col gap-2.5">
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Unlimited notes.
+                        </p>
+                      </li>
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Smarter AI with more features.
+                        </p>
+                      </li>
+                      <li class="flex items-start gap-2 leading-none">
+                        <icon-lucide-check />
+                        <p
+                          class="leading-loose text-muted-foreground first-line:leading-none"
+                        >
+                          Limitless storage for images and files.
+                        </p>
+                      </li>
+                    </ul>
+                    <Button class="rounded-lg">
+                      Get Template App for my team
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              </RouterLink>
+            </div>
+            <Features />
           </div>
-          <Features />
         </TabsContent>
       </Tabs>
     </div>
