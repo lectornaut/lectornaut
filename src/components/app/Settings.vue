@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { themes } from "@/helpers/defaults"
+import { languages } from "@/helpers/defaults"
 import emitter from "@/modules/mitt"
 import { store } from "@/modules/theme"
 import {
@@ -82,13 +83,14 @@ const deleteAccount = async () => {
       })
     })
 }
+
+const { locale } = useI18n()
+watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 </script>
 
 <template>
   <Dialog :open="openSettings" @update:open="openSettings = false">
-    <DialogContent
-      class="h-[-webkit-fill-available] max-w-4xl overflow-clip p-0"
-    >
+    <DialogContent class="h-2/3 w-3/5 max-w-none overflow-clip p-0">
       <DialogHeader class="sr-only">
         <DialogTitle>Settings</DialogTitle>
         <DialogDescription>
@@ -118,23 +120,32 @@ const deleteAccount = async () => {
         </TabsList>
         <TabsContent
           value="account"
-          class="col-span-4 mt-0 transition duration-300 animate-in fade-in"
+          class="col-span-4 mt-0 transition duration-200 animate-in fade-in"
         >
-          <div class="flex h-full w-full flex-col gap-4 px-8 py-6">
+          <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
             <div class="flex flex-col">
               <h3 class="text-lg font-semibold">Account</h3>
-              <p class="text-muted-foreground">Manage your account settings.</p>
+              <p class="flex items-center gap-2 text-muted-foreground">
+                Manage your account settings.
+              </p>
             </div>
             <Separator />
             <div class="flex items-center gap-4">
-              <Avatar class="h-16 w-16">
-                <AvatarImage
-                  :src="user?.photoURL!"
-                  :alt="user?.displayName"
-                  referrerpolicy="no-referrer"
-                />
-                <AvatarFallback>{{ user?.displayName }}</AvatarFallback>
-              </Avatar>
+              <div class="relative">
+                <Avatar class="h-16 w-16">
+                  <AvatarImage
+                    :src="user?.photoURL!"
+                    :alt="user?.displayName"
+                    referrerpolicy="no-referrer"
+                  />
+                  <AvatarFallback>{{ user?.displayName }}</AvatarFallback>
+                </Avatar>
+                <span
+                  class="absolute -bottom-0 -right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary p-2 text-primary-foreground"
+                >
+                  <icon-lucide-upload />
+                </span>
+              </div>
               <div class="grid gap-2">
                 <Label for="name" class="text-muted-foreground">
                   Preferred name
@@ -151,10 +162,26 @@ const deleteAccount = async () => {
             <Separator />
             <div class="flex items-center gap-4">
               <div class="flex flex-col gap-1">
-                <p class="text-sm font-medium leading-none">Email</p>
-                <p class="text-muted-foreground">
+                <p class="text-sm font-medium leading-none">Primary email</p>
+                <p class="flex items-center gap-2 text-muted-foreground">
                   {{ user?.email }}
-                  <icon-lucide-badge-check v-if="user?.emailVerified" />
+                  <TooltipProvider v-if="user?.emailVerified">
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Badge
+                          size="xs"
+                          variant="outline"
+                          class="gap-1 px-1 font-normal"
+                        >
+                          <icon-lucide-badge-check />
+                          Verified
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        We've verified your email address.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </p>
               </div>
               <div class="ml-auto flex gap-2">
@@ -174,10 +201,10 @@ const deleteAccount = async () => {
                 </Button>
                 <Dialog>
                   <DialogTrigger>
-                    <Button size="xs" variant="outline">
-                      Change email
-                    </Button></DialogTrigger
-                  >
+                    <Button size="sm" variant="outline">
+                      Change primary email
+                    </Button>
+                  </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle> Change email </DialogTitle>
@@ -212,15 +239,67 @@ const deleteAccount = async () => {
             </div>
             <div class="flex items-center gap-4">
               <div class="flex flex-col gap-1">
+                <p class="text-sm font-medium leading-none">
+                  Connected accounts
+                </p>
+                <p class="flex items-center gap-2 text-muted-foreground">
+                  Manage your connected accounts.
+                </p>
+              </div>
+              <div class="ml-auto flex gap-2">
+                <Button size="sm" variant="outline" class="gap-2">
+                  Connect a new account
+                </Button>
+              </div>
+            </div>
+            <div
+              v-for="provider in user?.providerData"
+              :key="provider.providerId"
+              class="flex items-center gap-4"
+            >
+              <div class="relative">
+                <Avatar class="h-8 w-8">
+                  <AvatarImage
+                    :src="provider.photoURL!"
+                    :alt="provider.displayName"
+                    referrerpolicy="no-referrer"
+                  />
+                  <AvatarFallback>{{ provider.displayName }}</AvatarFallback>
+                </Avatar>
+                <span
+                  class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-background"
+                >
+                  <icon-logos-google-icon
+                    v-if="provider.providerId === 'google.com'"
+                  />
+                </span>
+              </div>
+              <div class="flex flex-col gap-1">
+                <p class="text-sm font-medium leading-none">
+                  {{ provider.displayName }}
+                </p>
+                <p class="flex items-center gap-2 text-muted-foreground">
+                  {{ provider.email }}
+                </p>
+              </div>
+              <div class="ml-auto flex gap-2">
+                <Button size="xs" variant="secondary" class="gap-2">
+                  Disconnect
+                </Button>
+              </div>
+            </div>
+            <Separator />
+            <div class="flex items-center gap-4">
+              <div class="flex flex-col gap-1">
                 <p class="text-sm font-medium leading-none">Delete account</p>
-                <p class="text-muted-foreground">
+                <p class="flex items-center gap-2 text-muted-foreground">
                   Permanently delete your account.
                 </p>
               </div>
               <div class="ml-auto flex gap-2">
                 <AlertDialog>
                   <AlertDialogTrigger>
-                    <Button size="xs" variant="destructive" class="gap-2">
+                    <Button size="sm" variant="destructive" class="gap-2">
                       Delete account
                     </Button>
                   </AlertDialogTrigger>
@@ -233,8 +312,11 @@ const deleteAccount = async () => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction as-child @click="deleteAccount">
-                        <Button variant="destructive">Delete account </Button>
+                      <AlertDialogAction
+                        variant="destructive"
+                        @click="deleteAccount"
+                      >
+                        Delete account
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -245,12 +327,12 @@ const deleteAccount = async () => {
         </TabsContent>
         <TabsContent
           value="appearance"
-          class="col-span-4 mt-0 transition duration-300 animate-in fade-in"
+          class="col-span-4 mt-0 transition duration-200 animate-in fade-in"
         >
-          <div class="flex h-full w-full flex-col gap-4 px-8 py-6">
+          <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
             <div class="flex flex-col">
               <h3 class="text-lg font-semibold">Appearance</h3>
-              <p class="text-muted-foreground">
+              <p class="flex items-center gap-2 text-muted-foreground">
                 Customize the appearance of the app.
               </p>
             </div>
@@ -258,13 +340,13 @@ const deleteAccount = async () => {
             <div class="flex items-center gap-4">
               <div class="flex flex-col gap-1">
                 <p class="text-sm font-medium leading-none">Theme</p>
-                <p class="text-muted-foreground">
+                <p class="flex items-center gap-2 text-muted-foreground">
                   Customize how template app looks on your device.
                 </p>
               </div>
               <div class="ml-auto flex gap-2">
                 <Select v-model="store" :default-value="store">
-                  <SelectTrigger class="h-8 gap-2">
+                  <SelectTrigger class="h-9 gap-2">
                     <SelectValue placeholder="Select a theme" />
                   </SelectTrigger>
                   <SelectContent align="end">
@@ -275,6 +357,31 @@ const deleteAccount = async () => {
                       class="gap-4"
                     >
                       {{ mode.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="flex flex-col gap-1">
+                <p class="text-sm font-medium leading-none">Language</p>
+                <p class="flex items-center gap-2 text-muted-foreground">
+                  Choose your preferred language.
+                </p>
+              </div>
+              <div class="ml-auto flex gap-2">
+                <Select v-model="locale" :default-value="locale">
+                  <SelectTrigger class="h-9 gap-2">
+                    <SelectValue placeholder="Select a language" />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem
+                      v-for="language in languages"
+                      :key="language.id"
+                      :value="language.id"
+                      class="gap-4"
+                    >
+                      {{ language.name }}
                     </SelectItem>
                   </SelectContent>
                 </Select>

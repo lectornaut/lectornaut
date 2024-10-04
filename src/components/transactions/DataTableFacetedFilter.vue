@@ -91,7 +91,7 @@ const selectedValues = computed(
             >
               <Checkbox
                 :checked="selectedValues.has(option.value)"
-                class="flex aspect-square h-3 w-3 rounded-sm"
+                class="flex aspect-square h-3 w-3 rounded-sm border-muted-foreground data-[state=checked]:bg-muted-foreground"
               />
               <Component :is="option.icon" v-if="option.icon" />
               <span>{{ option.label }}</span>

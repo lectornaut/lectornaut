@@ -19,14 +19,13 @@ const value = ref({
 <template>
   <Popover>
     <PopoverTrigger as-child>
-      <Button variant="outline" class="gap-2" size="sm">
+      <Button variant="outline" class="gap-2" size="xs">
         <icon-lucide-calendar />
         <template v-if="value.start">
           <template v-if="value.end">
             {{ df.format(value.start.toDate(getLocalTimeZone())) }} -
             {{ df.format(value.end.toDate(getLocalTimeZone())) }}
           </template>
-
           <template v-else>
             {{ df.format(value.start.toDate(getLocalTimeZone())) }}
           </template>

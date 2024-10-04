@@ -27,8 +27,8 @@ export default {
       },
       fontFamily: {
         instrument: ["Instrument", "serif"],
-        inter: ["Inter Variable", "sans-serif"],
-        mono: ["Roboto Mono Variable", "monospace"],
+        geist: ["Geist Sans", "sans-serif"],
+        mono: ["Geist Mono", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",

@@ -10,7 +10,6 @@ useHead({
     <div
       class="mx-auto mb-44 mt-12 flex w-full max-w-2xl grow flex-col items-center"
     >
-      <RouterLink to="/home">Home</RouterLink>
       <Tabs default-value="personal" class="flex flex-col items-center">
         <TabsList class="m-4 rounded-xl">
           <TabsTrigger class="rounded-lg px-3 py-2" value="personal">
@@ -67,7 +66,7 @@ useHead({
         </div>
         <TabsContent
           value="personal"
-          class="transition duration-300 animate-in fade-in"
+          class="transition duration-200 animate-in fade-in"
           tabindex="-1"
         >
           <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">
@@ -178,7 +177,7 @@ useHead({
         </TabsContent>
         <TabsContent
           value="team"
-          class="transition duration-300 animate-in fade-in"
+          class="transition duration-200 animate-in fade-in"
           tabindex="-1"
         >
           <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">

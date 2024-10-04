@@ -70,47 +70,45 @@ const table = useVueTable({
 </script>
 
 <template>
-  <div class="grid grow gap-2">
-    <DataTableToolbar :table="table" />
-    <div class="no-scrollbar flex overflow-auto truncate rounded-md border">
-      <Table no-scrollbar>
-        <TableHeader>
+  <DataTableToolbar :table="table" />
+  <div class="no-scrollbar flex overflow-auto truncate rounded-md border">
+    <Table no-scrollbar>
+      <TableHeader>
+        <TableRow
+          v-for="headerGroup in table.getHeaderGroups()"
+          :key="headerGroup.id"
+        >
+          <TableHead v-for="header in headerGroup.headers" :key="header.id">
+            <FlexRender
+              v-if="!header.isPlaceholder"
+              :render="header.column.columnDef.header"
+              :props="header.getContext()"
+            />
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <template v-if="table.getRowModel().rows?.length">
           <TableRow
-            v-for="headerGroup in table.getHeaderGroups()"
-            :key="headerGroup.id"
+            v-for="row in table.getRowModel().rows"
+            :key="row.id"
+            :data-state="row.getIsSelected() && 'selected'"
           >
-            <TableHead v-for="header in headerGroup.headers" :key="header.id">
+            <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
               <FlexRender
-                v-if="!header.isPlaceholder"
-                :render="header.column.columnDef.header"
-                :props="header.getContext()"
+                :render="cell.column.columnDef.cell"
+                :props="cell.getContext()"
               />
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <template v-if="table.getRowModel().rows?.length">
-            <TableRow
-              v-for="row in table.getRowModel().rows"
-              :key="row.id"
-              :data-state="row.getIsSelected() && 'selected'"
-            >
-              <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                <FlexRender
-                  :render="cell.column.columnDef.cell"
-                  :props="cell.getContext()"
-                />
-              </TableCell>
-            </TableRow>
-          </template>
-          <TableRow v-else>
-            <TableCell :colspan="columns.length" class="h-24 text-center">
-              No results.
             </TableCell>
           </TableRow>
-        </TableBody>
-      </Table>
-    </div>
-    <DataTablePagination :table="table" />
+        </template>
+        <TableRow v-else>
+          <TableCell :colspan="columns.length" class="h-24 text-center">
+            No results.
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   </div>
+  <DataTablePagination :table="table" />
 </template>

@@ -85,7 +85,7 @@ export default defineConfig(async () => ({
     Layouts(),
     Unfonts({
       fontsource: {
-        families: ["Inter Variable", "Roboto Mono Variable"],
+        families: ["Instrument Serif", "Geist Sans", "Geist Mono"],
       },
     }),
     ViteImageOptimizer(),

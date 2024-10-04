@@ -32,6 +32,7 @@
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
+    "src/**/*.json",
     "vite.config.ts"
   ],
   "files": ["components.d.ts", "auto-imports.d.ts", "typed-router.d.ts"]

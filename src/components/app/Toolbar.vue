@@ -26,9 +26,10 @@ import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
           <TooltipContent> Expand Sidebar </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <CommandK />
+      <Notifications />
     </span>
     <span class="flex items-center gap-2">
+      <CommandK />
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -36,13 +37,15 @@ import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
               v-motion-fade
               variant="ghost"
               size="xs"
+              class="gap-2"
               @click="emitter.emit('Sidebar.Right.Toggle')"
             >
               <icon-mingcute-ai-fill v-if="rightSidebarVisibility" />
               <icon-mingcute-ai-line v-else />
+              AI Chat
             </Button>
           </TooltipTrigger>
-          <TooltipContent> Expand Sidebar </TooltipContent>
+          <TooltipContent> Chat with AI </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </span>

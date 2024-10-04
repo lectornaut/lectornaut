@@ -37,7 +37,7 @@ const user = useCurrentUser()
       </span>
       <Button
         variant="ghost"
-        class="w-72 justify-start bg-muted/75 pl-7 pr-16 font-normal text-muted-foreground"
+        class="justify-start bg-muted/75 pl-7 pr-16 font-normal text-muted-foreground"
         size="xs"
         @click="openCommand = true"
       >
