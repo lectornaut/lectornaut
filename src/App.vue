@@ -20,7 +20,7 @@ watch(user, async (currentUser, previousUser) => {
 </script>
 
 <template>
-  <div class="flex min-h-dvh flex-col">
+  <div class="flex h-dvh w-dvw flex-col">
     <RouterView v-slot="{ Component }">
       <template v-if="Component">
         <Transition

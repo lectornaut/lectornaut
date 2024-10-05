@@ -230,6 +230,7 @@ declare module 'vue' {
     IconLucideSparkles: typeof import('~icons/lucide/sparkles')['default']
     IconLucideSpinner2: typeof import('~icons/lucide/spinner2')['default']
     IconLucideSquareSplitHorizontal: typeof import('~icons/lucide/square-split-horizontal')['default']
+    IconLucideSquareSplitVertical: typeof import('~icons/lucide/square-split-vertical')['default']
     IconLucideSun: typeof import('~icons/lucide/sun')['default']
     IconLucideTable: typeof import('~icons/lucide/table')['default']
     IconLucideTasterisk: typeof import('~icons/lucide/tasterisk')['default']

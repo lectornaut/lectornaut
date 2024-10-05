@@ -82,7 +82,7 @@
     @apply flex-col;
     @apply text-xs;
     @apply select-none;
-    @apply overflow-hidden;
+    @apply overflow-auto;
     @apply overscroll-none;
     @apply accent-current;
   }

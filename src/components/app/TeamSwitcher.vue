@@ -232,8 +232,6 @@ const selectedTeam = ref<Team>(
             </DropdownMenuContent>
           </DropdownMenu>
         </Tooltip>
-      </TooltipProvider>
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
             <Button

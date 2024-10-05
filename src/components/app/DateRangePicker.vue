@@ -19,7 +19,7 @@ const value = ref({
 <template>
   <Popover>
     <PopoverTrigger as-child>
-      <Button variant="outline" class="gap-2" size="xs">
+      <Button variant="outline" class="gap-2" size="sm">
         <icon-lucide-calendar />
         <template v-if="value.start">
           <template v-if="value.end">

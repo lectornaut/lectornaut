@@ -1,7 +1,7 @@
 <template>
-  <div class="no-scrollbar relative flex grow flex-col overflow-y-auto">
+  <aside class="no-scrollbar flex grow flex-col overflow-auto">
     <TeamSwitcher />
     <Navigation />
     <Support />
-  </div>
+  </aside>
 </template>

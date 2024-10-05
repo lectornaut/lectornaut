@@ -41,8 +41,8 @@ const links = [
 
 <template>
   <nav class="flex flex-col p-2">
-    <template v-for="(link, index) of links" :key="`1-${index}`">
-      <TooltipProvider>
+    <TooltipProvider>
+      <template v-for="(link, index) of links" :key="`1-${index}`">
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
@@ -64,8 +64,8 @@ const links = [
             </span>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-    </template>
+      </template>
+    </TooltipProvider>
   </nav>
 </template>
 

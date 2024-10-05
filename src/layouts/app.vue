@@ -32,11 +32,7 @@ watch(rightSidebarVisibility, (value) => {
 </script>
 
 <template>
-  <ResizablePanelGroup
-    direction="horizontal"
-    auto-save-id="app"
-    class="flex h-full w-full"
-  >
+  <ResizablePanelGroup direction="horizontal" auto-save-id="app">
     <ResizablePanel
       ref="leftSidebar"
       class="flex flex-col bg-muted/50"
@@ -56,21 +52,25 @@ watch(rightSidebarVisibility, (value) => {
     />
     <ResizablePanel :default-size="60" :min-size="50" class="flex flex-col">
       <Toolbar />
-      <RouterView v-slot="{ Component, route }">
-        <Transition
-          enter-active-class="transition ease-in-out duration-200"
-          enter-from-class="opacity-0"
-          enter-to-class="opacity-100"
-          leave-active-class="transition ease-in-out duration-200"
-          leave-from-class="opacity-100"
-          leave-to-class="opacity-0"
-          mode="out-in"
-        >
-          <template v-if="Component">
-            <Component :is="Component" :key="route.path" />
-          </template>
-        </Transition>
-      </RouterView>
+      <main
+        class="no-scrollbar flex grow flex-col overflow-auto overscroll-none"
+      >
+        <RouterView v-slot="{ Component, route }">
+          <Transition
+            enter-active-class="transition ease-in-out duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition ease-in-out duration-200"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+            mode="out-in"
+          >
+            <template v-if="Component">
+              <Component :is="Component" :key="route.path" />
+            </template>
+          </Transition>
+        </RouterView>
+      </main>
     </ResizablePanel>
     <ResizableHandle
       :class="{ invisible: !rightSidebarVisibility }"
