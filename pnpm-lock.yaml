@@ -106,7 +106,7 @@ importers:
         version: 3.23.8
     devDependencies:
       '@iconify/json':
-        specifier: ^2.2.257
+        specifier: ^2.2.256
         version: 2.2.257
       '@intlify/unplugin-vue-i18n':
         specifier: ^5.2.0
