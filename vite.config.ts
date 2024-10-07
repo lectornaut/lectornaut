@@ -107,9 +107,9 @@ export default defineConfig(async () => ({
       // eslint: {
       //   lintCommand: 'eslint "./src/**/*.{ts,tsx}"',
       // },
-      // stylelint: {
-      //   lintCommand: "stylelint ./src/**/*.{css,vue}",
-      // },
+      stylelint: {
+        lintCommand: "stylelint ./src/**/*.{css,vue}",
+      },
     }),
   ],
   css: {
