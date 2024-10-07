@@ -51,13 +51,6 @@
 
 @layer base {
   :root {
-    scroll-behavior: smooth;
-    scrollbar-gutter: stable;
-
-    @apply overscroll-none;
-    @apply selection:bg-secondary;
-    @apply selection:text-secondary-foreground;
-
     --vis-tooltip-background-color: none !important;
     --vis-tooltip-border-color: none !important;
     --vis-tooltip-text-color: none !important;
@@ -74,15 +67,19 @@
   }
 
   body {
-    @apply bg-background;
-    @apply text-foreground;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+
+    @apply selection:bg-secondary;
+    @apply selection:text-secondary-foreground;
+
     @apply h-dvh;
     @apply w-dvw;
-    @apply flex;
-    @apply flex-col;
+    @apply bg-background;
+    @apply text-foreground;
     @apply text-xs;
     @apply select-none;
-    @apply overflow-auto;
+    @apply overflow-hidden;
     @apply overscroll-none;
     @apply accent-current;
   }

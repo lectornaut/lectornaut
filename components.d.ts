@@ -240,6 +240,7 @@ declare module 'vue' {
     IconLucideUpload: typeof import('~icons/lucide/upload')['default']
     IconLucideUser: typeof import('~icons/lucide/user')['default']
     IconLucideWallet: typeof import('~icons/lucide/wallet')['default']
+    IconLucideX: typeof import('~icons/lucide/x')['default']
     'IconMaterialSymbols-Circle': typeof import('~icons/material-symbols/-circle')['default']
     IconMaterialSymbolsCircle: typeof import('~icons/material-symbols/circle')['default']
     IconMdiAlertCircle: typeof import('~icons/mdi/alert-circle')['default']

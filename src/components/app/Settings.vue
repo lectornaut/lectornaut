@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { themes } from "@/helpers/defaults"
 import { languages } from "@/helpers/defaults"
+import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { store } from "@/modules/theme"
 import {
@@ -8,8 +9,14 @@ import {
   sendEmailVerification,
   verifyBeforeUpdateEmail,
 } from "firebase/auth"
+import { ref as storageRef } from "firebase/storage"
 import { toast } from "vue-sonner"
-import { updateCurrentUserProfile, useCurrentUser } from "vuefire"
+import {
+  updateCurrentUserProfile,
+  useCurrentUser,
+  useFirebaseStorage,
+  useStorageFile,
+} from "vuefire"
 
 const openSettings = ref(false)
 const defaultTab = ref("account")
@@ -26,6 +33,13 @@ const displayName = computed({
   get: () => user.value?.displayName ?? "",
   set: (value: string) => {
     updateCurrentUserProfile({ displayName: value })
+  },
+})
+
+const photoURL = computed({
+  get: () => user.value?.photoURL ?? "",
+  set: (value: string) => {
+    updateCurrentUserProfile({ photoURL: value })
   },
 })
 
@@ -84,6 +98,60 @@ const deleteAccount = async () => {
     })
 }
 
+const storage = useFirebaseStorage()
+const profilePhotoFileRef = storageRef(
+  storage,
+  `${user.value?.uid}/images/profilePhoto.jpg`
+)
+
+const { url, uploadProgress, uploadError, uploadTask, upload } =
+  useStorageFile(profilePhotoFileRef)
+
+watch(
+  () => url.value,
+  (newVal, oldVal) => {
+    if (oldVal === undefined) return
+    if (oldVal === null && newVal) {
+      try {
+        photoURL.value = newVal
+        toast.success("Profile picture updated", {
+          description: "Your profile picture has been updated successfully.",
+        })
+        reset()
+        filename.value = ""
+      } catch (error) {
+        console.error("Error updating profile with new photo URL:", error)
+        toast.error("Failed to update profile picture", {
+          description: error.message,
+        })
+      }
+    }
+  }
+)
+
+const uploadPicture = async () => {
+  const data = files.value?.item(0)
+  if (data) {
+    try {
+      toast.info("Uploading profile picture", {
+        description: "Please wait while we upload your profile picture.",
+      })
+      filename.value = data.name
+      await upload(data)
+    } catch (error) {
+      console.error("Error uploading picture or updating profile:", error)
+      toast.error("Failed to upload profile picture", {
+        description: error.message,
+      })
+    }
+  }
+}
+
+const filename = ref<string>()
+const { files, open, reset } = useFileDialog()
+
+watch(files, uploadPicture)
+
 const { locale } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 </script>
@@ -131,20 +199,59 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
             </div>
             <Separator />
             <div class="flex items-center gap-4">
-              <div class="relative">
-                <Avatar class="h-16 w-16">
-                  <AvatarImage
-                    :src="user?.photoURL!"
-                    :alt="user?.displayName"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback>{{ user?.displayName }}</AvatarFallback>
-                </Avatar>
-                <span
-                  class="absolute -bottom-0 -right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary p-2 text-primary-foreground"
-                >
-                  <icon-lucide-upload />
-                </span>
+              <div class="group relative flex flex-col items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Avatar
+                        class="h-16 w-16 cursor-pointer"
+                        @click="
+                          open({ accept: 'image/*', multiple: false }).then(
+                            () => {
+                              files.value = event.target.files
+                            }
+                          )
+                        "
+                      >
+                        <template v-if="uploadTask">
+                          <icon-lucide-loader class="animate-spin" />
+                        </template>
+                        <template v-else-if="uploadError">
+                          <icon-lucide-alert-triangle />
+                        </template>
+                        <template v-else>
+                          <AvatarImage
+                            :src="user?.photoURL!"
+                            :alt="user?.displayName"
+                            referrerpolicy="no-referrer"
+                          />
+                          <AvatarFallback>
+                            {{ getInitials(user?.displayName) }}
+                          </AvatarFallback>
+                        </template>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        uploadTask
+                          ? `${(uploadProgress * 100).toFixed(0)}%`
+                          : "Upload profile picture "
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        v-if="photoURL"
+                        class="absolute right-0 top-0 h-4 w-4 rounded-full border-2 border-background p-2 opacity-0 transition group-hover:opacity-100"
+                        @click="photoURL = ''"
+                      >
+                        <icon-lucide-x />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent> Remove profile picture </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div class="grid gap-2">
                 <Label for="name" class="text-muted-foreground">
@@ -264,7 +371,9 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                     :alt="provider.displayName"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback>{{ provider.displayName }}</AvatarFallback>
+                  <AvatarFallback>
+                    {{ getInitials(provider.displayName) }}
+                  </AvatarFallback>
                 </Avatar>
                 <span
                   class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-background"

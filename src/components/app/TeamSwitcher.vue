@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { isTauri } from "@/helpers/utilities"
+import { getInitials, isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
 const user = useCurrentUser()
 
-const groups = computed(() => [
+const generateGroups = (user) => [
   {
     label: "Personal Account",
     teams: [
       {
-        label: user.value?.displayName || "Personal",
+        label: user?.displayName || "Personal",
         value: "personal",
       },
     ],
@@ -18,24 +18,20 @@ const groups = computed(() => [
   {
     label: "Teams",
     teams: [
-      {
-        label: "Acme Inc.",
-        value: "acme-inc",
-      },
-      {
-        label: "Monsters Inc.",
-        value: "monsters",
-      },
+      { label: "Acme Inc.", value: "acme-inc" },
+      { label: "Monsters Inc.", value: "monsters" },
     ],
   },
-])
+]
 
-type Team = (typeof groups.value)[number]["teams"][number]
+const groups = computed(() => generateGroups(user.value))
+
+type Team = { label: string; value: string }
 
 const openAccountSwitcher = ref(false)
 const showNewTeamDialog = ref(false)
 const selectedTeam = ref<Team>(
-  groups.value[0]?.teams[0] ?? { label: "", value: "" }
+  groups.value[0]?.teams[0] || { label: "", value: "" }
 )
 </script>
 
@@ -55,16 +51,20 @@ const selectedTeam = ref<Team>(
             <Avatar class="h-4 w-4">
               <AvatarImage
                 :src="
-                  selectedTeam.value === 'personal'
-                    ? user?.photoURL!
-                    : `https://avatar.vercel.sh/${selectedTeam.value}.png`
+                  selectedTeam.value === 'personal' ? user?.photoURL! : null
                 "
                 referrerpolicy="no-referrer"
                 :alt="selectedTeam.label"
               />
-              <AvatarFallback>{{ selectedTeam.label }}</AvatarFallback>
+              <AvatarFallback>
+                {{ getInitials(selectedTeam.label) }}
+              </AvatarFallback>
             </Avatar>
-            <span class="truncate">{{ selectedTeam.label }}</span>
+            <span class="truncate">{{
+              selectedTeam.value === "personal"
+                ? user?.displayName
+                : selectedTeam.label
+            }}</span>
             <icon-lucide-chevron-down />
           </Button>
         </PopoverTrigger>
@@ -95,15 +95,13 @@ const selectedTeam = ref<Team>(
                 >
                   <Avatar class="h-4 w-4">
                     <AvatarImage
-                      :src="
-                        team.value === 'personal'
-                          ? user?.photoURL!
-                          : `https://avatar.vercel.sh/${selectedTeam.value}.png`
-                      "
+                      :src="team.value === 'personal' ? user?.photoURL! : null"
                       referrerpolicy="no-referrer"
                       :alt="team.label"
                     />
-                    <AvatarFallback>{{ team.label }}</AvatarFallback>
+                    <AvatarFallback>
+                      {{ getInitials(team.label) }}
+                    </AvatarFallback>
                   </Avatar>
                   <span class="truncate">{{ team.label }}</span>
                   <icon-lucide-check

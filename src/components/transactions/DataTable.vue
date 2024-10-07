@@ -70,10 +70,10 @@ const table = useVueTable({
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
+  <div class="grid gap-2">
     <DataTableToolbar :table="table" />
     <div class="grow rounded-md border">
-      <Table no-scrollba>
+      <Table no-scrollbar>
         <TableHeader>
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
