@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { AlertDialogCancel, type AlertDialogCancelProps } from "radix-vue"

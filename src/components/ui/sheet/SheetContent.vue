@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { type SheetVariants, sheetVariants } from "."
 import { cn } from "@/lib/utils"
 import { X } from "lucide-vue-next"

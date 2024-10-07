@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
 import emitter from "@/modules/mitt"
 import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"

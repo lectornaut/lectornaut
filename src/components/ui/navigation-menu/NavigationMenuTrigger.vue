@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { navigationMenuTriggerStyle } from "."
 import { cn } from "@/lib/utils"
 import { ChevronDown } from "lucide-vue-next"

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { type BadgeVariants, badgeVariants } from "."
 import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "vue"

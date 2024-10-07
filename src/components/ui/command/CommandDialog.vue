@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import Command from "./Command.vue"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useForwardPropsEmits } from "radix-vue"

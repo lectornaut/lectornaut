@@ -14,6 +14,7 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": [
       "node",
+      "vite/client",
       "vite-plugin-vue-layouts/client",
       "vite-plugin-pwa/vue",
       "vite-plugin-pwa/pwa-assets",

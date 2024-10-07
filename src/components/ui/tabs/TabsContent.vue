@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import { TabsContent, type TabsContentProps } from "radix-vue"
 import { type HTMLAttributes, computed } from "vue"

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import TableCell from "./TableCell.vue"
 import TableRow from "./TableRow.vue"
 import { cn } from "@/lib/utils"

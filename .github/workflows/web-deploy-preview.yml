@@ -1,0 +1,32 @@
+name: Deploy Web Preview
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+  workflow_dispatch:
+jobs:
+  deploy-preview:
+    if: ${{ !contains(github.event.head_commit.message, 'skip web preview') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Enable corepack
+        run: corepack enable
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm i
+      - name: Build app
+        run: pnpm build
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          channelId: preview
+          projectId: hyperjump-app

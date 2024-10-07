@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import type { ComboboxGroupProps } from "radix-vue"
 import { ComboboxGroup, ComboboxLabel } from "radix-vue"

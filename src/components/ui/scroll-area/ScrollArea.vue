@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import ScrollBar from "./ScrollBar.vue"
 import { cn } from "@/lib/utils"
 import {

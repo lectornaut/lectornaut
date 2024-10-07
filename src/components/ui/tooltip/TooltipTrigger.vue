@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { TooltipTrigger, type TooltipTriggerProps } from "radix-vue"
 
 const props = defineProps<TooltipTriggerProps>()

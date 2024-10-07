@@ -1,3 +1,4 @@
+import { isTauri } from "@/helpers/utilities"
 import NProgress from "nprogress"
 import { setupLayouts } from "virtual:generated-layouts"
 import { createRouter, createWebHistory } from "vue-router/auto"
@@ -22,6 +23,12 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from) => {
+  if (to.name === "/") {
+    if (isTauri.value) {
+      router.push("/feed")
+    }
+  }
+
   if (to.meta.requiresUser) {
     const currentUser = await getCurrentUser()
     if (!currentUser) {

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
@@ -19,7 +19,7 @@ defineProps<DataTablePaginationProps>()
         <span class="flex truncate">Rows per page</span>
         <Select
           :model-value="`${table.getState().pagination.pageSize}`"
-          @update:model-value="table.setPageSize"
+          @update:model-value="table.setPageSize(parseInt($event, 10))"
         >
           <SelectTrigger class="h-7 w-auto gap-1 px-2">
             <SelectValue

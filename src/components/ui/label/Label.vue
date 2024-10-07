@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import { Label, type LabelProps } from "radix-vue"
 import { type HTMLAttributes, computed } from "vue"

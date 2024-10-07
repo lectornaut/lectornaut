@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import type { ComboboxContentEmits, ComboboxContentProps } from "radix-vue"
 import { ComboboxContent, useForwardPropsEmits } from "radix-vue"

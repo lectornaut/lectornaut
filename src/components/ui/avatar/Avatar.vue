@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { type AvatarVariants, avatarVariant } from "."
 import { cn } from "@/lib/utils"
 import { AvatarRoot } from "radix-vue"

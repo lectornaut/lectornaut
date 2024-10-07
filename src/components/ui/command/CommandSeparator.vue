@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import type { ComboboxSeparatorProps } from "radix-vue"
 import { ComboboxSeparator } from "radix-vue"

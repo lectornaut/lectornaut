@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { PopoverRoot, useForwardPropsEmits } from "radix-vue"
 import type { PopoverRootEmits, PopoverRootProps } from "radix-vue"
 

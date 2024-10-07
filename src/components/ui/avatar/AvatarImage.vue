@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { AvatarImage, type AvatarImageProps } from "radix-vue"
 
 const props = defineProps<AvatarImageProps>()

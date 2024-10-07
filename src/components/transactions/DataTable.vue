@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import DataTablePagination from "./DataTablePagination.vue"
 import DataTableToolbar from "./DataTableToolbar.vue"
 import type { Task } from "@/data/schema"

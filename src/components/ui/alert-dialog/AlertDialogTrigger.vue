@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { AlertDialogTrigger, type AlertDialogTriggerProps } from "radix-vue"
 
 const props = defineProps<AlertDialogTriggerProps>()

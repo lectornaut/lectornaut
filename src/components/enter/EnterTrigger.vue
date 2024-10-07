@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { DrawerTrigger } from "@/components/ui/drawer"
 </script>
 
@@ -10,7 +10,7 @@ import { DrawerTrigger } from "@/components/ui/drawer"
     <DrawerContent class="outline-none">
       <div class="mx-auto flex w-full max-w-sm flex-col">
         <DrawerHeader class="sr-only">
-          <DrawerTitle>Enter Hyperjump</DrawerTitle>
+          <DrawerTitle>Enter Template</DrawerTitle>
           <DrawerDescription>
             Create an account or sign in to continue.
           </DrawerDescription>

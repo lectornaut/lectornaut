@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import type { ComboboxEmptyProps } from "radix-vue"
 import { ComboboxEmpty } from "radix-vue"

@@ -1,11 +1,13 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { getInitials, isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
+import type { User } from "firebase/auth"
+import type { c } from "node_modules/vuefire/dist/shared/vuefire.cc4a8ea4.mjs"
 import { useCurrentUser } from "vuefire"
 
 const user = useCurrentUser()
 
-const generateGroups = (user) => [
+const generateGroups = (user: c<User>) => [
   {
     label: "Personal Account",
     teams: [
@@ -50,9 +52,7 @@ const selectedTeam = ref<Team>(
           >
             <Avatar class="h-4 w-4">
               <AvatarImage
-                :src="
-                  selectedTeam.value === 'personal' ? user?.photoURL! : null
-                "
+                :src="selectedTeam.value === 'personal' ? user?.photoURL! : ''"
                 referrerpolicy="no-referrer"
                 :alt="selectedTeam.label"
               />
@@ -95,7 +95,7 @@ const selectedTeam = ref<Team>(
                 >
                   <Avatar class="h-4 w-4">
                     <AvatarImage
-                      :src="team.value === 'personal' ? user?.photoURL! : null"
+                      :src="team.value === 'personal' ? user?.photoURL! : ''"
                       referrerpolicy="no-referrer"
                       :alt="team.label"
                     />

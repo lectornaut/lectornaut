@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { authenticateEmail } from "@/modules/auth"
 
 useHead({
@@ -45,7 +45,7 @@ onMounted(async () => {
     <div class="mx-auto flex w-full max-w-sm flex-col">
       <div class="sr-only grid gap-1.5 p-4 text-center sm:text-left">
         <h1 class="text-lg font-semibold leading-none tracking-tight">
-          Enter Hyperjump
+          Enter Template
         </h1>
         <p class="text-muted-foreground">
           Create an account or sign in to continue.

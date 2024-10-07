@@ -14,8 +14,10 @@ export const columns: ColumnDef<Task>[] = [
       h(Checkbox, {
         checked:
           table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate"),
-        "onUpdate:checked": (value) => table.toggleAllPageRowsSelected(!!value),
+          (table.getIsSomePageRowsSelected() && "indeterminate") ||
+          false,
+        "onUpdate:checked": (value: boolean) =>
+          table.toggleAllPageRowsSelected(!!value),
         ariaLabel: "Select all",
         class:
           "flex w-3 aspect-square h-3 rounded-sm border-muted-foreground data-[state=checked]:bg-muted-foreground",
@@ -23,7 +25,7 @@ export const columns: ColumnDef<Task>[] = [
     cell: ({ row }) =>
       h(Checkbox, {
         checked: row.getIsSelected(),
-        "onUpdate:checked": (value) => row.toggleSelected(!!value),
+        "onUpdate:checked": (value: boolean) => row.toggleSelected(!!value),
         ariaLabel: "Select row",
         class:
           "flex w-3 aspect-square h-3 rounded-sm border-muted-foreground data-[state=checked]:bg-muted-foreground",

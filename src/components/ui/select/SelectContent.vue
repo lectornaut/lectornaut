@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { SelectScrollDownButton, SelectScrollUpButton } from "."
 import { cn } from "@/lib/utils"
 import {

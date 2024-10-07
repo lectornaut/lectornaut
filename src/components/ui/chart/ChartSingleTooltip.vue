@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { ChartTooltip } from "."
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { omit } from "@unovis/ts"
@@ -46,7 +46,7 @@ function template(d: any, i: number, elements: (HTMLElement | SVGElement)[]) {
     if (wm.has(data)) {
       return wm.get(data)
     } else {
-      const style = getComputedStyle(elements[i])
+      const style = getComputedStyle(elements[i] as Element)
       const omittedData = [
         {
           name: data.name,

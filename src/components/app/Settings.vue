@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { themes } from "@/helpers/defaults"
 import { languages } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
@@ -122,7 +122,7 @@ watch(
       } catch (error) {
         console.error("Error updating profile with new photo URL:", error)
         toast.error("Failed to update profile picture", {
-          description: error.message,
+          description: error as string,
         })
       }
     }
@@ -141,7 +141,7 @@ const uploadPicture = async () => {
     } catch (error) {
       console.error("Error uploading picture or updating profile:", error)
       toast.error("Failed to upload profile picture", {
-        description: error.message,
+        description: error as string,
       })
     }
   }
@@ -205,13 +205,7 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                     <TooltipTrigger as-child>
                       <Avatar
                         class="h-16 w-16 cursor-pointer"
-                        @click="
-                          open({ accept: 'image/*', multiple: false }).then(
-                            () => {
-                              files.value = event.target.files
-                            }
-                          )
-                        "
+                        @click="open({ accept: 'image/*', multiple: false })"
                       >
                         <template v-if="uploadTask">
                           <icon-lucide-loader class="animate-spin" />
@@ -221,12 +215,12 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                         </template>
                         <template v-else>
                           <AvatarImage
-                            :src="user?.photoURL!"
+                            :src="user?.photoURL as string"
                             :alt="user?.displayName"
                             referrerpolicy="no-referrer"
                           />
                           <AvatarFallback>
-                            {{ getInitials(user?.displayName) }}
+                            {{ getInitials(user?.displayName as string) }}
                           </AvatarFallback>
                         </template>
                       </Avatar>
@@ -234,8 +228,8 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                     <TooltipContent>
                       {{
                         uploadTask
-                          ? `${(uploadProgress * 100).toFixed(0)}%`
-                          : "Upload profile picture "
+                          ? `${uploadProgress ? (uploadProgress * 100).toFixed(0) : 0}%`
+                          : "Upload profile picture"
                       }}
                     </TooltipContent>
                   </Tooltip>
@@ -367,12 +361,12 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
               <div class="relative">
                 <Avatar class="h-8 w-8">
                   <AvatarImage
-                    :src="provider.photoURL!"
+                    :src="provider.photoURL as string"
                     :alt="provider.displayName"
                     referrerpolicy="no-referrer"
                   />
                   <AvatarFallback>
-                    {{ getInitials(provider.displayName) }}
+                    {{ getInitials(provider.displayName ?? "") }}
                   </AvatarFallback>
                 </Avatar>
                 <span

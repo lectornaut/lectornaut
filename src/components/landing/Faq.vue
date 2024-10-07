@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { DrawerTrigger, DrawerClose } from "@/components/ui/drawer"
 
 const accordionItems = [

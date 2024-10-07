@@ -15,6 +15,7 @@ import Components from "unplugin-vue-components/vite"
 import { VueRouterAutoImports } from "unplugin-vue-router"
 import VueRouter from "unplugin-vue-router/vite"
 import { defineConfig } from "vite"
+import checker from "vite-plugin-checker"
 import { ViteImageOptimizer } from "vite-plugin-image-optimizer"
 import { VitePWA } from "vite-plugin-pwa"
 import Layouts from "vite-plugin-vue-layouts"
@@ -100,6 +101,16 @@ export default defineConfig(async () => ({
       ),
     }),
     UnheadVite(),
+    checker({
+      typescript: true,
+      vueTsc: true,
+      // eslint: {
+      //   lintCommand: 'eslint "./src/**/*.{ts,tsx}"',
+      // },
+      // stylelint: {
+      //   lintCommand: "stylelint ./src/**/*.{css,vue}",
+      // },
+    }),
   ],
   css: {
     postcss: {

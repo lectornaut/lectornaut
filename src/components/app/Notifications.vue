@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 const components: { title: string; href: string; description: string }[] = [
   {
     title: "Alert Dialog",

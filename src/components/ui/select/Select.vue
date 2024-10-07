@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { SelectRootEmits, SelectRootProps } from "radix-vue"
 import { SelectRoot, useForwardPropsEmits } from "radix-vue"
 
