@@ -72,7 +72,6 @@
 
     @apply selection:bg-secondary;
     @apply selection:text-secondary-foreground;
-
     @apply h-dvh;
     @apply w-dvw;
     @apply bg-background;

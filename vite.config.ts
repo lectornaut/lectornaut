@@ -105,10 +105,10 @@ export default defineConfig(async () => ({
       typescript: true,
       vueTsc: true,
       // eslint: {
-      //   lintCommand: 'eslint "./src/**/*.{ts,tsx}"',
+      //   lintCommand: 'eslint "./src/**/*.{js,ts,vue}"',
       // },
       stylelint: {
-        lintCommand: "stylelint ./src/**/*.{css,vue}",
+        lintCommand: "stylelint ./src/**/*.{css,scss}",
       },
     }),
   ],
