@@ -19,7 +19,7 @@ const props = withDefaults(
 
 // Use weakmap to store reference to each datapoint for Tooltip
 const wm = new WeakMap()
-function template(d: any) {
+function template(d: Record<string, unknown>) {
   if (wm.has(d)) {
     return wm.get(d)
   } else {
@@ -40,7 +40,7 @@ function template(d: any) {
   }
 }
 
-function color(d: unknown, i: number) {
+function color(_d: Record<string, unknown>, i: number) {
   return props.colors[i] ?? "transparent"
 }
 </script>

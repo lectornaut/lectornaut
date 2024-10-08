@@ -9,9 +9,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "lint:code": "eslint . --fix",
+    "lint:code": "eslint 'src/**/*.{js,ts,vue}' --fix",
     "lint:format": "prettier . --write --ignore-path .gitignore",
-    "lint:style": "stylelint **/*.{css,scss} --fix --ignore-path .gitignore",
+    "lint:style": "stylelint src/**/*.{css,scss} --fix --ignore-path .gitignore",
     "prepare": "husky"
   },
   "lint-staged": {

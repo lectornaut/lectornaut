@@ -104,12 +104,6 @@ export default defineConfig(async () => ({
     checker({
       typescript: true,
       vueTsc: true,
-      // eslint: {
-      //   lintCommand: 'eslint "./src/**/*.{js,ts,vue}"',
-      // },
-      // stylelint: {
-      //   lintCommand: "stylelint ./src/**/*.{css,scss}",
-      // },
     }),
   ],
   css: {

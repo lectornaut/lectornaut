@@ -6,7 +6,7 @@ defineProps<{
   data: {
     name: string
     color: string
-    value: any
+    value: unknown
   }[]
 }>()
 </script>

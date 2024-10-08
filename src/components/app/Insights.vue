@@ -34,7 +34,7 @@ const data = computed(() => [
   },
 ])
 
-const lineX = (d: Data, i: number) => i
+const lineX = (_d: Data, i: number) => i
 </script>
 
 <template>

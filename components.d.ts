@@ -210,7 +210,7 @@ declare module 'vue' {
     Label: typeof import('./src/components/ui/label/Label.vue')['default']
     LanguageSwitcher: typeof import('./src/components/app/LanguageSwitcher.vue')['default']
     LeftSidebar: typeof import('./src/components/app/LeftSidebar.vue')['default']
-    LoanInsights: typeof import('./src/components/LoanInsights.vue')['default']
+    LoanInsights: typeof import('./src/components/app/LoanInsights.vue')['default']
     LoanTable: typeof import('./src/components/app/LoanTable.vue')['default']
     Navigation: typeof import('./src/components/app/Navigation.vue')['default']
     NavigationMenu: typeof import('./src/components/ui/navigation-menu/NavigationMenu.vue')['default']
