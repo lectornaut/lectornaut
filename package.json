@@ -38,7 +38,7 @@
     "firebase": "^10.14.0",
     "fuse.js": "^7.0.0",
     "hotkeys-js": "^3.13.7",
-    "lucide-vue-next": "^0.447.0",
+    "lucide-vue-next": "^0.451.0",
     "mitt": "^3.0.1",
     "nprogress": "^0.2.0",
     "radix-vue": "^1.9.7",

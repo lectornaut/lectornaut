@@ -62,8 +62,8 @@ importers:
         specifier: ^3.13.7
         version: 3.13.7
       lucide-vue-next:
-        specifier: ^0.447.0
-        version: 0.447.0(vue@3.5.11(typescript@5.6.2))
+        specifier: ^0.451.0
+        version: 0.451.0(vue@3.5.11(typescript@5.6.2))
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
@@ -4403,6 +4403,12 @@ packages:
         integrity: sha512-uJcB/FKZtBMCJpK8MQji6bJHgu1tixKPxRLeGkNzBoOZzpnZUJm0jm2/sBDWcuBx1dYgxV4JU+g5hmNxCyAmdA==,
       }
 
+  confbox@0.1.8:
+    resolution:
+      {
+        integrity: sha512-RMtmw0iFkeR4YV+fUOSucriAQNb9g8zFR52MWCtl+cCZOFRNL6zeB395vPzFhEjjn4fMxXudmELnl/KF/WrK6w==,
+      }
+
   consola@3.2.3:
     resolution:
       {
@@ -6468,10 +6474,10 @@ packages:
         integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==,
       }
 
-  lucide-vue-next@0.447.0:
+  lucide-vue-next@0.451.0:
     resolution:
       {
-        integrity: sha512-NXD61EHwgdIHZsVxFGYHowrPZnhWJOByVJ23LJB28BnXII29Cg157DmIbvrJ7idwbfhwYhCZ2moRfKOCwIvNiw==,
+        integrity: sha512-EJ3tDuZqFdps6wt4hhqJ/EzCE7KbhClkncvnqXiVE6Ni5jzA5XS1Ut5yCGXjO/GBIe39t3qmNRQIRszqdCDuBA==,
       }
     peerDependencies:
       vue: ">=3.0.1"
@@ -7032,6 +7038,12 @@ packages:
     resolution:
       {
         integrity: sha512-+ifYuSSqOQ8CqP4MbZA5hDpb97n3E8SVWdJe+Wms9kj745lmd3b7EZJiqvmLwAlmRfjrI7Hi5z3kdBJ93lFNPA==,
+      }
+
+  pkg-types@1.2.1:
+    resolution:
+      {
+        integrity: sha512-sQoqa8alT3nHjGuTjuKgOnvjo4cljkufdtLMnO2LBP/wRwuDlo1tkaEdMxCRhyGRPacv/ztlZgDPm2b7FAmEvw==,
       }
 
   popmotion@11.0.5:
@@ -11113,7 +11125,7 @@ snapshots:
       knitwork: 1.1.0
       mlly: 1.7.2
       pathe: 1.1.2
-      pkg-types: 1.2.0
+      pkg-types: 1.2.1
       scule: 1.3.0
       semver: 7.6.3
       ufo: 1.5.4
@@ -11154,7 +11166,7 @@ snapshots:
       defu: 6.1.4
       hookable: 5.5.3
       pathe: 1.1.2
-      pkg-types: 1.2.0
+      pkg-types: 1.2.1
       scule: 1.3.0
       std-env: 3.7.0
       ufo: 1.5.4
@@ -12381,6 +12393,9 @@ snapshots:
   concat-map@0.0.1: {}
 
   confbox@0.1.7: {}
+
+  confbox@0.1.8:
+    optional: true
 
   consola@3.2.3: {}
 
@@ -13623,7 +13638,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-vue-next@0.447.0(vue@3.5.11(typescript@5.6.2)):
+  lucide-vue-next@0.451.0(vue@3.5.11(typescript@5.6.2)):
     dependencies:
       vue: 3.5.11(typescript@5.6.2)
 
@@ -13739,7 +13754,7 @@ snapshots:
     dependencies:
       acorn: 8.12.1
       pathe: 1.1.2
-      pkg-types: 1.2.0
+      pkg-types: 1.2.1
       ufo: 1.5.4
     optional: true
 
@@ -13918,6 +13933,13 @@ snapshots:
       confbox: 0.1.7
       mlly: 1.7.1
       pathe: 1.1.2
+
+  pkg-types@1.2.1:
+    dependencies:
+      confbox: 0.1.8
+      mlly: 1.7.2
+      pathe: 1.1.2
+    optional: true
 
   popmotion@11.0.5:
     dependencies:
@@ -15009,7 +15031,7 @@ snapshots:
       magic-string: 0.30.11
       mlly: 1.7.2
       pathe: 1.1.2
-      pkg-types: 1.2.0
+      pkg-types: 1.2.1
       scule: 1.3.0
       strip-literal: 2.1.0
       unplugin: 1.14.1
