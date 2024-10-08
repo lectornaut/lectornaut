@@ -28,7 +28,7 @@ emitter.on("Menu.Help.Toggle", () => {
           <span class="text-muted-foreground"> ? </span></TooltipContent
         >
         <DropdownMenuContent class="w-48" align="start" side="top">
-          <DropdownMenuLabel> Help and Support </DropdownMenuLabel>
+          <DropdownMenuLabel>Help and Support</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem class="gap-2">

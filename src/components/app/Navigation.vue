@@ -4,6 +4,7 @@ import IconLoans from "~icons/lucide/coins"
 import IconHome from "~icons/lucide/home"
 import IconAccounts from "~icons/lucide/landmark"
 import IconSavings from "~icons/lucide/piggy-bank"
+import IconBalances from "~icons/lucide/wallet-minimal"
 
 const links = [
   {
@@ -11,6 +12,12 @@ const links = [
     label: "Systems Operational",
     icon: IconHome,
     to: "/home",
+  },
+  {
+    title: "Balances",
+    label: "Systems Operational",
+    icon: IconBalances,
+    to: "/balances",
   },
   {
     title: "Transactions",

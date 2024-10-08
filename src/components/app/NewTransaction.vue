@@ -7,7 +7,7 @@
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent class="w-56" align="end">
-      <DropdownMenuLabel> New Transaction </DropdownMenuLabel>
+      <DropdownMenuLabel>New Transaction</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuItem class="gap-3">

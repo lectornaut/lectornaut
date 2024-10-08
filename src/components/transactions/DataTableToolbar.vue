@@ -18,7 +18,7 @@ const isFiltered = computed(
 
 <template>
   <div class="flex items-center justify-between gap-2">
-    <div class="flex flex-1 items-center space-x-2">
+    <div class="flex items-center space-x-2">
       <Input
         placeholder="Filter tasks..."
         :model-value="

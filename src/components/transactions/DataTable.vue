@@ -51,6 +51,10 @@ const table = useVueTable({
     get rowSelection() {
       return rowSelection.value
     },
+    columnPinning: {
+      left: ["select"],
+      right: ["actions"],
+    },
   },
   enableRowSelection: true,
   onSortingChange: (updaterOrValue) => valueUpdater(updaterOrValue, sorting),
@@ -70,9 +74,9 @@ const table = useVueTable({
 </script>
 
 <template>
-  <div class="grid gap-2">
+  <div class="flex flex-col gap-2">
     <DataTableToolbar :table="table" />
-    <div class="grow rounded-md border">
+    <div class="grid grow rounded-md border">
       <Table no-scrollbar>
         <TableHeader>
           <TableRow
