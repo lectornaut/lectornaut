@@ -1,7 +1,9 @@
 import js from "@eslint/js"
+import tsParser from "@typescript-eslint/parser"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 import eslintPluginVue from "eslint-plugin-vue"
 import ts from "typescript-eslint"
+import vueParser from "vue-eslint-parser"
 
 export default ts.config(
   js.configs.recommended,
@@ -14,10 +16,11 @@ export default ts.config(
       "vue/require-default-prop": "off",
       "no-undef": "off",
     },
-    files: ["*.vue", "**/*.vue"],
+    files: ["**/*.vue"],
     languageOptions: {
+      parser: vueParser,
       parserOptions: {
-        parser: "@typescript-eslint/parser",
+        parser: tsParser,
       },
     },
   }
