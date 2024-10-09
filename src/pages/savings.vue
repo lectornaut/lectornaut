@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 useHead({
-  title: "Balances",
+  title: "Savings",
 })
 </script>
 
@@ -16,8 +16,8 @@ useHead({
           <NewTransaction />
         </div>
       </div>
-      <BalancesInsights />
-      <BalancesTable />
+      <SavingsInsights />
+      <SavingsTable />
     </div>
   </div>
 </template>

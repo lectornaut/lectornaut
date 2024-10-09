@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DropdownAction from "./DataTableDemoColumn.vue"
+import DropdownAction from "./BalancesDropdownAction.vue"
 import { Button } from "@/components/ui/button"
 import { valueUpdater } from "@/lib/utils"
 import type {

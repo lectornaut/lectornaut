@@ -38,8 +38,10 @@ useHead({
                 stroke-width="0"
                 class="fill-primary font-instrument tracking-tighter"
               >
-                A place to
-                <tspan alignment-baseline="middle" class="italic">dump</tspan>
+                You can't
+                <tspan alignment-baseline="middle" class="italic">
+                  improve
+                </tspan>
               </text>
             </svg>
             <svg
@@ -59,7 +61,10 @@ useHead({
                 stroke-width="0"
                 class="fill-primary font-instrument tracking-tighter"
               >
-                your thoughts.
+                what you can't
+                <tspan alignment-baseline="middle" class="italic">
+                  measure
+                </tspan>
               </text>
             </svg>
           </div>

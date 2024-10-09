@@ -26,7 +26,7 @@ import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
           <TooltipContent> Expand Sidebar </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <Notifications />
+      <TasksNotifications />
     </span>
     <span class="flex items-center gap-2">
       <CommandK />

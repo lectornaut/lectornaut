@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { columns } from "@/components/transactions/columns"
+import { columns } from "@/components/app/transactions/columns"
 import tasks from "@/data/tasks.json"
 
 useHead({
