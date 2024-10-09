@@ -74,7 +74,7 @@
     @apply selection:text-secondary-foreground;
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-background;
+    @apply bg-background/95;
     @apply text-foreground;
     @apply text-xs;
     @apply select-none;

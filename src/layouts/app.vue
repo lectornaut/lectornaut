@@ -50,7 +50,11 @@ watch(rightSidebarVisibility, (value) => {
       class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
       @dblclick="emitter.emit('Sidebar.Left.Toggle')"
     />
-    <ResizablePanel :default-size="60" :min-size="50" class="flex flex-col">
+    <ResizablePanel
+      :default-size="60"
+      :min-size="50"
+      class="flex flex-col bg-background"
+    >
       <Toolbar />
       <main
         class="no-scrollbar flex grow flex-col overflow-auto overscroll-none"

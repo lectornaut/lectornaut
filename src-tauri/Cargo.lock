@@ -3817,6 +3817,7 @@ dependencies = [
  "tauri-plugin-deep-link",
  "tauri-plugin-shell",
  "tauri-plugin-theme",
+ "window-vibrancy",
 ]
 
 [[package]]
