@@ -32,7 +32,7 @@ function template(d: Record<string, unknown>) {
     )
     const TooltipComponent = props.customTooltip ?? ChartTooltip
     createApp(TooltipComponent, {
-      title: d[props.index].toString(),
+      title: d[props.index]?.toString() ?? "",
       data: omittedData,
     }).mount(componentDiv)
     wm.set(d, componentDiv.innerHTML)
