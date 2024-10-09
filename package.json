@@ -117,5 +117,10 @@
   },
   "optionalDependencies": {
     "@img/sharp-win32-x64": "^0.33.5"
+  },
+  "resolutions": {
+    "@img/sharp-win32-x64": "^0.33.5",
+    "sharp": "^0.33.5",
+    "sharp-ico": "^0.1.5"
   }
 }
