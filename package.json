@@ -4,6 +4,20 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.1",
+  "pnpm": {
+    "supportedArchitectures": {
+      "os": [
+        "win32",
+        "linux",
+        "darwin",
+        "current"
+      ],
+      "cpu": [
+        "x64",
+        "arm64"
+      ]
+    }
+  },
   "scripts": {
     "dev": "vite --host",
     "build": "vue-tsc --noEmit && vite build",
