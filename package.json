@@ -99,5 +99,8 @@
     "vue-eslint-parser": "^9.4.3",
     "vue-tsc": "^2.1.6",
     "workbox-window": "^7.1.0"
+  },
+  "optionalDependencies": {
+    "@img/sharp-win32-x64": "^0.33.5"
   }
 }
