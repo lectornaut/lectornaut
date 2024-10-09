@@ -2,7 +2,7 @@
   <ScrollArea>
     <div class="space-y-8">
       <div class="flex items-center">
-        <Avatar class="h-9 w-9">
+        <Avatar class="size-9">
           <AvatarImage src="/avatars/01.png" alt="Avatar" />
           <AvatarFallback>OM</AvatarFallback>
         </Avatar>
@@ -14,7 +14,7 @@
       </div>
       <div class="flex items-center">
         <Avatar
-          class="flex h-9 w-9 items-center justify-center space-y-0 border"
+          class="flex size-9 items-center justify-center space-y-0 border"
         >
           <AvatarImage src="/avatars/02.png" alt="Avatar" />
           <AvatarFallback>JL</AvatarFallback>
@@ -26,7 +26,7 @@
         <div class="ml-auto font-geist text-sm font-medium">+$39.00</div>
       </div>
       <div class="flex items-center">
-        <Avatar class="h-9 w-9">
+        <Avatar class="size-9">
           <AvatarImage src="/avatars/03.png" alt="Avatar" />
           <AvatarFallback>IN</AvatarFallback>
         </Avatar>
@@ -37,7 +37,7 @@
         <div class="ml-auto font-geist text-sm font-medium">+$299.00</div>
       </div>
       <div class="flex items-center">
-        <Avatar class="h-9 w-9">
+        <Avatar class="size-9">
           <AvatarImage src="/avatars/04.png" alt="Avatar" />
           <AvatarFallback>WK</AvatarFallback>
         </Avatar>
@@ -48,7 +48,7 @@
         <div class="ml-auto font-geist text-sm font-medium">+$99.00</div>
       </div>
       <div class="flex items-center">
-        <Avatar class="h-9 w-9">
+        <Avatar class="size-9">
           <AvatarImage src="/avatars/05.png" alt="Avatar" />
           <AvatarFallback>SD</AvatarFallback>
         </Avatar>

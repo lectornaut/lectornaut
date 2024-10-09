@@ -13,7 +13,7 @@ const emit = defineEmits({
       <span
         class="mb-4 flex place-items-center rounded-2xl border p-3 shadow-lg"
       >
-        <icon-lucide-badge-check class="h-8 w-8" />
+        <icon-lucide-badge-check class="size-8" />
       </span>
       <h1 class="text-lg font-semibold leading-none tracking-tight">
         Email sent

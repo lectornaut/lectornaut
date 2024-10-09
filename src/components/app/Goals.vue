@@ -3,9 +3,9 @@
     <div class="space-y-8">
       <div class="flex items-center gap-4">
         <span
-          class="flex h-9 w-9 items-center justify-center rounded border bg-muted"
+          class="flex size-9 items-center justify-center rounded border bg-muted"
         >
-          <icon-lucide-car class="h-4 w-4" />
+          <icon-lucide-car class="size-4" />
         </span>
         <div class="flex grow flex-col gap-2">
           <div class="flex items-center justify-between">

@@ -50,7 +50,7 @@ const selectedTeam = ref<Team>(
             class="grow justify-start gap-3 truncate data-[state=open]:bg-muted"
             size="xs"
           >
-            <Avatar class="h-4 w-4">
+            <Avatar class="size-4">
               <AvatarImage
                 :src="selectedTeam.value === 'personal' ? user?.photoURL! : ''"
                 referrerpolicy="no-referrer"
@@ -93,7 +93,7 @@ const selectedTeam = ref<Team>(
                     }
                   "
                 >
-                  <Avatar class="h-4 w-4">
+                  <Avatar class="size-4">
                     <AvatarImage
                       :src="team.value === 'personal' ? user?.photoURL! : ''"
                       referrerpolicy="no-referrer"

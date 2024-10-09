@@ -237,7 +237,7 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                     <TooltipTrigger as-child>
                       <Button
                         v-if="photoURL"
-                        class="absolute right-0 top-0 h-4 w-4 rounded-full border-2 border-background p-2 opacity-0 transition group-hover:opacity-100"
+                        class="absolute right-0 top-0 size-4 rounded-full border-2 border-background p-2 opacity-0 transition group-hover:opacity-100"
                         @click="photoURL = ''"
                       >
                         <icon-lucide-x />
@@ -359,7 +359,7 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
               class="flex items-center gap-4"
             >
               <div class="relative">
-                <Avatar class="h-8 w-8">
+                <Avatar class="size-8">
                   <AvatarImage
                     :src="provider.photoURL as string"
                     :alt="provider.displayName"
@@ -370,7 +370,7 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                   </AvatarFallback>
                 </Avatar>
                 <span
-                  class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-background"
+                  class="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-background bg-background"
                 >
                   <icon-logos-google-icon
                     v-if="provider.providerId === 'google.com'"

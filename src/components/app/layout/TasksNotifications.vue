@@ -113,7 +113,7 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger class="h-7 gap-2 px-2" size="xs">
           <span
-            class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <icon-lucide-check-check />
           </span>
@@ -144,7 +144,7 @@ const components: { title: string; href: string; description: string }[] = [
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
-                    <icon-lucide-asterisk class="h-5 w-5" />
+                    <icon-lucide-asterisk class="size-5" />
                     <div class="flex flex-col">
                       <span class="text-sm font-medium">{{
                         component.title
@@ -163,7 +163,7 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger class="h-7 gap-2 px-2" size="xs">
           <span
-            class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <icon-lucide-bell />
           </span>
@@ -194,7 +194,7 @@ const components: { title: string; href: string; description: string }[] = [
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
-                    <icon-lucide-asterisk class="h-5 w-5" />
+                    <icon-lucide-asterisk class="size-5" />
                     <div class="flex flex-col">
                       <span class="text-sm font-medium">{{
                         component.title

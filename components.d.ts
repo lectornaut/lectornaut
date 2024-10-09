@@ -174,6 +174,7 @@ declare module 'vue' {
     IconLucideKeyboard: typeof import('~icons/lucide/keyboard')['default']
     IconLucideLanguages: typeof import('~icons/lucide/languages')['default']
     IconLucideLeaf: typeof import('~icons/lucide/leaf')['default']
+    IconLucideList: typeof import('~icons/lucide/list')['default']
     IconLucideLoader: typeof import('~icons/lucide/loader')['default']
     IconLucideLogOut: typeof import('~icons/lucide/log-out')['default']
     IconLucideMail: typeof import('~icons/lucide/mail')['default']
