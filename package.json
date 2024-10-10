@@ -4,20 +4,6 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.1",
-  "pnpm": {
-    "supportedArchitectures": {
-      "os": [
-        "win32",
-        "linux",
-        "darwin",
-        "current"
-      ],
-      "cpu": [
-        "x64",
-        "arm64"
-      ]
-    }
-  },
   "scripts": {
     "dev": "vite --host",
     "build": "vue-tsc --noEmit && vite build",
@@ -118,6 +104,7 @@
     "@img/sharp-win32-x64": "^0.33.5"
   },
   "resolutions": {
-    "sharp-ico": "^0.1.5"
+    "sharp-ico": "^0.1.5",
+    "sharp": "^0.33.5"
   }
 }
