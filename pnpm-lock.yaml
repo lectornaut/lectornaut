@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  sharp-ico: ^0.1.5
-
 importers:
   .:
     dependencies:
@@ -110,6 +107,9 @@ importers:
       "@img/sharp-win32-x64":
         specifier: ^0.33.5
         version: 0.33.5
+      sharp-ico:
+        specifier: ^0.1.5
+        version: 0.1.5
     devDependencies:
       "@eslint/js":
         specifier: ^9.12.0
