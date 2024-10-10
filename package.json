@@ -4,20 +4,6 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.1",
-  "pnpm": {
-    "supportedArchitectures": {
-      "os": [
-        "win32",
-        "linux",
-        "darwin",
-        "current"
-      ],
-      "cpu": [
-        "x64",
-        "arm64"
-      ]
-    }
-  },
   "scripts": {
     "dev": "vite --host",
     "build": "vue-tsc --noEmit && vite build",
@@ -93,7 +79,6 @@
     "prettier-plugin-tailwindcss": "^0.6.8",
     "sass-embedded": "^1.79.4",
     "sharp": "^0.33.5",
-    "sharp-ico": "^0.1.5",
     "stylelint": "^16.9.0",
     "stylelint-config-standard": "^36.0.1",
     "stylelint-config-standard-scss": "^13.1.0",
@@ -119,8 +104,6 @@
     "@img/sharp-win32-x64": "^0.33.5"
   },
   "resolutions": {
-    "@img/sharp-win32-x64": "^0.33.5",
-    "sharp": "^0.33.5",
     "sharp-ico": "^0.1.5"
   }
 }
