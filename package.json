@@ -101,6 +101,7 @@
     "workbox-window": "^7.1.0"
   },
   "resolutions": {
-    "sharp-ico": "^0.1.5"
+    "sharp-ico": "^0.1.5",
+    "sharp": "^0.33.5"
   }
 }
