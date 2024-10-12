@@ -30,7 +30,7 @@ emitter.on("Dialog.Settings.Open", (event: unknown) => {
 const user = useCurrentUser()
 
 const displayName = computed({
-  get: () => user.value?.displayName ?? "",
+  get: () => user.value?.displayName ?? "User",
   set: (value: string) => {
     updateCurrentUserProfile({ displayName: value })
   },

@@ -1,39 +1,134 @@
 <script setup lang="ts">
-const message = ref("")
+import { getInitials } from "@/helpers/utilities"
+import emitter from "@/modules/mitt"
+import { useCurrentUser } from "vuefire"
+
+const ask = ref("")
+const user = useCurrentUser()
+
+const displayName = computed(() => user.value?.displayName ?? "User")
+const photoURL = computed(() => user.value?.photoURL ?? "")
 </script>
 
 <template>
-  <aside class="no-scrollbar flex grow flex-col overflow-auto">
-    <div class="flex grow flex-col">
-      <div class="flex grow flex-col gap-2 p-2">
-        <div class="flex grow">messages</div>
+  <aside class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
+    <div>
+      <div
+        data-tauri-drag-region
+        class="flex items-center justify-between gap-2 p-2"
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                v-motion-fade
+                variant="ghost"
+                size="xs"
+                @click="emitter.emit('Sidebar.Right.Toggle')"
+              >
+                <icon-lucide-chevrons-right />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Collapse Sidebar </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    class="text-muted-foreground data-[state=open]:bg-muted"
+                  >
+                    <icon-lucide-ellipsis />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent> More </TooltipContent>
+              <DropdownMenuContent align="end">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem class="gap-2">
+                    <icon-lucide-download />
+                    <span>Export transcript</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem class="gap-2">
+                    <icon-lucide-trash />
+                    <span>Clear chat</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <Separator />
+    </div>
+    <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
+      <div class="flex grow flex-col gap-2 p-2">
+        <div
+          v-for="message in 24"
+          :key="message"
+          class="flex gap-2"
+          :class="
+            message % 2 !== 0 ? 'ml-16 flex-row-reverse' : 'mr-16 flex-row'
+          "
+        >
+          <Avatar v-if="message % 2 !== 0" class="size-4">
+            <AvatarImage
+              :src="photoURL! ?? ''"
+              referrerpolicy="no-referrer"
+              :alt="displayName"
+            />
+            <AvatarFallback>
+              {{ getInitials(displayName) }}
+            </AvatarFallback>
+          </Avatar>
+          <icon-mingcute-ai-fill v-else />
+          <div
+            class="flex w-auto shrink rounded-xl px-4 py-3"
+            :class="
+              message % 2 !== 0
+                ? 'ml-auto bg-primary/15'
+                : 'mr-auto bg-primary/5'
+            "
+          >
+            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Odio
+            necessitatibus deserunt cumque quibusdam minima et corporis ratione
+            a ipsa temporibus modi in neque, reiciendis nostrum voluptatibus!
+            Enim ut modi repudiandae?
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <Separator />
       <div class="flex flex-col gap-2 p-2">
-        <span class="flex items-center gap-2 p-1 text-muted-foreground/75">
-          <icon-mingcute-ai-fill />
-          <h3>AI suggestions</h3>
-        </span>
+        <div class="flex items-center gap-2 p-1 text-muted-foreground/75">
+          <icon-mingcute-pencil-2-ai-fill />
+          <RadiantText class="w-full"> Try these prompts </RadiantText>
+        </div>
         <div class="grid gap-2 md:grid-cols-2">
-          <Card class="cursor-pointer transition hover:shadow-md">
+          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">What are the</CardTitle>
               <CardDescription> benefits of upgrading? </CardDescription>
             </CardHeader>
           </Card>
-          <Card class="cursor-pointer transition hover:shadow-md">
+          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">How do I</CardTitle>
               <CardDescription> upgrade my account? </CardDescription>
             </CardHeader>
           </Card>
-          <Card class="cursor-pointer transition hover:shadow-md">
+          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">How do I</CardTitle>
               <CardDescription> cancel my subscription? </CardDescription>
             </CardHeader>
           </Card>
-          <Card class="cursor-pointer transition hover:shadow-md">
+          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">How do I</CardTitle>
               <CardDescription> change my password? </CardDescription>
@@ -47,14 +142,14 @@ const message = ref("")
             <icon-mingcute-ai-fill />
           </span>
           <Input
-            v-model="message"
+            v-model="ask"
             placeholder="Type your message here."
-            class="truncate pl-8 pr-12 focus:border-inherit focus:ring-0"
+            class="truncate rounded-full pl-8 pr-12 focus:border-inherit focus:ring-0"
           />
           <span
             class="absolute inset-y-0 end-0 flex items-center justify-center px-2"
           >
-            <Button size="xs">
+            <Button size="xs" class="rounded-full">
               <icon-lucide-arrow-up />
             </Button>
           </span>

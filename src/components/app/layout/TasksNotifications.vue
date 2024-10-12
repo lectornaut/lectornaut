@@ -113,9 +113,9 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger class="h-7 gap-2 px-2" size="xs">
           <span
-            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
-            <icon-lucide-check-check />
+            <icon-mingcute-check-2-fill />
           </span>
           Tasks
         </NavigationMenuTrigger>
@@ -144,7 +144,10 @@ const components: { title: string; href: string; description: string }[] = [
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
-                    <icon-lucide-asterisk class="size-5" />
+                    <span
+                      class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
+                      ><icon-lucide-asterisk
+                    /></span>
                     <div class="flex flex-col">
                       <span class="text-sm font-medium">{{
                         component.title
@@ -163,9 +166,9 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger class="h-7 gap-2 px-2" size="xs">
           <span
-            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
-            <icon-lucide-bell />
+            <icon-mingcute-notification-fill />
           </span>
           Notifications
         </NavigationMenuTrigger>
@@ -194,7 +197,10 @@ const components: { title: string; href: string; description: string }[] = [
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
-                    <icon-lucide-asterisk class="size-5" />
+                    <span
+                      class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
+                      ><icon-lucide-asterisk
+                    /></span>
                     <div class="flex flex-col">
                       <span class="text-sm font-medium">{{
                         component.title

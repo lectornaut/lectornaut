@@ -1,49 +1,5 @@
 <script lang="ts" setup>
-import IconTransactions from "~icons/lucide/arrow-left-right"
-import IconLoans from "~icons/lucide/coins"
-import IconHome from "~icons/lucide/home"
-import IconAccounts from "~icons/lucide/landmark"
-import IconSavings from "~icons/lucide/piggy-bank"
-import IconBalances from "~icons/lucide/wallet-minimal"
-
-const links = [
-  {
-    title: "Home",
-    label: "Systems Operational",
-    icon: IconHome,
-    to: "/home",
-  },
-  {
-    title: "Balances",
-    label: "Systems Operational",
-    icon: IconBalances,
-    to: "/balances",
-  },
-  {
-    title: "Transactions",
-    label: "Systems Operational",
-    icon: IconTransactions,
-    to: "/transactions",
-  },
-  {
-    title: "Savings",
-    label: "Systems Operational",
-    icon: IconSavings,
-    to: "/savings",
-  },
-  {
-    title: "Loans",
-    label: "Systems Operational",
-    icon: IconLoans,
-    to: "/loans",
-  },
-  {
-    title: "Accounts",
-    label: "Systems Operational",
-    icon: IconAccounts,
-    to: "/accounts",
-  },
-]
+import { links } from "@/data/data"
 </script>
 
 <template>

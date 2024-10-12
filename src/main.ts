@@ -11,9 +11,10 @@ import { initTheme } from "@/modules/theme"
 import { InferSeoMetaPlugin } from "@unhead/addons"
 import { createHead } from "@unhead/vue"
 import { MotionPlugin } from "@vueuse/motion"
+import { ReCaptchaEnterpriseProvider } from "firebase/app-check"
 import "unfonts.css"
 import { createApp } from "vue"
-import { VueFire, VueFireAuth } from "vuefire"
+import { VueFire, VueFireAuth, VueFireAppCheck } from "vuefire"
 
 const head = createHead({
   plugins: [InferSeoMetaPlugin()],
@@ -21,12 +22,23 @@ const head = createHead({
 
 const app = createApp(App)
 
-app.use(router)
-app.use(head)
 app.use(VueFire, {
   firebaseApp,
-  modules: [VueFireAuth()],
+  modules: [
+    VueFireAppCheck({
+      debug: process.env.NODE_ENV !== "production",
+      provider: new ReCaptchaEnterpriseProvider(
+        process.env.NODE_ENV !== "production"
+          ? "B864B9A2-3F56-4964-B4E1-FDD3F72D867D"
+          : "6LcbLl8qAAAAAGSsh5k2tAOP1e1yqFZZ3rR_JvZ2"
+      ),
+      isTokenAutoRefreshEnabled: true,
+    }),
+    VueFireAuth(),
+  ],
 })
+app.use(router)
+app.use(head)
 app.use(MotionPlugin)
 app.use(i18n)
 
