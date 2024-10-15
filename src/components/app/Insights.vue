@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { VisStackedBar, VisXYContainer } from "@unovis/vue"
 
 type Data = { revenue: number; subscription: number }

@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { buttonVariants } from "@/components/ui/button"
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { BulletLegend } from "@unovis/ts"
@@ -32,8 +32,8 @@ onMounted(() => {
 
 function onLegendItemClick(d: BulletLegendItemInterface, i: number) {
   emits("legendItemClick", d, i)
-  const isBulletActive = !props.items[i]?.inactive
-  const isFilterApplied = props.items.some((item) => item.inactive)
+  const isBulletActive = !props?.items[i]!.inactive
+  const isFilterApplied = props.items.some((i) => i.inactive)
   if (isFilterApplied && isBulletActive) {
     // reset filter
     emits(

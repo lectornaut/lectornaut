@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { shortcuts } from "@/helpers/shortcuts"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"

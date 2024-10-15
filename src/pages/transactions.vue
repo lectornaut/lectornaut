@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { columns } from "@/components/app/transactions/columns"
 import tasks from "@/data/tasks.json"
 

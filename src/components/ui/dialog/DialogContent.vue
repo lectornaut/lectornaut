@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { X } from "lucide-vue-next"
 import {
@@ -10,7 +10,7 @@ import {
   DialogPortal,
   useForwardPropsEmits,
 } from "radix-vue"
-import { type HTMLAttributes, computed } from "vue"
+import { computed, type HTMLAttributes } from "vue"
 
 const props = defineProps<
   DialogContentProps & { class?: HTMLAttributes["class"] }

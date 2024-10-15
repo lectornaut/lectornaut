@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import emitter from "@/modules/mitt"
 
 const openSupport = ref(false)

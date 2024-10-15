@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type SheetVariants, sheetVariants } from "."
 import { cn } from "@/lib/utils"
 import { X } from "lucide-vue-next"
@@ -11,7 +11,7 @@ import {
   DialogPortal,
   useForwardPropsEmits,
 } from "radix-vue"
-import { type HTMLAttributes, computed } from "vue"
+import { computed, type HTMLAttributes } from "vue"
 
 interface SheetContentProps extends DialogContentProps {
   class?: HTMLAttributes["class"]

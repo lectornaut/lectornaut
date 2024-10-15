@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Task } from "@/data/schema"
 import type { Column } from "@tanstack/vue-table"
 import type { Component } from "vue"

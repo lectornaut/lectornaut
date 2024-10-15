@@ -121,7 +121,7 @@ const totalValue = computed(() =>
                 elements.forEach(
                   (el) => (el.style.opacity = `${filterOpacity}`)
                 )
-                elements[i]?.style.setProperty('opacity', '1')
+                elements[i]!.style.opacity = '1'
               }
             },
           },

@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { ChartTooltip } from "."
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { omit } from "@unovis/ts"
@@ -32,7 +32,7 @@ function template(d: Record<string, unknown>) {
     )
     const TooltipComponent = props.customTooltip ?? ChartTooltip
     createApp(TooltipComponent, {
-      title: d[props.index]?.toString() ?? "",
+      title: d[props.index]!.toString(),
       data: omittedData,
     }).mount(componentDiv)
     wm.set(d, componentDiv.innerHTML)
@@ -40,7 +40,7 @@ function template(d: Record<string, unknown>) {
   }
 }
 
-function color(_d: Record<string, unknown>, i: number) {
+function color(_d: unknown, i: number) {
   return props.colors[i] ?? "transparent"
 }
 </script>

@@ -85,7 +85,12 @@ const photoURL = computed(() => user.value?.photoURL ?? "")
               {{ getInitials(displayName) }}
             </AvatarFallback>
           </Avatar>
-          <icon-mingcute-ai-fill v-else />
+          <span
+            v-else
+            class="flex aspect-square h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
+          >
+            <icon-mingcute-ai-fill />
+          </span>
           <div
             class="flex w-auto shrink rounded-xl px-4 py-3"
             :class="

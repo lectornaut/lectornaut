@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import DataTableFacetedFilter from "./DataTableFacetedFilter.vue"
 import DataTableViewOptions from "./DataTableViewOptions.vue"
 import { priorities, statuses } from "@/data/data"

@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { languages } from "@/helpers/defaults"
 
 const { locale } = useI18n()

@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type ButtonVariants, buttonVariants } from "."
 import { cn } from "@/lib/utils"
 import { Primitive, type PrimitiveProps } from "radix-vue"

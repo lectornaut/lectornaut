@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { SelectItemText, type SelectItemTextProps } from "radix-vue"
 
 const props = defineProps<SelectItemTextProps>()

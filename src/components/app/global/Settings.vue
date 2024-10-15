@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { themes } from "@/helpers/defaults"
 import { languages } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
@@ -7,6 +7,7 @@ import { store } from "@/modules/theme"
 import {
   deleteUser,
   sendEmailVerification,
+  unlink,
   verifyBeforeUpdateEmail,
 } from "firebase/auth"
 import { ref as storageRef } from "firebase/storage"
@@ -84,7 +85,10 @@ const changeEmail = async () => {
     })
 }
 
+const deletingAccount = ref(false)
 const deleteAccount = async () => {
+  deletingAccount.value = true
+
   await deleteUser(user.value!)
     .then(() => {
       toast.success("Account deleted", {
@@ -95,6 +99,35 @@ const deleteAccount = async () => {
       toast.error("Failed to delete account", {
         description: error.message,
       })
+    })
+    .finally(() => {
+      deletingAccount.value = false
+    })
+}
+
+const unlinkingProviderMap = ref<Record<string, boolean>>({})
+const unlinkProvider = async (providerId: string) => {
+  unlinkingProviderMap.value = {
+    ...unlinkingProviderMap.value,
+    [providerId]: true,
+  }
+
+  await unlink(user.value!, providerId)
+    .then(() => {
+      toast.success("Provider unlinked", {
+        description: "The provider has been successfully unlinked.",
+      })
+    })
+    .catch((error) => {
+      toast.error("Failed to unlink provider", {
+        description: error.message,
+      })
+    })
+    .finally(() => {
+      unlinkingProviderMap.value = {
+        ...unlinkingProviderMap.value,
+        [providerId]: false,
+      }
     })
 }
 
@@ -154,6 +187,17 @@ watch(files, uploadPicture)
 
 const { locale } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
+
+const getComputedProviderName = (provider: string) => {
+  switch (provider) {
+    case "google.com":
+      return "Google"
+    case "password":
+      return "Primary email"
+    default:
+      return "Unknown"
+  }
+}
 </script>
 
 <template>
@@ -344,7 +388,7 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                   Connected accounts
                 </p>
                 <p class="flex items-center gap-2 text-muted-foreground">
-                  Manage your connected accounts.
+                  Manage your connected accounts and sign-in methods.
                 </p>
               </div>
               <div class="ml-auto flex gap-2">
@@ -354,42 +398,82 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
               </div>
             </div>
             <div
-              v-for="provider in user?.providerData"
-              :key="provider.providerId"
-              class="flex items-center gap-4"
+              v-if="user?.providerData && user.providerData.length > 0"
+              lass="flex flex-col-reverse gap-4"
             >
-              <div class="relative">
-                <Avatar class="size-8">
-                  <AvatarImage
-                    :src="provider.photoURL as string"
-                    :alt="provider.displayName"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback>
-                    {{ getInitials(provider.displayName ?? "") }}
-                  </AvatarFallback>
-                </Avatar>
-                <span
-                  class="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-background bg-background"
-                >
-                  <icon-logos-google-icon
-                    v-if="provider.providerId === 'google.com'"
-                  />
-                </span>
+              <div
+                v-for="provider in user?.providerData"
+                :key="provider.providerId"
+                class="flex items-center gap-4"
+              >
+                <div class="relative">
+                  <Avatar class="size-8">
+                    <AvatarImage
+                      :src="provider.photoURL as string"
+                      :alt="provider.displayName"
+                      referrerpolicy="no-referrer"
+                    />
+                    <AvatarFallback>
+                      {{ getInitials(provider.displayName ?? "") }}
+                    </AvatarFallback>
+                  </Avatar>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <span
+                          class="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-background bg-background"
+                        >
+                          <icon-logos-google-icon
+                            v-if="provider.providerId === 'google.com'"
+                            class="text-muted-foreground"
+                          />
+                          <icon-heroicons-check-badge-solid
+                            v-else-if="provider.providerId === 'password'"
+                            class="text-green-500"
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {{ getComputedProviderName(provider.providerId) }}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <p class="text-sm font-medium leading-none">
+                    {{ provider.displayName }}
+                  </p>
+                  <p class="flex items-center gap-2 text-muted-foreground">
+                    {{ provider.email }}
+                  </p>
+                </div>
+                <div class="ml-auto flex gap-2">
+                  <Button
+                    v-if="provider.providerId === 'password'"
+                    size="xs"
+                    variant="secondary"
+                    class="gap-2"
+                  >
+                    Change password
+                  </Button>
+                  <Button
+                    :disabled="unlinkingProviderMap[provider.providerId]"
+                    size="xs"
+                    variant="destructive"
+                    class="gap-2"
+                    @click="unlinkProvider(provider.providerId)"
+                  >
+                    <icon-lucide-loader
+                      v-if="unlinkingProviderMap[provider.providerId]"
+                      class="animate-spin"
+                    />
+                    Disconnect
+                  </Button>
+                </div>
               </div>
-              <div class="flex flex-col gap-1">
-                <p class="text-sm font-medium leading-none">
-                  {{ provider.displayName }}
-                </p>
-                <p class="flex items-center gap-2 text-muted-foreground">
-                  {{ provider.email }}
-                </p>
-              </div>
-              <div class="ml-auto flex gap-2">
-                <Button size="xs" variant="secondary" class="gap-2">
-                  Disconnect
-                </Button>
-              </div>
+            </div>
+            <div v-else class="text-muted-foreground">
+              No connected accounts.
             </div>
             <Separator />
             <div class="flex items-center gap-4">
@@ -416,9 +500,14 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
+                        :disabled="deletingAccount"
                         variant="destructive"
                         @click="deleteAccount"
                       >
+                        <icon-lucide-loader
+                          v-if="deletingAccount"
+                          class="animate-spin"
+                        />
                         Delete account
                       </AlertDialogAction>
                     </AlertDialogFooter>

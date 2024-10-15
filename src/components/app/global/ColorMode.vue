@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { themes } from "@/helpers/defaults"
 import { store } from "@/modules/theme"
 </script>

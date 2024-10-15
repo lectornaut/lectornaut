@@ -143,12 +143,14 @@ const table = useVueTable({
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center space-x-2">
         <Input
-          placeholder="Filter emails..."
+          placeholder="Search"
           :model-value="
-            (table.getColumn('email')?.getFilterValue() as string) ?? ''
+            (table.getColumn('balance')?.getFilterValue() as string) ?? ''
           "
           class="h-9 focus:border-inherit focus:ring-0"
-          @update:model-value="table.getColumn('email')?.setFilterValue($event)"
+          @update:model-value="
+            table.getColumn('balance')?.setFilterValue($event)
+          "
         />
       </div>
       <DropdownMenu>

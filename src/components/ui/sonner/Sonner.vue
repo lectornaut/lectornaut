@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { Toaster as Sonner, type ToasterProps } from "vue-sonner"
 
 const props = defineProps<ToasterProps>()

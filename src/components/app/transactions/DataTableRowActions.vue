@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { labels } from "@/data/data"
 import { taskSchema } from "@/data/schema"
 import type { Task } from "@/data/schema"

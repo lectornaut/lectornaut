@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
   CalendarCell,
   CalendarCellTrigger,
@@ -19,7 +19,7 @@ import {
   type CalendarRootProps,
   useForwardPropsEmits,
 } from "radix-vue"
-import { type HTMLAttributes, computed } from "vue"
+import { computed, type HTMLAttributes } from "vue"
 
 const props = defineProps<
   CalendarRootProps & { class?: HTMLAttributes["class"] }

@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { CalendarGridHead, type CalendarGridHeadProps } from "radix-vue"
 
 const props = defineProps<CalendarGridHeadProps>()

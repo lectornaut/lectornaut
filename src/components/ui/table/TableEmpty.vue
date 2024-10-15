@@ -1,8 +1,8 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import TableCell from "./TableCell.vue"
 import TableRow from "./TableRow.vue"
 import { cn } from "@/lib/utils"
-import { type HTMLAttributes, computed } from "vue"
+import { computed, type HTMLAttributes } from "vue"
 
 const props = withDefaults(
   defineProps<{
