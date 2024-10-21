@@ -115,5 +115,6 @@ const user = useCurrentUser()
     </CommandDialog>
     <Settings v-if="user" />
     <ExitTrigger v-if="user" />
+    <Shortcuts v-if="user" />
   </div>
 </template>

@@ -28,9 +28,7 @@ app.use(VueFire, {
     VueFireAppCheck({
       debug: process.env.NODE_ENV !== "production",
       provider: new ReCaptchaEnterpriseProvider(
-        process.env.NODE_ENV !== "production"
-          ? "B864B9A2-3F56-4964-B4E1-FDD3F72D867D"
-          : "6LcbLl8qAAAAAGSsh5k2tAOP1e1yqFZZ3rR_JvZ2"
+        "6LcbLl8qAAAAAGSsh5k2tAOP1e1yqFZZ3rR_JvZ2"
       ),
       isTokenAutoRefreshEnabled: true,
     }),

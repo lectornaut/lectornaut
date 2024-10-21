@@ -43,7 +43,6 @@ import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
               >
                 <icon-mingcute-ai-fill v-if="rightSidebarVisibility" />
                 <icon-mingcute-ai-line v-else />
-                AI Chat
               </Button>
             </TooltipTrigger>
             <TooltipContent> Chat with AI </TooltipContent>

@@ -74,5 +74,4 @@ useEventListener(
 
 <template>
   <Sonner offset="8px" :theme="state" />
-  <Shortcuts />
 </template>

@@ -124,7 +124,7 @@ useHead({
                 class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div
-                  className="absolute animate-pulse transition -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
+                  className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
                 ></div>
                 <Alert
                   class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
@@ -133,7 +133,7 @@ useHead({
                     <span class="flex items-center gap-1.5 font-semibold">
                       <span class="text-sm">Pro</span>
                       <Badge class="gap-0.5 rounded-sm px-1 py-0">
-                        <icon-heroicons-sparkles-solid />
+                        <icon-mingcute-ai-fill />
                         AI
                       </Badge>
                     </span>
@@ -194,7 +194,7 @@ useHead({
                 class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div
-                  className="absolute animate-pulse transition -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
+                  className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
                 ></div>
                 <Alert
                   class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
@@ -203,7 +203,7 @@ useHead({
                     <span class="flex items-center gap-1.5 font-semibold">
                       <span class="text-sm">Team</span>
                       <Badge class="gap-0.5 rounded-sm px-1 py-0">
-                        <icon-heroicons-sparkles-solid />
+                        <icon-mingcute-ai-fill />
                         AI
                       </Badge>
                     </span>
@@ -245,7 +245,7 @@ useHead({
                       </li>
                     </ul>
                     <Button class="rounded-lg">
-                      Get Template App for my team
+                      Get Template App for Teams
                     </Button>
                   </AlertDescription>
                 </Alert>
