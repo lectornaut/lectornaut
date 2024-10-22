@@ -19,6 +19,13 @@ export default {
   ],
   theme: {
     extend: {
+      typography: {
+        DEFAULT: {
+          css: {
+            "--tw-prose-bold": "inherit",
+          },
+        },
+      },
       container: {
         center: true,
         screens: {
