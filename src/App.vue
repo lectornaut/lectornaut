@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { useCurrentUser } from "vuefire"
 
+const visibility = useDocumentVisibility()
+const isDark = useDark()
+
+const favicon = computed(() => {
+  if (visibility.value === "hidden") {
+    return "/favicon-invisible.svg"
+  }
+  return isDark.value ? "/favicon-dark.svg" : "/favicon.svg"
+})
+
+useFavicon(favicon)
+
 const user = useCurrentUser()
 const router = useRouter()
 const route = useRoute()
