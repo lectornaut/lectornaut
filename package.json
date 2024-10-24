@@ -11,7 +11,7 @@
     "tauri": "tauri",
     "lint:code": "eslint 'src/**/*.{js,ts,vue}' --fix",
     "lint:format": "prettier . --write --ignore-path .gitignore",
-    "lint:style": "stylelint src/**/*.{css,scss} --fix --ignore-path .gitignore",
+    "lint:style": "stylelint 'src/**/*.{css,scss}' --fix --ignore-path .gitignore",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -78,7 +78,7 @@
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
-    "sass-embedded": "^1.80.3",
+    "sass-embedded": "^1.80.4",
     "sharp": "^0.33.5",
     "stylelint": "^16.10.0",
     "stylelint-config-standard": "^36.0.1",

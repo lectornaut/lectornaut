@@ -39,7 +39,7 @@ const selectedTeam = ref<Team>(
 
 <template>
   <div
-    class="flex gap-2 p-2"
+    class="flex gap-2 px-2 pt-2"
     :class="isTauri ? 'flex-col-reverse' : 'items-center'"
   >
     <Dialog v-model:open="showNewTeamDialog">
