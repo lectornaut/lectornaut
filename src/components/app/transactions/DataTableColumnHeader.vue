@@ -27,7 +27,9 @@ defineOptions({
           size="sm"
           class="-ml-3 h-8 gap-2 data-[state=open]:bg-accent"
         >
-          <span>{{ title }}</span>
+          <span>
+            {{ title }}
+          </span>
           <icon-lucide-arrow-down v-if="column.getIsSorted() === 'desc'" />
           <icon-lucide-arrow-up v-else-if="column.getIsSorted() === 'asc'" />
           <icon-lucide-chevrons-up-down v-else />

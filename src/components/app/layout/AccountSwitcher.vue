@@ -5,6 +5,8 @@ import type { User } from "firebase/auth"
 import type { c } from "node_modules/vuefire/dist/shared/vuefire.cc4a8ea4.mjs"
 import { useCurrentUser } from "vuefire"
 
+const online = useOnline()
+
 const user = useCurrentUser()
 
 const generateGroups = (user: c<User>) => [
@@ -60,11 +62,21 @@ const selectedTeam = ref<Team>(
                 {{ getInitials(selectedTeam.label) }}
               </AvatarFallback>
             </Avatar>
-            <span class="truncate">{{
-              selectedTeam.value === "personal"
-                ? user?.displayName
-                : selectedTeam.label
-            }}</span>
+            <span
+              v-if="!online"
+              v-motion-fade
+              class="flex items-center gap-1 rounded-full border bg-muted px-1.5 py-0.5 text-muted-foreground"
+            >
+              <icon-bx-bxs-zap />
+              Offline
+            </span>
+            <span v-else v-motion-fade class="truncate">
+              {{
+                selectedTeam.value === "personal"
+                  ? user?.displayName
+                  : selectedTeam.label
+              }}
+            </span>
             <icon-lucide-chevron-down />
           </Button>
         </PopoverTrigger>
@@ -103,7 +115,9 @@ const selectedTeam = ref<Team>(
                       {{ getInitials(team.label) }}
                     </AvatarFallback>
                   </Avatar>
-                  <span class="truncate">{{ team.label }}</span>
+                  <span class="truncate">
+                    {{ team.label }}
+                  </span>
                   <icon-lucide-check
                     v-if="selectedTeam.value === team.value"
                     class="ml-auto"

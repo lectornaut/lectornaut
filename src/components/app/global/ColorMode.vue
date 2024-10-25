@@ -17,7 +17,9 @@ import { store } from "@/modules/theme"
               <icon-lucide-sun v-if="store == 'light'" />
               <icon-lucide-moon v-if="store == 'dark'" />
               <icon-lucide-monitor v-if="store == 'auto'" />
-              <span class="sr-only">{{ store }}</span>
+              <span class="sr-only">
+                {{ store }}
+              </span>
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>

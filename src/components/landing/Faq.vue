@@ -40,7 +40,9 @@ const accordionItems = [
             :key="item.value"
             :value="item.value"
           >
-            <AccordionTrigger>{{ item.title }}</AccordionTrigger>
+            <AccordionTrigger>
+              {{ item.title }}
+            </AccordionTrigger>
             <AccordionContent>
               {{ item.content }}
             </AccordionContent>

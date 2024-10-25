@@ -146,12 +146,13 @@ const components: { title: string; href: string; description: string }[] = [
                   <RouterLink :key="index" :to="component.href">
                     <span
                       class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
-                      ><icon-lucide-asterisk
-                    /></span>
+                    >
+                      <icon-lucide-asterisk />
+                    </span>
                     <div class="flex flex-col">
-                      <span class="text-sm font-medium">{{
-                        component.title
-                      }}</span>
+                      <span class="text-sm font-medium">
+                        {{ component.title }}
+                      </span>
                       <span class="text-muted-foreground">
                         {{ component.description }}
                       </span>
@@ -199,12 +200,13 @@ const components: { title: string; href: string; description: string }[] = [
                   <RouterLink :key="index" :to="component.href">
                     <span
                       class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
-                      ><icon-lucide-asterisk
-                    /></span>
+                    >
+                      <icon-lucide-asterisk />
+                    </span>
                     <div class="flex flex-col">
-                      <span class="text-sm font-medium">{{
-                        component.title
-                      }}</span>
+                      <span class="text-sm font-medium">
+                        {{ component.title }}
+                      </span>
                       <span class="text-muted-foreground">
                         {{ component.description }}
                       </span>

@@ -94,7 +94,9 @@ const selectedValues = computed(
                 class="flex aspect-square size-3 rounded-sm border-muted-foreground data-[state=checked]:bg-muted-foreground"
               />
               <Component :is="option.icon" v-if="option.icon" />
-              <span>{{ option.label }}</span>
+              <span>
+                {{ option.label }}
+              </span>
               <CommandShortcut v-if="facets?.get(option.value)">
                 {{ facets.get(option.value) }}
               </CommandShortcut>

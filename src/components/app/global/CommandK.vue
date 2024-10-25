@@ -90,7 +90,9 @@ const user = useCurrentUser()
                     :key="stepIndex"
                   >
                     <BreadcrumbItem>
-                      <BreadcrumbPage>{{ step }}</BreadcrumbPage>
+                      <BreadcrumbPage>
+                        {{ step }}
+                      </BreadcrumbPage>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator
                       v-if="stepIndex < shortcut.description.length - 1"

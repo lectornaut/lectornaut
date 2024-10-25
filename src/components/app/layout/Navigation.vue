@@ -16,7 +16,9 @@ import { links } from "@/data/data"
             >
               <RouterLink :to="link.to">
                 <Component :is="link.icon" />
-                <span class="truncate">{{ link.title }}</span>
+                <span class="truncate">
+                  {{ link.title }}
+                </span>
               </RouterLink>
             </Button>
           </TooltipTrigger>
