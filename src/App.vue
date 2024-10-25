@@ -1,18 +1,6 @@
 <script setup lang="ts">
 import { useCurrentUser } from "vuefire"
 
-const visibility = useDocumentVisibility()
-const isDark = useDark()
-
-const favicon = computed(() => {
-  if (visibility.value === "hidden") {
-    return "/favicon-invisible.svg"
-  }
-  return isDark.value ? "/favicon-dark.svg" : "/favicon.svg"
-})
-
-useFavicon(favicon)
-
 const user = useCurrentUser()
 const router = useRouter()
 const route = useRoute()
@@ -33,6 +21,7 @@ watch(user, async (currentUser, previousUser) => {
 
 <template>
   <div class="flex h-dvh w-dvw flex-col">
+    <Actions />
     <RouterView v-slot="{ Component }">
       <template v-if="Component">
         <Transition
@@ -51,6 +40,5 @@ watch(user, async (currentUser, previousUser) => {
         </Transition>
       </template>
     </RouterView>
-    <Actions />
   </div>
 </template>

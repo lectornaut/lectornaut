@@ -15,11 +15,19 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# https://crates.io/crates/tauri/versions
 tauri = { version = "2", features = ["macos-private-api", "devtools"] }
-tauri-plugin-shell = "2"
+# https://crates.io/crates/serde/versions
 serde = { version = "1", features = ["derive"] }
+# https://crates.io/crates/serde_json/versions
 serde_json = "1"
+
+# https://crates.io/crates/tauri-plugin-shell/versions
+tauri-plugin-shell = "2"
+# https://crates.io/crates/tauri-plugin-theme/versions
 tauri-plugin-theme = "2"
+# https://crates.io/crates/tauri-plugin-deep-link/versions
 tauri-plugin-deep-link = "2"
 
+# https://crates.io/crates/window-vibrancy/versions
 window-vibrancy = "0.5.2"

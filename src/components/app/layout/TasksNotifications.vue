@@ -109,7 +109,7 @@ const components: { title: string; href: string; description: string }[] = [
 
 <template>
   <NavigationMenu>
-    <NavigationMenuList>
+    <NavigationMenuList class="flex items-center gap-2">
       <NavigationMenuItem>
         <NavigationMenuTrigger class="h-7 gap-2 px-2" size="xs">
           <span

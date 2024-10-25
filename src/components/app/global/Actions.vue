@@ -4,6 +4,18 @@ import { state, store } from "@/modules/theme"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
 
+const visibility = useDocumentVisibility()
+const isDark = useDark()
+
+const favicon = computed(() => {
+  if (visibility.value === "hidden") {
+    return "/favicon-invisible.svg"
+  }
+  return isDark.value ? "/favicon-dark.svg" : "/favicon.svg"
+})
+
+useFavicon(favicon)
+
 useHead({
   meta: [
     {
@@ -70,6 +82,24 @@ useEventListener(
   },
   { capture: true }
 )
+
+const online = useOnline()
+
+watch(online, (value) => {
+  if (value) {
+    emitter.emit("Toast.Success", "You are online")
+  } else {
+    emitter.emit("Toast.Error", "You are offline")
+  }
+})
+
+emitter.on("Toast.Success", (message) => {
+  toast.success(message as string)
+})
+
+emitter.on("Toast.Error", (message) => {
+  toast.error(message as string)
+})
 </script>
 
 <template>

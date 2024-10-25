@@ -29,7 +29,7 @@ const user = useCurrentUser()
 
 <template>
   <div>
-    <div class="relative items-center">
+    <!-- <div class="relative items-center">
       <span
         class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-2"
       >
@@ -53,7 +53,7 @@ const user = useCurrentUser()
           <span class="scale-75">K</span>
         </kbd>
       </span>
-    </div>
+    </div> -->
     <CommandDialog :open="openCommand" @update:open="openCommand = false">
       <DialogHeader class="sr-only">
         <DialogTitle> Search </DialogTitle>
