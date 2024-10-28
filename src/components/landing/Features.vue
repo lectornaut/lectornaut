@@ -71,7 +71,7 @@
               >Mac</HoverCardTrigger
             ><HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-bi-apple class="size-8" />
+                <icon-bi-apple class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Download on the</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -86,7 +86,7 @@
               >Windows</HoverCardTrigger
             ><HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-logos-microsoft-icon class="size-8" />
+                <icon-logos-microsoft-icon class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Get it from</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -101,7 +101,7 @@
               >Linux</HoverCardTrigger
             ><HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-simple-icons-flathub class="size-8" />
+                <icon-simple-icons-flathub class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Download on</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -116,7 +116,7 @@
               >iOS</HoverCardTrigger
             ><HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-logos-apple-app-store class="size-8" />
+                <icon-logos-apple-app-store class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Download on the</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -131,7 +131,7 @@
               >Android</HoverCardTrigger
             ><HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-logos-google-play-icon class="size-8" />
+                <icon-logos-google-play-icon class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Get it on</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -147,7 +147,7 @@
               >Web</HoverCardTrigger
             ><HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-material-symbols-circle class="size-8" />
+                <icon-material-symbols-circle class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Open</p>
                   <span class="text-xl font-medium tracking-tight">

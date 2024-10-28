@@ -25,7 +25,7 @@ const router = createRouter({
 router.beforeEach(async (to, from) => {
   if (to.name === "/") {
     if (isTauri.value) {
-      router.push("/home")
+      router.push("/enter")
     }
   }
 

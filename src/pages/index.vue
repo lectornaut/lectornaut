@@ -61,10 +61,7 @@ useHead({
                 stroke-width="0"
                 class="fill-primary font-instrument tracking-tighter"
               >
-                what you can't
-                <tspan alignment-baseline="middle" class="italic">
-                  measure
-                </tspan>
+                what you don't measure
               </text>
             </svg>
           </div>
@@ -256,6 +253,7 @@ useHead({
         </TabsContent>
       </Tabs>
     </div>
+    <QRCode />
     <Footer />
   </div>
 </template>

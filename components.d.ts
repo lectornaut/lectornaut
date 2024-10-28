@@ -244,6 +244,7 @@ declare module 'vue' {
     PopoverContent: typeof import('./src/components/ui/popover/PopoverContent.vue')['default']
     PopoverTrigger: typeof import('./src/components/ui/popover/PopoverTrigger.vue')['default']
     Progress: typeof import('./src/components/ui/progress/Progress.vue')['default']
+    QRCode: typeof import('./src/components/landing/QRCode.vue')['default']
     RadiantText: typeof import('./src/components/smart/RadiantText.vue')['default']
     RangeCalendar: typeof import('./src/components/ui/range-calendar/RangeCalendar.vue')['default']
     RangeCalendarCell: typeof import('./src/components/ui/range-calendar/RangeCalendarCell.vue')['default']
