@@ -111,16 +111,16 @@ const components: { title: string; href: string; description: string }[] = [
   <NavigationMenu>
     <NavigationMenuList class="flex items-center gap-2">
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="h-7 gap-2 px-2" size="xs">
+        <NavigationMenuTrigger class="h-7 gap-1 rounded px-2">
           <span
             class="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <icon-mingcute-check-2-fill />
           </span>
-          Tasks
+          <!-- Tasks -->
         </NavigationMenuTrigger>
         <NavigationMenuContent>
-          <div class="w-96 -translate-x-px">
+          <div class="w-80 -translate-x-px">
             <div
               class="sticky top-0 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >
@@ -140,14 +140,14 @@ const components: { title: string; href: string; description: string }[] = [
                 <Button
                   size="lg"
                   variant="ghost"
-                  class="flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
+                  class="group relative flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
                     <span
                       class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
                     >
-                      <icon-lucide-asterisk />
+                      <icon-lucide-check />
                     </span>
                     <div class="flex flex-col">
                       <span class="text-sm font-medium">
@@ -156,6 +156,24 @@ const components: { title: string; href: string; description: string }[] = [
                       <span class="text-muted-foreground">
                         {{ component.description }}
                       </span>
+                      <div
+                        class="absolute bottom-2 right-2 z-10 hidden items-center gap-2 animate-in fade-in zoom-in group-hover:flex"
+                      >
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                class="aspect-square h-full gap-2 rounded-full"
+                              >
+                                <icon-lucide-check-check />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent> Mark as done </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
                   </RouterLink>
                 </Button>
@@ -165,22 +183,22 @@ const components: { title: string; href: string; description: string }[] = [
         </NavigationMenuContent>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="h-7 gap-2 px-2" size="xs">
+        <NavigationMenuTrigger class="h-7 gap-1 rounded px-2">
           <span
             class="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <icon-mingcute-notification-fill />
           </span>
-          Notifications
+          <!-- Notifications -->
         </NavigationMenuTrigger>
         <NavigationMenuContent>
-          <div class="w-96 -translate-x-px">
+          <div class="w-80 -translate-x-px">
             <div
               class="sticky top-0 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >
               <h3 class="text-sm font-semibold">Notifications</h3>
               <Button size="xs" variant="ghost" class="gap-2">
-                <icon-lucide-check-check /> Makr all as read
+                <icon-lucide-check-check /> Mark all as read
               </Button>
             </div>
             <div
@@ -194,14 +212,14 @@ const components: { title: string; href: string; description: string }[] = [
                 <Button
                   size="lg"
                   variant="ghost"
-                  class="flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
+                  class="group relative flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
                     <span
                       class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
                     >
-                      <icon-lucide-asterisk />
+                      <icon-lucide-bell />
                     </span>
                     <div class="flex flex-col">
                       <span class="text-sm font-medium">
@@ -210,6 +228,24 @@ const components: { title: string; href: string; description: string }[] = [
                       <span class="text-muted-foreground">
                         {{ component.description }}
                       </span>
+                      <div
+                        class="absolute bottom-2 right-2 z-10 hidden items-center gap-2 animate-in fade-in zoom-in group-hover:flex"
+                      >
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                class="aspect-square h-full gap-2 rounded-full"
+                              >
+                                <icon-lucide-check-check />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent> Mark as read </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
                   </RouterLink>
                 </Button>

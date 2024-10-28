@@ -64,8 +64,8 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Sidebar", "Left"],
-        keys: [[getPlatformSpecialKey(), "b"]],
-        hotkeys: "cmd+b,ctrl+b",
+        keys: [[getPlatformSpecialKey(), "\\"]],
+        hotkeys: "cmd+\\,ctrl+\\",
         event: "Sidebar.Left.Toggle",
         parameters: undefined,
         icon: IconLucidePanelLeft,
@@ -73,8 +73,8 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Sidebar", "Right"],
-        keys: [[getPlatformSpecialKey(), "shift", "b"]],
-        hotkeys: "cmd+shift+b,ctrl+shift+b",
+        keys: [[getPlatformSpecialKey(), "shift", "\\"]],
+        hotkeys: "cmd+shift+\\,ctrl+shift+\\",
         event: "Sidebar.Right.Toggle",
         parameters: undefined,
         icon: IconLucidePanelRight,

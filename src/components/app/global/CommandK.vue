@@ -2,7 +2,6 @@
 import { shortcuts } from "@/helpers/shortcuts"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
-import { useCurrentUser } from "vuefire"
 
 const openCommand = ref(false)
 
@@ -23,8 +22,6 @@ const filteredShortcuts = computed(() =>
     return webCondition && tauriCondition && hiddenCondition
   })
 )
-
-const user = useCurrentUser()
 </script>
 
 <template>
@@ -115,8 +112,5 @@ const user = useCurrentUser()
         </template>
       </CommandList>
     </CommandDialog>
-    <Settings v-if="user" />
-    <ExitTrigger v-if="user" />
-    <Shortcuts v-if="user" />
   </div>
 </template>
