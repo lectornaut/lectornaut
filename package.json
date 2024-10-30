@@ -50,7 +50,7 @@
     "vue": "^3.5.12",
     "vue-i18n": "^10.0.4",
     "vue-router": "^4.4.5",
-    "vue-sonner": "^1.2.3",
+    "vue-sonner": "^1.2.5",
     "vuefire": "^3.2.0",
     "zod": "^3.23.8"
   },
@@ -63,7 +63,7 @@
     "@tauri-apps/cli": "^2.0.4",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@types/eslint__js": "^8.42.3",
-    "@types/node": "^22.8.1",
+    "@types/node": "^22.8.4",
     "@types/nprogress": "^0.2.3",
     "@unhead/addons": "^1.11.10",
     "@vite-pwa/assets-generator": "^0.2.6",
@@ -78,7 +78,7 @@
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
-    "sass-embedded": "^1.80.4",
+    "sass-embedded": "^1.80.5",
     "sharp": "^0.33.5",
     "stylelint": "^16.10.0",
     "stylelint-config-standard": "^36.0.1",
@@ -86,7 +86,7 @@
     "svgo": "^3.3.2",
     "tailwindcss": "^3.4.14",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.12.0",
+    "typescript-eslint": "^8.12.2",
     "unplugin-auto-import": "^0.18.3",
     "unplugin-fonts": "^1.1.1",
     "unplugin-icons": "^0.19.3",
@@ -99,7 +99,7 @@
     "vite-plugin-vue-layouts": "^0.11.0",
     "vue-eslint-parser": "^9.4.3",
     "vue-tsc": "^2.1.8",
-    "workbox-window": "^7.1.0"
+    "workbox-window": "^7.3.0"
   },
   "resolutions": {
     "sharp-ico": "^0.1.5",

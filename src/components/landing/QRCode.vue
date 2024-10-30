@@ -9,7 +9,7 @@ import { state } from "@/modules/theme"
       class="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-4"
     >
       <div>
-        <span class="text-muted-foreground">Scan to get the app</span>
+        <span class="text-muted-foreground/50">Scan to get the app</span>
         <img
           :src="`qr-code-${state}.svg`"
           alt="QR Code"
@@ -18,14 +18,14 @@ import { state } from "@/modules/theme"
       </div>
     </DialogTrigger>
     <DialogContent class="max-w-fit">
-      <DialogHeader class="sr-only">
+      <DialogHeader class="items-center">
         <DialogTitle>Get the app</DialogTitle>
         <DialogDescription>
-          Scan the QR code to get the app on your device.
+          Scan the QR code to download the app
         </DialogDescription>
       </DialogHeader>
       <div class="flex items-center justify-center">
-        <img :src="`qr-code-${state}.svg`" alt="QR Code" />
+        <img :src="`qr-code-${state}.svg`" alt="QR Code" class="w-full" />
       </div>
     </DialogContent>
   </Dialog>
