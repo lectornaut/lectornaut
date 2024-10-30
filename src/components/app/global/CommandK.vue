@@ -26,22 +26,28 @@ const filteredShortcuts = computed(() =>
 
 <template>
   <div>
-    <!-- <div class="relative items-center">
-      <span
-        class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-2"
+    <div class="relative flex items-center">
+      <!-- <span
+        class="pointer-events-none absolute inset-y-0 start-0 flex w-full items-center gap-2 px-2 text-muted-foreground"
       >
-        <icon-lucide-search class="text-muted-foreground" />
-      </span>
-      <Button
-        variant="ghost"
-        class="justify-start bg-muted/75 pl-7 pr-16 font-normal text-muted-foreground"
-        size="xs"
-        @click="openCommand = true"
-      >
-        Search
-      </Button>
-      <span
-        class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center gap-1 px-2"
+        <icon-lucide-search />
+        <span class="truncate"> Search </span>
+      </span> -->
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button
+            variant="ghost"
+            size="xs"
+            class="text-muted-foreground"
+            @click="openCommand = true"
+          >
+            <icon-lucide-search />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent> Search </TooltipContent>
+      </Tooltip>
+      <!-- <span
+        class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center gap-1 px-1"
       >
         <kbd class="shortcut-key">
           <span class="scale-75">⌘</span>
@@ -49,8 +55,8 @@ const filteredShortcuts = computed(() =>
         <kbd class="shortcut-key">
           <span class="scale-75">K</span>
         </kbd>
-      </span>
-    </div> -->
+      </span> -->
+    </div>
     <CommandDialog :open="openCommand" @update:open="openCommand = false">
       <DialogHeader class="sr-only">
         <DialogTitle> Search </DialogTitle>

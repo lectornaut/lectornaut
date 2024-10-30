@@ -4,7 +4,6 @@ import emitter from "@/modules/mitt"
 import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import { useCurrentUser } from "vuefire"
 
 const tabs = ref(13)
 const selectedTab = ref(1)
@@ -29,8 +28,6 @@ onBeforeUnmount(() => {
     unlisten()
   }
 })
-
-const user = useCurrentUser()
 </script>
 
 <template>
@@ -143,9 +140,8 @@ const user = useCurrentUser()
       </TooltipProvider>
     </div>
     <Separator />
-    <CommandK v-if="user" />
-    <Settings v-if="user" />
-    <Shortcuts v-if="user" />
-    <ExitTrigger v-if="user" />
+    <Settings />
+    <Shortcuts />
+    <ExitTrigger />
   </div>
 </template>

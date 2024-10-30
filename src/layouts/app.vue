@@ -35,7 +35,7 @@ watch(rightSidebarVisibility, (value) => {
   <ResizablePanelGroup direction="horizontal" auto-save-id="app">
     <ResizablePanel
       ref="leftSidebar"
-      class="flex flex-col bg-muted/50 transition-all"
+      class="flex flex-col bg-muted/40 transition-all"
       :default-size="15"
       :min-size="10"
       :max-size="20"
@@ -83,7 +83,7 @@ watch(rightSidebarVisibility, (value) => {
     />
     <ResizablePanel
       ref="rightSidebar"
-      class="flex flex-col bg-muted/50 transition-all"
+      class="flex flex-col bg-muted/40 transition-all"
       :default-size="25"
       :min-size="20"
       :max-size="30"

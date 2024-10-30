@@ -1,7 +1,9 @@
 <template>
-  <aside class="no-scrollbar flex grow flex-col overflow-auto">
+  <div class="flex grow flex-col">
     <AccountSwitcher />
-    <Navigation />
+    <aside class="no-scrollbar flex grow flex-col overflow-auto">
+      <Navigation />
+    </aside>
     <Support />
-  </aside>
+  </div>
 </template>
