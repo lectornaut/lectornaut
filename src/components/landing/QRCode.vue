@@ -5,6 +5,7 @@ import { state } from "@/modules/theme"
 <template>
   <Dialog>
     <DialogTrigger
+      v-motion-fade
       as-child
       class="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-4"
     >

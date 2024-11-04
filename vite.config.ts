@@ -18,6 +18,7 @@ import { defineConfig } from "vite"
 import checker from "vite-plugin-checker"
 import { ViteImageOptimizer } from "vite-plugin-image-optimizer"
 import { VitePWA } from "vite-plugin-pwa"
+import Sitemap from "vite-plugin-sitemap"
 import Layouts from "vite-plugin-vue-layouts"
 
 const host = process.env.TAURI_DEV_HOST
@@ -101,6 +102,7 @@ export default defineConfig(async () => ({
       ),
     }),
     UnheadVite(),
+    Sitemap(),
     checker({
       typescript: true,
       vueTsc: true,
