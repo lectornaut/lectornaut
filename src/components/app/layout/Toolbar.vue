@@ -35,7 +35,6 @@ onBeforeUnmount(() => {
     <div
       data-tauri-drag-region
       class="flex items-center justify-between gap-2 p-2 transition-all"
-      :class="{ 'ml-16': !leftSidebarVisibility && isTauri && !isFullscreen }"
     >
       <TooltipProvider v-if="!leftSidebarVisibility">
         <Tooltip>

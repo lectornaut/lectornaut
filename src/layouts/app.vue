@@ -35,9 +35,10 @@ watch(rightSidebarVisibility, (value) => {
   <ResizablePanelGroup direction="horizontal" auto-save-id="app">
     <ResizablePanel
       ref="leftSidebar"
-      class="flex flex-col bg-muted/40 transition-all"
-      :default-size="15"
+      class="my-2 ml-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/40 shadow-lg transition-all"
+      :class="leftSidebarVisibility ? 'border' : 'invisible'"
       :min-size="10"
+      :default-size="15"
       :max-size="20"
       collapsible
       @collapse="leftSidebarVisibility = false"
@@ -46,15 +47,11 @@ watch(rightSidebarVisibility, (value) => {
       <LeftSidebar v-if="leftSidebarVisibility" v-motion-fade />
     </ResizablePanel>
     <ResizableHandle
-      :class="{ invisible: !leftSidebarVisibility }"
+      :class="{ invisible: leftSidebarVisibility }"
       class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
       @dblclick="emitter.emit('Sidebar.Left.Toggle')"
     />
-    <ResizablePanel
-      :default-size="60"
-      :min-size="50"
-      class="flex flex-col bg-background transition-all"
-    >
+    <ResizablePanel :default-size="60" class="flex flex-col transition-all">
       <Toolbar />
       <main
         class="no-scrollbar flex grow flex-col overflow-auto overscroll-none"
@@ -77,15 +74,16 @@ watch(rightSidebarVisibility, (value) => {
       </main>
     </ResizablePanel>
     <ResizableHandle
-      :class="{ invisible: !rightSidebarVisibility }"
+      :class="{ invisible: rightSidebarVisibility }"
       class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
       @dblclick="emitter.emit('Sidebar.Right.Toggle')"
     />
     <ResizablePanel
       ref="rightSidebar"
-      class="flex flex-col bg-muted/40 transition-all"
-      :default-size="25"
+      class="my-2 mr-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/40 shadow-lg transition-all"
+      :class="rightSidebarVisibility ? 'border' : 'invisible'"
       :min-size="20"
+      :default-size="25"
       :max-size="30"
       collapsible
       @collapse="rightSidebarVisibility = false"

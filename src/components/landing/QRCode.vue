@@ -12,7 +12,7 @@ import { state } from "@/modules/theme"
       <div>
         <span class="text-muted-foreground/50">Scan to get the app</span>
         <img
-          :src="`qr-code-${state}.svg`"
+          :src="`assets/images/qr-code-${state}.svg`"
           alt="QR Code"
           class="h-28 w-28 cursor-pointer rounded-xl border bg-muted/50 p-1 opacity-75 backdrop-blur-xl transition hover:scale-110 hover:opacity-100"
         />

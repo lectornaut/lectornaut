@@ -114,6 +114,18 @@ export default {
         "safe-left": "env(safe-area-inset-left)",
         "safe-right": "env(safe-area-inset-right)",
       },
+      inset: {
+        "safe-top": "env(safe-area-inset-top)",
+        "safe-bottom": "env(safe-area-inset-bottom)",
+        "safe-left": "env(safe-area-inset-left)",
+        "safe-right": "env(safe-area-inset-right)",
+        "titlebar-x": "env(titlebar-area-x)",
+        "titlebar-y": "env(titlebar-area-y)",
+      },
+      spacing: {
+        "titlebar-width": "env(titlebar-area-width)",
+        "titlebar-height": "env(titlebar-area-height)",
+      },
     },
   },
   plugins: [animate, tailwindForms, tailwindTypography],

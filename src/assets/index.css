@@ -23,7 +23,6 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --ring: 0 0% 3.9%;
-    --radius: 0.5rem;
   }
 
   .dark {
@@ -51,6 +50,7 @@
 
 @layer base {
   :root {
+    --radius: 0.5rem;
     --vis-tooltip-background-color: none !important;
     --vis-tooltip-border-color: none !important;
     --vis-tooltip-text-color: none !important;
@@ -69,12 +69,16 @@
   body {
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
+    font-variation-settings: normal;
+    text-size-adjust: 100%;
 
     @apply selection:bg-secondary;
     @apply selection:text-secondary-foreground;
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-background/95;
+    @apply bg-gradient-to-b;
+    @apply from-background/75;
+    @apply to-background/50;
     @apply text-foreground;
     @apply text-xs;
     @apply select-none;

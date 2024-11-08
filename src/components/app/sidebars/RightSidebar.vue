@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import click from "/assets/sounds/click.mp3"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
@@ -8,6 +9,8 @@ const user = useCurrentUser()
 
 const displayName = computed(() => user.value?.displayName ?? "User")
 const photoURL = computed(() => user.value?.photoURL ?? "")
+
+const play = () => new Audio(click).play()
 </script>
 
 <template>
@@ -95,7 +98,7 @@ const photoURL = computed(() => user.value?.photoURL ?? "")
             class="flex w-auto shrink rounded-xl px-4 py-3"
             :class="
               message % 2 !== 0
-                ? 'ml-auto bg-primary/15'
+                ? 'ml-auto bg-primary/10'
                 : 'mr-auto bg-primary/5'
             "
           >
@@ -115,25 +118,33 @@ const photoURL = computed(() => user.value?.photoURL ?? "")
           <RadiantText class="w-full"> Try these prompts </RadiantText>
         </div>
         <div class="grid gap-2 md:grid-cols-2">
-          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
+          <Card
+            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+          >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">What are the</CardTitle>
               <CardDescription> benefits of upgrading? </CardDescription>
             </CardHeader>
           </Card>
-          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
+          <Card
+            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+          >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">How do I</CardTitle>
               <CardDescription> upgrade my account? </CardDescription>
             </CardHeader>
           </Card>
-          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
+          <Card
+            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+          >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">How do I</CardTitle>
               <CardDescription> cancel my subscription? </CardDescription>
             </CardHeader>
           </Card>
-          <Card class="cursor-pointer rounded-xl transition hover:shadow-md">
+          <Card
+            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+          >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle class="text-xs">How do I</CardTitle>
               <CardDescription> change my password? </CardDescription>
@@ -149,12 +160,12 @@ const photoURL = computed(() => user.value?.photoURL ?? "")
           <Input
             v-model="ask"
             placeholder="Type your message here."
-            class="truncate rounded-full pl-8 pr-12 focus:border-inherit focus:ring-0"
+            class="truncate rounded-full bg-primary/5 pl-8 pr-12 ring-offset-transparent transition hover:bg-primary/10 focus:border-inherit focus:bg-primary/10 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <span
             class="absolute inset-y-0 end-0 flex items-center justify-center px-2"
           >
-            <Button size="xs" class="rounded-full">
+            <Button size="xs" class="rounded-full" @click="play">
               <icon-lucide-arrow-up />
             </Button>
           </span>
