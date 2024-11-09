@@ -47,34 +47,34 @@ watch(rightSidebarVisibility, (value) => {
       <LeftSidebar v-if="leftSidebarVisibility" v-motion-fade />
     </ResizablePanel>
     <ResizableHandle
-      :class="{ invisible: leftSidebarVisibility }"
+      :class="{ 'invisible w-0': leftSidebarVisibility }"
       class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
       @dblclick="emitter.emit('Sidebar.Left.Toggle')"
     />
     <ResizablePanel :default-size="60" class="flex flex-col transition-all">
       <Toolbar />
       <main
-        class="no-scrollbar flex grow flex-col overflow-auto overscroll-none"
+        class="no-scrollbar z-10 m-2 flex grow flex-col overflow-auto overscroll-none rounded-xl border bg-gradient-to-b from-background/75 to-background/40 shadow-xl"
       >
         <RouterView v-slot="{ Component, route }">
-          <Transition
-            enter-active-class="transition ease-in-out duration-200"
-            enter-from-class="opacity-0"
-            enter-to-class="opacity-100"
-            leave-active-class="transition ease-in-out duration-200"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
-            mode="out-in"
-          >
-            <template v-if="Component">
+          <template v-if="Component">
+            <Transition
+              enter-active-class="transition ease-in-out duration-200"
+              enter-from-class="opacity-0"
+              enter-to-class="opacity-100"
+              leave-active-class="transition ease-in-out duration-200"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+              mode="out-in"
+            >
               <Component :is="Component" :key="route.path" />
-            </template>
-          </Transition>
+            </Transition>
+          </template>
         </RouterView>
       </main>
     </ResizablePanel>
     <ResizableHandle
-      :class="{ invisible: rightSidebarVisibility }"
+      :class="{ 'invisible w-0': rightSidebarVisibility }"
       class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
       @dblclick="emitter.emit('Sidebar.Right.Toggle')"
     />

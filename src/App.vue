@@ -37,7 +37,9 @@ watch(user, async (currentUser, previousUser) => {
           >
             <Suspense>
               <Component :is="Component" />
-              <template #fallback> Loading... </template>
+              <template #fallback>
+                <SplashScreen />
+              </template>
             </Suspense>
           </Transition>
         </template>

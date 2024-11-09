@@ -5,7 +5,7 @@ import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 
-const tabs = ref(13)
+const tabs = ref(3)
 const selectedTab = ref(1)
 
 let unlisten: UnlistenFn | undefined
@@ -31,10 +31,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="sticky top-0 z-10 flex flex-col">
+  <div
+    class="sticky top-0 z-10 flex flex-col shadow-xl shadow-background after:absolute after:inset-x-0 after:-bottom-32 after:-z-10 after:h-32 after:bg-gradient-to-b after:from-background"
+  >
     <div
       data-tauri-drag-region
-      class="flex items-center justify-between gap-2 p-2 transition-all"
+      class="relative flex grow items-center justify-between gap-2 p-2 transition-all"
     >
       <TooltipProvider v-if="!leftSidebarVisibility">
         <Tooltip>
@@ -45,82 +47,67 @@ onBeforeUnmount(() => {
               size="xs"
               @click="emitter.emit('Sidebar.Left.Toggle')"
             >
-              <icon-lucide-panel-left />
+              <icon-lucide-chevrons-right />
             </Button>
           </TooltipTrigger>
           <TooltipContent> Expand Sidebar </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <TasksNotifications />
+      <!-- <TasksNotifications /> -->
       <nav
         data-tauri-drag-region
-        class="no-scrollbar flex grow overflow-auto overscroll-none"
+        class="flex h-full min-w-0 grow items-center justify-start gap-2 before:absolute before:inset-x-0 before:bottom-0 before:z-10 before:h-px before:bg-border"
       >
-        <div
-          class="flex grow before:sticky before:left-0 before:z-10 before:-mx-1 before:h-full before:w-2 before:bg-gradient-to-r before:from-background after:sticky after:right-0 after:z-10 after:-mx-2 after:h-full after:w-2 after:bg-gradient-to-l after:from-background"
+        <Button
+          v-for="tab in tabs"
+          :key="tab"
+          :variant="tab === selectedTab ? 'ghost' : 'secondary'"
+          size="xs"
+          class="group relative flex h-full min-w-16 max-w-56 grow justify-between gap-2 rounded-b-none rounded-t-lg border border-b-0 pr-1.5 after:absolute after:-inset-x-px after:-bottom-2 after:h-2 after:border-x after:border-border after:bg-current after:transition"
+          :class="
+            tab === selectedTab
+              ? 'bg-background after:z-20 after:text-background hover:bg-background'
+              : 'text-muted-foreground after:text-muted hover:bg-secondary'
+          "
+          as-child
+          @click="selectedTab = tab"
         >
-          <div class="relative flex items-center justify-between gap-2">
-            <span class="flex items-center gap-2">
+          <RouterLink to="">
+            <icon-lucide-circle />
+            <span class="mr-auto truncate"> Sample tab </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    class="invisible h-4 w-4 group-hover:visible"
+                    @click="tabs--"
+                  >
+                    <icon-lucide-x />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent> Close Tab </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </RouterLink>
+        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
               <Button
-                v-for="tab in tabs"
-                :key="tab"
-                :variant="tab === selectedTab ? 'secondary' : 'ghost'"
+                variant="secondary"
                 size="xs"
-                class="group relative w-56 justify-between gap-2"
-                :class="
-                  tab === selectedTab
-                    ? 'sticky left-0 right-0 z-20'
-                    : 'text-secondary-foreground/50 hover:bg-secondary/50'
-                "
-                as-child
-                @click="selectedTab = tab"
+                class="rounded-lg border"
+                @click="tabs++"
               >
-                <RouterLink to="">
-                  <icon-lucide-circle />
-                  <span class="mr-auto truncate"> Sample tab </span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          class="invisible h-4 w-4 group-hover:visible"
-                          @click="tabs--"
-                        >
-                          <icon-lucide-x />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent> Close Tab </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </RouterLink>
+                <icon-lucide-plus />
               </Button>
-            </span>
-            <!-- <span class="sticky right-0 flex items-center bg-background">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button variant="ghost" size="xs" @click="tabs++">
-                      <icon-lucide-plus />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent> New Tab </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </span> -->
-          </div>
-        </div>
+            </TooltipTrigger>
+            <TooltipContent> New Tab </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </nav>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="ghost" size="xs" @click="tabs++">
-              <icon-lucide-plus />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> New Tab </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
       <TooltipProvider v-if="!rightSidebarVisibility">
         <Tooltip>
           <TooltipTrigger as-child>
@@ -138,7 +125,6 @@ onBeforeUnmount(() => {
         </Tooltip>
       </TooltipProvider>
     </div>
-    <Separator />
     <Settings />
     <Shortcuts />
     <ExitTrigger />

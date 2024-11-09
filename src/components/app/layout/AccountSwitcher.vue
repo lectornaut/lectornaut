@@ -253,7 +253,7 @@ const selectedTeam = ref<Team>(
               class="text-muted-foreground"
               @click="emitter.emit('Sidebar.Left.Toggle')"
             >
-              <icon-lucide-panel-left />
+              <icon-lucide-chevrons-left />
             </Button>
           </TooltipTrigger>
           <TooltipContent> Collapse Sidebar </TooltipContent>

@@ -26,7 +26,11 @@ import { state } from "@/modules/theme"
         </DialogDescription>
       </DialogHeader>
       <div class="flex items-center justify-center">
-        <img :src="`qr-code-${state}.svg`" alt="QR Code" class="w-full" />
+        <img
+          :src="`assets/images/qr-code-${state}.svg`"
+          alt="QR Code"
+          class="w-full"
+        />
       </div>
     </DialogContent>
   </Dialog>
