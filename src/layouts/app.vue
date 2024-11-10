@@ -35,7 +35,7 @@ watch(rightSidebarVisibility, (value) => {
   <ResizablePanelGroup direction="horizontal" auto-save-id="app">
     <ResizablePanel
       ref="leftSidebar"
-      class="my-2 ml-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/40 shadow-lg transition-all"
+      class="my-2 ml-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/25 shadow-lg transition-all"
       :class="leftSidebarVisibility ? 'border' : 'invisible'"
       :min-size="10"
       :default-size="15"
@@ -54,7 +54,7 @@ watch(rightSidebarVisibility, (value) => {
     <ResizablePanel :default-size="60" class="flex flex-col transition-all">
       <Toolbar />
       <main
-        class="no-scrollbar z-10 m-2 flex grow flex-col overflow-auto overscroll-none rounded-xl border bg-gradient-to-b from-background/75 to-background/40 shadow-xl"
+        class="no-scrollbar z-10 m-2 flex grow flex-col overflow-auto overscroll-none rounded-xl border bg-gradient-to-b from-background/75 to-background/25 shadow-xl"
       >
         <RouterView v-slot="{ Component, route }">
           <template v-if="Component">
@@ -80,7 +80,7 @@ watch(rightSidebarVisibility, (value) => {
     />
     <ResizablePanel
       ref="rightSidebar"
-      class="my-2 mr-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/40 shadow-lg transition-all"
+      class="my-2 mr-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/25 shadow-lg transition-all"
       :class="rightSidebarVisibility ? 'border' : 'invisible'"
       :min-size="20"
       :default-size="25"

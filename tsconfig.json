@@ -1,7 +1,6 @@
 {
   "extends": "@vue/tsconfig/tsconfig.json",
   "compilerOptions": {
-    "moduleDetection": "force",
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "noUncheckedIndexedAccess": true,

@@ -118,8 +118,8 @@ importers:
         specifier: ^2.2.270
         version: 2.2.270
       "@intlify/unplugin-vue-i18n":
-        specifier: ^5.3.0
-        version: 5.3.0(@vue/compiler-dom@3.5.12)(eslint@9.14.0(jiti@2.3.3))(rollup@2.79.2)(typescript@5.6.3)(vue-i18n@10.0.4(vue@3.5.12(typescript@5.6.3)))(vue@3.5.12(typescript@5.6.3))
+        specifier: ^5.3.1
+        version: 5.3.1(@vue/compiler-dom@3.5.12)(eslint@9.14.0(jiti@2.3.3))(rollup@2.79.2)(typescript@5.6.3)(vue-i18n@10.0.4(vue@3.5.12(typescript@5.6.3)))(vue@3.5.12(typescript@5.6.3))
       "@tailwindcss/forms":
         specifier: ^0.5.9
         version: 0.5.9(tailwindcss@3.4.14)
@@ -151,8 +151,8 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(vite@5.4.10(@types/node@22.9.0)(sass-embedded@1.80.6)(terser@5.36.0))(vue@3.5.12(typescript@5.6.3))
       "@vue/tsconfig":
-        specifier: ^0.5.1
-        version: 0.5.1
+        specifier: ^0.6.0
+        version: 0.6.0(typescript@5.6.3)(vue@3.5.12(typescript@5.6.3))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.4.47)
@@ -2302,10 +2302,10 @@ packages:
       }
     engines: { node: ">= 16" }
 
-  "@intlify/unplugin-vue-i18n@5.3.0":
+  "@intlify/unplugin-vue-i18n@5.3.1":
     resolution:
       {
-        integrity: sha512-DcXq62ovjTOwY97htx1B9Wgg0G9mUNvSWdvHnQOFEg9topPFRB4ApQHYnHMoxNhsOqC/0qNSkD4SgsYQN80++Q==,
+        integrity: sha512-76huP8TpMOtBMLsYYIMLNbqMPXJ7+Q6xcjP6495h/pmbOQ7sw/DB8E0OFvDFeIZ2571a4ylzJnz+KMuYbAs1xA==,
       }
     engines: { node: ">= 18" }
     peerDependencies:
@@ -3639,11 +3639,19 @@ packages:
         integrity: sha512-L2RPSAwUFbgZH20etwrXyVyCBu9OxRSi8T/38QsvnkJyvq2LufW2lDCOzm7t/U9C1mkhJGWYfCuFBCmIuNivrg==,
       }
 
-  "@vue/tsconfig@0.5.1":
+  "@vue/tsconfig@0.6.0":
     resolution:
       {
-        integrity: sha512-VcZK7MvpjuTPx2w6blwnwZAu5/LgBUtejFOi3pPGQFXQN5Ela03FUtd2Qtg4yWGGissVL0dr6Ro1LfOFh+PCuQ==,
+        integrity: sha512-MHXNd6lzugsEHvuA6l1GqrF5jROqUon8sP/HInLPnthJiYvB0VvpHMywg7em1dBZfFZNBSkR68qH37zOdRHmCw==,
       }
+    peerDependencies:
+      typescript: 5.x
+      vue: ^3.3.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      vue:
+        optional: true
 
   "@vueuse/core@10.11.1":
     resolution:
@@ -10570,7 +10578,7 @@ snapshots:
 
   "@intlify/shared@10.0.4": {}
 
-  "@intlify/unplugin-vue-i18n@5.3.0(@vue/compiler-dom@3.5.12)(eslint@9.14.0(jiti@2.3.3))(rollup@2.79.2)(typescript@5.6.3)(vue-i18n@10.0.4(vue@3.5.12(typescript@5.6.3)))(vue@3.5.12(typescript@5.6.3))":
+  "@intlify/unplugin-vue-i18n@5.3.1(@vue/compiler-dom@3.5.12)(eslint@9.14.0(jiti@2.3.3))(rollup@2.79.2)(typescript@5.6.3)(vue-i18n@10.0.4(vue@3.5.12(typescript@5.6.3)))(vue@3.5.12(typescript@5.6.3))":
     dependencies:
       "@eslint-community/eslint-utils": 4.4.1(eslint@9.14.0(jiti@2.3.3))
       "@intlify/bundle-utils": 9.0.0(vue-i18n@10.0.4(vue@3.5.12(typescript@5.6.3)))
@@ -11515,7 +11523,10 @@ snapshots:
 
   "@vue/shared@3.5.12": {}
 
-  "@vue/tsconfig@0.5.1": {}
+  "@vue/tsconfig@0.6.0(typescript@5.6.3)(vue@3.5.12(typescript@5.6.3))":
+    optionalDependencies:
+      typescript: 5.6.3
+      vue: 3.5.12(typescript@5.6.3)
 
   "@vueuse/core@10.11.1(vue@3.5.12(typescript@5.6.3))":
     dependencies:

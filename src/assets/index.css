@@ -77,8 +77,8 @@
     @apply h-dvh;
     @apply w-dvw;
     @apply bg-gradient-to-b;
-    @apply from-background/75;
-    @apply to-background/50;
+    @apply from-background/95;
+    @apply to-background/75;
     @apply text-foreground;
     @apply text-xs;
     @apply select-none;
