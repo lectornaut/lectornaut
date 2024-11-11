@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getInitials, isTauri } from "@/helpers/utilities"
+import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import type { User } from "firebase/auth"
 import type { c } from "node_modules/vuefire/dist/shared/vuefire.cc4a8ea4.mjs"
@@ -40,10 +40,7 @@ const selectedTeam = ref<Team>(
 </script>
 
 <template>
-  <div
-    class="flex gap-2 p-2"
-    :class="isTauri ? 'flex-col-reverse' : 'items-center'"
-  >
+  <div class="flex gap-2 p-2">
     <Dialog v-model:open="showNewTeamDialog">
       <Popover v-model:open="openAccountSwitcher">
         <PopoverTrigger as-child>
@@ -199,7 +196,6 @@ const selectedTeam = ref<Team>(
     </Dialog>
     <div data-tauri-drag-region class="flex justify-end">
       <TooltipProvider>
-        <CommandK />
         <Tooltip>
           <DropdownMenu>
             <TooltipTrigger as-child>

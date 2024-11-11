@@ -24,7 +24,7 @@ import Layouts from "vite-plugin-vue-layouts"
 const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [
     VueRouter(),
     Vue(),
@@ -139,4 +139,4 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-}))
+})

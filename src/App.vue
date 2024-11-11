@@ -21,30 +21,26 @@ watch(user, async (currentUser, previousUser) => {
 
 <template>
   <div class="flex h-dvh w-dvw flex-col">
-    <Titlebar />
-    <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-      <Separator />
-      <RouterView v-slot="{ Component }">
-        <template v-if="Component">
-          <Transition
-            enter-active-class="transition ease-in-out duration-200"
-            enter-from-class="opacity-0"
-            enter-to-class="opacity-100"
-            leave-active-class="transition ease-in-out duration-200"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
-            mode="out-in"
-          >
-            <Suspense>
-              <Component :is="Component" />
-              <template #fallback>
-                <SplashScreen />
-              </template>
-            </Suspense>
-          </Transition>
-        </template>
-      </RouterView>
-    </div>
+    <RouterView v-slot="{ Component }">
+      <template v-if="Component">
+        <Transition
+          enter-active-class="transition ease-in-out duration-200"
+          enter-from-class="opacity-0"
+          enter-to-class="opacity-100"
+          leave-active-class="transition ease-in-out duration-200"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+          mode="out-in"
+        >
+          <Suspense>
+            <Component :is="Component" />
+            <template #fallback>
+              <SplashScreen />
+            </template>
+          </Suspense>
+        </Transition>
+      </template>
+    </RouterView>
     <Actions />
   </div>
 </template>

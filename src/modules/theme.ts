@@ -1,3 +1,4 @@
+import { defaultAccent } from "@/helpers/defaults"
 import { isTauri } from "@/helpers/utilities"
 import { invoke } from "@tauri-apps/api/core"
 
@@ -5,6 +6,17 @@ const initMode = () => {
   useColorMode({
     storageKey: "theme",
   })
+}
+
+export const accent = useStorage("accent", defaultAccent)
+
+watch(accent, (value) => {
+  document.documentElement.setAttribute("data-accent", value)
+})
+
+const initAccent = () => {
+  useStorage("accent", defaultAccent)
+  document.documentElement.setAttribute("data-accent", accent.value)
 }
 
 const initSidebars = () => {
@@ -17,6 +29,7 @@ export const rightSidebarVisibility = useStorage("rightSidebarVisibility", true)
 
 export const initTheme = () => {
   initMode()
+  initAccent()
   initSidebars()
 }
 

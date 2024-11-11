@@ -5,7 +5,7 @@ import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
 
 const visibility = useDocumentVisibility()
-const isDark = useDark()
+const isDark = usePreferredDark()
 
 const favicon = computed(() => {
   if (visibility.value === "hidden") {
@@ -103,5 +103,6 @@ emitter.on("Toast.Error", (message) => {
 </script>
 
 <template>
+  <CommandK />
   <Sonner offset="8px" :theme="state" />
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { themes } from "@/helpers/defaults"
+import { accentColors, defaultAccent, themes } from "@/helpers/defaults"
 import { languages } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
@@ -198,6 +198,8 @@ const getComputedProviderName = (provider: string) => {
       return "Unknown"
   }
 }
+
+const accent = useStorage("accent", defaultAccent)
 </script>
 
 <template>
@@ -549,6 +551,31 @@ const getComputedProviderName = (provider: string) => {
                       class="gap-4"
                     >
                       {{ mode.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="flex flex-col gap-1">
+                <p class="text-sm font-medium leading-none">Accent color</p>
+                <p class="flex items-center gap-2 text-muted-foreground">
+                  Choose your preferred accent color.
+                </p>
+              </div>
+              <div class="ml-auto flex gap-2">
+                <Select v-model="accent" :default-value="accent">
+                  <SelectTrigger class="h-9 gap-2">
+                    <SelectValue placeholder="Select an accent color" />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem
+                      v-for="color in accentColors"
+                      :key="color.id"
+                      :value="color.id"
+                      class="gap-4"
+                    >
+                      {{ color.name }}
                     </SelectItem>
                   </SelectContent>
                 </Select>
