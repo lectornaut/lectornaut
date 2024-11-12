@@ -121,8 +121,8 @@ importers:
         specifier: ^9.14.0
         version: 9.14.0
       "@iconify/json":
-        specifier: ^2.2.270
-        version: 2.2.270
+        specifier: ^2.2.271
+        version: 2.2.271
       "@intlify/unplugin-vue-i18n":
         specifier: ^5.3.1
         version: 5.3.1(@vue/compiler-dom@3.5.12)(eslint@9.14.0(jiti@2.3.3))(rollup@2.79.2)(typescript@5.6.3)(vue-i18n@10.0.4(vue@3.5.12(typescript@5.6.3)))(vue@3.5.12(typescript@5.6.3))
@@ -172,8 +172,8 @@ importers:
         specifier: ^5.2.1
         version: 5.2.1(@types/eslint@9.6.1)(eslint-config-prettier@9.1.0(eslint@9.14.0(jiti@2.3.3)))(eslint@9.14.0(jiti@2.3.3))(prettier@3.3.3)
       eslint-plugin-vue:
-        specifier: ^9.30.0
-        version: 9.30.0(eslint@9.14.0(jiti@2.3.3))
+        specifier: ^9.31.0
+        version: 9.31.0(eslint@9.14.0(jiti@2.3.3))
       husky:
         specifier: ^9.1.6
         version: 9.1.6
@@ -2066,10 +2066,10 @@ packages:
       }
     engines: { node: ">=18.18" }
 
-  "@iconify/json@2.2.270":
+  "@iconify/json@2.2.271":
     resolution:
       {
-        integrity: sha512-BpuvTnPpjmKwzopqhokLz99v69n2BOeWAEvm7ttIsesUM2a8JWr4PTYzu8iMbK9cFNcrGMtWNmBYqDznxRAQcA==,
+        integrity: sha512-EYp1o5by6iZuWmUUHoipxvRyCpj7Xp8kg5q0bm5Srl4oksYdUhtYb8IHqKTrReSTcpNCXtOpKbT8BnjmvO5WNw==,
       }
 
   "@iconify/types@2.0.0":
@@ -5110,10 +5110,10 @@ packages:
       eslint-config-prettier:
         optional: true
 
-  eslint-plugin-vue@9.30.0:
+  eslint-plugin-vue@9.31.0:
     resolution:
       {
-        integrity: sha512-CyqlRgShvljFkOeYK8wN5frh/OGTvkj1S7wlr2Q2pUvwq+X5VYiLd6ZjujpgSgLnys2W8qrBLkXQ41SUYaoPIQ==,
+        integrity: sha512-aYMUCgivhz1o4tLkRHj5oq9YgYPM4/EJc0M7TAKRLCUA5OYxRLAhYEVD2nLtTwLyixEFI+/QXSvKU9ESZFgqjQ==,
       }
     engines: { node: ^14.17.0 || >=16.0.0 }
     peerDependencies:
@@ -10548,7 +10548,7 @@ snapshots:
 
   "@humanwhocodes/retry@0.4.0": {}
 
-  "@iconify/json@2.2.270":
+  "@iconify/json@2.2.271":
     dependencies:
       "@iconify/types": 2.0.0
       pathe: 1.1.2
@@ -12564,7 +12564,7 @@ snapshots:
       "@types/eslint": 9.6.1
       eslint-config-prettier: 9.1.0(eslint@9.14.0(jiti@2.3.3))
 
-  eslint-plugin-vue@9.30.0(eslint@9.14.0(jiti@2.3.3)):
+  eslint-plugin-vue@9.31.0(eslint@9.14.0(jiti@2.3.3)):
     dependencies:
       "@eslint-community/eslint-utils": 4.4.1(eslint@9.14.0(jiti@2.3.3))
       eslint: 9.14.0(jiti@2.3.3)

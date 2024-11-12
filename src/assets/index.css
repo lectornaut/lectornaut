@@ -23,8 +23,7 @@
   body {
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
-    font-variation-settings: normal;
-    text-size-adjust: 100%;
+    scrollbar-width: thin;
 
     @apply selection:bg-secondary;
     @apply selection:text-secondary-foreground;
