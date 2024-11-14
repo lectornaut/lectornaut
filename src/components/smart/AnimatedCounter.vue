@@ -24,7 +24,7 @@ const animateValue = (newVal) => {
 
   interval = setInterval(() => {
     // Compute the change per frame, respecting decimal precision
-    let change = (newVal - displayNumber.value) / props.speed
+    const change = (newVal - displayNumber.value) / props.speed
     displayNumber.value += change
 
     // Stop the animation when the value is close enough to the target value
