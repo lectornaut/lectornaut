@@ -2,18 +2,11 @@
 import { logout } from "@/modules/auth"
 import emitter from "@/modules/mitt"
 
-const router = useRouter()
 const openExit = ref(false)
 
 emitter.on("Dialog.Exit.Open", () => {
   openExit.value = !openExit.value
 })
-
-const logoutUser = async () => {
-  await logout().then(async () => {
-    await router.push("/")
-  })
-}
 </script>
 
 <template>
@@ -27,7 +20,7 @@ const logoutUser = async () => {
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="logoutUser"> Logout </AlertDialogAction>
+        <AlertDialogAction @click="logout()"> Logout </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

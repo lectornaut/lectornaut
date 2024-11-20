@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isTauri } from "@/helpers/utilities"
+import { isTauri, generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
 import type { UnlistenFn } from "@tauri-apps/api/event"
@@ -7,7 +7,13 @@ import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useSortable } from "@vueuse/integrations/useSortable"
 
 const el = ref<HTMLElement | null>(null)
-const tabs = ref([
+
+type Tab = {
+  id: number
+  name: string
+}
+
+const tabs = ref<Tab[]>([
   {
     id: 1,
     name: "Sample tab",
@@ -50,6 +56,17 @@ onBeforeUnmount(() => {
     unlisten()
   }
 })
+
+emitter.on("Tabs.Add", (tab) => {
+  tabs.value.push(tab as Tab)
+})
+
+emitter.on("Tabs.Close", (id) => {
+  tabs.value.splice(
+    tabs.value.findIndex((tab) => tab.id === id),
+    1
+  )
+})
 </script>
 
 <template>
@@ -60,30 +77,32 @@ onBeforeUnmount(() => {
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"
     >
-      <TooltipProvider v-if="!leftSidebarVisibility">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              v-motion-fade
-              variant="ghost"
-              size="xs"
-              class="group"
-              @click="emitter.emit('Sidebar.Left.Toggle')"
-            >
-              <icon-lucide-menu class="group-hover:hidden" />
-              <icon-lucide-chevrons-right class="hidden group-hover:block" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Expand Sidebar </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <!-- <TasksNotifications /> -->
+      <div class="flex items-center justify-between gap-2">
+        <TooltipProvider v-if="!leftSidebarVisibility">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                v-motion-fade
+                variant="ghost"
+                size="xs"
+                class="group"
+                @click="emitter.emit('Sidebar.Left.Toggle')"
+              >
+                <icon-lucide-menu class="group-hover:hidden" />
+                <icon-lucide-chevrons-right class="hidden group-hover:block" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Expand Sidebar </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <!-- <TasksNotifications /> -->
+      </div>
       <nav
         ref="el"
         class="flex h-full w-fit min-w-0 items-center justify-start gap-2 after:absolute after:inset-x-0 after:bottom-0 after:-z-10 after:h-px after:bg-border"
       >
         <Button
-          v-for="(tab, index) in tabs"
+          v-for="tab in tabs"
           :key="tab.id"
           class="group relative flex h-full w-56 min-w-0 grow justify-between gap-2 rounded-lg border border-b-0 border-transparent pr-1.5 font-normal"
           :class="[
@@ -111,7 +130,7 @@ onBeforeUnmount(() => {
                     size="xs"
                     variant="ghost"
                     class="invisible h-4 w-4 group-hover:visible"
-                    @click="tabs.splice(index, 1)"
+                    @click="emitter.emit('Tabs.Close', tab.id)"
                   >
                     <icon-lucide-x />
                   </Button>
@@ -129,8 +148,12 @@ onBeforeUnmount(() => {
               <Button
                 variant="ghost"
                 size="xs"
-                class="itemBottom"
-                @click="tabs.push({ id: tabs.length + 1, name: 'Sample tab' })"
+                @click="
+                  emitter.emit('Tabs.Add', {
+                    id: generateId(),
+                    name: 'Sample tab',
+                  })
+                "
               >
                 <icon-lucide-plus />
               </Button>
@@ -138,22 +161,24 @@ onBeforeUnmount(() => {
             <TooltipContent> New Tab </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <TooltipProvider v-if="!rightSidebarVisibility">
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                v-motion-fade
-                variant="ghost"
-                size="xs"
-                class="gap-2"
-                @click="emitter.emit('Sidebar.Right.Toggle')"
-              >
-                <icon-mingcute-ai-fill />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Chat with AI </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div class="flex items-center gap-2">
+          <TooltipProvider v-if="!rightSidebarVisibility">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  v-motion-fade
+                  variant="ghost"
+                  size="xs"
+                  class="gap-2"
+                  @click="emitter.emit('Sidebar.Right.Toggle')"
+                >
+                  <icon-mingcute-ai-fill />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Chat with AI </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     </div>
     <Settings />

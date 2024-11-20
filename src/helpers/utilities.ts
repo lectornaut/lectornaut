@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from "uuid"
+
 export const isTauri = computed(() => {
   if ("__TAURI_INTERNALS__" in window) {
     return true
@@ -5,6 +7,10 @@ export const isTauri = computed(() => {
     return false
   }
 })
+
+export const generateId = () => {
+  return uuidv4()
+}
 
 export const getInitials = (name: string) =>
   name

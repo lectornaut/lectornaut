@@ -1,4 +1,4 @@
-import { router } from "./router"
+import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { updateUserData } from "@/queries/updateUserData"
 import {
@@ -86,8 +86,13 @@ export const signInWithMicrosoft = async () => {
 }
 
 export const logout = async () => {
-  return auth.signOut().catch((error) => {
-    console.error("Error in logout:", error)
-    throw error
-  })
+  return auth
+    .signOut()
+    .then(async () => {
+      await router.push("/")
+    })
+    .catch((error) => {
+      console.error("Error in logout:", error)
+      throw error
+    })
 }
