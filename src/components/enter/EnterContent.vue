@@ -1,29 +1,69 @@
 <script setup lang="ts">
 import {
-  sendAuthenticateEmail,
+  signUpWithEmailPassword,
+  signInWithEmailPassword,
+  resetEmailPassword,
   signInWithGoogle,
   signInWithMicrosoft,
 } from "@/modules/auth"
 
-const email = ref("")
+const authMode = ref<"sign-up" | "sign-in">("sign-up")
 const authenticateError = ref<string | boolean>(false)
-const sendAuthenticateViaEmailSuccess = ref(false)
 
-const authenticateViaEmailInProgress = ref(false)
-const authenticateViaEmail = async () => {
-  authenticateViaEmailInProgress.value = true
+const email = ref("")
+const password = ref("")
+const passwordInputType = ref<"password" | "text">("password")
+
+const signupViaEmailPasswordInProgress = ref(false)
+
+const signupViaEmailPassword = async () => {
+  signupViaEmailPasswordInProgress.value = true
   authenticateError.value = false
 
-  await sendAuthenticateEmail(email.value)
+  await signUpWithEmailPassword(email.value, password.value)
     .then(() => {
-      sendAuthenticateViaEmailSuccess.value = true
+      signupViaEmailPasswordInProgress.value = true
     })
     .catch((error) => {
       authenticateError.value = String(error)
     })
     .finally(() => {
-      authenticateViaEmailInProgress.value = false
+      signupViaEmailPasswordInProgress.value = false
     })
+}
+
+const signinViaEmailPasswordInProgress = ref(false)
+
+const signinViaEmailPassword = async () => {
+  signinViaEmailPasswordInProgress.value = true
+  authenticateError.value = false
+
+  await signInWithEmailPassword(email.value, password.value)
+    .then(() => {
+      signinViaEmailPasswordInProgress.value = true
+    })
+    .catch((error) => {
+      authenticateError.value = String(error)
+    })
+    .finally(() => {
+      signinViaEmailPasswordInProgress.value = false
+    })
+}
+
+const resetPassword = async () => {
+  authenticateError.value = false
+  await resetEmailPassword(email.value)
+    .then(() => {
+      authenticateError.value = "Password reset email sent"
+    })
+    .catch((error) => {
+      authenticateError.value = String(error)
+    })
+}
+
+const togglePasswordVisibility = () => {
+  passwordInputType.value =
+    passwordInputType.value === "password" ? "text" : "password"
 }
 
 const authenticateGoogleInProgress = ref(false)
@@ -76,38 +116,166 @@ const authenticateApple = async () => {
 </script>
 
 <template>
-  <form
-    v-if="!sendAuthenticateViaEmailSuccess"
-    @submit.prevent="authenticateViaEmail"
-  >
-    <div class="flex flex-col gap-4 p-4">
-      <div class="flex flex-col gap-2">
-        <div class="relative w-full items-center">
-          <span
-            class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-          >
-            <icon-lucide-mail class="text-muted-foreground" />
-          </span>
-          <Input
-            v-model="email"
-            type="email"
-            placeholder="Email"
-            class="pl-10 focus:border-inherit focus:ring-0"
-            :disabled="authenticateViaEmailInProgress"
-            required
-          />
+  <div>
+    <Tabs v-model="authMode" class="flex flex-col gap-4 p-4">
+      <TabsList class="grid grid-cols-2 rounded-xl">
+        <TabsTrigger value="sign-up" class="rounded-lg py-2">
+          Sign up
+        </TabsTrigger>
+        <TabsTrigger value="sign-in" class="rounded-lg py-2">
+          Sign in
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="sign-up">
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="relative w-full items-center">
+              <span
+                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+              >
+                <icon-lucide-mail class="text-muted-foreground" />
+              </span>
+              <Input
+                v-model="email"
+                type="email"
+                placeholder="Email"
+                class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
+                :disabled="signupViaEmailPasswordInProgress"
+                required
+              />
+            </div>
+            <div class="relative w-full items-center">
+              <span
+                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+              >
+                <icon-lucide-lock-keyhole class="text-muted-foreground" />
+              </span>
+              <Input
+                v-model="password"
+                :type="passwordInputType"
+                placeholder="Password"
+                class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
+                :disabled="signupViaEmailPasswordInProgress"
+                required
+              />
+              <span
+                class="absolute inset-y-0 end-0 flex items-center justify-center px-2"
+              >
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  @click="togglePasswordVisibility()"
+                >
+                  <icon-lucide-eye
+                    v-if="passwordInputType === 'password'"
+                    class="text-muted-foreground"
+                  />
+                  <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                </Button>
+              </span>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+              <Button variant="ghost" size="xs"> Send Magic link </Button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <Button
+              :disabled="signupViaEmailPasswordInProgress"
+              @click="signupViaEmailPassword"
+            >
+              <template v-if="signupViaEmailPasswordInProgress">
+                <icon-lucide-loader class="animate-spin" />
+              </template>
+              <template v-else> Continue </template>
+            </Button>
+          </div>
+          <div class="flex items-center justify-center gap-2">
+            <span class="text-muted-foreground/50">
+              Already have an account?
+            </span>
+            <Button variant="ghost" size="xs" @click="authMode = 'sign-in'">
+              Sign in
+            </Button>
+          </div>
         </div>
-        <Button
-          type="submit"
-          :disabled="authenticateViaEmailInProgress || !email"
-        >
-          <template v-if="authenticateViaEmailInProgress">
-            <icon-lucide-loader class="animate-spin" />
-          </template>
-          <template v-else> Continue </template>
-        </Button>
-      </div>
-      <Separator label="Or" />
+      </TabsContent>
+      <TabsContent value="sign-in">
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="relative w-full items-center">
+              <span
+                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+              >
+                <icon-lucide-mail class="text-muted-foreground" />
+              </span>
+              <Input
+                v-model="email"
+                type="email"
+                placeholder="Email"
+                class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
+                :disabled="signinViaEmailPasswordInProgress"
+                required
+              />
+            </div>
+            <div class="relative w-full items-center">
+              <span
+                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+              >
+                <icon-lucide-lock-keyhole class="text-muted-foreground" />
+              </span>
+              <Input
+                v-model="password"
+                :type="passwordInputType"
+                placeholder="Password"
+                class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
+                :disabled="signinViaEmailPasswordInProgress"
+                required
+              />
+              <span
+                class="absolute inset-y-0 end-0 flex items-center justify-center px-2"
+              >
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  @click="togglePasswordVisibility()"
+                >
+                  <icon-lucide-eye
+                    v-if="passwordInputType === 'password'"
+                    class="text-muted-foreground"
+                  />
+                  <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                </Button>
+              </span>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+              <Button variant="ghost" size="xs" @click="resetPassword()">
+                Forgot password?
+              </Button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <Button
+              type="submit"
+              :disabled="signinViaEmailPasswordInProgress"
+              @click="signinViaEmailPassword()"
+            >
+              <template v-if="signinViaEmailPasswordInProgress">
+                <icon-lucide-loader class="animate-spin" />
+              </template>
+              <template v-else> Continue </template>
+            </Button>
+          </div>
+          <div class="flex items-center justify-center gap-2">
+            <span class="text-muted-foreground/50">
+              Don't have an account?
+            </span>
+            <Button variant="ghost" size="xs" @click="authMode = 'sign-up'">
+              Sign up
+            </Button>
+          </div>
+        </div>
+      </TabsContent>
+      <Separator label="OR" />
       <div class="flex flex-col gap-2">
         <Button
           variant="secondary"
@@ -119,7 +287,7 @@ const authenticateApple = async () => {
             <icon-lucide-loader class="animate-spin" />
           </template>
           <template v-else>
-            <icon-mdi-google class="text-muted-foreground" />
+            <icon-logos-google-icon class="text-muted-foreground" />
           </template>
           Continue with Google
         </Button>
@@ -133,7 +301,7 @@ const authenticateApple = async () => {
             <icon-lucide-loader class="animate-spin" />
           </template>
           <template v-else>
-            <icon-mdi-microsoft class="text-muted-foreground" />
+            <icon-logos-microsoft-icon class="text-muted-foreground" />
           </template>
           Continue with Microsoft
         </Button>
@@ -147,7 +315,7 @@ const authenticateApple = async () => {
             <icon-lucide-loader class="animate-spin" />
           </template>
           <template v-else>
-            <icon-mdi-apple class="text-muted-foreground" />
+            <icon-mdi-apple class="h-4 w-4 text-accent-foreground" />
           </template>
           Continue with Apple
         </Button>
@@ -163,11 +331,6 @@ const authenticateApple = async () => {
           {{ authenticateError }}
         </AlertDescription>
       </Alert>
-    </div>
-  </form>
-  <EnterEmailSent
-    v-else
-    :email="email"
-    @change-email="sendAuthenticateViaEmailSuccess = false"
-  />
+    </Tabs>
+  </div>
 </template>

@@ -56,6 +56,7 @@ watch(rightSidebarVisibility, (value) => {
       />
       <ResizablePanel :default-size="60" class="flex flex-col transition-all">
         <Toolbar />
+        <SubNavigation />
         <main
           class="no-scrollbar z-10 m-2 flex grow flex-col overflow-auto overscroll-none rounded-xl border bg-gradient-to-b from-background/75 to-background/25 shadow-xl"
         >

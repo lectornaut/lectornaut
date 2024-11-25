@@ -40,13 +40,13 @@ const selectedTeam = ref<Team>(
 </script>
 
 <template>
-  <div class="flex gap-2 p-2">
+  <div class="flex items-center justify-between gap-2 p-2">
     <Dialog v-model:open="showNewTeamDialog">
       <Popover v-model:open="openAccountSwitcher">
         <PopoverTrigger as-child>
           <Button
             variant="ghost"
-            class="grow justify-start gap-3 truncate data-[state=open]:bg-muted"
+            class="gap-3 truncate data-[state=open]:bg-muted"
             size="xs"
           >
             <Avatar class="size-4">

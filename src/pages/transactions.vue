@@ -11,8 +11,8 @@ const selectedTab = ref("chart")
 
 <template>
   <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-    <div class="flex grow flex-col gap-2 p-2">
-      <div class="flex items-center justify-between gap-2">
+    <div class="sticky top-0 flex flex-col bg-background">
+      <div class="flex items-center justify-between gap-2 p-2">
         <div class="flex items-center gap-2">
           <DateViewPicker />
           <Tabs v-model="selectedTab">
@@ -47,6 +47,9 @@ const selectedTab = ref("chart")
           <NewTransaction />
         </div>
       </div>
+      <Separator />
+    </div>
+    <div class="flex grow flex-col gap-2 p-2">
       <DataChart v-if="selectedTab === 'chart'" />
       <DataTable
         v-else-if="selectedTab === 'table'"

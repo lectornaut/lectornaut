@@ -2,12 +2,15 @@ import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { updateUserData } from "@/queries/updateUserData"
 import {
+  createUserWithEmailAndPassword,
   getAdditionalUserInfo,
   getAuth,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   OAuthProvider,
+  sendPasswordResetEmail,
   sendSignInLinkToEmail,
+  signInWithEmailAndPassword,
   signInWithEmailLink,
   signInWithPopup,
   type UserCredential,
@@ -59,6 +62,45 @@ export const authenticateEmail = async () => {
         })
     }
   }
+}
+
+export const signUpWithEmailPassword = async (
+  email: string,
+  password: string
+) => {
+  return createUserWithEmailAndPassword(auth, email, password)
+    .then(async (result) => {
+      finishAuthentication(result)
+    })
+    .catch((error) => {
+      console.error("Error in signUpWithEmail:", error)
+      throw error
+    })
+}
+
+export const signInWithEmailPassword = async (
+  email: string,
+  password: string
+) => {
+  return signInWithEmailAndPassword(auth, email, password)
+    .then(async (result) => {
+      finishAuthentication(result)
+    })
+    .catch((error) => {
+      console.error("Error in signInWithEmail:", error)
+      throw error
+    })
+}
+
+export const resetEmailPassword = async (email: string) => {
+  return sendPasswordResetEmail(auth, email)
+    .then(() => {
+      alert("Password reset email sent")
+    })
+    .catch((error) => {
+      console.error("Error in resetPassword:", error)
+      throw error
+    })
 }
 
 export const signInWithGoogle = async () => {
