@@ -121,7 +121,7 @@ const play = () => new Audio(click).play()
             class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
           >
             <CardHeader class="gap-1 px-4 py-4">
-              <CardTitle class="text-xs">What are the</CardTitle>
+              <CardTitle>What are the</CardTitle>
               <CardDescription> benefits of upgrading? </CardDescription>
             </CardHeader>
           </Card>
@@ -129,7 +129,7 @@ const play = () => new Audio(click).play()
             class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
           >
             <CardHeader class="gap-1 px-4 py-4">
-              <CardTitle class="text-xs">How do I</CardTitle>
+              <CardTitle>How do I</CardTitle>
               <CardDescription> upgrade my account? </CardDescription>
             </CardHeader>
           </Card>
@@ -137,7 +137,7 @@ const play = () => new Audio(click).play()
             class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
           >
             <CardHeader class="gap-1 px-4 py-4">
-              <CardTitle class="text-xs">How do I</CardTitle>
+              <CardTitle>How do I</CardTitle>
               <CardDescription> cancel my subscription? </CardDescription>
             </CardHeader>
           </Card>
@@ -145,7 +145,7 @@ const play = () => new Audio(click).play()
             class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
           >
             <CardHeader class="gap-1 px-4 py-4">
-              <CardTitle class="text-xs">How do I</CardTitle>
+              <CardTitle>How do I</CardTitle>
               <CardDescription> change my password? </CardDescription>
             </CardHeader>
           </Card>

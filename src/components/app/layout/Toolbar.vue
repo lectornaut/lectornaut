@@ -69,34 +69,24 @@ emitter.on("Tabs.Close", (id) => {
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"
     >
-      <div class="flex items-center justify-between gap-2">
-        <TooltipProvider v-if="!leftSidebarVisibility" v-motion-fade>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="ghost"
-                size="icon"
-                class="group"
-                @click="emitter.emit('Sidebar.Left.Toggle')"
-              >
-                <icon-lucide-menu class="group-hover:hidden" />
-                <icon-lucide-chevrons-right class="hidden group-hover:block" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Expand Sidebar </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="gap-2">
-                <icon-lucide-history />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Recent Tabs </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      <!-- <div class="flex items-center justify-between gap-2"> -->
+      <TooltipProvider v-if="!leftSidebarVisibility" v-motion-fade>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="group"
+              @click="emitter.emit('Sidebar.Left.Toggle')"
+            >
+              <icon-lucide-menu class="group-hover:hidden" />
+              <icon-lucide-chevrons-right class="hidden group-hover:block" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> Expand Sidebar </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <!-- </div> -->
       <nav
         ref="el"
         class="flex w-fit min-w-0 items-center justify-start gap-2 after:absolute after:inset-x-0 after:bottom-0 after:-z-10 after:h-px after:bg-border"

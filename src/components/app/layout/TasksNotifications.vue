@@ -121,7 +121,7 @@ const components: { title: string; href: string; description: string }[] = [
           <!-- <span class="truncate"> Tasks </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent>
-          <div class="w-80 -translate-x-px">
+          <div class="w-96 -translate-x-px">
             <div
               class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >
@@ -192,7 +192,7 @@ const components: { title: string; href: string; description: string }[] = [
           <!-- <span class="truncate"> Notifications </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent>
-          <div class="w-80 -translate-x-px">
+          <div class="w-96 -translate-x-px">
             <div
               class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >

@@ -33,7 +33,6 @@
     @apply from-background/95;
     @apply to-background/75;
     @apply text-foreground;
-    @apply text-xs;
     @apply select-none;
     @apply overflow-hidden;
     @apply overscroll-none;

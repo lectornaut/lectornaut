@@ -193,7 +193,7 @@ const selectedTeam = ref<Team>(
         </DialogFooter>
       </DialogContent>
     </Dialog>
-    <div data-tauri-drag-region class="flex justify-end">
+    <div data-tauri-drag-region class="flex justify-end gap-2">
       <TooltipProvider>
         <Tooltip>
           <DropdownMenu>
