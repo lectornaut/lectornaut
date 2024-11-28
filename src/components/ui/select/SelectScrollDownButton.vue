@@ -5,7 +5,7 @@ import {
   SelectScrollDownButton,
   type SelectScrollDownButtonProps,
   useForwardProps,
-} from "radix-vue"
+} from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
 
 const props = defineProps<
@@ -29,7 +29,7 @@ const forwardedProps = useForwardProps(delegatedProps)
     "
   >
     <slot>
-      <ChevronDown class="h-4 w-4" />
+      <ChevronDown />
     </slot>
   </SelectScrollDownButton>
 </template>

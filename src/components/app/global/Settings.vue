@@ -317,7 +317,6 @@ const accent = useStorage("accent", defaultAccent)
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Badge
-                            size="xs"
                             variant="outline"
                             class="gap-1 px-1 font-normal"
                           >
@@ -335,7 +334,6 @@ const accent = useStorage("accent", defaultAccent)
                 <div class="ml-auto flex gap-2">
                   <Button
                     v-if="!user?.emailVerified"
-                    size="xs"
                     variant="secondary"
                     :disabled="sendingVerificationEmail"
                     class="gap-2"
@@ -349,9 +347,7 @@ const accent = useStorage("accent", defaultAccent)
                   </Button>
                   <Dialog>
                     <DialogTrigger>
-                      <Button size="sm" variant="outline">
-                        Change primary email
-                      </Button>
+                      <Button variant="outline"> Change primary email </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
@@ -395,7 +391,7 @@ const accent = useStorage("accent", defaultAccent)
                   </p>
                 </div>
                 <div class="ml-auto flex gap-2">
-                  <Button size="sm" variant="outline" class="gap-2">
+                  <Button variant="outline" class="gap-2">
                     Connect a new account
                   </Button>
                 </div>
@@ -453,7 +449,6 @@ const accent = useStorage("accent", defaultAccent)
                   <div class="ml-auto flex gap-2">
                     <Button
                       v-if="provider.providerId === 'password'"
-                      size="xs"
                       variant="secondary"
                       class="gap-2"
                     >
@@ -461,7 +456,6 @@ const accent = useStorage("accent", defaultAccent)
                     </Button>
                     <Button
                       :disabled="unlinkingProviderMap[provider.providerId]"
-                      size="xs"
                       variant="destructive"
                       class="gap-2"
                       @click="unlinkProvider(provider.providerId)"
@@ -489,7 +483,7 @@ const accent = useStorage("accent", defaultAccent)
                 <div class="ml-auto flex gap-2">
                   <AlertDialog>
                     <AlertDialogTrigger>
-                      <Button size="sm" variant="destructive" class="gap-2">
+                      <Button variant="destructive" class="gap-2">
                         Delete account
                       </Button>
                     </AlertDialogTrigger>

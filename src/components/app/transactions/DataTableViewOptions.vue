@@ -21,7 +21,7 @@ const columns = computed(() =>
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="outline" size="sm" class="gap-2">
+      <Button variant="outline" class="gap-2">
         <icon-lucide-sliders-horizontal />
         View
       </Button>

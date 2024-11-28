@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ChartTooltip from "./ChartTooltip.vue"
+import { ChartTooltip } from "."
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { omit } from "@unovis/ts"
 import { VisTooltip } from "@unovis/vue"
@@ -18,15 +18,9 @@ const props = withDefaults(
   }
 )
 
-const TooltipComponent = props.customTooltip ?? ChartTooltip
-
 // Use weakmap to store reference to each datapoint for Tooltip
 const wm = new WeakMap()
-function template(
-  d: Record<string, unknown>,
-  i: number,
-  elements: (HTMLElement | SVGElement)[]
-) {
+function template(d: any, i: number, elements: (HTMLElement | SVGElement)[]) {
   if (props.index in d) {
     if (wm.has(d)) {
       return wm.get(d)
@@ -35,12 +29,10 @@ function template(
       const omittedData = Object.entries(omit(d, [props.index])).map(
         ([key, value]) => {
           const legendReference = props.items?.find((i) => i.name === key)
-          return {
-            ...legendReference,
-            value: props.valueFormatter(Number(value)),
-          }
+          return { ...legendReference, value: props.valueFormatter(value) }
         }
       )
+      const TooltipComponent = props.customTooltip ?? ChartTooltip
       createApp(TooltipComponent, {
         title: d[props.index],
         data: omittedData,
@@ -49,24 +41,21 @@ function template(
       return componentDiv.innerHTML
     }
   } else {
-    const data = d.data as Record<string, unknown>
+    const data = d.data
 
     if (wm.has(data)) {
       return wm.get(data)
     } else {
-      const element = elements[i]
-      if (!element) {
-        throw new Error(`Element at index ${i} is undefined`)
-      }
-      const style = getComputedStyle(element)
+      const style = getComputedStyle(elements[i])
       const omittedData = [
         {
           name: data.name,
-          value: props.valueFormatter(Number(data[props.index])),
+          value: props.valueFormatter(data[props.index]),
           color: style.fill,
         },
       ]
       const componentDiv = document.createElement("div")
+      const TooltipComponent = props.customTooltip ?? ChartTooltip
       createApp(TooltipComponent, {
         title: d[props.index],
         data: omittedData,

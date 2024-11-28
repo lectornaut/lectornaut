@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import {
   AlertDialogDescription,
   type AlertDialogDescriptionProps,
-} from "radix-vue"
+} from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
 
 const props = defineProps<
@@ -20,7 +20,7 @@ const delegatedProps = computed(() => {
 <template>
   <AlertDialogDescription
     v-bind="delegatedProps"
-    :class="cn('text-xs text-muted-foreground', props.class)"
+    :class="cn('text-sm text-muted-foreground', props.class)"
   >
     <slot />
   </AlertDialogDescription>

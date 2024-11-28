@@ -159,13 +159,9 @@ const authenticateApple = async () => {
                 required
               />
               <span
-                class="absolute inset-y-0 end-0 flex items-center justify-center px-2"
+                class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
               >
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  @click="togglePasswordVisibility()"
-                >
+                <Button variant="ghost" @click="togglePasswordVisibility()">
                   <icon-lucide-eye
                     v-if="passwordInputType === 'password'"
                     class="text-muted-foreground"
@@ -175,7 +171,7 @@ const authenticateApple = async () => {
               </span>
             </div>
             <div class="flex items-center justify-end gap-2">
-              <Button variant="ghost" size="xs"> Send Magic link </Button>
+              <Button variant="ghost"> Send Magic link </Button>
             </div>
           </div>
           <div class="flex flex-col gap-2">
@@ -193,7 +189,7 @@ const authenticateApple = async () => {
             <span class="text-muted-foreground/50">
               Already have an account?
             </span>
-            <Button variant="ghost" size="xs" @click="authMode = 'sign-in'">
+            <Button variant="ghost" @click="authMode = 'sign-in'">
               Sign in
             </Button>
           </div>
@@ -232,13 +228,9 @@ const authenticateApple = async () => {
                 required
               />
               <span
-                class="absolute inset-y-0 end-0 flex items-center justify-center px-2"
+                class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
               >
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  @click="togglePasswordVisibility()"
-                >
+                <Button variant="ghost" @click="togglePasswordVisibility()">
                   <icon-lucide-eye
                     v-if="passwordInputType === 'password'"
                     class="text-muted-foreground"
@@ -248,7 +240,7 @@ const authenticateApple = async () => {
               </span>
             </div>
             <div class="flex items-center justify-end gap-2">
-              <Button variant="ghost" size="xs" @click="resetPassword()">
+              <Button variant="ghost" @click="resetPassword()">
                 Forgot password?
               </Button>
             </div>
@@ -269,7 +261,7 @@ const authenticateApple = async () => {
             <span class="text-muted-foreground/50">
               Don't have an account?
             </span>
-            <Button variant="ghost" size="xs" @click="authMode = 'sign-up'">
+            <Button variant="ghost" @click="authMode = 'sign-up'">
               Sign up
             </Button>
           </div>

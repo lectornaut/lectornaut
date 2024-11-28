@@ -1,6 +1,6 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { useFormField } from "./useFormField"
-import { Slot } from "radix-vue"
+import { Slot } from "reka-ui"
 
 const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 </script>

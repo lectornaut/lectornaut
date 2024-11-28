@@ -11,7 +11,7 @@ const selectedTab = ref("chart")
 
 <template>
   <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-    <div class="sticky top-0 flex flex-col bg-background">
+    <div class="sticky top-0 z-10 flex flex-col bg-background">
       <div class="flex items-center justify-between gap-2 p-2">
         <div class="flex items-center gap-2">
           <DateViewPicker />

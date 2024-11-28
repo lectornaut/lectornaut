@@ -17,7 +17,7 @@ function copy(id: string) {
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" class="data-[state=open]:bg-muted" size="xs">
+      <Button variant="ghost" class="data-[state=open]:bg-muted">
         <icon-lucide-ellipsis />
         <span class="sr-only">Open menu</span>
       </Button>

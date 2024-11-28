@@ -24,7 +24,7 @@ const accordionItems = [
 <template>
   <Drawer>
     <DrawerTrigger as-child>
-      <Button class="rounded-2xl" size="lg" variant="secondary"> FAQ </Button>
+      <Button variant="secondary" class="rounded-2xl" size="lg"> FAQ </Button>
     </DrawerTrigger>
     <DrawerContent class="outline-none">
       <div class="mx-auto flex w-full max-w-sm flex-col">

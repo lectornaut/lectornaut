@@ -1,7 +1,7 @@
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button size="sm" class="gap-2">
+      <Button class="gap-2">
         <icon-lucide-plus />
         New Transaction
       </Button>

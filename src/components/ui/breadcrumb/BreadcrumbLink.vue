@@ -1,6 +1,6 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
-import { Primitive, type PrimitiveProps } from "radix-vue"
+import { Primitive, type PrimitiveProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 const props = withDefaults(

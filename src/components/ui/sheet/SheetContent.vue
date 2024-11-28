@@ -10,7 +10,7 @@ import {
   DialogOverlay,
   DialogPortal,
   useForwardPropsEmits,
-} from "radix-vue"
+} from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
 
 interface SheetContentProps extends DialogContentProps {
@@ -49,7 +49,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       <DialogClose
         class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
       >
-        <X class="h-4 w-4 text-muted-foreground" />
+        <X class="h-4 w-4" />
       </DialogClose>
     </DialogContent>
   </DialogPortal>

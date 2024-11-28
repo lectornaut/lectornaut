@@ -42,7 +42,6 @@ const isFiltered = computed(
       <Button
         v-if="isFiltered"
         variant="secondary"
-        size="sm"
         @click="table.resetColumnFilters()"
       >
         Reset filters

@@ -47,7 +47,6 @@ const selectedTeam = ref<Team>(
           <Button
             variant="ghost"
             class="gap-3 truncate data-[state=open]:bg-muted"
-            size="xs"
           >
             <Avatar class="size-4">
               <AvatarImage
@@ -202,7 +201,7 @@ const selectedTeam = ref<Team>(
               <DropdownMenuTrigger as-child>
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="icon"
                   class="text-muted-foreground data-[state=open]:bg-muted"
                 >
                   <icon-lucide-bolt />
@@ -245,7 +244,7 @@ const selectedTeam = ref<Team>(
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
-              size="xs"
+              size="icon"
               class="text-muted-foreground"
               @click="emitter.emit('Sidebar.Left.Toggle')"
             >

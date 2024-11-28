@@ -11,7 +11,6 @@ import { links } from "@/data/data"
             <Button
               variant="ghost"
               class="grow justify-start gap-3 truncate font-normal text-muted-foreground"
-              size="sm"
               as-child
             >
               <RouterLink :to="link.to">

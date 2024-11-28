@@ -4,7 +4,7 @@ import {
   ProgressIndicator,
   ProgressRoot,
   type ProgressRootProps,
-} from "radix-vue"
+} from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
 
 const props = withDefaults(
@@ -26,7 +26,7 @@ const delegatedProps = computed(() => {
     v-bind="delegatedProps"
     :class="
       cn(
-        'relative h-4 w-full overflow-hidden rounded-full bg-secondary',
+        'relative h-2 w-full overflow-hidden rounded-full bg-primary/20',
         props.class
       )
     "

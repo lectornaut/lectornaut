@@ -3,7 +3,7 @@
     <BreadcrumbList>
       <BreadcrumbItem>
         <BreadcrumbLink as-child>
-          <Button size="xs" variant="ghost" as-child>
+          <Button variant="ghost" as-child>
             <RouterLink to="/home" class="gap-2">
               <icon-lucide-inbox />
               <span class="truncate">Home</span>
@@ -14,7 +14,7 @@
       <BreadcrumbSeparator />
       <BreadcrumbItem>
         <BreadcrumbLink as-child>
-          <Button size="xs" variant="ghost" as-child>
+          <Button variant="ghost" as-child>
             <RouterLink to="/exit" class="gap-2">
               <icon-lucide-package />
               <div class="truncate">Exit</div>
@@ -26,7 +26,7 @@
       <BreadcrumbItem>
         <BreadcrumbPage as-child>
           <BreadcrumbLink as-child>
-            <Button size="xs" variant="ghost" as-child>
+            <Button variant="ghost" as-child>
               <RouterLink to="/exit" class="gap-2">
                 <icon-lucide-box />
                 <span class="truncate">Breadcrumb</span>

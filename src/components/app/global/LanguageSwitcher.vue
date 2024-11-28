@@ -9,17 +9,21 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
   <TooltipProvider>
     <Tooltip>
       <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <TooltipTrigger as-child>
-            <Button variant="ghost" size="xs">
+        <TooltipTrigger as-child>
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="data-[state=open]:bg-muted"
+            >
               <icon-lucide-languages />
               <span class="sr-only">
                 {{ languages.find((language) => language.id === locale)?.name }}
               </span>
             </Button>
-          </TooltipTrigger>
-          <TooltipContent> Change language </TooltipContent>
-        </DropdownMenuTrigger>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent> Change language </TooltipContent>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Language</DropdownMenuLabel>
           <DropdownMenuSeparator />

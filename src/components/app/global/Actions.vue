@@ -103,6 +103,5 @@ emitter.on("Toast.Error", (message) => {
 </script>
 
 <template>
-  <CommandK />
   <Sonner offset="8px" :theme="state" />
 </template>

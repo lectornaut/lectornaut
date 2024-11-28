@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { type ButtonVariants, buttonVariants } from "."
 import { cn } from "@/lib/utils"
-import { Primitive, type PrimitiveProps } from "radix-vue"
+import { Primitive, type PrimitiveProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 interface Props extends PrimitiveProps {

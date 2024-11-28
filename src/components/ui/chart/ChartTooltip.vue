@@ -6,13 +6,13 @@ defineProps<{
   data: {
     name: string
     color: string
-    value: number | string
+    value: any
   }[]
 }>()
 </script>
 
 <template>
-  <Card class="text-xs">
+  <Card class="text-sm">
     <CardHeader v-if="title" class="border-b p-3">
       <CardTitle>
         {{ title }}

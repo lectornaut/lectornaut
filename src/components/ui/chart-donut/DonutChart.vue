@@ -31,7 +31,7 @@ const props = withDefaults(
       /**
        * Function to sort the segment
        */
-      sortFunction?: (a: unknown, b: unknown) => number | undefined
+      sortFunction?: (a: any, b: any) => number | undefined
       /**
        * Controls the formatting for the label.
        */
@@ -121,7 +121,7 @@ const totalValue = computed(() =>
                 elements.forEach(
                   (el) => (el.style.opacity = `${filterOpacity}`)
                 )
-                elements[i]!.style.opacity = '1'
+                elements[i].style.opacity = '1'
               }
             },
           },

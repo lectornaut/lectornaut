@@ -18,6 +18,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
   --ring: 0 0% 3.9%;
+  --chart-1: 0 0% 50%;
+  --chart-2: 0 0% 60%;
+  --chart-3: 0 0% 70%;
+  --chart-4: 0 0% 80%;
+  --chart-5: 0 0% 90%;
 }
 
 @mixin neutral-dark-theme {
@@ -40,6 +45,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
   --ring: 0 0% 83.1%;
+  --chart-1: 0 0% 50%;
+  --chart-2: 0 0% 60%;
+  --chart-3: 0 0% 70%;
+  --chart-4: 0 0% 80%;
+  --chart-5: 0 0% 90%;
 }
 
 @mixin rose-light-theme {
@@ -62,6 +72,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
   --ring: 346.8 77.2% 49.8%;
+  --chart-1: 346.8 77.2% 49.8%;
+  --chart-2: 355.7 100% 97.3%;
+  --chart-3: 346.8 77.2% 60%;
+  --chart-4: 355.7 100% 80%;
+  --chart-5: 346.8 77.2% 70%;
 }
 
 @mixin rose-dark-theme {
@@ -84,6 +99,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 85.7% 97.3%;
   --ring: 346.8 77.2% 49.8%;
+  --chart-1: 346.8 77.2% 49.8%;
+  --chart-2: 355.7 100% 97.3%;
+  --chart-3: 346.8 77.2% 60%;
+  --chart-4: 355.7 100% 80%;
+  --chart-5: 346.8 77.2% 70%;
 }
 
 @mixin blue-light-theme {
@@ -106,6 +126,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --ring: 221.2 83.2% 53.3%;
+  --chart-1: 221.2 83.2% 53.3%;
+  --chart-2: 222.2 47.4% 11.2%;
+  --chart-3: 221.2 83.2% 60%;
+  --chart-4: 222.2 47.4% 80%;
+  --chart-5: 221.2 83.2% 70%;
 }
 
 @mixin blue-dark-theme {
@@ -128,6 +153,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
   --ring: 224.3 76.3% 48%;
+  --chart-1: 217.2 91.2% 59.8%;
+  --chart-2: 222.2 47.4% 11.2%;
+  --chart-3: 217.2 91.2% 60%;
+  --chart-4: 222.2 47.4% 80%;
+  --chart-5: 217.2 91.2% 70%;
 }
 
 @mixin green-light-theme {
@@ -150,6 +180,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
   --ring: 142.1 76.2% 36.3%;
+  --chart-1: 142.1 76.2% 36.3%;
+  --chart-2: 142.1 76.2% 45%;
+  --chart-3: 142.1 76.2% 55%;
+  --chart-4: 142.1 76.2% 65%;
+  --chart-5: 142.1 76.2% 75%;
 }
 
 @mixin green-dark-theme {
@@ -172,6 +207,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 85.7% 97.3%;
   --ring: 142.4 71.8% 29.2%;
+  --chart-1: 142.1 70.6% 45.3%;
+  --chart-2: 142.1 70.6% 55%;
+  --chart-3: 142.1 70.6% 65%;
+  --chart-4: 142.1 70.6% 75%;
+  --chart-5: 142.1 70.6% 85%;
 }
 
 @mixin orange-light-theme {
@@ -194,6 +234,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 24.6 95% 53.1%;
+  --chart-1: 24.6 95% 53.1%;
+  --chart-2: 24.6 95% 60%;
+  --chart-3: 24.6 95% 70%;
+  --chart-4: 24.6 95% 80%;
+  --chart-5: 24.6 95% 90%;
 }
 
 @mixin orange-dark-theme {
@@ -216,6 +261,11 @@
   --destructive: 0 72.2% 50.6%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20.5 90.2% 48.2%;
+  --chart-1: 20.5 90.2% 48.2%;
+  --chart-2: 20.5 90.2% 55%;
+  --chart-3: 20.5 90.2% 65%;
+  --chart-4: 20.5 90.2% 75%;
+  --chart-5: 20.5 90.2% 85%;
 }
 
 @mixin red-light-theme {
@@ -238,6 +288,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
   --ring: 0 72.2% 50.6%;
+  --chart-1: 0 72.2% 50.6%;
+  --chart-2: 0 72.2% 60%;
+  --chart-3: 0 72.2% 70%;
+  --chart-4: 0 72.2% 80%;
+  --chart-5: 0 72.2% 90%;
 }
 
 @mixin red-dark-theme {
@@ -260,6 +315,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
   --ring: 0 72.2% 50.6%;
+  --chart-1: 0 72.2% 50.6%;
+  --chart-2: 0 72.2% 60%;
+  --chart-3: 0 72.2% 70%;
+  --chart-4: 0 72.2% 80%;
+  --chart-5: 0 72.2% 90%;
 }
 
 @mixin zinc-light-theme {
@@ -282,6 +342,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
   --ring: 240 5.9% 10%;
+  --chart-1: 240 5.9% 10%;
+  --chart-2: 240 5.9% 20%;
+  --chart-3: 240 5.9% 30%;
+  --chart-4: 240 5.9% 40%;
+  --chart-5: 240 5.9% 50%;
 }
 
 @mixin zinc-dark-theme {
@@ -304,6 +369,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
   --ring: 240 4.9% 83.9%;
+  --chart-1: 240 5.9% 10%;
+  --chart-2: 240 5.9% 20%;
+  --chart-3: 240 5.9% 30%;
+  --chart-4: 240 5.9% 40%;
+  --chart-5: 240 5.9% 50%;
 }
 
 @mixin slate-light-theme {
@@ -326,6 +396,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --ring: 222.2 84% 4.9%;
+  --chart-1: 222.2 47.4% 11.2%;
+  --chart-2: 222.2 47.4% 20%;
+  --chart-3: 222.2 47.4% 30%;
+  --chart-4: 222.2 47.4% 40%;
+  --chart-5: 222.2 47.4% 50%;
 }
 
 @mixin slate-dark-theme {
@@ -348,6 +423,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
   --ring: 212.7 26.8% 83.9%;
+  --chart-1: 222.2 47.4% 11.2%;
+  --chart-2: 222.2 47.4% 20%;
+  --chart-3: 222.2 47.4% 30%;
+  --chart-4: 222.2 47.4% 40%;
+  --chart-5: 222.2 47.4% 50%;
 }
 
 @mixin stone-light-theme {
@@ -370,6 +450,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20 14.3% 4.1%;
+  --chart-1: 24 9.8% 10%;
+  --chart-2: 24 9.8% 20%;
+  --chart-3: 24 9.8% 30%;
+  --chart-4: 24 9.8% 40%;
+  --chart-5: 24 9.8% 50%;
 }
 
 @mixin stone-dark-theme {
@@ -391,6 +476,12 @@
   --accent-foreground: 60 9.1% 97.8%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 20 14.3% 4.1%;
+  --chart-1: 24 9.8% 10%;
+  --chart-2: 24 9.8% 20%;
+  --chart-3: 24 9.8% 30%;
+  --chart-4: 24 9.8% 40%;
+  --chart-5: 24 9.8% 50%;
 }
 
 @mixin gray-light-theme {
@@ -413,6 +504,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 20% 98%;
   --ring: 224 71.4% 4.1%;
+  --chart-1: 220.9 39.3% 11%;
+  --chart-2: 220.9 39.3% 20%;
+  --chart-3: 220.9 39.3% 30%;
+  --chart-4: 220.9 39.3% 40%;
+  --chart-5: 220.9 39.3% 50%;
 }
 
 @mixin gray-dark-theme {
@@ -435,6 +531,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 20% 98%;
   --ring: 216 12.2% 83.9%;
+  --chart-1: 220.9 39.3% 11%;
+  --chart-2: 220.9 39.3% 20%;
+  --chart-3: 220.9 39.3% 30%;
+  --chart-4: 220.9 39.3% 40%;
+  --chart-5: 220.9 39.3% 50%;
 }
 
 @mixin yellow-light-theme {
@@ -457,6 +558,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20 14.3% 4.1%;
+  --chart-1: 47.9 95.8% 53.1%;
+  --chart-2: 47.9 95.8% 60%;
+  --chart-3: 47.9 95.8% 70%;
+  --chart-4: 47.9 95.8% 80%;
+  --chart-5: 47.9 95.8% 90%;
 }
 
 @mixin yellow-dark-theme {
@@ -479,6 +585,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 35.5 91.7% 32.9%;
+  --chart-1: 47.9 95.8% 53.1%;
+  --chart-2: 47.9 95.8% 60%;
+  --chart-3: 47.9 95.8% 70%;
+  --chart-4: 47.9 95.8% 80%;
+  --chart-5: 47.9 95.8% 90%;
 }
 
 @mixin violet-light-theme {
@@ -501,6 +612,11 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 20% 98%;
   --ring: 262.1 83.3% 57.8%;
+  --chart-1: 262.1 83.3% 57.8%;
+  --chart-2: 262.1 83.3% 60%;
+  --chart-3: 262.1 83.3% 70%;
+  --chart-4: 262.1 83.3% 80%;
+  --chart-5: 262.1 83.3% 90%;
 }
 
 @mixin violet-dark-theme {
@@ -523,6 +639,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 20% 98%;
   --ring: 263.4 70% 50.4%;
+  --chart-1: 263.4 70% 50.4%;
+  --chart-2: 263.4 70% 60%;
+  --chart-3: 263.4 70% 70%;
+  --chart-4: 263.4 70% 80%;
+  --chart-5: 263.4 70% 90%;
 }
 
 @mixin indigo-light-theme {
@@ -545,6 +666,11 @@
   --border: 220 13% 91%;
   --input: 220 13% 91%;
   --ring: 226 100% 66%;
+  --chart-1: 226 100% 66%;
+  --chart-2: 226 100% 70%;
+  --chart-3: 226 100% 80%;
+  --chart-4: 226 100% 90%;
+  --chart-5: 226 100% 100%;
 }
 
 @mixin indigo-dark-theme {
@@ -567,6 +693,11 @@
   --border: 225 20% 30%;
   --input: 225 20% 30%;
   --ring: 226 83% 63%;
+  --chart-1: 226 83% 63%;
+  --chart-2: 226 83% 70%;
+  --chart-3: 226 83% 80%;
+  --chart-4: 226 83% 90%;
+  --chart-5: 226 83% 100%;
 }
 
 @mixin pink-light-theme {
@@ -589,6 +720,11 @@
   --border: 340 25% 90%;
   --input: 340 25% 90%;
   --ring: 330 100% 80%;
+  --chart-1: 330 100% 80%;
+  --chart-2: 330 100% 85%;
+  --chart-3: 330 100% 90%;
+  --chart-4: 330 100% 95%;
+  --chart-5: 330 100% 100%;
 }
 
 @mixin pink-dark-theme {
@@ -611,6 +747,11 @@
   --border: 340 40% 25%;
   --input: 340 40% 25%;
   --ring: 330 100% 70%;
+  --chart-1: 330 100% 70%;
+  --chart-2: 330 100% 75%;
+  --chart-3: 330 100% 80%;
+  --chart-4: 330 100% 85%;
+  --chart-5: 330 100% 90%;
 }
 
 @mixin purple-light-theme {
@@ -633,6 +774,11 @@
   --border: 270 15% 90%;
   --input: 270 15% 90%;
   --ring: 270 90% 70%;
+  --chart-1: 270 90% 70%;
+  --chart-2: 270 90% 75%;
+  --chart-3: 270 90% 80%;
+  --chart-4: 270 90% 85%;
+  --chart-5: 270 90% 90%;
 }
 
 @mixin purple-dark-theme {
@@ -655,6 +801,11 @@
   --border: 270 30% 25%;
   --input: 270 30% 25%;
   --ring: 270 60% 50%;
+  --chart-1: 270 60% 50%;
+  --chart-2: 270 60% 55%;
+  --chart-3: 270 60% 60%;
+  --chart-4: 270 60% 65%;
+  --chart-5: 270 60% 70%;
 }
 
 @mixin cyan-light-theme {
@@ -677,6 +828,11 @@
   --border: 190 15% 90%;
   --input: 190 15% 90%;
   --ring: 190 100% 70%;
+  --chart-1: 190 100% 70%;
+  --chart-2: 190 100% 75%;
+  --chart-3: 190 100% 80%;
+  --chart-4: 190 100% 85%;
+  --chart-5: 190 100% 90%;
 }
 
 @mixin cyan-dark-theme {
@@ -699,6 +855,11 @@
   --border: 190 30% 25%;
   --input: 190 30% 25%;
   --ring: 190 70% 60%;
+  --chart-1: 190 70% 60%;
+  --chart-2: 190 70% 65%;
+  --chart-3: 190 70% 70%;
+  --chart-4: 190 70% 75%;
+  --chart-5: 190 70% 80%;
 }
 
 @mixin teal-light-theme {
@@ -721,6 +882,11 @@
   --border: 170 15% 85%;
   --input: 170 15% 85%;
   --ring: 170 100% 70%;
+  --chart-1: 170 100% 70%;
+  --chart-2: 170 100% 75%;
+  --chart-3: 170 100% 80%;
+  --chart-4: 170 100% 85%;
+  --chart-5: 170 100% 90%;
 }
 
 @mixin teal-dark-theme {
@@ -743,6 +909,11 @@
   --border: 170 30% 25%;
   --input: 170 30% 25%;
   --ring: 170 70% 50%;
+  --chart-1: 170 70% 50%;
+  --chart-2: 170 70% 55%;
+  --chart-3: 170 70% 60%;
+  --chart-4: 170 70% 65%;
+  --chart-5: 170 70% 70%;
 }
 
 :root {

@@ -18,14 +18,6 @@ const tabs = ref<Tab[]>([
     id: 1,
     name: "Sample tab",
   },
-  {
-    id: 2,
-    name: "Sample tab",
-  },
-  {
-    id: 3,
-    name: "Sample tab",
-  },
 ])
 const selectedTab = ref(1)
 
@@ -78,13 +70,12 @@ emitter.on("Tabs.Close", (id) => {
       class="relative flex grow items-center gap-2 p-2 transition-all"
     >
       <div class="flex items-center justify-between gap-2">
-        <TooltipProvider v-if="!leftSidebarVisibility">
+        <TooltipProvider v-if="!leftSidebarVisibility" v-motion-fade>
           <Tooltip>
             <TooltipTrigger as-child>
               <Button
-                v-motion-fade
                 variant="ghost"
-                size="xs"
+                size="icon"
                 class="group"
                 @click="emitter.emit('Sidebar.Left.Toggle')"
               >
@@ -95,16 +86,25 @@ emitter.on("Tabs.Close", (id) => {
             <TooltipContent> Expand Sidebar </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <!-- <TasksNotifications /> -->
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon" class="gap-2">
+                <icon-lucide-history />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Recent Tabs </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <nav
         ref="el"
-        class="flex h-full w-fit min-w-0 items-center justify-start gap-2 after:absolute after:inset-x-0 after:bottom-0 after:-z-10 after:h-px after:bg-border"
+        class="flex w-fit min-w-0 items-center justify-start gap-2 after:absolute after:inset-x-0 after:bottom-0 after:-z-10 after:h-px after:bg-border"
       >
         <Button
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex h-full w-56 min-w-0 grow justify-between gap-2 rounded-lg border border-b-0 border-transparent pr-1.5 font-normal"
+          class="group relative flex w-56 min-w-0 grow justify-between gap-2 border border-b-0 border-transparent pr-2 font-normal"
           :class="[
             tab.id === selectedTab
               ? 'min-w-24 rounded-b-none border-border bg-background shadow-[0px_8px_0_0_currentcolor] shadow-background before:absolute before:-bottom-2 before:-left-2 before:z-10 before:h-2 before:w-2 before:rounded-br-full before:border-b before:border-r before:border-border before:text-background before:shadow-[2px_2px_0_currentcolor] after:absolute after:-bottom-2 after:-right-2 after:z-10 after:h-2 after:w-2 after:rounded-bl-full after:border-b after:border-l after:border-border after:text-background after:shadow-[-2px_2px_0_currentcolor] hover:bg-background'
@@ -116,7 +116,6 @@ emitter.on("Tabs.Close", (id) => {
             },
           ]"
           :variant="tab.id === selectedTab ? 'secondary' : 'ghost'"
-          size="xs"
           as-child
           @click="selectedTab = tab.id"
         >
@@ -127,8 +126,8 @@ emitter.on("Tabs.Close", (id) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
-                    size="xs"
                     variant="ghost"
+                    size="icon"
                     class="invisible h-4 w-4 group-hover:visible"
                     @click="emitter.emit('Tabs.Close', tab.id)"
                   >
@@ -147,7 +146,7 @@ emitter.on("Tabs.Close", (id) => {
             <TooltipTrigger as-child>
               <Button
                 variant="ghost"
-                size="xs"
+                size="icon"
                 @click="
                   emitter.emit('Tabs.Add', {
                     id: generateId(),
@@ -162,13 +161,20 @@ emitter.on("Tabs.Close", (id) => {
           </Tooltip>
         </TooltipProvider>
         <div class="flex items-center gap-2">
-          <TooltipProvider v-if="!rightSidebarVisibility">
+          <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-chevron-down />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Tab options </TooltipContent>
+            </Tooltip>
+            <Tooltip v-if="!rightSidebarVisibility" v-motion-fade>
+              <TooltipTrigger as-child>
                 <Button
-                  v-motion-fade
                   variant="ghost"
-                  size="xs"
+                  size="icon"
                   class="gap-2"
                   @click="emitter.emit('Sidebar.Right.Toggle')"
                 >
@@ -181,8 +187,5 @@ emitter.on("Tabs.Close", (id) => {
         </div>
       </div>
     </div>
-    <Settings />
-    <Shortcuts />
-    <ExitTrigger />
   </div>
 </template>

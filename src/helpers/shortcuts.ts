@@ -167,7 +167,7 @@ export const shortcuts: ShortcutCategory[] = [
         tags: ["settings", "account"],
       },
     ],
-    hidden: [],
+    hidden: ["shortcuts"],
   },
   {
     title: "Settings",

@@ -108,24 +108,25 @@ const components: { title: string; href: string; description: string }[] = [
 </script>
 
 <template>
-  <NavigationMenu>
+  <NavigationMenu class="z-40">
     <NavigationMenuList class="flex items-center gap-2">
+      <NavigationMenuIndicator />
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="h-7 gap-1 rounded px-2">
+        <NavigationMenuTrigger>
           <span
-            class="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <icon-mingcute-check-2-fill />
           </span>
-          <!-- Tasks -->
+          <!-- <span class="truncate"> Tasks </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent>
           <div class="w-80 -translate-x-px">
             <div
-              class="sticky top-0 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
+              class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >
               <h3 class="text-sm font-semibold">Tasks</h3>
-              <Button size="xs" variant="ghost" class="gap-2">
+              <Button variant="ghost" class="gap-2">
                 <icon-lucide-plus /> New Task
               </Button>
             </div>
@@ -138,7 +139,6 @@ const components: { title: string; href: string; description: string }[] = [
                 as-child
               >
                 <Button
-                  size="lg"
                   variant="ghost"
                   class="group relative flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
                   as-child
@@ -164,8 +164,8 @@ const components: { title: string; href: string; description: string }[] = [
                             <TooltipTrigger as-child>
                               <Button
                                 variant="outline"
-                                size="xs"
-                                class="aspect-square h-full gap-2 rounded-full"
+                                size="icon"
+                                class="aspect-square gap-2 rounded-full"
                               >
                                 <icon-lucide-check-check />
                               </Button>
@@ -183,21 +183,21 @@ const components: { title: string; href: string; description: string }[] = [
         </NavigationMenuContent>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="h-7 gap-1 rounded px-2">
+        <NavigationMenuTrigger>
           <span
-            class="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <icon-mingcute-notification-fill />
           </span>
-          <!-- Notifications -->
+          <!-- <span class="truncate"> Notifications </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent>
           <div class="w-80 -translate-x-px">
             <div
-              class="sticky top-0 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
+              class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >
               <h3 class="text-sm font-semibold">Notifications</h3>
-              <Button size="xs" variant="ghost" class="gap-2">
+              <Button variant="ghost" class="gap-2">
                 <icon-lucide-check-check /> Mark all as read
               </Button>
             </div>
@@ -210,7 +210,6 @@ const components: { title: string; href: string; description: string }[] = [
                 as-child
               >
                 <Button
-                  size="lg"
                   variant="ghost"
                   class="group relative flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
                   as-child
@@ -236,8 +235,8 @@ const components: { title: string; href: string; description: string }[] = [
                             <TooltipTrigger as-child>
                               <Button
                                 variant="outline"
-                                size="xs"
-                                class="aspect-square h-full gap-2 rounded-full"
+                                size="icon"
+                                class="aspect-square gap-2 rounded-full"
                               >
                                 <icon-lucide-check-check />
                               </Button>

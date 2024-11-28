@@ -44,7 +44,6 @@ defineProps<DataTablePaginationProps>()
       <div class="flex items-center gap-2">
         <Button
           variant="outline"
-          size="xs"
           class="hidden lg:flex"
           :disabled="!table.getCanPreviousPage()"
           @click="table.setPageIndex(0)"
@@ -54,7 +53,6 @@ defineProps<DataTablePaginationProps>()
         </Button>
         <Button
           variant="outline"
-          size="xs"
           :disabled="!table.getCanPreviousPage()"
           @click="table.previousPage()"
         >
@@ -63,7 +61,6 @@ defineProps<DataTablePaginationProps>()
         </Button>
         <Button
           variant="outline"
-          size="xs"
           :disabled="!table.getCanNextPage()"
           @click="table.nextPage()"
         >
@@ -72,7 +69,6 @@ defineProps<DataTablePaginationProps>()
         </Button>
         <Button
           variant="outline"
-          size="xs"
           class="hidden lg:flex"
           :disabled="!table.getCanNextPage()"
           @click="table.setPageIndex(table.getPageCount() - 1)"

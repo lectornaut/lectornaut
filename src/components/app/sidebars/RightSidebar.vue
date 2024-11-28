@@ -24,9 +24,8 @@ const play = () => new Audio(click).play()
           <Tooltip>
             <TooltipTrigger as-child>
               <Button
-                v-motion-fade
                 variant="ghost"
-                size="xs"
+                size="icon"
                 @click="emitter.emit('Sidebar.Right.Toggle')"
               >
                 <icon-lucide-chevrons-right />
@@ -42,7 +41,7 @@ const play = () => new Audio(click).play()
                 <DropdownMenuTrigger as-child>
                   <Button
                     variant="ghost"
-                    size="xs"
+                    size="icon"
                     class="text-muted-foreground data-[state=open]:bg-muted"
                   >
                     <icon-lucide-ellipsis />
@@ -159,13 +158,14 @@ const play = () => new Audio(click).play()
           </span>
           <Input
             v-model="ask"
+            siz
             placeholder="Type your message here."
             class="truncate rounded-full bg-primary/5 pl-8 pr-12 ring-offset-transparent transition hover:bg-primary/10 focus:border-inherit focus:bg-primary/10 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <span
-            class="absolute inset-y-0 end-0 flex items-center justify-center px-2"
+            class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
           >
-            <Button size="xs" class="rounded-full" @click="play">
+            <Button class="rounded-full" size="icon" @click="play">
               <icon-lucide-arrow-up />
             </Button>
           </span>

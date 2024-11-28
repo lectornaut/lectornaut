@@ -1,10 +1,10 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import {
   CalendarHeading,
   type CalendarHeadingProps,
   useForwardProps,
-} from "radix-vue"
+} from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
 
 const props = defineProps<
@@ -23,7 +23,7 @@ const forwardedProps = useForwardProps(delegatedProps)
 <template>
   <CalendarHeading
     v-slot="{ headingValue }"
-    :class="cn('text-xs font-medium', props.class)"
+    :class="cn('text-sm font-medium', props.class)"
     v-bind="forwardedProps"
   >
     <slot :heading-value>

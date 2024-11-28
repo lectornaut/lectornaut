@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "vue"
 
@@ -11,7 +11,7 @@ const props = defineProps<{
   <ol
     :class="
       cn(
-        'flex flex-wrap items-center gap-1.5 break-words text-xs text-muted-foreground sm:gap-2.5',
+        'flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5',
         props.class
       )
     "

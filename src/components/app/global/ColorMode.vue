@@ -11,7 +11,7 @@ import { store } from "@/modules/theme"
           <DropdownMenuTrigger as-child>
             <Button
               variant="ghost"
-              size="xs"
+              size="icon"
               class="data-[state=open]:bg-muted"
             >
               <icon-lucide-sun v-if="store == 'light'" />

@@ -4,7 +4,7 @@ import {
   DateFormatter,
   getLocalTimeZone,
 } from "@internationalized/date"
-import type { DateRange } from "radix-vue"
+import type { DateRange } from "reka-ui"
 
 const df = new DateFormatter("en-US", {
   dateStyle: "medium",
@@ -19,7 +19,7 @@ const value = ref({
 <template>
   <Popover>
     <PopoverTrigger as-child>
-      <Button variant="outline" class="gap-2" size="sm">
+      <Button variant="outline" class="gap-2">
         <icon-lucide-calendar />
         <template v-if="value.start">
           <template v-if="value.end">

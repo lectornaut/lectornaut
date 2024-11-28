@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function valueUpdater<T extends Updater<unknown>>(
+export function valueUpdater<T extends Updater<any>>(
   updaterOrValue: T,
   ref: Ref
 ) {

@@ -5,7 +5,7 @@ import Vue from "@vitejs/plugin-vue"
 import autoprefixer from "autoprefixer"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath, URL } from "node:url"
-import RadixVueResolver from "radix-vue/resolver"
+import RekaResolver from "reka-ui/resolver"
 import tailwind from "tailwindcss"
 import AutoImport from "unplugin-auto-import/vite"
 import Unfonts from "unplugin-fonts/vite"
@@ -68,7 +68,7 @@ export default defineConfig({
     }),
     Components({
       resolvers: [
-        RadixVueResolver(),
+        RekaResolver(),
         IconsResolver({
           prefix: "icon",
         }),
@@ -93,7 +93,7 @@ export default defineConfig({
     ViteImageOptimizer(),
     Icons({
       scale: 1,
-      defaultClass: "inline-flex shrink-0 w-3 h-3",
+      defaultClass: "inline-flex shrink-0 w-4 h-4",
     }),
     VueI18nPlugin({
       include: resolve(

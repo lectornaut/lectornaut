@@ -58,7 +58,7 @@ watch(rightSidebarVisibility, (value) => {
         <Toolbar />
         <SubNavigation />
         <main
-          class="no-scrollbar z-10 m-2 flex grow flex-col overflow-auto overscroll-none rounded-xl border bg-gradient-to-b from-background/75 to-background/25 shadow-xl"
+          class="no-scrollbar z-30 m-2 flex grow flex-col overflow-auto overscroll-none rounded-xl border bg-gradient-to-b from-background/75 to-background/25 shadow-xl"
         >
           <RouterView v-slot="{ Component, route }">
             <template v-if="Component">

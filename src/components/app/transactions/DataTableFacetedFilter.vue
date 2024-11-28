@@ -24,7 +24,7 @@ const selectedValues = computed(
 <template>
   <Popover>
     <PopoverTrigger as-child>
-      <Button variant="outline" size="sm" class="gap-2 border-dashed">
+      <Button variant="outline" class="gap-2 border-dashed">
         <icon-lucide-plus-circle />
         {{ title }}
         <template v-if="selectedValues.size > 0">

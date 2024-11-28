@@ -16,7 +16,7 @@ emitter.on("Menu.Help.Toggle", () => {
           <DropdownMenuTrigger as-child>
             <Button
               variant="outline"
-              size="xs"
+              size="icon"
               class="fixed bottom-3 left-3 rounded-full data-[state=open]:bg-muted"
             >
               <icon-lucide-circle-help />
@@ -27,24 +27,24 @@ emitter.on("Menu.Help.Toggle", () => {
           Help and Support
           <span class="text-muted-foreground"> ? </span></TooltipContent
         >
-        <DropdownMenuContent class="w-48" align="start" side="top">
+        <DropdownMenuContent align="start">
           <DropdownMenuLabel>Help and Support</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem class="gap-2">
               <icon-lucide-message-circle />
-              <span>Contact us</span>
+              <span class="truncate">Contact us</span>
             </DropdownMenuItem>
             <DropdownMenuItem class="gap-2">
               <icon-lucide-book-open />
-              <span>Documentation</span>
+              <span class="truncate">Documentation</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               class="gap-2"
               @click="emitter.emit('Dialog.Shortcuts.Open')"
             >
               <icon-lucide-keyboard />
-              <span>Keyboard shortcuts</span>
+              <span class="truncate">Keyboard shortcuts</span>
               <DropdownMenuShortcut>⌘ /</DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -52,7 +52,7 @@ emitter.on("Menu.Help.Toggle", () => {
           <DropdownMenuGroup>
             <DropdownMenuItem class="gap-2">
               <icon-lucide-twitter />
-              <span>X (Twitter)</span>
+              <span class="truncate">X (Twitter)</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
