@@ -310,7 +310,7 @@ const accent = useStorage("accent", defaultAccent)
               <Separator />
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="text-sm font-medium leading-none">Primary email</p>
+                  <p class="font-medium leading-none">Primary email</p>
                   <p class="flex items-center gap-2 text-muted-foreground">
                     {{ user?.email }}
                     <TooltipProvider v-if="user?.emailVerified">
@@ -383,9 +383,7 @@ const accent = useStorage("accent", defaultAccent)
               </div>
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="text-sm font-medium leading-none">
-                    Connected accounts
-                  </p>
+                  <p class="font-medium leading-none">Connected accounts</p>
                   <p class="flex items-center gap-2 text-muted-foreground">
                     Manage your connected accounts and sign-in methods.
                   </p>
@@ -439,7 +437,7 @@ const accent = useStorage("accent", defaultAccent)
                     </TooltipProvider>
                   </div>
                   <div class="flex flex-col gap-1">
-                    <p class="text-sm font-medium leading-none">
+                    <p class="font-medium leading-none">
                       {{ provider.displayName }}
                     </p>
                     <p class="flex items-center gap-2 text-muted-foreground">
@@ -475,7 +473,7 @@ const accent = useStorage("accent", defaultAccent)
               <Separator />
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="text-sm font-medium leading-none">Delete account</p>
+                  <p class="font-medium leading-none">Delete account</p>
                   <p class="flex items-center gap-2 text-muted-foreground">
                     Permanently delete your account.
                   </p>
@@ -528,7 +526,7 @@ const accent = useStorage("accent", defaultAccent)
               <Separator />
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="text-sm font-medium leading-none">Theme</p>
+                  <p class="font-medium leading-none">Theme</p>
                   <p class="flex items-center gap-2 text-muted-foreground">
                     Customize how template app looks on your device.
                   </p>
@@ -553,7 +551,7 @@ const accent = useStorage("accent", defaultAccent)
               </div>
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="text-sm font-medium leading-none">Accent color</p>
+                  <p class="font-medium leading-none">Accent color</p>
                   <p class="flex items-center gap-2 text-muted-foreground">
                     Choose your preferred accent color.
                   </p>
@@ -578,7 +576,7 @@ const accent = useStorage("accent", defaultAccent)
               </div>
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="text-sm font-medium leading-none">Language</p>
+                  <p class="font-medium leading-none">Language</p>
                   <p class="flex items-center gap-2 text-muted-foreground">
                     Choose your preferred language.
                   </p>

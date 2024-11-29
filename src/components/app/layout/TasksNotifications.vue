@@ -125,7 +125,7 @@ const components: { title: string; href: string; description: string }[] = [
             <div
               class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >
-              <h3 class="text-sm font-semibold">Tasks</h3>
+              <h3 class="font-semibold">Tasks</h3>
               <Button variant="ghost" class="gap-2">
                 <icon-lucide-plus /> New Task
               </Button>
@@ -150,7 +150,7 @@ const components: { title: string; href: string; description: string }[] = [
                       <icon-lucide-check />
                     </span>
                     <div class="flex flex-col">
-                      <span class="text-sm font-medium">
+                      <span class="font-medium">
                         {{ component.title }}
                       </span>
                       <span class="text-muted-foreground">
@@ -196,7 +196,7 @@ const components: { title: string; href: string; description: string }[] = [
             <div
               class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
             >
-              <h3 class="text-sm font-semibold">Notifications</h3>
+              <h3 class="font-semibold">Notifications</h3>
               <Button variant="ghost" class="gap-2">
                 <icon-lucide-check-check /> Mark all as read
               </Button>
@@ -221,7 +221,7 @@ const components: { title: string; href: string; description: string }[] = [
                       <icon-lucide-bell />
                     </span>
                     <div class="flex flex-col">
-                      <span class="text-sm font-medium">
+                      <span class="font-medium">
                         {{ component.title }}
                       </span>
                       <span class="text-muted-foreground">

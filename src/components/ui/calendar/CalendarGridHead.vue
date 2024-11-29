@@ -1,10 +1,7 @@
 <script lang="ts" setup>
 import { CalendarGridHead, type CalendarGridHeadProps } from "reka-ui"
-import type { HTMLAttributes } from "vue"
 
-const props = defineProps<
-  CalendarGridHeadProps & { class?: HTMLAttributes["class"] }
->()
+const props = defineProps<CalendarGridHeadProps>()
 </script>
 
 <template>

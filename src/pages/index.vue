@@ -83,7 +83,7 @@ useHead({
                 >
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">
-                      <span class="text-sm">Free</span>
+                      <span class="">Free</span>
                     </span>
                   </AlertTitle>
                   <AlertDescription class="flex flex-col gap-4">
@@ -128,7 +128,7 @@ useHead({
                 >
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">
-                      <span class="text-sm">Pro</span>
+                      <span class="">Pro</span>
                       <Badge class="gap-0.5 rounded-sm px-1 py-0">
                         <icon-mingcute-ai-fill />
                         AI
@@ -198,7 +198,7 @@ useHead({
                 >
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">
-                      <span class="text-sm">Team</span>
+                      <span class="">Team</span>
                       <Badge class="gap-0.5 rounded-sm px-1 py-0">
                         <icon-mingcute-ai-fill />
                         AI

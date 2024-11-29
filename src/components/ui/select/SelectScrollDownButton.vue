@@ -29,7 +29,7 @@ const forwardedProps = useForwardProps(delegatedProps)
     "
   >
     <slot>
-      <ChevronDown />
+      <ChevronDown class="h-4 w-4" />
     </slot>
   </SelectScrollDownButton>
 </template>

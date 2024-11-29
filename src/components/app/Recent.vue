@@ -7,10 +7,10 @@
           <AvatarFallback>OM</AvatarFallback>
         </Avatar>
         <div class="ml-4 space-y-1">
-          <p class="text-sm font-medium leading-none">Olivia Martin</p>
+          <p class="font-medium leading-none">Olivia Martin</p>
           <p class="text-muted-foreground">olivia.martin@email.com</p>
         </div>
-        <div class="ml-auto font-geist text-sm font-medium">+$1,999.00</div>
+        <div class="ml-auto font-geist font-medium">+$1,999.00</div>
       </div>
       <div class="flex items-center">
         <Avatar
@@ -20,10 +20,10 @@
           <AvatarFallback>JL</AvatarFallback>
         </Avatar>
         <div class="ml-4 space-y-1">
-          <p class="text-sm font-medium leading-none">Jackson Lee</p>
+          <p class="font-medium leading-none">Jackson Lee</p>
           <p class="text-muted-foreground">jackson.lee@email.com</p>
         </div>
-        <div class="ml-auto font-geist text-sm font-medium">+$39.00</div>
+        <div class="ml-auto font-geist font-medium">+$39.00</div>
       </div>
       <div class="flex items-center">
         <Avatar class="size-9">
@@ -31,10 +31,10 @@
           <AvatarFallback>IN</AvatarFallback>
         </Avatar>
         <div class="ml-4 space-y-1">
-          <p class="text-sm font-medium leading-none">Isabella Nguyen</p>
+          <p class="font-medium leading-none">Isabella Nguyen</p>
           <p class="text-muted-foreground">isabella.nguyen@email.com</p>
         </div>
-        <div class="ml-auto font-geist text-sm font-medium">+$299.00</div>
+        <div class="ml-auto font-geist font-medium">+$299.00</div>
       </div>
       <div class="flex items-center">
         <Avatar class="size-9">
@@ -42,10 +42,10 @@
           <AvatarFallback>WK</AvatarFallback>
         </Avatar>
         <div class="ml-4 space-y-1">
-          <p class="text-sm font-medium leading-none">William Kim</p>
+          <p class="font-medium leading-none">William Kim</p>
           <p class="text-muted-foreground">will@email.com</p>
         </div>
-        <div class="ml-auto font-geist text-sm font-medium">+$99.00</div>
+        <div class="ml-auto font-geist font-medium">+$99.00</div>
       </div>
       <div class="flex items-center">
         <Avatar class="size-9">
@@ -53,10 +53,10 @@
           <AvatarFallback>SD</AvatarFallback>
         </Avatar>
         <div class="ml-4 space-y-1">
-          <p class="text-sm font-medium leading-none">Sofia Davis</p>
+          <p class="font-medium leading-none">Sofia Davis</p>
           <p class="text-muted-foreground">sofia.davis@email.com</p>
         </div>
-        <div class="ml-auto font-geist text-sm font-medium">+$39.00</div>
+        <div class="ml-auto font-geist font-medium">+$39.00</div>
       </div>
     </div>
   </ScrollArea>

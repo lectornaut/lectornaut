@@ -36,15 +36,18 @@
 
 .shortcut-key {
   @apply inline-flex;
-  @apply min-h-4;
-  @apply min-w-4;
+  @apply max-h-6;
+  @apply min-w-6;
+  @apply py-0.5;
+  @apply p-1;
   @apply items-center;
   @apply justify-center;
+  @apply shrink-0;
   @apply rounded;
   @apply border;
   @apply border-b-2;
   @apply bg-primary/5;
-  @apply font-sans;
+  @apply font-geist;
   @apply capitalize;
   @apply text-muted-foreground;
   @apply tracking-tight;

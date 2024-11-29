@@ -9,7 +9,7 @@
         </span>
         <div class="flex grow flex-col gap-2">
           <div class="flex items-center justify-between">
-            <p class="text-sm font-medium leading-none">Buy a new car</p>
+            <p class="font-medium leading-none">Buy a new car</p>
             <p class="flex items-center gap-2 text-muted-foreground">
               <icon-lucide-history /> <span>21 days left</span>
             </p>

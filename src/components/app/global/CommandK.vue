@@ -44,14 +44,10 @@ const filteredShortcuts = computed(() =>
       </Tooltip>
     </TooltipProvider>
     <span
-      class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center gap-1 px-2"
+      class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center gap-1 p-2"
     >
-      <kbd class="shortcut-key">
-        <span class="scale-75">⌘</span>
-      </kbd>
-      <kbd class="shortcut-key">
-        <span class="scale-75">K</span>
-      </kbd>
+      <kbd class="shortcut-key"> ⌘ </kbd>
+      <kbd class="shortcut-key"> K </kbd>
     </span>
     <CommandDialog :open="openCommand" @update:open="openCommand = false">
       <DialogHeader class="sr-only">
@@ -102,9 +98,7 @@ const filteredShortcuts = computed(() =>
               <CommandShortcut v-if="shortcut.keys" class="flex gap-1">
                 <template v-for="keys in shortcut.keys" :key="keys.toString()">
                   <kbd v-for="key in keys" :key="key" class="shortcut-key">
-                    <span class="scale-75">
-                      {{ key }}
-                    </span>
+                    {{ key }}
                   </kbd>
                 </template>
               </CommandShortcut>

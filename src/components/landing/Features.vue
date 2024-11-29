@@ -1,5 +1,5 @@
 <template>
-  <ul class="flex flex-col gap-5 text-sm">
+  <ul class="flex flex-col gap-5">
     <li class="flex items-start gap-3 leading-none">
       <icon-lucide-disc />
       <p class="leading-loose first-line:leading-none">

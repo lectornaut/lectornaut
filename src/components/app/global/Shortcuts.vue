@@ -128,9 +128,7 @@ const filteredShortcuts = computed(() => {
                   class="relative flex gap-1 after:absolute after:-right-8 after:top-1/2 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:text-neutral-400 after:content-['or'] last-of-type:after:hidden"
                 >
                   <kbd v-for="key in keys" :key="key" class="shortcut-key">
-                    <span class="scale-75">
-                      {{ key }}
-                    </span>
+                    {{ key }}
                   </kbd>
                 </div>
               </span>
