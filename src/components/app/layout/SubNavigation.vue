@@ -5,7 +5,6 @@
         <BreadcrumbLink as-child>
           <Button variant="ghost" as-child>
             <RouterLink to="/home" class="gap-2">
-              <icon-lucide-inbox />
               <span class="truncate">Home</span>
             </RouterLink>
           </Button>
@@ -16,7 +15,6 @@
         <BreadcrumbLink as-child>
           <Button variant="ghost" as-child>
             <RouterLink to="/exit" class="gap-2">
-              <icon-lucide-package />
               <div class="truncate">Exit</div>
             </RouterLink>
           </Button>
@@ -27,8 +25,7 @@
         <BreadcrumbPage as-child>
           <BreadcrumbLink as-child>
             <Button variant="ghost" as-child>
-              <RouterLink to="/exit" class="gap-2">
-                <icon-lucide-box />
+              <RouterLink to="/welcome" class="gap-2">
                 <span class="truncate">Breadcrumb</span>
               </RouterLink>
             </Button>

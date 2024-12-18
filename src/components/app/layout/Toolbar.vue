@@ -65,10 +65,7 @@ emitter.on("Tabs.Close", (id) => {
   <div
     class="sticky top-0 z-10 flex flex-col shadow-xl shadow-background after:absolute after:inset-x-0 after:-bottom-32 after:-z-10 after:h-32 after:bg-gradient-to-b after:from-background"
   >
-    <div
-      data-tauri-drag-region
-      class="relative flex grow items-center gap-2 p-2 transition-all"
-    >
+    <div class="relative flex grow items-center gap-2 p-2 transition-all">
       <!-- <div class="flex items-center justify-between gap-2"> -->
       <TooltipProvider v-if="!leftSidebarVisibility" v-motion-fade>
         <Tooltip>
@@ -110,7 +107,7 @@ emitter.on("Tabs.Close", (id) => {
           @click="selectedTab = tab.id"
         >
           <RouterLink to="">
-            <icon-lucide-box />
+            <icon-lucide-inbox />
             <span class="mr-auto truncate"> {{ tab.name }} {{ tab.id }} </span>
             <TooltipProvider v-if="tabs.length > 1">
               <Tooltip>

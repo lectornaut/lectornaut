@@ -16,10 +16,7 @@ const play = () => new Audio(click).play()
 <template>
   <aside class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
     <div>
-      <div
-        data-tauri-drag-region
-        class="flex items-center justify-between gap-2 p-2"
-      >
+      <div class="flex items-center justify-between gap-2 p-2">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>

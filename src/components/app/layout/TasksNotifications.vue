@@ -110,7 +110,6 @@ const components: { title: string; href: string; description: string }[] = [
 <template>
   <NavigationMenu class="z-40">
     <NavigationMenuList class="flex items-center gap-2">
-      <NavigationMenuIndicator />
       <NavigationMenuItem>
         <NavigationMenuTrigger>
           <span
