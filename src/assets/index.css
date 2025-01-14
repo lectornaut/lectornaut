@@ -30,7 +30,7 @@
     @apply h-dvh;
     @apply w-dvw;
     @apply bg-gradient-to-b;
-    @apply from-background/95;
+    @apply from-background/90;
     @apply to-background/75;
     @apply text-foreground;
     @apply text-sm;

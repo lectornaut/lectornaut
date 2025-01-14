@@ -91,12 +91,12 @@ export default {
             height: 0,
           },
           to: {
-            height: "var(--radix-accordion-content-height)",
+            height: "var(--reka-accordion-content-height)",
           },
         },
         "accordion-up": {
           from: {
-            height: "var(--radix-accordion-content-height)",
+            height: "var(--reka-accordion-content-height)",
           },
           to: {
             height: 0,
@@ -107,12 +107,12 @@ export default {
             height: 0,
           },
           to: {
-            height: "var(--radix-collapsible-content-height)",
+            height: "var(--reka-collapsible-content-height)",
           },
         },
         "collapsible-up": {
           from: {
-            height: "var(--radix-collapsible-content-height)",
+            height: "var(--reka-collapsible-content-height)",
           },
           to: {
             height: 0,

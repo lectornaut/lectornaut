@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { provideCommandGroupContext, useCommand } from "."
 import { cn } from "@/lib/utils"
-import type { ComboboxGroupProps } from "reka-ui"
-import { ComboboxGroup, ComboboxLabel } from "reka-ui"
-import { computed, type HTMLAttributes } from "vue"
+import type { ListboxGroupProps } from "reka-ui"
+import { ListboxGroup, ListboxGroupLabel, useId } from "reka-ui"
+import { computed, type HTMLAttributes, onMounted, onUnmounted } from "vue"
 
 const props = defineProps<
-  ComboboxGroupProps & {
+  ListboxGroupProps & {
     class?: HTMLAttributes["class"]
     heading?: string
   }
@@ -16,24 +17,41 @@ const delegatedProps = computed(() => {
 
   return delegated
 })
+
+const { allGroups, filterState } = useCommand()
+const id = useId()
+
+const isRender = computed(() =>
+  !filterState.search ? true : filterState.filtered.groups.has(id)
+)
+
+provideCommandGroupContext({ id })
+onMounted(() => {
+  if (!allGroups.value.has(id)) allGroups.value.set(id, new Set())
+})
+onUnmounted(() => {
+  allGroups.value.delete(id)
+})
 </script>
 
 <template>
-  <ComboboxGroup
+  <ListboxGroup
     v-bind="delegatedProps"
+    :id="id"
     :class="
       cn(
         'overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground',
         props.class
       )
     "
+    :hidden="isRender ? undefined : true"
   >
-    <ComboboxLabel
+    <ListboxGroupLabel
       v-if="heading"
       class="px-2 py-1.5 text-xs font-medium text-muted-foreground"
     >
       {{ heading }}
-    </ComboboxLabel>
+    </ListboxGroupLabel>
     <slot />
-  </ComboboxGroup>
+  </ListboxGroup>
 </template>

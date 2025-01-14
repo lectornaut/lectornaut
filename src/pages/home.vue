@@ -6,18 +6,7 @@ useHead({
 
 <template>
   <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-    <div class="flex grow flex-col gap-2 p-2">
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
-          <DateViewPicker />
-          <DateRangePicker />
-        </div>
-        <div class="flex items-center gap-2">
-          <NewTransaction />
-        </div>
-      </div>
-      <Insights />
-    </div>
+    <div class="flex grow flex-col gap-2 p-2">Home</div>
   </div>
 </template>
 

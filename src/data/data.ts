@@ -4,10 +4,7 @@ import CircleIcon from "~icons/lucide/circle"
 import CheckCircledIcon from "~icons/lucide/circle-check"
 import QuestionMarkCircledIcon from "~icons/lucide/circle-dashed"
 import StopwatchIcon from "~icons/lucide/circle-dot"
-import IconLoans from "~icons/lucide/coins"
 import IconHome from "~icons/lucide/home"
-import IconAccounts from "~icons/lucide/landmark"
-import IconSavings from "~icons/lucide/piggy-bank"
 import ArrowUpIcon from "~icons/lucide/signal-high"
 import ArrowDownIcon from "~icons/lucide/signal-low"
 import ArrowRightIcon from "~icons/lucide/signal-medium"
@@ -83,33 +80,15 @@ export const links = [
     to: "/home",
   },
   {
-    title: "Balances",
-    label: "Systems Operational",
+    title: "Welcome",
+    label: "Welcome",
     icon: h(IconBalances),
-    to: "/balances",
+    to: "/welcome",
   },
   {
-    title: "Transactions",
-    label: "Systems Operational",
+    title: "Exit",
+    label: "Exit",
     icon: h(IconTransactions),
-    to: "/transactions",
-  },
-  {
-    title: "Savings",
-    label: "Systems Operational",
-    icon: h(IconSavings),
-    to: "/savings",
-  },
-  {
-    title: "Loans",
-    label: "Systems Operational",
-    icon: h(IconLoans),
-    to: "/loans",
-  },
-  {
-    title: "Accounts",
-    label: "Systems Operational",
-    icon: h(IconAccounts),
-    to: "/accounts",
+    to: "/exit",
   },
 ]

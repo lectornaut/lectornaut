@@ -25,17 +25,6 @@ useHead({
   ],
 })
 
-watch(state, (value) => {
-  useHead({
-    meta: [
-      {
-        name: "theme-color",
-        content: () => (value === "dark" ? "#000000" : "#ffffff"),
-      },
-    ],
-  })
-})
-
 emitter.on("Theme.Change", (newTheme) => {
   store.value = newTheme as "light" | "dark" | "auto"
 })
