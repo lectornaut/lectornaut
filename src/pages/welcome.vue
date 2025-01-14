@@ -21,10 +21,13 @@ useHead({
       class="fixed bottom-0 z-20 h-1/2 w-full overflow-visible object-cover"
     />
     <div
-      class="absolute left-1/2 top-1/3 z-20 -translate-x-1/2 -translate-y-1/2"
+      class="absolute bottom-0 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
     >
-      <Button variant="secondary" class="aspect-square h-full rounded-full">
-        Start
+      <Button
+        variant="ghost"
+        class="bg-emerald-950/50 text-white backdrop-blur-xl"
+      >
+        Start your journey
       </Button>
     </div>
   </div>
