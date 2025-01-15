@@ -7,6 +7,7 @@ useHead({
 <template>
   <div class="flex grow flex-col">
     <Header />
+    <Separator />
     <div
       class="mx-auto mb-44 mt-12 flex w-full max-w-2xl grow flex-col items-center"
     >
@@ -19,53 +20,7 @@ useHead({
             <div class="flex items-center gap-1.5">Team</div>
           </TabsTrigger>
         </TabsList>
-        <div class="flex h-full w-full grow flex-col items-center">
-          <div class="mx-auto w-full max-w-2xl px-8 py-4">
-            <svg
-              preserveAspectRatio="xMinYMin"
-              width="100%"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 100 14"
-            >
-              <text
-                xmlns="http://www.w3.org/2000/svg"
-                x="50%"
-                y="50%"
-                fill="transparent"
-                dominant-baseline="middle"
-                text-anchor="middle"
-                text-rendering="geometricPrecision"
-                stroke-width="0"
-                class="fill-primary font-instrument tracking-tighter"
-              >
-                You can't
-                <tspan alignment-baseline="middle" class="italic">
-                  improve
-                </tspan>
-              </text>
-            </svg>
-            <svg
-              preserveAspectRatio="xMinYMin"
-              width="100%"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 100 14"
-            >
-              <text
-                xmlns="http://www.w3.org/2000/svg"
-                x="50%"
-                y="50%"
-                fill="transparent"
-                dominant-baseline="middle"
-                text-anchor="middle"
-                text-rendering="geometricPrecision"
-                stroke-width="0"
-                class="fill-primary font-instrument tracking-tighter"
-              >
-                what you don't measure
-              </text>
-            </svg>
-          </div>
-        </div>
+        <HeroText />
         <TabsContent
           value="personal"
           class="transition duration-200 animate-in fade-in"

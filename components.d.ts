@@ -135,6 +135,7 @@ declare module 'vue' {
     FormMessage: typeof import('./src/components/ui/form/FormMessage.vue')['default']
     Goals: typeof import('./src/components/app/Goals.vue')['default']
     Header: typeof import('./src/components/landing/Header.vue')['default']
+    HeroText: typeof import('./src/components/enter/HeroText.vue')['default']
     HoverCard: typeof import('./src/components/ui/hover-card/HoverCard.vue')['default']
     HoverCardContent: typeof import('./src/components/ui/hover-card/HoverCardContent.vue')['default']
     HoverCardTrigger: typeof import('./src/components/ui/hover-card/HoverCardTrigger.vue')['default']

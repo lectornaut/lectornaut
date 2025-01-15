@@ -5,6 +5,10 @@ import type { User } from "firebase/auth"
 import type { c } from "node_modules/vuefire/dist/shared/vuefire.cc4a8ea4.mjs"
 import { useCurrentUser } from "vuefire"
 
+defineProps<{
+  leftSidebarVisibility: boolean
+}>()
+
 const online = useOnline()
 
 const user = useCurrentUser()
@@ -40,12 +44,16 @@ const selectedTeam = ref<Team>(
 </script>
 
 <template>
-  <div class="flex items-center justify-between gap-2 p-2">
+  <div
+    data-tauri-drag-region
+    class="flex items-center justify-between gap-2 p-2"
+  >
     <Dialog v-model:open="showNewTeamDialog">
       <Popover v-model:open="openAccountSwitcher">
         <PopoverTrigger as-child>
           <Button
             variant="ghost"
+            :size="leftSidebarVisibility ? 'default' : 'icon'"
             class="gap-3 truncate data-[state=open]:bg-muted"
           >
             <Avatar class="size-4">
@@ -58,22 +66,24 @@ const selectedTeam = ref<Team>(
                 {{ getInitials(selectedTeam.label) }}
               </AvatarFallback>
             </Avatar>
-            <span
-              v-if="!online"
-              v-motion-fade
-              class="flex items-center gap-1 rounded-full border bg-muted px-1.5 py-0.5 text-muted-foreground"
-            >
-              <icon-bx-bxs-zap />
-              Offline
-            </span>
-            <span v-else v-motion-fade class="truncate">
-              {{
-                selectedTeam.value === "personal"
-                  ? user?.displayName
-                  : selectedTeam.label
-              }}
-            </span>
-            <icon-lucide-chevron-down />
+            <template v-if="leftSidebarVisibility">
+              <span
+                v-if="!online"
+                v-motion-fade
+                class="flex items-center gap-1 rounded-full border bg-muted px-1.5 py-0.5 text-muted-foreground"
+              >
+                <icon-bx-bxs-zap />
+                Offline
+              </span>
+              <span v-else v-motion-fade class="truncate">
+                {{
+                  selectedTeam.value === "personal"
+                    ? user?.displayName
+                    : selectedTeam.label
+                }}
+              </span>
+            </template>
+            <icon-lucide-chevron-down v-if="leftSidebarVisibility" />
           </Button>
         </PopoverTrigger>
         <PopoverContent class="w-auto p-0" align="start">
@@ -193,7 +203,7 @@ const selectedTeam = ref<Team>(
         </DialogFooter>
       </DialogContent>
     </Dialog>
-    <div class="flex justify-end gap-2">
+    <div v-if="leftSidebarVisibility" class="flex justify-end gap-2">
       <TooltipProvider>
         <Tooltip>
           <DropdownMenu>

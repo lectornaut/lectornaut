@@ -62,46 +62,60 @@ emitter.on("Tabs.Close", (id) => {
 </script>
 
 <template>
-  <div
-    class="sticky top-0 z-10 flex flex-col shadow-xl shadow-background after:absolute after:inset-x-0 after:-bottom-32 after:-z-10 after:h-32 after:bg-gradient-to-b after:from-background"
-  >
-    <div class="relative flex grow items-center gap-2 p-2 transition-all">
-      <!-- <div class="flex items-center justify-between gap-2"> -->
-      <TooltipProvider v-if="!leftSidebarVisibility" v-motion-fade>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="group"
-              @click="emitter.emit('Sidebar.Left.Toggle')"
-            >
-              <icon-lucide-menu class="group-hover:hidden" />
-              <icon-lucide-chevrons-right class="hidden group-hover:block" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Expand Sidebar </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <!-- </div> -->
+  <div class="sticky top-0 z-10 flex flex-col">
+    <div
+      data-tauri-drag-region
+      class="relative flex grow items-center gap-2 p-2 transition-all"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <TooltipProvider v-if="!leftSidebarVisibility" v-motion-fade>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="group"
+                @click="emitter.emit('Sidebar.Left.Toggle')"
+              >
+                <icon-lucide-menu class="group-hover:hidden" />
+                <icon-lucide-chevrons-right class="hidden group-hover:block" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Expand Sidebar </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider v-motion-fade>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon" class="gap-2">
+                <icon-lucide-arrow-left />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Go back </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon" class="gap-2">
+                <icon-lucide-arrow-right />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Go forward </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
       <nav
         ref="el"
-        class="flex w-fit min-w-0 items-center justify-start gap-2 after:absolute after:inset-x-0 after:bottom-0 after:-z-10 after:h-px after:bg-border"
+        class="relative flex w-fit min-w-0 items-center justify-start gap-2"
       >
         <Button
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex w-56 min-w-0 grow justify-between gap-2 border border-b-0 border-transparent pr-2 font-normal"
-          :class="[
+          class="group relative flex w-56 min-w-0 grow justify-between gap-2 border border-transparent bg-transparent pr-2 font-normal shadow-none"
+          :class="
             tab.id === selectedTab
-              ? 'min-w-24 rounded-b-none border-border bg-background shadow-[0px_8px_0_0_currentcolor] shadow-background before:absolute before:-bottom-2 before:-left-2 before:z-10 before:h-2 before:w-2 before:rounded-br-full before:border-b before:border-r before:border-border before:text-background before:shadow-[2px_2px_0_currentcolor] after:absolute after:-bottom-2 after:-right-2 after:z-10 after:h-2 after:w-2 after:rounded-bl-full after:border-b after:border-l after:border-border after:text-background after:shadow-[-2px_2px_0_currentcolor] hover:bg-background'
-              : 'text-muted-foreground before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full before:bg-muted after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full after:bg-muted',
-            ,
-            {
-              'before:first:hidden':
-                tab.id !== selectedTab && leftSidebarVisibility,
-            },
-          ]"
+              ? 'min-w-24 rounded-b-none border-border border-b-transparent before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-2.5 before:w-2 before:rounded-br-full before:border-b before:border-r before:border-border before:text-background before:shadow-[1px_1px_0_currentcolor] after:absolute after:-bottom-2.5 after:-right-2 after:z-20 after:h-2.5 after:w-2 after:rounded-bl-full after:border-b after:border-l after:border-border after:text-background after:shadow-[-1px_1px_0_currentcolor] hover:bg-transparent'
+              : 'text-muted-foreground before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full before:bg-muted after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full after:bg-muted'
+          "
           :variant="tab.id === selectedTab ? 'secondary' : 'ghost'"
           as-child
           @click="selectedTab = tab.id"
@@ -124,10 +138,17 @@ emitter.on("Tabs.Close", (id) => {
                 <TooltipContent> Close Tab </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            <span
+              v-if="tab.id === selectedTab"
+              class="absolute -inset-x-1 -bottom-2.5 z-10 h-1 bg-background"
+            ></span>
           </RouterLink>
         </Button>
       </nav>
-      <div class="flex grow items-center justify-between gap-2">
+      <div
+        data-tauri-drag-region
+        class="flex grow items-center justify-between gap-2"
+      >
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>
@@ -149,6 +170,7 @@ emitter.on("Tabs.Close", (id) => {
         </TooltipProvider>
         <div class="flex items-center gap-2">
           <TooltipProvider>
+            <!-- <TasksNotifications /> -->
             <Tooltip>
               <TooltipTrigger as-child>
                 <Button variant="ghost" size="icon" class="gap-2">
@@ -174,5 +196,9 @@ emitter.on("Tabs.Close", (id) => {
         </div>
       </div>
     </div>
+    <CommandK />
+    <Settings />
+    <Shortcuts />
+    <ExitTrigger />
   </div>
 </template>

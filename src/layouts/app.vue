@@ -33,13 +33,12 @@ watch(rightSidebarVisibility, (value) => {
 
 <template>
   <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-    <Titlebar />
-    <Separator />
+    <!-- <Titlebar /> -->
+    <!-- <Separator /> -->
     <ResizablePanelGroup direction="horizontal" auto-save-id="app">
       <ResizablePanel
         ref="leftSidebar"
-        class="my-2 ml-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/25 shadow-lg transition-all"
-        :class="leftSidebarVisibility ? 'border' : 'invisible'"
+        class="flex min-w-[52px] flex-col transition-all"
         :min-size="10"
         :default-size="15"
         :max-size="20"
@@ -47,18 +46,24 @@ watch(rightSidebarVisibility, (value) => {
         @collapse="leftSidebarVisibility = false"
         @expand="leftSidebarVisibility = true"
       >
-        <LeftSidebar v-if="leftSidebarVisibility" v-motion-fade />
+        <LeftSidebar
+          v-motion-fade
+          :left-sidebar-visibility="leftSidebarVisibility"
+        />
       </ResizablePanel>
       <ResizableHandle
-        :class="{ 'invisible w-0': leftSidebarVisibility }"
-        class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
+        class="z-20 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
         @dblclick="emitter.emit('Sidebar.Left.Toggle')"
       />
-      <ResizablePanel :default-size="60" class="flex flex-col transition-all">
+      <ResizablePanel
+        :default-size="60"
+        class="flex flex-col bg-background transition-all"
+      >
         <Toolbar />
+        <Separator />
         <SubNavigation />
         <main
-          class="no-scrollbar z-30 m-2 flex grow flex-col overflow-auto overscroll-none rounded-xl border bg-gradient-to-b from-background/75 to-background/25 shadow-xl"
+          class="no-scrollbar z-30 m-2 flex grow flex-col overflow-auto overscroll-none rounded-md border bg-background shadow-md"
         >
           <RouterView v-slot="{ Component, route }">
             <template v-if="Component">
@@ -78,14 +83,12 @@ watch(rightSidebarVisibility, (value) => {
         </main>
       </ResizablePanel>
       <ResizableHandle
-        :class="{ 'invisible w-0': rightSidebarVisibility }"
-        class="z-50 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
+        class="z-20 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
         @dblclick="emitter.emit('Sidebar.Right.Toggle')"
       />
       <ResizablePanel
         ref="rightSidebar"
-        class="my-2 mr-2 flex flex-col rounded-xl bg-gradient-to-b from-background/75 to-background/25 shadow-lg transition-all"
-        :class="rightSidebarVisibility ? 'border' : 'invisible'"
+        class="flex flex-col bg-gradient-to-b from-background/75 to-background/25 shadow-lg transition-all"
         :min-size="20"
         :default-size="25"
         :max-size="30"

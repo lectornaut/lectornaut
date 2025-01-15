@@ -4,6 +4,7 @@ export default {
   rules: {
     "selector-class-pattern": null,
     "at-rule-no-unknown": null,
+    "at-rule-no-deprecated": null,
     "scss/at-rule-no-unknown": [
       true,
       {

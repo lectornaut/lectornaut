@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import { links } from "@/data/data"
+
+defineProps<{
+  leftSidebarVisibility: boolean
+}>()
 </script>
 
 <template>
-  <nav class="flex flex-col p-2">
+  <nav class="flex flex-col gap-2 p-2">
     <TooltipProvider>
       <template v-for="(link, index) of links" :key="`1-${index}`">
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
-              class="grow justify-start gap-3 truncate font-normal text-muted-foreground"
+              :size="leftSidebarVisibility ? 'default' : 'icon'"
+              class="grow gap-3 truncate font-normal text-muted-foreground"
+              :class="{ 'justify-start': leftSidebarVisibility }"
               as-child
             >
               <RouterLink :to="link.to">
                 <Component :is="link.icon" />
-                <span class="truncate">
+                <span v-if="leftSidebarVisibility" class="truncate">
                   {{ link.title }}
                 </span>
               </RouterLink>
