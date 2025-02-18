@@ -89,7 +89,7 @@ const play = () => new Audio(click).play()
           </Avatar>
           <span
             v-else
-            class="flex aspect-square h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="bg-primary text-primary-foreground flex aspect-square h-4 w-4 items-center justify-center rounded-full"
           >
             <icon-mingcute-ai-fill />
           </span>
@@ -97,8 +97,8 @@ const play = () => new Audio(click).play()
             class="flex w-auto shrink rounded-xl px-4 py-3"
             :class="
               message % 2 !== 0
-                ? 'ml-auto bg-primary/10'
-                : 'mr-auto bg-primary/5'
+                ? 'bg-primary/10 ml-auto'
+                : 'bg-primary/5 mr-auto'
             "
           >
             Lorem ipsum, dolor sit amet consectetur adipisicing elit. Odio
@@ -112,13 +112,13 @@ const play = () => new Audio(click).play()
     <div>
       <Separator />
       <div class="flex flex-col gap-2 p-2">
-        <div class="flex items-center gap-2 p-1 text-muted-foreground/75">
+        <div class="text-muted-foreground/75 flex items-center gap-2 p-1">
           <icon-mingcute-pencil-2-ai-fill />
           <RadiantText class="w-full"> Try these prompts </RadiantText>
         </div>
         <div class="grid gap-2 md:grid-cols-2">
           <Card
-            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+            class="hover:border-primary/25 cursor-pointer rounded-xl shadow-none transition"
           >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle>What are the</CardTitle>
@@ -126,7 +126,7 @@ const play = () => new Audio(click).play()
             </CardHeader>
           </Card>
           <Card
-            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+            class="hover:border-primary/25 cursor-pointer rounded-xl shadow-none transition"
           >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle>How do I</CardTitle>
@@ -134,7 +134,7 @@ const play = () => new Audio(click).play()
             </CardHeader>
           </Card>
           <Card
-            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+            class="hover:border-primary/25 cursor-pointer rounded-xl shadow-none transition"
           >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle>How do I</CardTitle>
@@ -142,7 +142,7 @@ const play = () => new Audio(click).play()
             </CardHeader>
           </Card>
           <Card
-            class="cursor-pointer rounded-xl shadow-none transition hover:border-primary/25"
+            class="hover:border-primary/25 cursor-pointer rounded-xl shadow-none transition"
           >
             <CardHeader class="gap-1 px-4 py-4">
               <CardTitle>How do I</CardTitle>
@@ -160,7 +160,7 @@ const play = () => new Audio(click).play()
             v-model="ask"
             siz
             placeholder="Type your message here."
-            class="truncate rounded-full bg-primary/5 pl-8 pr-12 ring-offset-transparent transition hover:bg-primary/10 focus:border-inherit focus:bg-primary/10 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            class="bg-primary/5 hover:bg-primary/10 focus:bg-primary/10 truncate rounded-full pr-12 pl-8 ring-offset-transparent transition focus:border-inherit focus:ring-0 focus:outline-hidden focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <span
             class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"

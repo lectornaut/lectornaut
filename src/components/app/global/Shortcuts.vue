@@ -125,7 +125,7 @@ const filteredShortcuts = computed(() => {
                 <div
                   v-for="keys in shortcut.keys"
                   :key="keys.toString()"
-                  class="relative flex gap-1 after:absolute after:-right-8 after:top-1/2 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:text-neutral-400 after:content-['or'] last-of-type:after:hidden"
+                  class="relative flex gap-1 after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:text-neutral-400 after:content-['or'] last-of-type:after:hidden"
                 >
                   <kbd v-for="key in keys" :key="key" class="shortcut-key">
                     {{ key }}
@@ -136,7 +136,7 @@ const filteredShortcuts = computed(() => {
           </AccordionContent>
         </AccordionItem>
         <div v-if="filteredShortcuts.length === 0" class="">
-          <p class="p-4 text-center text-muted-foreground">
+          <p class="text-muted-foreground p-4 text-center">
             No shortcuts found.
           </p>
         </div>

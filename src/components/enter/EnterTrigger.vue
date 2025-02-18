@@ -7,7 +7,7 @@ import { DrawerTrigger } from "@/components/ui/drawer"
     <DrawerTrigger as-child>
       <slot />
     </DrawerTrigger>
-    <DrawerContent class="outline-none">
+    <DrawerContent class="outline-hidden">
       <div class="mx-auto flex w-full max-w-sm flex-col">
         <DrawerHeader class="sr-only">
           <DrawerTitle>Enter Template</DrawerTitle>

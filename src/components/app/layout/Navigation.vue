@@ -15,7 +15,7 @@ defineProps<{
             <Button
               variant="ghost"
               :size="leftSidebarVisibility ? 'default' : 'icon'"
-              class="grow gap-3 truncate font-normal text-muted-foreground"
+              class="text-muted-foreground grow gap-3 truncate font-normal"
               :class="{ 'justify-start': leftSidebarVisibility }"
               as-child
             >

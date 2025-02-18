@@ -235,12 +235,12 @@ const accent = useStorage("accent", defaultAccent)
         <div class="no-scrollbar flex w-4/5 grow flex-col overflow-auto">
           <TabsContent
             value="account"
-            class="mt-0 flex-col transition duration-200 animate-in fade-in"
+            class="animate-in fade-in mt-0 flex-col transition duration-200"
           >
             <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
               <div class="flex flex-col">
                 <h3 class="text-lg font-semibold">Account</h3>
-                <p class="flex items-center gap-2 text-muted-foreground">
+                <p class="text-muted-foreground flex items-center gap-2">
                   Manage your account settings.
                 </p>
               </div>
@@ -284,7 +284,7 @@ const accent = useStorage("accent", defaultAccent)
                       <TooltipTrigger as-child>
                         <Button
                           v-if="photoURL"
-                          class="absolute right-0 top-0 size-4 rounded-full border-2 border-background p-2 opacity-0 transition group-hover:opacity-100"
+                          class="border-background absolute top-0 right-0 size-4 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
                           @click="photoURL = ''"
                         >
                           <icon-lucide-x />
@@ -310,8 +310,8 @@ const accent = useStorage("accent", defaultAccent)
               <Separator />
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="font-medium leading-none">Primary email</p>
-                  <p class="flex items-center gap-2 text-muted-foreground">
+                  <p class="leading-none font-medium">Primary email</p>
+                  <p class="text-muted-foreground flex items-center gap-2">
                     {{ user?.email }}
                     <TooltipProvider v-if="user?.emailVerified">
                       <Tooltip>
@@ -383,8 +383,8 @@ const accent = useStorage("accent", defaultAccent)
               </div>
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="font-medium leading-none">Connected accounts</p>
-                  <p class="flex items-center gap-2 text-muted-foreground">
+                  <p class="leading-none font-medium">Connected accounts</p>
+                  <p class="text-muted-foreground flex items-center gap-2">
                     Manage your connected accounts and sign-in methods.
                   </p>
                 </div>
@@ -418,7 +418,7 @@ const accent = useStorage("accent", defaultAccent)
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <span
-                            class="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-background bg-background"
+                            class="border-background bg-background absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full border-2"
                           >
                             <icon-logos-google-icon
                               v-if="provider.providerId === 'google.com'"
@@ -437,10 +437,10 @@ const accent = useStorage("accent", defaultAccent)
                     </TooltipProvider>
                   </div>
                   <div class="flex flex-col gap-1">
-                    <p class="font-medium leading-none">
+                    <p class="leading-none font-medium">
                       {{ provider.displayName }}
                     </p>
-                    <p class="flex items-center gap-2 text-muted-foreground">
+                    <p class="text-muted-foreground flex items-center gap-2">
                       {{ provider.email }}
                     </p>
                   </div>
@@ -473,8 +473,8 @@ const accent = useStorage("accent", defaultAccent)
               <Separator />
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="font-medium leading-none">Delete account</p>
-                  <p class="flex items-center gap-2 text-muted-foreground">
+                  <p class="leading-none font-medium">Delete account</p>
+                  <p class="text-muted-foreground flex items-center gap-2">
                     Permanently delete your account.
                   </p>
                 </div>
@@ -514,20 +514,20 @@ const accent = useStorage("accent", defaultAccent)
           </TabsContent>
           <TabsContent
             value="appearance"
-            class="mt-0 flex-col transition duration-200 animate-in fade-in"
+            class="animate-in fade-in mt-0 flex-col transition duration-200"
           >
             <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
               <div class="flex flex-col">
                 <h3 class="text-lg font-semibold">Appearance</h3>
-                <p class="flex items-center gap-2 text-muted-foreground">
+                <p class="text-muted-foreground flex items-center gap-2">
                   Customize the appearance of the app.
                 </p>
               </div>
               <Separator />
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="font-medium leading-none">Theme</p>
-                  <p class="flex items-center gap-2 text-muted-foreground">
+                  <p class="leading-none font-medium">Theme</p>
+                  <p class="text-muted-foreground flex items-center gap-2">
                     Customize how template app looks on your device.
                   </p>
                 </div>
@@ -551,8 +551,8 @@ const accent = useStorage("accent", defaultAccent)
               </div>
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="font-medium leading-none">Accent color</p>
-                  <p class="flex items-center gap-2 text-muted-foreground">
+                  <p class="leading-none font-medium">Accent color</p>
+                  <p class="text-muted-foreground flex items-center gap-2">
                     Choose your preferred accent color.
                   </p>
                 </div>
@@ -576,8 +576,8 @@ const accent = useStorage("accent", defaultAccent)
               </div>
               <div class="flex items-center gap-4">
                 <div class="flex flex-col gap-1">
-                  <p class="font-medium leading-none">Language</p>
-                  <p class="flex items-center gap-2 text-muted-foreground">
+                  <p class="leading-none font-medium">Language</p>
+                  <p class="text-muted-foreground flex items-center gap-2">
                     Choose your preferred language.
                   </p>
                 </div>

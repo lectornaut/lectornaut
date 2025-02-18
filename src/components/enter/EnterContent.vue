@@ -307,7 +307,7 @@ const authenticateApple = async () => {
             <icon-lucide-loader class="animate-spin" />
           </template>
           <template v-else>
-            <icon-mdi-apple class="h-4 w-4 text-accent-foreground" />
+            <icon-mdi-apple class="text-accent-foreground h-4 w-4" />
           </template>
           Continue with Apple
         </Button>

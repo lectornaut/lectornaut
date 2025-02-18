@@ -9,7 +9,7 @@ useHead({
     <Header />
     <Separator />
     <div
-      class="mx-auto mb-44 mt-12 flex w-full max-w-2xl grow flex-col items-center"
+      class="mx-auto mt-12 mb-44 flex w-full max-w-2xl grow flex-col items-center"
     >
       <Tabs default-value="personal" class="flex w-full flex-col items-center">
         <TabsList class="m-4 rounded-xl">
@@ -23,7 +23,7 @@ useHead({
         <HeroText />
         <TabsContent
           value="personal"
-          class="transition duration-200 animate-in fade-in"
+          class="animate-in fade-in transition duration-200"
           tabindex="-1"
         >
           <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">
@@ -31,7 +31,7 @@ useHead({
             <div class="mt-12 flex w-full flex-col gap-4 sm:flex-row">
               <RouterLink
                 to="/enter"
-                class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                class="focus-visible:ring-primary relative flex w-full rounded-xl transition focus-visible:ring-2 focus-visible:outline-hidden"
               >
                 <Alert
                   class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
@@ -46,7 +46,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Unlimited notes, upto 10MB per note.
                         </p>
@@ -54,7 +54,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Basic AI model and features.
                         </p>
@@ -62,7 +62,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           100MB storage.
                         </p>
@@ -73,10 +73,10 @@ useHead({
               </RouterLink>
               <RouterLink
                 to="/enter"
-                class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                class="focus-visible:ring-primary relative flex w-full rounded-xl transition focus-visible:ring-2 focus-visible:outline-hidden"
               >
                 <div
-                  className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
+                  className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
                 ></div>
                 <Alert
                   class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
@@ -93,10 +93,10 @@ useHead({
                       variant="secondary"
                       class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
                     >
-                      <span class="truncate text-muted-foreground line-through">
+                      <span class="text-muted-foreground truncate line-through">
                         $10/mo
                       </span>
-                      <span class="truncate text-primary">$50/one-time</span>
+                      <span class="text-primary truncate">$50/one-time</span>
                     </Badge>
                   </AlertTitle>
                   <AlertDescription class="flex flex-col gap-4">
@@ -104,7 +104,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Unlimited notes.
                         </p>
@@ -112,7 +112,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Smarter AI with more features.
                         </p>
@@ -120,7 +120,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Limitless storage for images and files.
                         </p>
@@ -134,7 +134,7 @@ useHead({
         </TabsContent>
         <TabsContent
           value="team"
-          class="transition duration-200 animate-in fade-in"
+          class="animate-in fade-in transition duration-200"
           tabindex="-1"
         >
           <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">
@@ -143,10 +143,10 @@ useHead({
             >
               <RouterLink
                 to="/enter"
-                class="relative flex w-full rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                class="focus-visible:ring-primary relative flex w-full rounded-xl transition focus-visible:ring-2 focus-visible:outline-hidden"
               >
                 <div
-                  className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
+                  className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
                 ></div>
                 <Alert
                   class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
@@ -163,10 +163,10 @@ useHead({
                       variant="secondary"
                       class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
                     >
-                      <span class="truncate text-muted-foreground line-through">
+                      <span class="text-muted-foreground truncate line-through">
                         $8/user/mo
                       </span>
-                      <span class="truncate text-primary">$5/user/mo</span>
+                      <span class="text-primary truncate">$5/user/mo</span>
                     </Badge>
                   </AlertTitle>
                   <AlertDescription class="flex flex-col gap-4">
@@ -174,7 +174,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Unlimited notes.
                         </p>
@@ -182,7 +182,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Smarter AI with more features.
                         </p>
@@ -190,7 +190,7 @@ useHead({
                       <li class="flex items-start gap-2 leading-none">
                         <icon-lucide-check />
                         <p
-                          class="leading-loose text-muted-foreground first-line:leading-none"
+                          class="text-muted-foreground leading-loose first-line:leading-none"
                         >
                           Limitless storage for images and files.
                         </p>

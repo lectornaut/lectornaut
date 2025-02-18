@@ -26,7 +26,7 @@ const accordionItems = [
     <DrawerTrigger as-child>
       <Button variant="secondary" class="rounded-2xl" size="lg"> FAQ </Button>
     </DrawerTrigger>
-    <DrawerContent class="outline-none">
+    <DrawerContent class="outline-hidden">
       <div class="mx-auto flex w-full max-w-sm flex-col">
         <DrawerHeader class="sr-only">
           <DrawerTitle> Frequently Asked Questions </DrawerTitle>

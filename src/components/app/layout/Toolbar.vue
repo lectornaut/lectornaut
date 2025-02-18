@@ -84,7 +84,7 @@ emitter.on("Tabs.Close", (id) => {
             <TooltipContent> Expand Sidebar </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <TooltipProvider v-motion-fade>
+        <TooltipProvider v-if="isTauri" v-motion-fade>
           <Tooltip>
             <TooltipTrigger as-child>
               <Button variant="ghost" size="icon" class="gap-2">
@@ -102,6 +102,16 @@ emitter.on("Tabs.Close", (id) => {
             <TooltipContent> Go forward </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon" class="gap-2">
+                <icon-lucide-history />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> History </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <nav
         ref="el"
@@ -113,8 +123,8 @@ emitter.on("Tabs.Close", (id) => {
           class="group relative flex w-56 min-w-0 grow justify-between gap-2 border border-transparent bg-transparent pr-2 font-normal shadow-none"
           :class="
             tab.id === selectedTab
-              ? 'min-w-24 rounded-b-none border-border border-b-transparent before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-2.5 before:w-2 before:rounded-br-full before:border-b before:border-r before:border-border before:text-background before:shadow-[1px_1px_0_currentcolor] after:absolute after:-bottom-2.5 after:-right-2 after:z-20 after:h-2.5 after:w-2 after:rounded-bl-full after:border-b after:border-l after:border-border after:text-background after:shadow-[-1px_1px_0_currentcolor] hover:bg-transparent'
-              : 'text-muted-foreground before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full before:bg-muted after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full after:bg-muted'
+              ? 'border-border before:border-border before:text-background after:border-border after:text-background min-w-24 rounded-b-none border-b-transparent before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-2.5 before:w-2 before:rounded-br-full before:border-r before:border-b before:shadow-[1px_1px_0_currentcolor] after:absolute after:-right-2 after:-bottom-2.5 after:z-20 after:h-2.5 after:w-2 after:rounded-bl-full after:border-b after:border-l after:shadow-[-1px_1px_0_currentcolor] hover:bg-transparent'
+              : 'text-muted-foreground before:bg-muted after:bg-muted before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full'
           "
           :variant="tab.id === selectedTab ? 'secondary' : 'ghost'"
           as-child
@@ -140,7 +150,7 @@ emitter.on("Tabs.Close", (id) => {
             </TooltipProvider>
             <span
               v-if="tab.id === selectedTab"
-              class="absolute -inset-x-1 -bottom-2.5 z-10 h-1 bg-background"
+              class="bg-background absolute -inset-x-1 -bottom-2.5 z-10 h-1"
             ></span>
           </RouterLink>
         </Button>
@@ -179,6 +189,8 @@ emitter.on("Tabs.Close", (id) => {
               </TooltipTrigger>
               <TooltipContent> Tab options </TooltipContent>
             </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
             <Tooltip v-if="!rightSidebarVisibility" v-motion-fade>
               <TooltipTrigger as-child>
                 <Button

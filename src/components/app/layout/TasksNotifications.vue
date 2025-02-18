@@ -113,7 +113,7 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger>
           <span
-            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full"
           >
             <icon-mingcute-check-2-fill />
           </span>
@@ -122,7 +122,7 @@ const components: { title: string; href: string; description: string }[] = [
         <NavigationMenuContent>
           <div class="w-96 -translate-x-px">
             <div
-              class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
+              class="bg-background sticky top-0 z-10 flex items-center justify-between border-b py-2 pr-2 pl-4"
             >
               <h3 class="font-semibold">Tasks</h3>
               <Button variant="ghost" class="gap-2">
@@ -139,12 +139,12 @@ const components: { title: string; href: string; description: string }[] = [
               >
                 <Button
                   variant="ghost"
-                  class="group relative flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
+                  class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
                     <span
-                      class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
+                      class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
                     >
                       <icon-lucide-check />
                     </span>
@@ -156,7 +156,7 @@ const components: { title: string; href: string; description: string }[] = [
                         {{ component.description }}
                       </span>
                       <div
-                        class="absolute bottom-2 right-2 z-10 hidden items-center gap-2 animate-in fade-in zoom-in group-hover:flex"
+                        class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
                       >
                         <TooltipProvider>
                           <Tooltip>
@@ -184,7 +184,7 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger>
           <span
-            class="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            class="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full"
           >
             <icon-mingcute-notification-fill />
           </span>
@@ -193,7 +193,7 @@ const components: { title: string; href: string; description: string }[] = [
         <NavigationMenuContent>
           <div class="w-96 -translate-x-px">
             <div
-              class="sticky top-0 z-10 flex items-center justify-between border-b bg-background py-2 pl-4 pr-2"
+              class="bg-background sticky top-0 z-10 flex items-center justify-between border-b py-2 pr-2 pl-4"
             >
               <h3 class="font-semibold">Notifications</h3>
               <Button variant="ghost" class="gap-2">
@@ -210,12 +210,12 @@ const components: { title: string; href: string; description: string }[] = [
               >
                 <Button
                   variant="ghost"
-                  class="group relative flex h-auto items-start justify-start gap-3 whitespace-normal px-3 py-2 leading-normal"
+                  class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
                   as-child
                 >
                   <RouterLink :key="index" :to="component.href">
                     <span
-                      class="flex items-center justify-center rounded-full bg-primary p-1 text-primary-foreground"
+                      class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
                     >
                       <icon-lucide-bell />
                     </span>
@@ -227,7 +227,7 @@ const components: { title: string; href: string; description: string }[] = [
                         {{ component.description }}
                       </span>
                       <div
-                        class="absolute bottom-2 right-2 z-10 hidden items-center gap-2 animate-in fade-in zoom-in group-hover:flex"
+                        class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
                       >
                         <TooltipProvider>
                           <Tooltip>

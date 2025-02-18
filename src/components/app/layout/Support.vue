@@ -17,7 +17,7 @@ emitter.on("Menu.Help.Toggle", () => {
             <Button
               variant="outline"
               size="icon"
-              class="fixed bottom-3 left-3 rounded-full data-[state=open]:bg-muted"
+              class="data-[state=open]:bg-muted fixed bottom-3 left-3 rounded-full"
             >
               <icon-lucide-circle-help />
             </Button>

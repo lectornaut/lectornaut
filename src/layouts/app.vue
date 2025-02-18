@@ -33,12 +33,12 @@ watch(rightSidebarVisibility, (value) => {
 
 <template>
   <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-    <!-- <Titlebar /> -->
-    <!-- <Separator /> -->
+    <Titlebar />
+    <Separator />
     <ResizablePanelGroup direction="horizontal" auto-save-id="app">
       <ResizablePanel
         ref="leftSidebar"
-        class="flex min-w-[52px] flex-col transition-all"
+        class="flex flex-col transition-all"
         :min-size="10"
         :default-size="15"
         :max-size="20"
@@ -52,18 +52,18 @@ watch(rightSidebarVisibility, (value) => {
         />
       </ResizablePanel>
       <ResizableHandle
-        class="z-20 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
+        class="data-resize-handle-active:bg-primary z-20 transition hover:scale-x-3 active:scale-x-3 data-resize-handle-active:scale-x-3 data-[state=hover]:scale-x-3"
         @dblclick="emitter.emit('Sidebar.Left.Toggle')"
       />
       <ResizablePanel
         :default-size="60"
-        class="flex flex-col bg-background transition-all"
+        class="bg-background flex flex-col transition-all"
       >
         <Toolbar />
         <Separator />
         <SubNavigation />
         <main
-          class="no-scrollbar z-30 m-2 flex grow flex-col overflow-auto overscroll-none rounded-md border bg-background shadow-md"
+          class="no-scrollbar bg-background z-30 m-2 flex grow flex-col overflow-auto overscroll-none rounded-md border shadow-md"
         >
           <RouterView v-slot="{ Component, route }">
             <template v-if="Component">
@@ -83,12 +83,12 @@ watch(rightSidebarVisibility, (value) => {
         </main>
       </ResizablePanel>
       <ResizableHandle
-        class="z-20 transition hover:scale-x-[3] active:scale-x-[3] data-[state=hover]:scale-x-[3] [&[data-resize-handle-active]]:scale-x-[3] [&[data-resize-handle-active]]:bg-primary"
+        class="data-resize-handle-active:bg-primary z-20 transition hover:scale-x-3 active:scale-x-3 data-resize-handle-active:scale-x-3 data-[state=hover]:scale-x-3"
         @dblclick="emitter.emit('Sidebar.Right.Toggle')"
       />
       <ResizablePanel
         ref="rightSidebar"
-        class="flex flex-col bg-gradient-to-b from-background/75 to-background/25 shadow-lg transition-all"
+        class="flex flex-col transition-all"
         :min-size="20"
         :default-size="25"
         :max-size="30"

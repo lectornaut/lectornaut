@@ -54,7 +54,7 @@ const selectedTeam = ref<Team>(
           <Button
             variant="ghost"
             :size="leftSidebarVisibility ? 'default' : 'icon'"
-            class="gap-3 truncate data-[state=open]:bg-muted"
+            class="data-[state=open]:bg-muted gap-3 truncate"
           >
             <Avatar class="size-4">
               <AvatarImage
@@ -70,7 +70,7 @@ const selectedTeam = ref<Team>(
               <span
                 v-if="!online"
                 v-motion-fade
-                class="flex items-center gap-1 rounded-full border bg-muted px-1.5 py-0.5 text-muted-foreground"
+                class="bg-muted text-muted-foreground flex items-center gap-1 rounded-full border px-1.5 py-0.5"
               >
                 <icon-bx-bxs-zap />
                 Offline

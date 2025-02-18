@@ -44,7 +44,7 @@ onMounted(async () => {
   <div v-else class="flex grow place-items-center">
     <div class="mx-auto flex w-full max-w-sm flex-col">
       <div class="sr-only grid gap-1.5 p-4 text-center sm:text-left">
-        <h1 class="text-lg font-semibold leading-none tracking-tight">
+        <h1 class="text-lg leading-none font-semibold tracking-tight">
           Enter Template
         </h1>
         <p class="text-muted-foreground">

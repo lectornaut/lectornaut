@@ -7,14 +7,14 @@ import { state } from "@/modules/theme"
     <DialogTrigger
       v-motion-fade
       as-child
-      class="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-4"
+      class="fixed right-4 bottom-4 z-50 flex flex-col items-center gap-4"
     >
       <div>
         <span class="text-muted-foreground/50">Scan to get the app</span>
         <img
           :src="`/assets/images/qr-code-${state}.svg`"
           alt="QR Code"
-          class="h-28 w-28 cursor-pointer rounded-xl border bg-muted/50 p-1 opacity-75 backdrop-blur-xl transition hover:scale-110 hover:opacity-100"
+          class="bg-muted/50 h-28 w-28 cursor-pointer rounded-xl border p-1 opacity-75 backdrop-blur-xl transition hover:scale-110 hover:opacity-100"
         />
       </div>
     </DialogTrigger>

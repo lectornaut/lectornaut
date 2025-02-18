@@ -1,12 +1,11 @@
 import VueI18nPlugin from "@intlify/unplugin-vue-i18n/vite"
+import tailwindcss from "@tailwindcss/vite"
 import UnheadVite from "@unhead/addons/vite"
 import { unheadVueComposablesImports } from "@unhead/vue"
 import Vue from "@vitejs/plugin-vue"
-import autoprefixer from "autoprefixer"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 import RekaResolver from "reka-ui/resolver"
-import tailwind from "tailwindcss"
 import AutoImport from "unplugin-auto-import/vite"
 import Unfonts from "unplugin-fonts/vite"
 import IconsResolver from "unplugin-icons/resolver"
@@ -66,6 +65,7 @@ export default defineConfig({
         ],
       },
     }),
+    tailwindcss(),
     Components({
       resolvers: [
         RekaResolver(),
@@ -93,7 +93,7 @@ export default defineConfig({
     ViteImageOptimizer(),
     Icons({
       scale: 1,
-      defaultClass: "inline-flex shrink-0 w-4 h-4",
+      defaultClass: "shrink-0 w-4 h-4",
     }),
     VueI18nPlugin({
       include: resolve(
@@ -108,11 +108,6 @@ export default defineConfig({
       vueTsc: true,
     }),
   ],
-  css: {
-    postcss: {
-      plugins: [tailwind(), autoprefixer()],
-    },
-  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

@@ -1,5 +1,5 @@
 <template>
-  <header class="flex h-7 min-h-titlebar-height items-center justify-center">
+  <header class="min-h-titlebar-height flex h-7 items-center justify-center">
     <div
       data-tauri-drag-region
       class="grid h-full min-h-7 w-full grid-cols-3 items-center gap-2 p-2"

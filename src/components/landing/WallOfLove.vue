@@ -76,9 +76,9 @@ const works: Artwork[] = [
               class="aspect-video w-full object-cover"
             />
           </div>
-          <figcaption class="pt-2 text-muted-foreground">
+          <figcaption class="text-muted-foreground pt-2">
             Photo by
-            <span class="font-semibold text-foreground">
+            <span class="text-foreground font-semibold">
               {{ artwork.artist }}
             </span>
           </figcaption>
