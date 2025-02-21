@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { accentColors, defaultAccent, themes } from "@/helpers/defaults"
+import { accents, defaultAccent, themes } from "@/helpers/defaults"
 import { languages } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
@@ -203,7 +203,7 @@ const accent = useStorage("accent", defaultAccent)
 </script>
 
 <template>
-  <Dialog :open="openSettings" @update:open="openSettings = false">
+  <Dialog v-model:open="openSettings">
     <DialogContent class="h-2/3 w-3/5 max-w-none overflow-clip p-0">
       <DialogHeader class="sr-only">
         <DialogTitle>Settings</DialogTitle>
@@ -396,7 +396,7 @@ const accent = useStorage("accent", defaultAccent)
               </div>
               <div
                 v-if="user?.providerData && user.providerData.length > 0"
-                lass="flex flex-col-reverse gap-4"
+                class="flex flex-col-reverse gap-4"
               >
                 <div
                   v-for="provider in user?.providerData"
@@ -563,7 +563,7 @@ const accent = useStorage("accent", defaultAccent)
                     </SelectTrigger>
                     <SelectContent align="end">
                       <SelectItem
-                        v-for="color in accentColors"
+                        v-for="color in accents"
                         :key="color.id"
                         :value="color.id"
                         class="gap-4"

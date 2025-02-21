@@ -26,8 +26,8 @@ const filteredShortcuts = computed(() =>
 
 <template>
   <div class="relative flex grow items-center">
-    <!-- <span
-      class="pointer-events-none absolute inset-y-0 start-0 flex w-full items-center gap-2 px-2 text-muted-foreground"
+    <span
+      class="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex w-full items-center gap-2 px-2"
     >
       <icon-lucide-search />
       <span class="truncate"> Search </span>
@@ -35,9 +35,13 @@ const filteredShortcuts = computed(() =>
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger as-child>
-          <Button variant="secondary" class="grow" @click="openCommand = true">
-            <icon-lucide-search />
-            <span class="truncate">Search</span>
+          <Button
+            variant="secondary"
+            class="grow shadow-none"
+            @click="openCommand = true"
+          >
+            <!-- <icon-lucide-search />
+            <span class="truncate">Search</span> -->
           </Button>
         </TooltipTrigger>
         <TooltipContent> Search </TooltipContent>
@@ -48,8 +52,8 @@ const filteredShortcuts = computed(() =>
     >
       <kbd class="shortcut-key"> ⌘ </kbd>
       <kbd class="shortcut-key"> K </kbd>
-    </span> -->
-    <CommandDialog :open="openCommand" @update:open="openCommand = false">
+    </span>
+    <CommandDialog v-model:open="openCommand">
       <DialogHeader class="sr-only">
         <DialogTitle> Search </DialogTitle>
         <DialogDescription> Type a command or search... </DialogDescription>

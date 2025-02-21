@@ -1,5 +1,3 @@
-export const defaultLanguage = "en-US"
-
 export const languages = [
   {
     id: "en-US",
@@ -10,6 +8,8 @@ export const languages = [
     name: "Japanese",
   },
 ]
+
+export const defaultLanguage = "en-US"
 
 export const themes = [
   {
@@ -26,75 +26,31 @@ export const themes = [
   },
 ]
 
-export const accentColors = [
-  {
-    id: "neutral",
-    name: "Neutral",
-  },
-  {
-    id: "rose",
-    name: "Rose",
-  },
-  {
-    id: "blue",
-    name: "Blue",
-  },
-  {
-    id: "green",
-    name: "Green",
-  },
-  {
-    id: "orange",
-    name: "Orange",
-  },
-  {
-    id: "red",
-    name: "Red",
-  },
-  {
-    id: "zinc",
-    name: "Zinc",
-  },
-  {
-    id: "slate",
-    name: "Slate",
-  },
-  {
-    id: "stone",
-    name: "Stone",
-  },
-  {
-    id: "gray",
-    name: "Gray",
-  },
-  {
-    id: "yellow",
-    name: "Yellow",
-  },
-  {
-    id: "violet",
-    name: "Violet",
-  },
-  {
-    id: "indigo",
-    name: "Indigo",
-  },
-  {
-    id: "pink",
-    name: "Pink",
-  },
-  {
-    id: "purple",
-    name: "Purple",
-  },
-  {
-    id: "cyan",
-    name: "Cyan",
-  },
-  {
-    id: "teal",
-    name: "Teal",
-  },
+export const defaultTheme = "auto"
+
+export const accents = [
+  { id: "red", name: "Red" },
+  { id: "orange", name: "Orange" },
+  { id: "amber", name: "Amber" },
+  { id: "yellow", name: "Yellow" },
+  { id: "lime", name: "Lime" },
+  { id: "green", name: "Green" },
+  { id: "emerald", name: "Emerald" },
+  { id: "teal", name: "Teal" },
+  { id: "cyan", name: "Cyan" },
+  { id: "sky", name: "Sky" },
+  { id: "blue", name: "Blue" },
+  { id: "indigo", name: "Indigo" },
+  { id: "violet", name: "Violet" },
+  { id: "purple", name: "Purple" },
+  { id: "fuchsia", name: "Fuchsia" },
+  { id: "pink", name: "Pink" },
+  { id: "rose", name: "Rose" },
+  { id: "slate", name: "Slate" },
+  { id: "gray", name: "Gray" },
+  { id: "zinc", name: "Zinc" },
+  { id: "neutral", name: "Neutral" },
+  { id: "stone", name: "Stone" },
 ]
 
 export const defaultAccent = "neutral"

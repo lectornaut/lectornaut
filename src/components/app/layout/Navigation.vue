@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import { links } from "@/data/data"
-
-defineProps<{
-  leftSidebarVisibility: boolean
-}>()
 </script>
 
 <template>
@@ -14,14 +10,12 @@ defineProps<{
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
-              :size="leftSidebarVisibility ? 'default' : 'icon'"
-              class="text-muted-foreground grow gap-3 truncate font-normal"
-              :class="{ 'justify-start': leftSidebarVisibility }"
+              class="text-muted-foreground grow justify-start gap-3 truncate font-normal"
               as-child
             >
               <RouterLink :to="link.to">
                 <Component :is="link.icon" />
-                <span v-if="leftSidebarVisibility" class="truncate">
+                <span class="truncate">
                   {{ link.title }}
                 </span>
               </RouterLink>

@@ -10,7 +10,7 @@ emitter.on("Dialog.Exit.Open", () => {
 </script>
 
 <template>
-  <AlertDialog :open="openExit" @update:open="openExit = false">
+  <AlertDialog v-model:open="openExit">
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle> Are you sure you want to logout? </AlertDialogTitle>

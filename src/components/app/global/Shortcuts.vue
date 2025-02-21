@@ -77,7 +77,7 @@ const filteredShortcuts = computed(() => {
 </script>
 
 <template>
-  <Sheet :open="openShortcuts" @update:open="openShortcuts = false">
+  <Sheet v-model:open="openShortcuts">
     <SheetContent>
       <SheetHeader>
         <SheetTitle>Keyboard shortcuts</SheetTitle>

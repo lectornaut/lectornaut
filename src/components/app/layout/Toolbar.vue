@@ -208,7 +208,6 @@ emitter.on("Tabs.Close", (id) => {
         </div>
       </div>
     </div>
-    <CommandK />
     <Settings />
     <Shortcuts />
     <ExitTrigger />
