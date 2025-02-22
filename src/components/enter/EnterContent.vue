@@ -128,146 +128,142 @@ const authenticateApple = async () => {
       </TabsList>
       <TabsContent value="sign-up">
         <div class="flex flex-col gap-4">
-          <div class="flex flex-col gap-2">
-            <div class="relative w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-mail class="text-muted-foreground" />
-              </span>
-              <Input
-                v-model="email"
-                type="email"
-                placeholder="Email"
-                class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
-                :disabled="signupViaEmailPasswordInProgress"
-                required
-              />
+          <div class="flex flex-col gap-4">
+            <div class="grid gap-4">
+              <Label for="email">Email</Label>
+              <div class="relative w-full items-center">
+                <span
+                  class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+                >
+                  <icon-lucide-mail class="text-muted-foreground" />
+                </span>
+                <Input
+                  id="email"
+                  v-model="email"
+                  type="email"
+                  placeholder="Email"
+                  class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
+                  :disabled="signupViaEmailPasswordInProgress"
+                  required
+                />
+              </div>
             </div>
-            <div class="relative w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-lock-keyhole class="text-muted-foreground" />
-              </span>
-              <Input
-                v-model="password"
-                :type="passwordInputType"
-                placeholder="Password"
-                class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
-                :disabled="signupViaEmailPasswordInProgress"
-                required
-              />
-              <span
-                class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
-              >
-                <Button variant="ghost" @click="togglePasswordVisibility()">
-                  <icon-lucide-eye
-                    v-if="passwordInputType === 'password'"
-                    class="text-muted-foreground"
-                  />
-                  <icon-lucide-eye-off v-else class="text-muted-foreground" />
-                </Button>
-              </span>
-            </div>
-            <div class="flex items-center justify-end gap-2">
-              <Button variant="ghost"> Send Magic link </Button>
+            <div class="grid gap-4">
+              <Label for="password">Password</Label>
+              <div class="relative w-full items-center">
+                <span
+                  class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+                >
+                  <icon-lucide-lock-keyhole class="text-muted-foreground" />
+                </span>
+                <Input
+                  id="password"
+                  v-model="password"
+                  :type="passwordInputType"
+                  placeholder="Password"
+                  class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
+                  :disabled="signupViaEmailPasswordInProgress"
+                  required
+                />
+                <span
+                  class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
+                >
+                  <Button variant="ghost" @click="togglePasswordVisibility()">
+                    <icon-lucide-eye
+                      v-if="passwordInputType === 'password'"
+                      class="text-muted-foreground"
+                    />
+                    <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                  </Button>
+                </span>
+              </div>
             </div>
           </div>
-          <div class="flex flex-col gap-2">
-            <Button
-              :disabled="signupViaEmailPasswordInProgress"
-              @click="signupViaEmailPassword"
-            >
-              <template v-if="signupViaEmailPasswordInProgress">
-                <icon-lucide-loader class="animate-spin" />
-              </template>
-              <template v-else> Continue </template>
-            </Button>
-          </div>
+          <Button
+            :disabled="signupViaEmailPasswordInProgress"
+            @click="signupViaEmailPassword"
+          >
+            <template v-if="signupViaEmailPasswordInProgress">
+              <icon-lucide-loader class="animate-spin" />
+            </template>
+            <template v-else> Continue </template>
+          </Button>
           <div class="flex items-center justify-center gap-2">
-            <span class="text-muted-foreground/50">
-              Already have an account?
-            </span>
-            <Button variant="ghost" @click="authMode = 'sign-in'">
-              Sign in
-            </Button>
+            <Button variant="ghost"> Send Magic link </Button>
           </div>
         </div>
       </TabsContent>
       <TabsContent value="sign-in">
         <div class="flex flex-col gap-4">
-          <div class="flex flex-col gap-2">
-            <div class="relative w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-mail class="text-muted-foreground" />
-              </span>
-              <Input
-                v-model="email"
-                type="email"
-                placeholder="Email"
-                class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
-                :disabled="signinViaEmailPasswordInProgress"
-                required
-              />
+          <div class="flex flex-col gap-4">
+            <div class="grid gap-4">
+              <Label for="email">Email</Label>
+              <div class="relative w-full items-center">
+                <span
+                  class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+                >
+                  <icon-lucide-mail class="text-muted-foreground" />
+                </span>
+                <Input
+                  id="email"
+                  v-model="email"
+                  type="email"
+                  placeholder="Email"
+                  class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
+                  :disabled="signinViaEmailPasswordInProgress"
+                  required
+                />
+              </div>
             </div>
-            <div class="relative w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-lock-keyhole class="text-muted-foreground" />
-              </span>
-              <Input
-                v-model="password"
-                :type="passwordInputType"
-                placeholder="Password"
-                class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
-                :disabled="signinViaEmailPasswordInProgress"
-                required
-              />
-              <span
-                class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
-              >
-                <Button variant="ghost" @click="togglePasswordVisibility()">
-                  <icon-lucide-eye
-                    v-if="passwordInputType === 'password'"
-                    class="text-muted-foreground"
-                  />
-                  <icon-lucide-eye-off v-else class="text-muted-foreground" />
-                </Button>
-              </span>
-            </div>
-            <div class="flex items-center justify-end gap-2">
-              <Button variant="ghost" @click="resetPassword()">
-                Forgot password?
-              </Button>
+            <div class="grid gap-4">
+              <Label for="password">Password</Label>
+              <div class="relative w-full items-center">
+                <span
+                  class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+                >
+                  <icon-lucide-lock-keyhole class="text-muted-foreground" />
+                </span>
+                <Input
+                  id="password"
+                  v-model="password"
+                  :type="passwordInputType"
+                  placeholder="Password"
+                  class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
+                  :disabled="signinViaEmailPasswordInProgress"
+                  required
+                />
+                <span
+                  class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
+                >
+                  <Button variant="ghost" @click="togglePasswordVisibility()">
+                    <icon-lucide-eye
+                      v-if="passwordInputType === 'password'"
+                      class="text-muted-foreground"
+                    />
+                    <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                  </Button>
+                </span>
+              </div>
             </div>
           </div>
-          <div class="flex flex-col gap-2">
-            <Button
-              type="submit"
-              :disabled="signinViaEmailPasswordInProgress"
-              @click="signinViaEmailPassword()"
-            >
-              <template v-if="signinViaEmailPasswordInProgress">
-                <icon-lucide-loader class="animate-spin" />
-              </template>
-              <template v-else> Continue </template>
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            :disabled="signinViaEmailPasswordInProgress"
+            @click="signinViaEmailPassword()"
+          >
+            <template v-if="signinViaEmailPasswordInProgress">
+              <icon-lucide-loader class="animate-spin" />
+            </template>
+            <template v-else> Continue </template>
+          </Button>
           <div class="flex items-center justify-center gap-2">
-            <span class="text-muted-foreground/50">
-              Don't have an account?
-            </span>
-            <Button variant="ghost" @click="authMode = 'sign-up'">
-              Sign up
+            <Button variant="ghost" @click="resetPassword()">
+              Forgot password?
             </Button>
           </div>
         </div>
       </TabsContent>
-      <Separator label="OR" />
+      <Separator label="Or continue with" class="my-4" />
       <div class="flex flex-col gap-2">
         <Button
           variant="secondary"
@@ -279,9 +275,9 @@ const authenticateApple = async () => {
             <icon-lucide-loader class="animate-spin" />
           </template>
           <template v-else>
-            <icon-logos-google-icon class="text-muted-foreground" />
+            <icon-mdi-google />
           </template>
-          Continue with Google
+          Google
         </Button>
         <Button
           variant="secondary"
@@ -293,9 +289,9 @@ const authenticateApple = async () => {
             <icon-lucide-loader class="animate-spin" />
           </template>
           <template v-else>
-            <icon-logos-microsoft-icon class="text-muted-foreground" />
+            <icon-mdi-microsoft />
           </template>
-          Continue with Microsoft
+          Microsoft
         </Button>
         <Button
           variant="secondary"
@@ -307,11 +303,29 @@ const authenticateApple = async () => {
             <icon-lucide-loader class="animate-spin" />
           </template>
           <template v-else>
-            <icon-mdi-apple class="text-accent-foreground h-4 w-4" />
+            <icon-mdi-apple />
           </template>
-          Continue with Apple
+          Apple
         </Button>
       </div>
+      <TabsContent value="sign-up">
+        <div class="flex items-center justify-center gap-2">
+          <span class="text-muted-foreground/50">
+            Already have an account?
+          </span>
+          <Button variant="link" @click="authMode = 'sign-in'">
+            Sign in
+          </Button>
+        </div>
+      </TabsContent>
+      <TabsContent value="sign-in">
+        <div class="flex items-center justify-center gap-2">
+          <span class="text-muted-foreground/50"> Don't have an account? </span>
+          <Button variant="link" @click="authMode = 'sign-up'">
+            Sign up
+          </Button>
+        </div>
+      </TabsContent>
       <Alert
         v-if="authenticateError"
         variant="destructive"

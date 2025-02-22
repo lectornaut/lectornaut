@@ -3,8 +3,12 @@
     class="fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-2 p-2"
   >
     <div class="flex grow items-center justify-start">
-      <Button size="icon"><icon-material-symbols-circle /></Button>
-      <Button variant="link" class="gap-2 font-semibold"> Template App </Button>
+      <Button variant="ghost" as-child>
+        <RouterLink to="/">
+          <icon-material-symbols-circle />
+          Template App
+        </RouterLink>
+      </Button>
     </div>
     <div class="flex grow items-center justify-center"></div>
     <div class="flex grow items-center justify-end">

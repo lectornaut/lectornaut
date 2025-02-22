@@ -2,7 +2,7 @@
   <header class="min-h-titlebar-height flex h-auto items-center justify-center">
     <div
       data-tauri-drag-region
-      class="grid h-full min-h-7 w-full grid-cols-3 items-center gap-2 p-2"
+      class="grid h-full min-h-8 w-full grid-cols-3 items-center gap-2 p-2"
     >
       <div
         data-tauri-drag-region

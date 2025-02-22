@@ -77,8 +77,7 @@ emitter.on("Tabs.Close", (id) => {
                 class="group"
                 @click="emitter.emit('Sidebar.Left.Toggle')"
               >
-                <icon-lucide-menu class="group-hover:hidden" />
-                <icon-lucide-chevrons-right class="hidden group-hover:block" />
+                <icon-lucide-chevrons-right />
               </Button>
             </TooltipTrigger>
             <TooltipContent> Expand Sidebar </TooltipContent>

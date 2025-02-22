@@ -93,7 +93,7 @@ export default defineConfig({
     ViteImageOptimizer(),
     Icons({
       scale: 1,
-      defaultClass: "shrink-0 w-4 h-4",
+      defaultClass: "inline-flex shrink-0 size-4",
     }),
     VueI18nPlugin({
       include: resolve(
