@@ -5,6 +5,8 @@ use window_vibrancy::*;
 pub fn run() {
     let mut ctx = tauri::generate_context!();
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_theme::init(ctx.config_mut()))

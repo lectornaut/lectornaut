@@ -33,7 +33,7 @@ watch(rightSidebarVisibility, (value) => {
 
 <template>
   <SidebarProvider
-    class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--header-height:calc(theme(spacing.12))]"
+    class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--header-height:calc(theme(spacing.14))]"
   >
     <Titlebar />
     <Separator />

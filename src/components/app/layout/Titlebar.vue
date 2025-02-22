@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import { isTauri } from "@/helpers/utilities"
+</script>
+
 <template>
   <header class="min-h-titlebar-height flex h-auto items-center justify-center">
     <div
@@ -7,7 +11,26 @@
       <div
         data-tauri-drag-region
         class="flex grow items-center justify-end gap-2"
-      ></div>
+      >
+        <TooltipProvider v-if="isTauri" v-motion-fade>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon" class="gap-2">
+                <icon-lucide-arrow-left />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Go back </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon" class="gap-2">
+                <icon-lucide-arrow-right />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Go forward </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
       <div
         data-tauri-drag-region
         class="flex grow items-center justify-center gap-2"
@@ -17,7 +40,9 @@
       <div
         data-tauri-drag-region
         class="flex grow items-center justify-start gap-2"
-      ></div>
+      >
+        <TasksNotifications />
+      </div>
     </div>
   </header>
 </template>

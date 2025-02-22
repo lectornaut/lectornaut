@@ -37,7 +37,7 @@ const filteredShortcuts = computed(() =>
         <TooltipTrigger as-child>
           <Button
             variant="secondary"
-            class="h-8 grow shadow-none"
+            class="grow shadow-none"
             @click="openCommand = true"
           >
             <!-- <icon-lucide-search />

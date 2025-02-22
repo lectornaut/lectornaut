@@ -83,24 +83,6 @@ emitter.on("Tabs.Close", (id) => {
             <TooltipContent> Expand Sidebar </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <TooltipProvider v-if="isTauri" v-motion-fade>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="gap-2">
-                <icon-lucide-arrow-left />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Go back </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="gap-2">
-                <icon-lucide-arrow-right />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Go forward </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>
@@ -179,7 +161,6 @@ emitter.on("Tabs.Close", (id) => {
         </TooltipProvider>
         <div class="flex items-center gap-2">
           <TooltipProvider>
-            <!-- <TasksNotifications /> -->
             <Tooltip>
               <TooltipTrigger as-child>
                 <Button variant="ghost" size="icon" class="gap-2">

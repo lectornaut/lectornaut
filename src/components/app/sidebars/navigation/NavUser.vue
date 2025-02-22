@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useSidebar } from "@/components/ui/sidebar"
 import {
   BadgeCheck,
   Bell,
@@ -16,8 +15,6 @@ defineProps<{
     avatar: string
   }
 }>()
-
-const { isMobile } = useSidebar()
 </script>
 
 <template>
@@ -41,9 +38,8 @@ const { isMobile } = useSidebar()
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          class="w-[--reka-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-          :side="isMobile ? 'bottom' : 'right'"
-          align="end"
+          class="w-[--reka-dropdown-menu-trigger-width] min-w-60 rounded-lg"
+          align="start"
           :side-offset="4"
         >
           <DropdownMenuLabel class="p-0 font-normal">
