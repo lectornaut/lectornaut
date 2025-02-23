@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
+
 const components: { title: string; href: string; description: string }[] = [
   {
     title: "Alert Dialog",
@@ -132,51 +134,56 @@ const components: { title: string; href: string; description: string }[] = [
             <div
               class="no-scrollbar flex h-96 grow flex-col overflow-y-auto p-2"
             >
-              <NavigationMenuLink
-                v-for="(component, index) in components"
-                :key="index"
-                as-child
+              <OverlayScrollbarsComponent
+                defer
+                :options="{ scrollbars: { autoHide: 'scroll' } }"
               >
-                <Button
-                  variant="ghost"
-                  class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
+                <NavigationMenuLink
+                  v-for="(component, index) in components"
+                  :key="index"
                   as-child
                 >
-                  <RouterLink :key="index" :to="component.href">
-                    <span
-                      class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
-                    >
-                      <icon-lucide-check />
-                    </span>
-                    <div class="flex flex-col">
-                      <span class="font-medium">
-                        {{ component.title }}
-                      </span>
-                      <span class="text-muted-foreground">
-                        {{ component.description }}
-                      </span>
-                      <div
-                        class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
+                  <Button
+                    variant="ghost"
+                    class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
+                    as-child
+                  >
+                    <RouterLink :key="index" :to="component.href">
+                      <span
+                        class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
                       >
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                class="aspect-square gap-2 rounded-full"
-                              >
-                                <icon-lucide-check-check />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent> Mark as done </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <icon-lucide-check />
+                      </span>
+                      <div class="flex flex-col">
+                        <span class="font-medium">
+                          {{ component.title }}
+                        </span>
+                        <span class="text-muted-foreground">
+                          {{ component.description }}
+                        </span>
+                        <div
+                          class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
+                        >
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  class="aspect-square gap-2 rounded-full"
+                                >
+                                  <icon-lucide-check-check />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent> Mark as done </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </div>
-                    </div>
-                  </RouterLink>
-                </Button>
-              </NavigationMenuLink>
+                    </RouterLink>
+                  </Button>
+                </NavigationMenuLink>
+              </OverlayScrollbarsComponent>
             </div>
           </div>
         </NavigationMenuContent>
@@ -203,51 +210,56 @@ const components: { title: string; href: string; description: string }[] = [
             <div
               class="no-scrollbar flex h-96 grow flex-col overflow-y-auto p-2"
             >
-              <NavigationMenuLink
-                v-for="(component, index) in components"
-                :key="index"
-                as-child
+              <OverlayScrollbarsComponent
+                defer
+                :options="{ scrollbars: { autoHide: 'scroll' } }"
               >
-                <Button
-                  variant="ghost"
-                  class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
+                <NavigationMenuLink
+                  v-for="(component, index) in components"
+                  :key="index"
                   as-child
                 >
-                  <RouterLink :key="index" :to="component.href">
-                    <span
-                      class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
-                    >
-                      <icon-lucide-bell />
-                    </span>
-                    <div class="flex flex-col">
-                      <span class="font-medium">
-                        {{ component.title }}
-                      </span>
-                      <span class="text-muted-foreground">
-                        {{ component.description }}
-                      </span>
-                      <div
-                        class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
+                  <Button
+                    variant="ghost"
+                    class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
+                    as-child
+                  >
+                    <RouterLink :key="index" :to="component.href">
+                      <span
+                        class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
                       >
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                class="aspect-square gap-2 rounded-full"
-                              >
-                                <icon-lucide-check-check />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent> Mark as read </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <icon-lucide-bell />
+                      </span>
+                      <div class="flex flex-col">
+                        <span class="font-medium">
+                          {{ component.title }}
+                        </span>
+                        <span class="text-muted-foreground">
+                          {{ component.description }}
+                        </span>
+                        <div
+                          class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
+                        >
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  class="aspect-square gap-2 rounded-full"
+                                >
+                                  <icon-lucide-check-check />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent> Mark as read </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </div>
-                    </div>
-                  </RouterLink>
-                </Button>
-              </NavigationMenuLink>
+                    </RouterLink>
+                  </Button>
+                </NavigationMenuLink>
+              </OverlayScrollbarsComponent>
             </div>
           </div>
         </NavigationMenuContent>

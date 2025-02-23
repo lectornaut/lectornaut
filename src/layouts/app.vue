@@ -57,10 +57,7 @@ watch(rightSidebarVisibility, (value) => {
           >
             <LeftSidebar v-motion-fade />
           </ResizablePanel>
-          <ResizableHandle
-            with-handle
-            @dblclick="emitter.emit('Sidebar.Left.Toggle')"
-          />
+          <ResizableHandle @dblclick="emitter.emit('Sidebar.Left.Toggle')" />
           <ResizablePanel
             :default-size="60"
             class="bg-background flex flex-col transition-all"
@@ -88,10 +85,7 @@ watch(rightSidebarVisibility, (value) => {
               </RouterView>
             </main>
           </ResizablePanel>
-          <ResizableHandle
-            with-handle
-            @dblclick="emitter.emit('Sidebar.Right.Toggle')"
-          />
+          <ResizableHandle @dblclick="emitter.emit('Sidebar.Right.Toggle')" />
           <ResizablePanel
             ref="rightSidebar"
             class="flex flex-col transition-all"

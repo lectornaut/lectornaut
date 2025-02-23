@@ -43,9 +43,11 @@
     "lucide-vue-next": "^0.475.0",
     "mitt": "^3.0.1",
     "nprogress": "^0.2.0",
+    "overlayscrollbars": "^2.11.1",
+    "overlayscrollbars-vue": "^0.5.9",
     "reka-ui": "2.0.0",
     "sortablejs": "^1.15.6",
-    "tailwind-merge": "^3.0.1",
+    "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "vaul-vue": "^0.3.0",
@@ -101,7 +103,7 @@
     "vite-plugin-sitemap": "^0.7.1",
     "vite-plugin-vue-layouts": "^0.11.0",
     "vue-eslint-parser": "^9.4.3",
-    "vue-tsc": "^2.2.2",
+    "vue-tsc": "^2.2.4",
     "workbox-window": "^7.3.0"
   },
   "resolutions": {

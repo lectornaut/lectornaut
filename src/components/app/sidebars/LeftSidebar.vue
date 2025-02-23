@@ -1,10 +1,8 @@
 <template>
-  <div class="flex grow flex-col">
+  <aside class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
     <AccountSwitcher />
     <Separator />
-    <aside class="no-scrollbar flex grow flex-col overflow-auto">
-      <Navigation />
-    </aside>
+    <Navigation />
     <Support />
-  </div>
+  </aside>
 </template>
