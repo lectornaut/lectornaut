@@ -49,10 +49,10 @@
     "updater": {
       "active": true,
       "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFEOUIzRDMxMDlGMURFRUEKUldUcTN2RUpNVDJiSFNCaDFEL2J4c0Z4QTNaRGxnRFZuV3VLMktxZ1Z5Y3drbllJUllpdjNxYlIK",
       "endpoints": [
         "https://github.com/hyperjump/template-app/releases/download/main/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2NjhDNDY0RDI3Mjc3NTIKUldSU2QzTFNaTVJvVnJVMytZZHJESFBlNEVMd0N6dWlQUkdYZHl6NVZYdUhFS01RSkRzQkd6U0UK"
+      ]
     }
   }
 }
