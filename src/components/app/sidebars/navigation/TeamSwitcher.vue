@@ -25,13 +25,13 @@ const activeTeam = ref(props.teams[0])
             <div
               class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
             >
-              <component :is="activeTeam.logo" class="size-4" />
+              <component :is="activeTeam?.logo" class="size-4" />
             </div>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-semibold">
-                {{ activeTeam.name }}
+                {{ activeTeam?.name }}
               </span>
-              <span class="truncate text-xs">{{ activeTeam.plan }}</span>
+              <span class="truncate text-xs">{{ activeTeam?.plan }}</span>
             </div>
             <ChevronsUpDown class="ml-auto" />
           </SidebarMenuButton>

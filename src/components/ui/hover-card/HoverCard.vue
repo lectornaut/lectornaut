@@ -9,7 +9,10 @@ import {
 const props = defineProps<HoverCardRootProps>()
 const emits = defineEmits<HoverCardRootEmits>()
 
-const forwarded = useForwardPropsEmits(props, emits)
+const forwarded: ReturnType<typeof useForwardPropsEmits> = useForwardPropsEmits(
+  props,
+  emits
+)
 </script>
 
 <template>

@@ -8,6 +8,7 @@ import { i18n } from "@/modules/i18n"
 import { initPwa } from "@/modules/pwa"
 import { router } from "@/modules/router"
 import { initTheme } from "@/modules/theme"
+import { initUpdater } from "@/modules/updater"
 import { InferSeoMetaPlugin } from "@unhead/addons"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
@@ -45,3 +46,4 @@ app.mount("#app")
 initTheme()
 initHotkeys()
 initPwa()
+initUpdater()

@@ -113,13 +113,13 @@ const components: { title: string; href: string; description: string }[] = [
   <NavigationMenu class="z-40">
     <NavigationMenuList class="flex items-center gap-2">
       <NavigationMenuItem>
-        <NavigationMenuTrigger>
+        <NavigationMenuTrigger class="gap-4">
           <span
             class="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full"
           >
             <icon-mingcute-check-2-fill />
           </span>
-          <!-- <span class="truncate"> Tasks </span> -->
+          <span class="truncate"> Tasks </span>
         </NavigationMenuTrigger>
         <NavigationMenuContent>
           <div class="w-96 -translate-x-px">
@@ -189,13 +189,13 @@ const components: { title: string; href: string; description: string }[] = [
         </NavigationMenuContent>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <NavigationMenuTrigger>
+        <NavigationMenuTrigger class="gap-4">
           <span
             class="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full"
           >
             <icon-mingcute-notification-fill />
           </span>
-          <!-- <span class="truncate"> Notifications </span> -->
+          <span class="truncate"> Notifications </span>
         </NavigationMenuTrigger>
         <NavigationMenuContent>
           <div class="w-96 -translate-x-px">

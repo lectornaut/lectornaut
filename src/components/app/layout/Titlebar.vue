@@ -39,7 +39,7 @@ import { isTauri } from "@/helpers/utilities"
       </div>
       <div
         data-tauri-drag-region
-        class="flex grow items-center justify-start gap-2"
+        class="flex grow items-center justify-end gap-2"
       >
         <TasksNotifications />
       </div>

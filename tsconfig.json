@@ -8,8 +8,8 @@
     "outDir": "dist",
     "sourceMap": true,
     "declaration": true,
-    "composite": true,
     "declarationMap": true,
+    "composite": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": [
       "node",
