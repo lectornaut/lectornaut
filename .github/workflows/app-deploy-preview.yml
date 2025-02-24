@@ -64,3 +64,10 @@ jobs:
             ${{ github.workspace }}/src-tauri/target/release/bundle/appimage/*.appimage
             ${{ github.workspace }}/src-tauri/target/release/bundle/msi/*.msi
             ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/*.exe
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifact-${{ matrix.runs-on }}
+          pattern: artifact-*
+          merge-multiple: true
+      - run: ls -R artifact
