@@ -35,6 +35,9 @@ window-vibrancy = "0.5.2"
 # https://crates.io/crates/tauri-plugin-process/versions
 tauri-plugin-process = "2"
 
+# https://crates.io/crates/tauri-plugin-dialog/versions
+tauri-plugin-dialog = "2"
+
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-positioner = "2"
 tauri-plugin-updater = "2"
