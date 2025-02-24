@@ -26,12 +26,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Enable corepack
+        run: corepack enable pnpm
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           cache: "pnpm"
-      - name: Enable corepack
-        run: corepack enable pnpm
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
         with:
