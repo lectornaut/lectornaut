@@ -27,7 +27,7 @@
     "@tailwindcss/vite": "^4.0.8",
     "@tanstack/vue-table": "^8.21.2",
     "@tauri-apps/api": "^2.2.0",
-    "@tauri-apps/plugin-dialog": "~2",
+    "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-updater": "~2.5.1",
     "@unhead/vue": "2.0.0-alpha.19",
     "@unovis/ts": "1.5.1",
