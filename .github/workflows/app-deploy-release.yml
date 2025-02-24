@@ -62,6 +62,3 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
           includeUpdaterJson: true
-          releaseCommitish: release
-          owner: hyperjump
-          repo: app
