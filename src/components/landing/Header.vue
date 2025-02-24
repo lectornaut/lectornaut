@@ -6,7 +6,7 @@
       <Button variant="ghost" as-child>
         <RouterLink to="/">
           <icon-material-symbols-circle />
-          Template App
+          Hyperjump
         </RouterLink>
       </Button>
     </div>

@@ -161,14 +161,13 @@ const play = () => new Audio(click).play()
         </span>
         <Input
           v-model="ask"
-          siz
           placeholder="Type your message here."
-          class="bg-primary/5 hover:bg-primary/10 focus:bg-primary/10 truncate rounded-full pr-12 pl-8 ring-offset-transparent transition focus:border-inherit focus:ring-0 focus:outline-hidden focus-visible:ring-0 focus-visible:ring-offset-0"
+          class="truncate px-9"
         />
         <span
-          class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
+          class="absolute inset-y-0 end-0 right-0 flex items-center justify-center"
         >
-          <Button class="rounded-full" size="icon" @click="play">
+          <Button size="icon" variant="ghost" @click="play">
             <icon-lucide-arrow-up />
           </Button>
         </span>

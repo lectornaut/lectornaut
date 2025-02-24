@@ -197,7 +197,7 @@ useHead({
                       </li>
                     </ul>
                     <Button class="rounded-lg">
-                      Get Template App for Teams
+                      Get Hyperjump for Teams
                     </Button>
                   </AlertDescription>
                 </Alert>

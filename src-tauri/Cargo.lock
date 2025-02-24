@@ -3,6 +3,24 @@
 version = 3
 
 [[package]]
+name = "Hyperjump"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-positioner",
+ "tauri-plugin-shell",
+ "tauri-plugin-theme",
+ "tauri-plugin-updater",
+ "tauri-plugin-window-state",
+ "window-vibrancy",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4652,24 +4670,6 @@ dependencies = [
  "once_cell",
  "rustix 0.38.44",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "template"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-positioner",
- "tauri-plugin-shell",
- "tauri-plugin-theme",
- "tauri-plugin-updater",
- "tauri-plugin-window-state",
- "window-vibrancy",
 ]
 
 [[package]]
