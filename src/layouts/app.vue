@@ -47,7 +47,7 @@ watch(rightSidebarVisibility, (value) => {
         <ResizablePanelGroup direction="horizontal" auto-save-id="app">
           <ResizablePanel
             ref="leftSidebar"
-            class="flex flex-col transition-all"
+            class="bg-accent flex flex-col transition-all"
             :min-size="10"
             :default-size="15"
             :max-size="20"
@@ -57,7 +57,10 @@ watch(rightSidebarVisibility, (value) => {
           >
             <LeftSidebar v-motion-fade />
           </ResizablePanel>
-          <ResizableHandle @dblclick="emitter.emit('Sidebar.Left.Toggle')" />
+          <ResizableHandle
+            class="data-[state=hover]:bg-sidebar-border data-[state=drag]:bg-sidebar-border"
+            @dblclick="emitter.emit('Sidebar.Left.Toggle')"
+          />
           <ResizablePanel
             :default-size="60"
             class="bg-background flex flex-col transition-all"
@@ -85,10 +88,13 @@ watch(rightSidebarVisibility, (value) => {
               </RouterView>
             </main>
           </ResizablePanel>
-          <ResizableHandle @dblclick="emitter.emit('Sidebar.Right.Toggle')" />
+          <ResizableHandle
+            class="data-[state=hover]:bg-sidebar-border data-[state=drag]:bg-sidebar-border"
+            @dblclick="emitter.emit('Sidebar.Right.Toggle')"
+          />
           <ResizablePanel
             ref="rightSidebar"
-            class="flex flex-col transition-all"
+            class="bg-accent flex flex-col transition-all"
             :min-size="20"
             :default-size="25"
             :max-size="30"

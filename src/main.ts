@@ -2,6 +2,7 @@ import App from "@/App.vue"
 import "@/assets/index.css"
 import "@/assets/main.scss"
 import "@/assets/theme.scss"
+import { isTauri } from "@/helpers/utilities"
 import { firebaseApp } from "@/modules/firebase"
 import { initHotkeys } from "@/modules/hotkeys"
 import { i18n } from "@/modules/i18n"
@@ -43,7 +44,10 @@ app.use(i18n)
 
 app.mount("#app")
 
+if (isTauri.value) {
+  initUpdater()
+}
+
 initTheme()
 initHotkeys()
 initPwa()
-initUpdater()

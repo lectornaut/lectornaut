@@ -1,5 +1,14 @@
 @import "tailwindcss";
+
 @config "../../tailwind.config.ts";
+
+@layer utilities {
+  @import "./main.scss";
+}
+
+@layer theme {
+  @import "./theme.scss";
+}
 
 @layer base {
   :root {

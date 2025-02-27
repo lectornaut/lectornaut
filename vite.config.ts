@@ -28,7 +28,6 @@ export default defineConfig({
     VueRouter(),
     Vue(),
     VitePWA({
-      registerType: "prompt",
       devOptions: {
         enabled: process.env.NODE_ENV === "development",
         type: "module",

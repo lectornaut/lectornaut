@@ -144,6 +144,7 @@ const data = {
 
 <template>
   <Sidebar collapsible="icon">
+    <Separator />
     <SidebarHeader>
       <TeamSwitcher :teams="data.teams" />
     </SidebarHeader>

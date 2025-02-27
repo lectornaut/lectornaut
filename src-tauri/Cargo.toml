@@ -22,23 +22,24 @@ serde = { version = "1", features = ["derive"] }
 # https://crates.io/crates/serde_json/versions
 serde_json = "1"
 
+# https://crates.io/crates/window-vibrancy/versions
+window-vibrancy = "0.6.0"
+
 # https://crates.io/crates/tauri-plugin-shell/versions
 tauri-plugin-shell = "2"
 # https://crates.io/crates/tauri-plugin-theme/versions
 tauri-plugin-theme = "2"
 # https://crates.io/crates/tauri-plugin-deep-link/versions
 tauri-plugin-deep-link = "2"
-
-# https://crates.io/crates/window-vibrancy/versions
-window-vibrancy = "0.5.2"
-
 # https://crates.io/crates/tauri-plugin-process/versions
 tauri-plugin-process = "2"
-
 # https://crates.io/crates/tauri-plugin-dialog/versions
 tauri-plugin-dialog = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+# https://crates.io/crates/tauri-plugin-positioner/versions
 tauri-plugin-positioner = "2"
+# https://crates.io/crates/tauri-plugin-updater/versions
 tauri-plugin-updater = "2"
+# https://crates.io/crates/tauri-plugin-window-state/versions
 tauri-plugin-window-state = "2"
