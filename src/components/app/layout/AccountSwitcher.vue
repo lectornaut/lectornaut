@@ -96,7 +96,7 @@ const selectedTeam = ref<Team>(
                   v-for="team in group.teams"
                   :key="team.value"
                   :value="team.label"
-                  class="grow justify-start gap-3 truncate"
+                  class="grow justify-start gap-2 truncate"
                   @select="
                     () => {
                       selectedTeam = team
@@ -130,7 +130,7 @@ const selectedTeam = ref<Team>(
                 <DialogTrigger as-child>
                   <CommandItem
                     value="create-team"
-                    class="grow justify-start gap-3 truncate"
+                    class="grow justify-start gap-2 truncate"
                     @select="
                       () => {
                         openAccountSwitcher = false
@@ -155,8 +155,8 @@ const selectedTeam = ref<Team>(
           </DialogDescription>
         </DialogHeader>
         <div>
-          <div class="space-y-4 py-2 pb-4">
-            <div class="space-y-2">
+          <div class="flex flex-col gap-4">
+            <div class="grid gap-4">
               <Label for="name">Team name</Label>
               <Input
                 id="name"
@@ -164,7 +164,7 @@ const selectedTeam = ref<Team>(
                 class="focus:border-inherit focus:ring-0"
               />
             </div>
-            <div class="space-y-2">
+            <div class="grid gap-4">
               <Label for="plan">Subscription plan</Label>
               <Select>
                 <SelectTrigger>

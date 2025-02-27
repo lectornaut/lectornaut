@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ChevronsUpDown, Plus } from "lucide-vue-next"
-import { type Component, ref } from "vue"
+import { type Component } from "vue"
 
 const props = defineProps<{
   teams: {
@@ -23,7 +22,7 @@ const activeTeam = ref(props.teams[0])
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <div
-              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
+              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md"
             >
               <component :is="activeTeam?.logo" class="size-4" />
             </div>
@@ -33,11 +32,11 @@ const activeTeam = ref(props.teams[0])
               </span>
               <span class="truncate text-xs">{{ activeTeam?.plan }}</span>
             </div>
-            <ChevronsUpDown class="ml-auto" />
+            <icon-lucide-chevrons-up-down />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          class="w-[--reka-dropdown-menu-trigger-width] min-w-60 rounded-lg"
+          class="w-[--reka-dropdown-menu-trigger-width] min-w-60"
           align="start"
           :side-offset="4"
         >
@@ -63,9 +62,9 @@ const activeTeam = ref(props.teams[0])
             <div
               class="bg-background flex size-6 items-center justify-center rounded-md border"
             >
-              <Plus class="size-4" />
+              <icon-lucide-plus />
             </div>
-            <div class="text-muted-foreground font-medium">Add team</div>
+            <div class="text-muted-foreground">Add team</div>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
