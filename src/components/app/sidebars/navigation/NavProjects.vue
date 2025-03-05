@@ -36,26 +36,20 @@ const { isMobile } = useSidebar()
             :align="isMobile ? 'end' : 'start'"
           >
             <DropdownMenuItem>
-              <icon-lucide-folder class="text-muted-foreground" />
+              <icon-lucide-folder />
               <span>View Project</span>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <icon-lucide-forward class="text-muted-foreground" />
+              <icon-lucide-forward />
               <span>Share Project</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <icon-lucide-trash-2 class="text-muted-foreground" />
+              <icon-lucide-trash-2 />
               <span>Delete Project</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </SidebarMenuItem>
-      <SidebarMenuItem>
-        <SidebarMenuButton class="text-sidebar-foreground/70">
-          <MoreHorizontal class="text-sidebar-foreground/70" />
-          <span>More</span>
-        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   </SidebarGroup>

@@ -1,6 +1,8 @@
 @import "tailwindcss";
-@import "./main";
-@import "./theme";
+@import "./main.scss";
+@import "./theme.scss";
+
+@config "../../tailwind.config.ts";
 
 @layer base {
   :root {

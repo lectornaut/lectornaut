@@ -156,6 +156,7 @@ declare module 'vue' {
     IconLucideMessageCircleMore: typeof import('~icons/lucide/message-circle-more')['default']
     IconLucideMonitor: typeof import('~icons/lucide/monitor')['default']
     IconLucideMoon: typeof import('~icons/lucide/moon')['default']
+    IconLucideMore: typeof import('~icons/lucide/more')['default']
     IconLucideMoreHorizontal: typeof import('~icons/lucide/more-horizontal')['default']
     IconLucidePalette: typeof import('~icons/lucide/palette')['default']
     IconLucidePencil: typeof import('~icons/lucide/pencil')['default']

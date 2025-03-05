@@ -10,8 +10,8 @@ import {
 const authMode = ref<"sign-up" | "sign-in">("sign-up")
 const authenticateError = ref<string | boolean>(false)
 
-const email = ref("")
-const password = ref("")
+const email = ref<string>("")
+const password = ref<string>("")
 const passwordInputType = ref<"password" | "text">("password")
 
 const signupViaEmailPasswordInProgress = ref(false)
