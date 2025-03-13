@@ -17,10 +17,7 @@ const delegatedProps = computed(() => {
   return delegated
 })
 
-const forwarded: ReturnType<typeof useForwardPropsEmits> = useForwardPropsEmits(
-  delegatedProps,
-  emits
-)
+const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
 const id = useId()
 const { filterState, allItems, allGroups } = useCommand()
@@ -50,7 +47,7 @@ onMounted(() => {
   // textValue to perform filter
   allItems.value.set(
     id,
-    currentElement.value.textContent ?? props?.value?.toString() ?? ""
+    currentElement.value.textContent ?? props.value?.toString() ?? ""
   )
 
   const groupId = groupContext?.id

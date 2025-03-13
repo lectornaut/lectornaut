@@ -23,10 +23,7 @@ const delegatedProps = computed(() => {
   return delegated
 })
 
-const forwarded: ReturnType<typeof useForwardPropsEmits> = useForwardPropsEmits(
-  delegatedProps,
-  emits
-)
+const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>

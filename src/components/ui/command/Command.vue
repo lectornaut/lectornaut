@@ -20,10 +20,7 @@ const delegatedProps = computed(() => {
   return delegated
 })
 
-const forwarded: ReturnType<typeof useForwardPropsEmits> = useForwardPropsEmits(
-  delegatedProps,
-  emits
-)
+const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
 const allItems = ref<Map<string, string>>(new Map())
 const allGroups = ref<Map<string, Set<string>>>(new Map())

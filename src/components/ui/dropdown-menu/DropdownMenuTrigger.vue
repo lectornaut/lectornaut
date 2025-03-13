@@ -7,8 +7,7 @@ import {
 
 const props = defineProps<DropdownMenuTriggerProps>()
 
-const forwardedProps: ReturnType<typeof useForwardProps> =
-  useForwardProps(props)
+const forwardedProps = useForwardProps(props)
 </script>
 
 <template>

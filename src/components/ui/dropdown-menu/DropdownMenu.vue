@@ -9,10 +9,7 @@ import {
 const props = defineProps<DropdownMenuRootProps>()
 const emits = defineEmits<DropdownMenuRootEmits>()
 
-const forwarded: ReturnType<typeof useForwardPropsEmits> = useForwardPropsEmits(
-  props,
-  emits
-)
+const forwarded = useForwardPropsEmits(props, emits)
 </script>
 
 <template>

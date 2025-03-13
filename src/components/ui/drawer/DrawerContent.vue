@@ -11,10 +11,7 @@ const props = defineProps<
 >()
 const emits = defineEmits<DialogContentEmits>()
 
-const forwarded: ReturnType<typeof useForwardPropsEmits> = useForwardPropsEmits(
-  props,
-  emits
-)
+const forwarded = useForwardPropsEmits(props, emits)
 </script>
 
 <template>
