@@ -19,18 +19,9 @@ const initAccent = () => {
   document.documentElement.setAttribute("data-accent", accent.value)
 }
 
-const initSidebars = () => {
-  useStorage("leftSidebarVisibility", true)
-  useStorage("rightSidebarVisibility", false)
-}
-
-export const leftSidebarVisibility = useStorage("leftSidebarVisibility", true)
-export const rightSidebarVisibility = useStorage("rightSidebarVisibility", true)
-
 export const initTheme = () => {
   initMode()
   initAccent()
-  initSidebars()
 }
 
 export const { store, system, state } = useColorMode({

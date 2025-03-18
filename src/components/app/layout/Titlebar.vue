@@ -3,10 +3,10 @@ import { isTauri } from "@/helpers/utilities"
 </script>
 
 <template>
-  <header class="min-h-titlebar-height flex h-auto items-center justify-center">
+  <header class="min-h-titlebar-height flex items-center justify-center">
     <div
       data-tauri-drag-region
-      class="grid h-full min-h-8 w-full grid-cols-3 items-center gap-2 p-2"
+      class="grid h-full w-full grid-cols-3 items-center gap-2 p-2"
     >
       <div
         data-tauri-drag-region
@@ -41,7 +41,7 @@ import { isTauri } from "@/helpers/utilities"
         data-tauri-drag-region
         class="flex grow items-center justify-end gap-2"
       >
-        <TasksNotifications />
+        <!-- <TasksNotifications /> -->
       </div>
     </div>
   </header>

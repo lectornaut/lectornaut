@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { isTauri, generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
-import { leftSidebarVisibility, rightSidebarVisibility } from "@/modules/theme"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useSortable } from "@vueuse/integrations/useSortable"
@@ -67,22 +66,7 @@ emitter.on("Tabs.Close", (id) => {
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"
     >
-      <div class="flex items-center justify-between gap-2">
-        <TooltipProvider v-if="!leftSidebarVisibility" v-motion-fade>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="ghost"
-                size="icon"
-                class="group"
-                @click="emitter.emit('Sidebar.Left.Toggle')"
-              >
-                <icon-lucide-chevrons-right />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Expand Sidebar </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <!-- <div class="flex items-center justify-between gap-2">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>
@@ -93,7 +77,7 @@ emitter.on("Tabs.Close", (id) => {
             <TooltipContent> History </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </div>
+      </div> -->
       <nav
         ref="el"
         class="relative flex w-fit min-w-0 items-center justify-start gap-2"
@@ -170,24 +154,10 @@ emitter.on("Tabs.Close", (id) => {
               <TooltipContent> Tab options </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip v-if="!rightSidebarVisibility" v-motion-fade>
-              <TooltipTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="gap-2"
-                  @click="emitter.emit('Sidebar.Right.Toggle')"
-                >
-                  <icon-mingcute-ai-fill />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Chat with AI </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
       </div>
     </div>
+    <Separator />
     <Settings />
     <Shortcuts />
     <ExitTrigger />

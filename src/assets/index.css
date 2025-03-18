@@ -16,6 +16,24 @@
     --vis-primary-color: var(--primary);
     --vis-secondary-color: var(--secondary);
     --vis-text-color: var(--foreground);
+
+    /* Defines node border, box-shadow, and handle colors */
+    --vf-node-color: var(--foreground);
+
+    /* Defines color of node box-shadow */
+    --vf-box-shadow: var(--foreground);
+
+    /* Defines node background color */
+    --vf-node-bg: var(--background);
+
+    /* Defines node text color */
+    --vf-node-text: var(--foreground);
+
+    /* Defines node handle color */
+    --vf-handle: var(--foreground);
+
+    /* Defines connection line color */
+    --vf-connection-path: var(--foreground);
   }
 
   * {
