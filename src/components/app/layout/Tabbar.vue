@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import type { UnlistenFn } from "@tauri-apps/api/event"
@@ -58,26 +59,33 @@ emitter.on("Tabs.Close", (id) => {
     1
   )
 })
+
+const { open, setOpen } = useSidebar()
 </script>
 
 <template>
-  <div class="sticky top-0 z-10 flex flex-col">
+  <div class="flex flex-col">
     <div
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"
     >
-      <!-- <div class="flex items-center justify-between gap-2">
-        <TooltipProvider>
+      <div v-if="!open" class="flex items-center justify-between gap-2">
+        <TooltipProvider v-motion-fade>
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="gap-2">
-                <icon-lucide-history />
+              <Button
+                variant="ghost"
+                size="icon"
+                class="gap-2"
+                @click="setOpen(true)"
+              >
+                <icon-lucide-panel-left />
               </Button>
             </TooltipTrigger>
-            <TooltipContent> History </TooltipContent>
+            <TooltipContent> Left panel </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </div> -->
+      </div>
       <nav
         ref="el"
         class="relative flex w-fit min-w-0 items-center justify-start gap-2"
@@ -88,8 +96,8 @@ emitter.on("Tabs.Close", (id) => {
           class="group relative flex w-56 min-w-0 grow justify-between gap-2 border border-transparent bg-transparent pr-2 font-normal shadow-none"
           :class="
             tab.id === selectedTab
-              ? 'border-border before:border-border before:text-background after:border-border after:text-background min-w-24 rounded-b-none border-b-transparent before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-2.5 before:w-2 before:rounded-br-full before:border-r before:border-b before:shadow-[1px_1px_0_currentcolor] after:absolute after:-right-2 after:-bottom-2.5 after:z-20 after:h-2.5 after:w-2 after:rounded-bl-full after:border-b after:border-l after:shadow-[-1px_1px_0_currentcolor] hover:bg-transparent'
-              : 'text-muted-foreground before:bg-muted after:bg-muted before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full'
+              ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:bg-background min-w-24 rounded-b-none border-b-transparent text-inherit before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-4 before:w-2 before:rounded-br-full before:border-r before:border-b before:shadow-[0px_8px_0_currentcolor] after:absolute after:-right-2 after:-bottom-2.5 after:z-20 after:h-4 after:w-2 after:rounded-bl-full after:border-b after:border-l after:shadow-[0px_8px_0_currentcolor]'
+              : 'before:bg-muted after:bg-muted before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full'
           "
           :variant="tab.id === selectedTab ? 'secondary' : 'ghost'"
           as-child
@@ -115,7 +123,7 @@ emitter.on("Tabs.Close", (id) => {
             </TooltipProvider>
             <span
               v-if="tab.id === selectedTab"
-              class="bg-background absolute -inset-x-1 -bottom-2.5 z-10 h-1"
+              class="bg-background absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
             ></span>
           </RouterLink>
         </Button>
@@ -152,6 +160,21 @@ emitter.on("Tabs.Close", (id) => {
                 </Button>
               </TooltipTrigger>
               <TooltipContent> Tab options </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider v-if="!open" v-motion-fade>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="gap-2"
+                  @click="setOpen(true)"
+                >
+                  <icon-lucide-panel-right />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Right panel </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>

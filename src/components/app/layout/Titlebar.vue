@@ -3,33 +3,61 @@ import { isTauri } from "@/helpers/utilities"
 </script>
 
 <template>
-  <header class="min-h-titlebar-height flex items-center justify-center">
+  <header
+    class="min-h-titlebar-height flex shrink-0 items-center justify-center"
+  >
     <div
       data-tauri-drag-region
       class="grid h-full w-full grid-cols-3 items-center gap-2 p-2"
     >
       <div
         data-tauri-drag-region
-        class="flex grow items-center justify-end gap-2"
+        class="flex grow items-center justify-between gap-2"
       >
-        <TooltipProvider v-if="isTauri" v-motion-fade>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="gap-2">
-                <icon-lucide-arrow-left />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Go back </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="gap-2">
-                <icon-lucide-arrow-right />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Go forward </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div class="flex gap-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                as-child
+                class="after:bg-border relative after:absolute after:-right-2 after:h-3 after:w-px after:rounded-full"
+              >
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-grip />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Menu </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <AccountSwitcher />
+        </div>
+        <div v-if="isTauri" class="flex gap-2">
+          <TooltipProvider v-motion-fade>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-arrow-left />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Go back </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-arrow-right />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Go forward </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-history />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> History </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
       <div
         data-tauri-drag-region
@@ -39,9 +67,37 @@ import { isTauri } from "@/helpers/utilities"
       </div>
       <div
         data-tauri-drag-region
-        class="flex grow items-center justify-end gap-2"
+        class="flex grow items-center justify-between gap-2"
       >
-        <!-- <TasksNotifications /> -->
+        <TasksNotifications />
+        <div class="flex gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-panel-left />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Left panel </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-panel-bottom />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Bottom panel </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" class="gap-2">
+                  <icon-lucide-panel-right />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Right panel </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     </div>
   </header>

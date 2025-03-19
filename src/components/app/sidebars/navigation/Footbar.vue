@@ -1,3 +1,3 @@
 <template>
-  <div class="bg-primary h-5"></div>
+  <div class="bg-muted h-5"></div>
 </template>

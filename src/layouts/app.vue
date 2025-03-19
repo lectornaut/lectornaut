@@ -2,6 +2,7 @@
   <SidebarProvider
     :style="{
       '--sidebar-width': '350px',
+      '--sidebar-width-icon': '56px',
     }"
     class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--footer-height:calc(theme(spacing.5))] [--header-height:calc(theme(spacing.14))]"
   >
@@ -13,12 +14,12 @@
         class="top-[calc(var(--header-height)_+_1px)] bottom-[calc(var(--footer-height)_+_1px)] h-[calc(100svh_-_var(--header-height)_-_var(--footer-height)))]"
       />
       <div
-        class="no-scrollbar bg-background flex grow flex-col overflow-auto overscroll-none"
+        class="no-scrollbar flex grow flex-col overflow-auto overscroll-none"
       >
-        <Toolbar />
+        <Tabbar />
         <SubNavigation />
         <main
-          class="no-scrollbar bg-background m-2 flex grow flex-col overflow-auto overscroll-none rounded-md border shadow-xl"
+          class="no-scrollbar bg-background flex grow flex-col overflow-auto overscroll-none border-t"
         >
           <RouterView v-slot="{ Component, route }">
             <template v-if="Component">

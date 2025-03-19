@@ -17,7 +17,7 @@ useHead({
             Personal
           </TabsTrigger>
           <TabsTrigger class="rounded-lg px-3 py-2" value="team">
-            <div class="flex items-center gap-1.5">Team</div>
+            Team
           </TabsTrigger>
         </TabsList>
         <HeroText />

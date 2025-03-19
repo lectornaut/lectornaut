@@ -78,7 +78,7 @@ const filteredShortcuts = computed(() => {
 
 <template>
   <Sheet v-model:open="openShortcuts">
-    <SheetContent>
+    <SheetContent class="m-2 h-auto rounded-lg">
       <SheetHeader>
         <SheetTitle>Keyboard shortcuts</SheetTitle>
         <SheetDescription class="py-4">

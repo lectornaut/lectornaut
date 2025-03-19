@@ -14,11 +14,7 @@ emitter.on("Menu.Help.Toggle", () => {
       <DropdownMenu v-model:open="openSupport">
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
-            <Button
-              variant="outline"
-              size="icon"
-              class="data-[state=open]:bg-muted fixed bottom-3 left-3 rounded-full"
-            >
+            <Button variant="ghost" class="data-[state=open]:bg-muted">
               <icon-lucide-circle-help />
             </Button>
           </DropdownMenuTrigger>

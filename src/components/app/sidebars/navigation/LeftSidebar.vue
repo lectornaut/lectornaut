@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSidebar, type SidebarProps } from "@/components/ui/sidebar"
+import emitter from "@/modules/mitt"
 import { ArchiveX, File, Inbox, Send, Trash2 } from "lucide-vue-next"
 import { h, ref } from "vue"
 
@@ -132,7 +133,7 @@ const data = {
 
 const activeItem = ref(data.navMain[0])
 const mails = ref(data.mails)
-const { setOpen } = useSidebar()
+const { setOpen, toggleSidebar } = useSidebar()
 </script>
 
 <template>
@@ -142,21 +143,26 @@ const { setOpen } = useSidebar()
   >
     <Sidebar
       collapsible="none"
-      class="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r"
+      class="w-[calc(var(--sidebar-width-icon))] border-r"
     >
       <SidebarHeader>
-        <Button variant="destructive" @click="setOpen(true)">
-          <icon-lucide-chevron-right />
+        <Button variant="destructive" size="icon" @click="toggleSidebar()">
+          <icon-lucide-panel-left />
         </Button>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem v-for="item in data.navMain" :key="item.title">
+              <SidebarMenuItem
+                v-for="item in data.navMain"
+                :key="item.title"
+                class="flex justify-center"
+              >
                 <SidebarMenuButton
                   :tooltip="h('div', { hidden: false }, item.title)"
                   :is-active="activeItem?.title === item.title"
+                  class="flex justify-center"
                   @click="
                     () => {
                       activeItem = item
@@ -170,7 +176,6 @@ const { setOpen } = useSidebar()
                   "
                 >
                   <component :is="item.icon" />
-                  <span>{{ item.title }}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -178,21 +183,68 @@ const { setOpen } = useSidebar()
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <Support />
+        <TooltipProvider>
+          <Tooltip>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    class="text-muted-foreground data-[state=open]:bg-muted"
+                  >
+                    <icon-lucide-bolt />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent> Settings </TooltipContent>
+              <DropdownMenuContent class="w-48" align="start">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem class="gap-2">
+                    <icon-lucide-user />
+                    <span>Profile</span>
+                    <DropdownMenuShortcut>⇧ ⌘ P</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    class="gap-2"
+                    @click="emitter.emit('Dialog.Settings.Open')"
+                  >
+                    <icon-lucide-settings />
+                    <span>Preferences</span>
+                    <DropdownMenuShortcut>⌘ ,</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    class="gap-2"
+                    @click="emitter.emit('Dialog.Exit.Open')"
+                  >
+                    <icon-lucide-log-out />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </TooltipProvider>
         <NavUser :user="data.user" />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
     <Sidebar collapsible="none" class="bg-background hidden flex-1 md:flex">
       <SidebarHeader>
-        <Button variant="ghost" @click="setOpen(false)">
-          <icon-lucide-chevron-left />
-        </Button>
+        <div class="flex">
+          <Button variant="ghost" size="icon" @click="setOpen(false)">
+            <icon-lucide-panel-left />
+          </Button>
+        </div>
       </SidebarHeader>
       <SidebarContent>
-        <AccountSwitcher />
         <Navigation />
         <FlowSidebar />
-        <Support />
         <SidebarGroup>
           <SidebarGroupContent> </SidebarGroupContent>
         </SidebarGroup>

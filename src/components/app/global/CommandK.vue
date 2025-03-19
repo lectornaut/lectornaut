@@ -27,10 +27,10 @@ const filteredShortcuts = computed(() =>
 <template>
   <div class="relative flex grow items-center">
     <span
-      class="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex w-full items-center gap-2 px-2"
+      class="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex w-full items-center gap-3 px-4"
     >
       <icon-lucide-search />
-      <span class="truncate"> Search </span>
+      <span class="truncate">Search</span>
     </span>
     <TooltipProvider>
       <Tooltip>

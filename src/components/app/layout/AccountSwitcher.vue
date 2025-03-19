@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { getInitials } from "@/helpers/utilities"
-import emitter from "@/modules/mitt"
 import type { User } from "firebase/auth"
 import type { c } from "node_modules/vuefire/dist/shared/vuefire.cc4a8ea4.mjs"
 import { useCurrentUser } from "vuefire"
@@ -40,10 +39,7 @@ const selectedTeam = ref<Team>(
 </script>
 
 <template>
-  <div
-    data-tauri-drag-region
-    class="flex items-center justify-between gap-2 p-2"
-  >
+  <div data-tauri-drag-region class="flex items-center justify-between gap-2">
     <Dialog v-model:open="showNewTeamDialog">
       <Popover v-model:open="openAccountSwitcher">
         <PopoverTrigger as-child>
@@ -196,67 +192,5 @@ const selectedTeam = ref<Team>(
         </DialogFooter>
       </DialogContent>
     </Dialog>
-    <div class="flex justify-end gap-2">
-      <TooltipProvider>
-        <Tooltip>
-          <DropdownMenu>
-            <TooltipTrigger as-child>
-              <DropdownMenuTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="text-muted-foreground data-[state=open]:bg-muted"
-                >
-                  <icon-lucide-bolt />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent> Settings </TooltipContent>
-            <DropdownMenuContent class="w-48" align="start">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem class="gap-2">
-                  <icon-lucide-user />
-                  <span>Profile</span>
-                  <DropdownMenuShortcut>⇧ ⌘ P</DropdownMenuShortcut>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  class="gap-2"
-                  @click="emitter.emit('Dialog.Settings.Open')"
-                >
-                  <icon-lucide-settings />
-                  <span>Preferences</span>
-                  <DropdownMenuShortcut>⌘ ,</DropdownMenuShortcut>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  class="gap-2"
-                  @click="emitter.emit('Dialog.Exit.Open')"
-                >
-                  <icon-lucide-log-out />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="text-muted-foreground"
-              @click="emitter.emit('Sidebar.Left.Toggle')"
-            >
-              <icon-lucide-chevrons-left />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Collapse Sidebar </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
   </div>
 </template>
