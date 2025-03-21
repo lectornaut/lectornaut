@@ -1,20 +1,32 @@
-@mixin red-light-theme {
+@mixin light-theme {
+  color-scheme: light;
+
   --background: var(--color-white);
   --foreground: var(--color-neutral-800);
   --muted: var(--color-neutral-100);
   --muted-foreground: var(--color-neutral-800);
   --popover: var(--color-white);
   --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
+  --card: var(--color-white);
   --card-foreground: var(--color-neutral-900);
   --border: var(--color-neutral-200);
   --input: var(--color-neutral-200);
-  --primary: var(--color-red-500);
-  --primary-foreground: var(--color-white);
   --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
+  --secondary-foreground: var(--color-neutral-600);
   --accent: var(--color-neutral-50);
   --accent-foreground: var(--color-black);
+  --sidebar-background: var(--color-white);
+  --sidebar-foreground: var(--color-neutral-800);
+  --sidebar-primary: var(--color-neutral-800);
+  --sidebar-primary-foreground: var(--color-white);
+  --sidebar-accent: var(--color-neutral-100);
+  --sidebar-accent-foreground: var(--color-neutral-900);
+  --sidebar-border: var(--color-neutral-200);
+}
+
+@mixin red-light-theme {
+  --primary: var(--color-red-500);
+  --primary-foreground: var(--color-white);
   --destructive: var(--color-red-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-red-500);
@@ -23,33 +35,12 @@
   --chart-3: var(--color-red-300);
   --chart-4: var(--color-red-200);
   --chart-5: var(--color-red-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-red-500);
 }
 
 @mixin orange-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-orange-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-orange-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-orange-500);
@@ -58,33 +49,12 @@
   --chart-3: var(--color-orange-300);
   --chart-4: var(--color-orange-200);
   --chart-5: var(--color-orange-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-orange-500);
 }
 
 @mixin amber-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-amber-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-amber-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-amber-500);
@@ -93,33 +63,12 @@
   --chart-3: var(--color-amber-300);
   --chart-4: var(--color-amber-200);
   --chart-5: var(--color-amber-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-amber-500);
 }
 
 @mixin yellow-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-yellow-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-yellow-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-yellow-500);
@@ -128,33 +77,12 @@
   --chart-3: var(--color-yellow-300);
   --chart-4: var(--color-yellow-200);
   --chart-5: var(--color-yellow-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-yellow-500);
 }
 
 @mixin lime-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-lime-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-lime-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-lime-500);
@@ -163,33 +91,12 @@
   --chart-3: var(--color-lime-300);
   --chart-4: var(--color-lime-200);
   --chart-5: var(--color-lime-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-lime-500);
 }
 
 @mixin green-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-green-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-green-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-green-500);
@@ -198,33 +105,12 @@
   --chart-3: var(--color-green-300);
   --chart-4: var(--color-green-200);
   --chart-5: var(--color-green-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-green-500);
 }
 
 @mixin emerald-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-emerald-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-emerald-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-emerald-500);
@@ -233,33 +119,12 @@
   --chart-3: var(--color-emerald-300);
   --chart-4: var(--color-emerald-200);
   --chart-5: var(--color-emerald-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-emerald-500);
 }
 
 @mixin teal-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-teal-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-teal-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-teal-500);
@@ -268,33 +133,12 @@
   --chart-3: var(--color-teal-300);
   --chart-4: var(--color-teal-200);
   --chart-5: var(--color-teal-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-teal-500);
 }
 
 @mixin cyan-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-cyan-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-cyan-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-cyan-500);
@@ -303,33 +147,12 @@
   --chart-3: var(--color-cyan-300);
   --chart-4: var(--color-cyan-200);
   --chart-5: var(--color-cyan-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-cyan-500);
 }
 
 @mixin sky-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-sky-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-sky-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-sky-500);
@@ -338,33 +161,12 @@
   --chart-3: var(--color-sky-300);
   --chart-4: var(--color-sky-200);
   --chart-5: var(--color-sky-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-sky-500);
 }
 
 @mixin blue-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-blue-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-blue-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-blue-500);
@@ -373,33 +175,12 @@
   --chart-3: var(--color-blue-300);
   --chart-4: var(--color-blue-200);
   --chart-5: var(--color-blue-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-blue-500);
 }
 
 @mixin indigo-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-indigo-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-indigo-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-indigo-500);
@@ -408,33 +189,12 @@
   --chart-3: var(--color-indigo-300);
   --chart-4: var(--color-indigo-200);
   --chart-5: var(--color-indigo-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-indigo-500);
 }
 
 @mixin violet-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-violet-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-violet-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-violet-500);
@@ -443,33 +203,12 @@
   --chart-3: var(--color-violet-300);
   --chart-4: var(--color-violet-200);
   --chart-5: var(--color-violet-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-violet-500);
 }
 
 @mixin purple-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-purple-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-purple-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-purple-500);
@@ -478,33 +217,12 @@
   --chart-3: var(--color-purple-300);
   --chart-4: var(--color-purple-200);
   --chart-5: var(--color-purple-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-purple-500);
 }
 
 @mixin fuchsia-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-fuchsia-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-fuchsia-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-fuchsia-500);
@@ -513,33 +231,12 @@
   --chart-3: var(--color-fuchsia-300);
   --chart-4: var(--color-fuchsia-200);
   --chart-5: var(--color-fuchsia-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-fuchsia-500);
 }
 
 @mixin pink-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-pink-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-pink-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-pink-500);
@@ -548,33 +245,12 @@
   --chart-3: var(--color-pink-300);
   --chart-4: var(--color-pink-200);
   --chart-5: var(--color-pink-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-pink-500);
 }
 
 @mixin rose-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-rose-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-rose-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-rose-500);
@@ -583,33 +259,12 @@
   --chart-3: var(--color-rose-300);
   --chart-4: var(--color-rose-200);
   --chart-5: var(--color-rose-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-rose-500);
 }
 
 @mixin slate-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-slate-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-slate-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-slate-500);
@@ -618,33 +273,12 @@
   --chart-3: var(--color-slate-300);
   --chart-4: var(--color-slate-200);
   --chart-5: var(--color-slate-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-slate-500);
 }
 
 @mixin gray-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-gray-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-gray-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-gray-500);
@@ -653,33 +287,12 @@
   --chart-3: var(--color-gray-300);
   --chart-4: var(--color-gray-200);
   --chart-5: var(--color-gray-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-gray-500);
 }
 
 @mixin zinc-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-zinc-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-zinc-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-zinc-500);
@@ -688,33 +301,12 @@
   --chart-3: var(--color-zinc-300);
   --chart-4: var(--color-zinc-200);
   --chart-5: var(--color-zinc-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-zinc-500);
 }
 
 @mixin neutral-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-neutral-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-neutral-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-neutral-500);
@@ -723,33 +315,12 @@
   --chart-3: var(--color-neutral-300);
   --chart-4: var(--color-neutral-200);
   --chart-5: var(--color-neutral-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-neutral-500);
 }
 
 @mixin stone-light-theme {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-100);
-  --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
   --primary: var(--color-stone-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-50);
-  --accent-foreground: var(--color-black);
   --destructive: var(--color-stone-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-stone-500);
@@ -758,33 +329,38 @@
   --chart-3: var(--color-stone-300);
   --chart-4: var(--color-stone-200);
   --chart-5: var(--color-stone-100);
-  --sidebar-background: var(--color-neutral-100);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-200);
-  --sidebar-accent-foreground: var(--color-neutral-900);
-  --sidebar-border: var(--color-neutral-300);
   --sidebar-ring: var(--color-stone-500);
 }
 
-@mixin red-dark-theme {
-  --background: var(--color-black);
+@mixin dark-theme {
+  color-scheme: dark;
+
+  --background: var(--color-neutral-950);
   --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
+  --muted: var(--color-neutral-900);
+  --muted-foreground: var(--color-neutral-200);
   --popover: var(--color-black);
   --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
+  --card: var(--color-neutral-950);
   --card-foreground: var(--color-neutral-100);
   --border: var(--color-neutral-800);
   --input: var(--color-neutral-800);
+  --secondary: var(--color-neutral-900);
+  --secondary-foreground: var(--color-neutral-600);
+  --accent: var(--color-neutral-900);
+  --accent-foreground: var(--color-white);
+  --sidebar-background: var(--color-neutral-950);
+  --sidebar-foreground: var(--color-neutral-200);
+  --sidebar-primary: var(--color-neutral-200);
+  --sidebar-primary-foreground: var(--color-black);
+  --sidebar-accent: var(--color-neutral-900);
+  --sidebar-accent-foreground: var(--color-white);
+  --sidebar-border: var(--color-neutral-800);
+}
+
+@mixin red-dark-theme {
   --primary: var(--color-red-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-red-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-red-500);
@@ -793,33 +369,12 @@
   --chart-3: var(--color-red-300);
   --chart-4: var(--color-red-200);
   --chart-5: var(--color-red-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-red-500);
 }
 
 @mixin orange-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-orange-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-orange-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-orange-500);
@@ -828,33 +383,12 @@
   --chart-3: var(--color-orange-300);
   --chart-4: var(--color-orange-200);
   --chart-5: var(--color-orange-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-orange-500);
 }
 
 @mixin amber-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-amber-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-amber-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-amber-500);
@@ -863,33 +397,12 @@
   --chart-3: var(--color-amber-300);
   --chart-4: var(--color-amber-200);
   --chart-5: var(--color-amber-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-amber-500);
 }
 
 @mixin yellow-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-yellow-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-yellow-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-yellow-500);
@@ -898,33 +411,12 @@
   --chart-3: var(--color-yellow-300);
   --chart-4: var(--color-yellow-200);
   --chart-5: var(--color-yellow-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-yellow-500);
 }
 
 @mixin lime-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-lime-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-lime-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-lime-500);
@@ -933,33 +425,12 @@
   --chart-3: var(--color-lime-300);
   --chart-4: var(--color-lime-200);
   --chart-5: var(--color-lime-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-lime-500);
 }
 
 @mixin green-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-green-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-green-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-green-500);
@@ -968,33 +439,12 @@
   --chart-3: var(--color-green-300);
   --chart-4: var(--color-green-200);
   --chart-5: var(--color-green-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-green-500);
 }
 
 @mixin emerald-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-emerald-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-emerald-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-emerald-500);
@@ -1003,33 +453,12 @@
   --chart-3: var(--color-emerald-300);
   --chart-4: var(--color-emerald-200);
   --chart-5: var(--color-emerald-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-emerald-500);
 }
 
 @mixin teal-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-teal-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-teal-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-teal-500);
@@ -1038,33 +467,12 @@
   --chart-3: var(--color-teal-300);
   --chart-4: var(--color-teal-200);
   --chart-5: var(--color-teal-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-teal-500);
 }
 
 @mixin cyan-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-cyan-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-cyan-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-cyan-500);
@@ -1073,33 +481,12 @@
   --chart-3: var(--color-cyan-300);
   --chart-4: var(--color-cyan-200);
   --chart-5: var(--color-cyan-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-cyan-500);
 }
 
 @mixin sky-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-sky-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-sky-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-sky-500);
@@ -1108,33 +495,12 @@
   --chart-3: var(--color-sky-300);
   --chart-4: var(--color-sky-200);
   --chart-5: var(--color-sky-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-sky-500);
 }
 
 @mixin blue-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-blue-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-blue-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-blue-500);
@@ -1143,33 +509,12 @@
   --chart-3: var(--color-blue-300);
   --chart-4: var(--color-blue-200);
   --chart-5: var(--color-blue-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-blue-500);
 }
 
 @mixin indigo-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-indigo-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-indigo-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-indigo-500);
@@ -1178,33 +523,12 @@
   --chart-3: var(--color-indigo-300);
   --chart-4: var(--color-indigo-200);
   --chart-5: var(--color-indigo-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-indigo-500);
 }
 
 @mixin violet-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-violet-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-violet-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-violet-500);
@@ -1213,33 +537,12 @@
   --chart-3: var(--color-violet-300);
   --chart-4: var(--color-violet-200);
   --chart-5: var(--color-violet-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-violet-500);
 }
 
 @mixin purple-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-purple-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-purple-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-purple-500);
@@ -1248,33 +551,12 @@
   --chart-3: var(--color-purple-300);
   --chart-4: var(--color-purple-200);
   --chart-5: var(--color-purple-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-purple-500);
 }
 
 @mixin fuchsia-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-fuchsia-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-fuchsia-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-fuchsia-500);
@@ -1283,33 +565,12 @@
   --chart-3: var(--color-fuchsia-300);
   --chart-4: var(--color-fuchsia-200);
   --chart-5: var(--color-fuchsia-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-fuchsia-500);
 }
 
 @mixin pink-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-pink-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-pink-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-pink-500);
@@ -1318,33 +579,12 @@
   --chart-3: var(--color-pink-300);
   --chart-4: var(--color-pink-200);
   --chart-5: var(--color-pink-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-pink-500);
 }
 
 @mixin rose-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-rose-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-rose-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-rose-500);
@@ -1353,33 +593,12 @@
   --chart-3: var(--color-rose-300);
   --chart-4: var(--color-rose-200);
   --chart-5: var(--color-rose-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-rose-500);
 }
 
 @mixin slate-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-slate-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-slate-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-slate-500);
@@ -1388,33 +607,12 @@
   --chart-3: var(--color-slate-300);
   --chart-4: var(--color-slate-200);
   --chart-5: var(--color-slate-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-slate-500);
 }
 
 @mixin gray-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-gray-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-gray-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-gray-500);
@@ -1423,33 +621,12 @@
   --chart-3: var(--color-gray-300);
   --chart-4: var(--color-gray-200);
   --chart-5: var(--color-gray-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-gray-500);
 }
 
 @mixin zinc-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-zinc-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-zinc-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-zinc-500);
@@ -1458,33 +635,12 @@
   --chart-3: var(--color-zinc-300);
   --chart-4: var(--color-zinc-200);
   --chart-5: var(--color-zinc-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-zinc-500);
 }
 
 @mixin neutral-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-neutral-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-neutral-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-neutral-500);
@@ -1493,33 +649,12 @@
   --chart-3: var(--color-neutral-300);
   --chart-4: var(--color-neutral-200);
   --chart-5: var(--color-neutral-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-neutral-500);
 }
 
 @mixin stone-dark-theme {
-  --background: var(--color-black);
-  --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-100);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
-  --card: var(--color-neutral-900);
-  --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
   --primary: var(--color-stone-500);
   --primary-foreground: var(--color-white);
-  --secondary: var(--color-neutral-900);
-  --secondary-foreground: var(--color-white);
-  --accent: var(--color-neutral-950);
-  --accent-foreground: var(--color-white);
   --destructive: var(--color-stone-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-stone-500);
@@ -1528,18 +663,11 @@
   --chart-3: var(--color-stone-300);
   --chart-4: var(--color-stone-200);
   --chart-5: var(--color-stone-100);
-  --sidebar-background: var(--color-neutral-900);
-  --sidebar-foreground: var(--color-neutral-200);
-  --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-neutral-700);
   --sidebar-ring: var(--color-stone-500);
 }
 
 :root {
-  color-scheme: light;
+  @include light-theme;
 
   &[data-accent="red"] {
     @include red-light-theme;
@@ -1630,7 +758,7 @@
   }
 
   &.dark {
-    color-scheme: dark;
+    @include dark-theme;
 
     &[data-accent="red"] {
       @include red-dark-theme;

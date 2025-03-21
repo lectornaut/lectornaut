@@ -3,7 +3,6 @@ import { shortcuts } from "@/helpers/shortcuts"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import Fuse from "fuse.js"
-import { ref, computed } from "vue"
 
 const openShortcuts = ref(false)
 
@@ -78,7 +77,7 @@ const filteredShortcuts = computed(() => {
 
 <template>
   <Sheet v-model:open="openShortcuts">
-    <SheetContent class="m-2 h-auto rounded-lg">
+    <SheetContent class="m-2 h-auto rounded-lg border">
       <SheetHeader>
         <SheetTitle>Keyboard shortcuts</SheetTitle>
         <SheetDescription class="py-4">

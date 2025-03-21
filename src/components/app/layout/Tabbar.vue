@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useSidebar } from "@/components/ui/sidebar"
-import { isTauri, generateId } from "@/helpers/utilities"
+import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
-import type { UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useSortable } from "@vueuse/integrations/useSortable"
 
 const el = ref<HTMLElement | null>(null)
@@ -28,27 +26,6 @@ useSortable(el, tabs, {
   dragClass: "cursor-grabbing",
 })
 
-let unlisten: UnlistenFn | undefined
-
-const isFullscreen = computedAsync(
-  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
-  false
-)
-
-onMounted(async () => {
-  if (isTauri.value) {
-    unlisten = await getCurrentWindow().onResized(async () => {
-      isFullscreen.value = await getCurrentWindow().isFullscreen()
-    })
-  }
-})
-
-onBeforeUnmount(() => {
-  if (unlisten) {
-    unlisten()
-  }
-})
-
 emitter.on("Tabs.Add", (tab) => {
   tabs.value.push(tab as Tab)
 })
@@ -64,7 +41,7 @@ const { open, setOpen } = useSidebar()
 </script>
 
 <template>
-  <div class="flex flex-col">
+  <div class="bg-background flex flex-col">
     <div
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"
@@ -104,7 +81,7 @@ const { open, setOpen } = useSidebar()
           @click="selectedTab = tab.id"
         >
           <RouterLink to="">
-            <icon-lucide-inbox />
+            <icon-lucide-workflow />
             <span class="mr-auto truncate"> {{ tab.name }} {{ tab.id }} </span>
             <TooltipProvider v-if="tabs.length > 1">
               <Tooltip>

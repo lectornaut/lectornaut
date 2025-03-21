@@ -20,7 +20,11 @@
         "hiddenTitle": true,
         "zoomHotkeysEnabled": true,
         "transparent": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 26
+        }
       }
     ],
     "security": {

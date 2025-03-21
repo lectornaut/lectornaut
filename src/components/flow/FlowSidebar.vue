@@ -1,33 +1,96 @@
 <script setup lang="ts">
 import useDragAndDrop from "./useDnD"
+import { nodes } from "@/data/nodes"
 
 const { onDragStart } = useDragAndDrop()
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-4 p-4">
-    <div
-      class="rounded-md border"
-      :draggable="true"
-      @dragstart="onDragStart($event, 'input')"
-    >
-      Input Node
-    </div>
-
-    <div
-      class="rounded-md border"
-      :draggable="true"
-      @dragstart="onDragStart($event, 'default')"
-    >
-      Default Node
-    </div>
-
-    <div
-      class="rounded-md border"
-      :draggable="true"
-      @dragstart="onDragStart($event, 'output')"
-    >
-      Output Node
-    </div>
-  </div>
+  <Tabs default-value="actions">
+    <Sidebar collapsible="none" class="shrink-0">
+      <SidebarHeader class="p-4">
+        <div class="text-foreground text-base font-medium">Widgets</div>
+      </SidebarHeader>
+      <Separator />
+      <SidebarHeader class="bg-background">
+        <TabsList class="bg-background w-full p-0">
+          <TabsTrigger
+            v-for="tab in nodes"
+            :key="tab.id"
+            :value="tab.id"
+            class="text-muted-foreground/50 data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+          >
+            <span class="flex items-center justify-center gap-2">
+              <span class="truncate"> {{ tab.name }} </span>
+            </span>
+          </TabsTrigger>
+        </TabsList>
+      </SidebarHeader>
+      <Separator />
+      <SidebarContent>
+        <OverlayScrollbarsComponent
+          defer
+          :options="{ scrollbars: { autoHide: 'scroll' } }"
+        >
+          <TabsContent
+            v-for="tab in nodes"
+            :key="tab.id"
+            :value="tab.id"
+            class="mt-0"
+          >
+            <SidebarGroup
+              v-for="group in tab.groups"
+              :key="group.id"
+              :value="group.id"
+            >
+              <SidebarGroupLabel>{{ group.name }}</SidebarGroupLabel>
+              <SidebarMenu class="gap-2">
+                <Collapsible
+                  v-for="list in group.lists"
+                  :key="list.id"
+                  :value="list.id"
+                  as-child
+                  class="group/collapsible"
+                >
+                  <SidebarMenuItem class="grid gap-2">
+                    <CollapsibleTrigger as-child>
+                      <SidebarMenuButton>
+                        <component :is="list.icon" />
+                        <span class="truncate font-medium">
+                          {{ list.name }}
+                        </span>
+                        <icon-lucide-chevron-right
+                          class="ml-auto transition group-data-[state=open]/collapsible:rotate-90"
+                        />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent
+                      class="rounded-md border border-dashed p-2"
+                    >
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          <SidebarMenuItem
+                            v-for="node in list.nodes"
+                            :key="node.id"
+                          >
+                            <SidebarMenuButton
+                              :draggable="true"
+                              @dragstart="onDragStart($event, node.id)"
+                            >
+                              <icon-lucide-grip-vertical class="opacity-50" />
+                              <span class="truncate">{{ node.name }}</span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              </SidebarMenu>
+            </SidebarGroup>
+          </TabsContent>
+        </OverlayScrollbarsComponent>
+      </SidebarContent>
+    </Sidebar>
+  </Tabs>
 </template>

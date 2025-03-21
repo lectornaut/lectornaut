@@ -1,5 +1,28 @@
 <script setup lang="ts">
 import { isTauri } from "@/helpers/utilities"
+import type { UnlistenFn } from "@tauri-apps/api/event"
+import { getCurrentWindow } from "@tauri-apps/api/window"
+
+let unlisten: UnlistenFn | undefined
+
+const isFullscreen = computedAsync(
+  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
+  false
+)
+
+onMounted(async () => {
+  if (isTauri.value) {
+    unlisten = await getCurrentWindow().onResized(async () => {
+      isFullscreen.value = await getCurrentWindow().isFullscreen()
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (unlisten) {
+    unlisten()
+  }
+})
 </script>
 
 <template>
@@ -12,7 +35,8 @@ import { isTauri } from "@/helpers/utilities"
     >
       <div
         data-tauri-drag-region
-        class="flex grow items-center justify-between gap-2"
+        class="flex grow items-center justify-between gap-2 transition-all"
+        :class="{ 'pl-20': isTauri && !isFullscreen }"
       >
         <div class="flex gap-4">
           <TooltipProvider>
@@ -70,7 +94,7 @@ import { isTauri } from "@/helpers/utilities"
         class="flex grow items-center justify-between gap-2"
       >
         <TasksNotifications />
-        <div class="flex gap-2">
+        <div class="flex">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>

@@ -1,49 +1,29 @@
 <script setup lang="ts">
-import { useSidebar, type SidebarProps } from "@/components/ui/sidebar"
-import emitter from "@/modules/mitt"
-import { ArchiveX, File, Inbox, Send, Trash2 } from "lucide-vue-next"
-import { h, ref } from "vue"
+import { useSidebar } from "@/components/ui/sidebar"
+import { Layers2, Workflow } from "lucide-vue-next"
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
+import { useCurrentUser } from "vuefire"
 
-const props = withDefaults(defineProps<SidebarProps>(), {
-  collapsible: "icon",
-})
+const user = useCurrentUser()
+const userData = {
+  name: user.value?.displayName || "",
+  email: user.value?.email || "",
+  avatar: user.value?.photoURL || "",
+}
 
 // This is sample data
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
-      title: "Inbox",
+      title: "Workflows",
       url: "#",
-      icon: Inbox,
+      icon: Workflow,
       isActive: true,
     },
     {
       title: "Drafts",
       url: "#",
-      icon: File,
-      isActive: false,
-    },
-    {
-      title: "Sent",
-      url: "#",
-      icon: Send,
-      isActive: false,
-    },
-    {
-      title: "Junk",
-      url: "#",
-      icon: ArchiveX,
-      isActive: false,
-    },
-    {
-      title: "Trash",
-      url: "#",
-      icon: Trash2,
+      icon: Layers2,
       isActive: false,
     },
   ],
@@ -133,122 +113,141 @@ const data = {
 
 const activeItem = ref(data.navMain[0])
 const mails = ref(data.mails)
-const { setOpen, toggleSidebar } = useSidebar()
+const { setOpen } = useSidebar()
+
+const getStatus = () => {
+  const rand = Math.random()
+  if (rand > 0.75)
+    return { text: "LIVE", class: "bg-green-500/10 text-green-500" }
+  if (rand > 0.5)
+    return { text: "PAUSED", class: "bg-amber-500/10 text-amber-500" }
+  if (rand > 0.25)
+    return { text: "RUNNING", class: "bg-sky-500/10 text-sky-500" }
+  return { text: "FAILING", class: "bg-red-500/10 text-red-500" }
+}
 </script>
 
 <template>
-  <Sidebar
-    class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row"
-    v-bind="props"
-  >
+  <Sidebar collapsible="icon" class="[&>[data-sidebar=sidebar]]:flex-row">
     <Sidebar
       collapsible="none"
       class="w-[calc(var(--sidebar-width-icon))] border-r"
     >
       <SidebarHeader>
-        <Button variant="destructive" size="icon" @click="toggleSidebar()">
-          <icon-lucide-panel-left />
-        </Button>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem
-                v-for="item in data.navMain"
-                :key="item.title"
-                class="flex justify-center"
-              >
-                <SidebarMenuButton
-                  :tooltip="h('div', { hidden: false }, item.title)"
-                  :is-active="activeItem?.title === item.title"
-                  class="flex justify-center"
-                  @click="
-                    () => {
-                      activeItem = item
-                      const mail = data.mails.sort(() => Math.random() - 0.5)
-                      mails = mail.slice(
-                        0,
-                        Math.max(5, Math.floor(Math.random() * 10) + 1)
-                      )
-                      setOpen(true)
-                    }
-                  "
-                >
-                  <component :is="item.icon" />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter>
-        <Support />
-        <TooltipProvider>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    class="text-muted-foreground data-[state=open]:bg-muted"
-                  >
-                    <icon-lucide-bolt />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent> Settings </TooltipContent>
-              <DropdownMenuContent class="w-48" align="start">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem class="gap-2">
-                    <icon-lucide-user />
-                    <span>Profile</span>
-                    <DropdownMenuShortcut>⇧ ⌘ P</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    class="gap-2"
-                    @click="emitter.emit('Dialog.Settings.Open')"
-                  >
-                    <icon-lucide-settings />
-                    <span>Preferences</span>
-                    <DropdownMenuShortcut>⌘ ,</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    class="gap-2"
-                    @click="emitter.emit('Dialog.Exit.Open')"
-                  >
-                    <icon-lucide-log-out />
-                    <span>Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-        </TooltipProvider>
-        <NavUser :user="data.user" />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-    <Sidebar collapsible="none" class="bg-background hidden flex-1 md:flex">
-      <SidebarHeader>
-        <div class="flex">
-          <Button variant="ghost" size="icon" @click="setOpen(false)">
-            <icon-lucide-panel-left />
-          </Button>
+        <div
+          class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
+        >
+          <icon-mdi-circle class="size-4" />
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <Navigation />
-        <FlowSidebar />
-        <SidebarGroup>
-          <SidebarGroupContent> </SidebarGroupContent>
-        </SidebarGroup>
+        <OverlayScrollbarsComponent
+          defer
+          :options="{ scrollbars: { autoHide: 'scroll' } }"
+        >
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem v-for="item in data.navMain" :key="item.title">
+                  <SidebarMenuButton
+                    :tooltip="item.title"
+                    :is-active="activeItem?.title === item.title"
+                    @click="
+                      () => {
+                        activeItem = item
+                        const mail = data.mails.sort(() => Math.random() - 0.5)
+                        mails = mail.slice(
+                          0,
+                          Math.max(5, Math.floor(Math.random() * 10) + 1)
+                        )
+                        setOpen(true)
+                      }
+                    "
+                  >
+                    <component :is="item.icon" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </OverlayScrollbarsComponent>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <Support />
+          <SettingsMenu />
+        </SidebarMenu>
+        <NavUser :user="userData" />
+      </SidebarFooter>
+    </Sidebar>
+    <Sidebar collapsible="none" class="flex flex-1 overflow-hidden">
+      <SidebarHeader class="p-4">
+        <div class="text-foreground text-base font-medium">
+          {{ activeItem?.title }}
+        </div>
+      </SidebarHeader>
+      <Separator />
+      <SidebarHeader class="p-0">
+        <SidebarInput
+          class="h-14 border-0 p-4"
+          placeholder="Search workflows"
+        />
+      </SidebarHeader>
+      <Separator />
+      <SidebarContent>
+        <OverlayScrollbarsComponent
+          defer
+          :options="{ scrollbars: { autoHide: 'scroll' } }"
+        >
+          <SidebarGroup>
+            <SidebarGroupContent class="grid gap-2">
+              <RouterLink v-for="mail in mails" :key="mail.email" to="/">
+                <Card class="shadow-none">
+                  <CardHeader class="p-4">
+                    <CardTitle
+                      class="text-md flex items-center justify-between font-medium"
+                    >
+                      <span class="truncate">{{ mail.name }}</span>
+                      <Badge variant="secondary" class="gap-2 p-1">
+                        <icon-lucide-ellipsis />
+                      </Badge>
+                    </CardTitle>
+                    <!-- <CardDescription class="line-clamp-1">
+                      {{ mail.subject }}
+                    </CardDescription> -->
+                  </CardHeader>
+                  <!-- <CardContent class="line-clamp-2 text-balance"></CardContent> -->
+                  <CardFooter class="flex-col items-start gap-1 px-4 pb-4">
+                    <Badge
+                      variant="secondary"
+                      class="gap-2 p-1 pr-2"
+                      :class="getStatus().class"
+                    >
+                      <icon-mdi-circle />
+                      <span class="truncate">
+                        {{ getStatus().text }}
+                      </span>
+                    </Badge>
+                    <Badge variant="secondary" class="gap-2 p-1 pr-2">
+                      <icon-lucide-hash />
+                      <span class="truncate">
+                        {{ Math.floor(Math.random() * 60) }} RUNS
+                      </span>
+                    </Badge>
+                    <Badge variant="secondary" class="gap-2 p-1 pr-2">
+                      <icon-lucide-clock />
+                      <span class="truncate">
+                        {{ Math.floor(Math.random() * 60) }} HOURS
+                      </span>
+                    </Badge>
+                  </CardFooter>
+                </Card>
+              </RouterLink>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </OverlayScrollbarsComponent>
       </SidebarContent>
     </Sidebar>
+    <SidebarRail />
   </Sidebar>
 </template>
