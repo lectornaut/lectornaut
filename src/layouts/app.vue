@@ -1,6 +1,8 @@
 <template>
   <SidebarProvider
-    :style="{}"
+    :style="{
+      '--sidebar-width': '278px',
+    }"
     class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--footer-height:calc(theme(spacing.5))] [--header-height:calc(theme(spacing.14))]"
   >
     <Titlebar />
@@ -40,11 +42,10 @@
             </RouterView>
           </main>
         </div>
+        <RightSidebar
+          class="top-[calc(var(--header-height)_+_1px)] bottom-[calc(var(--footer-height)_+_1px)] h-[calc(100svh_-_var(--header-height)_-_var(--footer-height)))]"
+        />
       </div>
-      <RightSidebar
-        side="right"
-        class="top-[calc(var(--header-height)_+_1px)] bottom-[calc(var(--footer-height)_+_1px)] h-[calc(100svh_-_var(--header-height)_-_var(--footer-height)))]"
-      />
     </div>
     <Separator />
     <Footbar />

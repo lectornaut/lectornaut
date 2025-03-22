@@ -113,7 +113,7 @@ const data = {
 
 const activeItem = ref(data.navMain[0])
 const mails = ref(data.mails)
-const { setOpen } = useSidebar()
+const { setOpen, state } = useSidebar()
 
 const getStatus = () => {
   const rand = Math.random()
@@ -151,16 +151,27 @@ const getStatus = () => {
                 <SidebarMenuItem v-for="item in data.navMain" :key="item.title">
                   <SidebarMenuButton
                     :tooltip="item.title"
-                    :is-active="activeItem?.title === item.title"
+                    :is-active="
+                      activeItem?.title === item.title && state === 'expanded'
+                    "
                     @click="
                       () => {
-                        activeItem = item
-                        const mail = data.mails.sort(() => Math.random() - 0.5)
-                        mails = mail.slice(
-                          0,
-                          Math.max(5, Math.floor(Math.random() * 10) + 1)
-                        )
-                        setOpen(true)
+                        if (
+                          state === 'expanded' &&
+                          activeItem?.title === item.title
+                        ) {
+                          setOpen(false)
+                        } else {
+                          activeItem = item
+                          const mail = data.mails.sort(
+                            () => Math.random() - 0.5
+                          )
+                          mails = mail.slice(
+                            0,
+                            Math.max(5, Math.floor(Math.random() * 10) + 1)
+                          )
+                          setOpen(true)
+                        }
                       }
                     "
                   >
@@ -181,17 +192,33 @@ const getStatus = () => {
       </SidebarFooter>
     </Sidebar>
     <Sidebar collapsible="none" class="flex flex-1 overflow-hidden">
-      <SidebarHeader class="p-4">
-        <div class="text-foreground text-base font-medium">
-          {{ activeItem?.title }}
+      <SidebarHeader class="border-b border-dashed">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-foreground ml-2 text-base font-medium">
+            {{ activeItem?.title }}
+          </span>
+          <Button variant="ghost" class="gap-2">
+            <icon-lucide-plus />
+            <span class="truncate">New</span>
+          </Button>
         </div>
       </SidebarHeader>
-      <Separator />
-      <SidebarHeader class="p-0">
-        <SidebarInput
-          class="h-14 border-0 p-4"
-          placeholder="Search workflows"
-        />
+      <SidebarHeader>
+        <div class="relative flex items-center justify-between gap-2">
+          <span
+            class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
+          >
+            <icon-lucide-search />
+          </span>
+          <SidebarInput class="h-10 pl-9" placeholder="Search" />
+          <span
+            class="absolute inset-y-0 end-0 flex items-center justify-center"
+          >
+            <Button variant="ghost" size="icon">
+              <icon-lucide-list-filter />
+            </Button>
+          </span>
+        </div>
       </SidebarHeader>
       <Separator />
       <SidebarContent>
@@ -205,7 +232,7 @@ const getStatus = () => {
                 <Card class="shadow-none">
                   <CardHeader class="p-4">
                     <CardTitle
-                      class="text-md flex items-center justify-between font-medium"
+                      class="flex items-center justify-between text-base font-medium"
                     >
                       <span class="truncate">{{ mail.name }}</span>
                       <Badge variant="secondary" class="gap-2 p-1">

@@ -10,7 +10,7 @@ import { state } from "@/modules/theme"
       class="fixed right-4 bottom-4 z-50 flex flex-col items-center gap-4"
     >
       <div>
-        <span class="text-muted-foreground/50">Scan to get the app</span>
+        <span class="text-muted-foreground">Scan to get the app</span>
         <img
           :src="`/assets/images/qr-code-${state}.svg`"
           alt="QR Code"

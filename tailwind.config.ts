@@ -33,9 +33,9 @@ export default {
         },
       },
       fontFamily: {
-        instrument: ["Instrument", "serif"],
-        geist: ["Geist Sans", "sans-serif"],
-        mono: ["Geist Mono", "monospace"],
+        sans: ["Geist Variable", "sans-serif"],
+        mono: ["Geist Mono Variable", "monospace"],
+        serif: ["Playfair Display Variable", "serif"],
       },
       colors: {
         border: "var(--border)",

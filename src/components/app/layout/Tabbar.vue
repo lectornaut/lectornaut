@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useSidebar } from "@/components/ui/sidebar"
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { useSortable } from "@vueuse/integrations/useSortable"
@@ -36,8 +35,6 @@ emitter.on("Tabs.Close", (id) => {
     1
   )
 })
-
-const { open, setOpen } = useSidebar()
 </script>
 
 <template>
@@ -46,23 +43,7 @@ const { open, setOpen } = useSidebar()
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"
     >
-      <div v-if="!open" class="flex items-center justify-between gap-2">
-        <TooltipProvider v-motion-fade>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="ghost"
-                size="icon"
-                class="gap-2"
-                @click="setOpen(true)"
-              >
-                <icon-lucide-panel-left />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Left panel </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      <!-- <div class="flex items-center justify-between gap-2"></div> -->
       <nav
         ref="el"
         class="relative flex w-fit min-w-0 items-center justify-start gap-2"
@@ -137,21 +118,6 @@ const { open, setOpen } = useSidebar()
                 </Button>
               </TooltipTrigger>
               <TooltipContent> Tab options </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider v-if="!open" v-motion-fade>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="gap-2"
-                  @click="setOpen(true)"
-                >
-                  <icon-lucide-panel-right />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Right panel </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>

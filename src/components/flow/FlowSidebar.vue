@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import useDragAndDrop from "./useDnD"
 import { nodes } from "@/data/nodes"
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const { onDragStart } = useDragAndDrop()
 </script>
@@ -8,17 +9,23 @@ const { onDragStart } = useDragAndDrop()
 <template>
   <Tabs default-value="actions">
     <Sidebar collapsible="none" class="shrink-0">
-      <SidebarHeader class="p-4">
-        <div class="text-foreground text-base font-medium">Widgets</div>
+      <SidebarHeader class="border-b border-dashed">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-foreground ml-2 text-base font-medium">
+            Widgets</span
+          >
+          <Button variant="ghost" size="icon">
+            <icon-lucide-settings />
+          </Button>
+        </div>
       </SidebarHeader>
-      <Separator />
       <SidebarHeader class="bg-background">
         <TabsList class="bg-background w-full p-0">
           <TabsTrigger
             v-for="tab in nodes"
             :key="tab.id"
             :value="tab.id"
-            class="text-muted-foreground/50 data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
           >
             <span class="flex items-center justify-center gap-2">
               <span class="truncate"> {{ tab.name }} </span>
@@ -44,30 +51,30 @@ const { onDragStart } = useDragAndDrop()
               :value="group.id"
             >
               <SidebarGroupLabel>{{ group.name }}</SidebarGroupLabel>
-              <SidebarMenu class="gap-2">
-                <Collapsible
-                  v-for="list in group.lists"
-                  :key="list.id"
-                  :value="list.id"
-                  as-child
-                  class="group/collapsible"
-                >
-                  <SidebarMenuItem class="grid gap-2">
-                    <CollapsibleTrigger as-child>
-                      <SidebarMenuButton>
-                        <component :is="list.icon" />
-                        <span class="truncate font-medium">
-                          {{ list.name }}
-                        </span>
-                        <icon-lucide-chevron-right
-                          class="ml-auto transition group-data-[state=open]/collapsible:rotate-90"
-                        />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent
-                      class="rounded-md border border-dashed p-2"
-                    >
-                      <SidebarGroupContent>
+              <SidebarGroupContent>
+                <SidebarMenu class="gap-2">
+                  <Collapsible
+                    v-for="list in group.lists"
+                    :key="list.id"
+                    :value="list.id"
+                    as-child
+                    class="group/collapsible"
+                  >
+                    <SidebarMenuItem class="grid gap-2">
+                      <CollapsibleTrigger as-child>
+                        <SidebarMenuButton>
+                          <component :is="list.icon" />
+                          <span class="truncate font-medium">
+                            {{ list.name }}
+                          </span>
+                          <icon-lucide-chevron-right
+                            class="ml-auto transition group-data-[state=open]/collapsible:rotate-90"
+                          />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent
+                        class="rounded-md border border-dashed p-2"
+                      >
                         <SidebarMenu>
                           <SidebarMenuItem
                             v-for="node in list.nodes"
@@ -82,11 +89,11 @@ const { onDragStart } = useDragAndDrop()
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                         </SidebarMenu>
-                      </SidebarGroupContent>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              </SidebarMenu>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                </SidebarMenu>
+              </SidebarGroupContent>
             </SidebarGroup>
           </TabsContent>
         </OverlayScrollbarsComponent>

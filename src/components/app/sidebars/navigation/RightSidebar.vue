@@ -1,50 +1,60 @@
+<script setup lang="ts">
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
+</script>
+
 <template>
-  <Sidebar>
+  <Tabs default-value="details">
     <Sidebar collapsible="none" class="shrink-0">
-      <Tabs default-value="details">
-        <SidebarHeader class="p-4">
-          <div class="text-foreground text-base font-medium">Information</div>
-        </SidebarHeader>
-        <Separator />
-        <SidebarHeader>
-          <TabsList class="bg-background w-full p-0">
-            <TabsTrigger
-              class="text-muted-foreground/50 data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-              value="details"
-            >
-              <span class="flex items-center justify-center gap-2">
-                <!-- <icon-lucide-workflow /> -->
-                Details
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
-              class="text-muted-foreground/50 data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-              value="activity"
-            >
-              <span class="flex items-center justify-center gap-2">
-                <!-- <icon-lucide-activity /> -->
-                Activity
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
-              class="text-muted-foreground/50 data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-              value="settings"
-            >
-              <span class="flex items-center justify-center gap-2">
-                <!-- <icon-lucide-settings /> -->
-                Settings
-              </span>
-            </TabsTrigger>
-          </TabsList>
-        </SidebarHeader>
-        <Separator />
-        <SidebarContent class="flex flex-col gap-4 p-2">
-          <OverlayScrollbarsComponent
-            defer
-            :options="{ scrollbars: { autoHide: 'scroll' } }"
+      <SidebarHeader class="border-b border-dashed">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-foreground ml-2 text-base font-medium">
+            Information
+          </span>
+          <Button variant="ghost" size="icon">
+            <icon-lucide-sparkle />
+          </Button>
+        </div>
+      </SidebarHeader>
+      <SidebarHeader>
+        <TabsList class="bg-background w-full p-0">
+          <TabsTrigger
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            value="details"
           >
-            <TabsContent value="details">
-              <pre>
+            <span class="flex items-center justify-center gap-2">
+              <!-- <icon-lucide-workflow /> -->
+              Details
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            value="activity"
+          >
+            <span class="flex items-center justify-center gap-2">
+              <!-- <icon-lucide-activity /> -->
+              Activity
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            value="settings"
+          >
+            <span class="flex items-center justify-center gap-2">
+              <!-- <icon-lucide-settings /> -->
+              Settings
+            </span>
+          </TabsTrigger>
+        </TabsList>
+      </SidebarHeader>
+      <Separator />
+      <SidebarContent>
+        <OverlayScrollbarsComponent
+          defer
+          :options="{ scrollbars: { autoHide: 'scroll' } }"
+        >
+          <TabsContent value="details" class="mt-0">
+            <FlowProgress />
+            <pre>
 Metrics
 ---
 Period: 2021-09-01 - 2021-09-30
@@ -77,34 +87,13 @@ Failed job usage
 24
 Total minutes used across failed jobs in this organization for current month
 </pre
-              >
-            </TabsContent>
-            <TabsContent value="activity">
-              <pre>
-Activity
----
-queued
-in progress
-waiting
-completed
-neutral
-success
-failure
-cancelled
-action required
-timed out
-skipped
-stale
----
-3 days ago
-3m 15s
----
-Old logs [PLUG]
-</pre
-              >
-            </TabsContent>
-            <TabsContent value="settings">
-              <pre>
+            >
+          </TabsContent>
+          <TabsContent value="activity" class="mt-0">
+            <FlowActivity />
+          </TabsContent>
+          <TabsContent value="settings" class="mt-0">
+            <pre>
 Settings
 ---
 General
@@ -121,12 +110,10 @@ Notifications
 Artifact and log retention [PLUG]
 ---
 </pre
-              >
-            </TabsContent>
-          </OverlayScrollbarsComponent>
-        </SidebarContent>
-      </Tabs>
+            >
+          </TabsContent>
+        </OverlayScrollbarsComponent>
+      </SidebarContent>
     </Sidebar>
-    <SidebarRail />
-  </Sidebar>
+  </Tabs>
 </template>

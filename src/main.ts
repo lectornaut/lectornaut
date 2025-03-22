@@ -15,6 +15,7 @@ import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
 import { ReCaptchaEnterpriseProvider } from "firebase/app-check"
 import "overlayscrollbars/overlayscrollbars.css"
+import "unfonts.css"
 import { createApp } from "vue"
 import { VueFire, VueFireAuth, VueFireAppCheck } from "vuefire"
 

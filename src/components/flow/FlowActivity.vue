@@ -1,0 +1,228 @@
+<script lang="ts" setup>
+import { getLocalTimeZone, DateFormatter, today } from "@internationalized/date"
+import type { DateRange } from "reka-ui"
+import AlertTriangle from "~icons/lucide/alert-triangle"
+import Ban from "~icons/lucide/ban"
+import CheckCircle from "~icons/lucide/check-circle"
+import Circle from "~icons/lucide/circle"
+import Clock from "~icons/lucide/clock"
+import Hourglass from "~icons/lucide/hourglass"
+import MinusCircle from "~icons/lucide/minus-circle"
+import PauseCircle from "~icons/lucide/pause-circle"
+import RefreshCw from "~icons/lucide/refresh-cw"
+import XCircle from "~icons/lucide/x-circle"
+
+const timeline = [
+  {
+    id: 1,
+    content: "a1b2c3d",
+    status: "success",
+    date: "Sep 20",
+    datetime: "2020-09-20",
+    icon: CheckCircle,
+    iconColor: "text-green-500",
+  },
+  {
+    id: 2,
+    content: "d4e5f6g",
+    status: "in progress",
+    date: "Sep 22",
+    datetime: "2020-09-22",
+    icon: RefreshCw,
+    iconColor: "text-blue-500",
+  },
+  {
+    id: 3,
+    content: "h7i8j9k",
+    status: "failure",
+    date: "Sep 28",
+    datetime: "2020-09-28",
+    icon: XCircle,
+    iconColor: "text-red-500",
+  },
+  {
+    id: 4,
+    content: "l0m1n2o",
+    status: "completed",
+    date: "Sep 30",
+    datetime: "2020-09-30",
+    icon: CheckCircle,
+    iconColor: "text-green-500",
+  },
+  {
+    id: 5,
+    content: "p3q4r5s",
+    status: "waiting",
+    date: "Oct 4",
+    datetime: "2020-10-04",
+    icon: Hourglass,
+    iconColor: "text-yellow-500",
+  },
+  {
+    id: 6,
+    content: "q6r7s8t",
+    status: "queued",
+    date: "Oct 6",
+    datetime: "2020-10-06",
+    icon: PauseCircle,
+    iconColor: "text-gray-500",
+  },
+  {
+    id: 7,
+    content: "u9v0w1x",
+    status: "cancelled",
+    date: "Oct 10",
+    datetime: "2020-10-10",
+    icon: Ban,
+    iconColor: "text-red-400",
+  },
+  {
+    id: 8,
+    content: "y2z3a4b",
+    status: "action required",
+    date: "Oct 14",
+    datetime: "2020-10-14",
+    icon: AlertTriangle,
+    iconColor: "text-orange-500",
+  },
+  {
+    id: 9,
+    content: "c5d6e7f",
+    status: "timed out",
+    date: "Oct 18",
+    datetime: "2020-10-18",
+    icon: Clock,
+    iconColor: "text-purple-500",
+  },
+  {
+    id: 10,
+    content: "g8h9i0j",
+    status: "skipped",
+    date: "Oct 22",
+    datetime: "2020-10-22",
+    icon: MinusCircle,
+    iconColor: "text-gray-500",
+  },
+  {
+    id: 11,
+    content: "k1l2m3n",
+    status: "stale",
+    date: "Oct 26",
+    datetime: "2020-10-26",
+    icon: Circle,
+    iconColor: "text-gray-400",
+  },
+  {
+    id: 12,
+    content: "o4p5q6r",
+    status: "neutral",
+    date: "Oct 30",
+    datetime: "2020-10-30",
+    icon: Circle,
+    iconColor: "text-gray-300",
+  },
+]
+
+const df = new DateFormatter("en-US", {
+  dateStyle: "medium",
+})
+
+const start = today(getLocalTimeZone())
+const end = today(getLocalTimeZone())
+
+const range = ref({
+  start,
+  end,
+}) as Ref<DateRange>
+</script>
+
+<template>
+  <div>
+    <SidebarGroup>
+      <SidebarGroupContent class="flex flex-col">
+        <Popover>
+          <PopoverTrigger as-child>
+            <Button variant="outline" class="justify-start gap-2">
+              <icon-lucide-calendar />
+              {{
+                range.start
+                  ? df.format(range.start.toDate(getLocalTimeZone()))
+                  : "Start date"
+              }}
+              -
+              {{
+                range.end
+                  ? df.format(range.end.toDate(getLocalTimeZone()))
+                  : "End date"
+              }}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent class="w-auto p-0">
+            <RangeCalendar v-model="range" initial-focus class="p-1" />
+          </PopoverContent>
+        </Popover>
+      </SidebarGroupContent>
+    </SidebarGroup>
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <ul role="list" class="-mb-8">
+          <li v-for="(event, eventIdx) in timeline" :key="event.id">
+            <div class="relative pb-8">
+              <span
+                v-if="eventIdx !== timeline.length - 1"
+                class="bg-border absolute top-2.5 left-2.5 -ml-px h-full w-0.5"
+              />
+              <div class="relative flex gap-4">
+                <div>
+                  <span
+                    :class="[
+                      event.iconColor,
+                      'ring-background bg-background flex size-5 items-center justify-center rounded-full ring-6',
+                    ]"
+                  >
+                    <component :is="event.icon" />
+                  </span>
+                </div>
+                <div class="flex min-w-0 flex-1 justify-between space-x-4">
+                  <div>
+                    <p class="">
+                      {{ event.content }}
+                      <span class="text-muted-foreground">
+                        {{ event.status }}
+                      </span>
+                    </p>
+                  </div>
+                  <div
+                    class="text-muted-foreground flex items-center text-right text-xs whitespace-nowrap"
+                  >
+                    <time :datetime="event.datetime">{{ event.date }}</time>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </SidebarGroupContent>
+    </SidebarGroup>
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <Card class="shadow-none">
+          <CardHeader class="p-4">
+            <CardTitle
+              class="flex items-center justify-between text-base font-medium"
+            >
+              <span class="truncate">Upgrade activity retention</span>
+            </CardTitle>
+            <CardDescription class="">
+              Get unlimited access to your logs by upgrading your plan.
+            </CardDescription>
+          </CardHeader>
+          <!-- <CardContent class="px-4 pb-4"></CardContent> -->
+          <CardFooter class="px-4 pb-4">
+            <Button class="w-full"> Upgrade </Button>
+          </CardFooter>
+        </Card>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  </div>
+</template>

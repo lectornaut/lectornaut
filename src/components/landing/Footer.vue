@@ -14,7 +14,7 @@ const { t } = useI18n()
       </EnterTrigger>
       <Faq />
     </div>
-    <div class="mb-safe-bottom text-muted-foreground/50 z-10 text-center">
+    <div class="mb-safe-bottom text-muted-foreground z-10 text-center">
       {{ t("hello") }}, track expenses, set goals, and save money.
     </div>
   </div>

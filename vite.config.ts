@@ -86,7 +86,11 @@ export default defineConfig({
     Layouts(),
     Unfonts({
       fontsource: {
-        families: ["Instrument Serif", "Geist Sans", "Geist Mono"],
+        families: [
+          "Geist Variable",
+          "Geist Mono Variable",
+          "Playfair Display Variable",
+        ],
       },
     }),
     ViteImageOptimizer(),
