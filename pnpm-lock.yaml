@@ -45,8 +45,8 @@ importers:
         specifier: ^8.27.0
         version: 8.27.0(eslint@9.23.0(jiti@2.4.2))(typescript@5.8.2)
       "@unhead/vue":
-        specifier: 2.0.0-rc.13
-        version: 2.0.0-rc.13(vue@3.5.13(typescript@5.8.2))
+        specifier: 2.0.0
+        version: 2.0.0(vue@3.5.13(typescript@5.8.2))
       "@unovis/ts":
         specifier: 1.5.1
         version: 1.5.1
@@ -111,8 +111,8 @@ importers:
         specifier: ^0.5.9
         version: 0.5.9(overlayscrollbars@2.11.1)(vue@3.5.13(typescript@5.8.2))
       reka-ui:
-        specifier: 2.1.0
-        version: 2.1.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
+        specifier: 2.1.1
+        version: 2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
       sortablejs:
         specifier: ^1.15.6
         version: 1.15.6
@@ -127,7 +127,7 @@ importers:
         version: 11.1.0
       vaul-vue:
         specifier: ^0.4.1
-        version: 0.4.1(reka-ui@2.1.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
+        version: 0.4.1(reka-ui@2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
       vee-validate:
         specifier: ^4.15.0
         version: 4.15.0(vue@3.5.13(typescript@5.8.2))
@@ -181,8 +181,8 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0
       "@unhead/addons":
-        specifier: 2.0.0-rc.13
-        version: 2.0.0-rc.13(rollup@2.79.2)
+        specifier: 2.0.0
+        version: 2.0.0(rollup@2.79.2)
       "@vite-pwa/assets-generator":
         specifier: ^0.2.6
         version: 0.2.6
@@ -3525,16 +3525,16 @@ packages:
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
 
-  "@unhead/addons@2.0.0-rc.13":
+  "@unhead/addons@2.0.0":
     resolution:
       {
-        integrity: sha512-umlTn3l32iDipt/jxESaELZ7cadm08sOnwOUoRNb9NKW2qjUJqOrwQYjXLu4I3V9A9v50p6So3j2NDDKXC7+nw==,
+        integrity: sha512-KhrN4hyPvEar3NKa1RVUMBYSBXHF6hoVPMqeKkYSpig4WZTCUCqVFEqgH+O4fkwUHicKYHz/hgf7Cx0ATUcAPg==,
       }
 
-  "@unhead/vue@2.0.0-rc.13":
+  "@unhead/vue@2.0.0":
     resolution:
       {
-        integrity: sha512-9jF2Y85HtEdxfaa6Y4wn2Gh1eXJHVNvvecWs3+qfEV83kSOFFowOpm6nIYmNpVGPQtnS0OW1JeIZjQEPZR+LAQ==,
+        integrity: sha512-QkgWNZ9ZWXhhTYZL2JJs33YwmJP7Ix8l28hofV0qM2txlIVhp747bdxdD/eMysMusbvvtHtMgvPEQE6kByqUTw==,
       }
     peerDependencies:
       vue: ">=3.5.13"
@@ -4224,10 +4224,10 @@ packages:
       }
     engines: { node: ">=6" }
 
-  caniuse-lite@1.0.30001706:
+  caniuse-lite@1.0.30001707:
     resolution:
       {
-        integrity: sha512-3ZczoTApMAZwPKYWmwVbQMFpXBDds3/0VciVoUwPUbldlYyVLmRVuRs/PcUZtHpbLRpzzDvrvnFuREsGt6lUug==,
+        integrity: sha512-3qtRjw/HQSMlDWf+X79N206fepf4SOOU6SQLMaq/0KkZLmSjPxAkBOQQ+FxbHKfHmYLZFfdWsO3KA90ceHPSnw==,
       }
 
   chalk@4.1.2:
@@ -6885,12 +6885,6 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
-  ohash@1.1.6:
-    resolution:
-      {
-        integrity: sha512-TBu7PtV8YkAZn0tSxobKY2n2aAQva936lhRrj6957aDaCf9IEtqsKbgMzXE/F/sjqYOwmrukeORHNLe5glk7Cg==,
-      }
-
   ohash@2.0.11:
     resolution:
       {
@@ -7425,10 +7419,10 @@ packages:
       }
     hasBin: true
 
-  reka-ui@2.1.0:
+  reka-ui@2.1.1:
     resolution:
       {
-        integrity: sha512-w4kEDEyXhIqv4QeFJeiuBc4mQP37hH/UTRpEb9dMbPdR49JG5TcV/s0+ntNRONUUW4LDLX7E1ZPcwBw5hnu0yw==,
+        integrity: sha512-awvpQ041LPXAvf2uRVFwedsyz9SwsuoWlRql1fg4XimUCxEI2GOfHo6FIdL44dSPb/eG/gWbdGhoGHLlbX5gPA==,
       }
     peerDependencies:
       vue: ">= 3.2.0"
@@ -8496,10 +8490,10 @@ packages:
         integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==,
       }
 
-  unhead@2.0.0-rc.13:
+  unhead@2.0.0:
     resolution:
       {
-        integrity: sha512-cuG4Uu6kS9/zF2+XL/5od6S1J4GJqm3xB/I6PVoXgqEVCKryziGdLo+uaqewgOWnv5y5kDRiSuRQz/7fh0nUfw==,
+        integrity: sha512-3H+CpXTMq1FPWc6tWj4VjG+NfWrIXswfpNWC29Ux8Dq0RyWcU1pF00Qx/KjaXprkXH53pE/lTT+1+D8BJ430ew==,
       }
 
   unicode-canonical-property-names-ecmascript@2.0.1:
@@ -8558,10 +8552,10 @@ packages:
       }
     engines: { node: ">= 10.0.0" }
 
-  unplugin-ast@0.14.3:
+  unplugin-ast@0.14.4:
     resolution:
       {
-        integrity: sha512-IolafxIoszpJ0Phx+wjZmNZxvh81PXLJEGnnIm3NPRaYUsgrZ9En05ScuEhbL8UZ/nry2aKPmy7CsM6arZI1Sg==,
+        integrity: sha512-9EWJqy9PblRP/7/6Fl2YSAXEuzkJmTMSmoWEd+NBlqHETDaYgd2hGrRNC2gHmz4Ec7lUVxeWKtowYmYuC+lJng==,
       }
     engines: { node: ">=18.12.0" }
 
@@ -8670,6 +8664,13 @@ packages:
     resolution:
       {
         integrity: sha512-m1ekpSwuOT5hxkJeZGRxO7gXbXT3gF26NjQ7GdVHoLoF8/nopLcd/QfPigpCy7i51oFHiRJg/CyHhj4vs2+KGw==,
+      }
+    engines: { node: ">=18.12.0" }
+
+  unplugin@2.2.2:
+    resolution:
+      {
+        integrity: sha512-Qp+iiD+qCRnUek+nDoYvtWX7tfnYyXsrOnJ452FRTgOyKmTM7TUJ3l+PLPJOOWPTUyKISKp4isC5JJPSXUjGgw==,
       }
     engines: { node: ">=18.12.0" }
 
@@ -11451,22 +11452,22 @@ snapshots:
       "@typescript-eslint/types": 8.27.0
       eslint-visitor-keys: 4.2.0
 
-  "@unhead/addons@2.0.0-rc.13(rollup@2.79.2)":
+  "@unhead/addons@2.0.0(rollup@2.79.2)":
     dependencies:
       "@rollup/pluginutils": 5.1.4(rollup@2.79.2)
       estree-walker: 3.0.3
       magic-string: 0.30.17
       mlly: 1.7.4
       ufo: 1.5.4
-      unplugin: 2.2.0
-      unplugin-ast: 0.14.3
+      unplugin: 2.2.2
+      unplugin-ast: 0.14.4
     transitivePeerDependencies:
       - rollup
 
-  "@unhead/vue@2.0.0-rc.13(vue@3.5.13(typescript@5.8.2))":
+  "@unhead/vue@2.0.0(vue@3.5.13(typescript@5.8.2))":
     dependencies:
       hookable: 5.5.3
-      unhead: 2.0.0-rc.13
+      unhead: 2.0.0
       vue: 3.5.13(typescript@5.8.2)
 
   "@unovis/dagre-layout@0.8.8-2":
@@ -11918,7 +11919,7 @@ snapshots:
 
   browserslist@4.24.4:
     dependencies:
-      caniuse-lite: 1.0.30001706
+      caniuse-lite: 1.0.30001707
       electron-to-chromium: 1.5.123
       node-releases: 2.0.19
       update-browserslist-db: 1.1.3(browserslist@4.24.4)
@@ -11974,7 +11975,7 @@ snapshots:
 
   callsites@3.1.0: {}
 
-  caniuse-lite@1.0.30001706: {}
+  caniuse-lite@1.0.30001707: {}
 
   chalk@4.1.2:
     dependencies:
@@ -13568,10 +13569,7 @@ snapshots:
       has-symbols: 1.1.0
       object-keys: 1.1.1
 
-  ohash@1.1.6: {}
-
-  ohash@2.0.11:
-    optional: true
+  ohash@2.0.11: {}
 
   once@1.4.0:
     dependencies:
@@ -13843,7 +13841,7 @@ snapshots:
     dependencies:
       jsesc: 3.0.2
 
-  reka-ui@2.1.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)):
+  reka-ui@2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)):
     dependencies:
       "@floating-ui/dom": 1.6.13
       "@floating-ui/vue": 1.1.6(vue@3.5.13(typescript@5.8.2))
@@ -13854,7 +13852,7 @@ snapshots:
       "@vueuse/shared": 12.8.2(typescript@5.8.2)
       aria-hidden: 1.2.4
       defu: 6.1.4
-      ohash: 1.1.6
+      ohash: 2.0.11
       vue: 3.5.13(typescript@5.8.2)
     transitivePeerDependencies:
       - "@vue/composition-api"
@@ -14572,7 +14570,7 @@ snapshots:
 
   undici-types@6.20.0: {}
 
-  unhead@2.0.0-rc.13:
+  unhead@2.0.0:
     dependencies:
       hookable: 5.5.3
 
@@ -14612,12 +14610,12 @@ snapshots:
 
   universalify@2.0.1: {}
 
-  unplugin-ast@0.14.3:
+  unplugin-ast@0.14.4:
     dependencies:
       "@babel/generator": 7.26.10
       ast-kit: 1.4.2
       magic-string-ast: 0.8.0
-      unplugin: 2.2.0
+      unplugin: 2.2.2
       unplugin-utils: 0.2.4
 
   unplugin-auto-import@19.1.1(@nuxt/kit@3.16.0)(@vueuse/core@13.0.0(vue@3.5.13(typescript@5.8.2))):
@@ -14711,6 +14709,11 @@ snapshots:
       acorn: 8.14.1
       webpack-virtual-modules: 0.6.2
 
+  unplugin@2.2.2:
+    dependencies:
+      acorn: 8.14.1
+      webpack-virtual-modules: 0.6.2
+
   untyped@2.0.0:
     dependencies:
       citty: 0.1.6
@@ -14738,10 +14741,10 @@ snapshots:
 
   varint@6.0.0: {}
 
-  vaul-vue@0.4.1(reka-ui@2.1.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2)):
+  vaul-vue@0.4.1(reka-ui@2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2)):
     dependencies:
       "@vueuse/core": 10.11.1(vue@3.5.13(typescript@5.8.2))
-      reka-ui: 2.1.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
+      reka-ui: 2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
       vue: 3.5.13(typescript@5.8.2)
     transitivePeerDependencies:
       - "@vue/composition-api"

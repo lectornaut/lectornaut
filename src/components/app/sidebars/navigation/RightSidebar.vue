@@ -53,41 +53,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
           :options="{ scrollbars: { autoHide: 'scroll' } }"
         >
           <TabsContent value="details" class="mt-0">
-            <FlowProgress />
-            <pre>
-Metrics
----
-Period: 2021-09-01 - 2021-09-30
----
-Usage
----
-Total minutes [PLUG]
-24
-Total minutes across all workflows in this organization for current month
----
-Total job runs
-12
-Total job runs across all workflows in this organization for current month
----
-Performance
----
-Avg job run time
-1m 19s
-Average run time of jobs in this organization for current month
----
-Avg job queue time [PLUG]
-4s
-Average queue time of jobs in this organization for current month
----
-Job failure rate
-100%
-Failure rate across jobs in this organization for current month
----
-Failed job usage
-24
-Total minutes used across failed jobs in this organization for current month
-</pre
-            >
+            <FlowDetails />
           </TabsContent>
           <TabsContent value="activity" class="mt-0">
             <FlowActivity />

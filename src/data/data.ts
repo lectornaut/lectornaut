@@ -1,4 +1,3 @@
-import { h } from "vue"
 import IconTransactions from "~icons/lucide/arrow-left-right"
 import CircleIcon from "~icons/lucide/circle"
 import CheckCircledIcon from "~icons/lucide/circle-check"
@@ -30,27 +29,27 @@ export const statuses = [
   {
     value: "backlog",
     label: "Backlog",
-    icon: h(QuestionMarkCircledIcon),
+    icon: QuestionMarkCircledIcon,
   },
   {
     value: "todo",
     label: "Todo",
-    icon: h(CircleIcon),
+    icon: CircleIcon,
   },
   {
     value: "in progress",
     label: "In Progress",
-    icon: h(StopwatchIcon),
+    icon: StopwatchIcon,
   },
   {
     value: "done",
     label: "Done",
-    icon: h(CheckCircledIcon),
+    icon: CheckCircledIcon,
   },
   {
     value: "canceled",
     label: "Canceled",
-    icon: h(CrossCircledIcon),
+    icon: CrossCircledIcon,
   },
 ]
 
@@ -58,17 +57,17 @@ export const priorities = [
   {
     value: "low",
     label: "Low",
-    icon: h(ArrowDownIcon),
+    icon: ArrowDownIcon,
   },
   {
     value: "medium",
     label: "Medium",
-    icon: h(ArrowRightIcon),
+    icon: ArrowRightIcon,
   },
   {
     value: "high",
     label: "High",
-    icon: h(ArrowUpIcon),
+    icon: ArrowUpIcon,
   },
 ]
 
@@ -76,19 +75,19 @@ export const links = [
   {
     title: "Home",
     label: "Systems Operational",
-    icon: h(IconHome),
+    icon: IconHome,
     to: "/home",
   },
   {
     title: "Welcome",
     label: "Welcome",
-    icon: h(IconBalances),
+    icon: IconBalances,
     to: "/welcome",
   },
   {
     title: "Exit",
     label: "Exit",
-    icon: h(IconTransactions),
+    icon: IconTransactions,
     to: "/exit",
   },
 ]

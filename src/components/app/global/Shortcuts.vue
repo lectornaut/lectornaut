@@ -77,10 +77,10 @@ const filteredShortcuts = computed(() => {
 
 <template>
   <Sheet v-model:open="openShortcuts">
-    <SheetContent class="m-2 h-auto rounded-lg border">
-      <SheetHeader>
+    <SheetContent class="p-0">
+      <SheetHeader class="gap-4 p-6">
         <SheetTitle>Keyboard shortcuts</SheetTitle>
-        <SheetDescription class="py-4">
+        <SheetDescription>
           <div class="relative w-full items-center">
             <span
               class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
@@ -96,50 +96,53 @@ const filteredShortcuts = computed(() => {
           </div>
         </SheetDescription>
       </SheetHeader>
-      <Accordion collapsible type="multiple">
-        <AccordionItem
-          v-for="category in filteredShortcuts"
-          :key="category.id"
-          :value="category.id"
-        >
-          <AccordionTrigger>
-            {{ category.title }}
-          </AccordionTrigger>
-          <AccordionContent>
-            <div
-              v-for="(shortcut, shortcutIndex) in category.shortcuts"
-              :key="shortcutIndex"
-              class="flex items-center justify-between px-4 py-2"
-            >
-              <div class="flex items-center">
-                <span
-                  v-for="(step, stepIndex) in shortcut.description"
-                  :key="stepIndex"
-                  class="text-neutral-600 dark:text-neutral-200"
-                >
-                  {{ step }}
+      <Separator />
+      <ScrollArea class="h-full px-6">
+        <Accordion collapsible type="multiple">
+          <AccordionItem
+            v-for="category in filteredShortcuts"
+            :key="category.id"
+            :value="category.id"
+          >
+            <AccordionTrigger>
+              {{ category.title }}
+            </AccordionTrigger>
+            <AccordionContent>
+              <div
+                v-for="(shortcut, shortcutIndex) in category.shortcuts"
+                :key="shortcutIndex"
+                class="flex items-center justify-between px-4 py-2"
+              >
+                <div class="flex items-center">
+                  <span
+                    v-for="(step, stepIndex) in shortcut.description"
+                    :key="stepIndex"
+                    class="text-neutral-600 dark:text-neutral-200"
+                  >
+                    {{ step }}
+                  </span>
+                </div>
+                <span class="flex gap-8">
+                  <div
+                    v-for="keys in shortcut.keys"
+                    :key="keys.toString()"
+                    class="relative flex gap-1 after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:text-neutral-400 after:content-['or'] last-of-type:after:hidden"
+                  >
+                    <kbd v-for="key in keys" :key="key" class="shortcut-key">
+                      {{ key }}
+                    </kbd>
+                  </div>
                 </span>
               </div>
-              <span class="flex gap-8">
-                <div
-                  v-for="keys in shortcut.keys"
-                  :key="keys.toString()"
-                  class="relative flex gap-1 after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:text-neutral-400 after:content-['or'] last-of-type:after:hidden"
-                >
-                  <kbd v-for="key in keys" :key="key" class="shortcut-key">
-                    {{ key }}
-                  </kbd>
-                </div>
-              </span>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-        <div v-if="filteredShortcuts.length === 0" class="">
-          <p class="text-muted-foreground p-4 text-center">
-            No shortcuts found.
-          </p>
-        </div>
-      </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+          <div v-if="filteredShortcuts.length === 0" class="">
+            <p class="text-muted-foreground p-4 text-center">
+              No shortcuts found.
+            </p>
+          </div>
+        </Accordion>
+      </ScrollArea>
     </SheetContent>
   </Sheet>
 </template>

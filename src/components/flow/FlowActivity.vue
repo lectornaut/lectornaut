@@ -127,12 +127,84 @@ const df = new DateFormatter("en-US", {
   dateStyle: "medium",
 })
 
-const start = today(getLocalTimeZone())
-const end = today(getLocalTimeZone())
+const presets = [
+  {
+    id: 0,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 0,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Today",
+  },
+  {
+    id: 7,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 7,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 7 days",
+  },
+  {
+    id: 14,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 14,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 14 days",
+  },
+  {
+    id: 30,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 30,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 30 days",
+  },
+  {
+    id: 90,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 90,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 3 months",
+  },
+  {
+    id: 180,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 180,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 6 months",
+  },
+  {
+    id: 365,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 365,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 1 year",
+  },
+]
+
+const defaultRange = presets.find((preset) => preset.id === 0)!
 
 const range = ref({
-  start,
-  end,
+  start: defaultRange.value.start,
+  end: defaultRange.value.end,
 }) as Ref<DateRange>
 </script>
 
@@ -157,8 +229,27 @@ const range = ref({
               }}
             </Button>
           </PopoverTrigger>
-          <PopoverContent class="w-auto p-0">
-            <RangeCalendar v-model="range" initial-focus class="p-1" />
+          <PopoverContent class="w-auto p-1">
+            <Select v-model="range">
+              <SelectTrigger>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="preset in presets"
+                  :key="preset.id"
+                  :value="preset.value"
+                >
+                  {{ preset.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <RangeCalendar
+              v-model="range"
+              :max-value="today(getLocalTimeZone())"
+              initial-focus
+              class="p-0"
+            />
           </PopoverContent>
         </Popover>
       </SidebarGroupContent>
@@ -211,10 +302,11 @@ const range = ref({
             <CardTitle
               class="flex items-center justify-between text-base font-medium"
             >
-              <span class="truncate">Upgrade activity retention</span>
+              <span class="truncate"> History retention limit reached </span>
             </CardTitle>
             <CardDescription class="">
-              Get unlimited access to your logs by upgrading your plan.
+              Get unlimited access to your activity timeline by upgrading to the
+              Pro plan.
             </CardDescription>
           </CardHeader>
           <!-- <CardContent class="px-4 pb-4"></CardContent> -->

@@ -62,7 +62,7 @@ const { onDragStart } = useDragAndDrop()
                   >
                     <SidebarMenuItem class="grid gap-2">
                       <CollapsibleTrigger as-child>
-                        <SidebarMenuButton>
+                        <SidebarMenuButton :class="[list.bg, list.color]">
                           <component :is="list.icon" />
                           <span class="truncate font-medium">
                             {{ list.name }}
@@ -73,18 +73,21 @@ const { onDragStart } = useDragAndDrop()
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent
-                        class="rounded-md border border-dashed p-2"
+                        class="rounded-md p-2"
+                        :class="[list.bg]"
                       >
-                        <SidebarMenu>
+                        <SidebarMenu class="gap-2">
                           <SidebarMenuItem
                             v-for="node in list.nodes"
                             :key="node.id"
                           >
                             <SidebarMenuButton
                               :draggable="true"
+                              class="rounded-md border border-dashed p-2"
+                              :class="[list.bg, list.color, list.border]"
                               @dragstart="onDragStart($event, node.id)"
                             >
-                              <icon-lucide-grip-vertical class="opacity-50" />
+                              <icon-lucide-grip-horizontal class="opacity-70" />
                               <span class="truncate">{{ node.name }}</span>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
