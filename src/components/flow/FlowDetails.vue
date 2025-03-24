@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { activity } from "@/data/chart"
 
 const stats = [

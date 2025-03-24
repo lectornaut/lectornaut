@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 const active = ref(true)
 const running = refAutoReset(false, 5000)
 </script>
