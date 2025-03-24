@@ -30,6 +30,7 @@ const data = {
   mails: [
     {
       name: "William Smith",
+      active: false,
       email: "williamsmith@example.com",
       subject: "Meeting Tomorrow",
       date: "09:34 AM",
@@ -38,6 +39,7 @@ const data = {
     },
     {
       name: "Alice Smith",
+      active: false,
       email: "alicesmith@example.com",
       subject: "Re: Project Update",
       date: "Yesterday",
@@ -46,6 +48,7 @@ const data = {
     },
     {
       name: "Bob Johnson",
+      active: false,
       email: "bobjohnson@example.com",
       subject: "Weekend Plans",
       date: "2 days ago",
@@ -54,6 +57,7 @@ const data = {
     },
     {
       name: "Emily Davis",
+      active: false,
       email: "emilydavis@example.com",
       subject: "Re: Question about Budget",
       date: "2 days ago",
@@ -62,6 +66,7 @@ const data = {
     },
     {
       name: "Michael Wilson",
+      active: false,
       email: "michaelwilson@example.com",
       subject: "Important Announcement",
       date: "1 week ago",
@@ -70,6 +75,7 @@ const data = {
     },
     {
       name: "Sarah Brown",
+      active: false,
       email: "sarahbrown@example.com",
       subject: "Re: Feedback on Proposal",
       date: "1 week ago",
@@ -78,6 +84,7 @@ const data = {
     },
     {
       name: "David Lee",
+      active: false,
       email: "davidlee@example.com",
       subject: "New Project Idea",
       date: "1 week ago",
@@ -86,6 +93,7 @@ const data = {
     },
     {
       name: "Olivia Wilson",
+      active: false,
       email: "oliviawilson@example.com",
       subject: "Vacation Plans",
       date: "1 week ago",
@@ -94,6 +102,7 @@ const data = {
     },
     {
       name: "James Martin",
+      active: false,
       email: "jamesmartin@example.com",
       subject: "Re: Conference Registration",
       date: "1 week ago",
@@ -102,6 +111,7 @@ const data = {
     },
     {
       name: "Sophia White",
+      active: false,
       email: "sophiawhite@example.com",
       subject: "Team Dinner",
       date: "1 week ago",
@@ -228,8 +238,17 @@ const getStatus = () => {
         >
           <SidebarGroup>
             <SidebarGroupContent class="grid gap-2">
-              <RouterLink v-for="mail in mails" :key="mail.email" to="/">
-                <Card class="shadow-none">
+              <RouterLink
+                v-for="mail in mails"
+                :key="mail.email"
+                to="/"
+                class="ring-offset-background focus-visible:ring-ring rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                @click="() => (mail.active = !mail.active)"
+              >
+                <Card
+                  class="shadow-none"
+                  :class="{ 'border-primary': mail.active }"
+                >
                   <CardHeader class="p-4">
                     <CardTitle
                       class="flex items-center justify-between text-base font-medium"
@@ -239,12 +258,11 @@ const getStatus = () => {
                         <icon-lucide-ellipsis />
                       </Badge>
                     </CardTitle>
-                    <!-- <CardDescription class="line-clamp-1">
+                    <CardDescription class="line-clamp-1">
                       {{ mail.subject }}
-                    </CardDescription> -->
+                    </CardDescription>
                   </CardHeader>
-                  <!-- <CardContent class="line-clamp-2 text-balance"></CardContent> -->
-                  <CardFooter class="flex-col items-start gap-1 px-4 pb-4">
+                  <CardFooter class="flex-col items-start gap-1 p-4 pt-0">
                     <Badge
                       variant="secondary"
                       class="gap-2 p-1 pr-2"

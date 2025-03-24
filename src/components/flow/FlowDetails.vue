@@ -1,11 +1,13 @@
 <script lang="ts" setup>
+import { activity } from "@/data/chart"
+
 const stats = [
   {
     name: "Total minutes",
     value: "24",
     change: "+5%",
     description:
-      "Total minutes across all workflows in this organization for current month",
+      "Total minutes across all workflows in this organization for current month.",
     changeType: "positive",
     usage: 12,
     capacity: 50,
@@ -17,7 +19,7 @@ const stats = [
     value: "12",
     change: "-2%",
     description:
-      "Total job runs across all workflows in this organization for current month",
+      "Total job runs across all workflows in this organization for current month.",
     changeType: "negative",
     usage: 60,
     capacity: 20,
@@ -29,8 +31,8 @@ const stats = [
     value: "1m 19s",
     change: "+3s",
     description:
-      "Average run time of jobs in this organization for current month",
-    changeType: "neutral",
+      "Average time taken by a job to run across all workflows in this organization for current month.",
+    changeType: "positive",
     usage: 70,
     capacity: 2,
     unit: "seconds",
@@ -41,7 +43,7 @@ const stats = [
     value: "4s",
     change: "-1s",
     description:
-      "Average queue time of jobs in this organization for current month",
+      "Average time taken by a job to get queued across all workflows in this organization for current month.",
     changeType: "positive",
     usage: 50,
     capacity: 10,
@@ -50,27 +52,27 @@ const stats = [
   },
   {
     name: "Job failure rate",
-    value: "100",
+    value: "10%",
     change: "+10%",
     description:
-      "Failure rate across jobs in this organization for current month",
+      "Percentage of jobs that failed across all workflows in this organization for current month.",
     changeType: "negative",
     usage: 90,
     capacity: 100,
     unit: "%",
-    showUpgrade: false,
+    showUpgrade: true,
   },
   {
     name: "Failed job usage",
     value: "24",
     change: "+4%",
     description:
-      "Total minutes used across failed jobs in this organization for current month",
+      "Total minutes across all workflows in this organization for current month.",
     changeType: "negative",
     usage: 85,
-    capacity: 30,
+    capacity: 300,
     unit: "minutes",
-    showUpgrade: false,
+    showUpgrade: true,
   },
 ]
 
@@ -82,61 +84,163 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
 
 <template>
   <dl class="grid divide-y">
-    <div v-for="stat in stats" :key="stat.name" class="flex flex-col gap-4 p-6">
-      <div class="flex items-center justify-between">
-        <dt class="text-secondary-foreground font-medium">{{ stat.name }}</dt>
-        <dd
-          :class="[
-            stat.changeType === 'negative' ? 'text-red-600' : 'text-green-700',
-            'text-xs font-medium',
-          ]"
-        >
-          {{ stat.change }}
-        </dd>
-      </div>
-      <dd class="w-full text-2xl font-medium tracking-tight">
-        {{ stat.value }}
-      </dd>
-      <p class="text-muted-foreground mb-2 w-full text-xs text-balance">
-        {{ stat.description }}
-      </p>
-      <Card v-if="stat.showUpgrade" class="shadow-none">
-        <CardHeader class="p-4">
+    <div>
+      <Card class="border-0 shadow-none">
+        <CardHeader>
           <CardTitle
             class="flex items-center justify-between text-base font-medium"
           >
-            <span class="truncate"> {{ stat.usage }} {{ stat.unit }} </span>
-            <Badge variant="secondary" class="gap-2 p-1 pl-2">
-              <span class="truncate"> Upgrade </span>
-              <icon-mdi-arrow-right-circle />
-            </Badge>
+            <span class="truncate"> Runs </span>
           </CardTitle>
-          <CardDescription class="line-clamp-1">
-            {{ getUsagePercentage(stat.usage, stat.capacity) }}% used from
-            {{ stat.capacity }} {{ stat.unit }}
+          <CardDescription>
+            <div class="flex gap-2">
+              <span class="flex items-center gap-1">
+                <icon-mdi-circle-medium class="text-[MediumSlateBlue]" />
+                <span class="text-xs text-[MediumSlateBlue]">
+                  {{ Math.round(Math.random() * 100) }}
+                  runs
+                </span>
+              </span>
+              <span class="flex items-center gap-1">
+                <icon-mdi-circle-medium class="text-[MediumOrchid]" />
+                <span class="text-xs text-[MediumOrchid]">
+                  {{ Math.round(Math.random() * 100) }}
+                  jobs
+                </span>
+              </span>
+              <span class="flex items-center gap-1">
+                <icon-mdi-circle-medium class="text-[Crimson]" />
+                <span class="text-xs text-[Crimson]">
+                  {{ Math.round(Math.random() * 100) }}
+                  errors
+                </span>
+              </span>
+            </div>
           </CardDescription>
         </CardHeader>
-        <CardContent class="px-4 pt-2">
-          <Progress
-            :model-value="getUsagePercentage(stat.usage, stat.capacity)"
-            class="h-2"
+        <CardContent>
+          <LineChart
+            class="-mx-5 h-16 w-0 min-w-[-webkit-fill-available] p-0"
+            :data="activity"
+            index="day"
+            :categories="['runs', 'jobs', 'errors', 'duration']"
+            :colors="[
+              'MediumSlateBlue',
+              'MediumOrchid',
+              'Crimson',
+              'MediumPurple',
+            ]"
+            :y-formatter="
+              (tick, i) => {
+                return typeof tick === 'number'
+                  ? `$ ${new Intl.NumberFormat('us').format(tick).toString()}`
+                  : ''
+              }
+            "
+            :show-tooltip="false"
+            :show-grid-line="false"
+            :show-legend="false"
+            :show-y-axis="false"
+            :show-x-axis="false"
           />
         </CardContent>
-        <Separator />
-        <CardFooter class="p-0">
-          <div class="flex h-16 w-full items-center">
-            <div class="flex grow flex-col items-center gap-1">
-              <span class="truncate"> {{ stat.usage }} {{ stat.unit }} </span>
-              <span class="text-muted-foreground text-xs"> Used </span>
-            </div>
-            <Separator orientation="vertical" />
-            <div class="flex grow flex-col items-center gap-1">
-              <span class="truncate">
-                {{ stat.capacity }} {{ stat.unit }}
+        <CardFooter>
+          <div class="flex w-full items-center">
+            <div class="flex grow flex-col gap-1">
+              <span class="text-muted-foreground truncate text-xs">
+                First run
               </span>
-              <span class="text-muted-foreground text-xs"> Reserved </span>
+              <span class="">
+                {{
+                  new Date().toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                }}
+              </span>
+            </div>
+            <div class="flex grow flex-col gap-1">
+              <span class="text-muted-foreground truncate text-xs">
+                Last run
+              </span>
+              <span class="">
+                {{
+                  new Date().toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                }}
+              </span>
             </div>
           </div>
+        </CardFooter>
+      </Card>
+    </div>
+    <div v-for="stat in stats" :key="stat.name">
+      <Card class="border-0 shadow-none">
+        <CardHeader class="gap-4">
+          <CardTitle
+            class="flex items-center justify-between text-base font-medium"
+          >
+            <span class="truncate"> {{ stat.name }} </span>
+            <span
+              :class="[
+                stat.changeType === 'negative'
+                  ? 'text-red-600'
+                  : 'text-green-600',
+                'text-xs font-medium',
+              ]"
+            >
+              {{ stat.change }}
+            </span>
+          </CardTitle>
+          <div class="w-full text-2xl font-medium tracking-tight">
+            {{ stat.value }}
+          </div>
+          <CardDescription class="text-xs">
+            {{ stat.description }}
+          </CardDescription>
+        </CardHeader>
+        <CardFooter v-if="stat.showUpgrade">
+          <Card class="w-full shadow-none">
+            <CardHeader>
+              <CardTitle
+                class="flex items-center justify-between text-base font-medium"
+              >
+                <span class="truncate"> {{ stat.usage }} {{ stat.unit }} </span>
+              </CardTitle>
+              <CardDescription>
+                {{ getUsagePercentage(stat.usage, stat.capacity) }}% used in
+                billing cycle.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Progress
+                :model-value="getUsagePercentage(stat.usage, stat.capacity)"
+                class="h-1.5"
+              />
+            </CardContent>
+            <Separator />
+            <CardFooter class="p-0">
+              <div class="flex h-16 w-full items-center">
+                <div class="flex grow flex-col items-center gap-1">
+                  <span class="truncate">
+                    {{ stat.usage }} {{ stat.unit }}
+                  </span>
+                  <span class="text-muted-foreground text-xs"> Used </span>
+                </div>
+                <Separator orientation="vertical" />
+                <div class="flex grow flex-col items-center gap-1">
+                  <span class="truncate">
+                    {{ stat.capacity }} {{ stat.unit }}
+                  </span>
+                  <span class="text-muted-foreground text-xs"> Reserved </span>
+                </div>
+              </div>
+            </CardFooter>
+          </Card>
         </CardFooter>
       </Card>
     </div>

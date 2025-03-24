@@ -45,8 +45,9 @@ onBeforeUnmount(() => {
                 as-child
                 class="after:bg-border relative after:absolute after:-right-2 after:h-3 after:w-px after:rounded-full"
               >
-                <Button variant="ghost" size="icon" class="gap-2">
+                <Button variant="ghost" class="gap-2">
                   <icon-lucide-grip />
+                  <span class="truncate">Menu</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent> Menu </TooltipContent>

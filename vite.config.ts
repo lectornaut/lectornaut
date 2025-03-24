@@ -109,6 +109,7 @@ export default defineConfig({
     checker({
       typescript: true,
       vueTsc: true,
+      overlay: false,
     }),
   ],
   resolve: {

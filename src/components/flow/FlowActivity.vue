@@ -302,16 +302,15 @@ const range = ref({
             <CardTitle
               class="flex items-center justify-between text-base font-medium"
             >
-              <span class="truncate"> History retention limit reached </span>
+              <span class="truncate"> Retention limit reached </span>
             </CardTitle>
-            <CardDescription class="">
+            <CardDescription>
               Get unlimited access to your activity timeline by upgrading to the
               Pro plan.
             </CardDescription>
           </CardHeader>
-          <!-- <CardContent class="px-4 pb-4"></CardContent> -->
-          <CardFooter class="px-4 pb-4">
-            <Button class="w-full"> Upgrade </Button>
+          <CardFooter class="p-4 pt-0">
+            <Button variant="destructive" class="w-full"> Upgrade </Button>
           </CardFooter>
         </Card>
       </SidebarGroupContent>
