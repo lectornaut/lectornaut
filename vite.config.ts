@@ -107,6 +107,7 @@ export default defineConfig({
     UnheadVite(),
     Sitemap(),
     checker({
+      enableBuild: false,
       typescript: true,
       vueTsc: true,
       overlay: false,
