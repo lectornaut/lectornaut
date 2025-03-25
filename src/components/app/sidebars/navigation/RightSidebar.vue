@@ -11,7 +11,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
             Information
           </span>
           <Button variant="ghost" size="icon">
-            <icon-lucide-sparkle />
+            <icon-lucide-share-2 />
           </Button>
         </div>
       </SidebarHeader>
@@ -59,24 +59,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
             <FlowActivity />
           </TabsContent>
           <TabsContent value="settings" class="mt-0">
-            <pre>
-Settings
----
-General
----
-Name
-Description
----
-Collaborators [PLUG]
----
-Add collaborator
----
-Notifications
----
-Artifact and log retention [PLUG]
----
-</pre
-            >
+            <FlowSettings />
           </TabsContent>
         </OverlayScrollbarsComponent>
       </SidebarContent>

@@ -209,93 +209,101 @@ const range = ref({
 </script>
 
 <template>
-  <div>
-    <SidebarGroup>
-      <SidebarGroupContent class="flex flex-col">
-        <Popover>
-          <PopoverTrigger as-child>
-            <Button variant="outline" class="justify-start gap-2">
-              <icon-lucide-calendar />
-              {{
-                range.start
-                  ? df.format(range.start.toDate(getLocalTimeZone()))
-                  : "Start date"
-              }}
-              -
-              {{
-                range.end
-                  ? df.format(range.end.toDate(getLocalTimeZone()))
-                  : "End date"
-              }}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent class="w-auto p-1">
-            <Select v-model="range">
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="preset in presets"
-                  :key="preset.id"
-                  :value="preset.value"
-                >
-                  {{ preset.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <RangeCalendar
-              v-model="range"
-              :max-value="today(getLocalTimeZone())"
-              initial-focus
-              class="p-0"
-            />
-          </PopoverContent>
-        </Popover>
-      </SidebarGroupContent>
-    </SidebarGroup>
-    <SidebarGroup>
-      <SidebarGroupContent>
-        <ul role="list" class="-mb-8">
-          <li v-for="(event, eventIdx) in timeline" :key="event.id">
-            <div class="relative pb-8">
-              <span
-                v-if="eventIdx !== timeline.length - 1"
-                class="bg-border absolute top-2.5 left-2.5 -ml-px h-full w-0.5"
+  <div class="grid">
+    <div>
+      <Card class="border-0 shadow-none">
+        <CardHeader>
+          <Popover>
+            <PopoverTrigger as-child>
+              <Button
+                variant="link"
+                class="text-destructive h-auto justify-start gap-3 border-0 p-0"
+              >
+                <!-- <icon-lucide-calendar /> -->
+                {{
+                  range.start
+                    ? df.format(range.start.toDate(getLocalTimeZone()))
+                    : "Start date"
+                }}
+                -
+                {{
+                  range.end
+                    ? df.format(range.end.toDate(getLocalTimeZone()))
+                    : "End date"
+                }}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent class="w-auto p-1">
+              <Select v-model="range">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="preset in presets"
+                    :key="preset.id"
+                    :value="preset.value"
+                  >
+                    {{ preset.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <RangeCalendar
+                v-model="range"
+                :max-value="today(getLocalTimeZone())"
+                initial-focus
+                class="p-0"
               />
-              <div class="relative flex gap-4">
-                <div>
-                  <span
-                    :class="[
-                      event.iconColor,
-                      'ring-background bg-background flex size-5 items-center justify-center rounded-full ring-6',
-                    ]"
-                  >
-                    <component :is="event.icon" />
-                  </span>
-                </div>
-                <div class="flex min-w-0 flex-1 justify-between space-x-4">
+            </PopoverContent>
+          </Popover>
+          <CardTitle
+            class="flex items-center justify-between text-base font-medium"
+          >
+            <span class="truncate"> History </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul role="list" class="-mb-8">
+            <li v-for="(event, eventIdx) in timeline" :key="event.id">
+              <div class="relative pb-8">
+                <span
+                  v-if="eventIdx !== timeline.length - 1"
+                  class="bg-border absolute top-2.5 left-2.5 -ml-px h-full w-0.5"
+                />
+                <div class="relative flex gap-4">
                   <div>
-                    <p class="">
-                      {{ event.content }}
-                      <span class="text-muted-foreground">
-                        {{ event.status }}
-                      </span>
-                    </p>
+                    <span
+                      :class="[
+                        event.iconColor,
+                        'ring-background bg-background flex size-5 items-center justify-center rounded-full ring-6',
+                      ]"
+                    >
+                      <component :is="event.icon" />
+                    </span>
                   </div>
-                  <div
-                    class="text-muted-foreground flex items-center text-right text-xs whitespace-nowrap"
-                  >
-                    <time :datetime="event.datetime">{{ event.date }}</time>
+                  <div class="flex min-w-0 flex-1 justify-between space-x-4">
+                    <div>
+                      <p class="">
+                        {{ event.content }}
+                        <span class="text-muted-foreground">
+                          {{ event.status }}
+                        </span>
+                      </p>
+                    </div>
+                    <div
+                      class="text-muted-foreground flex items-center text-right text-xs whitespace-nowrap"
+                    >
+                      <time :datetime="event.datetime">{{ event.date }}</time>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </li>
-        </ul>
-      </SidebarGroupContent>
-    </SidebarGroup>
-    <SidebarGroup>
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+    <SidebarGroup class="p-6">
       <SidebarGroupContent>
         <Card class="shadow-none">
           <CardHeader class="p-4">

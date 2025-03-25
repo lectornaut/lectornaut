@@ -1,7 +1,7 @@
 <template>
   <SidebarProvider
     :style="{
-      '--sidebar-width': '278px',
+      '--sidebar-width': '270px',
     }"
     class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--footer-height:calc(theme(spacing.5))] [--header-height:calc(theme(spacing.14))]"
   >

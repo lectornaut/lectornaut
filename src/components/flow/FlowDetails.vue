@@ -150,7 +150,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
               <span class="text-muted-foreground truncate text-xs">
                 First run
               </span>
-              <span class="">
+              <span>
                 {{
                   new Date().toLocaleDateString("en-GB", {
                     day: "numeric",
@@ -164,7 +164,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
               <span class="text-muted-foreground truncate text-xs">
                 Last run
               </span>
-              <span class="">
+              <span>
                 {{
                   new Date().toLocaleDateString("en-GB", {
                     day: "numeric",
@@ -242,6 +242,103 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
             </CardFooter>
           </Card>
         </CardFooter>
+      </Card>
+    </div>
+    <div>
+      <Card class="border-0 shadow-none">
+        <CardHeader class="gap-4">
+          <CardTitle
+            class="flex items-center justify-between text-base font-medium"
+          >
+            <span class="truncate"> Information </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl class="flex flex-col gap-3">
+            <div class="flex justify-between">
+              <dt class="text-muted-foreground">Created by</dt>
+              <dd>Marie Culver</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-muted-foreground">Created on</dt>
+              <dd>June 8, 2020</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-muted-foreground">Last modified</dt>
+              <dd>June 8, 2020</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-muted-foreground">Dimensions</dt>
+              <dd>4032 x 3024</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-muted-foreground">Resolution</dt>
+              <dd>72 x 72</dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
+    </div>
+    <div>
+      <Card class="border-0 shadow-none">
+        <CardHeader class="gap-4">
+          <CardTitle
+            class="flex items-center justify-between text-base font-medium"
+          >
+            <span class="truncate">Description</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="flex items-center justify-between">
+            <span class="text-muted-foreground truncate italic">
+              Add a description to this workflow.
+            </span>
+            <!-- <Button variant="secondary" size="icon">
+              <icon-lucide-pencil />
+            </Button> -->
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+    <div>
+      <Card class="border-0 shadow-none">
+        <CardHeader class="gap-4">
+          <CardTitle
+            class="flex items-center justify-between text-base font-medium"
+          >
+            <span class="truncate">Shared with</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul role="list" class="flex flex-col gap-3">
+            <li class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img
+                  src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=3&w=1024&h=1024&q=80"
+                  alt=""
+                  class="size-6 rounded-full"
+                />
+                <p class="text-secondary-foreground font-medium">
+                  Aimee Douglas
+                </p>
+              </div>
+              <span class="text-muted-foreground truncate text-xs">Owner</span>
+            </li>
+            <li class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img
+                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixqx=oilqXxSqey&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                  alt=""
+                  class="size-6 rounded-full"
+                />
+                <p class="text-secondary-foreground font-medium">
+                  Andrea McMillan
+                </p>
+              </div>
+              <span class="text-muted-foreground truncate text-xs">Viewer</span>
+            </li>
+          </ul>
+        </CardContent>
       </Card>
     </div>
   </dl>
