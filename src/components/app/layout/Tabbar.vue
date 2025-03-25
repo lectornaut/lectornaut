@@ -2,21 +2,41 @@
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { useSortable } from "@vueuse/integrations/useSortable"
+import { useStorage } from "@vueuse/core"
+import { useRoute, useRouter } from "vue-router"
 
 const el = ref<HTMLElement | null>(null)
+const router = useRouter()
+const route = useRoute()
 
 type Tab = {
-  id: number
+  id: string | number
   name: string
+  path: string
+  icon?: string
 }
 
-const tabs = ref<Tab[]>([
+const tabs = useStorage<Tab[]>("hyperjump-tabs", [
   {
     id: 1,
     name: "Sample tab",
+    path: "/",
+    icon: "workflow"
   },
 ])
-const selectedTab = ref(1)
+
+const selectedTab = ref<string | number>(tabs.value[0]?.id || 1)
+
+watch(
+  () => route.path,
+  (newPath) => {
+    const existingTab = tabs.value.find((tab) => tab.path === newPath)
+    if (existingTab) {
+      selectedTab.value = existingTab.id
+    }
+  },
+  { immediate: true }
+)
 
 useSortable(el, tabs, {
   animation: 150,
@@ -25,16 +45,60 @@ useSortable(el, tabs, {
   dragClass: "cursor-grabbing",
 })
 
-emitter.on("Tabs.Add", (tab) => {
-  tabs.value.push(tab as Tab)
+const selectTab = (tab: Tab) => {
+  selectedTab.value = tab.id
+  router.push(tab.path)
+}
+
+const addTab = (tab: Tab) => {
+  tabs.value.push(tab)
+  selectTab(tab)
+}
+
+const closeTab = (id: string | number) => {
+  const tabIndex = tabs.value.findIndex((tab) => tab.id === id)
+  
+  if (id === selectedTab.value) {
+    const newSelectedIndex = tabIndex > 0 ? tabIndex - 1 : Math.min(tabIndex + 1, tabs.value.length - 1)
+    if (tabs.value[newSelectedIndex]) {
+      selectTab(tabs.value[newSelectedIndex])
+    }
+  }
+  
+  tabs.value.splice(tabIndex, 1)
+  
+  if (tabs.value.length === 0) {
+    const defaultTab = {
+      id: generateId(),
+      name: "Home",
+      path: "/",
+      icon: "home"
+    }
+    addTab(defaultTab)
+  }
+}
+
+emitter.on("Tabs.Add", (tab: any) => {
+  if (!tab.path) {
+    tab.path = route.path
+  }
+  
+  const existingTab = tabs.value.find((t) => t.path === tab.path)
+  if (existingTab) {
+    selectTab(existingTab)
+  } else {
+    addTab(tab as Tab)
+  }
 })
 
 emitter.on("Tabs.Close", (id) => {
-  tabs.value.splice(
-    tabs.value.findIndex((tab) => tab.id === id),
-    1
-  )
+  closeTab(id)
 })
+
+const getIconComponent = (iconName: string | undefined) => {
+  if (!iconName) return 'icon-lucide-file'
+  return `icon-lucide-${iconName}`
+}
 </script>
 
 <template>
@@ -43,10 +107,9 @@ emitter.on("Tabs.Close", (id) => {
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"
     >
-      <!-- <div class="flex items-center justify-between gap-2"></div> -->
       <nav
         ref="el"
-        class="relative flex w-fit min-w-0 items-center justify-start gap-2"
+        class="relative flex w-fit min-w-0 items-center justify-start gap-2 overflow-x-auto"
       >
         <Button
           v-for="tab in tabs"
@@ -59,11 +122,11 @@ emitter.on("Tabs.Close", (id) => {
           "
           :variant="tab.id === selectedTab ? 'secondary' : 'ghost'"
           as-child
-          @click="selectedTab = tab.id"
+          @click="selectTab(tab)"
         >
-          <RouterLink to="">
-            <icon-lucide-workflow />
-            <span class="mr-auto truncate"> {{ tab.name }} {{ tab.id }} </span>
+          <div class="flex w-full items-center gap-2">
+            <component :is="getIconComponent(tab.icon)" />
+            <span class="mr-auto truncate"> {{ tab.name }} </span>
             <TooltipProvider v-if="tabs.length > 1">
               <Tooltip>
                 <TooltipTrigger as-child>
@@ -71,7 +134,7 @@ emitter.on("Tabs.Close", (id) => {
                     variant="ghost"
                     size="icon"
                     class="invisible h-4 w-4 group-hover:visible"
-                    @click="emitter.emit('Tabs.Close', tab.id)"
+                    @click.stop="closeTab(tab.id)"
                   >
                     <icon-lucide-x />
                   </Button>
@@ -83,7 +146,7 @@ emitter.on("Tabs.Close", (id) => {
               v-if="tab.id === selectedTab"
               class="bg-background absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
             ></span>
-          </RouterLink>
+          </div>
         </Button>
       </nav>
       <div
@@ -99,7 +162,9 @@ emitter.on("Tabs.Close", (id) => {
                 @click="
                   emitter.emit('Tabs.Add', {
                     id: generateId(),
-                    name: 'Sample tab',
+                    name: 'New Tab',
+                    path: route.path,
+                    icon: 'plus-circle'
                   })
                 "
               >
@@ -124,8 +189,12 @@ emitter.on("Tabs.Close", (id) => {
       </div>
     </div>
     <Separator />
-    <Settings />
-    <Shortcuts />
-    <ExitTrigger />
+    
+    <!-- Tab content will be rendered by router-view in the parent layout -->
+    
+    <!-- Global components -->
+    <Settings v-if="false" />
+    <Shortcuts v-if="false" />
+    <ExitTrigger v-if="false" />
   </div>
 </template>
