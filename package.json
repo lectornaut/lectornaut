@@ -6,8 +6,9 @@
   "packageManager": "pnpm@10.6.5",
   "scripts": {
     "dev": "vite --host",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vite build",
     "preview": "vite preview",
+    "check": "vue-tsc --noEmit",
     "tauri": "tauri",
     "lint:code": "eslint 'src/**/*.{js,ts,vue}' --fix",
     "lint:format": "prettier . --write --ignore-path .gitignore",
