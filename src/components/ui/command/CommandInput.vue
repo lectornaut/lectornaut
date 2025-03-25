@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useCommand } from "."
 import { cn } from "@/lib/utils"
 import { Search } from "lucide-vue-next"
 import {
@@ -8,6 +7,7 @@ import {
   useForwardProps,
 } from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
+import { useCommand } from "."
 
 defineOptions({
   inheritAttrs: false,

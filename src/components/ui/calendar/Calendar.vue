@@ -1,4 +1,12 @@
 <script lang="ts" setup>
+import { cn } from "@/lib/utils"
+import {
+  CalendarRoot,
+  type CalendarRootEmits,
+  type CalendarRootProps,
+  useForwardPropsEmits,
+} from "reka-ui"
+import { computed, type HTMLAttributes } from "vue"
 import {
   CalendarCell,
   CalendarCellTrigger,
@@ -12,14 +20,6 @@ import {
   CalendarNextButton,
   CalendarPrevButton,
 } from "."
-import { cn } from "@/lib/utils"
-import {
-  CalendarRoot,
-  type CalendarRootEmits,
-  type CalendarRootProps,
-  useForwardPropsEmits,
-} from "reka-ui"
-import { computed, type HTMLAttributes } from "vue"
 
 const props = defineProps<
   CalendarRootProps & { class?: HTMLAttributes["class"] }

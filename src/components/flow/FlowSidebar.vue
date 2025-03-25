@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import useDragAndDrop from "./useDnD"
 import { nodes } from "@/data/nodes"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
+import useDragAndDrop from "./useDnD"
 
 const { onDragStart } = useDragAndDrop()
 </script>

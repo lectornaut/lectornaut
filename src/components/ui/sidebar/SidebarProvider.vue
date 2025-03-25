@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { cn } from "@/lib/utils"
+import { useEventListener, useMediaQuery, useVModel } from "@vueuse/core"
+import { TooltipProvider } from "reka-ui"
+import { computed, type HTMLAttributes, type Ref, ref } from "vue"
 import {
   provideSidebarContext,
   SIDEBAR_COOKIE_MAX_AGE,
@@ -7,10 +11,6 @@ import {
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
 } from "./utils"
-import { cn } from "@/lib/utils"
-import { useEventListener, useMediaQuery, useVModel } from "@vueuse/core"
-import { TooltipProvider } from "reka-ui"
-import { computed, type HTMLAttributes, type Ref, ref } from "vue"
 
 const props = withDefaults(
   defineProps<{

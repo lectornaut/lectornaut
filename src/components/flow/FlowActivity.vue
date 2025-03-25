@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getLocalTimeZone, DateFormatter, today } from "@internationalized/date"
+import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
 import AlertTriangle from "~icons/lucide/alert-triangle"
 import Ban from "~icons/lucide/ban"

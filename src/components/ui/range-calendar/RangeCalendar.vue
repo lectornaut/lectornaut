@@ -1,4 +1,12 @@
 <script lang="ts" setup>
+import { cn } from "@/lib/utils"
+import {
+  RangeCalendarRoot,
+  type RangeCalendarRootEmits,
+  type RangeCalendarRootProps,
+  useForwardPropsEmits,
+} from "reka-ui"
+import { computed, type HTMLAttributes } from "vue"
 import {
   RangeCalendarCell,
   RangeCalendarCellTrigger,
@@ -12,14 +20,6 @@ import {
   RangeCalendarNextButton,
   RangeCalendarPrevButton,
 } from "."
-import { cn } from "@/lib/utils"
-import {
-  RangeCalendarRoot,
-  type RangeCalendarRootEmits,
-  type RangeCalendarRootProps,
-  useForwardPropsEmits,
-} from "reka-ui"
-import { computed, type HTMLAttributes } from "vue"
 
 const props = defineProps<
   RangeCalendarRootProps & { class?: HTMLAttributes["class"] }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import useDragAndDrop from "./useDnD"
 import { Background } from "@vue-flow/background"
 import { Controls } from "@vue-flow/controls"
 import { VueFlow, useVueFlow } from "@vue-flow/core"
 import { MiniMap } from "@vue-flow/minimap"
+import useDragAndDrop from "./useDnD"
 
 const { onConnect, addEdges } = useVueFlow()
 

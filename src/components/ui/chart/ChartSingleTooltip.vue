@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ChartTooltip } from "."
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { omit } from "@unovis/ts"
 import { VisTooltip } from "@unovis/vue"
 import { type Component, createApp } from "vue"
+import { ChartTooltip } from "."
 
 const props = defineProps<{
   selector: string
@@ -46,7 +46,7 @@ function template(
     if (wm.has(data)) {
       return wm.get(data)
     } else {
-      const style = getComputedStyle(elements[i])
+      const style = getComputedStyle(elements[i] as HTMLElement)
       const omittedData = [
         {
           name: data.name,
@@ -60,7 +60,7 @@ function template(
         title: d[props.index],
         data: omittedData,
       }).mount(componentDiv)
-      wm.set(d, componentDiv.innerHTML)
+      wm.set(d as WeakKey, componentDiv.innerHTML)
       return componentDiv.innerHTML
     }
   }

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import ScrollBar from "./ScrollBar.vue"
 import { cn } from "@/lib/utils"
 import {
   ScrollAreaCorner,
@@ -8,6 +7,7 @@ import {
   ScrollAreaViewport,
 } from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
+import ScrollBar from "./ScrollBar.vue"
 
 const props = defineProps<
   ScrollAreaRootProps & { class?: HTMLAttributes["class"] }

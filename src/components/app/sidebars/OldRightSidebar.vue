@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import click from "/assets/sounds/click.mp3"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 import { useCurrentUser } from "vuefire"
+import click from "/assets/sounds/click.mp3"
 
 const ask = ref("")
 const user = useCurrentUser()

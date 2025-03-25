@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DrawerTrigger, DrawerClose } from "@/components/ui/drawer"
+import { DrawerClose, DrawerTrigger } from "@/components/ui/drawer"
 
 const accordionItems = [
   {

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { SelectScrollDownButton, SelectScrollUpButton } from "."
 import { cn } from "@/lib/utils"
 import {
   SelectContent,
@@ -10,6 +9,7 @@ import {
   useForwardPropsEmits,
 } from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
+import { SelectScrollDownButton, SelectScrollUpButton } from "."
 
 defineOptions({
   inheritAttrs: false,

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { provideCommandGroupContext, useCommand } from "."
 import { cn } from "@/lib/utils"
 import type { ListboxGroupProps } from "reka-ui"
 import { ListboxGroup, ListboxGroupLabel, useId } from "reka-ui"
 import { computed, type HTMLAttributes, onMounted, onUnmounted } from "vue"
+import { provideCommandGroupContext, useCommand } from "."
 
 const props = defineProps<
   ListboxGroupProps & {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { accents, defaultAccent, themes } from "@/helpers/defaults"
-import { languages } from "@/helpers/defaults"
+import { accents, defaultAccent, languages, themes } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { store } from "@/modules/theme"

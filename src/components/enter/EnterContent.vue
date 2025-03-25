@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-  signUpWithEmailPassword,
-  signInWithEmailPassword,
   resetEmailPassword,
+  signInWithEmailPassword,
   signInWithGoogle,
   signInWithMicrosoft,
+  signUpWithEmailPassword,
 } from "@/modules/auth"
 
 const authMode = ref<"sign-up" | "sign-in">("sign-up")
