@@ -1,19 +1,14 @@
 <script setup lang="ts">
 import { getInitials } from "@/helpers/utilities"
-import type { User } from "firebase/auth"
-import type { c } from "node_modules/vuefire/dist/shared/vuefire.cc4a8ea4.mjs"
-import { useCurrentUser } from "vuefire"
 
 const online = useOnline()
 
-const user = useCurrentUser()
-
-const generateGroups = (user: c<User>) => [
+const groups = [
   {
     label: "Personal Account",
     teams: [
       {
-        label: user?.displayName || "Personal",
+        label: "Alicia Koch",
         value: "personal",
       },
     ],
@@ -21,27 +16,29 @@ const generateGroups = (user: c<User>) => [
   {
     label: "Teams",
     teams: [
-      { label: "Acme Inc.", value: "acme-inc" },
-      { label: "Monsters Inc.", value: "monsters" },
+      {
+        label: "Acme Inc.",
+        value: "acme-inc",
+      },
+      {
+        label: "Monsters Inc.",
+        value: "monsters",
+      },
     ],
   },
 ]
 
-const groups = computed(() => generateGroups(user.value))
+type Team = (typeof groups)[number]["teams"][number]
 
-type Team = { label: string; value: string }
-
-const openAccountSwitcher = ref(false)
+const open = ref(false)
 const showNewTeamDialog = ref(false)
-const selectedTeam = ref<Team>(
-  groups.value[0]?.teams[0] || { label: "", value: "" }
-)
+const selectedTeam = ref<Team>(groups[0].teams[0])
 </script>
 
 <template>
   <div data-tauri-drag-region class="flex items-center justify-between gap-2">
     <Dialog v-model:open="showNewTeamDialog">
-      <Popover v-model:open="openAccountSwitcher">
+      <Popover v-model:open="open">
         <PopoverTrigger as-child>
           <Button
             variant="ghost"
@@ -49,9 +46,9 @@ const selectedTeam = ref<Team>(
           >
             <Avatar class="size-4">
               <AvatarImage
-                :src="selectedTeam.value === 'personal' ? user?.photoURL! : ''"
-                referrerpolicy="no-referrer"
+                :src="`https://avatar.vercel.sh/${selectedTeam.value}.png`"
                 :alt="selectedTeam.label"
+                referrerpolicy="no-referrer"
               />
               <AvatarFallback>
                 {{ getInitials(selectedTeam.label) }}
@@ -66,11 +63,7 @@ const selectedTeam = ref<Team>(
               Offline
             </span>
             <span v-else v-motion-fade class="truncate">
-              {{
-                selectedTeam.value === "personal"
-                  ? user?.displayName
-                  : selectedTeam.label
-              }}
+              {{ selectedTeam.label }}
             </span>
             <icon-lucide-chevron-down />
           </Button>
@@ -91,18 +84,18 @@ const selectedTeam = ref<Team>(
                 <CommandItem
                   v-for="team in group.teams"
                   :key="team.value"
-                  :value="team.label"
+                  :value="team"
                   class="grow justify-start gap-2 truncate"
                   @select="
                     () => {
                       selectedTeam = team
-                      openAccountSwitcher = false
+                      open = false
                     }
                   "
                 >
                   <Avatar class="size-4">
                     <AvatarImage
-                      :src="team.value === 'personal' ? user?.photoURL! : ''"
+                      :src="`https://avatar.vercel.sh/${team.value}.png`"
                       referrerpolicy="no-referrer"
                       :alt="team.label"
                     />
@@ -129,7 +122,7 @@ const selectedTeam = ref<Team>(
                     class="grow justify-start gap-2 truncate"
                     @select="
                       () => {
-                        openAccountSwitcher = false
+                        open = false
                         showNewTeamDialog = true
                       }
                     "
@@ -160,7 +153,7 @@ const selectedTeam = ref<Team>(
                 class="focus:border-inherit focus:ring-0"
               />
             </div>
-            <div class="grid gap-4">
+            <div class="space-y-2">
               <Label for="plan">Subscription plan</Label>
               <Select>
                 <SelectTrigger>

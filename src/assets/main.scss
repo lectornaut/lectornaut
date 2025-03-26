@@ -38,19 +38,18 @@
   @apply inline-flex;
   @apply items-center;
   @apply justify-center;
-  @apply max-h-6;
-  @apply min-w-6;
-  @apply p-1;
+  @apply max-h-5;
+  @apply min-w-5;
+  @apply p-0.5;
   @apply shrink-0;
-  @apply rounded;
+  @apply rounded-sm;
   @apply border;
-  @apply border-b-2;
-  @apply bg-secondary;
-  @apply font-mono;
+  @apply shadow-xs;
+  @apply bg-background;
+  @apply font-sans;
   @apply align-baseline;
   @apply capitalize;
-  @apply text-muted-foreground;
-  @apply text-xs;
+  @apply text-foreground;
+  @apply text-[11px];
   @apply tracking-tight;
-  @apply font-medium;
 }

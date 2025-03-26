@@ -71,6 +71,9 @@ const team = [
             />
           </div>
         </CardContent>
+        <CardFooter>
+          <Button size="sm">Save</Button>
+        </CardFooter>
       </Card>
     </div>
     <div>
@@ -88,33 +91,30 @@ const team = [
         <CardContent class="grid gap-8">
           <div class="grid w-full items-center gap-3">
             <Label for="project-team"> Members </Label>
-            <div class="flex gap-2">
-              <a
+            <div class="flex flex-wrap gap-2">
+              <Button
                 v-for="person in team"
                 :key="person.email"
                 :href="person.href"
-                class="relative rounded-full hover:opacity-75"
+                variant="outline"
+                class="rounded-full"
+                size="icon"
               >
                 <img
                   class="inline-block size-8 rounded-full"
                   :src="person.imageUrl"
                   :alt="person.name"
                 />
-              </a>
-              <button
-                type="button"
-                class="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-gray-200 bg-white text-gray-400 hover:border-gray-300 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-hidden"
-              >
-                <span class="absolute -inset-2" />
-                <span class="sr-only">Add team member</span>
-                <PlusIcon class="size-5" aria-hidden="true" />
-              </button>
+              </Button>
+              <Button variant="outline" class="rounded-full" size="icon">
+                <icon-lucide-plus />
+              </Button>
             </div>
           </div>
           <div class="grid w-full items-center gap-3">
-            <Label for="project-privacy"> Privacy </Label>
+            <Label for="project-sharing"> Sharing </Label>
             <RadioGroup
-              name="privacy"
+              name="sharing"
               default-value="public"
               class="grid gap-4"
             >
@@ -150,7 +150,6 @@ const team = [
         </CardContent>
       </Card>
     </div>
-    <!-- notifications sections -->
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader>
@@ -213,6 +212,23 @@ const team = [
             </div>
           </div>
         </CardContent>
+      </Card>
+    </div>
+    <div>
+      <Card class="border-0 shadow-none">
+        <CardHeader>
+          <CardTitle
+            class="flex items-center justify-between text-base font-medium"
+          >
+            <span class="truncate"> Danger Zone </span>
+          </CardTitle>
+          <CardDescription>
+            Delete the project and all its data permanently.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button variant="secondary" size="sm">Delete workflow</Button>
+        </CardFooter>
       </Card>
     </div>
   </div>

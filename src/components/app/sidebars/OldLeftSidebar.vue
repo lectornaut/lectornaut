@@ -1,6 +1,6 @@
 <template>
   <aside class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-    <AccountSwitcher />
+    <TeamSwitcher />
     <Separator />
     <Navigation />
     <Support />

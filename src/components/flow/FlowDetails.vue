@@ -318,9 +318,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   alt=""
                   class="size-6 rounded-full"
                 />
-                <p class="text-secondary-foreground font-medium">
-                  Aimee Douglas
-                </p>
+                <p class="font-medium">Aimee Douglas</p>
               </div>
               <span class="text-muted-foreground truncate text-xs">Owner</span>
             </li>
@@ -331,9 +329,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   alt=""
                   class="size-6 rounded-full"
                 />
-                <p class="text-secondary-foreground font-medium">
-                  Andrea McMillan
-                </p>
+                <p class="font-medium">Andrea McMillan</p>
               </div>
               <span class="text-muted-foreground truncate text-xs">Viewer</span>
             </li>

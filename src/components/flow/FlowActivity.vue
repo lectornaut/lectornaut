@@ -219,7 +219,6 @@ const range = ref({
                 variant="link"
                 class="text-destructive h-auto justify-start gap-3 border-0 p-0"
               >
-                <!-- <icon-lucide-calendar /> -->
                 {{
                   range.start
                     ? df.format(range.start.toDate(getLocalTimeZone()))
@@ -318,7 +317,9 @@ const range = ref({
             </CardDescription>
           </CardHeader>
           <CardFooter class="p-4 pt-0">
-            <Button variant="destructive" class="w-full"> Upgrade </Button>
+            <Button variant="destructive" class="w-full" size="sm">
+              Upgrade
+            </Button>
           </CardFooter>
         </Card>
       </SidebarGroupContent>
