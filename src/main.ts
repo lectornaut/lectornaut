@@ -1,5 +1,5 @@
 import App from "@/App.vue"
-import "@/assets/index.css"
+import "@/assets/globals.css"
 import "@/assets/main.scss"
 import "@/assets/theme.scss"
 import { isTauri } from "@/helpers/utilities"

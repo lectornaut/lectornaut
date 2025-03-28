@@ -1,0 +1,142 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/forms";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --spacing-safe-top: env(safe-area-inset-top);
+  --spacing-safe-bottom: env(safe-area-inset-bottom);
+  --spacing-safe-left: env(safe-area-inset-left);
+  --spacing-safe-right: env(safe-area-inset-right);
+  --spacing-titlebar-width: env(titlebar-area-width);
+  --spacing-titlebar-height: env(titlebar-area-height);
+  --font-sans: "Geist Variable", "sans-serif";
+  --font-mono: "Geist Mono Variable", "monospace";
+  --font-serif: "Playfair Display Variable", "serif";
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-collapsible-down: collapsible-down 0.2s ease-out;
+  --animate-collapsible-up: collapsible-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+
+    to {
+      height: var(--reka-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--reka-accordion-content-height);
+    }
+
+    to {
+      height: 0;
+    }
+  }
+
+  @keyframes collapsible-down {
+    from {
+      max-height: 0;
+    }
+
+    to {
+      max-height: var(--reka-collapsible-content-height);
+    }
+  }
+
+  @keyframes collapsible-up {
+    from {
+      max-height: var(--reka-collapsible-content-height);
+    }
+
+    to {
+      max-height: 0;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    --vis-tooltip-background-color: none;
+    --vis-tooltip-border-color: none;
+    --vis-tooltip-text-color: none;
+    --vis-tooltip-shadow-color: none;
+    --vis-tooltip-backdrop-filter: none;
+    --vis-tooltip-padding: none;
+    --vis-primary-color: var(--primary);
+    --vis-secondary-color: var(--secondary);
+    --vis-text-color: var(--foreground);
+    --vf-node-color: var(--foreground);
+    --vf-box-shadow: var(--foreground);
+    --vf-node-bg: var(--background);
+    --vf-node-text: var(--foreground);
+    --vf-handle: var(--border);
+    --vf-connection-path: var(--border);
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+
+    @apply selection:bg-secondary;
+    @apply selection:text-secondary-foreground;
+    @apply h-dvh;
+    @apply w-dvw;
+    @apply bg-linear-to-b;
+    @apply from-background/95;
+    @apply to-background/90;
+    @apply text-foreground;
+    @apply text-sm;
+    @apply select-none;
+    @apply overflow-hidden;
+    @apply overscroll-none;
+    @apply accent-current;
+  }
+}
