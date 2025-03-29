@@ -140,3 +140,61 @@
     @apply accent-current;
   }
 }
+
+@layer components {
+  #nprogress {
+    @apply pointer-events-none;
+
+    .bar {
+      @apply fixed;
+      @apply bottom-0;
+      @apply left-0;
+      @apply w-full;
+      @apply h-0.5;
+      @apply z-50;
+
+      background-image: linear-gradient(
+        to right,
+        #27c4f5,
+        #a307ba,
+        #fd8d32,
+        #70c050,
+        #27c4f5
+      );
+    }
+  }
+
+  .no-scrollbar::-webkit-scrollbar,
+  [no-scrollbar]::-webkit-scrollbar {
+    display: none;
+    appearance: none;
+  }
+
+  .no-scrollbar,
+  [no-scrollbar] {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    @apply overscroll-none;
+  }
+
+  .shortcut-key {
+    @apply inline-flex;
+    @apply items-center;
+    @apply justify-center;
+    @apply max-h-5;
+    @apply min-w-5;
+    @apply p-0.5;
+    @apply shrink-0;
+    @apply rounded-sm;
+    @apply border;
+    @apply shadow-xs;
+    @apply bg-background;
+    @apply font-sans;
+    @apply align-baseline;
+    @apply capitalize;
+    @apply text-foreground;
+    @apply text-[11px];
+    @apply tracking-tight;
+  }
+}
