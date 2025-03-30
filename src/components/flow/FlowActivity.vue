@@ -213,12 +213,15 @@ const range = ref({
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader>
+          <CardTitle
+            class="flex items-center justify-between text-base font-medium"
+          >
+            <span class="truncate"> History </span>
+          </CardTitle>
           <Popover>
             <PopoverTrigger as-child>
-              <Button
-                variant="link"
-                class="text-destructive h-auto justify-start gap-3 border-0 p-0"
-              >
+              <Button variant="link" class="h-auto justify-start gap-2 p-0">
+                <icon-lucide-calendar />
                 {{
                   range.start
                     ? df.format(range.start.toDate(getLocalTimeZone()))
@@ -255,11 +258,6 @@ const range = ref({
               />
             </PopoverContent>
           </Popover>
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
-            <span class="truncate"> History </span>
-          </CardTitle>
         </CardHeader>
         <CardContent>
           <ul role="list" class="-mb-8">

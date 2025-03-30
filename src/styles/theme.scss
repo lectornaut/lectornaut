@@ -666,186 +666,188 @@
   --sidebar-ring: var(--color-stone-500);
 }
 
-:root {
-  @include light-theme;
-
-  &[data-accent="red"] {
-    @include red-light-theme;
-  }
-
-  &[data-accent="orange"] {
-    @include orange-light-theme;
-  }
-
-  &[data-accent="amber"] {
-    @include amber-light-theme;
-  }
-
-  &[data-accent="yellow"] {
-    @include yellow-light-theme;
-  }
-
-  &[data-accent="lime"] {
-    @include lime-light-theme;
-  }
-
-  &[data-accent="green"] {
-    @include green-light-theme;
-  }
-
-  &[data-accent="emerald"] {
-    @include emerald-light-theme;
-  }
-
-  &[data-accent="teal"] {
-    @include teal-light-theme;
-  }
-
-  &[data-accent="cyan"] {
-    @include cyan-light-theme;
-  }
-
-  &[data-accent="sky"] {
-    @include sky-light-theme;
-  }
-
-  &[data-accent="blue"] {
-    @include blue-light-theme;
-  }
-
-  &[data-accent="indigo"] {
-    @include indigo-light-theme;
-  }
-
-  &[data-accent="violet"] {
-    @include violet-light-theme;
-  }
-
-  &[data-accent="purple"] {
-    @include purple-light-theme;
-  }
-
-  &[data-accent="fuchsia"] {
-    @include fuchsia-light-theme;
-  }
-
-  &[data-accent="pink"] {
-    @include pink-light-theme;
-  }
-
-  &[data-accent="rose"] {
-    @include rose-light-theme;
-  }
-
-  &[data-accent="slate"] {
-    @include slate-light-theme;
-  }
-
-  &[data-accent="gray"] {
-    @include gray-light-theme;
-  }
-
-  &[data-accent="zinc"] {
-    @include zinc-light-theme;
-  }
-
-  &[data-accent="neutral"] {
-    @include neutral-light-theme;
-  }
-
-  &[data-accent="stone"] {
-    @include stone-light-theme;
-  }
-
-  &.dark {
-    @include dark-theme;
+@layer base {
+  :root {
+    @include light-theme;
 
     &[data-accent="red"] {
-      @include red-dark-theme;
+      @include red-light-theme;
     }
 
     &[data-accent="orange"] {
-      @include orange-dark-theme;
+      @include orange-light-theme;
     }
 
     &[data-accent="amber"] {
-      @include amber-dark-theme;
+      @include amber-light-theme;
     }
 
     &[data-accent="yellow"] {
-      @include yellow-dark-theme;
+      @include yellow-light-theme;
     }
 
     &[data-accent="lime"] {
-      @include lime-dark-theme;
+      @include lime-light-theme;
     }
 
     &[data-accent="green"] {
-      @include green-dark-theme;
+      @include green-light-theme;
     }
 
     &[data-accent="emerald"] {
-      @include emerald-dark-theme;
+      @include emerald-light-theme;
     }
 
     &[data-accent="teal"] {
-      @include teal-dark-theme;
+      @include teal-light-theme;
     }
 
     &[data-accent="cyan"] {
-      @include cyan-dark-theme;
+      @include cyan-light-theme;
     }
 
     &[data-accent="sky"] {
-      @include sky-dark-theme;
+      @include sky-light-theme;
     }
 
     &[data-accent="blue"] {
-      @include blue-dark-theme;
+      @include blue-light-theme;
     }
 
     &[data-accent="indigo"] {
-      @include indigo-dark-theme;
+      @include indigo-light-theme;
     }
 
     &[data-accent="violet"] {
-      @include violet-dark-theme;
+      @include violet-light-theme;
     }
 
     &[data-accent="purple"] {
-      @include purple-dark-theme;
+      @include purple-light-theme;
     }
 
     &[data-accent="fuchsia"] {
-      @include fuchsia-dark-theme;
+      @include fuchsia-light-theme;
     }
 
     &[data-accent="pink"] {
-      @include pink-dark-theme;
+      @include pink-light-theme;
     }
 
     &[data-accent="rose"] {
-      @include rose-dark-theme;
+      @include rose-light-theme;
     }
 
     &[data-accent="slate"] {
-      @include slate-dark-theme;
+      @include slate-light-theme;
     }
 
     &[data-accent="gray"] {
-      @include gray-dark-theme;
+      @include gray-light-theme;
     }
 
     &[data-accent="zinc"] {
-      @include zinc-dark-theme;
+      @include zinc-light-theme;
     }
 
     &[data-accent="neutral"] {
-      @include neutral-dark-theme;
+      @include neutral-light-theme;
     }
 
     &[data-accent="stone"] {
-      @include stone-dark-theme;
+      @include stone-light-theme;
+    }
+
+    &.dark {
+      @include dark-theme;
+
+      &[data-accent="red"] {
+        @include red-dark-theme;
+      }
+
+      &[data-accent="orange"] {
+        @include orange-dark-theme;
+      }
+
+      &[data-accent="amber"] {
+        @include amber-dark-theme;
+      }
+
+      &[data-accent="yellow"] {
+        @include yellow-dark-theme;
+      }
+
+      &[data-accent="lime"] {
+        @include lime-dark-theme;
+      }
+
+      &[data-accent="green"] {
+        @include green-dark-theme;
+      }
+
+      &[data-accent="emerald"] {
+        @include emerald-dark-theme;
+      }
+
+      &[data-accent="teal"] {
+        @include teal-dark-theme;
+      }
+
+      &[data-accent="cyan"] {
+        @include cyan-dark-theme;
+      }
+
+      &[data-accent="sky"] {
+        @include sky-dark-theme;
+      }
+
+      &[data-accent="blue"] {
+        @include blue-dark-theme;
+      }
+
+      &[data-accent="indigo"] {
+        @include indigo-dark-theme;
+      }
+
+      &[data-accent="violet"] {
+        @include violet-dark-theme;
+      }
+
+      &[data-accent="purple"] {
+        @include purple-dark-theme;
+      }
+
+      &[data-accent="fuchsia"] {
+        @include fuchsia-dark-theme;
+      }
+
+      &[data-accent="pink"] {
+        @include pink-dark-theme;
+      }
+
+      &[data-accent="rose"] {
+        @include rose-dark-theme;
+      }
+
+      &[data-accent="slate"] {
+        @include slate-dark-theme;
+      }
+
+      &[data-accent="gray"] {
+        @include gray-dark-theme;
+      }
+
+      &[data-accent="zinc"] {
+        @include zinc-dark-theme;
+      }
+
+      &[data-accent="neutral"] {
+        @include neutral-dark-theme;
+      }
+
+      &[data-accent="stone"] {
+        @include stone-dark-theme;
+      }
     }
   }
 }

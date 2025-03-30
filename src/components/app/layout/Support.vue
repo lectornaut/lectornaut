@@ -24,7 +24,7 @@ emitter.on("Menu.Help.Toggle", () => {
             Help and Support
             <kbd class="shortcut-key">?</kbd>
           </TooltipContent>
-          <DropdownMenuContent align="start" side="right">
+          <DropdownMenuContent class="w-56" align="end" side="right">
             <DropdownMenuLabel>Help and Support</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

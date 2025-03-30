@@ -4,10 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  sharp-ico: ^0.1.5
-  sharp: ^0.33.5
-
 importers:
   .:
     dependencies:
@@ -58,16 +54,16 @@ importers:
         version: 4.15.0(vue@3.5.13(typescript@5.8.2))(zod@3.24.2)
       "@vue-flow/background":
         specifier: ^1.3.2
-        version: 1.3.2(@vue-flow/core@1.42.4(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
+        version: 1.3.2(@vue-flow/core@1.42.5(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
       "@vue-flow/controls":
         specifier: ^1.1.2
-        version: 1.1.2(@vue-flow/core@1.42.4(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
+        version: 1.1.2(@vue-flow/core@1.42.5(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
       "@vue-flow/core":
-        specifier: ^1.42.4
-        version: 1.42.4(vue@3.5.13(typescript@5.8.2))
+        specifier: ^1.42.5
+        version: 1.42.5(vue@3.5.13(typescript@5.8.2))
       "@vue-flow/minimap":
-        specifier: ^1.5.2
-        version: 1.5.2(@vue-flow/core@1.42.4(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
+        specifier: ^1.5.3
+        version: 1.5.3(@vue-flow/core@1.42.5(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
       "@vueuse/core":
         specifier: ^13.0.0
         version: 13.0.0(vue@3.5.13(typescript@5.8.2))
@@ -142,7 +138,7 @@ importers:
         version: 1.3.0
       vuefire:
         specifier: ^3.2.1
-        version: 3.2.1(consola@3.4.0)(firebase@11.5.0)(vue@3.5.13(typescript@5.8.2))
+        version: 3.2.1(consola@3.4.2)(firebase@11.5.0)(vue@3.5.13(typescript@5.8.2))
       zod:
         specifier: ^3.24.2
         version: 3.24.2
@@ -178,8 +174,8 @@ importers:
         specifier: 2.0.2
         version: 2.0.2(rollup@2.79.2)
       "@vite-pwa/assets-generator":
-        specifier: ^0.2.6
-        version: 0.2.6
+        specifier: ^1.0.0
+        version: 1.0.0
       "@vitejs/plugin-vue":
         specifier: ^5.2.3
         version: 5.2.3(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(vue@3.5.13(typescript@5.8.2))
@@ -268,8 +264,8 @@ importers:
         specifier: ^1.1.8
         version: 1.1.8(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))
       vite-plugin-pwa:
-        specifier: ^0.21.2
-        version: 0.21.2(@vite-pwa/assets-generator@0.2.6)(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(workbox-build@7.1.1)(workbox-window@7.3.0)
+        specifier: ^1.0.0
+        version: 1.0.0(@vite-pwa/assets-generator@1.0.0)(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(workbox-build@7.1.1)(workbox-window@7.3.0)
       vite-plugin-sitemap:
         specifier: ^0.7.1
         version: 0.7.1
@@ -298,12 +294,6 @@ packages:
     resolution:
       {
         integrity: sha512-xvX6P/lo1B3ej0OsaErAjqgFYzYVcJpamjLAFLYh9vRJngBrMoUG7aVnrGTeqM7yxbyTD5p3F2+0/QUEh8Vzhw==,
-      }
-
-  "@antfu/utils@0.7.10":
-    resolution:
-      {
-        integrity: sha512-+562v9k4aI80m1+VuMHehNJWLOFjBnXn3tdOitzD0il5b7smkSBal4+a3oKiQTbrwMmN/TBUMDvbdoWDehgOww==,
       }
 
   "@antfu/utils@8.1.1":
@@ -2495,6 +2485,13 @@ packages:
         integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==,
       }
 
+  "@quansync/fs@0.1.1":
+    resolution:
+      {
+        integrity: sha512-sx8J1O/+j2lqs8MvsEz6rs/6UAUpCb4fu7C6EqtMqzbS3CmqLkTDTOMK+DrWukvyUuHzl8DhMjfNJzQDTqfGJg==,
+      }
+    engines: { node: ">=20.18.0" }
+
   "@rollup/plugin-babel@5.3.1":
     resolution:
       {
@@ -3586,10 +3583,10 @@ packages:
     peerDependencies:
       zod: ^3.24.0
 
-  "@vite-pwa/assets-generator@0.2.6":
+  "@vite-pwa/assets-generator@1.0.0":
     resolution:
       {
-        integrity: sha512-kK44dXltvoubEo5B+6tCGjUrOWOE1+dA4DForbFpO1rKy2wSkAVGrs8tyfN6DzTig89/QKyV8XYodgmaKyrYng==,
+        integrity: sha512-tWRF/tsqGkND5+dDVnJz7DzQkIRjtTRRYvA3y6l4FwTwK47OK72p1X7ResSz6T7PimIZMuFd+arsB8NRIG+Sww==,
       }
     engines: { node: ">=16.14.0" }
     hasBin: true
@@ -3640,18 +3637,18 @@ packages:
       "@vue-flow/core": ^1.23.0
       vue: ^3.3.0
 
-  "@vue-flow/core@1.42.4":
+  "@vue-flow/core@1.42.5":
     resolution:
       {
-        integrity: sha512-olaLCXAd/tmcWctQTGv1dLLhHHxMKM4/zqRcQxvmCb/kIJQvEkaXeJ0DGRrfV/VCrkvYRaLUJ0JnVsW8bYFLsQ==,
+        integrity: sha512-fNaBzt5i/JYHIzfmR4wtT1TkpfZBgB+Pe/LjCG+aXdNOpeveuegv3AmEcU3GFqf/uYrd1rsma877Lncu1uwz1w==,
       }
     peerDependencies:
       vue: ^3.3.0
 
-  "@vue-flow/minimap@1.5.2":
+  "@vue-flow/minimap@1.5.3":
     resolution:
       {
-        integrity: sha512-XNSpWwwXfCWqJilc2eCW+3ry3r9vhF8HmUw5wrAsUTHiss4R9k5uZLABo7c3T3VdcVRJ8pTfUJ9vjpzb8H+FKg==,
+        integrity: sha512-w8VQc8orPdzfstIPI4/u6H7qlc/uVM1W6b5Upd5NQi0+S9seYl3CiUrzO9liW/f8Fuvr5oHVQg0X6nn2K083rA==,
       }
     peerDependencies:
       "@vue-flow/core": ^1.23.0
@@ -4399,17 +4396,17 @@ packages:
         integrity: sha512-hkT3yDPFbs95mNCy1+7qNKC6Pro+/ibzYxtM2iqEigpf0sVw+bg4Zh9/snjsBcf990vfIsg5+1U7VyiyBb3etg==,
       }
 
-  consola@3.2.3:
-    resolution:
-      {
-        integrity: sha512-I5qxpzLv+sJhTVEoLYNcTW+bThDCPsit0vLNKShZx6rLtpilNpmmeTPaeqJb9ZE9dV3DGaeby6Vuhrw38WjeyQ==,
-      }
-    engines: { node: ^14.18.0 || >=16.10.0 }
-
   consola@3.4.0:
     resolution:
       {
         integrity: sha512-EiPU8G6dQG0GFHNR8ljnZFki/8a+cQwEQ+7wpxdChl02Q8HXlwEZWD5lqAF8vC2sEC3Tehr8hy7vErz88LHyUA==,
+      }
+    engines: { node: ^14.18.0 || >=16.10.0 }
+
+  consola@3.4.2:
+    resolution:
+      {
+        integrity: sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==,
       }
     engines: { node: ^14.18.0 || >=16.10.0 }
 
@@ -6197,13 +6194,6 @@ packages:
       {
         integrity: sha512-nO6jcEfZWQXDhOiBtG2KvKyEptz7RVbpGP4vTD2hLBdmNQSsCiicO2Ioinv6UI4y9ukqnBpy+XZ9H6uLNgJTlw==,
       }
-
-  jiti@1.21.6:
-    resolution:
-      {
-        integrity: sha512-2yTgeWTWzMWkHu6Jp9NKgePDaYHbntiwvYuuJLbbN9vl7DC9DvXKOB2BC3ZZ92D3cvV/aflH0osDfwpHepQ53w==,
-      }
-    hasBin: true
 
   jiti@2.4.2:
     resolution:
@@ -8451,10 +8441,10 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
-  unconfig@0.3.13:
+  unconfig@7.3.1:
     resolution:
       {
-        integrity: sha512-N9Ph5NC4+sqtcOjPfHrRcHekBCadCXWTBzp2VYYbySOHW0PfD9XLCeXshTXjkPYwLrBr9AtSeU0CZmkYECJhng==,
+        integrity: sha512-LH5WL+un92tGAzWS87k7LkAfwpMdm7V0IXG2FxEjZz/QxiIW5J5LkcrKQThj0aRz6+h/lFmKI9EUXmK/T0bcrw==,
       }
 
   unctx@2.4.1:
@@ -8764,14 +8754,14 @@ packages:
     peerDependencies:
       vite: ">=3"
 
-  vite-plugin-pwa@0.21.2:
+  vite-plugin-pwa@1.0.0:
     resolution:
       {
-        integrity: sha512-vFhH6Waw8itNu37hWUJxL50q+CBbNcMVzsKaYHQVrfxTt3ihk3PeLO22SbiP1UNWzcEPaTQv+YVxe4G0KOjAkg==,
+        integrity: sha512-X77jo0AOd5OcxmWj3WnVti8n7Kw2tBgV1c8MCXFclrSlDV23ePzv2eTDIALXI2Qo6nJ5pZJeZAuX0AawvRfoeA==,
       }
     engines: { node: ">=16.0.0" }
     peerDependencies:
-      "@vite-pwa/assets-generator": ^0.2.6
+      "@vite-pwa/assets-generator": ^1.0.0
       vite: ^3.1.0 || ^4.0.0 || ^5.0.0 || ^6.0.0
       workbox-build: ^7.3.0
       workbox-window: ^7.3.0
@@ -9238,8 +9228,6 @@ snapshots:
     dependencies:
       package-manager-detector: 0.2.9
       tinyexec: 0.3.2
-
-  "@antfu/utils@0.7.10": {}
 
   "@antfu/utils@8.1.1": {}
 
@@ -10821,6 +10809,10 @@ snapshots:
 
   "@protobufjs/utf8@1.1.0": {}
 
+  "@quansync/fs@0.1.1":
+    dependencies:
+      quansync: 0.2.10
+
   "@rollup/plugin-babel@5.3.1(@babel/core@7.26.10)(rollup@2.79.2)":
     dependencies:
       "@babel/core": 7.26.10
@@ -11503,14 +11495,14 @@ snapshots:
     transitivePeerDependencies:
       - vue
 
-  "@vite-pwa/assets-generator@0.2.6":
+  "@vite-pwa/assets-generator@1.0.0":
     dependencies:
       cac: 6.7.14
       colorette: 2.0.20
-      consola: 3.2.3
+      consola: 3.4.2
       sharp: 0.33.5
       sharp-ico: 0.1.5
-      unconfig: 0.3.13
+      unconfig: 7.3.1
 
   "@vitejs/plugin-vue@5.2.3(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(vue@3.5.13(typescript@5.8.2))":
     dependencies:
@@ -11529,17 +11521,17 @@ snapshots:
       path-browserify: 1.0.1
       vscode-uri: 3.1.0
 
-  "@vue-flow/background@1.3.2(@vue-flow/core@1.42.4(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))":
+  "@vue-flow/background@1.3.2(@vue-flow/core@1.42.5(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))":
     dependencies:
-      "@vue-flow/core": 1.42.4(vue@3.5.13(typescript@5.8.2))
+      "@vue-flow/core": 1.42.5(vue@3.5.13(typescript@5.8.2))
       vue: 3.5.13(typescript@5.8.2)
 
-  "@vue-flow/controls@1.1.2(@vue-flow/core@1.42.4(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))":
+  "@vue-flow/controls@1.1.2(@vue-flow/core@1.42.5(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))":
     dependencies:
-      "@vue-flow/core": 1.42.4(vue@3.5.13(typescript@5.8.2))
+      "@vue-flow/core": 1.42.5(vue@3.5.13(typescript@5.8.2))
       vue: 3.5.13(typescript@5.8.2)
 
-  "@vue-flow/core@1.42.4(vue@3.5.13(typescript@5.8.2))":
+  "@vue-flow/core@1.42.5(vue@3.5.13(typescript@5.8.2))":
     dependencies:
       "@vueuse/core": 10.11.1(vue@3.5.13(typescript@5.8.2))
       d3-drag: 3.0.0
@@ -11549,9 +11541,9 @@ snapshots:
     transitivePeerDependencies:
       - "@vue/composition-api"
 
-  "@vue-flow/minimap@1.5.2(@vue-flow/core@1.42.4(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))":
+  "@vue-flow/minimap@1.5.3(@vue-flow/core@1.42.5(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))":
     dependencies:
-      "@vue-flow/core": 1.42.4(vue@3.5.13(typescript@5.8.2))
+      "@vue-flow/core": 1.42.5(vue@3.5.13(typescript@5.8.2))
       d3-selection: 3.0.0
       d3-zoom: 3.0.0
       vue: 3.5.13(typescript@5.8.2)
@@ -12036,10 +12028,10 @@ snapshots:
 
   confbox@0.2.1: {}
 
-  consola@3.2.3: {}
-
   consola@3.4.0:
     optional: true
+
+  consola@3.4.2: {}
 
   convert-source-map@1.9.0: {}
 
@@ -13177,8 +13169,6 @@ snapshots:
 
   javascript-natural-sort@0.7.1:
     optional: true
-
-  jiti@1.21.6: {}
 
   jiti@2.4.2: {}
 
@@ -14511,11 +14501,12 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  unconfig@0.3.13:
+  unconfig@7.3.1:
     dependencies:
-      "@antfu/utils": 0.7.10
+      "@quansync/fs": 0.1.1
       defu: 6.1.4
-      jiti: 1.21.6
+      jiti: 2.4.2
+      quansync: 0.2.10
 
   unctx@2.4.1:
     dependencies:
@@ -14738,7 +14729,7 @@ snapshots:
       pathe: 1.1.2
       vite: 6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0)
 
-  vite-plugin-pwa@0.21.2(@vite-pwa/assets-generator@0.2.6)(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(workbox-build@7.1.1)(workbox-window@7.3.0):
+  vite-plugin-pwa@1.0.0(@vite-pwa/assets-generator@1.0.0)(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(workbox-build@7.1.1)(workbox-window@7.3.0):
     dependencies:
       debug: 4.4.0
       pretty-bytes: 6.1.1
@@ -14747,7 +14738,7 @@ snapshots:
       workbox-build: 7.1.1
       workbox-window: 7.3.0
     optionalDependencies:
-      "@vite-pwa/assets-generator": 0.2.6
+      "@vite-pwa/assets-generator": 1.0.0
     transitivePeerDependencies:
       - supports-color
 
@@ -14833,12 +14824,12 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.2
 
-  vuefire@3.2.1(consola@3.4.0)(firebase@11.5.0)(vue@3.5.13(typescript@5.8.2)):
+  vuefire@3.2.1(consola@3.4.2)(firebase@11.5.0)(vue@3.5.13(typescript@5.8.2)):
     dependencies:
       vue: 3.5.13(typescript@5.8.2)
       vue-demi: 0.14.10(vue@3.5.13(typescript@5.8.2))
     optionalDependencies:
-      consola: 3.4.0
+      consola: 3.4.2
       firebase: 11.5.0
 
   web-vitals@4.2.4: {}

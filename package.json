@@ -38,8 +38,8 @@
     "@vee-validate/zod": "^4.15.0",
     "@vue-flow/background": "^1.3.2",
     "@vue-flow/controls": "^1.1.2",
-    "@vue-flow/core": "^1.42.4",
-    "@vue-flow/minimap": "^1.5.2",
+    "@vue-flow/core": "^1.42.5",
+    "@vue-flow/minimap": "^1.5.3",
     "@vueuse/core": "^13.0.0",
     "@vueuse/integrations": "^13.0.0",
     "@vueuse/motion": "^3.0.3",
@@ -78,7 +78,7 @@
     "@types/nprogress": "^0.2.3",
     "@types/uuid": "^10.0.0",
     "@unhead/addons": "2.0.2",
-    "@vite-pwa/assets-generator": "^0.2.6",
+    "@vite-pwa/assets-generator": "^1.0.0",
     "@vitejs/plugin-vue": "^5.2.3",
     "@vue/tsconfig": "^0.7.0",
     "eslint": "^9.23.0",
@@ -108,15 +108,11 @@
     "vite": "^6.2.3",
     "vite-plugin-checker": "^0.9.1",
     "vite-plugin-image-optimizer": "^1.1.8",
-    "vite-plugin-pwa": "^0.21.2",
+    "vite-plugin-pwa": "^1.0.0",
     "vite-plugin-sitemap": "^0.7.1",
     "vite-plugin-vue-layouts": "^0.11.0",
     "vue-eslint-parser": "^10.1.1",
     "vue-tsc": "3.0.0-alpha.2",
     "workbox-window": "^7.3.0"
-  },
-  "resolutions": {
-    "sharp-ico": "^0.1.5",
-    "sharp": "^0.33.5"
   }
 }

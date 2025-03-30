@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 @plugin "@tailwindcss/forms";
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -97,25 +97,6 @@
 }
 
 @layer base {
-  :root {
-    --radius: 0.5rem;
-    --vis-tooltip-background-color: none;
-    --vis-tooltip-border-color: none;
-    --vis-tooltip-text-color: none;
-    --vis-tooltip-shadow-color: none;
-    --vis-tooltip-backdrop-filter: none;
-    --vis-tooltip-padding: none;
-    --vis-primary-color: var(--primary);
-    --vis-secondary-color: var(--secondary);
-    --vis-text-color: var(--foreground);
-    --vf-node-color: var(--foreground);
-    --vf-box-shadow: var(--foreground);
-    --vf-node-bg: var(--background);
-    --vf-node-text: var(--foreground);
-    --vf-handle: var(--border);
-    --vf-connection-path: var(--border);
-  }
-
   * {
     @apply border-border outline-ring/50;
   }
@@ -138,6 +119,25 @@
     @apply overflow-hidden;
     @apply overscroll-none;
     @apply accent-current;
+  }
+
+  :root {
+    --radius: 0.5rem;
+    --vis-tooltip-background-color: none;
+    --vis-tooltip-border-color: none;
+    --vis-tooltip-text-color: none;
+    --vis-tooltip-shadow-color: none;
+    --vis-tooltip-backdrop-filter: none;
+    --vis-tooltip-padding: none;
+    --vis-primary-color: var(--primary);
+    --vis-secondary-color: var(--secondary);
+    --vis-text-color: var(--foreground);
+    --vf-node-color: var(--foreground);
+    --vf-box-shadow: var(--foreground);
+    --vf-node-bg: var(--background);
+    --vf-node-text: var(--foreground);
+    --vf-handle: var(--border);
+    --vf-connection-path: var(--border);
   }
 }
 
