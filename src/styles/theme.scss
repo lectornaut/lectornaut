@@ -3,18 +3,18 @@
 
   --background: var(--color-white);
   --foreground: var(--color-neutral-800);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-500);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
   --card: var(--color-white);
   --card-foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
+  --popover: var(--color-white);
+  --popover-foreground: var(--color-neutral-800);
   --secondary: var(--color-neutral-100);
   --secondary-foreground: var(--color-neutral-600);
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
   --accent: var(--color-neutral-100);
   --accent-foreground: var(--color-black);
+  --border: var(--color-neutral-200);
+  --input: var(--color-neutral-200);
   --sidebar-background: var(--color-white);
   --sidebar-foreground: var(--color-neutral-800);
   --sidebar-primary: var(--color-neutral-800);
@@ -337,18 +337,18 @@
 
   --background: var(--color-neutral-950);
   --foreground: var(--color-neutral-200);
-  --muted: var(--color-neutral-900);
-  --muted-foreground: var(--color-neutral-500);
-  --popover: var(--color-black);
-  --popover-foreground: var(--color-neutral-100);
   --card: var(--color-neutral-950);
   --card-foreground: var(--color-neutral-100);
-  --border: var(--color-neutral-800);
-  --input: var(--color-neutral-800);
+  --popover: var(--color-black);
+  --popover-foreground: var(--color-neutral-100);
   --secondary: var(--color-neutral-900);
   --secondary-foreground: var(--color-neutral-400);
+  --muted: var(--color-neutral-900);
+  --muted-foreground: var(--color-neutral-500);
   --accent: var(--color-neutral-900);
   --accent-foreground: var(--color-white);
+  --border: var(--color-neutral-800);
+  --input: var(--color-neutral-800);
   --sidebar-background: var(--color-neutral-950);
   --sidebar-foreground: var(--color-neutral-200);
   --sidebar-primary: var(--color-neutral-200);
@@ -757,97 +757,97 @@
     &[data-accent="stone"] {
       @include stone-light-theme;
     }
+  }
 
-    &.dark {
-      @include dark-theme;
+  .dark {
+    @include dark-theme;
 
-      &[data-accent="red"] {
-        @include red-dark-theme;
-      }
+    &[data-accent="red"] {
+      @include red-dark-theme;
+    }
 
-      &[data-accent="orange"] {
-        @include orange-dark-theme;
-      }
+    &[data-accent="orange"] {
+      @include orange-dark-theme;
+    }
 
-      &[data-accent="amber"] {
-        @include amber-dark-theme;
-      }
+    &[data-accent="amber"] {
+      @include amber-dark-theme;
+    }
 
-      &[data-accent="yellow"] {
-        @include yellow-dark-theme;
-      }
+    &[data-accent="yellow"] {
+      @include yellow-dark-theme;
+    }
 
-      &[data-accent="lime"] {
-        @include lime-dark-theme;
-      }
+    &[data-accent="lime"] {
+      @include lime-dark-theme;
+    }
 
-      &[data-accent="green"] {
-        @include green-dark-theme;
-      }
+    &[data-accent="green"] {
+      @include green-dark-theme;
+    }
 
-      &[data-accent="emerald"] {
-        @include emerald-dark-theme;
-      }
+    &[data-accent="emerald"] {
+      @include emerald-dark-theme;
+    }
 
-      &[data-accent="teal"] {
-        @include teal-dark-theme;
-      }
+    &[data-accent="teal"] {
+      @include teal-dark-theme;
+    }
 
-      &[data-accent="cyan"] {
-        @include cyan-dark-theme;
-      }
+    &[data-accent="cyan"] {
+      @include cyan-dark-theme;
+    }
 
-      &[data-accent="sky"] {
-        @include sky-dark-theme;
-      }
+    &[data-accent="sky"] {
+      @include sky-dark-theme;
+    }
 
-      &[data-accent="blue"] {
-        @include blue-dark-theme;
-      }
+    &[data-accent="blue"] {
+      @include blue-dark-theme;
+    }
 
-      &[data-accent="indigo"] {
-        @include indigo-dark-theme;
-      }
+    &[data-accent="indigo"] {
+      @include indigo-dark-theme;
+    }
 
-      &[data-accent="violet"] {
-        @include violet-dark-theme;
-      }
+    &[data-accent="violet"] {
+      @include violet-dark-theme;
+    }
 
-      &[data-accent="purple"] {
-        @include purple-dark-theme;
-      }
+    &[data-accent="purple"] {
+      @include purple-dark-theme;
+    }
 
-      &[data-accent="fuchsia"] {
-        @include fuchsia-dark-theme;
-      }
+    &[data-accent="fuchsia"] {
+      @include fuchsia-dark-theme;
+    }
 
-      &[data-accent="pink"] {
-        @include pink-dark-theme;
-      }
+    &[data-accent="pink"] {
+      @include pink-dark-theme;
+    }
 
-      &[data-accent="rose"] {
-        @include rose-dark-theme;
-      }
+    &[data-accent="rose"] {
+      @include rose-dark-theme;
+    }
 
-      &[data-accent="slate"] {
-        @include slate-dark-theme;
-      }
+    &[data-accent="slate"] {
+      @include slate-dark-theme;
+    }
 
-      &[data-accent="gray"] {
-        @include gray-dark-theme;
-      }
+    &[data-accent="gray"] {
+      @include gray-dark-theme;
+    }
 
-      &[data-accent="zinc"] {
-        @include zinc-dark-theme;
-      }
+    &[data-accent="zinc"] {
+      @include zinc-dark-theme;
+    }
 
-      &[data-accent="neutral"] {
-        @include neutral-dark-theme;
-      }
+    &[data-accent="neutral"] {
+      @include neutral-dark-theme;
+    }
 
-      &[data-accent="stone"] {
-        @include stone-dark-theme;
-      }
+    &[data-accent="stone"] {
+      @include stone-dark-theme;
     }
   }
 }

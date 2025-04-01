@@ -1,22 +1,17 @@
 <template>
   <SidebarProvider
-    :style="{
-      '--sidebar-width': '270px',
-    }"
-    class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--footer-height:calc(theme(spacing.5))] [--header-height:calc(theme(spacing.14))]"
+    class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--footer-height:calc(theme(spacing.5))] [--header-height:calc(theme(spacing.12))]"
   >
     <Titlebar />
     <Separator />
     <div class="no-scrollbar flex grow overflow-hidden overscroll-none">
       <LeftSidebar
-        class="top-[calc(var(--header-height)_+_1px)] bottom-[calc(var(--footer-height)_+_1px)] h-[calc(100svh_-_var(--header-height)_-_var(--footer-height)))]"
+        class="top-[calc(var(--header-height)_+_1px)] bottom-[calc(var(--footer-height)_+_1px)] h-[calc(100svh_-_var(--header-height)_-_var(--footer-height)_-_2px))]"
       />
       <div
         class="no-scrollbar flex grow divide-x divide-dashed overflow-hidden overscroll-none"
       >
-        <FlowSidebar
-          class="top-[calc(var(--header-height)_+_1px)] bottom-[calc(var(--footer-height)_+_1px)] h-[calc(100svh_-_var(--header-height)_-_var(--footer-height)))]"
-        />
+        <FlowSidebar />
         <div
           class="no-scrollbar flex grow flex-col overflow-auto overscroll-none"
         >
@@ -42,9 +37,7 @@
             </RouterView>
           </main>
         </div>
-        <RightSidebar
-          class="top-[calc(var(--header-height)_+_1px)] bottom-[calc(var(--footer-height)_+_1px)] h-[calc(100svh_-_var(--header-height)_-_var(--footer-height)))]"
-        />
+        <RightSidebar />
       </div>
     </div>
     <Separator />

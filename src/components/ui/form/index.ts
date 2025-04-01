@@ -1,4 +1,8 @@
-export { Form, Field as FormField } from "vee-validate"
+export {
+  Form,
+  Field as FormField,
+  FieldArray as FormFieldArray,
+} from "vee-validate"
 export { default as FormControl } from "./FormControl.vue"
 export { default as FormDescription } from "./FormDescription.vue"
 export { default as FormItem } from "./FormItem.vue"

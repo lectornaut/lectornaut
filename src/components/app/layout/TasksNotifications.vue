@@ -113,7 +113,7 @@ const components: { title: string; href: string; description: string }[] = [
   <NavigationMenu class="z-40">
     <NavigationMenuList class="flex items-center gap-2">
       <NavigationMenuItem>
-        <NavigationMenuTrigger>
+        <NavigationMenuTrigger class="bg-transparent px-2">
           <span
             class="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full"
           >
@@ -121,8 +121,8 @@ const components: { title: string; href: string; description: string }[] = [
           </span>
           <!-- <span class="truncate"> Tasks </span> -->
         </NavigationMenuTrigger>
-        <NavigationMenuContent>
-          <div class="w-96 -translate-x-px">
+        <NavigationMenuContent class="p-0">
+          <div class="w-80">
             <div
               class="bg-background sticky top-0 z-10 flex items-center justify-between border-b py-2 pr-2 pl-4"
             >
@@ -131,36 +131,30 @@ const components: { title: string; href: string; description: string }[] = [
                 <icon-lucide-plus /> New Task
               </Button>
             </div>
-            <div
-              class="no-scrollbar flex h-96 grow flex-col overflow-y-auto p-2"
-            >
+            <div class="no-scrollbar flex h-72 grow flex-col overflow-y-auto">
               <OverlayScrollbarsComponent
                 defer
                 :options="{ scrollbars: { autoHide: 'scroll' } }"
               >
-                <NavigationMenuLink
-                  v-for="(component, index) in components"
-                  :key="index"
-                  as-child
-                >
-                  <Button
-                    variant="ghost"
-                    class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
+                <div class="grid gap-2 p-2">
+                  <NavigationMenuLink
+                    v-for="(component, index) in components"
+                    :key="index"
                     as-child
                   >
-                    <RouterLink :key="index" :to="component.href">
-                      <span
-                        class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
-                      >
-                        <icon-lucide-check />
-                      </span>
-                      <div class="flex flex-col">
-                        <span class="font-medium">
+                    <Alert>
+                      <RouterLink :key="index" :to="component.href">
+                        <span
+                          class="bg-primary text-primary-foreground inline-flex aspect-square size-8 items-center justify-center rounded-full"
+                        >
+                          <icon-lucide-check />
+                        </span>
+                        <AlertTitle>
                           {{ component.title }}
-                        </span>
-                        <span class="text-muted-foreground">
+                        </AlertTitle>
+                        <AlertDescription class="text-muted-foreground">
                           {{ component.description }}
-                        </span>
+                        </AlertDescription>
                         <div
                           class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
                         >
@@ -179,17 +173,17 @@ const components: { title: string; href: string; description: string }[] = [
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                      </div>
-                    </RouterLink>
-                  </Button>
-                </NavigationMenuLink>
+                      </RouterLink>
+                    </Alert>
+                  </NavigationMenuLink>
+                </div>
               </OverlayScrollbarsComponent>
             </div>
           </div>
         </NavigationMenuContent>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <NavigationMenuTrigger>
+        <NavigationMenuTrigger class="bg-transparent px-2">
           <span
             class="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full"
           >
@@ -197,8 +191,8 @@ const components: { title: string; href: string; description: string }[] = [
           </span>
           <!-- <span class="truncate"> Notifications </span> -->
         </NavigationMenuTrigger>
-        <NavigationMenuContent>
-          <div class="w-96 -translate-x-px">
+        <NavigationMenuContent class="p-0">
+          <div class="w-80">
             <div
               class="bg-background sticky top-0 z-10 flex items-center justify-between border-b py-2 pr-2 pl-4"
             >
@@ -207,36 +201,30 @@ const components: { title: string; href: string; description: string }[] = [
                 <icon-lucide-check-check /> Mark all as read
               </Button>
             </div>
-            <div
-              class="no-scrollbar flex h-96 grow flex-col overflow-y-auto p-2"
-            >
+            <div class="no-scrollbar flex h-72 grow flex-col overflow-y-auto">
               <OverlayScrollbarsComponent
                 defer
                 :options="{ scrollbars: { autoHide: 'scroll' } }"
               >
-                <NavigationMenuLink
-                  v-for="(component, index) in components"
-                  :key="index"
-                  as-child
-                >
-                  <Button
-                    variant="ghost"
-                    class="group relative flex h-auto items-start justify-start gap-3 px-3 py-2 leading-normal whitespace-normal"
+                <div class="grid gap-2 p-2">
+                  <NavigationMenuLink
+                    v-for="(component, index) in components"
+                    :key="index"
                     as-child
                   >
-                    <RouterLink :key="index" :to="component.href">
-                      <span
-                        class="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-1"
-                      >
-                        <icon-lucide-bell />
-                      </span>
-                      <div class="flex flex-col">
-                        <span class="font-medium">
+                    <Alert>
+                      <RouterLink :key="index" :to="component.href">
+                        <span
+                          class="bg-primary text-primary-foreground inline-flex aspect-square size-8 items-center justify-center rounded-full"
+                        >
+                          <icon-lucide-bell />
+                        </span>
+                        <AlertTitle>
                           {{ component.title }}
-                        </span>
-                        <span class="text-muted-foreground">
+                        </AlertTitle>
+                        <AlertDescription class="text-muted-foreground">
                           {{ component.description }}
-                        </span>
+                        </AlertDescription>
                         <div
                           class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
                         >
@@ -255,10 +243,10 @@ const components: { title: string; href: string; description: string }[] = [
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                      </div>
-                    </RouterLink>
-                  </Button>
-                </NavigationMenuLink>
+                      </RouterLink>
+                    </Alert>
+                  </NavigationMenuLink>
+                </div>
               </OverlayScrollbarsComponent>
             </div>
           </div>

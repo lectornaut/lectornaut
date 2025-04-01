@@ -27,11 +27,11 @@ onBeforeUnmount(() => {
 
 <template>
   <header
-    class="min-h-titlebar-height flex shrink-0 items-center justify-center"
+    class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top flex shrink-0 items-center justify-center"
   >
     <div
       data-tauri-drag-region
-      class="grid h-full w-full grid-cols-3 items-center gap-2 p-2"
+      class="grid h-full w-full grid-cols-3 items-center gap-2 p-1.5"
     >
       <div
         data-tauri-drag-region
@@ -45,9 +45,8 @@ onBeforeUnmount(() => {
                 as-child
                 class="after:bg-border relative after:absolute after:-right-2 after:h-3 after:w-px after:rounded-full"
               >
-                <Button variant="ghost" class="w-8 gap-2">
+                <Button variant="ghost" class="gap-2">
                   <icon-lucide-grip />
-                  <!-- <span class="truncate">Menu</span> -->
                 </Button>
               </TooltipTrigger>
               <TooltipContent> Menu </TooltipContent>

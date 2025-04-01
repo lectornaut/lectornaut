@@ -69,7 +69,7 @@ function filterItems() {
   filterState.filtered.count = itemCount
 }
 
-function _handleSelect() {
+function handleSelect() {
   filterState.search = ""
 }
 
@@ -89,6 +89,7 @@ provideCommandContext({
 
 <template>
   <ListboxRoot
+    data-slot="command"
     v-bind="forwarded"
     :class="
       cn(

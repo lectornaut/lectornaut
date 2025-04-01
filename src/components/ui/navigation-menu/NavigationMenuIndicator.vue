@@ -22,6 +22,7 @@ const forwardedProps = useForwardProps(delegatedProps)
 
 <template>
   <NavigationMenuIndicator
+    data-slot="navigation-menu-indicator"
     v-bind="forwardedProps"
     :class="
       cn(

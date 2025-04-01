@@ -8,9 +8,12 @@ import {
 } from "reka-ui"
 import { computed, type HTMLAttributes } from "vue"
 
-const props = defineProps<
-  CalendarCellTriggerProps & { class?: HTMLAttributes["class"] }
->()
+const props = withDefaults(
+  defineProps<CalendarCellTriggerProps & { class?: HTMLAttributes["class"] }>(),
+  {
+    as: "button",
+  }
+)
 
 const delegatedProps = computed(() => {
   const { class: _, ...delegated } = props
@@ -23,10 +26,11 @@ const forwardedProps = useForwardProps(delegatedProps)
 
 <template>
   <CalendarCellTrigger
+    data-slot="calendar-cell-trigger"
     :class="
       cn(
         buttonVariants({ variant: 'ghost' }),
-        'h-9 w-9 p-0 font-normal',
+        'size-8 cursor-default p-0 font-normal aria-selected:opacity-100',
         '[&[data-today]:not([data-selected])]:bg-accent [&[data-today]:not([data-selected])]:text-accent-foreground',
         // Selected
         'data-[selected]:bg-primary data-[selected]:text-primary-foreground data-[selected]:hover:bg-primary data-[selected]:hover:text-primary-foreground data-[selected]:focus:bg-primary data-[selected]:focus:text-primary-foreground data-[selected]:opacity-100',
@@ -35,7 +39,7 @@ const forwardedProps = useForwardProps(delegatedProps)
         // Unavailable
         'data-[unavailable]:text-destructive-foreground data-[unavailable]:line-through',
         // Outside months
-        'data-[outside-view]:text-muted-foreground [&[data-outside-view][data-selected]]:bg-accent/50 [&[data-outside-view][data-selected]]:text-muted-foreground data-[outside-view]:opacity-50 [&[data-outside-view][data-selected]]:opacity-30',
+        'data-[outside-view]:text-muted-foreground',
         props.class
       )
     "

@@ -214,20 +214,25 @@ const getStatus = () => {
         </div>
       </SidebarHeader>
       <SidebarHeader>
-        <div class="relative flex items-center justify-between gap-2">
-          <span
-            class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
-          >
-            <icon-lucide-search />
-          </span>
-          <SidebarInput class="h-10 pl-9" placeholder="Search" />
-          <span
-            class="absolute inset-y-0 end-0 flex items-center justify-center"
-          >
-            <Button variant="ghost" size="icon">
-              <icon-lucide-list-filter />
-            </Button>
-          </span>
+        <div class="flex items-center justify-between gap-2">
+          <div class="relative flex h-full items-center justify-between gap-2">
+            <span
+              class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
+            >
+              <icon-lucide-search />
+            </span>
+            <SidebarInput class="h-full pl-9" placeholder="Search" />
+            <!-- <span
+              class="absolute inset-y-0 end-0 flex items-center justify-center"
+            >
+              <Button variant="ghost" size="icon">
+                <icon-lucide-list-filter />
+              </Button>
+            </span> -->
+          </div>
+          <Button variant="ghost" size="icon">
+            <icon-lucide-list-filter />
+          </Button>
         </div>
       </SidebarHeader>
       <Separator />

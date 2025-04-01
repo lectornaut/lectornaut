@@ -19,7 +19,7 @@ const { onDragStart } = useDragAndDrop()
           </Button>
         </div>
       </SidebarHeader>
-      <SidebarHeader class="bg-background">
+      <SidebarHeader>
         <TabsList class="bg-background w-full p-0">
           <TabsTrigger
             v-for="tab in nodes"
