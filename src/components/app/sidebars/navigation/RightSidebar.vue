@@ -18,7 +18,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
       <SidebarHeader>
         <TabsList class="bg-background w-full p-0">
           <TabsTrigger
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
             value="details"
           >
             <span class="flex items-center justify-center gap-2">
@@ -27,7 +27,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
             </span>
           </TabsTrigger>
           <TabsTrigger
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
             value="activity"
           >
             <span class="flex items-center justify-center gap-2">
@@ -36,7 +36,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
             </span>
           </TabsTrigger>
           <TabsTrigger
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
             value="settings"
           >
             <span class="flex items-center justify-center gap-2">

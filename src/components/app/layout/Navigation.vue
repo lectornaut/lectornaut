@@ -40,12 +40,3 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
     </OverlayScrollbarsComponent>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.router-link-exact-active,
-.router-link-active {
-  @apply bg-primary;
-  @apply text-primary-foreground;
-  @apply hover:bg-primary/90;
-}
-</style>

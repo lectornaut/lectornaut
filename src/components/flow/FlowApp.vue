@@ -32,7 +32,7 @@ onConnect(addEdges)
   </div>
 </template>
 
-<style lang="scss">
+<style>
 @import "@vue-flow/core/dist/style.css";
 @import "@vue-flow/core/dist/theme-default.css";
 @import "@vue-flow/minimap/dist/style.css";

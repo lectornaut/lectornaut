@@ -15,7 +15,7 @@
   --accent-foreground: var(--color-black);
   --border: var(--color-neutral-200);
   --input: var(--color-neutral-200);
-  --sidebar-background: var(--color-white);
+  --sidebar: var(--color-white);
   --sidebar-foreground: var(--color-neutral-800);
   --sidebar-primary: var(--color-neutral-800);
   --sidebar-primary-foreground: var(--color-white);
@@ -30,12 +30,12 @@
   --destructive: var(--color-red-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-red-500);
+  --sidebar-ring: var(--color-red-500);
   --chart-1: var(--color-red-500);
   --chart-2: var(--color-red-400);
   --chart-3: var(--color-red-300);
   --chart-4: var(--color-red-200);
   --chart-5: var(--color-red-100);
-  --sidebar-ring: var(--color-red-500);
 }
 
 @mixin orange-light-theme {
@@ -44,12 +44,12 @@
   --destructive: var(--color-orange-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-orange-500);
+  --sidebar-ring: var(--color-orange-500);
   --chart-1: var(--color-orange-500);
   --chart-2: var(--color-orange-400);
   --chart-3: var(--color-orange-300);
   --chart-4: var(--color-orange-200);
   --chart-5: var(--color-orange-100);
-  --sidebar-ring: var(--color-orange-500);
 }
 
 @mixin amber-light-theme {
@@ -58,12 +58,12 @@
   --destructive: var(--color-amber-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-amber-500);
+  --sidebar-ring: var(--color-amber-500);
   --chart-1: var(--color-amber-500);
   --chart-2: var(--color-amber-400);
   --chart-3: var(--color-amber-300);
   --chart-4: var(--color-amber-200);
   --chart-5: var(--color-amber-100);
-  --sidebar-ring: var(--color-amber-500);
 }
 
 @mixin yellow-light-theme {
@@ -72,12 +72,12 @@
   --destructive: var(--color-yellow-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-yellow-500);
+  --sidebar-ring: var(--color-yellow-500);
   --chart-1: var(--color-yellow-500);
   --chart-2: var(--color-yellow-400);
   --chart-3: var(--color-yellow-300);
   --chart-4: var(--color-yellow-200);
   --chart-5: var(--color-yellow-100);
-  --sidebar-ring: var(--color-yellow-500);
 }
 
 @mixin lime-light-theme {
@@ -86,12 +86,12 @@
   --destructive: var(--color-lime-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-lime-500);
+  --sidebar-ring: var(--color-lime-500);
   --chart-1: var(--color-lime-500);
   --chart-2: var(--color-lime-400);
   --chart-3: var(--color-lime-300);
   --chart-4: var(--color-lime-200);
   --chart-5: var(--color-lime-100);
-  --sidebar-ring: var(--color-lime-500);
 }
 
 @mixin green-light-theme {
@@ -100,12 +100,12 @@
   --destructive: var(--color-green-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-green-500);
+  --sidebar-ring: var(--color-green-500);
   --chart-1: var(--color-green-500);
   --chart-2: var(--color-green-400);
   --chart-3: var(--color-green-300);
   --chart-4: var(--color-green-200);
   --chart-5: var(--color-green-100);
-  --sidebar-ring: var(--color-green-500);
 }
 
 @mixin emerald-light-theme {
@@ -114,12 +114,12 @@
   --destructive: var(--color-emerald-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-emerald-500);
+  --sidebar-ring: var(--color-emerald-500);
   --chart-1: var(--color-emerald-500);
   --chart-2: var(--color-emerald-400);
   --chart-3: var(--color-emerald-300);
   --chart-4: var(--color-emerald-200);
   --chart-5: var(--color-emerald-100);
-  --sidebar-ring: var(--color-emerald-500);
 }
 
 @mixin teal-light-theme {
@@ -128,12 +128,12 @@
   --destructive: var(--color-teal-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-teal-500);
+  --sidebar-ring: var(--color-teal-500);
   --chart-1: var(--color-teal-500);
   --chart-2: var(--color-teal-400);
   --chart-3: var(--color-teal-300);
   --chart-4: var(--color-teal-200);
   --chart-5: var(--color-teal-100);
-  --sidebar-ring: var(--color-teal-500);
 }
 
 @mixin cyan-light-theme {
@@ -142,12 +142,12 @@
   --destructive: var(--color-cyan-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-cyan-500);
+  --sidebar-ring: var(--color-cyan-500);
   --chart-1: var(--color-cyan-500);
   --chart-2: var(--color-cyan-400);
   --chart-3: var(--color-cyan-300);
   --chart-4: var(--color-cyan-200);
   --chart-5: var(--color-cyan-100);
-  --sidebar-ring: var(--color-cyan-500);
 }
 
 @mixin sky-light-theme {
@@ -156,12 +156,12 @@
   --destructive: var(--color-sky-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-sky-500);
+  --sidebar-ring: var(--color-sky-500);
   --chart-1: var(--color-sky-500);
   --chart-2: var(--color-sky-400);
   --chart-3: var(--color-sky-300);
   --chart-4: var(--color-sky-200);
   --chart-5: var(--color-sky-100);
-  --sidebar-ring: var(--color-sky-500);
 }
 
 @mixin blue-light-theme {
@@ -170,12 +170,12 @@
   --destructive: var(--color-blue-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-blue-500);
+  --sidebar-ring: var(--color-blue-500);
   --chart-1: var(--color-blue-500);
   --chart-2: var(--color-blue-400);
   --chart-3: var(--color-blue-300);
   --chart-4: var(--color-blue-200);
   --chart-5: var(--color-blue-100);
-  --sidebar-ring: var(--color-blue-500);
 }
 
 @mixin indigo-light-theme {
@@ -184,12 +184,12 @@
   --destructive: var(--color-indigo-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-indigo-500);
+  --sidebar-ring: var(--color-indigo-500);
   --chart-1: var(--color-indigo-500);
   --chart-2: var(--color-indigo-400);
   --chart-3: var(--color-indigo-300);
   --chart-4: var(--color-indigo-200);
   --chart-5: var(--color-indigo-100);
-  --sidebar-ring: var(--color-indigo-500);
 }
 
 @mixin violet-light-theme {
@@ -198,12 +198,12 @@
   --destructive: var(--color-violet-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-violet-500);
+  --sidebar-ring: var(--color-violet-500);
   --chart-1: var(--color-violet-500);
   --chart-2: var(--color-violet-400);
   --chart-3: var(--color-violet-300);
   --chart-4: var(--color-violet-200);
   --chart-5: var(--color-violet-100);
-  --sidebar-ring: var(--color-violet-500);
 }
 
 @mixin purple-light-theme {
@@ -212,12 +212,12 @@
   --destructive: var(--color-purple-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-purple-500);
+  --sidebar-ring: var(--color-purple-500);
   --chart-1: var(--color-purple-500);
   --chart-2: var(--color-purple-400);
   --chart-3: var(--color-purple-300);
   --chart-4: var(--color-purple-200);
   --chart-5: var(--color-purple-100);
-  --sidebar-ring: var(--color-purple-500);
 }
 
 @mixin fuchsia-light-theme {
@@ -226,12 +226,12 @@
   --destructive: var(--color-fuchsia-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-fuchsia-500);
+  --sidebar-ring: var(--color-fuchsia-500);
   --chart-1: var(--color-fuchsia-500);
   --chart-2: var(--color-fuchsia-400);
   --chart-3: var(--color-fuchsia-300);
   --chart-4: var(--color-fuchsia-200);
   --chart-5: var(--color-fuchsia-100);
-  --sidebar-ring: var(--color-fuchsia-500);
 }
 
 @mixin pink-light-theme {
@@ -240,12 +240,12 @@
   --destructive: var(--color-pink-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-pink-500);
+  --sidebar-ring: var(--color-pink-500);
   --chart-1: var(--color-pink-500);
   --chart-2: var(--color-pink-400);
   --chart-3: var(--color-pink-300);
   --chart-4: var(--color-pink-200);
   --chart-5: var(--color-pink-100);
-  --sidebar-ring: var(--color-pink-500);
 }
 
 @mixin rose-light-theme {
@@ -254,12 +254,12 @@
   --destructive: var(--color-rose-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-rose-500);
+  --sidebar-ring: var(--color-rose-500);
   --chart-1: var(--color-rose-500);
   --chart-2: var(--color-rose-400);
   --chart-3: var(--color-rose-300);
   --chart-4: var(--color-rose-200);
   --chart-5: var(--color-rose-100);
-  --sidebar-ring: var(--color-rose-500);
 }
 
 @mixin slate-light-theme {
@@ -268,12 +268,12 @@
   --destructive: var(--color-slate-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-slate-500);
+  --sidebar-ring: var(--color-slate-500);
   --chart-1: var(--color-slate-500);
   --chart-2: var(--color-slate-400);
   --chart-3: var(--color-slate-300);
   --chart-4: var(--color-slate-200);
   --chart-5: var(--color-slate-100);
-  --sidebar-ring: var(--color-slate-500);
 }
 
 @mixin gray-light-theme {
@@ -282,12 +282,12 @@
   --destructive: var(--color-gray-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-gray-500);
+  --sidebar-ring: var(--color-gray-500);
   --chart-1: var(--color-gray-500);
   --chart-2: var(--color-gray-400);
   --chart-3: var(--color-gray-300);
   --chart-4: var(--color-gray-200);
   --chart-5: var(--color-gray-100);
-  --sidebar-ring: var(--color-gray-500);
 }
 
 @mixin zinc-light-theme {
@@ -296,12 +296,12 @@
   --destructive: var(--color-zinc-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-zinc-500);
+  --sidebar-ring: var(--color-zinc-500);
   --chart-1: var(--color-zinc-500);
   --chart-2: var(--color-zinc-400);
   --chart-3: var(--color-zinc-300);
   --chart-4: var(--color-zinc-200);
   --chart-5: var(--color-zinc-100);
-  --sidebar-ring: var(--color-zinc-500);
 }
 
 @mixin neutral-light-theme {
@@ -310,12 +310,12 @@
   --destructive: var(--color-neutral-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-neutral-500);
+  --sidebar-ring: var(--color-neutral-500);
   --chart-1: var(--color-neutral-500);
   --chart-2: var(--color-neutral-400);
   --chart-3: var(--color-neutral-300);
   --chart-4: var(--color-neutral-200);
   --chart-5: var(--color-neutral-100);
-  --sidebar-ring: var(--color-neutral-500);
 }
 
 @mixin stone-light-theme {
@@ -324,12 +324,12 @@
   --destructive: var(--color-stone-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-stone-500);
+  --sidebar-ring: var(--color-stone-500);
   --chart-1: var(--color-stone-500);
   --chart-2: var(--color-stone-400);
   --chart-3: var(--color-stone-300);
   --chart-4: var(--color-stone-200);
   --chart-5: var(--color-stone-100);
-  --sidebar-ring: var(--color-stone-500);
 }
 
 @mixin dark-theme {
@@ -343,13 +343,13 @@
   --popover-foreground: var(--color-neutral-100);
   --secondary: var(--color-neutral-900);
   --secondary-foreground: var(--color-neutral-400);
-  --muted: var(--color-neutral-900);
+  --muted: var(--color-neutral-950);
   --muted-foreground: var(--color-neutral-500);
   --accent: var(--color-neutral-900);
   --accent-foreground: var(--color-white);
   --border: var(--color-neutral-800);
   --input: var(--color-neutral-800);
-  --sidebar-background: var(--color-neutral-950);
+  --sidebar: var(--color-neutral-950);
   --sidebar-foreground: var(--color-neutral-200);
   --sidebar-primary: var(--color-neutral-200);
   --sidebar-primary-foreground: var(--color-black);
@@ -364,12 +364,12 @@
   --destructive: var(--color-red-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-red-500);
+  --sidebar-ring: var(--color-red-500);
   --chart-1: var(--color-red-500);
   --chart-2: var(--color-red-400);
   --chart-3: var(--color-red-300);
   --chart-4: var(--color-red-200);
   --chart-5: var(--color-red-100);
-  --sidebar-ring: var(--color-red-500);
 }
 
 @mixin orange-dark-theme {
@@ -378,12 +378,12 @@
   --destructive: var(--color-orange-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-orange-500);
+  --sidebar-ring: var(--color-orange-500);
   --chart-1: var(--color-orange-500);
   --chart-2: var(--color-orange-400);
   --chart-3: var(--color-orange-300);
   --chart-4: var(--color-orange-200);
   --chart-5: var(--color-orange-100);
-  --sidebar-ring: var(--color-orange-500);
 }
 
 @mixin amber-dark-theme {
@@ -392,12 +392,12 @@
   --destructive: var(--color-amber-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-amber-500);
+  --sidebar-ring: var(--color-amber-500);
   --chart-1: var(--color-amber-500);
   --chart-2: var(--color-amber-400);
   --chart-3: var(--color-amber-300);
   --chart-4: var(--color-amber-200);
   --chart-5: var(--color-amber-100);
-  --sidebar-ring: var(--color-amber-500);
 }
 
 @mixin yellow-dark-theme {
@@ -406,12 +406,12 @@
   --destructive: var(--color-yellow-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-yellow-500);
+  --sidebar-ring: var(--color-yellow-500);
   --chart-1: var(--color-yellow-500);
   --chart-2: var(--color-yellow-400);
   --chart-3: var(--color-yellow-300);
   --chart-4: var(--color-yellow-200);
   --chart-5: var(--color-yellow-100);
-  --sidebar-ring: var(--color-yellow-500);
 }
 
 @mixin lime-dark-theme {
@@ -420,12 +420,12 @@
   --destructive: var(--color-lime-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-lime-500);
+  --sidebar-ring: var(--color-lime-500);
   --chart-1: var(--color-lime-500);
   --chart-2: var(--color-lime-400);
   --chart-3: var(--color-lime-300);
   --chart-4: var(--color-lime-200);
   --chart-5: var(--color-lime-100);
-  --sidebar-ring: var(--color-lime-500);
 }
 
 @mixin green-dark-theme {
@@ -434,12 +434,12 @@
   --destructive: var(--color-green-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-green-500);
+  --sidebar-ring: var(--color-green-500);
   --chart-1: var(--color-green-500);
   --chart-2: var(--color-green-400);
   --chart-3: var(--color-green-300);
   --chart-4: var(--color-green-200);
   --chart-5: var(--color-green-100);
-  --sidebar-ring: var(--color-green-500);
 }
 
 @mixin emerald-dark-theme {
@@ -448,12 +448,12 @@
   --destructive: var(--color-emerald-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-emerald-500);
+  --sidebar-ring: var(--color-emerald-500);
   --chart-1: var(--color-emerald-500);
   --chart-2: var(--color-emerald-400);
   --chart-3: var(--color-emerald-300);
   --chart-4: var(--color-emerald-200);
   --chart-5: var(--color-emerald-100);
-  --sidebar-ring: var(--color-emerald-500);
 }
 
 @mixin teal-dark-theme {
@@ -462,12 +462,12 @@
   --destructive: var(--color-teal-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-teal-500);
+  --sidebar-ring: var(--color-teal-500);
   --chart-1: var(--color-teal-500);
   --chart-2: var(--color-teal-400);
   --chart-3: var(--color-teal-300);
   --chart-4: var(--color-teal-200);
   --chart-5: var(--color-teal-100);
-  --sidebar-ring: var(--color-teal-500);
 }
 
 @mixin cyan-dark-theme {
@@ -476,12 +476,12 @@
   --destructive: var(--color-cyan-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-cyan-500);
+  --sidebar-ring: var(--color-cyan-500);
   --chart-1: var(--color-cyan-500);
   --chart-2: var(--color-cyan-400);
   --chart-3: var(--color-cyan-300);
   --chart-4: var(--color-cyan-200);
   --chart-5: var(--color-cyan-100);
-  --sidebar-ring: var(--color-cyan-500);
 }
 
 @mixin sky-dark-theme {
@@ -490,12 +490,12 @@
   --destructive: var(--color-sky-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-sky-500);
+  --sidebar-ring: var(--color-sky-500);
   --chart-1: var(--color-sky-500);
   --chart-2: var(--color-sky-400);
   --chart-3: var(--color-sky-300);
   --chart-4: var(--color-sky-200);
   --chart-5: var(--color-sky-100);
-  --sidebar-ring: var(--color-sky-500);
 }
 
 @mixin blue-dark-theme {
@@ -504,12 +504,12 @@
   --destructive: var(--color-blue-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-blue-500);
+  --sidebar-ring: var(--color-blue-500);
   --chart-1: var(--color-blue-500);
   --chart-2: var(--color-blue-400);
   --chart-3: var(--color-blue-300);
   --chart-4: var(--color-blue-200);
   --chart-5: var(--color-blue-100);
-  --sidebar-ring: var(--color-blue-500);
 }
 
 @mixin indigo-dark-theme {
@@ -518,12 +518,12 @@
   --destructive: var(--color-indigo-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-indigo-500);
+  --sidebar-ring: var(--color-indigo-500);
   --chart-1: var(--color-indigo-500);
   --chart-2: var(--color-indigo-400);
   --chart-3: var(--color-indigo-300);
   --chart-4: var(--color-indigo-200);
   --chart-5: var(--color-indigo-100);
-  --sidebar-ring: var(--color-indigo-500);
 }
 
 @mixin violet-dark-theme {
@@ -532,12 +532,12 @@
   --destructive: var(--color-violet-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-violet-500);
+  --sidebar-ring: var(--color-violet-500);
   --chart-1: var(--color-violet-500);
   --chart-2: var(--color-violet-400);
   --chart-3: var(--color-violet-300);
   --chart-4: var(--color-violet-200);
   --chart-5: var(--color-violet-100);
-  --sidebar-ring: var(--color-violet-500);
 }
 
 @mixin purple-dark-theme {
@@ -546,12 +546,12 @@
   --destructive: var(--color-purple-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-purple-500);
+  --sidebar-ring: var(--color-purple-500);
   --chart-1: var(--color-purple-500);
   --chart-2: var(--color-purple-400);
   --chart-3: var(--color-purple-300);
   --chart-4: var(--color-purple-200);
   --chart-5: var(--color-purple-100);
-  --sidebar-ring: var(--color-purple-500);
 }
 
 @mixin fuchsia-dark-theme {
@@ -560,12 +560,12 @@
   --destructive: var(--color-fuchsia-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-fuchsia-500);
+  --sidebar-ring: var(--color-fuchsia-500);
   --chart-1: var(--color-fuchsia-500);
   --chart-2: var(--color-fuchsia-400);
   --chart-3: var(--color-fuchsia-300);
   --chart-4: var(--color-fuchsia-200);
   --chart-5: var(--color-fuchsia-100);
-  --sidebar-ring: var(--color-fuchsia-500);
 }
 
 @mixin pink-dark-theme {
@@ -574,12 +574,12 @@
   --destructive: var(--color-pink-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-pink-500);
+  --sidebar-ring: var(--color-pink-500);
   --chart-1: var(--color-pink-500);
   --chart-2: var(--color-pink-400);
   --chart-3: var(--color-pink-300);
   --chart-4: var(--color-pink-200);
   --chart-5: var(--color-pink-100);
-  --sidebar-ring: var(--color-pink-500);
 }
 
 @mixin rose-dark-theme {
@@ -588,12 +588,12 @@
   --destructive: var(--color-rose-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-rose-500);
+  --sidebar-ring: var(--color-rose-500);
   --chart-1: var(--color-rose-500);
   --chart-2: var(--color-rose-400);
   --chart-3: var(--color-rose-300);
   --chart-4: var(--color-rose-200);
   --chart-5: var(--color-rose-100);
-  --sidebar-ring: var(--color-rose-500);
 }
 
 @mixin slate-dark-theme {
@@ -602,12 +602,12 @@
   --destructive: var(--color-slate-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-slate-500);
+  --sidebar-ring: var(--color-slate-500);
   --chart-1: var(--color-slate-500);
   --chart-2: var(--color-slate-400);
   --chart-3: var(--color-slate-300);
   --chart-4: var(--color-slate-200);
   --chart-5: var(--color-slate-100);
-  --sidebar-ring: var(--color-slate-500);
 }
 
 @mixin gray-dark-theme {
@@ -616,12 +616,12 @@
   --destructive: var(--color-gray-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-gray-500);
+  --sidebar-ring: var(--color-gray-500);
   --chart-1: var(--color-gray-500);
   --chart-2: var(--color-gray-400);
   --chart-3: var(--color-gray-300);
   --chart-4: var(--color-gray-200);
   --chart-5: var(--color-gray-100);
-  --sidebar-ring: var(--color-gray-500);
 }
 
 @mixin zinc-dark-theme {
@@ -630,12 +630,12 @@
   --destructive: var(--color-zinc-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-zinc-500);
+  --sidebar-ring: var(--color-zinc-500);
   --chart-1: var(--color-zinc-500);
   --chart-2: var(--color-zinc-400);
   --chart-3: var(--color-zinc-300);
   --chart-4: var(--color-zinc-200);
   --chart-5: var(--color-zinc-100);
-  --sidebar-ring: var(--color-zinc-500);
 }
 
 @mixin neutral-dark-theme {
@@ -644,12 +644,12 @@
   --destructive: var(--color-neutral-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-neutral-500);
+  --sidebar-ring: var(--color-neutral-500);
   --chart-1: var(--color-neutral-500);
   --chart-2: var(--color-neutral-400);
   --chart-3: var(--color-neutral-300);
   --chart-4: var(--color-neutral-200);
   --chart-5: var(--color-neutral-100);
-  --sidebar-ring: var(--color-neutral-500);
 }
 
 @mixin stone-dark-theme {
@@ -658,12 +658,12 @@
   --destructive: var(--color-stone-600);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-stone-500);
+  --sidebar-ring: var(--color-stone-500);
   --chart-1: var(--color-stone-500);
   --chart-2: var(--color-stone-400);
   --chart-3: var(--color-stone-300);
   --chart-4: var(--color-stone-200);
   --chart-5: var(--color-stone-100);
-  --sidebar-ring: var(--color-stone-500);
 }
 
 @layer base {

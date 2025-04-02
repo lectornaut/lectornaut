@@ -143,6 +143,7 @@ declare module 'vue' {
     IconLogosGoogleIcon: typeof import('~icons/logos/google-icon')['default']
     IconLogosGooglePlayIcon: typeof import('~icons/logos/google-play-icon')['default']
     IconLogosMicrosoftIcon: typeof import('~icons/logos/microsoft-icon')['default']
+    IconLucideActivity: typeof import('~icons/lucide/activity')['default']
     IconLucideAlertCircle: typeof import('~icons/lucide/alert-circle')['default']
     IconLucideAlertTriangle: typeof import('~icons/lucide/alert-triangle')['default']
     IconLucideArrowLeft: typeof import('~icons/lucide/arrow-left')['default']

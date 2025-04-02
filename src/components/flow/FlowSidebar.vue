@@ -25,7 +25,7 @@ const { onDragStart } = useDragAndDrop()
             v-for="tab in nodes"
             :key="tab.id"
             :value="tab.id"
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
           >
             <span class="flex items-center justify-center gap-2">
               <span class="truncate"> {{ tab.name }} </span>

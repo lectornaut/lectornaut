@@ -20,8 +20,8 @@ importers:
         specifier: ^3.7.0
         version: 3.7.0
       "@tailwindcss/vite":
-        specifier: ^4.1.0
-        version: 4.1.0(vite@6.2.4(@types/node@22.13.17)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.1)(terser@5.39.0)(yaml@2.7.0))
+        specifier: ^4.1.1
+        version: 4.1.1(vite@6.2.4(@types/node@22.13.17)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.1)(terser@5.39.0)(yaml@2.7.0))
       "@tanstack/vue-table":
         specifier: ^8.21.2
         version: 8.21.2(vue@3.5.13(typescript@5.8.2))
@@ -29,20 +29,20 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1
       "@tauri-apps/plugin-dialog":
-        specifier: ~2
-        version: 2.2.0
+        specifier: ~2.2.1
+        version: 2.2.1
       "@tauri-apps/plugin-process":
-        specifier: ~2
-        version: 2.2.0
+        specifier: ~2.2.1
+        version: 2.2.1
       "@tauri-apps/plugin-updater":
-        specifier: ~2.6.1
-        version: 2.6.1
+        specifier: ~2.7.0
+        version: 2.7.0
       "@typescript-eslint/parser":
         specifier: ^8.29.0
         version: 8.29.0(eslint@9.23.0(jiti@2.4.2))(typescript@5.8.2)
       "@unhead/vue":
-        specifier: 2.0.2
-        version: 2.0.2(vue@3.5.13(typescript@5.8.2))
+        specifier: 2.0.3
+        version: 2.0.3(vue@3.5.13(typescript@5.8.2))
       "@unovis/ts":
         specifier: 1.5.1
         version: 1.5.1
@@ -92,8 +92,8 @@ importers:
         specifier: ^3.13.9
         version: 3.13.9
       lucide-vue-next:
-        specifier: ^0.486.0
-        version: 0.486.0(vue@3.5.13(typescript@5.8.2))
+        specifier: ^0.487.0
+        version: 0.487.0(vue@3.5.13(typescript@5.8.2))
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
@@ -107,8 +107,8 @@ importers:
         specifier: ^0.5.9
         version: 0.5.9(overlayscrollbars@2.11.1)(vue@3.5.13(typescript@5.8.2))
       reka-ui:
-        specifier: 2.1.1
-        version: 2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
+        specifier: 2.2.0
+        version: 2.2.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
       sortablejs:
         specifier: ^1.15.6
         version: 1.15.6
@@ -120,7 +120,7 @@ importers:
         version: 11.1.0
       vaul-vue:
         specifier: ^0.4.1
-        version: 0.4.1(reka-ui@2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
+        version: 0.4.1(reka-ui@2.2.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
       vee-validate:
         specifier: ^4.15.0
         version: 4.15.0(vue@3.5.13(typescript@5.8.2))
@@ -147,17 +147,17 @@ importers:
         specifier: ^9.23.0
         version: 9.23.0
       "@iconify/json":
-        specifier: ^2.2.322
-        version: 2.2.322
+        specifier: ^2.2.323
+        version: 2.2.323
       "@intlify/unplugin-vue-i18n":
         specifier: ^6.0.5
         version: 6.0.5(@vue/compiler-dom@3.5.13)(eslint@9.23.0(jiti@2.4.2))(rollup@2.79.2)(typescript@5.8.2)(vue-i18n@12.0.0-alpha.1(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2))
       "@tailwindcss/forms":
         specifier: ^0.5.10
-        version: 0.5.10(tailwindcss@4.1.0)
+        version: 0.5.10(tailwindcss@4.1.1)
       "@tailwindcss/typography":
         specifier: ^0.5.16
-        version: 0.5.16(tailwindcss@4.1.0)
+        version: 0.5.16(tailwindcss@4.1.1)
       "@tauri-apps/cli":
         specifier: ^2.4.1
         version: 2.4.1
@@ -171,8 +171,8 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0
       "@unhead/addons":
-        specifier: 2.0.2
-        version: 2.0.2(rollup@2.79.2)
+        specifier: 2.0.3
+        version: 2.0.3(rollup@2.79.2)
       "@vite-pwa/assets-generator":
         specifier: ^1.0.0
         version: 1.0.0
@@ -228,8 +228,8 @@ importers:
         specifier: ^3.3.2
         version: 3.3.2
       tailwindcss:
-        specifier: ^4.1.0
-        version: 4.1.0
+        specifier: ^4.1.1
+        version: 4.1.1
       tw-animate-css:
         specifier: ^1.2.5
         version: 1.2.5
@@ -2000,10 +2000,10 @@ packages:
       }
     engines: { node: ">=18.18" }
 
-  "@iconify/json@2.2.322":
+  "@iconify/json@2.2.323":
     resolution:
       {
-        integrity: sha512-/P2UFkVgzrCwkTKEfvOITzjrEQB9jfPd03LicRYFrNWpycP/pzxq1jt+bt6Zq8iaPVSddTMLMPQqdNgeAkWfnQ==,
+        integrity: sha512-PtRN4hK9OkT2nlEa76A5QT54E6/SOukceKQkOZv9mk44UOlaS/9fhJFNUEA+FBAXEPcnnCQb2nVui+IAn7xTSw==,
       }
 
   "@iconify/types@2.0.0":
@@ -2746,115 +2746,115 @@ packages:
     peerDependencies:
       tailwindcss: ">=3.0.0 || >= 3.0.0-alpha.1 || >= 4.0.0-alpha.20 || >= 4.0.0-beta.1"
 
-  "@tailwindcss/node@4.1.0":
+  "@tailwindcss/node@4.1.1":
     resolution:
       {
-        integrity: sha512-mfgxGxFaxbsUbaGwKIAQXUSm7Qoojw53FftpoKwo4ANwr9wnDaByz4vi1gMti/xfJvmQ5lzA1DvPiX5yCHtBkQ==,
+        integrity: sha512-xvlh4pvfG/bkv0fEtJDABAm1tjtSmSyi2QmS4zyj1EKNI1UiOYiUq1IphSwDsNJ5vJ9cWEGs4rJXpUdCN2kujQ==,
       }
 
-  "@tailwindcss/oxide-android-arm64@4.1.0":
+  "@tailwindcss/oxide-android-arm64@4.1.1":
     resolution:
       {
-        integrity: sha512-UredFljuHey2Kh5qyYfQVBr0Xfq70ZE5Df6i5IubNYQGs2JXXT4VL0SIUjwzHx5W9T6t7dT7banunlV6lthGPQ==,
+        integrity: sha512-gTyRzfdParpoCU1yyUC/iN6XK6T0Ra4bDlF8Aeul5NP9cLzKEZDogdNVNGv5WZmCDkVol7qlex7TMmcfytMmmw==,
       }
     engines: { node: ">= 10" }
     cpu: [arm64]
     os: [android]
 
-  "@tailwindcss/oxide-darwin-arm64@4.1.0":
+  "@tailwindcss/oxide-darwin-arm64@4.1.1":
     resolution:
       {
-        integrity: sha512-QHQ/46lRVwH9zEBNiRk8AJ3Af4pMq6DuZAI//q323qrPOXjsRdrhLsH9LUO3mqBfHr5EZNUxN3Am5vpO89sntw==,
+        integrity: sha512-dI0QbdMWBvLB3MtaTKetzUKG9CUUQow8JSP4Nm+OxVokeZ+N+f1OmZW/hW1LzMxpx9RQCBgSRL+IIvKRat5Wdg==,
       }
     engines: { node: ">= 10" }
     cpu: [arm64]
     os: [darwin]
 
-  "@tailwindcss/oxide-darwin-x64@4.1.0":
+  "@tailwindcss/oxide-darwin-x64@4.1.1":
     resolution:
       {
-        integrity: sha512-lEMgYHCvQQ6x2KOZ4FwnPprwfnc+UnjzwXRqEYIhB/NlYvXQD1QMf7oKEDRqy94DiZaYox9ZRfG2YJOBgM0UkA==,
+        integrity: sha512-2Y+NPQOTRBCItshPgY/CWg4bKi7E9evMg4bgdb6h9iZObCZLOe3doPcuSxGS3DB0dKyMFKE8pTdWtFUbxZBMSA==,
       }
     engines: { node: ">= 10" }
     cpu: [x64]
     os: [darwin]
 
-  "@tailwindcss/oxide-freebsd-x64@4.1.0":
+  "@tailwindcss/oxide-freebsd-x64@4.1.1":
     resolution:
       {
-        integrity: sha512-9fdImTc+2lA5yHqJ61oeTXfCtzylNOzJVFhyWwVQAJESJJbVCPnj6f+b+Zf/AYAdKQfS6FCThbPEahkQrDCgLQ==,
+        integrity: sha512-N97NGMsB/7CHShbc5ube4dcsW/bYENkBrg8yWi8ieN9boYVRdw3cZviVryV/Nfu9bKbBV9kUvduFF2qBI7rEqg==,
       }
     engines: { node: ">= 10" }
     cpu: [x64]
     os: [freebsd]
 
-  "@tailwindcss/oxide-linux-arm-gnueabihf@4.1.0":
+  "@tailwindcss/oxide-linux-arm-gnueabihf@4.1.1":
     resolution:
       {
-        integrity: sha512-HB0bTkUOuTLLSdadyRhKE9yps4/ZBjrojbHTPMSvvf/8yBLZRPpWb+A6IgW5R+2A2AL4KhVPgLwWfoXsErxJFg==,
+        integrity: sha512-33Lk6KbHnUZbXqza6RWNFo9wqPQ4+H5BAn1CkUUfC1RZ1vYbyDN6+iJPj53wmnWJ3mhRI8jWt3Jt1fO02IVdUQ==,
       }
     engines: { node: ">= 10" }
     cpu: [arm]
     os: [linux]
 
-  "@tailwindcss/oxide-linux-arm64-gnu@4.1.0":
+  "@tailwindcss/oxide-linux-arm64-gnu@4.1.1":
     resolution:
       {
-        integrity: sha512-+QtYCwvKLjC46h6RikKkpELJWrpiMMtgyK0aaqhwPLEx1icGgIhwz8dqrkAiqbFRE0KiRrE2aenhYoEkplyRmA==,
+        integrity: sha512-LyW35RzSUy+80WYScv03HKasAUmMFDaSbNpWfk1gG5gEE9kuRGnDzSrqMoLAmY/kzMCYP/1kqmUiAx8EFLkI2A==,
       }
     engines: { node: ">= 10" }
     cpu: [arm64]
     os: [linux]
 
-  "@tailwindcss/oxide-linux-arm64-musl@4.1.0":
+  "@tailwindcss/oxide-linux-arm64-musl@4.1.1":
     resolution:
       {
-        integrity: sha512-nApadFKM9GauzuPZPlt6TKfELavMHqJ0gVd+GYkYBTwr2t9KhgCAb2sKiFDDIhs1a7gOjsU7P1lEauv3iKFp+Q==,
+        integrity: sha512-1KPnDMlHdqjPTUSFjx55pafvs8RZXRgxfeRgUrukwDKkuj7gFk28vW3Mx65YdiugAc9NWs3VgueZWaM1Po6uGw==,
       }
     engines: { node: ">= 10" }
     cpu: [arm64]
     os: [linux]
 
-  "@tailwindcss/oxide-linux-x64-gnu@4.1.0":
+  "@tailwindcss/oxide-linux-x64-gnu@4.1.1":
     resolution:
       {
-        integrity: sha512-cp0Rf9Wit2kZHhrV8HIoDFD8dxU2+ZTCFCFbDj3a07pGyyPwLCJm5H5VipKXgYrBaLmlYu73ERidW0S5sdEXEg==,
+        integrity: sha512-4WdzA+MRlsinEEE6yxNMLJxpw0kE9XVipbAKdTL8BeUpyC2TdA3TL46lBulXzKp3BIxh3nqyR/UCqzl5o+3waQ==,
       }
     engines: { node: ">= 10" }
     cpu: [x64]
     os: [linux]
 
-  "@tailwindcss/oxide-linux-x64-musl@4.1.0":
+  "@tailwindcss/oxide-linux-x64-musl@4.1.1":
     resolution:
       {
-        integrity: sha512-4/wf42XWBJGXsOS6BhgPhdQbg/qyfdZ1nZvTL9sJoxYN+Ah+cfY5Dd7R0smzI8hmgCRt3TD1lYb72ChTyIA59w==,
+        integrity: sha512-q7Ugbw3ARcjCW2VMUYrcMbJ6aMQuWPArBBE2EqC/swPZTdGADvMQSlvR0VKusUM4HoSsO7ZbvcZ53YwR57+AKw==,
       }
     engines: { node: ">= 10" }
     cpu: [x64]
     os: [linux]
 
-  "@tailwindcss/oxide-win32-arm64-msvc@4.1.0":
+  "@tailwindcss/oxide-win32-arm64-msvc@4.1.1":
     resolution:
       {
-        integrity: sha512-caXJJ0G6NwGbcoxEYdH3MZYN84C3PldaMdAEPMU6bjJXURQlKdSlQ/Ecis7/nSgBkMkicZyhqWmb36Tw/BFSIw==,
+        integrity: sha512-0KpqsovgHcIzm7eAGzzEZsEs0/nPYXnRBv+aPq/GehpNQuE/NAQu+YgZXIIof+VflDFuyXOEnaFr7T5MZ1INhA==,
       }
     engines: { node: ">= 10" }
     cpu: [arm64]
     os: [win32]
 
-  "@tailwindcss/oxide-win32-x64-msvc@4.1.0":
+  "@tailwindcss/oxide-win32-x64-msvc@4.1.1":
     resolution:
       {
-        integrity: sha512-ZHXRXRxB7HBmkUE8U13nmkGGYfR1I2vsuhiYjeDDUFIYpk1BL6caU8hvzkSlL/X5CAQNdIUUJRGom5I0ZyfJOA==,
+        integrity: sha512-B1mjeXNS26kBOHv5sXARf6Wd0PWHV9x1TDlW0ummrBUOUAxAy5wcy4Nii1wzNvCdvC448hgiL06ylhwAbNthmg==,
       }
     engines: { node: ">= 10" }
     cpu: [x64]
     os: [win32]
 
-  "@tailwindcss/oxide@4.1.0":
+  "@tailwindcss/oxide@4.1.1":
     resolution:
       {
-        integrity: sha512-A33oyZKpPFH08d7xkl13Dc8OTsbPhsuls0z9gUCxIHvn8c1BsUACddQxL6HwaeJR1fSYyXZUw8bdWcD8bVawpQ==,
+        integrity: sha512-7+YBgnPQ4+jv6B6WVOerJ6WOzDzNJXrRKDts674v6TKAqFqYRr9+EBtSziO7nNcwQ8JtoZNMeqA+WJDjtCM/7w==,
       }
     engines: { node: ">= 10" }
 
@@ -2866,10 +2866,10 @@ packages:
     peerDependencies:
       tailwindcss: ">=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1"
 
-  "@tailwindcss/vite@4.1.0":
+  "@tailwindcss/vite@4.1.1":
     resolution:
       {
-        integrity: sha512-IszG0h/o8jOGheY0f7v41a9qyDymZ5eU8qm4koTypMKagBhaQA06Keip13wch6sz7rG3cvIG7A3/ytdfRh2BUw==,
+        integrity: sha512-tFTkRZwXq4XKr3S2dUZBxy80wbWYHdDSsu4QOB1yE1HJFKjfxKVpXtup4dyTVdQcLInoHC9lZXFPHnjoBP774g==,
       }
     peerDependencies:
       vite: ^5.2.0 || ^6
@@ -2881,10 +2881,10 @@ packages:
       }
     engines: { node: ">=12" }
 
-  "@tanstack/virtual-core@3.13.5":
+  "@tanstack/virtual-core@3.13.6":
     resolution:
       {
-        integrity: sha512-gMLNylxhJdUlfRR1G3U9rtuwUh2IjdrrniJIDcekVJN3/3i+bluvdMi3+eodnxzJq5nKnxnigo9h0lIpaqV6HQ==,
+        integrity: sha512-cnQUeWnhNP8tJ4WsGcYiX24Gjkc9ALstLbHcBj1t3E7EimN6n6kHH+DPV4PpDnuw00NApQp+ViojMj1GRdwYQg==,
       }
 
   "@tanstack/vue-table@8.21.2":
@@ -2896,10 +2896,10 @@ packages:
     peerDependencies:
       vue: ">=3.2"
 
-  "@tanstack/vue-virtual@3.13.5":
+  "@tanstack/vue-virtual@3.13.6":
     resolution:
       {
-        integrity: sha512-1hhUA6CUjmKc5JDyKLcYOV6mI631FaKKxXh77Ja4UtIy6EOofYaLPk8vVgvK6vLMUSfHR2vI3ZpPY9ibyX60SA==,
+        integrity: sha512-GYdZ3SJBQPzgxhuCE2fvpiH46qzHiVx5XzBSdtESgiqh4poj8UgckjGWYEhxaBbcVt1oLzh1m3Ql4TyH32TOzQ==,
       }
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
@@ -3017,22 +3017,22 @@ packages:
     engines: { node: ">= 10" }
     hasBin: true
 
-  "@tauri-apps/plugin-dialog@2.2.0":
+  "@tauri-apps/plugin-dialog@2.2.1":
     resolution:
       {
-        integrity: sha512-6bLkYK68zyK31418AK5fNccCdVuRnNpbxquCl8IqgFByOgWFivbiIlvb79wpSXi0O+8k8RCSsIpOquebusRVSg==,
+        integrity: sha512-wZmCouo4PgTosh/UoejPw9DPs6RllS5Pp3fuOV2JobCu36mR5AXU2MzU9NZiVaFi/5Zfc8RN0IhcZHnksJ1o8A==,
       }
 
-  "@tauri-apps/plugin-process@2.2.0":
+  "@tauri-apps/plugin-process@2.2.1":
     resolution:
       {
-        integrity: sha512-uypN2Crmyop9z+KRJr3zl71OyVFgTuvHFjsJ0UxxQ/J5212jVa5w4nPEYjIewcn8bUEXacRebwE6F7owgrbhSw==,
+        integrity: sha512-cF/k8J+YjjuowhNG1AboHNTlrGiOwgX5j6NzsX6WFf9FMzyZUchkCgZMxCdSE5NIgFX0vvOgLQhODFJgbMenLg==,
       }
 
-  "@tauri-apps/plugin-updater@2.6.1":
+  "@tauri-apps/plugin-updater@2.7.0":
     resolution:
       {
-        integrity: sha512-iiOevw4kc12Ok99J9KthXwUqwPv1sYjG+tNEDZqPmwvOmIq7s58nKMRz6NJPKXT4U16NzMPffFcP/LUOsz6c4A==,
+        integrity: sha512-oBug5UCH2wOsoYk0LW5LEMAT51mszjg11s8eungRH26x/qOrEjLvnuJJoxVVr9nsWowJ6vnpXKS+lUMfFTlvHQ==,
       }
 
   "@trivago/prettier-plugin-sort-imports@5.2.2":
@@ -3534,16 +3534,16 @@ packages:
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
 
-  "@unhead/addons@2.0.2":
+  "@unhead/addons@2.0.3":
     resolution:
       {
-        integrity: sha512-lgusCYMiaSgIOetTKoZWJ5hGi2EXCuCEZxm5QKKMGyGQPsEm+y3wn6LwHkD+CBmnuNhNH5kgb6nibcOHh5aHfg==,
+        integrity: sha512-zNrDDytI62jsqoU+WTgMXGKeDYwfbLZDNMykgB7wMzz3CJR2KZ17DEojnrMknwLq5CbrgOaNGZ52LL8JCXWA5w==,
       }
 
-  "@unhead/vue@2.0.2":
+  "@unhead/vue@2.0.3":
     resolution:
       {
-        integrity: sha512-pUGcbmPNCALOVWnQRtIjJ5ubNaZus3nHfCBDPEVwhbiLzeLF6wbhgTakwksZ1EegKNOZwRAkmVbV6i+23OYEUQ==,
+        integrity: sha512-6Yci+MTunYuJLYwujBA68hEr5PabBl87yEhImrG4AUogaYWqIwtMHukn0bQvcjaBksXartLJtGUhxhmKgBdyPw==,
       }
     peerDependencies:
       vue: ">=3.5.13"
@@ -6597,10 +6597,10 @@ packages:
         integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==,
       }
 
-  lucide-vue-next@0.486.0:
+  lucide-vue-next@0.487.0:
     resolution:
       {
-        integrity: sha512-Iw6KpUbxBcSLSsTQr69uxUfbe9mJOMmT7XK0MitDvr1P69AWVElDDl7/07YJMBzAG+xZxy90SBzKe8V6HS32UA==,
+        integrity: sha512-ilVgu9EHkfId7WSjmoPkzp13cuzpSGO5J16AmltjRHFoj6MlCBGY8BzsBU/ISKVlDheUxM+MsIYjNo/1hSEa6w==,
       }
     peerDependencies:
       vue: ">=3.0.1"
@@ -6672,6 +6672,12 @@ packages:
     resolution:
       {
         integrity: sha512-IEn+pegP1aManZuckezWCO+XZQDplx1366JoVhTpMpBB1sPey/SbveZQUosKiKiGYjg1wH4pMlNgXbCiYgihQA==,
+      }
+
+  mdn-data@2.19.0:
+    resolution:
+      {
+        integrity: sha512-vXxcNOxiaUhwoBShl2gd8xOQFeKWLosotfwPeRQsDwtruBSDFAzPPLfg2KMgdK8iz4RUVdswyWMuZwOVojrVZQ==,
       }
 
   meow@13.2.0:
@@ -7399,10 +7405,10 @@ packages:
       }
     hasBin: true
 
-  reka-ui@2.1.1:
+  reka-ui@2.2.0:
     resolution:
       {
-        integrity: sha512-awvpQ041LPXAvf2uRVFwedsyz9SwsuoWlRql1fg4XimUCxEI2GOfHo6FIdL44dSPb/eG/gWbdGhoGHLlbX5gPA==,
+        integrity: sha512-eeRrLI4LwJ6dkdwks6KFNKGs0+beqZlHO3JMHen7THDTh+yJ5Z0KNwONmOhhV/0hZC2uJCEExgG60QPzGstkQg==,
       }
     peerDependencies:
       vue: ">= 3.2.0"
@@ -8108,10 +8114,10 @@ packages:
     peerDependencies:
       stylelint: ^16.1.0
 
-  stylelint-scss@6.10.0:
+  stylelint-scss@6.11.1:
     resolution:
       {
-        integrity: sha512-y03if6Qw9xBMoVaf7tzp5BbnYhYvudIKzURkhSHzcHG0bW0fAYvQpTUVJOe7DyhHaxeThBil4ObEMvGbV7+M+w==,
+        integrity: sha512-e4rYo0UY+BIMtGeGanghrvHTjcryxgZbyFxUedp8dLFqC4P70aawNdYjRrQxbnKhu3BNr4+lt5e/53tcKXiwFA==,
       }
     engines: { node: ">=18.12.0" }
     peerDependencies:
@@ -8220,10 +8226,10 @@ packages:
         integrity: sha512-aV27Oj8B7U/tAOMhJsSGdWqelfmudnGMdXIlMnk1JfsjwSjts6o8HyfN7SFH3EztzH4YH8kk6GbLTHzITJO39Q==,
       }
 
-  tailwindcss@4.1.0:
+  tailwindcss@4.1.1:
     resolution:
       {
-        integrity: sha512-vBYstoFnvUZCDxaauNGQQEvJNQgCd1vSMDRYuZZMH1xRRcTboOk1rJrW5yFkEabU9X6Yx1C4LQ+QvPOvQj4Daw==,
+        integrity: sha512-QNbdmeS979Efzim2g/bEvfuh+fTcIdp1y7gA+sb6OYSW74rt7Cr7M78AKdf6HqWT3d5AiTb7SwTT3sLQxr4/qw==,
       }
 
   tapable@2.2.1:
@@ -8459,10 +8465,10 @@ packages:
         integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==,
       }
 
-  unhead@2.0.2:
+  unhead@2.0.3:
     resolution:
       {
-        integrity: sha512-1pcK/rSA70sezpdgmupQPd/yrul8pVFJRwMvWjEthbsXoTXMqjNQlV7NBXWeWt5r2uje1lZJsvRTHF7IvdOhcg==,
+        integrity: sha512-l2O1DSzEid8Fp+I+FMMhFnl1IewyAvBhbdYipaq9Jh2AMndv//yWZ2amjzDLpYpUmDr9E8WTcdoAXkm9wH60Aw==,
       }
 
   unicode-canonical-property-names-ecmascript@2.0.1:
@@ -10516,7 +10522,7 @@ snapshots:
 
   "@humanwhocodes/retry@0.4.2": {}
 
-  "@iconify/json@2.2.322":
+  "@iconify/json@2.2.323":
     dependencies:
       "@iconify/types": 2.0.0
       pathe: 1.1.2
@@ -10935,92 +10941,92 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  "@tailwindcss/forms@0.5.10(tailwindcss@4.1.0)":
+  "@tailwindcss/forms@0.5.10(tailwindcss@4.1.1)":
     dependencies:
       mini-svg-data-uri: 1.4.4
-      tailwindcss: 4.1.0
+      tailwindcss: 4.1.1
 
-  "@tailwindcss/node@4.1.0":
+  "@tailwindcss/node@4.1.1":
     dependencies:
       enhanced-resolve: 5.18.1
       jiti: 2.4.2
       lightningcss: 1.29.2
-      tailwindcss: 4.1.0
+      tailwindcss: 4.1.1
 
-  "@tailwindcss/oxide-android-arm64@4.1.0":
+  "@tailwindcss/oxide-android-arm64@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-darwin-arm64@4.1.0":
+  "@tailwindcss/oxide-darwin-arm64@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-darwin-x64@4.1.0":
+  "@tailwindcss/oxide-darwin-x64@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-freebsd-x64@4.1.0":
+  "@tailwindcss/oxide-freebsd-x64@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-linux-arm-gnueabihf@4.1.0":
+  "@tailwindcss/oxide-linux-arm-gnueabihf@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-linux-arm64-gnu@4.1.0":
+  "@tailwindcss/oxide-linux-arm64-gnu@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-linux-arm64-musl@4.1.0":
+  "@tailwindcss/oxide-linux-arm64-musl@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-linux-x64-gnu@4.1.0":
+  "@tailwindcss/oxide-linux-x64-gnu@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-linux-x64-musl@4.1.0":
+  "@tailwindcss/oxide-linux-x64-musl@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-win32-arm64-msvc@4.1.0":
+  "@tailwindcss/oxide-win32-arm64-msvc@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide-win32-x64-msvc@4.1.0":
+  "@tailwindcss/oxide-win32-x64-msvc@4.1.1":
     optional: true
 
-  "@tailwindcss/oxide@4.1.0":
+  "@tailwindcss/oxide@4.1.1":
     optionalDependencies:
-      "@tailwindcss/oxide-android-arm64": 4.1.0
-      "@tailwindcss/oxide-darwin-arm64": 4.1.0
-      "@tailwindcss/oxide-darwin-x64": 4.1.0
-      "@tailwindcss/oxide-freebsd-x64": 4.1.0
-      "@tailwindcss/oxide-linux-arm-gnueabihf": 4.1.0
-      "@tailwindcss/oxide-linux-arm64-gnu": 4.1.0
-      "@tailwindcss/oxide-linux-arm64-musl": 4.1.0
-      "@tailwindcss/oxide-linux-x64-gnu": 4.1.0
-      "@tailwindcss/oxide-linux-x64-musl": 4.1.0
-      "@tailwindcss/oxide-win32-arm64-msvc": 4.1.0
-      "@tailwindcss/oxide-win32-x64-msvc": 4.1.0
+      "@tailwindcss/oxide-android-arm64": 4.1.1
+      "@tailwindcss/oxide-darwin-arm64": 4.1.1
+      "@tailwindcss/oxide-darwin-x64": 4.1.1
+      "@tailwindcss/oxide-freebsd-x64": 4.1.1
+      "@tailwindcss/oxide-linux-arm-gnueabihf": 4.1.1
+      "@tailwindcss/oxide-linux-arm64-gnu": 4.1.1
+      "@tailwindcss/oxide-linux-arm64-musl": 4.1.1
+      "@tailwindcss/oxide-linux-x64-gnu": 4.1.1
+      "@tailwindcss/oxide-linux-x64-musl": 4.1.1
+      "@tailwindcss/oxide-win32-arm64-msvc": 4.1.1
+      "@tailwindcss/oxide-win32-x64-msvc": 4.1.1
 
-  "@tailwindcss/typography@0.5.16(tailwindcss@4.1.0)":
+  "@tailwindcss/typography@0.5.16(tailwindcss@4.1.1)":
     dependencies:
       lodash.castarray: 4.4.0
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       postcss-selector-parser: 6.0.10
-      tailwindcss: 4.1.0
+      tailwindcss: 4.1.1
 
-  "@tailwindcss/vite@4.1.0(vite@6.2.4(@types/node@22.13.17)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.1)(terser@5.39.0)(yaml@2.7.0))":
+  "@tailwindcss/vite@4.1.1(vite@6.2.4(@types/node@22.13.17)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.1)(terser@5.39.0)(yaml@2.7.0))":
     dependencies:
-      "@tailwindcss/node": 4.1.0
-      "@tailwindcss/oxide": 4.1.0
-      tailwindcss: 4.1.0
+      "@tailwindcss/node": 4.1.1
+      "@tailwindcss/oxide": 4.1.1
+      tailwindcss: 4.1.1
       vite: 6.2.4(@types/node@22.13.17)(jiti@2.4.2)(lightningcss@1.29.2)(sass-embedded@1.86.1)(terser@5.39.0)(yaml@2.7.0)
 
   "@tanstack/table-core@8.21.2": {}
 
-  "@tanstack/virtual-core@3.13.5": {}
+  "@tanstack/virtual-core@3.13.6": {}
 
   "@tanstack/vue-table@8.21.2(vue@3.5.13(typescript@5.8.2))":
     dependencies:
       "@tanstack/table-core": 8.21.2
       vue: 3.5.13(typescript@5.8.2)
 
-  "@tanstack/vue-virtual@3.13.5(vue@3.5.13(typescript@5.8.2))":
+  "@tanstack/vue-virtual@3.13.6(vue@3.5.13(typescript@5.8.2))":
     dependencies:
-      "@tanstack/virtual-core": 3.13.5
+      "@tanstack/virtual-core": 3.13.6
       vue: 3.5.13(typescript@5.8.2)
 
   "@tauri-apps/api@2.4.1": {}
@@ -11072,15 +11078,15 @@ snapshots:
       "@tauri-apps/cli-win32-ia32-msvc": 2.4.1
       "@tauri-apps/cli-win32-x64-msvc": 2.4.1
 
-  "@tauri-apps/plugin-dialog@2.2.0":
+  "@tauri-apps/plugin-dialog@2.2.1":
     dependencies:
       "@tauri-apps/api": 2.4.1
 
-  "@tauri-apps/plugin-process@2.2.0":
+  "@tauri-apps/plugin-process@2.2.1":
     dependencies:
       "@tauri-apps/api": 2.4.1
 
-  "@tauri-apps/plugin-updater@2.6.1":
+  "@tauri-apps/plugin-updater@2.7.0":
     dependencies:
       "@tauri-apps/api": 2.4.1
 
@@ -11418,7 +11424,7 @@ snapshots:
       "@typescript-eslint/types": 8.29.0
       eslint-visitor-keys: 4.2.0
 
-  "@unhead/addons@2.0.2(rollup@2.79.2)":
+  "@unhead/addons@2.0.3(rollup@2.79.2)":
     dependencies:
       "@rollup/pluginutils": 5.1.4(rollup@2.79.2)
       estree-walker: 3.0.3
@@ -11430,10 +11436,10 @@ snapshots:
     transitivePeerDependencies:
       - rollup
 
-  "@unhead/vue@2.0.2(vue@3.5.13(typescript@5.8.2))":
+  "@unhead/vue@2.0.3(vue@3.5.13(typescript@5.8.2))":
     dependencies:
       hookable: 5.5.3
-      unhead: 2.0.2
+      unhead: 2.0.3
       vue: 3.5.13(typescript@5.8.2)
 
   "@unovis/dagre-layout@0.8.8-2":
@@ -13370,7 +13376,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-vue-next@0.486.0(vue@3.5.13(typescript@5.8.2)):
+  lucide-vue-next@0.487.0(vue@3.5.13(typescript@5.8.2)):
     dependencies:
       vue: 3.5.13(typescript@5.8.2)
 
@@ -13430,6 +13436,8 @@ snapshots:
   mdn-data@2.0.30: {}
 
   mdn-data@2.12.2: {}
+
+  mdn-data@2.19.0: {}
 
   meow@13.2.0: {}
 
@@ -13794,13 +13802,13 @@ snapshots:
     dependencies:
       jsesc: 3.0.2
 
-  reka-ui@2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)):
+  reka-ui@2.2.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)):
     dependencies:
       "@floating-ui/dom": 1.6.13
       "@floating-ui/vue": 1.1.6(vue@3.5.13(typescript@5.8.2))
       "@internationalized/date": 3.7.0
       "@internationalized/number": 3.6.0
-      "@tanstack/vue-virtual": 3.13.5(vue@3.5.13(typescript@5.8.2))
+      "@tanstack/vue-virtual": 3.13.6(vue@3.5.13(typescript@5.8.2))
       "@vueuse/core": 12.8.2(typescript@5.8.2)
       "@vueuse/shared": 12.8.2(typescript@5.8.2)
       aria-hidden: 1.2.4
@@ -14237,7 +14245,7 @@ snapshots:
       postcss-scss: 4.0.9(postcss@8.5.3)
       stylelint: 16.17.0(typescript@5.8.2)
       stylelint-config-recommended: 14.0.1(stylelint@16.17.0(typescript@5.8.2))
-      stylelint-scss: 6.10.0(stylelint@16.17.0(typescript@5.8.2))
+      stylelint-scss: 6.11.1(stylelint@16.17.0(typescript@5.8.2))
     optionalDependencies:
       postcss: 8.5.3
 
@@ -14258,12 +14266,12 @@ snapshots:
       stylelint: 16.17.0(typescript@5.8.2)
       stylelint-config-recommended: 14.0.1(stylelint@16.17.0(typescript@5.8.2))
 
-  stylelint-scss@6.10.0(stylelint@16.17.0(typescript@5.8.2)):
+  stylelint-scss@6.11.1(stylelint@16.17.0(typescript@5.8.2)):
     dependencies:
       css-tree: 3.1.0
       is-plain-object: 5.0.0
       known-css-properties: 0.35.0
-      mdn-data: 2.12.2
+      mdn-data: 2.19.0
       postcss-media-query-parser: 0.2.3
       postcss-resolve-nested-selector: 0.1.6
       postcss-selector-parser: 7.1.0
@@ -14372,7 +14380,7 @@ snapshots:
 
   tailwind-merge@3.1.0: {}
 
-  tailwindcss@4.1.0: {}
+  tailwindcss@4.1.1: {}
 
   tapable@2.2.1: {}
 
@@ -14518,7 +14526,7 @@ snapshots:
 
   undici-types@6.20.0: {}
 
-  unhead@2.0.2:
+  unhead@2.0.3:
     dependencies:
       hookable: 5.5.3
 
@@ -14689,10 +14697,10 @@ snapshots:
 
   varint@6.0.0: {}
 
-  vaul-vue@0.4.1(reka-ui@2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2)):
+  vaul-vue@0.4.1(reka-ui@2.2.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2)))(vue@3.5.13(typescript@5.8.2)):
     dependencies:
       "@vueuse/core": 10.11.1(vue@3.5.13(typescript@5.8.2))
-      reka-ui: 2.1.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
+      reka-ui: 2.2.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
       vue: 3.5.13(typescript@5.8.2)
     transitivePeerDependencies:
       - "@vue/composition-api"
