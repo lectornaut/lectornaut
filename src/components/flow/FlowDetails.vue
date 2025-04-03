@@ -87,9 +87,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader>
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate"> Runs </span>
           </CardTitle>
           <CardDescription>
@@ -181,9 +179,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     <div v-for="stat in stats" :key="stat.name">
       <Card class="border-0 shadow-none">
         <CardHeader class="gap-4">
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate"> {{ stat.name }} </span>
             <span
               :class="[
@@ -206,9 +202,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
         <CardFooter v-if="stat.showUpgrade">
           <Card class="w-full shadow-none">
             <CardHeader>
-              <CardTitle
-                class="flex items-center justify-between text-base font-medium"
-              >
+              <CardTitle>
                 <span class="truncate"> {{ stat.usage }} {{ stat.unit }} </span>
               </CardTitle>
               <CardDescription>
@@ -223,8 +217,8 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
               />
             </CardContent>
             <Separator />
-            <CardFooter class="p-0">
-              <div class="flex h-16 w-full items-center">
+            <CardFooter>
+              <div class="flex h-16 w-full items-center gap-6">
                 <div class="flex grow flex-col items-center gap-1">
                   <span class="truncate">
                     {{ stat.usage }} {{ stat.unit }}
@@ -247,9 +241,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader class="gap-4">
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate"> Information </span>
           </CardTitle>
         </CardHeader>
@@ -282,16 +274,14 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader class="gap-4">
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate">Description</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div class="flex items-center justify-between">
             <span class="text-muted-foreground truncate italic">
-              Add a description to this workflow.
+              Add a description.
             </span>
             <!-- <Button variant="secondary" size="icon">
               <icon-lucide-pencil />
@@ -303,9 +293,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader class="gap-4">
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate">Shared with</span>
           </CardTitle>
         </CardHeader>

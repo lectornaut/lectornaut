@@ -15,8 +15,9 @@ emitter.on("Menu.Help.Toggle", () => {
         <DropdownMenu v-model:open="openSupport">
           <TooltipTrigger as-child>
             <DropdownMenuTrigger as-child>
-              <SidebarMenuButton class="data-[state=open]:bg-muted">
+              <SidebarMenuButton class="data-[state=open]:bg-accent">
                 <icon-lucide-circle-help />
+                <span class="truncate">Help & Support</span>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
           </TooltipTrigger>

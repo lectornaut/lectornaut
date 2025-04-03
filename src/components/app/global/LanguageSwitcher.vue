@@ -14,7 +14,7 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
             <Button
               variant="ghost"
               size="icon"
-              class="data-[state=open]:bg-muted"
+              class="data-[state=open]:bg-accent"
             >
               <icon-lucide-languages />
               <span class="sr-only">

@@ -12,13 +12,9 @@ useHead({
       class="mx-auto mt-12 mb-44 flex w-full max-w-2xl grow flex-col items-center"
     >
       <Tabs default-value="personal" class="flex w-full flex-col items-center">
-        <TabsList class="m-4 rounded-xl">
-          <TabsTrigger class="rounded-lg px-3 py-2" value="personal">
-            Personal
-          </TabsTrigger>
-          <TabsTrigger class="rounded-lg px-3 py-2" value="team">
-            Team
-          </TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="personal"> Personal </TabsTrigger>
+          <TabsTrigger value="team"> Team </TabsTrigger>
         </TabsList>
         <HeroText />
         <TabsContent
@@ -84,15 +80,12 @@ useHead({
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">
                       <span class="">Pro</span>
-                      <Badge class="gap-0.5 rounded-sm px-1 py-0">
+                      <Badge>
                         <icon-mingcute-ai-fill />
                         AI
                       </Badge>
                     </span>
-                    <Badge
-                      variant="secondary"
-                      class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
-                    >
+                    <Badge variant="secondary">
                       <span class="text-muted-foreground truncate line-through">
                         $10/mo
                       </span>
@@ -154,15 +147,12 @@ useHead({
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">
                       <span class="">Team</span>
-                      <Badge class="gap-0.5 rounded-sm px-1 py-0">
+                      <Badge>
                         <icon-mingcute-ai-fill />
                         AI
                       </Badge>
                     </span>
-                    <Badge
-                      variant="secondary"
-                      class="gap-1 truncate rounded-sm px-1 py-0 font-medium"
-                    >
+                    <Badge variant="secondary">
                       <span class="text-muted-foreground truncate line-through">
                         $8/user/mo
                       </span>

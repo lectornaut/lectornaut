@@ -210,34 +210,32 @@ const range = ref({
 
 <template>
   <div class="grid">
-    <div>
-      <Card class="border-0 shadow-none">
-        <CardHeader>
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
-            <span class="truncate"> History </span>
-          </CardTitle>
-          <Popover>
-            <PopoverTrigger as-child>
-              <Button variant="link" class="h-auto justify-start gap-2 p-0">
-                <icon-lucide-calendar />
-                {{
-                  range.start
-                    ? df.format(range.start.toDate(getLocalTimeZone()))
-                    : "Start date"
-                }}
-                -
-                {{
-                  range.end
-                    ? df.format(range.end.toDate(getLocalTimeZone()))
-                    : "End date"
-                }}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent class="w-auto p-1">
+    <Card class="border-0 shadow-none">
+      <CardHeader>
+        <CardTitle>
+          <span class="truncate"> History </span>
+        </CardTitle>
+        <Popover>
+          <PopoverTrigger as-child>
+            <Button variant="link" class="h-auto justify-start gap-2 p-0">
+              <!-- <icon-lucide-calendar /> -->
+              {{
+                range.start
+                  ? df.format(range.start.toDate(getLocalTimeZone()))
+                  : "Start date"
+              }}
+              -
+              {{
+                range.end
+                  ? df.format(range.end.toDate(getLocalTimeZone()))
+                  : "End date"
+              }}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent class="grid w-full p-0">
+            <div class="p-2">
               <Select v-model="range">
-                <SelectTrigger>
+                <SelectTrigger class="w-full">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -250,75 +248,72 @@ const range = ref({
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <RangeCalendar
-                v-model="range"
-                :max-value="today(getLocalTimeZone())"
-                initial-focus
-                class="p-0"
+            </div>
+            <Separator />
+            <RangeCalendar
+              v-model="range"
+              :max-value="today(getLocalTimeZone())"
+              initial-focus
+              class="p-2"
+            />
+          </PopoverContent>
+        </Popover>
+      </CardHeader>
+      <CardContent>
+        <ul role="list" class="-mb-8">
+          <li v-for="(event, eventIdx) in timeline" :key="event.id">
+            <div class="relative pb-8">
+              <span
+                v-if="eventIdx !== timeline.length - 1"
+                class="bg-border absolute top-2.5 left-2.5 -ml-px h-full w-0.5"
               />
-            </PopoverContent>
-          </Popover>
-        </CardHeader>
-        <CardContent>
-          <ul role="list" class="-mb-8">
-            <li v-for="(event, eventIdx) in timeline" :key="event.id">
-              <div class="relative pb-8">
-                <span
-                  v-if="eventIdx !== timeline.length - 1"
-                  class="bg-border absolute top-2.5 left-2.5 -ml-px h-full w-0.5"
-                />
-                <div class="relative flex gap-4">
+              <div class="relative flex gap-4">
+                <div>
+                  <span
+                    :class="[
+                      event.iconColor,
+                      'ring-background bg-background flex size-5 items-center justify-center rounded-full ring-6',
+                    ]"
+                  >
+                    <component :is="event.icon" />
+                  </span>
+                </div>
+                <div class="flex min-w-0 flex-1 justify-between space-x-4">
                   <div>
-                    <span
-                      :class="[
-                        event.iconColor,
-                        'ring-background bg-background flex size-5 items-center justify-center rounded-full ring-6',
-                      ]"
-                    >
-                      <component :is="event.icon" />
-                    </span>
+                    <p class="">
+                      {{ event.content }}
+                      <span class="text-muted-foreground">
+                        {{ event.status }}
+                      </span>
+                    </p>
                   </div>
-                  <div class="flex min-w-0 flex-1 justify-between space-x-4">
-                    <div>
-                      <p class="">
-                        {{ event.content }}
-                        <span class="text-muted-foreground">
-                          {{ event.status }}
-                        </span>
-                      </p>
-                    </div>
-                    <div
-                      class="text-muted-foreground flex items-center text-right text-xs whitespace-nowrap"
-                    >
-                      <time :datetime="event.datetime">{{ event.date }}</time>
-                    </div>
+                  <div
+                    class="text-muted-foreground flex items-center text-right text-xs whitespace-nowrap"
+                  >
+                    <time :datetime="event.datetime">{{ event.date }}</time>
                   </div>
                 </div>
               </div>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+            </div>
+          </li>
+        </ul>
+      </CardContent>
+    </Card>
     <SidebarGroup class="p-6">
       <SidebarGroupContent>
         <Card class="shadow-none">
-          <CardHeader class="p-4">
-            <CardTitle
-              class="flex items-center justify-between text-base font-medium"
-            >
-              <span class="truncate"> Retention limit reached </span>
-            </CardTitle>
-            <CardDescription>
+          <CardHeader>
+            <CardTitle> Limit reached </CardTitle>
+            <CardDescription class="text-xs">
               Get unlimited access to your activity timeline by upgrading to the
               Pro plan.
             </CardDescription>
           </CardHeader>
-          <CardFooter class="p-4 pt-0">
+          <CardContent>
             <Button variant="destructive" class="w-full" size="sm">
               Upgrade
             </Button>
-          </CardFooter>
+          </CardContent>
         </Card>
       </SidebarGroupContent>
     </SidebarGroup>

@@ -42,7 +42,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
         <PopoverTrigger as-child>
           <Button
             variant="ghost"
-            class="data-[state=open]:bg-muted gap-3 truncate"
+            class="data-[state=open]:bg-accent gap-3 truncate"
           >
             <Avatar class="size-4">
               <AvatarImage

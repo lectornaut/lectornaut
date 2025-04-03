@@ -12,11 +12,9 @@ const steps = [
     <SidebarGroupContent>
       <Card class="shadow-none">
         <CardHeader class="p-4">
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate">My progress</span>
-            <Badge variant="secondary" class="gap-2 p-1 pl-2">
+            <Badge variant="secondary">
               <span class="truncate"> Skip </span>
               <icon-mdi-arrow-right-circle />
             </Badge>

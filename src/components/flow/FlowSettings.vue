@@ -43,9 +43,7 @@ const team = [
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader>
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate"> General </span>
           </CardTitle>
           <CardDescription>
@@ -79,9 +77,7 @@ const team = [
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader>
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate"> Team </span>
           </CardTitle>
           <CardDescription>
@@ -153,9 +149,7 @@ const team = [
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader>
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate"> Notifications </span>
           </CardTitle>
           <CardDescription>
@@ -217,9 +211,7 @@ const team = [
     <div>
       <Card class="border-0 shadow-none">
         <CardHeader>
-          <CardTitle
-            class="flex items-center justify-between text-base font-medium"
-          >
+          <CardTitle>
             <span class="truncate"> Danger Zone </span>
           </CardTitle>
           <CardDescription>

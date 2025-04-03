@@ -12,7 +12,7 @@ import { store } from "@/modules/theme"
             <Button
               variant="ghost"
               size="icon"
-              class="data-[state=open]:bg-muted"
+              class="data-[state=open]:bg-accent"
             >
               <icon-lucide-sun v-if="store == 'light'" />
               <icon-lucide-moon v-if="store == 'dark'" />

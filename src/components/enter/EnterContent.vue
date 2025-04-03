@@ -117,14 +117,10 @@ const authenticateApple = async () => {
 
 <template>
   <div>
-    <Tabs v-model="authMode" class="flex flex-col gap-4 p-4">
-      <TabsList class="grid grid-cols-2 rounded-xl">
-        <TabsTrigger value="sign-up" class="rounded-lg py-2">
-          Sign up
-        </TabsTrigger>
-        <TabsTrigger value="sign-in" class="rounded-lg py-2">
-          Sign in
-        </TabsTrigger>
+    <Tabs v-model="authMode">
+      <TabsList>
+        <TabsTrigger value="sign-up"> Sign up </TabsTrigger>
+        <TabsTrigger value="sign-in"> Sign in </TabsTrigger>
       </TabsList>
       <TabsContent value="sign-up">
         <div class="flex flex-col gap-4">

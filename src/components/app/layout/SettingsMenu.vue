@@ -9,8 +9,9 @@ import emitter from "@/modules/mitt"
         <DropdownMenu>
           <TooltipTrigger as-child>
             <DropdownMenuTrigger as-child>
-              <SidebarMenuButton class="data-[state=open]:bg-muted">
+              <SidebarMenuButton class="data-[state=open]:bg-accent">
                 <icon-lucide-bolt />
+                <span class="truncate">Settings</span>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
           </TooltipTrigger>

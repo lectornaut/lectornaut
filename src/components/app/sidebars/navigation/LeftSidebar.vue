@@ -141,14 +141,26 @@ const getStatus = () => {
   <Sidebar collapsible="icon" class="[&>[data-sidebar=sidebar]]:flex-row">
     <Sidebar
       collapsible="none"
-      class="w-[calc(var(--sidebar-width-icon))] border-r"
+      class="w-[calc(var(--sidebar-width-icon)_+_1px)] border-r"
     >
       <SidebarHeader>
-        <div
-          class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
-        >
-          <icon-mdi-circle class="size-4" />
-        </div>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" as-child class="md:h-8 md:p-0">
+              <RouterLink to="/">
+                <div
+                  class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg"
+                >
+                  <icon-mdi-circle class="size-4" />
+                </div>
+                <div class="grid flex-1 text-left leading-tight">
+                  <span class="truncate font-semibold">Acme Inc</span>
+                  <span class="truncate text-xs">Enterprise</span>
+                </div>
+              </RouterLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <OverlayScrollbarsComponent
@@ -173,19 +185,13 @@ const getStatus = () => {
                           setOpen(false)
                         } else {
                           activeItem = item
-                          const mail = data.mails.sort(
-                            () => Math.random() - 0.5
-                          )
-                          mails = mail.slice(
-                            0,
-                            Math.max(5, Math.floor(Math.random() * 10) + 1)
-                          )
                           setOpen(true)
                         }
                       }
                     "
                   >
                     <component :is="item.icon" />
+                    <span class="truncate">{{ item.title }}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -251,15 +257,13 @@ const getStatus = () => {
                 @click="() => (mail.active = !mail.active)"
               >
                 <Card
-                  class="shadow-none"
+                  class="rounded-md shadow-none"
                   :class="{ 'border-primary': mail.active }"
                 >
-                  <CardHeader class="p-4">
-                    <CardTitle
-                      class="flex items-center justify-between text-base font-medium"
-                    >
+                  <CardHeader>
+                    <CardTitle class="flex w-full justify-between">
                       <span class="truncate">{{ mail.name }}</span>
-                      <Badge variant="secondary" class="gap-2 p-1">
+                      <Badge variant="secondary" class="p-1">
                         <icon-lucide-ellipsis />
                       </Badge>
                     </CardTitle>
@@ -267,24 +271,20 @@ const getStatus = () => {
                       {{ mail.subject }}
                     </CardDescription>
                   </CardHeader>
-                  <CardFooter class="flex-col items-start gap-1 p-4 pt-0">
-                    <Badge
-                      variant="secondary"
-                      class="gap-2 p-1 pr-2"
-                      :class="getStatus().class"
-                    >
+                  <CardFooter class="flex-col items-start gap-1">
+                    <Badge variant="secondary" :class="getStatus().class">
                       <icon-mdi-circle />
                       <span class="truncate">
                         {{ getStatus().text }}
                       </span>
                     </Badge>
-                    <Badge variant="secondary" class="gap-2 p-1 pr-2">
+                    <Badge variant="secondary">
                       <icon-lucide-hash />
                       <span class="truncate">
                         {{ Math.floor(Math.random() * 60) }} RUNS
                       </span>
                     </Badge>
-                    <Badge variant="secondary" class="gap-2 p-1 pr-2">
+                    <Badge variant="secondary">
                       <icon-lucide-clock />
                       <span class="truncate">
                         {{ Math.floor(Math.random() * 60) }} HOURS
