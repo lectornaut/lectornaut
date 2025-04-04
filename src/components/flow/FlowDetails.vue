@@ -178,8 +178,8 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     </div>
     <div v-for="stat in stats" :key="stat.name">
       <Card class="border-0 shadow-none">
-        <CardHeader class="gap-4">
-          <CardTitle>
+        <CardHeader>
+          <CardTitle class="flex w-full justify-between">
             <span class="truncate"> {{ stat.name }} </span>
             <span
               :class="[
@@ -205,7 +205,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
               <CardTitle>
                 <span class="truncate"> {{ stat.usage }} {{ stat.unit }} </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription class="text-xs">
                 {{ getUsagePercentage(stat.usage, stat.capacity) }}% used in
                 billing cycle.
               </CardDescription>
@@ -217,15 +217,15 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
               />
             </CardContent>
             <Separator />
-            <CardFooter>
-              <div class="flex h-16 w-full items-center gap-6">
+            <CardFooter class="px-0">
+              <div class="flex w-full flex-col gap-6">
                 <div class="flex grow flex-col items-center gap-1">
                   <span class="truncate">
                     {{ stat.usage }} {{ stat.unit }}
                   </span>
                   <span class="text-muted-foreground text-xs"> Used </span>
                 </div>
-                <Separator orientation="vertical" />
+                <Separator />
                 <div class="flex grow flex-col items-center gap-1">
                   <span class="truncate">
                     {{ stat.capacity }} {{ stat.unit }}

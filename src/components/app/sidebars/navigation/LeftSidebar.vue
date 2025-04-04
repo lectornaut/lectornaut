@@ -263,15 +263,12 @@ const getStatus = () => {
                   <CardHeader>
                     <CardTitle class="flex w-full justify-between">
                       <span class="truncate">{{ mail.name }}</span>
-                      <Badge variant="secondary" class="p-1">
-                        <icon-lucide-ellipsis />
-                      </Badge>
                     </CardTitle>
                     <CardDescription class="line-clamp-1">
                       {{ mail.subject }}
                     </CardDescription>
                   </CardHeader>
-                  <CardFooter class="flex-col items-start gap-1">
+                  <CardContent class="flex flex-col gap-1">
                     <Badge variant="secondary" :class="getStatus().class">
                       <icon-mdi-circle />
                       <span class="truncate">
@@ -290,7 +287,7 @@ const getStatus = () => {
                         {{ Math.floor(Math.random() * 60) }} HOURS
                       </span>
                     </Badge>
-                  </CardFooter>
+                  </CardContent>
                 </Card>
               </RouterLink>
             </SidebarGroupContent>

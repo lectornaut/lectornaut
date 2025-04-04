@@ -91,7 +91,7 @@
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "sass-embedded": "^1.86.2",
+    "sass-embedded": "^1.86.3",
     "sharp": "^0.33.5",
     "stylelint": "^16.17.0",
     "stylelint-config-standard-scss": "^14.0.0",
@@ -111,7 +111,7 @@
     "vite-plugin-pwa": "^1.0.0",
     "vite-plugin-sitemap": "^0.7.1",
     "vite-plugin-vue-layouts": "^0.11.0",
-    "vue-eslint-parser": "^10.1.1",
+    "vue-eslint-parser": "^10.1.2",
     "vue-tsc": "3.0.0-alpha.2",
     "workbox-window": "^7.3.0"
   }

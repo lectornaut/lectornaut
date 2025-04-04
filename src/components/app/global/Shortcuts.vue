@@ -3,6 +3,7 @@ import { shortcuts } from "@/helpers/shortcuts"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import Fuse from "fuse.js"
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const openShortcuts = ref(false)
 
@@ -77,8 +78,8 @@ const filteredShortcuts = computed(() => {
 
 <template>
   <Sheet v-model:open="openShortcuts">
-    <SheetContent class="p-0">
-      <SheetHeader class="gap-4 p-6">
+    <SheetContent class="gap-0">
+      <SheetHeader class="gap-4">
         <SheetTitle>Keyboard shortcuts</SheetTitle>
         <SheetDescription>
           <div class="relative w-full items-center">
@@ -97,36 +98,43 @@ const filteredShortcuts = computed(() => {
         </SheetDescription>
       </SheetHeader>
       <Separator />
-      <ScrollArea class="h-full px-6">
-        <Accordion collapsible type="multiple">
+      <OverlayScrollbarsComponent
+        defer
+        :options="{ scrollbars: { autoHide: 'scroll' } }"
+      >
+        <Accordion collapsible type="multiple" class="p-4">
           <AccordionItem
             v-for="category in filteredShortcuts"
             :key="category.id"
             :value="category.id"
           >
-            <AccordionTrigger>
+            <AccordionTrigger class="py-2">
               {{ category.title }}
             </AccordionTrigger>
             <AccordionContent>
               <div
                 v-for="(shortcut, shortcutIndex) in category.shortcuts"
                 :key="shortcutIndex"
-                class="flex items-center justify-between px-4 py-2"
+                class="flex items-center justify-between py-2"
               >
-                <div class="flex items-center">
-                  <span
+                <div class="text-muted-foreground flex items-center gap-2">
+                  <template
                     v-for="(step, stepIndex) in shortcut.description"
                     :key="stepIndex"
-                    class="text-neutral-600 dark:text-neutral-200"
                   >
-                    {{ step }}
-                  </span>
+                    <span class="truncate">
+                      {{ step }}
+                    </span>
+                    <span v-if="stepIndex < shortcut.description.length - 1">
+                      ›
+                    </span>
+                  </template>
                 </div>
                 <span class="flex gap-8">
                   <div
                     v-for="keys in shortcut.keys"
                     :key="keys.toString()"
-                    class="relative flex gap-1 after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:text-neutral-400 after:content-['or'] last-of-type:after:hidden"
+                    class="after:text-muted-foreground relative flex gap-1 after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:content-['or'] last-of-type:after:hidden"
                   >
                     <kbd v-for="key in keys" :key="key" class="shortcut-key">
                       {{ key }}
@@ -142,7 +150,7 @@ const filteredShortcuts = computed(() => {
             </p>
           </div>
         </Accordion>
-      </ScrollArea>
+      </OverlayScrollbarsComponent>
     </SheetContent>
   </Sheet>
 </template>

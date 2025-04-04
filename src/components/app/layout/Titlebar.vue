@@ -31,7 +31,7 @@ onBeforeUnmount(() => {
   >
     <div
       data-tauri-drag-region
-      class="grid h-full w-full grid-cols-3 items-center gap-2 p-1.5"
+      class="grid h-full w-full grid-cols-3 items-center gap-2 p-2"
     >
       <div
         data-tauri-drag-region
