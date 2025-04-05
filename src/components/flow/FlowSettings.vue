@@ -86,68 +86,16 @@ const team = [
         </CardHeader>
         <CardContent class="grid gap-8">
           <div class="grid w-full items-center gap-4">
-            <Label for="project-team"> Members </Label>
-            <div class="flex flex-wrap gap-2">
-              <Button
-                v-for="person in team"
-                :key="person.email"
-                :href="person.href"
-                variant="outline"
-                size="icon"
-                class="rounded-full"
-                as-child
-              >
-                <Avatar>
-                  <AvatarImage
-                    class="inline-block size-8 rounded-full"
-                    :src="person.imageUrl"
-                    :alt="person.name"
-                  />
-                  <AvatarFallback>
-                    {{ person.name[0] }}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-              <Button variant="outline" class="rounded-full" size="icon">
-                <icon-lucide-plus />
-              </Button>
+            <Label for="project-invite"> Invite people </Label>
+            <div class="flex gap-2">
+              <Input
+                id="project-invite"
+                type="text"
+                name="project-invite"
+                placeholder="Email"
+              />
+              <Button variant="outline"> Invite </Button>
             </div>
-          </div>
-          <div class="grid w-full items-center gap-4">
-            <Label for="project-sharing"> Sharing </Label>
-            <RadioGroup
-              name="sharing"
-              default-value="public"
-              class="grid gap-4"
-            >
-              <div class="flex gap-3">
-                <RadioGroupItem id="public" value="public" />
-                <Label for="public" class="grid gap-1">
-                  <span class="truncate">Public to everyone </span>
-                  <span class="text-secondary-foreground/70 text-xs">
-                    Everyone with the link will see this project.
-                  </span>
-                </Label>
-              </div>
-              <div class="flex gap-3">
-                <RadioGroupItem id="private" value="private" />
-                <Label for="private" class="grid gap-1">
-                  <span class="truncate">Private to project members </span>
-                  <span class="text-secondary-foreground/70 text-xs">
-                    Only members of this project would be able to access.
-                  </span>
-                </Label>
-              </div>
-              <div class="flex gap-3">
-                <RadioGroupItem id="personal" value="personal" />
-                <Label for="personal" class="grid gap-1">
-                  <span class="truncate">Private to you </span>
-                  <span class="text-secondary-foreground/70 text-xs">
-                    You are the only one able to access this project.
-                  </span>
-                </Label>
-              </div>
-            </RadioGroup>
           </div>
           <div class="grid w-full items-center gap-4">
             <Label for="project-access"> People with access </Label>
@@ -188,6 +136,42 @@ const team = [
                 </Select>
               </div>
             </div>
+          </div>
+          <div class="grid w-full items-center gap-4">
+            <Label for="project-sharing"> General access </Label>
+            <RadioGroup
+              name="sharing"
+              default-value="public"
+              class="grid gap-4"
+            >
+              <div class="flex gap-3">
+                <RadioGroupItem id="public" value="public" />
+                <Label for="public" class="grid gap-1">
+                  <span class="truncate">Public to everyone</span>
+                  <span class="text-secondary-foreground/70 text-xs">
+                    Anyone on the internet with the link can view.
+                  </span>
+                </Label>
+              </div>
+              <div class="flex gap-3">
+                <RadioGroupItem id="private" value="private" />
+                <Label for="private" class="grid gap-1">
+                  <span class="truncate">Private to members</span>
+                  <span class="text-secondary-foreground/70 text-xs">
+                    Only people in your organization can view.
+                  </span>
+                </Label>
+              </div>
+              <div class="flex gap-3">
+                <RadioGroupItem id="personal" value="personal" />
+                <Label for="personal" class="grid gap-1">
+                  <span class="truncate">Restricted</span>
+                  <span class="text-secondary-foreground/70 text-xs">
+                    Only people with access can open the link.
+                  </span>
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
         </CardContent>
       </Card>

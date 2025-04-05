@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import useDragAndDrop from "@/composables/useDnD"
 import { Background } from "@vue-flow/background"
 import { Controls } from "@vue-flow/controls"
+import "@vue-flow/controls/dist/style.css"
 import { VueFlow, useVueFlow } from "@vue-flow/core"
+import "@vue-flow/core/dist/style.css"
+import "@vue-flow/core/dist/theme-default.css"
 import { MiniMap } from "@vue-flow/minimap"
-import useDragAndDrop from "./useDnD"
+import "@vue-flow/minimap/dist/style.css"
 
 const { onConnect, addEdges } = useVueFlow()
 
@@ -22,7 +26,14 @@ onConnect(addEdges)
       @dragleave="onDragLeave"
       @drop="onDrop"
     >
-      <Controls />
+      <Controls :show-fit-view="false" :show-interactive="false">
+        <template #icon-zoom-in>
+          <icon-lucide-plus />
+        </template>
+        <template #icon-zoom-out>
+          <icon-lucide-minus />
+        </template>
+      </Controls>
       <MiniMap pannable zoomable />
       <Background
         :class="{ 'bg-muted': isDragOver }"
@@ -31,10 +42,3 @@ onConnect(addEdges)
     </VueFlow>
   </div>
 </template>
-
-<style>
-@import "@vue-flow/core/dist/style.css";
-@import "@vue-flow/core/dist/theme-default.css";
-@import "@vue-flow/minimap/dist/style.css";
-@import "@vue-flow/controls/dist/style.css";
-</style>

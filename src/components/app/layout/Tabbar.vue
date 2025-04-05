@@ -51,7 +51,7 @@ emitter.on("Tabs.Close", (id) => {
         <Button
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex w-56 min-w-0 grow justify-between gap-2 border border-transparent bg-transparent pr-2 font-normal shadow-none"
+          class="group relative flex w-60 min-w-0 flex-1 justify-between gap-2 border border-transparent bg-transparent"
           :class="
             tab.id === selectedTab
               ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:bg-background min-w-24 rounded-b-none border-b-transparent text-inherit before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-4 before:w-2 before:rounded-br-full before:border-r before:border-b before:shadow-[0px_8px_0_currentcolor] after:absolute after:-right-2 after:-bottom-2.5 after:z-20 after:h-4 after:w-2 after:rounded-bl-full after:border-b after:border-l after:shadow-[0px_8px_0_currentcolor]'
