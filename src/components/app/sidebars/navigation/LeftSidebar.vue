@@ -141,7 +141,7 @@ const getStatus = () => {
   <Sidebar collapsible="icon" class="[&>[data-sidebar=sidebar]]:flex-row">
     <Sidebar
       collapsible="none"
-      class="w-[calc(var(--sidebar-width-icon)_+_1px)] border-r"
+      class="w-[calc(var(--sidebar-width-icon)+1px)] border-r"
     >
       <SidebarHeader>
         <SidebarMenu>
@@ -236,9 +236,16 @@ const getStatus = () => {
               </Button>
             </span> -->
           </div>
-          <Button variant="ghost" size="icon">
-            <icon-lucide-list-filter />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon">
+                  <icon-lucide-list-filter />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Filter </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </SidebarHeader>
       <Separator />

@@ -2,20 +2,7 @@
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const source = ref(window.location.href)
-const { share, isSupported } = useShare()
-const { copy, copied } = useClipboard({ source })
-
-const startShare = () => {
-  if (isSupported.value) {
-    share({
-      title: "Share workflow",
-      text: "Check out this workflow",
-      url: source.value,
-    })
-  } else {
-    copy(source)
-  }
-}
+const { copy, copied } = useClipboard({ source, legacy: true })
 </script>
 
 <template>
@@ -26,11 +13,17 @@ const startShare = () => {
           <span class="text-foreground ml-2 text-base font-medium">
             Information
           </span>
-          <Button variant="ghost" size="icon" @click="startShare()">
-            <icon-lucide-share-2 v-if="isSupported" />
-            <icon-lucide-copy v-else-if="!copied" />
-            <icon-lucide-check v-else />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon" @click="copy(source)">
+                  <icon-lucide-copy v-if="!copied" />
+                  <icon-lucide-check v-else />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Copy URL </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </SidebarHeader>
       <SidebarHeader>

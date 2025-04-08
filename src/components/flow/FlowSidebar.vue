@@ -14,9 +14,16 @@ const { onDragStart } = useDragAndDrop()
           <span class="text-foreground ml-2 text-base font-medium">
             Widgets</span
           >
-          <Button variant="ghost" size="icon">
-            <icon-lucide-settings />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="icon">
+                  <icon-lucide-settings />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Settings </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </SidebarHeader>
       <SidebarHeader>
