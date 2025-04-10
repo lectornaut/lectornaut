@@ -2,14 +2,14 @@ import { getAnalytics } from "firebase/analytics"
 import { initializeApp } from "firebase/app"
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA_rIOA70xgfZz1YvY21y3g5eml4-5OYaM",
-  authDomain: "hyperjump-app.firebaseapp.com",
-  databaseURL: "https://hyperjump-app.firebaseio.com",
-  projectId: "hyperjump-app",
-  storageBucket: "hyperjump-app.appspot.com",
-  messagingSenderId: "459536818593",
-  appId: "1:459536818593:web:c467b34cd6b9cb77f6abe0",
-  measurementId: "G-SXL6PEFB2F",
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_DATABASE_URL,
+  projectId: import.meta.env.VITE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_APP_ID,
+  measurementId: import.meta.env.VITE_MEASUREMENT_ID,
 }
 
 const firebaseApp = initializeApp(firebaseConfig)

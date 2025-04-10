@@ -30,7 +30,7 @@ app.use(VueFire, {
     VueFireAppCheck({
       debug: process.env.NODE_ENV !== "production",
       provider: new ReCaptchaEnterpriseProvider(
-        "6LcbLl8qAAAAAGSsh5k2tAOP1e1yqFZZ3rR_JvZ2"
+        import.meta.env.VITE_RECAPTCHA_ENTERPRISE_KEY
       ),
       isTokenAutoRefreshEnabled: true,
     }),

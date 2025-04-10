@@ -34,3 +34,6 @@ dev-dist
 
 # Node.js
 .npmrc
+
+# Environment variables
+.env

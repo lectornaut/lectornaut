@@ -22,6 +22,7 @@ onConnect(addEdges)
   <div class="flex grow">
     <VueFlow
       :nodes="nodes"
+      fit-view-on-init
       @dragover="onDragOver"
       @dragleave="onDragLeave"
       @drop="onDrop"
@@ -34,7 +35,7 @@ onConnect(addEdges)
           <icon-lucide-minus />
         </template>
       </Controls>
-      <MiniMap pannable zoomable />
+      <MiniMap pannable zoomable node-color="var(--primary)" />
       <Background
         :class="{ 'bg-muted': isDragOver }"
         class="relative transition"
