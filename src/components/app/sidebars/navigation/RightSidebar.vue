@@ -3,11 +3,26 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const source = ref(window.location.href)
 const { copy, copied } = useClipboard({ source, legacy: true })
+
+const metadata = [
+  {
+    id: "details",
+    name: "Details",
+  },
+  {
+    id: "activity",
+    name: "Activity",
+  },
+  {
+    id: "settings",
+    name: "Settings",
+  },
+]
 </script>
 
 <template>
   <Tabs default-value="details">
-    <Sidebar collapsible="none" class="shrink-0">
+    <Sidebar collapsible="none">
       <SidebarHeader class="border-b border-dashed">
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
@@ -27,32 +42,15 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         </div>
       </SidebarHeader>
       <SidebarHeader>
-        <TabsList class="bg-background w-full p-0">
+        <TabsList class="bg-sidebar w-full p-0">
           <TabsTrigger
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-            value="details"
+            v-for="tab in metadata"
+            :key="tab.id"
+            :value="tab.id"
+            class="data-[state=active]:after:bg-primary data-[state=active]:bg-sidebar text-secondary-foreground data-[state=active]:text-foreground relative w-full py-2.5 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
           >
             <span class="flex items-center justify-center gap-2">
-              <!-- <icon-lucide-workflow /> -->
-              Details
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-            value="activity"
-          >
-            <span class="flex items-center justify-center gap-2">
-              <!-- <icon-lucide-activity /> -->
-              Activity
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-            value="settings"
-          >
-            <span class="flex items-center justify-center gap-2">
-              <!-- <icon-lucide-settings /> -->
-              Settings
+              <span class="truncate"> {{ tab.name }} </span>
             </span>
           </TabsTrigger>
         </TabsList>
@@ -63,13 +61,13 @@ const { copy, copied } = useClipboard({ source, legacy: true })
           defer
           :options="{ scrollbars: { autoHide: 'scroll' } }"
         >
-          <TabsContent value="details" class="mt-0">
+          <TabsContent value="details">
             <FlowDetails />
           </TabsContent>
-          <TabsContent value="activity" class="mt-0">
+          <TabsContent value="activity">
             <FlowActivity />
           </TabsContent>
-          <TabsContent value="settings" class="mt-0">
+          <TabsContent value="settings">
             <FlowSettings />
           </TabsContent>
         </OverlayScrollbarsComponent>

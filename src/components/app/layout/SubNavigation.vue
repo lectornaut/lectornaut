@@ -4,7 +4,7 @@ const running = refAutoReset(false, 5000)
 </script>
 
 <template>
-  <div class="bg-background flex items-center justify-between gap-2 p-2">
+  <div class="bg-sidebar flex items-center justify-between gap-2 p-2">
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>

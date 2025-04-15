@@ -19,10 +19,10 @@ useHead({
         <HeroText />
         <TabsContent
           value="personal"
-          class="animate-in fade-in transition duration-200"
+          class="animate-in fade-in transition"
           tabindex="-1"
         >
-          <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">
+          <div class="w-full rounded-2xl px-8 py-4">
             <Features />
             <div class="mt-12 flex w-full flex-col gap-4 sm:flex-row">
               <RouterLink
@@ -30,7 +30,7 @@ useHead({
                 class="focus-visible:ring-primary relative flex w-full rounded-xl transition focus-visible:ring-2 focus-visible:outline-hidden"
               >
                 <Alert
-                  class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                  class="z-10 flex flex-col items-stretch gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
                 >
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">
@@ -75,7 +75,7 @@ useHead({
                   className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
                 ></div>
                 <Alert
-                  class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                  class="z-10 flex flex-col items-stretch gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
                 >
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">
@@ -127,10 +127,10 @@ useHead({
         </TabsContent>
         <TabsContent
           value="team"
-          class="animate-in fade-in transition duration-200"
+          class="animate-in fade-in transition"
           tabindex="-1"
         >
-          <div class="max-w-d mt-0 w-full rounded-2xl px-8 py-4">
+          <div class="w-full rounded-2xl px-8 py-4">
             <div
               class="mx-auto mb-16 flex w-full max-w-sm flex-col gap-4 sm:flex-row"
             >
@@ -142,7 +142,7 @@ useHead({
                   className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
                 ></div>
                 <Alert
-                  class="z-10 flex flex-col gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                  class="z-10 flex flex-col items-stretch gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
                 >
                   <AlertTitle class="flex justify-between gap-2">
                     <span class="flex items-center gap-1.5 font-semibold">

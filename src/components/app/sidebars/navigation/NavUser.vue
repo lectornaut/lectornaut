@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSidebar } from "@/components/ui/sidebar"
+import emitter from "@/modules/mitt"
 
 defineProps<{
   user: {
@@ -65,7 +66,9 @@ const { isMobile } = useSidebar()
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  @click="emitter.emit('Dialog.Settings.Open', 'account')"
+                >
                   <icon-lucide-badge-check />
                   Account
                 </DropdownMenuItem>

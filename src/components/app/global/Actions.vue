@@ -62,15 +62,15 @@ watch(needRefresh, (value) => {
   }
 })
 
-// useEventListener(
-//   document,
-//   "contextmenu",
-//   (e) => {
-//     e.preventDefault()
-//     return false
-//   },
-//   { capture: true }
-// )
+useEventListener(
+  document,
+  "contextmenu",
+  (e) => {
+    e.preventDefault()
+    return false
+  },
+  { capture: true }
+)
 
 const online = useOnline()
 

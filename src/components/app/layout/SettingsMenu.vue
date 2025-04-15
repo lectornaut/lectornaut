@@ -27,7 +27,7 @@ import emitter from "@/modules/mitt"
               </DropdownMenuItem>
               <DropdownMenuItem
                 class="gap-2"
-                @click="emitter.emit('Dialog.Settings.Open')"
+                @click="emitter.emit('Dialog.Settings.Open', 'general')"
               >
                 <icon-lucide-settings />
                 <span>Preferences</span>

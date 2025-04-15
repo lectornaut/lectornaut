@@ -16,13 +16,13 @@ const data = {
   navMain: [
     {
       title: "Workflows",
-      url: "#",
+      url: "/workflows",
       icon: Workflow,
       isActive: true,
     },
     {
       title: "Drafts",
-      url: "#",
+      url: "/drafts",
       icon: Layers2,
       isActive: false,
     },
@@ -147,7 +147,7 @@ const getStatus = () => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" as-child class="md:h-8 md:p-0">
-              <RouterLink to="/">
+              <RouterLink to="/home">
                 <div
                   class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg"
                 >
@@ -176,6 +176,7 @@ const getStatus = () => {
                     :is-active="
                       activeItem?.title === item.title && state === 'expanded'
                     "
+                    as-child
                     @click="
                       () => {
                         if (
@@ -190,8 +191,10 @@ const getStatus = () => {
                       }
                     "
                   >
-                    <component :is="item.icon" />
-                    <span class="truncate">{{ item.title }}</span>
+                    <RouterLink :to="item.url">
+                      <component :is="item.icon" />
+                      <span class="truncate">{{ item.title }}</span>
+                    </RouterLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -207,7 +210,7 @@ const getStatus = () => {
         <NavUser :user="userData" />
       </SidebarFooter>
     </Sidebar>
-    <Sidebar collapsible="none" class="flex flex-1 overflow-hidden">
+    <Sidebar collapsible="none" class="hidden flex-1 overflow-hidden md:flex">
       <SidebarHeader class="border-b border-dashed">
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
@@ -228,13 +231,6 @@ const getStatus = () => {
               <icon-lucide-search />
             </span>
             <SidebarInput class="h-full pl-9" placeholder="Search" />
-            <!-- <span
-              class="absolute inset-y-0 end-0 flex items-center justify-center"
-            >
-              <Button variant="ghost" size="icon">
-                <icon-lucide-list-filter />
-              </Button>
-            </span> -->
           </div>
           <TooltipProvider>
             <Tooltip>
@@ -257,9 +253,9 @@ const getStatus = () => {
           <SidebarGroup>
             <SidebarGroupContent class="grid gap-2">
               <RouterLink
-                v-for="mail in mails"
+                v-for="(mail, index) in mails"
                 :key="mail.email"
-                to="/"
+                :to="`/workflows/${index}`"
                 class="ring-offset-background focus-visible:ring-ring rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 @click="() => (mail.active = !mail.active)"
               >

@@ -72,14 +72,6 @@ onBeforeUnmount(() => {
               </TooltipTrigger>
               <TooltipContent> Go forward </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="gap-2">
-                  <icon-lucide-history />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> History </TooltipContent>
-            </Tooltip>
           </TooltipProvider>
         </div>
       </div>

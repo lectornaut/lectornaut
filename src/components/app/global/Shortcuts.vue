@@ -78,7 +78,7 @@ const filteredShortcuts = computed(() => {
 
 <template>
   <Sheet v-model:open="openShortcuts">
-    <SheetContent class="gap-0">
+    <SheetContent class="m-3 h-auto gap-0 rounded-md border">
       <SheetHeader class="gap-4">
         <SheetTitle>Keyboard shortcuts</SheetTitle>
         <SheetDescription>
@@ -102,13 +102,18 @@ const filteredShortcuts = computed(() => {
         defer
         :options="{ scrollbars: { autoHide: 'scroll' } }"
       >
-        <Accordion collapsible type="multiple" class="p-4">
+        <Accordion
+          collapsible
+          type="multiple"
+          :default-value="filteredShortcuts.map((category) => category.id)"
+          class="px-4"
+        >
           <AccordionItem
             v-for="category in filteredShortcuts"
             :key="category.id"
             :value="category.id"
           >
-            <AccordionTrigger class="py-2">
+            <AccordionTrigger>
               {{ category.title }}
             </AccordionTrigger>
             <AccordionContent>

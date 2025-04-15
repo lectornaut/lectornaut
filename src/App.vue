@@ -24,10 +24,10 @@ watch(user, async (currentUser, previousUser) => {
     <RouterView v-slot="{ Component }">
       <template v-if="Component">
         <Transition
-          enter-active-class="transition ease-in-out duration-200"
+          enter-active-class="transition ease-in-out "
           enter-from-class="opacity-0"
           enter-to-class="opacity-100"
-          leave-active-class="transition ease-in-out duration-200"
+          leave-active-class="transition ease-in-out "
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
           mode="out-in"

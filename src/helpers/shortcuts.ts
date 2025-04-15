@@ -67,7 +67,7 @@ export const shortcuts: ShortcutCategory[] = [
         keys: [[getPlatformSpecialKey(), ","]],
         hotkeys: "cmd+,,ctrl+,",
         event: "Dialog.Settings.Open",
-        parameters: "profile",
+        parameters: "general",
         icon: IconLucideSettings,
         tags: ["settings"],
       },

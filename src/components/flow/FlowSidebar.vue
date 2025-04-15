@@ -8,7 +8,7 @@ const { onDragStart } = useDragAndDrop()
 
 <template>
   <Tabs default-value="actions">
-    <Sidebar collapsible="none" class="shrink-0">
+    <Sidebar collapsible="none">
       <SidebarHeader class="border-b border-dashed">
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
@@ -27,12 +27,12 @@ const { onDragStart } = useDragAndDrop()
         </div>
       </SidebarHeader>
       <SidebarHeader>
-        <TabsList class="bg-background w-full p-0">
+        <TabsList class="bg-sidebar w-full p-0">
           <TabsTrigger
             v-for="tab in nodes"
             :key="tab.id"
             :value="tab.id"
-            class="text-secondary-foreground data-[state=active]:after:bg-primary relative w-full rounded-md py-2.5 data-[state=active]:z-10 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
+            class="data-[state=active]:after:bg-primary data-[state=active]:bg-sidebar text-secondary-foreground data-[state=active]:text-foreground relative w-full py-2.5 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
           >
             <span class="flex items-center justify-center gap-2">
               <span class="truncate"> {{ tab.name }} </span>
@@ -46,12 +46,7 @@ const { onDragStart } = useDragAndDrop()
           defer
           :options="{ scrollbars: { autoHide: 'scroll' } }"
         >
-          <TabsContent
-            v-for="tab in nodes"
-            :key="tab.id"
-            :value="tab.id"
-            class="mt-0"
-          >
+          <TabsContent v-for="tab in nodes" :key="tab.id" :value="tab.id">
             <SidebarGroup
               v-for="group in tab.groups"
               :key="group.id"

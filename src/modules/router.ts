@@ -30,8 +30,8 @@ router.beforeEach(async (to, from) => {
   }
 
   if (to.meta.requiresUser) {
-    const currentUser = await getCurrentUser()
-    if (!currentUser) {
+    const user = await getCurrentUser()
+    if (!user) {
       return {
         path: "/enter",
         query: {
@@ -42,8 +42,8 @@ router.beforeEach(async (to, from) => {
   }
 
   if (to.meta.requiresGuest) {
-    const currentUser = await getCurrentUser()
-    if (currentUser) {
+    const user = await getCurrentUser()
+    if (user) {
       return {
         path: "/home",
       }
