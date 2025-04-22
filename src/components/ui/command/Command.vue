@@ -69,7 +69,7 @@ function filterItems() {
   filterState.filtered.count = itemCount
 }
 
-function _handleSelect() {
+function handleSelect() {
   filterState.search = ""
 }
 

@@ -1,39 +1,81 @@
 <script setup lang="ts">
-const team = [
+const persons = [
   {
     name: "Tom",
     email: "t@hey.com",
-    href: "#",
     imageUrl:
       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Whitney",
     email: "w@hey.com",
-    href: "#",
     imageUrl:
       "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Leonard",
     email: "l@hey.com",
-    href: "#",
     imageUrl:
       "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Floyd",
     email: "f@hey.com",
-    href: "#",
     imageUrl:
       "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Emily",
     email: "e@hey.com",
-    href: "#",
     imageUrl:
       "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+  },
+]
+
+const teams = [
+  {
+    id: "1",
+    name: "Senior Design Team",
+    description: "Hands-on design team",
+    members: [
+      {
+        name: "Tom",
+        email: "t@hey.com",
+        imageUrl:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+      },
+      {
+        name: "Whitney",
+        email: "w@hey.com",
+        imageUrl:
+          "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+      },
+      {
+        name: "Leonard",
+        email: "l@hey.com",
+        imageUrl:
+          "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+      },
+    ],
+  },
+  {
+    id: "2",
+    name: "Marketing Team",
+    description: "Marketing and sales team",
+    members: [
+      {
+        name: "Floyd",
+        email: "f@hey.com",
+        imageUrl:
+          "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+      },
+      {
+        name: "Emily",
+        email: "e@hey.com",
+        imageUrl:
+          "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+      },
+    ],
   },
 ]
 </script>
@@ -99,13 +141,54 @@ const team = [
           </div>
           <div class="grid w-full items-center gap-4">
             <Label for="project-access"> People with access </Label>
-            <div class="grid gap-6">
+            <div class="grid gap-4">
               <div
-                v-for="person in team"
-                :key="person.email"
-                class="flex items-center justify-between space-x-4"
+                v-for="team in teams"
+                :key="team.id"
+                class="flex justify-between space-x-4"
               >
-                <div class="flex gap-3">
+                <div class="flex flex-col gap-2">
+                  <div class="flex -space-x-2">
+                    <Avatar
+                      v-for="person in team.members"
+                      :key="person.email"
+                      class="ring-background ring-3"
+                    >
+                      <AvatarImage
+                        class="inline-block size-8 rounded-full"
+                        :src="person.imageUrl"
+                        :alt="person.name"
+                      />
+                      <AvatarFallback>
+                        {{ person.name[0] }}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div>
+                    <p class="font-medium">
+                      {{ team.name }}
+                    </p>
+                    <p class="text-muted-foreground text-xs">
+                      {{ team.description }}
+                    </p>
+                  </div>
+                </div>
+                <Select default-value="edit">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="edit"> Edit </SelectItem>
+                    <SelectItem value="view"> View </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div
+                v-for="person in persons"
+                :key="person.email"
+                class="flex justify-between space-x-4"
+              >
+                <div class="flex flex-col gap-2">
                   <Avatar>
                     <AvatarImage
                       class="inline-block size-8 rounded-full"

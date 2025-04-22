@@ -124,6 +124,11 @@
     @apply overflow-hidden;
     @apply overscroll-none;
     @apply accent-current;
+    @apply antialiased;
+    @apply pl-safe-left;
+    @apply pr-safe-right;
+    @apply pt-safe-top;
+    @apply pb-safe-bottom;
   }
 
   :root {

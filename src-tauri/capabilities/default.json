@@ -10,7 +10,6 @@
     "core:webview:allow-set-webview-zoom",
     "core:event:default",
     "shell:allow-open",
-    "theme:default",
     "deep-link:default"
   ]
 }

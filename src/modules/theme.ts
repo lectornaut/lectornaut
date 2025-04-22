@@ -1,6 +1,6 @@
 import { defaultAccent } from "@/helpers/defaults"
 import { isTauri } from "@/helpers/utilities"
-import { invoke } from "@tauri-apps/api/core"
+import { setTheme } from "@tauri-apps/api/app"
 
 const initMode = () => {
   useColorMode({
@@ -29,27 +29,19 @@ export const { store, system, state } = useColorMode({
 })
 
 if (isTauri.value) {
-  watch(store, (value) => {
+  watch(store, async (value) => {
     switch (value) {
       case "light":
-        invoke("plugin:theme|set_theme", {
-          theme: "light",
-        })
+        await setTheme("light")
         break
       case "dark":
-        invoke("plugin:theme|set_theme", {
-          theme: "dark",
-        })
+        await setTheme("dark")
         break
       case "auto":
-        invoke("plugin:theme|set_theme", {
-          theme: "auto",
-        })
+        await setTheme(null)
         break
       default:
-        invoke("plugin:theme|set_theme", {
-          theme: "auto",
-        })
+        await setTheme(null)
         break
     }
   })

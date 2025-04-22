@@ -27,8 +27,6 @@ window-vibrancy = "0.6.0"
 
 # https://crates.io/crates/tauri-plugin-shell/versions
 tauri-plugin-shell = "2"
-# https://crates.io/crates/tauri-plugin-theme/versions
-tauri-plugin-theme = "2"
 # https://crates.io/crates/tauri-plugin-deep-link/versions
 tauri-plugin-deep-link = "2"
 # https://crates.io/crates/tauri-plugin-process/versions

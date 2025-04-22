@@ -12,7 +12,7 @@ const props = defineProps<
 >()
 
 defineSlots<{
-  default: (props: { headingValue: string }) => unknown
+  default: (props: { headingValue: string }) => any
 }>()
 
 const delegatedProps = computed(() => {

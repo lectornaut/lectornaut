@@ -134,7 +134,9 @@ emitter.on("Tabs.Close", (id) => {
         ref="el"
         class="relative flex w-fit min-w-0 items-center justify-start gap-2"
       >
-        <template v-if="pending"> <icon-lucide-loader /> loading </template>
+        <template v-if="pending">
+          <icon-lucide-loader class="animate-spin" /> loading
+        </template>
         <template v-else-if="error">
           <icon-lucide-alert-triangle /> error
         </template>

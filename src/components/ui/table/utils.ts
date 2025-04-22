@@ -1,7 +1,7 @@
 import type { Updater } from "@tanstack/vue-table"
 import type { Ref } from "vue"
 
-export function valueUpdater<T extends Updater<unknown>>(
+export function valueUpdater<T extends Updater<any>>(
   updaterOrValue: T,
   ref: Ref
 ) {
