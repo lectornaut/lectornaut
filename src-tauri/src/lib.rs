@@ -3,7 +3,7 @@ use window_vibrancy::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut ctx = tauri::generate_context!();
+    let ctx = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
