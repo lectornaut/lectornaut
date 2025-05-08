@@ -32,7 +32,9 @@ type Team = (typeof groups)[number]["teams"][number]
 
 const open = ref(false)
 const showNewTeamDialog = ref(false)
-const selectedTeam = ref<Team>(groups[0].teams[0])
+const selectedTeam = ref<Team>(
+  groups[0]?.teams[0] ?? { label: "Default Team", value: "default" }
+)
 </script>
 
 <template>
@@ -72,7 +74,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
           <Command>
             <CommandInput
               placeholder="Search team..."
-              class="border-none focus:border-inherit focus:ring-0"
+              class="border-none p-0 focus:border-inherit focus:ring-0"
             />
             <CommandList>
               <CommandEmpty>No team found.</CommandEmpty>
@@ -85,7 +87,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
                   v-for="team in group.teams"
                   :key="team.value"
                   :value="team"
-                  class="grow justify-start gap-2 truncate"
+                  class="grow justify-start gap-2 truncate py-2"
                   @select="
                     () => {
                       selectedTeam = team
@@ -119,7 +121,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
                 <DialogTrigger as-child>
                   <CommandItem
                     value="create-team"
-                    class="grow justify-start gap-2 truncate"
+                    class="grow justify-start gap-2 truncate py-2"
                     @select="
                       () => {
                         open = false

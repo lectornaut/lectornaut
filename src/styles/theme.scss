@@ -25,7 +25,7 @@
 }
 
 @mixin red-light-theme {
-  --primary: var(--color-red-500);
+  --primary: var(--color-red-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-red-800);
   --destructive-foreground: var(--color-white);
@@ -39,7 +39,7 @@
 }
 
 @mixin orange-light-theme {
-  --primary: var(--color-orange-500);
+  --primary: var(--color-orange-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-orange-800);
   --destructive-foreground: var(--color-white);
@@ -53,7 +53,7 @@
 }
 
 @mixin amber-light-theme {
-  --primary: var(--color-amber-500);
+  --primary: var(--color-amber-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-amber-800);
   --destructive-foreground: var(--color-white);
@@ -67,7 +67,7 @@
 }
 
 @mixin yellow-light-theme {
-  --primary: var(--color-yellow-500);
+  --primary: var(--color-yellow-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-yellow-800);
   --destructive-foreground: var(--color-white);
@@ -81,7 +81,7 @@
 }
 
 @mixin lime-light-theme {
-  --primary: var(--color-lime-500);
+  --primary: var(--color-lime-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-lime-800);
   --destructive-foreground: var(--color-white);
@@ -95,7 +95,7 @@
 }
 
 @mixin green-light-theme {
-  --primary: var(--color-green-500);
+  --primary: var(--color-green-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-green-800);
   --destructive-foreground: var(--color-white);
@@ -109,7 +109,7 @@
 }
 
 @mixin emerald-light-theme {
-  --primary: var(--color-emerald-500);
+  --primary: var(--color-emerald-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-emerald-800);
   --destructive-foreground: var(--color-white);
@@ -123,7 +123,7 @@
 }
 
 @mixin teal-light-theme {
-  --primary: var(--color-teal-500);
+  --primary: var(--color-teal-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-teal-800);
   --destructive-foreground: var(--color-white);
@@ -137,7 +137,7 @@
 }
 
 @mixin cyan-light-theme {
-  --primary: var(--color-cyan-500);
+  --primary: var(--color-cyan-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-cyan-800);
   --destructive-foreground: var(--color-white);
@@ -151,7 +151,7 @@
 }
 
 @mixin sky-light-theme {
-  --primary: var(--color-sky-500);
+  --primary: var(--color-sky-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-sky-800);
   --destructive-foreground: var(--color-white);
@@ -165,7 +165,7 @@
 }
 
 @mixin blue-light-theme {
-  --primary: var(--color-blue-500);
+  --primary: var(--color-blue-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-blue-800);
   --destructive-foreground: var(--color-white);
@@ -179,7 +179,7 @@
 }
 
 @mixin indigo-light-theme {
-  --primary: var(--color-indigo-500);
+  --primary: var(--color-indigo-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-indigo-800);
   --destructive-foreground: var(--color-white);
@@ -193,7 +193,7 @@
 }
 
 @mixin violet-light-theme {
-  --primary: var(--color-violet-500);
+  --primary: var(--color-violet-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-violet-800);
   --destructive-foreground: var(--color-white);
@@ -207,7 +207,7 @@
 }
 
 @mixin purple-light-theme {
-  --primary: var(--color-purple-500);
+  --primary: var(--color-purple-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-purple-800);
   --destructive-foreground: var(--color-white);
@@ -221,7 +221,7 @@
 }
 
 @mixin fuchsia-light-theme {
-  --primary: var(--color-fuchsia-500);
+  --primary: var(--color-fuchsia-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-fuchsia-800);
   --destructive-foreground: var(--color-white);
@@ -235,7 +235,7 @@
 }
 
 @mixin pink-light-theme {
-  --primary: var(--color-pink-500);
+  --primary: var(--color-pink-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-pink-800);
   --destructive-foreground: var(--color-white);
@@ -249,7 +249,7 @@
 }
 
 @mixin rose-light-theme {
-  --primary: var(--color-rose-500);
+  --primary: var(--color-rose-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-rose-800);
   --destructive-foreground: var(--color-white);
@@ -263,7 +263,7 @@
 }
 
 @mixin slate-light-theme {
-  --primary: var(--color-slate-500);
+  --primary: var(--color-slate-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-slate-800);
   --destructive-foreground: var(--color-white);
@@ -277,7 +277,7 @@
 }
 
 @mixin gray-light-theme {
-  --primary: var(--color-gray-500);
+  --primary: var(--color-gray-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-gray-800);
   --destructive-foreground: var(--color-white);
@@ -291,7 +291,7 @@
 }
 
 @mixin zinc-light-theme {
-  --primary: var(--color-zinc-500);
+  --primary: var(--color-zinc-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-zinc-800);
   --destructive-foreground: var(--color-white);
@@ -305,7 +305,7 @@
 }
 
 @mixin neutral-light-theme {
-  --primary: var(--color-neutral-500);
+  --primary: var(--color-neutral-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-neutral-800);
   --destructive-foreground: var(--color-white);
@@ -319,7 +319,7 @@
 }
 
 @mixin stone-light-theme {
-  --primary: var(--color-stone-500);
+  --primary: var(--color-stone-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-stone-800);
   --destructive-foreground: var(--color-white);
@@ -359,7 +359,7 @@
 }
 
 @mixin red-dark-theme {
-  --primary: var(--color-red-600);
+  --primary: var(--color-red-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-red-500);
   --destructive-foreground: var(--color-white);
@@ -373,7 +373,7 @@
 }
 
 @mixin orange-dark-theme {
-  --primary: var(--color-orange-600);
+  --primary: var(--color-orange-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-orange-500);
   --destructive-foreground: var(--color-white);
@@ -387,7 +387,7 @@
 }
 
 @mixin amber-dark-theme {
-  --primary: var(--color-amber-600);
+  --primary: var(--color-amber-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-amber-500);
   --destructive-foreground: var(--color-white);
@@ -401,7 +401,7 @@
 }
 
 @mixin yellow-dark-theme {
-  --primary: var(--color-yellow-600);
+  --primary: var(--color-yellow-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-yellow-500);
   --destructive-foreground: var(--color-white);
@@ -415,7 +415,7 @@
 }
 
 @mixin lime-dark-theme {
-  --primary: var(--color-lime-600);
+  --primary: var(--color-lime-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-lime-500);
   --destructive-foreground: var(--color-white);
@@ -429,7 +429,7 @@
 }
 
 @mixin green-dark-theme {
-  --primary: var(--color-green-600);
+  --primary: var(--color-green-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-green-500);
   --destructive-foreground: var(--color-white);
@@ -443,7 +443,7 @@
 }
 
 @mixin emerald-dark-theme {
-  --primary: var(--color-emerald-600);
+  --primary: var(--color-emerald-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-emerald-500);
   --destructive-foreground: var(--color-white);
@@ -457,7 +457,7 @@
 }
 
 @mixin teal-dark-theme {
-  --primary: var(--color-teal-600);
+  --primary: var(--color-teal-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-teal-500);
   --destructive-foreground: var(--color-white);
@@ -471,7 +471,7 @@
 }
 
 @mixin cyan-dark-theme {
-  --primary: var(--color-cyan-600);
+  --primary: var(--color-cyan-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-cyan-500);
   --destructive-foreground: var(--color-white);
@@ -485,7 +485,7 @@
 }
 
 @mixin sky-dark-theme {
-  --primary: var(--color-sky-600);
+  --primary: var(--color-sky-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-sky-500);
   --destructive-foreground: var(--color-white);
@@ -499,7 +499,7 @@
 }
 
 @mixin blue-dark-theme {
-  --primary: var(--color-blue-600);
+  --primary: var(--color-blue-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-blue-500);
   --destructive-foreground: var(--color-white);
@@ -513,7 +513,7 @@
 }
 
 @mixin indigo-dark-theme {
-  --primary: var(--color-indigo-600);
+  --primary: var(--color-indigo-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-indigo-500);
   --destructive-foreground: var(--color-white);
@@ -527,7 +527,7 @@
 }
 
 @mixin violet-dark-theme {
-  --primary: var(--color-violet-600);
+  --primary: var(--color-violet-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-violet-500);
   --destructive-foreground: var(--color-white);
@@ -541,7 +541,7 @@
 }
 
 @mixin purple-dark-theme {
-  --primary: var(--color-purple-600);
+  --primary: var(--color-purple-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-purple-500);
   --destructive-foreground: var(--color-white);
@@ -555,7 +555,7 @@
 }
 
 @mixin fuchsia-dark-theme {
-  --primary: var(--color-fuchsia-600);
+  --primary: var(--color-fuchsia-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-fuchsia-500);
   --destructive-foreground: var(--color-white);
@@ -569,7 +569,7 @@
 }
 
 @mixin pink-dark-theme {
-  --primary: var(--color-pink-600);
+  --primary: var(--color-pink-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-pink-500);
   --destructive-foreground: var(--color-white);
@@ -583,7 +583,7 @@
 }
 
 @mixin rose-dark-theme {
-  --primary: var(--color-rose-600);
+  --primary: var(--color-rose-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-rose-500);
   --destructive-foreground: var(--color-white);
@@ -597,7 +597,7 @@
 }
 
 @mixin slate-dark-theme {
-  --primary: var(--color-slate-600);
+  --primary: var(--color-slate-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-slate-500);
   --destructive-foreground: var(--color-white);
@@ -611,7 +611,7 @@
 }
 
 @mixin gray-dark-theme {
-  --primary: var(--color-gray-600);
+  --primary: var(--color-gray-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-gray-500);
   --destructive-foreground: var(--color-white);
@@ -625,7 +625,7 @@
 }
 
 @mixin zinc-dark-theme {
-  --primary: var(--color-zinc-600);
+  --primary: var(--color-zinc-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-zinc-500);
   --destructive-foreground: var(--color-white);
@@ -639,7 +639,7 @@
 }
 
 @mixin neutral-dark-theme {
-  --primary: var(--color-neutral-600);
+  --primary: var(--color-neutral-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-neutral-500);
   --destructive-foreground: var(--color-white);
@@ -653,7 +653,7 @@
 }
 
 @mixin stone-dark-theme {
-  --primary: var(--color-stone-600);
+  --primary: var(--color-stone-800);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-stone-500);
   --destructive-foreground: var(--color-white);

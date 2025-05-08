@@ -12,7 +12,7 @@ useHead({
       class="mx-auto mt-12 mb-44 flex w-full max-w-2xl grow flex-col items-center"
     >
       <Tabs default-value="personal" class="flex w-full flex-col items-center">
-        <TabsList>
+        <TabsList class="mx-auto">
           <TabsTrigger value="personal"> Personal </TabsTrigger>
           <TabsTrigger value="team"> Team </TabsTrigger>
         </TabsList>

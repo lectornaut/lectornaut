@@ -1,25 +1,21 @@
-<script setup lang="ts">
-import { DrawerTrigger } from "@/components/ui/drawer"
-</script>
-
 <template>
-  <Drawer>
-    <DrawerTrigger as-child>
+  <Dialog>
+    <DialogTrigger as-child>
       <slot />
-    </DrawerTrigger>
-    <DrawerContent class="outline-hidden">
-      <div class="mx-auto flex w-full max-w-sm flex-col">
-        <DrawerHeader class="sr-only">
-          <DrawerTitle>Enter Template</DrawerTitle>
-          <DrawerDescription>
-            Create an account or sign in to continue.
-          </DrawerDescription>
-        </DrawerHeader>
+    </DialogTrigger>
+    <DialogContent class="w-sm max-w-fit">
+      <DialogHeader class="sr-only">
+        <DialogTitle>Enter Template</DialogTitle>
+        <DialogDescription>
+          Create an account or sign in to continue.
+        </DialogDescription>
+      </DialogHeader>
+      <div class="mx-auto flex w-full flex-col">
         <EnterContent />
-        <DrawerFooter class="mb-safe-bottom">
-          <EnterFooter />
-        </DrawerFooter>
       </div>
-    </DrawerContent>
-  </Drawer>
+      <DialogFooter>
+        <EnterFooter />
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>

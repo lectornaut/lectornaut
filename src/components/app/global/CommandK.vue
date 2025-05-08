@@ -60,7 +60,7 @@ const filteredShortcuts = computed(() =>
       </DialogHeader>
       <CommandInput
         placeholder="Type a command or search..."
-        class="border-none focus:border-inherit focus:ring-0"
+        class="border-none p-0 focus:border-inherit focus:ring-0"
       />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
