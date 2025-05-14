@@ -328,7 +328,7 @@ const authenticateApple = async () => {
     <TabsContent value="sign-up">
       <div class="flex items-center justify-center gap-1">
         <span class="text-muted-foreground"> Already have an account? </span>
-        <Button variant="link" @click="authMode = 'sign-in'" class="p-0">
+        <Button variant="link" class="p-0" @click="authMode = 'sign-in'">
           Sign in
         </Button>
       </div>
@@ -336,7 +336,7 @@ const authenticateApple = async () => {
     <TabsContent value="sign-in">
       <div class="flex items-center justify-center gap-1">
         <span class="text-muted-foreground"> Don't have an account? </span>
-        <Button variant="link" @click="authMode = 'sign-up'" class="p-0">
+        <Button variant="link" class="p-0" @click="authMode = 'sign-up'">
           Sign up
         </Button>
       </div>

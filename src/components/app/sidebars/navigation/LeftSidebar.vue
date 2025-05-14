@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useSidebar } from "@/components/ui/sidebar"
-import { Layers2, Workflow } from "lucide-vue-next"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 import { useCurrentUser } from "vuefire"
+import IconLayers2 from "~icons/lucide/layers-2"
+import IconWorkflow from "~icons/lucide/workflow"
 
 const user = useCurrentUser()
 const userData = {
@@ -17,13 +18,13 @@ const data = {
     {
       title: "Workflows",
       url: "/workflows",
-      icon: Workflow,
+      icon: IconWorkflow,
       isActive: true,
     },
     {
       title: "Drafts",
       url: "/drafts",
-      icon: Layers2,
+      icon: IconLayers2,
       isActive: false,
     },
   ],
