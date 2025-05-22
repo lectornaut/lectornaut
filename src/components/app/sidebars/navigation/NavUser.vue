@@ -38,7 +38,7 @@ const { isMobile } = useSidebar()
             </TooltipTrigger>
             <TooltipContent side="right"> Account </TooltipContent>
             <DropdownMenuContent
-              class="w-[--reka-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+              class="w-56"
               :side="isMobile ? 'bottom' : 'right'"
               align="end"
               :side-offset="4"
@@ -82,10 +82,12 @@ const { isMobile } = useSidebar()
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <icon-lucide-log-out />
-                Log out
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem>
+                  <icon-lucide-log-out />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </Tooltip>

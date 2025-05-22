@@ -2,6 +2,7 @@
 import { useSidebar } from "@/components/ui/sidebar"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 import { useCurrentUser } from "vuefire"
+import IconHome from "~icons/lucide/home"
 import IconLayers2 from "~icons/lucide/layers-2"
 import IconWorkflow from "~icons/lucide/workflow"
 
@@ -16,16 +17,22 @@ const userData = {
 const data = {
   navMain: [
     {
+      title: "Home",
+      url: "/home",
+      id: "home",
+      icon: IconHome,
+    },
+    {
       title: "Workflows",
       url: "/workflows",
+      id: "workflows",
       icon: IconWorkflow,
-      isActive: true,
     },
     {
       title: "Drafts",
       url: "/drafts",
+      id: "drafts",
       icon: IconLayers2,
-      isActive: false,
     },
   ],
   mails: [
@@ -175,7 +182,7 @@ const getStatus = () => {
                   <SidebarMenuButton
                     :tooltip="item.title"
                     :is-active="
-                      activeItem?.title === item.title && state === 'expanded'
+                      state === 'expanded' && activeItem?.title === item.title
                     "
                     as-child
                     @click="
@@ -212,7 +219,7 @@ const getStatus = () => {
       </SidebarFooter>
     </Sidebar>
     <Sidebar collapsible="none" class="hidden flex-1 overflow-hidden md:flex">
-      <SidebarHeader class="border-b border-dashed">
+      <SidebarHeader class="border-b">
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
             {{ activeItem?.title }}
@@ -256,7 +263,7 @@ const getStatus = () => {
               <RouterLink
                 v-for="(mail, index) in mails"
                 :key="mail.email"
-                :to="`/workflows/${index}`"
+                :to="`/${activeItem.id}/${index}`"
                 class="ring-offset-background focus-visible:ring-ring rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 @click="() => (mail.active = !mail.active)"
               >

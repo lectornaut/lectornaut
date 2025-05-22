@@ -1,21 +1,18 @@
 <script lang="ts" setup>
 import { cn } from "@/lib/utils"
+import { reactiveOmit } from "@vueuse/core"
 import {
   RangeCalendarHeadCell,
   type RangeCalendarHeadCellProps,
   useForwardProps,
 } from "reka-ui"
-import { computed, type HTMLAttributes } from "vue"
+import type { HTMLAttributes } from "vue"
 
 const props = defineProps<
   RangeCalendarHeadCellProps & { class?: HTMLAttributes["class"] }
 >()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
-
-  return delegated
-})
+const delegatedProps = reactiveOmit(props, "class")
 
 const forwardedProps = useForwardProps(delegatedProps)
 </script>

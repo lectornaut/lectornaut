@@ -7,7 +7,7 @@ useHead({
 <template>
   <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
     <div class="flex grow flex-col gap-2">
-      <HyperApp />
+      <FlowApp />
     </div>
   </div>
 </template>
@@ -15,6 +15,7 @@ useHead({
 <route lang="json">
 {
   "meta": {
+    "layout": "app",
     "requiresUser": true
   }
 }

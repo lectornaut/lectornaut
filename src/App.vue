@@ -21,26 +21,7 @@ watch(user, async (currentUser, previousUser) => {
 
 <template>
   <div class="flex h-dvh w-dvw flex-col">
-    <RouterView v-slot="{ Component }">
-      <template v-if="Component">
-        <Transition
-          enter-active-class="transition ease-in-out "
-          enter-from-class="opacity-0"
-          enter-to-class="opacity-100"
-          leave-active-class="transition ease-in-out "
-          leave-from-class="opacity-100"
-          leave-to-class="opacity-0"
-          mode="out-in"
-        >
-          <Suspense>
-            <Component :is="Component" />
-            <template #fallback>
-              <SplashScreen />
-            </template>
-          </Suspense>
-        </Transition>
-      </template>
-    </RouterView>
+    <RouterView />
     <Actions />
   </div>
 </template>

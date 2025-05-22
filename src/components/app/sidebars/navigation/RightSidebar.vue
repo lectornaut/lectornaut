@@ -23,7 +23,7 @@ const metadata = [
 <template>
   <Tabs default-value="details">
     <Sidebar collapsible="none">
-      <SidebarHeader class="border-b border-dashed">
+      <SidebarHeader class="border-b">
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
             Information

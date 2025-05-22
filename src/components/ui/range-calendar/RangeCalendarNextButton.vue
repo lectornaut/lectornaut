@@ -1,23 +1,20 @@
 <script lang="ts" setup>
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { reactiveOmit } from "@vueuse/core"
 import { ChevronRight } from "lucide-vue-next"
 import {
   RangeCalendarNext,
   type RangeCalendarNextProps,
   useForwardProps,
 } from "reka-ui"
-import { computed, type HTMLAttributes } from "vue"
+import type { HTMLAttributes } from "vue"
 
 const props = defineProps<
   RangeCalendarNextProps & { class?: HTMLAttributes["class"] }
 >()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
-
-  return delegated
-})
+const delegatedProps = reactiveOmit(props, "class")
 
 const forwardedProps = useForwardProps(delegatedProps)
 </script>

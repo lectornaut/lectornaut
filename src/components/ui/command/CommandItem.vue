@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
-import { useCurrentElement } from "@vueuse/core"
+import { reactiveOmit, useCurrentElement } from "@vueuse/core"
 import type { ListboxItemEmits, ListboxItemProps } from "reka-ui"
 import { ListboxItem, useForwardPropsEmits, useId } from "reka-ui"
 import { computed, type HTMLAttributes, onMounted, onUnmounted, ref } from "vue"
@@ -11,11 +11,7 @@ const props = defineProps<
 >()
 const emits = defineEmits<ListboxItemEmits>()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
-
-  return delegated
-})
+const delegatedProps = reactiveOmit(props, "class")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 

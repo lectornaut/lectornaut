@@ -1,19 +1,16 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
+import { reactiveOmit } from "@vueuse/core"
 import type { PrimitiveProps } from "reka-ui"
 import { Primitive } from "reka-ui"
-import { computed, type HTMLAttributes } from "vue"
+import type { HTMLAttributes } from "vue"
 import { useCommand } from "."
 
 const props = defineProps<
   PrimitiveProps & { class?: HTMLAttributes["class"] }
 >()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
-
-  return delegated
-})
+const delegatedProps = reactiveOmit(props, "class")
 
 const { filterState } = useCommand()
 const isRender = computed(

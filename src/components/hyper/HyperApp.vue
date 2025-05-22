@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Carousel, type CarouselApi } from "@/components/ui/carousel"
 import { watchOnce } from "@vueuse/core"
+import AutoScroll from "embla-carousel-auto-scroll"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import IconCamera from "~icons/lucide/camera"
 import IconGrix2x2 from "~icons/lucide/grid-2-x-2"
@@ -232,249 +233,358 @@ const navItems = [
     },
   },
 ]
+
+const randomIndex = () => {
+  return Math.floor(Math.random() * 12) + 1
+}
 </script>
 
 <template>
-  <Carousel
-    ref="carouselContainerRef"
-    orientation="vertical"
-    :plugins="[WheelGesturesPlugin()]"
-    class="focus-visible:outline-none"
-    @init-api="(val) => (emblaMainApi = val)"
-  >
-    <CarouselContent class="m-0 h-dvh w-dvw">
-      <CarouselItem
-        class="flex size-full items-center justify-center gap-4 p-4"
+  <div class="relative">
+    <div
+      class="absolute inset-0 grid h-screen w-screen grid-cols-6 bg-black px-1"
+    >
+      <Carousel
+        v-for="(_, columnIndex) in 6"
+        :key="columnIndex"
+        class="focus-visible:outline-none"
+        orientation="vertical"
+        :opts="{
+          align: 'start',
+          loop: true,
+        }"
+        :plugins="[
+          WheelGesturesPlugin(),
+          AutoScroll({
+            speed: randomIndex() * 0.05,
+            startDelay: 0,
+            stopOnInteraction: false,
+            stopOnMouseEnter: true,
+          }),
+        ]"
       >
-        <div class="m-auto grid w-full max-w-md grid-cols-2 gap-2">
-          <template v-for="(item, index) in navItems" :key="index">
-            <button
-              v-if="!item.primary"
-              class="flex aspect-square flex-col items-center justify-center gap-6 rounded-4xl border p-8 transition"
-              :class="item.style.button"
-              @click="
-                carouselContainerRef?.carouselApi.scrollTo(item.scrollTo, true)
-              "
-            >
-              <span :class="item.style.icon" class="rounded-full p-4">
-                <component :is="item.icon" class="size-8" />
-              </span>
-              <span class="text-lg leading-tight font-semibold tracking-tight">
-                {{ item.text }}
-              </span>
-            </button>
-          </template>
-        </div>
-      </CarouselItem>
-      <CarouselItem
-        class="flex size-full items-center justify-center gap-4 p-4"
-      >
-        <div class="m-auto w-full max-w-md">
-          <div
-            class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl"
-          >
-            <div v-if="isCameraOpen" v-show="!isLoading">
-              <div
-                class="absolute inset-0 z-10 bg-white opacity-0 transition"
-                :class="{ 'opacity-100': isShotPhoto }"
-              ></div>
-              <video
-                v-show="!isPhotoTaken"
-                ref="camera"
-                autoplay
-                class="aspect-square size-full rotate-y-180 rounded-4xl object-cover"
-              />
-              <canvas
-                v-show="isPhotoTaken"
-                id="photoTaken"
-                ref="canvas"
-                class="aspect-square size-full rounded-4xl object-cover"
-              />
-            </div>
-            <div class="absolute end-4 top-4 z-10 flex flex-col gap-2">
-              <Button
-                variant="ghost"
-                class="text-muted-foreground rounded-full"
-                size="icon"
-                @click="toggleCamera"
-              >
-                <icon-lucide-aperture v-if="!isCameraOpen" />
-                <icon-lucide-loader
-                  v-else-if="isCameraOpen && isLoading"
-                  class="animate-spin"
-                />
-                <icon-lucide-x v-else />
-              </Button>
-              <Button
-                v-if="isPhotoTaken"
-                variant="ghost"
-                class="text-muted-foreground rounded-full"
-                size="icon"
-                as-child
-              >
-                <a
-                  id="downloadPhoto"
-                  download="photo.jpg"
-                  role="button"
-                  @click="downloadImage"
-                >
-                  <icon-lucide-download />
-                </a>
-              </Button>
-            </div>
-            <div
-              v-if="isCameraOpen && !isLoading"
-              class="absolute bottom-4 left-1/2 z-10 -translate-x-1/2"
-            >
-              <Button
-                variant="secondary"
-                size="icon"
-                class="rounded-full"
-                @click="takePhoto"
-              >
-                <icon-lucide-circle v-if="!isPhotoTaken" class="size-8" />
-                <icon-lucide-refresh-cw v-else />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CarouselItem>
-      <CarouselItem
-        class="flex size-full items-center justify-center gap-4 p-4"
-      >
-        <div class="m-auto w-full max-w-md">
-          <div
-            class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl bg-cover bg-center bg-no-repeat p-4"
+        <CarouselContent class="m-0 max-h-dvh min-h-0">
+          <CarouselItem
+            v-for="(__, rowIndex) in 15"
+            :key="rowIndex"
+            class="bg-background group relative m-1 flex aspect-square basis-auto items-center justify-center rounded bg-cover bg-center p-0"
             :style="{
-              backgroundImage: `url(${fileDataUrl})`,
+              backgroundImage: `url(https://flowbite.s3.amazonaws.com/docs/gallery/masonry/image-${randomIndex()}.jpg)`,
             }"
           >
             <div
-              v-if="!fileDataUrl"
-              class="text-muted-foreground m-auto grid grid-cols-1 gap-16"
-            >
-              <icon-lucide-image class="h-8 w-auto" />
-            </div>
-            <div class="grid w-full">
-              <div class="relative w-full items-center">
-                <Label for="picture">
-                  <Input
-                    id="picture"
-                    type="file"
-                    accept=".jpg, .png"
-                    class="bg-muted rounded-full shadow-none"
-                    placeholder="Upload a picture"
-                    @change="handleFileChange"
-                  />
-                </Label>
-                <span
-                  class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
-                >
-                  <Badge class="rounded-full" variant="secondary">
-                    <icon-mdi-dots-circle />
-                    <span class="truncate">Try sample image</span>
-                  </Badge>
+              class="absolute inset-0 flex items-center justify-center bg-black/75 transition group-hover:bg-transparent"
+            ></div>
+          </CarouselItem>
+        </CarouselContent>
+      </Carousel>
+    </div>
+    <Carousel
+      ref="carouselContainerRef"
+      orientation="vertical"
+      :plugins="[WheelGesturesPlugin()]"
+      class="focus-visible:outline-none"
+      @init-api="(val) => (emblaMainApi = val)"
+    >
+      <CarouselContent class="m-0 h-screen w-screen">
+        <CarouselItem class="flex items-center justify-center gap-4 p-4">
+          <div class="m-auto grid w-full max-w-md grid-cols-2 gap-2">
+            <template v-for="(item, index) in navItems" :key="index">
+              <button
+                v-if="!item.primary"
+                class="flex aspect-square flex-col items-center justify-center gap-6 rounded-4xl border p-8 transition"
+                :class="item.style.button"
+                @click="
+                  carouselContainerRef?.carouselApi.scrollTo(
+                    item.scrollTo,
+                    true
+                  )
+                "
+              >
+                <span :class="item.style.icon" class="rounded-full p-4">
+                  <component :is="item.icon" class="size-8" />
                 </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CarouselItem>
-      <CarouselItem
-        class="flex size-full items-center justify-center gap-4 p-4"
-      >
-        <div class="m-auto w-full max-w-md">
-          <div
-            class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl p-4"
-          >
-            <div class="text-muted-foreground m-auto grid grid-cols-3 gap-16">
-              <icon-simple-icons-amazon class="h-8 w-auto" />
-              <icon-simple-icons-shopify class="h-8 w-auto" />
-              <icon-simple-icons-etsy class="h-8 w-auto" />
-              <icon-simple-icons-ebay class="h-8 w-auto" />
-              <icon-simple-icons-rakuten class="h-8 w-auto" />
-              <icon-tabler-brand-walmart class="h-8 w-auto" />
-            </div>
-            <div class="grid w-full">
-              <div class="relative w-full items-center">
-                <Label for="link">
-                  <Input
-                    id="link"
-                    type="text"
-                    class="bg-muted rounded-full shadow-none"
-                    placeholder="Paste your link here..."
-                  />
-                </Label>
                 <span
-                  class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
+                  class="text-lg leading-tight font-semibold tracking-tight"
                 >
-                  <Badge class="rounded-full" variant="secondary">
-                    <icon-mdi-dots-circle />
-                    <span class="truncate">Try sample link</span>
-                  </Badge>
+                  {{ item.text }}
                 </span>
-              </div>
-            </div>
+              </button>
+            </template>
           </div>
-        </div>
-      </CarouselItem>
-      <CarouselItem
-        class="flex size-full items-center justify-center gap-4 p-4"
-      >
-        <div class="m-auto w-full max-w-md">
-          <div
-            class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl p-4"
-          >
-            <div class="relative w-full items-center">
-              <Label for="search">
-                <Textarea
-                  v-model="search"
-                  class="bg-muted h-32 resize-none rounded-2xl p-4 shadow-none"
-                  cols="10"
-                  placeholder="Ask AI what you want to find..."
-                />
-              </Label>
-              <span class="absolute bottom-0 flex gap-2 p-2">
-                <Badge class="rounded-full" variant="secondary">
-                  <icon-mdi-dots-circle />
-                  <span class="truncate">Try sample prompt</span>
-                </Badge>
-              </span>
-              <span class="absolute right-0 bottom-0 flex gap-2 p-2">
-                <Button
-                  :variant="search ? 'default' : 'secondary'"
-                  size="icon"
-                  class="rounded-xl"
-                >
-                  <icon-lucide-arrow-up />
-                </Button>
-              </span>
-            </div>
-          </div>
-        </div>
-      </CarouselItem>
-    </CarouselContent>
-  </Carousel>
-  <Carousel
-    class="fixed top-4 left-1/2 w-full max-w-md -translate-x-1/2 focus-visible:outline-none"
-    @init-api="(val) => (emblaThumbnailApi = val)"
-  >
-    <CarouselContent class="m-0 flex gap-2">
-      <template v-for="(item, index) in navItems" :key="index">
-        <CarouselItem
-          :class="[
-            'flex shrink-0 basis-auto items-center justify-center gap-2 rounded-full px-3 transition-all',
-            `border-${item.color}-500/5`,
-            selectedIndex === index ? item.style.active : item.style.inactive,
-          ]"
-          @click="onThumbClick(index)"
-        >
-          <component :is="item.icon" />
-          <span v-if="selectedIndex === index" class="font-medium">
-            {{ item.text }}
-          </span>
         </CarouselItem>
-      </template>
-    </CarouselContent>
-  </Carousel>
+        <CarouselItem class="flex items-center justify-center gap-4 p-4">
+          <div class="m-auto w-full max-w-md">
+            <div
+              class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl"
+            >
+              <div v-if="isCameraOpen" v-show="!isLoading">
+                <div
+                  class="absolute inset-0 z-10 bg-white opacity-0 transition"
+                  :class="{ 'opacity-100': isShotPhoto }"
+                ></div>
+                <video
+                  v-show="!isPhotoTaken"
+                  ref="camera"
+                  autoplay
+                  class="aspect-square size-full rotate-y-180 rounded-4xl object-cover"
+                />
+                <canvas
+                  v-show="isPhotoTaken"
+                  id="photoTaken"
+                  ref="canvas"
+                  class="aspect-square size-full rounded-4xl object-cover"
+                />
+              </div>
+              <div class="absolute end-4 top-4 z-10 flex flex-col gap-2">
+                <Button
+                  variant="ghost"
+                  class="text-muted-foreground rounded-full"
+                  size="icon"
+                  @click="toggleCamera"
+                >
+                  <icon-lucide-aperture v-if="!isCameraOpen" />
+                  <icon-lucide-loader
+                    v-else-if="isCameraOpen && isLoading"
+                    class="animate-spin"
+                  />
+                  <icon-lucide-x v-else />
+                </Button>
+                <Button
+                  v-if="isPhotoTaken"
+                  variant="ghost"
+                  class="text-muted-foreground rounded-full"
+                  size="icon"
+                  as-child
+                >
+                  <a
+                    id="downloadPhoto"
+                    download="photo.jpg"
+                    role="button"
+                    @click="downloadImage"
+                  >
+                    <icon-lucide-download />
+                  </a>
+                </Button>
+              </div>
+              <div
+                v-if="isCameraOpen && !isLoading"
+                class="absolute bottom-4 left-1/2 z-10 -translate-x-1/2"
+              >
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  class="rounded-full"
+                  @click="takePhoto"
+                >
+                  <icon-lucide-circle v-if="!isPhotoTaken" class="size-8" />
+                  <icon-lucide-refresh-cw v-else />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CarouselItem>
+        <CarouselItem class="flex items-center justify-center gap-4 p-4">
+          <div class="m-auto w-full max-w-md">
+            <div
+              class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl bg-cover bg-center bg-no-repeat p-4"
+              :style="{
+                backgroundImage: `url(${fileDataUrl})`,
+              }"
+            >
+              <div
+                v-if="!fileDataUrl"
+                class="text-muted-foreground m-auto grid grid-cols-1 gap-16"
+              >
+                <icon-lucide-image class="h-8 w-auto" />
+              </div>
+              <div class="grid w-full">
+                <div class="relative w-full items-center">
+                  <Label for="picture">
+                    <Input
+                      id="picture"
+                      type="file"
+                      accept=".jpg, .png"
+                      class="bg-muted rounded-full shadow-none"
+                      placeholder="Upload a picture"
+                      @change="handleFileChange"
+                    />
+                  </Label>
+                  <span
+                    class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
+                  >
+                    <Badge class="rounded-full" variant="secondary">
+                      <icon-mdi-dots-circle />
+                      <span class="truncate">Try sample image</span>
+                    </Badge>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CarouselItem>
+        <CarouselItem class="flex items-center justify-center gap-4 p-4">
+          <div class="m-auto w-full max-w-md">
+            <div
+              class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl p-4"
+            >
+              <div class="text-muted-foreground m-auto grid grid-cols-3 gap-16">
+                <icon-simple-icons-amazon class="h-8 w-auto" />
+                <icon-simple-icons-shopify class="h-8 w-auto" />
+                <icon-simple-icons-etsy class="h-8 w-auto" />
+                <icon-simple-icons-ebay class="h-8 w-auto" />
+                <icon-simple-icons-rakuten class="h-8 w-auto" />
+                <icon-tabler-brand-walmart class="h-8 w-auto" />
+              </div>
+              <div class="grid w-full">
+                <div class="relative w-full items-center">
+                  <Label for="link">
+                    <Input
+                      id="link"
+                      type="text"
+                      class="bg-muted rounded-full shadow-none"
+                      placeholder="Paste your link here..."
+                    />
+                  </Label>
+                  <span
+                    class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
+                  >
+                    <Badge class="rounded-full" variant="secondary">
+                      <icon-mdi-dots-circle />
+                      <span class="truncate">Try sample link</span>
+                    </Badge>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CarouselItem>
+        <CarouselItem class="flex items-center justify-center gap-4 p-4">
+          <div class="m-auto w-full max-w-md">
+            <div
+              class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl p-4"
+            >
+              <div class="relative w-full items-center">
+                <Label for="search">
+                  <Textarea
+                    v-model="search"
+                    data-gramm="false"
+                    class="bg-background h-32 resize-none rounded-3xl p-4 shadow-none"
+                    cols="10"
+                    placeholder="Ask AI what you want to find..."
+                  />
+                </Label>
+                <span class="absolute end-0 top-0 flex gap-2 p-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Badge class="rounded-full px-0.5" variant="secondary">
+                          <icon-mdi-dots-circle />
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <span class="truncate">Try sample prompt</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </span>
+                <span
+                  class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-4"
+                >
+                  <span class="flex gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <DropdownMenu>
+                          <TooltipTrigger as-child>
+                            <DropdownMenuTrigger as-child>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                class="rounded-full"
+                              >
+                                <icon-lucide-plus />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Attach</TooltipContent>
+                          <DropdownMenuContent
+                            class="w-48 rounded-2xl shadow-none"
+                            align="start"
+                            side="top"
+                          >
+                            <DropdownMenuLabel>
+                              Attach to your prompt
+                            </DropdownMenuLabel>
+                            <DropdownMenuGroup>
+                              <DropdownMenuItem class="gap-2">
+                                <icon-lucide-upload />
+                                <span>Upload image</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem class="gap-2">
+                                <icon-lucide-camera />
+                                <span>Take photo</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem class="gap-2">
+                                <icon-lucide-globe />
+                                <span>Image URL</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuGroup>
+                            <DropdownMenuLabel
+                              class="text-muted-foreground text-xs"
+                            >
+                              JPEG, PNG, GIF, WEBP, AVIF supported. Max 5MB.
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup>
+                              <DropdownMenuItem class="gap-2">
+                                <icon-lucide-link-2 />
+                                <span>Product Link</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuGroup>
+                            <DropdownMenuLabel
+                              class="text-muted-foreground text-xs"
+                            >
+                              Amazon, Shopify, Etsy, eBay, Rakuten, Walmart
+                              supported.
+                            </DropdownMenuLabel>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </span>
+                  <span class="flex gap-2">
+                    <Button size="icon" class="rounded-full">
+                      <icon-lucide-arrow-up />
+                    </Button>
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </CarouselItem>
+      </CarouselContent>
+    </Carousel>
+    <Carousel
+      class="fixed top-4 left-1/2 w-full max-w-md -translate-x-1/2 focus-visible:outline-none"
+      @init-api="(val) => (emblaThumbnailApi = val)"
+    >
+      <CarouselContent class="m-0 flex gap-2">
+        <template v-for="(item, index) in navItems" :key="index">
+          <CarouselItem
+            :class="[
+              'flex shrink-0 basis-auto items-center justify-center gap-2 rounded-full px-3 transition-all',
+              `border-${item.color}-500/5`,
+              selectedIndex === index ? item.style.active : item.style.inactive,
+            ]"
+            @click="onThumbClick(index)"
+          >
+            <component :is="item.icon" />
+            <span v-if="selectedIndex === index" class="font-medium">
+              {{ item.text }}
+            </span>
+          </CarouselItem>
+        </template>
+      </CarouselContent>
+    </Carousel>
+  </div>
 </template>

@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { reactiveOmit } from "@vueuse/core"
 import {
   RangeCalendarCellTrigger,
   type RangeCalendarCellTriggerProps,
   useForwardProps,
 } from "reka-ui"
-import { computed, type HTMLAttributes } from "vue"
+import type { HTMLAttributes } from "vue"
 
 const props = withDefaults(
   defineProps<
@@ -17,11 +18,7 @@ const props = withDefaults(
   }
 )
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
-
-  return delegated
-})
+const delegatedProps = reactiveOmit(props, "class")
 
 const forwardedProps = useForwardProps(delegatedProps)
 </script>

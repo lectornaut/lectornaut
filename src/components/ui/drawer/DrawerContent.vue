@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils"
 import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 import { useForwardPropsEmits } from "reka-ui"
 import { DrawerContent, DrawerPortal } from "vaul-vue"
-import type { HtmlHTMLAttributes } from "vue"
+import type { HTMLAttributes } from "vue"
 import DrawerOverlay from "./DrawerOverlay.vue"
 
 const props = defineProps<
-  DialogContentProps & { class?: HtmlHTMLAttributes["class"] }
+  DialogContentProps & { class?: HTMLAttributes["class"] }
 >()
 const emits = defineEmits<DialogContentEmits>()
 

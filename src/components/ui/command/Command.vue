@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
+import { reactiveOmit } from "@vueuse/core"
 import type { ListboxRootEmits, ListboxRootProps } from "reka-ui"
 import { ListboxRoot, useFilter, useForwardPropsEmits } from "reka-ui"
-import { computed, type HTMLAttributes, reactive, ref, watch } from "vue"
+import { type HTMLAttributes, reactive, ref, watch } from "vue"
 import { provideCommandContext } from "."
 
 const props = withDefaults(
@@ -14,11 +15,7 @@ const props = withDefaults(
 
 const emits = defineEmits<ListboxRootEmits>()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
-
-  return delegated
-})
+const delegatedProps = reactiveOmit(props, "class")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
@@ -69,7 +66,7 @@ function filterItems() {
   filterState.filtered.count = itemCount
 }
 
-function _handleSelect() {
+function handleSelect() {
   filterState.search = ""
 }
 
