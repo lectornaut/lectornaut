@@ -1,3 +1,12 @@
+<route lang="json">
+{
+  "meta": {
+    "requiresGuest": true,
+    "title": "Enter"
+  }
+}
+</route>
+
 <script setup lang="ts">
 import { authenticateEmail } from "@/modules/auth"
 
@@ -52,11 +61,3 @@ onMounted(async () => {
     </div>
   </div>
 </template>
-
-<route lang="json">
-{
-  "meta": {
-    "requiresGuest": true
-  }
-}
-</route>

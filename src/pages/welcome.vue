@@ -1,3 +1,12 @@
+<route lang="json">
+{
+  "meta": {
+    "requiresUser": true,
+    "title": "Welcome"
+  }
+}
+</route>
+
 <script setup lang="ts">
 useHead({
   title: "Welcome",
@@ -34,11 +43,3 @@ useHead({
     </div>
   </div>
 </template>
-
-<route lang="json">
-{
-  "meta": {
-    "requiresUser": true
-  }
-}
-</route>

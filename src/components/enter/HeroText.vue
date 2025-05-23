@@ -16,7 +16,7 @@
           text-anchor="middle"
           text-rendering="geometricPrecision"
           stroke-width="0"
-          class="fill-current font-serif tracking-tighter"
+          class="fill-current font-serif tracking-tight"
         >
           First
           <tspan alignment-baseline="middle" class="italic">emotionally</tspan>
@@ -37,7 +37,7 @@
           text-anchor="middle"
           text-rendering="geometricPrecision"
           stroke-width="0"
-          class="fill-current font-serif tracking-tighter"
+          class="fill-current font-serif tracking-tight"
         >
           <tspan alignment-baseline="middle" class="italic">intelligent</tspan>
           AI

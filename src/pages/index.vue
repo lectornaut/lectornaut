@@ -1,3 +1,12 @@
+<route lang="json">
+{
+  "meta": {
+    "requiresGuest": true,
+    "title": "Landing"
+  }
+}
+</route>
+
 <script setup lang="ts">
 useHead({
   title: "Landing",
@@ -202,11 +211,3 @@ useHead({
     <Footer />
   </div>
 </template>
-
-<route lang="json">
-{
-  "meta": {
-    "requiresGuest": true
-  }
-}
-</route>

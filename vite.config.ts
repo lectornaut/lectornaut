@@ -19,6 +19,7 @@ import { ViteImageOptimizer } from "vite-plugin-image-optimizer"
 import { VitePWA } from "vite-plugin-pwa"
 import Sitemap from "vite-plugin-sitemap"
 import Layouts from "vite-plugin-vue-layouts"
+import tailwindAutoReference from "vite-plugin-vue-tailwind-auto-reference"
 
 const host = process.env.TAURI_DEV_HOST
 
@@ -64,6 +65,7 @@ export default defineConfig({
         ],
       },
     }),
+    tailwindAutoReference("./src/styles/index.css"),
     tailwindcss(),
     Components({
       resolvers: [

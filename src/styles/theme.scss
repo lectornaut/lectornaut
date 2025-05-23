@@ -1,31 +1,31 @@
 @mixin light-theme {
   color-scheme: light;
 
-  --background: var(--color-white);
+  --background: var(--color-neutral-100);
   --foreground: var(--color-neutral-800);
-  --card: var(--color-white);
+  --card: var(--color-neutral-100);
   --card-foreground: var(--color-neutral-950);
-  --popover: var(--color-white);
+  --popover: var(--color-neutral-100);
   --popover-foreground: var(--color-neutral-900);
-  --secondary: var(--color-neutral-100);
+  --secondary: var(--color-neutral-200);
   --secondary-foreground: var(--color-neutral-600);
   --muted: var(--color-neutral-200);
-  --muted-foreground: var(--color-neutral-400);
-  --accent: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
+  --accent: var(--color-neutral-200);
   --accent-foreground: var(--color-black);
   --border: var(--color-neutral-200);
   --input: var(--color-neutral-200);
-  --sidebar: var(--color-white);
+  --sidebar: var(--color-neutral-100);
   --sidebar-foreground: var(--color-neutral-800);
   --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-neutral-100);
-  --sidebar-accent-foreground: var(--color-black);
+  --sidebar-primary-foreground: var(--color-neutral-100);
+  --sidebar-accent: var(--color-neutral-200);
+  --sidebar-accent-foreground: var(--color-neutral-800);
   --sidebar-border: var(--color-neutral-200);
 }
 
 @mixin red-light-theme {
-  --primary: var(--color-red-800);
+  --primary: var(--color-red-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-red-800);
   --destructive-foreground: var(--color-white);
@@ -39,7 +39,7 @@
 }
 
 @mixin orange-light-theme {
-  --primary: var(--color-orange-800);
+  --primary: var(--color-orange-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-orange-800);
   --destructive-foreground: var(--color-white);
@@ -53,7 +53,7 @@
 }
 
 @mixin amber-light-theme {
-  --primary: var(--color-amber-800);
+  --primary: var(--color-amber-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-amber-800);
   --destructive-foreground: var(--color-white);
@@ -67,7 +67,7 @@
 }
 
 @mixin yellow-light-theme {
-  --primary: var(--color-yellow-800);
+  --primary: var(--color-yellow-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-yellow-800);
   --destructive-foreground: var(--color-white);
@@ -81,7 +81,7 @@
 }
 
 @mixin lime-light-theme {
-  --primary: var(--color-lime-800);
+  --primary: var(--color-lime-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-lime-800);
   --destructive-foreground: var(--color-white);
@@ -95,7 +95,7 @@
 }
 
 @mixin green-light-theme {
-  --primary: var(--color-green-800);
+  --primary: var(--color-green-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-green-800);
   --destructive-foreground: var(--color-white);
@@ -109,7 +109,7 @@
 }
 
 @mixin emerald-light-theme {
-  --primary: var(--color-emerald-800);
+  --primary: var(--color-emerald-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-emerald-800);
   --destructive-foreground: var(--color-white);
@@ -123,7 +123,7 @@
 }
 
 @mixin teal-light-theme {
-  --primary: var(--color-teal-800);
+  --primary: var(--color-teal-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-teal-800);
   --destructive-foreground: var(--color-white);
@@ -137,7 +137,7 @@
 }
 
 @mixin cyan-light-theme {
-  --primary: var(--color-cyan-800);
+  --primary: var(--color-cyan-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-cyan-800);
   --destructive-foreground: var(--color-white);
@@ -151,7 +151,7 @@
 }
 
 @mixin sky-light-theme {
-  --primary: var(--color-sky-800);
+  --primary: var(--color-sky-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-sky-800);
   --destructive-foreground: var(--color-white);
@@ -165,7 +165,7 @@
 }
 
 @mixin blue-light-theme {
-  --primary: var(--color-blue-800);
+  --primary: var(--color-blue-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-blue-800);
   --destructive-foreground: var(--color-white);
@@ -179,7 +179,7 @@
 }
 
 @mixin indigo-light-theme {
-  --primary: var(--color-indigo-800);
+  --primary: var(--color-indigo-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-indigo-800);
   --destructive-foreground: var(--color-white);
@@ -193,7 +193,7 @@
 }
 
 @mixin violet-light-theme {
-  --primary: var(--color-violet-800);
+  --primary: var(--color-violet-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-violet-800);
   --destructive-foreground: var(--color-white);
@@ -207,7 +207,7 @@
 }
 
 @mixin purple-light-theme {
-  --primary: var(--color-purple-800);
+  --primary: var(--color-purple-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-purple-800);
   --destructive-foreground: var(--color-white);
@@ -221,7 +221,7 @@
 }
 
 @mixin fuchsia-light-theme {
-  --primary: var(--color-fuchsia-800);
+  --primary: var(--color-fuchsia-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-fuchsia-800);
   --destructive-foreground: var(--color-white);
@@ -235,7 +235,7 @@
 }
 
 @mixin pink-light-theme {
-  --primary: var(--color-pink-800);
+  --primary: var(--color-pink-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-pink-800);
   --destructive-foreground: var(--color-white);
@@ -249,7 +249,7 @@
 }
 
 @mixin rose-light-theme {
-  --primary: var(--color-rose-800);
+  --primary: var(--color-rose-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-rose-800);
   --destructive-foreground: var(--color-white);
@@ -263,7 +263,7 @@
 }
 
 @mixin slate-light-theme {
-  --primary: var(--color-slate-800);
+  --primary: var(--color-slate-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-slate-800);
   --destructive-foreground: var(--color-white);
@@ -277,7 +277,7 @@
 }
 
 @mixin gray-light-theme {
-  --primary: var(--color-gray-800);
+  --primary: var(--color-gray-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-gray-800);
   --destructive-foreground: var(--color-white);
@@ -291,7 +291,7 @@
 }
 
 @mixin zinc-light-theme {
-  --primary: var(--color-zinc-800);
+  --primary: var(--color-zinc-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-zinc-800);
   --destructive-foreground: var(--color-white);
@@ -305,7 +305,7 @@
 }
 
 @mixin neutral-light-theme {
-  --primary: var(--color-neutral-800);
+  --primary: var(--color-neutral-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-neutral-800);
   --destructive-foreground: var(--color-white);
@@ -319,7 +319,7 @@
 }
 
 @mixin stone-light-theme {
-  --primary: var(--color-stone-800);
+  --primary: var(--color-stone-600);
   --primary-foreground: var(--color-white);
   --destructive: var(--color-stone-800);
   --destructive-foreground: var(--color-white);
@@ -335,26 +335,26 @@
 @mixin dark-theme {
   color-scheme: dark;
 
-  --background: var(--color-neutral-950);
+  --background: var(--color-neutral-900);
   --foreground: var(--color-neutral-200);
-  --card: var(--color-black);
+  --card: var(--color-neutral-900);
   --card-foreground: var(--color-neutral-50);
-  --popover: var(--color-black);
+  --popover: var(--color-neutral-900);
   --popover-foreground: var(--color-neutral-100);
-  --secondary: var(--color-neutral-900);
+  --secondary: var(--color-neutral-800);
   --secondary-foreground: var(--color-neutral-400);
   --muted: var(--color-neutral-800);
   --muted-foreground: var(--color-neutral-500);
-  --accent: var(--color-neutral-900);
+  --accent: var(--color-neutral-800);
   --accent-foreground: var(--color-white);
   --border: var(--color-neutral-800);
   --input: var(--color-neutral-800);
-  --sidebar: var(--color-black);
+  --sidebar: var(--color-neutral-900);
   --sidebar-foreground: var(--color-neutral-200);
   --sidebar-primary: var(--color-neutral-200);
-  --sidebar-primary-foreground: var(--color-black);
-  --sidebar-accent: var(--color-neutral-900);
-  --sidebar-accent-foreground: var(--color-white);
+  --sidebar-primary-foreground: var(--color-neutral-900);
+  --sidebar-accent: var(--color-neutral-800);
+  --sidebar-accent-foreground: var(--color-neutral-200);
   --sidebar-border: var(--color-neutral-800);
 }
 

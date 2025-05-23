@@ -27,6 +27,7 @@ const filteredShortcuts = computed(() =>
 <template>
   <div class="relative flex grow items-center">
     <span
+      id="tour-search-bar"
       class="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex w-full items-center gap-3 px-4"
     >
       <icon-lucide-search />

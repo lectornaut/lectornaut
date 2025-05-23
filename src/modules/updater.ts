@@ -7,7 +7,7 @@ export const initUpdater = async () => {
     console.log("Checking for updates...")
     const update = await check()
 
-    if (update?.available) {
+    if (update) {
       console.log(
         `Found update: ${update.version} (released on ${update.date})\nRelease notes: ${update.body}`
       )

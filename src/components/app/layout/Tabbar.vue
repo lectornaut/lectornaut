@@ -10,6 +10,7 @@ const el = ref<HTMLElement | null>(null)
 type Tab = {
   id: string
   name: string
+  url: string
 }
 
 const db = useFirestore()
@@ -112,9 +113,9 @@ emitter.on("Tabs.Close", (id) => {
 })
 
 const dummyRecentTabs = [
-  { id: "1", name: "Tab 1" },
-  { id: "2", name: "Tab 2" },
-  { id: "3", name: "Tab 3" },
+  { id: "1", name: "Tab 1", url: "/workflows" },
+  { id: "2", name: "Tab 2", url: "/workflows" },
+  { id: "3", name: "Tab 3", url: "/workflows" },
 ]
 </script>
 
@@ -210,7 +211,7 @@ const dummyRecentTabs = [
                 as-child
                 @click="active = tab.id"
               >
-                <RouterLink :to="tab.id">
+                <RouterLink :to="`${tab.url}/${tab.id}`">
                   <icon-lucide-workflow />
                   <span class="mr-auto truncate">
                     {{ tab.name }} {{ tab.id }}
@@ -297,6 +298,7 @@ const dummyRecentTabs = [
                   emitter.emit('Tabs.Add', {
                     id: generateId(),
                     name: 'Sample tab',
+                    url: '/workflows',
                   })
                 "
               >

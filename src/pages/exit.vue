@@ -1,3 +1,12 @@
+<route lang="json">
+{
+  "meta": {
+    "requiresUser": true,
+    "title": "Exit"
+  }
+}
+</route>
+
 <script setup lang="ts">
 import emitter from "@/modules/mitt"
 
@@ -15,11 +24,3 @@ useHead({
     </div>
   </div>
 </template>
-
-<route lang="json">
-{
-  "meta": {
-    "requiresUser": true
-  }
-}
-</route>

@@ -1,6 +1,16 @@
+<route lang="json">
+{
+  "meta": {
+    "layout": "app",
+    "requiresUser": true,
+    "title": "Drafts"
+  }
+}
+</route>
+
 <script setup lang="ts">
 useHead({
-  title: "Home",
+  title: "Drafts",
 })
 </script>
 
@@ -11,12 +21,3 @@ useHead({
     </div>
   </div>
 </template>
-
-<route lang="json">
-{
-  "meta": {
-    "layout": "app",
-    "requiresUser": true
-  }
-}
-</route>

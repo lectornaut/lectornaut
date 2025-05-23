@@ -43,6 +43,7 @@ const selectedTeam = ref<Team>(
       <Popover v-model:open="open">
         <PopoverTrigger as-child>
           <Button
+            id="tour-team-switcher"
             variant="ghost"
             class="data-[state=open]:bg-accent gap-3 truncate"
           >

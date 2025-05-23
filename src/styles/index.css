@@ -118,6 +118,7 @@
     @apply bg-linear-to-b;
     @apply from-background;
     @apply to-background/95;
+    @apply bg-background;
     @apply text-foreground;
     @apply text-sm;
     @apply select-none;
