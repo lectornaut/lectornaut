@@ -173,7 +173,7 @@ const route = useRoute()
           :options="{ scrollbars: { autoHide: 'scroll' } }"
         >
           <SidebarGroup>
-            <SidebarGroupContent>
+            <SidebarGroupContent id="tour-primary-navigation">
               <SidebarMenu>
                 <SidebarMenuItem
                   v-for="item in navigation"
@@ -210,7 +210,7 @@ const route = useRoute()
           <span class="text-foreground ml-2 text-base font-medium">
             {{ route.meta.title }}
           </span>
-          <Button variant="ghost" class="gap-2">
+          <Button variant="ghost">
             <icon-lucide-plus />
             <span class="truncate">New</span>
           </Button>

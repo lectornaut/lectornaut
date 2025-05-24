@@ -45,7 +45,7 @@ onBeforeUnmount(() => {
                 as-child
                 class="after:bg-border relative after:absolute after:-right-2 after:h-3 after:w-px after:rounded-full"
               >
-                <Button variant="ghost" size="icon" class="gap-2">
+                <Button variant="ghost" size="icon">
                   <icon-lucide-grip />
                 </Button>
               </TooltipTrigger>
@@ -58,7 +58,7 @@ onBeforeUnmount(() => {
           <TooltipProvider v-motion-fade>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="gap-2">
+                <Button variant="ghost" size="icon">
                   <icon-lucide-arrow-left />
                 </Button>
               </TooltipTrigger>
@@ -66,7 +66,7 @@ onBeforeUnmount(() => {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="gap-2">
+                <Button variant="ghost" size="icon">
                   <icon-lucide-arrow-right />
                 </Button>
               </TooltipTrigger>
@@ -90,7 +90,7 @@ onBeforeUnmount(() => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="gap-2">
+                <Button variant="ghost" size="icon">
                   <icon-lucide-panel-left />
                 </Button>
               </TooltipTrigger>
@@ -98,7 +98,7 @@ onBeforeUnmount(() => {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="gap-2">
+                <Button variant="ghost" size="icon">
                   <icon-lucide-panel-bottom />
                 </Button>
               </TooltipTrigger>
@@ -106,7 +106,7 @@ onBeforeUnmount(() => {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="gap-2">
+                <Button variant="ghost" size="icon">
                   <icon-lucide-panel-right />
                 </Button>
               </TooltipTrigger>

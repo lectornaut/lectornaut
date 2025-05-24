@@ -71,10 +71,12 @@ const { isMobile } = useSidebar()
                 <DropdownMenuItem
                   @click="emitter.emit('Dialog.Settings.Open', 'account')"
                 >
-                  <icon-lucide-badge-check />
+                  <icon-lucide-circle-user />
                   Account
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  @click="emitter.emit('Dialog.Settings.Open', 'billing')"
+                >
                   <icon-lucide-credit-card />
                   Billing
                 </DropdownMenuItem>

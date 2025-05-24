@@ -53,6 +53,16 @@ const productTour = driver({
       },
     },
     {
+      element: "#tour-primary-navigation",
+      popover: {
+        title: "Primary navigation",
+        description:
+          "This is the primary navigation. You can use it to navigate between different sections of the application.",
+        side: "right",
+        align: "start",
+      },
+    },
+    {
       popover: {
         title: "Happy Coding",
         description:
@@ -95,16 +105,13 @@ const productTour = driver({
 
                 Documentation <icon-lucide-arrow-up-right />
               </DropdownMenuItem>
-              <DropdownMenuItem
-                class="gap-2"
-                @click="emitter.emit('Dialog.Shortcuts.Open')"
-              >
+              <DropdownMenuItem @click="emitter.emit('Dialog.Shortcuts.Open')">
                 <icon-lucide-keyboard />
                 Shortcuts
                 <DropdownMenuShortcut>⌘ /</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSub>
-                <DropdownMenuItem class="gap-2" as-child>
+                <DropdownMenuItem as-child>
                   <DropdownMenuSubTrigger>
                     <icon-lucide-ellipsis />
                     More

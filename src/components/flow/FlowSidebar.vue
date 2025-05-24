@@ -54,7 +54,7 @@ const { onDragStart } = useDragAndDrop()
             >
               <SidebarGroupLabel>{{ group.name }}</SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu class="gap-2">
+                <SidebarMenu>
                   <Collapsible
                     v-for="list in group.lists"
                     :key="list.id"
@@ -78,7 +78,7 @@ const { onDragStart } = useDragAndDrop()
                         class="rounded-md p-2"
                         :class="[list.bg]"
                       >
-                        <SidebarMenu class="gap-2">
+                        <SidebarMenu>
                           <SidebarMenuItem
                             v-for="node in list.nodes"
                             :key="node.id"

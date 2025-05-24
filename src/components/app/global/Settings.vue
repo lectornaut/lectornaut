@@ -367,14 +367,13 @@ const data = {
                         v-if="!user?.emailVerified"
                         variant="secondary"
                         :disabled="sendingVerificationEmail"
-                        class="gap-2"
                         @click="sendVerificationEmail"
                       >
                         <icon-lucide-loader
                           v-if="sendingVerificationEmail"
                           class="animate-spin"
                         />
-                        Verify email
+                        <span class="truncate">Verify email</span>
                       </Button>
                       <Dialog>
                         <DialogTrigger>
@@ -400,14 +399,15 @@ const data = {
                           <DialogFooter>
                             <Button
                               :disabled="changingEmail || !newEmail"
-                              class="gap-2"
                               @click="changeEmail"
                             >
                               <icon-lucide-loader
                                 v-if="changingEmail"
                                 class="animate-spin"
                               />
-                              Send verification email
+                              <span class="truncate"
+                                >Send verification email</span
+                              >
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -422,8 +422,9 @@ const data = {
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">
-                      <Button variant="outline" class="gap-2">
-                        Connect a new account
+                      <Button variant="outline">
+                        <icon-lucide-plus />
+                        <span class="truncate">Connect a new account</span>
                       </Button>
                     </div>
                   </div>
@@ -483,21 +484,20 @@ const data = {
                         <Button
                           v-if="provider.providerId === 'password'"
                           variant="secondary"
-                          class="gap-2"
                         >
-                          Change password
+                          <icon-lucide-lock />
+                          <span class="truncate">Change password</span>
                         </Button>
                         <Button
                           :disabled="unlinkingProviderMap[provider.providerId]"
                           variant="destructive"
-                          class="gap-2"
                           @click="unlinkProvider(provider.providerId)"
                         >
                           <icon-lucide-loader
                             v-if="unlinkingProviderMap[provider.providerId]"
                             class="animate-spin"
                           />
-                          Disconnect
+                          <span class="truncate">Disconnect</span>
                         </Button>
                       </div>
                     </div>
@@ -516,8 +516,13 @@ const data = {
                     <div class="ml-auto flex gap-2">
                       <AlertDialog>
                         <AlertDialogTrigger>
-                          <Button variant="destructive" class="gap-2">
-                            Delete account
+                          <Button variant="destructive">
+                            <icon-lucide-loader
+                              v-if="deletingAccount"
+                              class="animate-spin"
+                            />
+                            <icon-lucide-trash-2 v-else />
+                            <span class="truncate">Delete account</span>
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>

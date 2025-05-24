@@ -11,7 +11,7 @@ const running = refAutoReset(false, 5000)
           <BreadcrumbItem>
             <BreadcrumbLink as-child>
               <Button variant="ghost" as-child>
-                <RouterLink to="/exit" class="gap-2">
+                <RouterLink to="/exit">
                   <span class="truncate">Exit</span>
                 </RouterLink>
               </Button>
@@ -22,7 +22,7 @@ const running = refAutoReset(false, 5000)
             <BreadcrumbPage as-child>
               <BreadcrumbLink as-child>
                 <Button variant="ghost" as-child>
-                  <RouterLink to="/welcome" class="gap-2">
+                  <RouterLink to="/welcome">
                     <span class="truncate">Breadcrumb</span>
                     <Badge
                       variant="secondary"
@@ -69,22 +69,17 @@ const running = refAutoReset(false, 5000)
       </Breadcrumb>
     </div>
     <div class="flex gap-2">
-      <Button class="gap-2" variant="ghost" as-child>
+      <Button variant="ghost" as-child>
         <Label for="active">
           <Switch id="active" v-model="active" />
           <span class="truncate">Enabled</span>
         </Label>
       </Button>
-      <Button
-        :disabled="running"
-        class="gap-2"
-        variant="outline"
-        @click="running = !running"
-      >
+      <Button :disabled="running" variant="outline" @click="running = !running">
         <icon-lucide-play />
-        <span class="truncate"> Run </span>
+        <span class="truncate">Run</span>
       </Button>
-      <Button class="gap-2">
+      <Button>
         <icon-lucide-check-check />
         <span class="truncate">Publish</span>
       </Button>

@@ -33,23 +33,17 @@ const filteredShortcuts = computed(() =>
 
 <template>
   <div class="relative flex grow items-center">
-    <span
-      id="tour-search-bar"
-      class="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex w-full items-center gap-3 px-4"
-    >
-      <icon-lucide-search />
-      <span class="truncate">Search</span>
-    </span>
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger as-child>
           <Button
+            id="tour-search-bar"
             variant="secondary"
             class="grow shadow-none"
             @click="openCommand = true"
           >
-            <!-- <icon-lucide-search />
-            <span class="truncate">Search</span> -->
+            <icon-lucide-search />
+            <span class="truncate">Search or command...</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent> Search </TooltipContent>

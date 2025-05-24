@@ -314,7 +314,7 @@ const dummyRecentTabs = [
               <DropdownMenu>
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" class="gap-2">
+                    <Button variant="ghost" size="icon">
                       <icon-lucide-chevron-down />
                     </Button>
                   </DropdownMenuTrigger>
