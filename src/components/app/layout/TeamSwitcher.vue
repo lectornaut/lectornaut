@@ -88,7 +88,6 @@ const selectedTeam = ref<Team>(
                   v-for="team in group.teams"
                   :key="team.value"
                   :value="team"
-                  class="grow justify-start gap-2 truncate py-2"
                   @select="
                     () => {
                       selectedTeam = team
@@ -122,7 +121,6 @@ const selectedTeam = ref<Team>(
                 <DialogTrigger as-child>
                   <CommandItem
                     value="create-team"
-                    class="grow justify-start gap-2 truncate py-2"
                     @select="
                       () => {
                         open = false
@@ -146,38 +144,14 @@ const selectedTeam = ref<Team>(
             Add a new team to manage products and customers.
           </DialogDescription>
         </DialogHeader>
-        <div>
-          <div class="flex flex-col gap-4">
-            <div class="grid gap-4">
-              <Label for="name">Team name</Label>
-              <Input
-                id="name"
-                placeholder="Acme Inc."
-                class="focus:border-inherit focus:ring-0"
-              />
-            </div>
-            <div class="space-y-2">
-              <Label for="plan">Subscription plan</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">
-                    <span class="font-medium">Free</span> -
-                    <span class="text-muted-foreground">
-                      Trial for two weeks
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="pro">
-                    <span class="font-medium">Pro</span> -
-                    <span class="text-muted-foreground">
-                      $9/month per user
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <div class="flex flex-col gap-4">
+          <div class="grid gap-2">
+            <Label for="name">Team name</Label>
+            <Input
+              id="name"
+              placeholder="Acme Inc."
+              class="focus:border-inherit focus:ring-0"
+            />
           </div>
         </div>
         <DialogFooter>

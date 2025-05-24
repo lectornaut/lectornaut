@@ -53,19 +53,21 @@ const { isMobile } = useSidebar()
                   </Avatar>
                   <div class="grid flex-1 text-left text-sm leading-tight">
                     <span class="truncate font-semibold">{{ user.name }}</span>
-                    <span class="truncate text-xs">{{ user.email }}</span>
+                    <span class="text-muted-foreground truncate text-xs">
+                      {{ user.email }}
+                    </span>
                   </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <icon-lucide-sparkles />
-                  Upgrade to Pro
+                <DropdownMenuItem
+                  @click="emitter.emit('Dialog.Settings.Open', 'general')"
+                >
+                  <icon-lucide-settings />
+                  Settings
+                  <DropdownMenuShortcut>⌘ ,</DropdownMenuShortcut>
                 </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
                 <DropdownMenuItem
                   @click="emitter.emit('Dialog.Settings.Open', 'account')"
                 >
@@ -76,14 +78,10 @@ const { isMobile } = useSidebar()
                   <icon-lucide-credit-card />
                   Billing
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <icon-lucide-bell />
-                  Notifications
-                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem @click="emitter.emit('Dialog.Exit.Open')">
                   <icon-lucide-log-out />
                   Log out
                 </DropdownMenuItem>

@@ -516,15 +516,15 @@ const randomIndex = () => {
                               Attach to your prompt
                             </DropdownMenuLabel>
                             <DropdownMenuGroup>
-                              <DropdownMenuItem class="gap-2">
+                              <DropdownMenuItem>
                                 <icon-lucide-upload />
                                 <span>Upload image</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem class="gap-2">
+                              <DropdownMenuItem>
                                 <icon-lucide-camera />
                                 <span>Take photo</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem class="gap-2">
+                              <DropdownMenuItem>
                                 <icon-lucide-globe />
                                 <span>Image URL</span>
                               </DropdownMenuItem>
@@ -536,7 +536,7 @@ const randomIndex = () => {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
-                              <DropdownMenuItem class="gap-2">
+                              <DropdownMenuItem>
                                 <icon-lucide-link-2 />
                                 <span>Product Link</span>
                               </DropdownMenuItem>

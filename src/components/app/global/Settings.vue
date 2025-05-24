@@ -19,6 +19,7 @@ import {
   useStorageFile,
 } from "vuefire"
 import IconCircleUserRound from "~icons/lucide/circle-user-round"
+import IconCreditCard from "~icons/lucide/credit-card"
 import IconPaintbrush from "~icons/lucide/paintbrush"
 import IconSettings from "~icons/lucide/settings"
 
@@ -209,6 +210,7 @@ const data = {
     { name: "General", icon: IconSettings, id: "general" },
     { name: "Account", icon: IconCircleUserRound, id: "account" },
     { name: "Appearance", icon: IconPaintbrush, id: "appearance" },
+    { name: "Billing", icon: IconCreditCard, id: "billing" },
   ],
 }
 </script>

@@ -148,7 +148,7 @@ const authenticateApple = async () => {
         <div class="flex flex-col gap-4">
           <div class="grid gap-4">
             <Label for="email">Email</Label>
-            <div class="relative w-full items-center">
+            <div class="relative flex w-full items-center">
               <span
                 class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
               >
@@ -167,7 +167,7 @@ const authenticateApple = async () => {
           </div>
           <div class="grid gap-4">
             <Label for="password">Password</Label>
-            <div class="relative w-full items-center">
+            <div class="relative flex w-full items-center">
               <span
                 class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
               >
@@ -205,9 +205,6 @@ const authenticateApple = async () => {
           </template>
           <template v-else> Continue </template>
         </Button>
-        <div class="flex items-center justify-center gap-2">
-          <Button variant="ghost"> Send Magic link </Button>
-        </div>
       </div>
     </TabsContent>
     <TabsContent value="sign-in">
@@ -215,7 +212,7 @@ const authenticateApple = async () => {
         <div class="flex flex-col gap-4">
           <div class="grid gap-4">
             <Label for="email">Email</Label>
-            <div class="relative w-full items-center">
+            <div class="relative flex w-full items-center">
               <span
                 class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
               >
@@ -233,8 +230,17 @@ const authenticateApple = async () => {
             </div>
           </div>
           <div class="grid gap-4">
-            <Label for="password">Password</Label>
-            <div class="relative w-full items-center">
+            <div class="relative flex w-full items-center justify-between">
+              <Label for="password">Password</Label>
+              <Button
+                variant="link"
+                class="h-auto p-0 text-xs leading-0"
+                @click="resetPassword()"
+              >
+                Forgot password
+              </Button>
+            </div>
+            <div class="relative flex w-full items-center">
               <span
                 class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
               >
@@ -273,11 +279,31 @@ const authenticateApple = async () => {
           </template>
           <template v-else> Continue </template>
         </Button>
-        <div class="flex items-center justify-center gap-2">
-          <Button variant="ghost" @click="resetPassword()">
-            Forgot password?
-          </Button>
-        </div>
+      </div>
+    </TabsContent>
+
+    <TabsContent value="sign-up">
+      <div class="flex items-center justify-center gap-1">
+        <span class="text-muted-foreground"> Already have an account? </span>
+        <Button
+          variant="link"
+          class="h-auto p-0 leading-0"
+          @click="authMode = 'sign-in'"
+        >
+          Sign in
+        </Button>
+      </div>
+    </TabsContent>
+    <TabsContent value="sign-in">
+      <div class="flex items-center justify-center gap-1">
+        <span class="text-muted-foreground"> Don't have an account? </span>
+        <Button
+          variant="link"
+          class="h-auto p-0 leading-0"
+          @click="authMode = 'sign-up'"
+        >
+          Sign up
+        </Button>
       </div>
     </TabsContent>
     <Separator label="Or continue with" />
@@ -325,29 +351,13 @@ const authenticateApple = async () => {
         Apple
       </Button>
     </div>
-    <TabsContent value="sign-up">
-      <div class="flex items-center justify-center gap-1">
-        <span class="text-muted-foreground"> Already have an account? </span>
-        <Button variant="link" class="p-0" @click="authMode = 'sign-in'">
-          Sign in
-        </Button>
-      </div>
-    </TabsContent>
-    <TabsContent value="sign-in">
-      <div class="flex items-center justify-center gap-1">
-        <span class="text-muted-foreground"> Don't have an account? </span>
-        <Button variant="link" class="p-0" @click="authMode = 'sign-up'">
-          Sign up
-        </Button>
-      </div>
-    </TabsContent>
     <Alert
       v-if="authenticateError"
       variant="destructive"
       class="bg-destructive/5 border-destructive/10"
     >
       <icon-lucide-alert-circle />
-      <AlertTitle> Something went wrong </AlertTitle>
+      <AlertTitle> Message: </AlertTitle>
       <AlertDescription>
         {{ authenticateError }}
       </AlertDescription>

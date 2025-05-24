@@ -200,7 +200,6 @@ const route = useRoute()
       <SidebarFooter>
         <SidebarMenu>
           <Support />
-          <SettingsMenu />
         </SidebarMenu>
         <NavUser :user="userData" />
       </SidebarFooter>

@@ -10,17 +10,24 @@ emitter.on("Dialog.Command.Open", () => {
 })
 
 const filteredShortcuts = computed(() =>
-  shortcuts.filter((category) => {
-    const webCondition = isTauri.value ? true : !category.hidden.includes("web")
-
-    const tauriCondition = isTauri.value
-      ? !category.hidden.includes("tauri")
-      : true
-
-    const hiddenCondition = !category.hidden.includes("command")
-
-    return webCondition && tauriCondition && hiddenCondition
-  })
+  shortcuts
+    .filter((category) => {
+      const webCondition = isTauri.value
+        ? true
+        : !category.hidden.includes("web")
+      const desktopCondition = isTauri.value
+        ? !category.hidden.includes("desktop")
+        : true
+      const hiddenCondition = !category.hidden.includes("commands")
+      return webCondition && desktopCondition && hiddenCondition
+    })
+    .map((category) => ({
+      ...category,
+      shortcuts: category.shortcuts.filter(
+        (shortcut) => !shortcut.hidden.includes("commands")
+      ),
+    }))
+    .filter((category) => category.shortcuts.length > 0)
 )
 </script>
 
@@ -74,7 +81,6 @@ const filteredShortcuts = computed(() =>
               v-for="shortcut in category.shortcuts"
               :key="shortcut.event"
               :value="shortcut.event + shortcut.parameters + shortcut.tags"
-              class="grow justify-start gap-3 truncate"
               @select="
                 () => {
                   emitter.emit(shortcut.event, shortcut.parameters)

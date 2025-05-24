@@ -26,19 +26,31 @@ const fuseShortcut = new Fuse(
 
 const filteredShortcuts = computed(() => {
   if (!search.value) {
-    return shortcuts.filter((category) => {
-      const webCondition = isTauri.value
-        ? true
-        : !category.hidden.includes("web")
-
-      const tauriCondition = isTauri.value
-        ? !category.hidden.includes("tauri")
-        : true
-
-      const hiddenCondition = !category.hidden.includes("shortcuts")
-
-      return webCondition && tauriCondition && hiddenCondition
-    })
+    return shortcuts
+      .map((category) => {
+        const visibleShortcuts = category.shortcuts.filter((shortcut) => {
+          const shortcutWeb = isTauri.value
+            ? true
+            : !shortcut.hidden.includes("web")
+          const shortcutDesktop = isTauri.value
+            ? !shortcut.hidden.includes("desktop")
+            : true
+          const shortcutHidden = !shortcut.hidden.includes("shortcuts")
+          return shortcutWeb && shortcutDesktop && shortcutHidden
+        })
+        return {
+          ...category,
+          shortcuts: visibleShortcuts,
+        }
+      })
+      .filter((category) => category.shortcuts.length > 0)
+      .filter((category) => {
+        return (
+          (isTauri.value ? true : !category.hidden.includes("web")) &&
+          (isTauri.value ? !category.hidden.includes("desktop") : true) &&
+          !category.hidden.includes("shortcuts")
+        )
+      })
   }
 
   const categoryResults = fuseCategory
@@ -50,10 +62,14 @@ const filteredShortcuts = computed(() => {
 
   return categoryResults
     .map((category) => {
-      const visibleShortcuts = category.shortcuts.filter((shortcut) =>
-        shortcutResults.includes(shortcut)
-      )
-
+      const visibleShortcuts = category.shortcuts.filter((shortcut) => {
+        return (
+          shortcutResults.includes(shortcut) &&
+          (isTauri.value ? true : !shortcut.hidden.includes("web")) &&
+          (isTauri.value ? !shortcut.hidden.includes("desktop") : true) &&
+          !shortcut.hidden.includes("shortcuts")
+        )
+      })
       return {
         ...category,
         shortcuts: visibleShortcuts,
@@ -61,17 +77,11 @@ const filteredShortcuts = computed(() => {
     })
     .filter((category) => category.shortcuts.length > 0)
     .filter((category) => {
-      const webCondition = isTauri.value
-        ? true
-        : !category.hidden.includes("web")
-
-      const tauriCondition = isTauri.value
-        ? !category.hidden.includes("tauri")
-        : true
-
-      const hiddenCondition = !category.hidden.includes("shortcuts")
-
-      return webCondition && tauriCondition && hiddenCondition
+      return (
+        (isTauri.value ? true : !category.hidden.includes("web")) &&
+        (isTauri.value ? !category.hidden.includes("desktop") : true) &&
+        !category.hidden.includes("shortcuts")
+      )
     })
 })
 </script>
@@ -84,15 +94,15 @@ const filteredShortcuts = computed(() => {
         <SheetDescription>
           <div class="relative w-full items-center">
             <span
-              class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
+              class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-2"
             >
               <icon-lucide-search class="text-muted-foreground" />
             </span>
             <Input
               v-model="search"
               type="text"
-              placeholder="Search in shortcuts"
-              class="pl-10 focus:border-inherit focus:ring-0"
+              placeholder="Search shortcuts..."
+              class="pl-8 focus:border-inherit focus:ring-0"
             />
           </div>
         </SheetDescription>

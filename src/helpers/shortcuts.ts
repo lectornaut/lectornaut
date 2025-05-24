@@ -1,6 +1,7 @@
 import type { FunctionalComponent, SVGAttributes } from "vue"
 import IconLucideCheckSquare2 from "~icons/lucide/check-square-2"
 import IconLucideCircleUser from "~icons/lucide/circle-user"
+import IconCreditCard from "~icons/lucide/credit-card"
 import IconLucideHelpCircle from "~icons/lucide/help-circle"
 import IconLucideLogout from "~icons/lucide/log-out"
 import IconLucideMinusSquare from "~icons/lucide/minus-square"
@@ -22,6 +23,8 @@ export const getPlatformSpecialKey = (): string =>
 
 // const getPlatformAlternateKey = () => (isAppleDevice() ? "⌥" : "Alt")
 
+type ShortcutHiddenType = "web" | "desktop" | "shortcuts" | "commands"
+
 type Shortcut = {
   description: string[]
   keys: string[][]
@@ -30,13 +33,14 @@ type Shortcut = {
   parameters: string | undefined
   icon: FunctionalComponent<SVGAttributes> | string
   tags: string[]
+  hidden: ShortcutHiddenType[]
 }
 
 type ShortcutCategory = {
   title: string
   id: string
   shortcuts: Shortcut[]
-  hidden: string[]
+  hidden: ShortcutHiddenType[]
 }
 
 export const shortcuts: ShortcutCategory[] = [
@@ -45,40 +49,44 @@ export const shortcuts: ShortcutCategory[] = [
     id: "general",
     shortcuts: [
       {
-        description: ["Command"],
+        description: ["Commands"],
         keys: [[getPlatformSpecialKey(), "k"]],
         hotkeys: "cmd+k,ctrl+k",
         event: "Dialog.Command.Open",
         parameters: undefined,
         icon: IconLucideTerminal,
         tags: ["command", "search"],
+        hidden: ["commands"],
       },
       {
-        description: ["Keyboard shortcuts"],
+        description: ["Keyboard Shortcuts"],
         keys: [[getPlatformSpecialKey(), "/"]],
         hotkeys: "cmd+/,ctrl+/",
         event: "Dialog.Shortcuts.Open",
         parameters: undefined,
         icon: IconLucideZap,
         tags: ["keyboard", "shortcuts", "help"],
+        hidden: [],
       },
       {
-        description: ["Open settings"],
+        description: ["Settings"],
         keys: [[getPlatformSpecialKey(), ","]],
         hotkeys: "cmd+,,ctrl+,",
         event: "Dialog.Settings.Open",
         parameters: "general",
         icon: IconLucideSettings,
         tags: ["settings"],
+        hidden: [],
       },
       {
-        description: ["Open help"],
+        description: ["Help and Support"],
         keys: [["?"]],
         hotkeys: "shift+/",
         event: "Menu.Help.Toggle",
         parameters: undefined,
         icon: IconLucideHelpCircle,
         tags: ["help", "support"],
+        hidden: [],
       },
       {
         description: ["Sidebar", "Left"],
@@ -88,6 +96,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucidePanelLeft,
         tags: ["sidebar", "toggle"],
+        hidden: [],
       },
       {
         description: ["Sidebar", "Right"],
@@ -97,6 +106,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucidePanelRight,
         tags: ["sidebar", "toggle"],
+        hidden: [],
       },
     ],
     hidden: [],
@@ -113,6 +123,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucidePlusSquare,
         tags: ["tab", "new", "add", "open"],
+        hidden: [],
       },
       {
         description: ["Close current tab"],
@@ -122,6 +133,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucideMinusSquare,
         tags: ["tab", "close", "remove"],
+        hidden: [],
       },
       {
         description: ["Close other tabs"],
@@ -131,6 +143,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucideXSquare,
         tags: ["tab", "close", "remove", "others"],
+        hidden: [],
       },
       {
         description: ["Select Nth tab"],
@@ -140,9 +153,94 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucideCheckSquare2,
         tags: ["tab", "select"],
+        hidden: [],
       },
     ],
     hidden: ["web"],
+  },
+  {
+    title: "Settings",
+    id: "settings",
+    shortcuts: [
+      {
+        description: ["Settings", "General"],
+        keys: [],
+        hotkeys: "",
+        event: "Dialog.Settings.Open",
+        parameters: "general",
+        icon: IconLucideSettings,
+        tags: ["settings", "general"],
+        hidden: [],
+      },
+      {
+        description: ["Settings", "Account"],
+        keys: [],
+        hotkeys: "",
+        event: "Dialog.Settings.Open",
+        parameters: "account",
+        icon: IconLucideCircleUser,
+        tags: ["settings", "account"],
+        hidden: [],
+      },
+      {
+        description: ["Settings", "Appearance"],
+        keys: [],
+        hotkeys: "",
+        event: "Dialog.Settings.Open",
+        parameters: "appearance",
+        icon: IconLucideSettings,
+        tags: ["settings", "appearance", "theme"],
+        hidden: [],
+      },
+      {
+        description: ["Settings", "Billing"],
+        keys: [],
+        hotkeys: "",
+        event: "Dialog.Settings.Open",
+        parameters: "billing",
+        icon: IconCreditCard,
+        tags: ["settings", "billing"],
+        hidden: [],
+      },
+    ],
+    hidden: ["shortcuts"],
+  },
+  {
+    title: "Appearance",
+    id: "appearance",
+    shortcuts: [
+      {
+        description: ["Change theme", "Light"],
+        keys: [],
+        hotkeys: "",
+        event: "Theme.Change",
+        parameters: "light",
+        icon: IconLucideSun,
+        tags: ["settings", "theme", "light"],
+        hidden: [],
+      },
+      {
+        description: ["Change theme", "Dark"],
+        keys: [],
+        hotkeys: "",
+        event: "Theme.Change",
+        parameters: "dark",
+        icon: IconLucideMoon,
+        tags: ["settings", "theme", "dark"],
+        hidden: [],
+      },
+      {
+        description: ["Change theme", "Auto"],
+        keys: [],
+        hotkeys: "",
+        event: "Theme.Change",
+        parameters: "auto",
+        icon: IconLucideMonitor,
+        tags: ["settings", "theme", "auto"],
+        hidden: [],
+      },
+    ],
+    hidden: ["shortcuts"],
   },
   {
     title: "Account",
@@ -156,58 +254,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucideLogout,
         tags: ["logout", "sign out"],
-      },
-      {
-        description: ["Settings", "Account"],
-        keys: [],
-        hotkeys: "",
-        event: "Dialog.Settings.Open",
-        parameters: "account",
-        icon: IconLucideCircleUser,
-        tags: ["settings", "account"],
-      },
-    ],
-    hidden: ["shortcuts"],
-  },
-  {
-    title: "Settings",
-    id: "settings",
-    shortcuts: [
-      {
-        description: ["Change theme", "Light"],
-        keys: [],
-        hotkeys: "",
-        event: "Theme.Change",
-        parameters: "light",
-        icon: IconLucideSun,
-        tags: ["settings", "theme", "light"],
-      },
-      {
-        description: ["Change theme", "Dark"],
-        keys: [],
-        hotkeys: "",
-        event: "Theme.Change",
-        parameters: "dark",
-        icon: IconLucideMoon,
-        tags: ["settings", "theme", "dark"],
-      },
-      {
-        description: ["Change theme", "Auto"],
-        keys: [],
-        hotkeys: "",
-        event: "Theme.Change",
-        parameters: "auto",
-        icon: IconLucideMonitor,
-        tags: ["settings", "theme", "auto"],
-      },
-      {
-        description: ["Settings", "Appearance"],
-        keys: [],
-        hotkeys: "",
-        event: "Dialog.Settings.Open",
-        parameters: "appearance",
-        icon: IconLucideSettings,
-        tags: ["settings", "theme"],
+        hidden: [],
       },
     ],
     hidden: ["shortcuts"],

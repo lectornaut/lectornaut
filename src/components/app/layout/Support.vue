@@ -4,6 +4,8 @@ import { state } from "@/modules/theme"
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
 
+const version = import.meta.env.VITE_APP_VERSION
+
 const openSupport = ref(false)
 
 emitter.on("Menu.Help.Toggle", () => {
@@ -70,7 +72,7 @@ const productTour = driver({
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton class="data-[state=open]:bg-accent">
                 <icon-lucide-circle-help />
-                <span class="truncate">Help & Support</span>
+                Help & Support
               </SidebarMenuButton>
             </DropdownMenuTrigger>
           </TooltipTrigger>
@@ -78,36 +80,73 @@ const productTour = driver({
             Help and Support
             <kbd class="shortcut-key">?</kbd>
           </TooltipContent>
-          <DropdownMenuContent class="w-56" align="end" side="right">
-            <DropdownMenuLabel>Help and support</DropdownMenuLabel>
-            <DropdownMenuSeparator />
+          <DropdownMenuContent class="w-48" align="end" side="right">
             <DropdownMenuGroup>
-              <DropdownMenuItem class="gap-2">
+              <DropdownMenuItem>
                 <icon-lucide-message-circle />
-                <span class="truncate">Contact us</span>
+                Contact us
               </DropdownMenuItem>
-              <DropdownMenuItem class="gap-2" @click="productTour.drive()">
+              <DropdownMenuItem @click="productTour.drive()">
                 <icon-lucide-circle-play />
-                <span class="truncate">Product tour</span>
+                Product tour
               </DropdownMenuItem>
-              <DropdownMenuItem class="gap-2">
+              <DropdownMenuItem>
                 <icon-lucide-book-open />
-                <span class="truncate">Documentation</span>
+
+                Documentation <icon-lucide-arrow-up-right />
               </DropdownMenuItem>
               <DropdownMenuItem
                 class="gap-2"
                 @click="emitter.emit('Dialog.Shortcuts.Open')"
               >
                 <icon-lucide-keyboard />
-                <span class="truncate">Shortcuts</span>
+                Shortcuts
                 <DropdownMenuShortcut>⌘ /</DropdownMenuShortcut>
               </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuItem class="gap-2" as-child>
+                  <DropdownMenuSubTrigger>
+                    <icon-lucide-ellipsis />
+                    More
+                  </DropdownMenuSubTrigger>
+                </DropdownMenuItem>
+                <DropdownMenuSubContent>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem>
+                      Status <icon-lucide-arrow-up-right />
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Terms of Service <icon-lucide-arrow-up-right />
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Privacy Policy <icon-lucide-arrow-up-right />
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel class="text-muted-foreground text-xs">
+                      Hyperjump v{{ version }}
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuLabel class="text-muted-foreground text-xs">
+              What's new
+            </DropdownMenuLabel>
             <DropdownMenuGroup>
-              <DropdownMenuItem class="gap-2">
-                <icon-lucide-twitter />
-                <span class="truncate">X (Twitter)</span>
+              <DropdownMenuItem>
+                <icon-lucide-circle-dot-dashed />
+                AI for Agents
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <icon-lucide-circle-dot-dashed />
+                Sales Pipeline
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <icon-lucide-circle-dot />
+                Full changelog <icon-lucide-arrow-up-right />
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
