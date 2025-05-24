@@ -16,14 +16,12 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
               <TooltipTrigger as-child>
                 <Button
                   variant="ghost"
-                  class="text-muted-foreground grow justify-start gap-3 truncate font-normal"
+                  class="text-muted-foreground grow justify-start font-normal"
                   as-child
                 >
                   <RouterLink :to="link.to">
                     <Component :is="link.icon" />
-                    <span class="truncate">
-                      {{ link.title }}
-                    </span>
+                    {{ link.title }}
                   </RouterLink>
                 </Button>
               </TooltipTrigger>

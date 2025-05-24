@@ -188,7 +188,7 @@ const route = useRoute()
                   >
                     <RouterLink :to="item.url">
                       <component :is="item.icon" />
-                      <span class="truncate">{{ item.title }}</span>
+                      <span>{{ item.title }}</span>
                     </RouterLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -212,7 +212,7 @@ const route = useRoute()
           </span>
           <Button variant="ghost">
             <icon-lucide-plus />
-            <span class="truncate">New</span>
+            <span>New</span>
           </Button>
         </div>
       </SidebarHeader>
@@ -255,7 +255,7 @@ const route = useRoute()
                 <Card class="rounded-md shadow-none">
                   <CardHeader>
                     <CardTitle class="flex w-full justify-between">
-                      <span class="truncate">{{ workflow.name }}</span>
+                      <span>{{ workflow.name }}</span>
                     </CardTitle>
                     <CardDescription class="line-clamp-1">
                       {{ workflow.subject }}
@@ -264,21 +264,17 @@ const route = useRoute()
                   <CardContent class="flex flex-col gap-1">
                     <Badge variant="secondary" :class="getStatus().class">
                       <icon-mdi-circle />
-                      <span class="truncate">
+                      <span>
                         {{ getStatus().text }}
                       </span>
                     </Badge>
                     <Badge variant="secondary">
                       <icon-lucide-hash />
-                      <span class="truncate">
-                        {{ Math.floor(Math.random() * 60) }} RUNS
-                      </span>
+                      <span> {{ Math.floor(Math.random() * 60) }} RUNS </span>
                     </Badge>
                     <Badge variant="secondary">
                       <icon-lucide-clock />
-                      <span class="truncate">
-                        {{ Math.floor(Math.random() * 60) }} HOURS
-                      </span>
+                      <span> {{ Math.floor(Math.random() * 60) }} HOURS </span>
                     </Badge>
                   </CardContent>
                 </Card>

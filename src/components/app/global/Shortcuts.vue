@@ -137,7 +137,7 @@ const filteredShortcuts = computed(() => {
                     v-for="(step, stepIndex) in shortcut.description"
                     :key="stepIndex"
                   >
-                    <span class="truncate">
+                    <span>
                       {{ step }}
                     </span>
                     <span v-if="stepIndex < shortcut.description.length - 1">
@@ -149,7 +149,7 @@ const filteredShortcuts = computed(() => {
                   <div
                     v-for="keys in shortcut.keys"
                     :key="keys.toString()"
-                    class="after:text-muted-foreground relative flex gap-1 after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:content-['or'] last-of-type:after:hidden"
+                    class="after:text-muted-foreground relative flex after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:content-['or'] last-of-type:after:hidden"
                   >
                     <kbd v-for="key in keys" :key="key" class="shortcut-key">
                       {{ key }}

@@ -200,12 +200,13 @@
     @apply rounded-sm;
     @apply border;
     @apply shadow-xs;
-    @apply bg-background;
     @apply font-sans;
     @apply align-baseline;
     @apply capitalize;
-    @apply text-foreground;
+    @apply bg-background/90;
+    @apply text-foreground/80;
     @apply text-xs;
     @apply tracking-tight;
+    @apply scale-90;
   }
 }

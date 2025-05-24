@@ -115,7 +115,7 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger>
           <icon-lucide-check />
-          <!-- <span class="truncate"> Tasks </span> -->
+          <!-- <span> Tasks </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <div class="w-80">
@@ -171,7 +171,7 @@ const components: { title: string; href: string; description: string }[] = [
       <NavigationMenuItem>
         <NavigationMenuTrigger>
           <icon-lucide-bell />
-          <!-- <span class="truncate"> Notifications </span> -->
+          <!-- <span> Notifications </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <div class="w-80">

@@ -1,11 +1,11 @@
 @mixin light-theme {
   color-scheme: light;
 
-  --background: var(--color-neutral-100);
+  --background: var(--color-neutral-50);
   --foreground: var(--color-neutral-800);
   --card: var(--color-neutral-100);
   --card-foreground: var(--color-neutral-950);
-  --popover: var(--color-neutral-100);
+  --popover: var(--color-neutral-50);
   --popover-foreground: var(--color-neutral-900);
   --secondary: var(--color-neutral-200);
   --secondary-foreground: var(--color-neutral-600);
@@ -337,7 +337,7 @@
 
   --background: var(--color-neutral-900);
   --foreground: var(--color-neutral-200);
-  --card: var(--color-neutral-900);
+  --card: var(--color-neutral-950);
   --card-foreground: var(--color-neutral-50);
   --popover: var(--color-neutral-900);
   --popover-foreground: var(--color-neutral-100);
@@ -349,7 +349,7 @@
   --accent-foreground: var(--color-white);
   --border: var(--color-neutral-800);
   --input: var(--color-neutral-800);
-  --sidebar: var(--color-neutral-900);
+  --sidebar: var(--color-neutral-950);
   --sidebar-foreground: var(--color-neutral-200);
   --sidebar-primary: var(--color-neutral-200);
   --sidebar-primary-foreground: var(--color-neutral-900);

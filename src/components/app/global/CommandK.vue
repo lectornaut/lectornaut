@@ -43,17 +43,17 @@ const filteredShortcuts = computed(() =>
             @click="openCommand = true"
           >
             <icon-lucide-search />
-            <span class="truncate">Search or command...</span>
+            <span>Search or command</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent> Search </TooltipContent>
       </Tooltip>
     </TooltipProvider>
     <span
-      class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center gap-1 p-2"
+      class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center p-2"
     >
-      <kbd class="shortcut-key"> ⌘ </kbd>
-      <kbd class="shortcut-key"> K </kbd>
+      <kbd class="shortcut-key">⌘</kbd>
+      <kbd class="shortcut-key">K</kbd>
     </span>
     <CommandDialog v-model:open="openCommand">
       <DialogHeader class="sr-only">
@@ -100,11 +100,11 @@ const filteredShortcuts = computed(() =>
                   </template>
                 </BreadcrumbList>
               </Breadcrumb>
-              <CommandShortcut v-if="shortcut.keys" class="flex gap-1">
+              <CommandShortcut v-if="shortcut.keys">
                 <template v-for="keys in shortcut.keys" :key="keys.toString()">
-                  <kbd v-for="key in keys" :key="key" class="shortcut-key">
-                    {{ key }}
-                  </kbd>
+                  <kbd v-for="key in keys" :key="key" class="shortcut-key">{{
+                    key
+                  }}</kbd>
                 </template>
               </CommandShortcut>
             </CommandItem>

@@ -261,6 +261,22 @@ const data = {
               defer
               :options="{ scrollbars: { autoHide: 'scroll' } }"
             >
+              <TabsContent value="general">
+                <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
+                  <div class="flex flex-col">
+                    <h3 class="text-lg font-semibold">General</h3>
+                    <p class="text-muted-foreground flex items-center gap-2">
+                      Manage your general settings and preferences.
+                    </p>
+                  </div>
+                  <Separator />
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="group relative flex flex-col items-center gap-2"
+                    ></div>
+                  </div>
+                </div>
+              </TabsContent>
               <TabsContent value="account">
                 <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
@@ -373,7 +389,7 @@ const data = {
                           v-if="sendingVerificationEmail"
                           class="animate-spin"
                         />
-                        <span class="truncate">Verify email</span>
+                        <span>Verify email</span>
                       </Button>
                       <Dialog>
                         <DialogTrigger>
@@ -405,9 +421,7 @@ const data = {
                                 v-if="changingEmail"
                                 class="animate-spin"
                               />
-                              <span class="truncate"
-                                >Send verification email</span
-                              >
+                              <span>Send verification email</span>
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -424,7 +438,7 @@ const data = {
                     <div class="ml-auto flex gap-2">
                       <Button variant="outline">
                         <icon-lucide-plus />
-                        <span class="truncate">Connect a new account</span>
+                        <span>Connect a new account</span>
                       </Button>
                     </div>
                   </div>
@@ -486,7 +500,7 @@ const data = {
                           variant="secondary"
                         >
                           <icon-lucide-lock />
-                          <span class="truncate">Change password</span>
+                          <span>Change password</span>
                         </Button>
                         <Button
                           :disabled="unlinkingProviderMap[provider.providerId]"
@@ -497,7 +511,7 @@ const data = {
                             v-if="unlinkingProviderMap[provider.providerId]"
                             class="animate-spin"
                           />
-                          <span class="truncate">Disconnect</span>
+                          <span>Disconnect</span>
                         </Button>
                       </div>
                     </div>
@@ -522,7 +536,7 @@ const data = {
                               class="animate-spin"
                             />
                             <icon-lucide-trash-2 v-else />
-                            <span class="truncate">Delete account</span>
+                            <span>Delete account</span>
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -640,19 +654,43 @@ const data = {
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent value="general">
+              <!-- billing -->
+              <TabsContent value="billing">
                 <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
-                    <h3 class="text-lg font-semibold">General</h3>
+                    <h3 class="text-lg font-semibold">Billing</h3>
                     <p class="text-muted-foreground flex items-center gap-2">
-                      Manage your general settings and preferences.
+                      Manage your billing information and subscriptions.
                     </p>
                   </div>
                   <Separator />
                   <div class="flex items-center gap-4">
-                    <div
-                      class="group relative flex flex-col items-center gap-2"
-                    ></div>
+                    <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">Payment methods</p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        Manage your payment methods and billing information.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Button variant="outline">
+                        <icon-lucide-plus />
+                        <span>Add payment method</span>
+                      </Button>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">Billing history</p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        View your billing history and invoices.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Button variant="outline">
+                        <icon-lucide-file-text />
+                        <span>View billing history</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </TabsContent>

@@ -13,9 +13,9 @@ const steps = [
       <Card class="shadow-none">
         <CardHeader class="p-4">
           <CardTitle>
-            <span class="truncate">My progress</span>
+            <span>My progress</span>
             <Badge variant="secondary">
-              <span class="truncate"> Skip </span>
+              <span> Skip </span>
               <icon-mdi-arrow-right-circle />
             </Badge>
           </CardTitle>
@@ -34,7 +34,6 @@ const steps = [
                 />
                 <icon-mdi-circle-small v-else class="text-muted-foreground" />
                 <span
-                  class="truncate"
                   :class="
                     step.status === 'complete'
                       ? 'text-muted-foreground'

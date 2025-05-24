@@ -86,7 +86,7 @@ const teams = [
       <Card class="border-0 shadow-none">
         <CardHeader>
           <CardTitle>
-            <span class="truncate"> General </span>
+            <span> General </span>
           </CardTitle>
           <CardDescription class="text-xs">
             Configure the general settings of the project.
@@ -120,7 +120,7 @@ const teams = [
       <Card class="border-0 shadow-none">
         <CardHeader>
           <CardTitle>
-            <span class="truncate"> Team </span>
+            <span> Team </span>
           </CardTitle>
           <CardDescription class="text-xs">
             Manage the team members of the project.
@@ -230,7 +230,7 @@ const teams = [
               <div class="flex gap-3">
                 <RadioGroupItem id="public" value="public" />
                 <Label for="public" class="grid gap-1">
-                  <span class="truncate">Public to everyone</span>
+                  <span>Public to everyone</span>
                   <span class="text-secondary-foreground/70 text-xs">
                     Anyone on the internet with the link can view.
                   </span>
@@ -239,7 +239,7 @@ const teams = [
               <div class="flex gap-3">
                 <RadioGroupItem id="private" value="private" />
                 <Label for="private" class="grid gap-1">
-                  <span class="truncate">Private to members</span>
+                  <span>Private to members</span>
                   <span class="text-secondary-foreground/70 text-xs">
                     Only people in your organization can view.
                   </span>
@@ -248,7 +248,7 @@ const teams = [
               <div class="flex gap-3">
                 <RadioGroupItem id="personal" value="personal" />
                 <Label for="personal" class="grid gap-1">
-                  <span class="truncate">Restricted</span>
+                  <span>Restricted</span>
                   <span class="text-secondary-foreground/70 text-xs">
                     Only people with access can open the link.
                   </span>
@@ -263,7 +263,7 @@ const teams = [
       <Card class="border-0 shadow-none">
         <CardHeader>
           <CardTitle>
-            <span class="truncate"> Notifications </span>
+            <span> Notifications </span>
           </CardTitle>
           <CardDescription class="text-xs">
             Configure the notifications of the project.
@@ -273,7 +273,7 @@ const teams = [
           <div class="grid gap-6">
             <div class="flex gap-3">
               <Label for="triggers" class="grid gap-1">
-                <span class="truncate">Task updates</span>
+                <span>Task updates</span>
                 <span class="text-secondary-foreground/70 text-xs">
                   When an automation completes, fails, or encounters an error.
                 </span>
@@ -282,7 +282,7 @@ const teams = [
             </div>
             <div class="flex gap-3">
               <Label for="enabled" class="grid gap-1">
-                <span class="truncate">Workflow execution</span>
+                <span>Workflow execution</span>
                 <span class="text-secondary-foreground/70 text-xs">
                   Start, pause, or completion of multi-step workflows.
                 </span>
@@ -291,7 +291,7 @@ const teams = [
             </div>
             <div class="flex gap-3">
               <Label for="agent" class="grid gap-1">
-                <span class="truncate">Agent Insights</span>
+                <span>Agent Insights</span>
                 <span class="text-secondary-foreground/70 text-xs">
                   AI-generated suggestions, optimizations, or reports.
                 </span>
@@ -300,7 +300,7 @@ const teams = [
             </div>
             <div class="flex gap-3">
               <Label for="collaboration" class="grid gap-1">
-                <span class="truncate">Collaboration Alerts</span>
+                <span>Collaboration Alerts</span>
                 <span class="text-secondary-foreground/70 text-xs">
                   When a team member assigns a task, comments, or makes updates.
                 </span>
@@ -309,7 +309,7 @@ const teams = [
             </div>
             <div class="flex gap-3">
               <Label for="security" class="grid gap-1">
-                <span class="truncate">Security & Compliance</span>
+                <span>Security & Compliance</span>
                 <span class="text-secondary-foreground/70 text-xs">
                   Unauthorized access attempts, unusual activity, or system
                   failures.
@@ -325,7 +325,7 @@ const teams = [
       <Card class="border-0 shadow-none">
         <CardHeader>
           <CardTitle>
-            <span class="truncate"> Danger Zone </span>
+            <span> Danger Zone </span>
           </CardTitle>
           <CardDescription class="text-xs">
             Delete the project and all its data permanently.

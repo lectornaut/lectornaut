@@ -45,7 +45,7 @@ const selectedTeam = ref<Team>(
           <Button
             id="tour-team-switcher"
             variant="ghost"
-            class="data-[state=open]:bg-accent gap-3 truncate"
+            class="data-[state=open]:bg-accent"
           >
             <Avatar class="size-4">
               <AvatarImage
@@ -65,7 +65,7 @@ const selectedTeam = ref<Team>(
               <icon-bx-bxs-zap />
               Offline
             </span>
-            <span v-else v-motion-fade class="truncate">
+            <span v-else v-motion-fade>
               {{ selectedTeam.label }}
             </span>
             <icon-lucide-chevron-down />
@@ -105,7 +105,7 @@ const selectedTeam = ref<Team>(
                       {{ getInitials(team.label) }}
                     </AvatarFallback>
                   </Avatar>
-                  <span class="truncate">
+                  <span>
                     {{ team.label }}
                   </span>
                   <icon-lucide-check

@@ -415,7 +415,7 @@ const randomIndex = () => {
                   >
                     <Badge class="rounded-full" variant="secondary">
                       <icon-mdi-dots-circle />
-                      <span class="truncate">Try sample image</span>
+                      <span>Try sample image</span>
                     </Badge>
                   </span>
                 </div>
@@ -451,7 +451,7 @@ const randomIndex = () => {
                   >
                     <Badge class="rounded-full" variant="secondary">
                       <icon-mdi-dots-circle />
-                      <span class="truncate">Try sample link</span>
+                      <span>Try sample link</span>
                     </Badge>
                   </span>
                 </div>
@@ -483,7 +483,7 @@ const randomIndex = () => {
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent side="top">
-                        <span class="truncate">Try sample prompt</span>
+                        <span>Try sample prompt</span>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

@@ -213,7 +213,7 @@ const range = ref({
     <Card class="border-0 shadow-none">
       <CardHeader>
         <CardTitle>
-          <span class="truncate"> History </span>
+          <span> History </span>
         </CardTitle>
         <Popover>
           <PopoverTrigger as-child>

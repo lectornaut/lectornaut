@@ -88,7 +88,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
       <Card class="border-0 shadow-none">
         <CardHeader>
           <CardTitle>
-            <span class="truncate"> Runs </span>
+            <span> Runs </span>
           </CardTitle>
           <CardDescription>
             <div class="flex gap-2">
@@ -180,7 +180,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
       <Card class="border-0 shadow-none">
         <CardHeader>
           <CardTitle class="flex w-full justify-between">
-            <span class="truncate"> {{ stat.name }} </span>
+            <span> {{ stat.name }} </span>
             <span
               :class="[
                 stat.changeType === 'negative'
@@ -203,7 +203,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
           <Card class="w-full shadow-none">
             <CardHeader>
               <CardTitle>
-                <span class="truncate"> {{ stat.usage }} {{ stat.unit }} </span>
+                <span> {{ stat.usage }} {{ stat.unit }} </span>
               </CardTitle>
               <CardDescription class="text-xs">
                 {{ getUsagePercentage(stat.usage, stat.capacity) }}% used in
@@ -220,16 +220,12 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
             <CardFooter class="px-0">
               <div class="flex w-full flex-col gap-6">
                 <div class="flex grow flex-col items-center gap-1">
-                  <span class="truncate">
-                    {{ stat.usage }} {{ stat.unit }}
-                  </span>
+                  <span> {{ stat.usage }} {{ stat.unit }} </span>
                   <span class="text-muted-foreground text-xs"> Used </span>
                 </div>
                 <Separator />
                 <div class="flex grow flex-col items-center gap-1">
-                  <span class="truncate">
-                    {{ stat.capacity }} {{ stat.unit }}
-                  </span>
+                  <span> {{ stat.capacity }} {{ stat.unit }} </span>
                   <span class="text-muted-foreground text-xs"> Reserved </span>
                 </div>
               </div>
@@ -242,7 +238,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
       <Card class="border-0 shadow-none">
         <CardHeader class="gap-4">
           <CardTitle>
-            <span class="truncate"> Information </span>
+            <span> Information </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -275,7 +271,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
       <Card class="border-0 shadow-none">
         <CardHeader class="gap-4">
           <CardTitle>
-            <span class="truncate">Description</span>
+            <span>Description</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -294,7 +290,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
       <Card class="border-0 shadow-none">
         <CardHeader class="gap-4">
           <CardTitle>
-            <span class="truncate">Shared with</span>
+            <span>Shared with</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
