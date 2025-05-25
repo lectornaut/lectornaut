@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { shortcuts } from "@/helpers/shortcuts"
+import {
+  shortcuts,
+  type Shortcut,
+  type ShortcutCategory,
+} from "@/helpers/shortcuts"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import Fuse from "fuse.js"
@@ -25,64 +29,45 @@ const fuseShortcut = new Fuse(
 )
 
 const filteredShortcuts = computed(() => {
+  const isWeb = !isTauri.value
+  const isDesktop = isTauri.value
+
+  const filterShortcut = (shortcut: Shortcut) =>
+    (isWeb ? !shortcut.hidden.includes("web") : true) &&
+    (isDesktop ? !shortcut.hidden.includes("desktop") : true) &&
+    !shortcut.hidden.includes("shortcuts")
+
+  const filterCategory = (category: ShortcutCategory) =>
+    (isWeb ? !category.hidden.includes("web") : true) &&
+    (isDesktop ? !category.hidden.includes("desktop") : true) &&
+    !category.hidden.includes("shortcuts")
+
   if (!search.value) {
     return shortcuts
-      .map((category) => {
-        const visibleShortcuts = category.shortcuts.filter((shortcut) => {
-          const shortcutWeb = isTauri.value
-            ? true
-            : !shortcut.hidden.includes("web")
-          const shortcutDesktop = isTauri.value
-            ? !shortcut.hidden.includes("desktop")
-            : true
-          const shortcutHidden = !shortcut.hidden.includes("shortcuts")
-          return shortcutWeb && shortcutDesktop && shortcutHidden
-        })
-        return {
-          ...category,
-          shortcuts: visibleShortcuts,
-        }
-      })
+      .filter(filterCategory)
+      .map((category) => ({
+        ...category,
+        shortcuts: category.shortcuts.filter(filterShortcut),
+      }))
       .filter((category) => category.shortcuts.length > 0)
-      .filter((category) => {
-        return (
-          (isTauri.value ? true : !category.hidden.includes("web")) &&
-          (isTauri.value ? !category.hidden.includes("desktop") : true) &&
-          !category.hidden.includes("shortcuts")
-        )
-      })
   }
 
-  const categoryResults = fuseCategory
-    .search(search.value)
-    .map((result) => result.item)
-  const shortcutResults = fuseShortcut
-    .search(search.value)
-    .map((result) => result.item)
+  const categoryResults = new Set(
+    fuseCategory.search(search.value).map((result) => result.item)
+  )
+  const shortcutResults = new Set(
+    fuseShortcut.search(search.value).map((result) => result.item)
+  )
 
-  return categoryResults
-    .map((category) => {
-      const visibleShortcuts = category.shortcuts.filter((shortcut) => {
-        return (
-          shortcutResults.includes(shortcut) &&
-          (isTauri.value ? true : !shortcut.hidden.includes("web")) &&
-          (isTauri.value ? !shortcut.hidden.includes("desktop") : true) &&
-          !shortcut.hidden.includes("shortcuts")
-        )
-      })
-      return {
-        ...category,
-        shortcuts: visibleShortcuts,
-      }
-    })
+  return Array.from(categoryResults)
+    .filter(filterCategory)
+    .map((category) => ({
+      ...category,
+      shortcuts: category.shortcuts
+        .filter((s) => shortcutResults.has(s))
+        .filter(filterShortcut),
+    }))
     .filter((category) => category.shortcuts.length > 0)
-    .filter((category) => {
-      return (
-        (isTauri.value ? true : !category.hidden.includes("web")) &&
-        (isTauri.value ? !category.hidden.includes("desktop") : true) &&
-        !category.hidden.includes("shortcuts")
-      )
-    })
 })
 </script>
 

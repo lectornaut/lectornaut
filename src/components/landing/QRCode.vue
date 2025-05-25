@@ -18,7 +18,7 @@ import { state } from "@/modules/theme"
         />
       </div>
     </DialogTrigger>
-    <DialogContent class="max-w-fit">
+    <DialogContent class="w-sm max-w-fit">
       <DialogHeader class="items-center">
         <DialogTitle>Get the app</DialogTitle>
         <DialogDescription>

@@ -20,7 +20,7 @@ import {
 } from "vuefire"
 import IconCircleUserRound from "~icons/lucide/circle-user-round"
 import IconCreditCard from "~icons/lucide/credit-card"
-import IconPaintbrush from "~icons/lucide/paintbrush"
+import IconPalette from "~icons/lucide/palette"
 import IconSettings from "~icons/lucide/settings"
 
 const openSettings = ref(false)
@@ -209,7 +209,7 @@ const data = {
   nav: [
     { name: "General", icon: IconSettings, id: "general" },
     { name: "Account", icon: IconCircleUserRound, id: "account" },
-    { name: "Appearance", icon: IconPaintbrush, id: "appearance" },
+    { name: "Appearance", icon: IconPalette, id: "appearance" },
     { name: "Billing", icon: IconCreditCard, id: "billing" },
   ],
 }

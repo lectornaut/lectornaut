@@ -11,7 +11,7 @@ emitter.on("Dialog.Exit.Open", () => {
 
 <template>
   <AlertDialog v-model:open="openExit">
-    <AlertDialogContent>
+    <AlertDialogContent class="w-sm max-w-fit">
       <AlertDialogHeader>
         <AlertDialogTitle> Are you sure you want to logout? </AlertDialogTitle>
         <AlertDialogDescription>

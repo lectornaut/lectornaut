@@ -3,10 +3,12 @@ import IconLucideCheckSquare2 from "~icons/lucide/check-square-2"
 import IconLucideCircleUser from "~icons/lucide/circle-user"
 import IconCreditCard from "~icons/lucide/credit-card"
 import IconLucideHelpCircle from "~icons/lucide/help-circle"
+import IconLucideKeyboard from "~icons/lucide/keyboard"
 import IconLucideLogout from "~icons/lucide/log-out"
 import IconLucideMinusSquare from "~icons/lucide/minus-square"
 import IconLucideMonitor from "~icons/lucide/monitor"
 import IconLucideMoon from "~icons/lucide/moon"
+import IconLucidePalette from "~icons/lucide/palette"
 import IconLucidePanelLeft from "~icons/lucide/panel-left"
 import IconLucidePanelRight from "~icons/lucide/panel-right"
 import IconLucidePlusSquare from "~icons/lucide/plus-square"
@@ -14,7 +16,6 @@ import IconLucideSettings from "~icons/lucide/settings"
 import IconLucideSun from "~icons/lucide/sun"
 import IconLucideTerminal from "~icons/lucide/terminal"
 import IconLucideXSquare from "~icons/lucide/x-square"
-import IconLucideZap from "~icons/lucide/zap"
 
 const isAppleDevice = () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
 
@@ -25,7 +26,7 @@ export const getPlatformSpecialKey = (): string =>
 
 type ShortcutHiddenType = "web" | "desktop" | "shortcuts" | "commands"
 
-type Shortcut = {
+export type Shortcut = {
   description: string[]
   keys: string[][]
   hotkeys: string
@@ -36,7 +37,7 @@ type Shortcut = {
   hidden: ShortcutHiddenType[]
 }
 
-type ShortcutCategory = {
+export type ShortcutCategory = {
   title: string
   id: string
   shortcuts: Shortcut[]
@@ -59,12 +60,12 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: ["commands"],
       },
       {
-        description: ["Keyboard Shortcuts"],
+        description: ["Keyboard shortcuts"],
         keys: [[getPlatformSpecialKey(), "/"]],
         hotkeys: "cmd+/,ctrl+/",
         event: "Dialog.Shortcuts.Open",
         parameters: undefined,
-        icon: IconLucideZap,
+        icon: IconLucideKeyboard,
         tags: ["keyboard", "shortcuts", "help"],
         hidden: [],
       },
@@ -79,7 +80,7 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
       {
-        description: ["Help and Support"],
+        description: ["Help and support"],
         keys: [["?"]],
         hotkeys: "shift+/",
         event: "Menu.Help.Toggle",
@@ -188,7 +189,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "appearance",
-        icon: IconLucideSettings,
+        icon: IconLucidePalette,
         tags: ["settings", "appearance", "theme"],
         hidden: [],
       },

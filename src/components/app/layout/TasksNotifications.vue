@@ -113,117 +113,147 @@ const components: { title: string; href: string; description: string }[] = [
   <NavigationMenu class="z-40">
     <NavigationMenuList class="flex items-center gap-2">
       <NavigationMenuItem>
-        <NavigationMenuTrigger>
+        <NavigationMenuTrigger class="px-2">
           <icon-lucide-check />
           <!-- <span> Tasks </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
-          <div class="w-80">
-            <div
-              class="bg-background sticky top-0 z-10 flex items-center justify-between border-b p-2"
-            >
-              <h3 class="ml-2 font-semibold">Tasks</h3>
-              <Button variant="ghost"> <icon-lucide-plus /> New Task </Button>
-            </div>
-            <div class="no-scrollbar flex h-72 grow flex-col overflow-y-auto">
-              <OverlayScrollbarsComponent
-                defer
-                :options="{ scrollbars: { autoHide: 'scroll' } }"
+          <Tabs default-value="saved">
+            <div class="w-80">
+              <div
+                class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
-                <div class="grid gap-2 p-2">
-                  <NavigationMenuLink
-                    v-for="(component, index) in components"
-                    :key="index"
-                    as-child
-                  >
-                    <Alert class="group relative">
-                      <icon-lucide-check />
-                      <AlertTitle>
-                        {{ component.title }}
-                      </AlertTitle>
-                      <AlertDescription
-                        class="text-muted-foreground text-xs text-pretty"
-                      >
-                        {{ component.description }}
-                      </AlertDescription>
-                      <div
-                        class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
-                      >
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button size="icon">
-                                <icon-lucide-check-check />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent> Mark as read </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </Alert>
-                  </NavigationMenuLink>
-                </div>
-              </OverlayScrollbarsComponent>
+                <h3 class="ml-2 font-semibold">Tasks</h3>
+                <TabsList>
+                  <TabsTrigger value="saved">
+                    <icon-lucide-bookmark />
+                    <!-- Saved -->
+                  </TabsTrigger>
+                  <TabsTrigger value="done">
+                    <icon-lucide-check />
+                    <!-- Done -->
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <Separator />
+              <div class="no-scrollbar flex h-96 grow flex-col overflow-y-auto">
+                <OverlayScrollbarsComponent
+                  defer
+                  :options="{ scrollbars: { autoHide: 'scroll' } }"
+                >
+                  <div class="grid p-2">
+                    <NavigationMenuLink
+                      v-for="(component, index) in components"
+                      :key="index"
+                      class="group relative p-0"
+                    >
+                      <Alert class="border-0 bg-transparent p-3">
+                        <icon-lucide-circle-check-big />
+                        <AlertTitle>
+                          {{ component.title }}
+                        </AlertTitle>
+                        <AlertDescription
+                          class="text-muted-foreground text-xs text-pretty"
+                        >
+                          {{ component.description }}
+                        </AlertDescription>
+                        <div
+                          class="bg-background absolute top-2 right-2 z-10 hidden items-center gap-2 rounded-lg p-1 shadow-md group-hover:flex"
+                        >
+                          <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            size="sm"
+                          >
+                            <ToggleGroupItem value="saved">
+                              <icon-lucide-bookmark />
+                              <!-- Save -->
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="done">
+                              <icon-lucide-check />
+                              <!-- Done -->
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </div>
+                      </Alert>
+                    </NavigationMenuLink>
+                  </div>
+                </OverlayScrollbarsComponent>
+              </div>
             </div>
-          </div>
+          </Tabs>
         </NavigationMenuContent>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <NavigationMenuTrigger>
+        <NavigationMenuTrigger class="px-2">
           <icon-lucide-bell />
           <!-- <span> Notifications </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
-          <div class="w-80">
-            <div
-              class="bg-background sticky top-0 z-10 flex items-center justify-between border-b p-2"
-            >
-              <h3 class="ml-2 font-semibold">Notifications</h3>
-              <Button variant="ghost">
-                <icon-lucide-check-check /> Mark all as read
-              </Button>
-            </div>
-            <div class="no-scrollbar flex h-72 grow flex-col overflow-y-auto">
-              <OverlayScrollbarsComponent
-                defer
-                :options="{ scrollbars: { autoHide: 'scroll' } }"
+          <Tabs default-value="saved">
+            <div class="w-80">
+              <div
+                class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
-                <div class="grid gap-2 p-2">
-                  <NavigationMenuLink
-                    v-for="(component, index) in components"
-                    :key="index"
-                    as-child
-                  >
-                    <Alert class="group relative">
-                      <icon-lucide-bell />
-                      <AlertTitle>
-                        {{ component.title }}
-                      </AlertTitle>
-                      <AlertDescription
-                        class="text-muted-foreground text-xs text-pretty"
-                      >
-                        {{ component.description }}
-                      </AlertDescription>
-                      <div
-                        class="animate-in fade-in zoom-in absolute right-2 bottom-2 z-10 hidden items-center gap-2 group-hover:flex"
-                      >
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button size="icon">
-                                <icon-lucide-check-check />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent> Mark as read </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </Alert>
-                  </NavigationMenuLink>
-                </div>
-              </OverlayScrollbarsComponent>
+                <h3 class="ml-2 font-semibold">Notifications</h3>
+                <TabsList>
+                  <TabsTrigger value="saved">
+                    <icon-lucide-bookmark />
+                    <!-- Saved -->
+                  </TabsTrigger>
+                  <TabsTrigger value="done">
+                    <icon-lucide-check />
+                    <!-- Done -->
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <Separator />
+              <div class="no-scrollbar flex h-96 grow flex-col overflow-y-auto">
+                <OverlayScrollbarsComponent
+                  defer
+                  :options="{ scrollbars: { autoHide: 'scroll' } }"
+                >
+                  <div class="grid p-2">
+                    <NavigationMenuLink
+                      v-for="(component, index) in components"
+                      :key="index"
+                      class="group relative p-0"
+                    >
+                      <Alert class="border-0 bg-transparent p-3">
+                        <icon-lucide-bell-dot />
+                        <AlertTitle>
+                          {{ component.title }}
+                        </AlertTitle>
+                        <AlertDescription
+                          class="text-muted-foreground text-xs text-pretty"
+                        >
+                          {{ component.description }}
+                        </AlertDescription>
+                        <div
+                          class="bg-background absolute top-2 right-2 z-10 hidden items-center gap-2 rounded-lg p-1 shadow-md group-hover:flex"
+                        >
+                          <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            size="sm"
+                          >
+                            <ToggleGroupItem value="saved">
+                              <icon-lucide-bookmark />
+                              <!-- Save -->
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="done">
+                              <icon-lucide-check />
+                              <!-- Done -->
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </div>
+                      </Alert>
+                    </NavigationMenuLink>
+                  </div>
+                </OverlayScrollbarsComponent>
+              </div>
             </div>
-          </div>
+          </Tabs>
         </NavigationMenuContent>
       </NavigationMenuItem>
     </NavigationMenuList>

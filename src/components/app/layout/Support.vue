@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { changelog } from "@/data/changelog"
 import emitter from "@/modules/mitt"
 import { state } from "@/modules/theme"
 import { driver } from "driver.js"
@@ -133,10 +134,10 @@ const selectedCategory = ref("")
                         Status <icon-lucide-arrow-up-right />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        Terms of Service <icon-lucide-arrow-up-right />
+                        Terms of service <icon-lucide-arrow-up-right />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        Privacy Policy <icon-lucide-arrow-up-right />
+                        Privacy policy <icon-lucide-arrow-up-right />
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
@@ -153,17 +154,19 @@ const selectedCategory = ref("")
                 What's new
               </DropdownMenuLabel>
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  v-for="(log, index) in changelog.slice(0, 2)"
+                  :key="index"
+                  @click="emitter.emit('Dialog.Changelog.Open', log.id)"
+                >
                   <icon-lucide-circle-dot-dashed />
-                  AI for Agents
+                  <span class="truncate">{{ log.title }}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <icon-lucide-circle-dot-dashed />
-                  Sales Pipeline
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  @click="emitter.emit('Dialog.Changelog.Open')"
+                >
                   <icon-lucide-circle-dot />
-                  Full changelog <icon-lucide-arrow-up-right />
+                  Full changelog
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -198,13 +201,34 @@ const selectedCategory = ref("")
                 </div>
                 <div class="grid gap-2">
                   <Label class="text-secondary-foreground text-xs" for="email">
-                    Email
+                    Work email
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="ada@lovelace.com"
                   />
+                </div>
+                <div class="grid gap-2">
+                  <Label
+                    class="text-secondary-foreground text-xs"
+                    for="company-size"
+                  >
+                    Company size
+                  </Label>
+                  <Select>
+                    <SelectTrigger class="w-full">
+                      <SelectValue placeholder="Number of employees" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1-99">1-99 employees</SelectItem>
+                      <SelectItem value="100-299">100-299 employees</SelectItem>
+                      <SelectItem value="300-1999"
+                        >300-1,999 employees</SelectItem
+                      >
+                      <SelectItem value="2000+">2,000+ employees</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div class="grid gap-2">
                   <Label
@@ -242,10 +266,7 @@ const selectedCategory = ref("")
                 </div>
               </div>
             </DialogHeader>
-            <DialogFooter>
-              <DialogClose as-child>
-                <Button variant="ghost"> Cancel </Button>
-              </DialogClose>
+            <DialogFooter class="grid grid-cols-1 gap-2">
               <DialogClose as-child>
                 <Button> Send request </Button>
               </DialogClose>
@@ -255,6 +276,10 @@ const selectedCategory = ref("")
       </TooltipProvider>
     </Tooltip>
   </SidebarMenuItem>
+  <Shortcuts />
+  <Changelog />
+  <Settings />
+  <ExitTrigger />
 </template>
 
 <style>

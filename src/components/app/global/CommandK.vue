@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { shortcuts } from "@/helpers/shortcuts"
+import {
+  shortcuts,
+  type Shortcut,
+  type ShortcutCategory,
+} from "@/helpers/shortcuts"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 
@@ -9,46 +13,41 @@ emitter.on("Dialog.Command.Open", () => {
   openCommand.value = !openCommand.value
 })
 
-const filteredShortcuts = computed(() =>
-  shortcuts
-    .filter((category) => {
-      const webCondition = isTauri.value
-        ? true
-        : !category.hidden.includes("web")
-      const desktopCondition = isTauri.value
-        ? !category.hidden.includes("desktop")
-        : true
-      const hiddenCondition = !category.hidden.includes("commands")
-      return webCondition && desktopCondition && hiddenCondition
-    })
+const filteredShortcuts = computed(() => {
+  const isWeb = !isTauri.value
+  const isDesktop = isTauri.value
+
+  const filterShortcut = (shortcut: Shortcut) =>
+    (isWeb ? !shortcut.hidden.includes("web") : true) &&
+    (isDesktop ? !shortcut.hidden.includes("desktop") : true) &&
+    !shortcut.hidden.includes("commands")
+
+  const filterCategory = (category: ShortcutCategory) =>
+    (isWeb ? !category.hidden.includes("web") : true) &&
+    (isDesktop ? !category.hidden.includes("desktop") : true) &&
+    !category.hidden.includes("commands")
+
+  return shortcuts
+    .filter(filterCategory)
     .map((category) => ({
       ...category,
-      shortcuts: category.shortcuts.filter(
-        (shortcut) => !shortcut.hidden.includes("commands")
-      ),
+      shortcuts: category.shortcuts.filter(filterShortcut),
     }))
     .filter((category) => category.shortcuts.length > 0)
-)
+})
 </script>
 
 <template>
   <div class="relative flex grow items-center">
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <Button
-            id="tour-search-bar"
-            variant="secondary"
-            class="grow shadow-none"
-            @click="openCommand = true"
-          >
-            <icon-lucide-search />
-            <span>Search or command</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent> Search </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Button
+      id="tour-search-bar"
+      variant="secondary"
+      class="grow shadow-none"
+      @click="openCommand = true"
+    >
+      <icon-lucide-search />
+      <span>Search or command</span>
+    </Button>
     <span
       class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center p-2"
     >

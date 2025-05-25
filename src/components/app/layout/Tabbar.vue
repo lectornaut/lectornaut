@@ -362,8 +362,5 @@ const dummyRecentTabs = [
       </div>
     </div>
     <Separator />
-    <Settings />
-    <Shortcuts />
-    <ExitTrigger />
   </div>
 </template>
