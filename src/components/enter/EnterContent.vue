@@ -185,7 +185,11 @@ const authenticateApple = async () => {
               <span
                 class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
               >
-                <Button variant="ghost" @click="togglePasswordVisibility()">
+                <Button
+                  variant="ghost"
+                  tabindex="-1"
+                  @click="togglePasswordVisibility()"
+                >
                   <icon-lucide-eye
                     v-if="passwordInputType === 'password'"
                     class="text-muted-foreground"
@@ -234,7 +238,8 @@ const authenticateApple = async () => {
               <Label for="password">Password</Label>
               <Button
                 variant="link"
-                class="h-auto p-0 text-xs leading-0"
+                class="h-auto p-0 text-xs leading-1"
+                tabindex="-1"
                 @click="resetPassword()"
               >
                 Forgot password
@@ -258,7 +263,11 @@ const authenticateApple = async () => {
               <span
                 class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
               >
-                <Button variant="ghost" @click="togglePasswordVisibility()">
+                <Button
+                  variant="ghost"
+                  tabindex="-1"
+                  @click="togglePasswordVisibility()"
+                >
                   <icon-lucide-eye
                     v-if="passwordInputType === 'password'"
                     class="text-muted-foreground"

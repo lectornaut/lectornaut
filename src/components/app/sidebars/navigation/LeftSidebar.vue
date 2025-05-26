@@ -13,7 +13,6 @@ const userData = {
   avatar: user.value?.photoURL || "",
 }
 
-// This is sample data
 const navigation = [
   {
     title: "Home",

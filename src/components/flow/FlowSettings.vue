@@ -3,31 +3,31 @@ const persons = [
   {
     name: "Tom",
     email: "t@hey.com",
-    imageUrl:
+    avatar:
       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Whitney",
     email: "w@hey.com",
-    imageUrl:
+    avatar:
       "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Leonard",
     email: "l@hey.com",
-    imageUrl:
+    avatar:
       "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Floyd",
     email: "f@hey.com",
-    imageUrl:
+    avatar:
       "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   {
     name: "Emily",
     email: "e@hey.com",
-    imageUrl:
+    avatar:
       "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
 ]
@@ -41,19 +41,19 @@ const teams = [
       {
         name: "Tom",
         email: "t@hey.com",
-        imageUrl:
+        avatar:
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       },
       {
         name: "Whitney",
         email: "w@hey.com",
-        imageUrl:
+        avatar:
           "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       },
       {
         name: "Leonard",
         email: "l@hey.com",
-        imageUrl:
+        avatar:
           "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       },
     ],
@@ -66,13 +66,13 @@ const teams = [
       {
         name: "Floyd",
         email: "f@hey.com",
-        imageUrl:
+        avatar:
           "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       },
       {
         name: "Emily",
         email: "e@hey.com",
-        imageUrl:
+        avatar:
           "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       },
     ],
@@ -156,7 +156,7 @@ const teams = [
                     >
                       <AvatarImage
                         class="inline-block size-8 rounded-full"
-                        :src="person.imageUrl"
+                        :src="person.avatar"
                         :alt="person.name"
                       />
                       <AvatarFallback>
@@ -192,7 +192,7 @@ const teams = [
                   <Avatar>
                     <AvatarImage
                       class="inline-block size-8 rounded-full"
-                      :src="person.imageUrl"
+                      :src="person.avatar"
                       :alt="person.name"
                     />
                     <AvatarFallback>

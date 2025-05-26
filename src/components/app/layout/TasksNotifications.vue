@@ -110,11 +110,11 @@ const components: { title: string; href: string; description: string }[] = [
 </script>
 
 <template>
-  <NavigationMenu class="z-40">
+  <NavigationMenu id="tour-tasks-notifications">
     <NavigationMenuList class="flex items-center gap-2">
       <NavigationMenuItem>
         <NavigationMenuTrigger class="px-2">
-          <icon-lucide-check />
+          <icon-lucide-inbox />
           <!-- <span> Tasks </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
@@ -136,7 +136,7 @@ const components: { title: string; href: string; description: string }[] = [
                 </TabsList>
               </div>
               <Separator />
-              <div class="no-scrollbar flex h-96 grow flex-col overflow-y-auto">
+              <div class="no-scrollbar flex h-80 flex-col overflow-y-auto">
                 <OverlayScrollbarsComponent
                   defer
                   :options="{ scrollbars: { autoHide: 'scroll' } }"
@@ -180,6 +180,29 @@ const components: { title: string; href: string; description: string }[] = [
                   </div>
                 </OverlayScrollbarsComponent>
               </div>
+              <Separator />
+              <div
+                class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
+              >
+                <Button variant="outline" size="sm">
+                  <icon-lucide-plus />
+                  New task
+                </Button>
+                <div>
+                  <TabsContent value="saved">
+                    <Button variant="ghost" size="sm">
+                      <icon-lucide-check-check />
+                      Mark all as done
+                    </Button>
+                  </TabsContent>
+                  <TabsContent value="done">
+                    <Button variant="ghost" size="sm">
+                      <icon-lucide-bookmark-check />
+                      Mark all as saved
+                    </Button>
+                  </TabsContent>
+                </div>
+              </div>
             </div>
           </Tabs>
         </NavigationMenuContent>
@@ -208,7 +231,7 @@ const components: { title: string; href: string; description: string }[] = [
                 </TabsList>
               </div>
               <Separator />
-              <div class="no-scrollbar flex h-96 grow flex-col overflow-y-auto">
+              <div class="no-scrollbar flex h-80 flex-col overflow-y-auto">
                 <OverlayScrollbarsComponent
                   defer
                   :options="{ scrollbars: { autoHide: 'scroll' } }"
@@ -251,6 +274,29 @@ const components: { title: string; href: string; description: string }[] = [
                     </NavigationMenuLink>
                   </div>
                 </OverlayScrollbarsComponent>
+              </div>
+              <Separator />
+              <div
+                class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
+              >
+                <Button variant="outline" size="sm">
+                  <icon-lucide-plus />
+                  New task
+                </Button>
+                <div>
+                  <TabsContent value="saved">
+                    <Button variant="ghost" size="sm">
+                      <icon-lucide-check-check />
+                      Mark all as done
+                    </Button>
+                  </TabsContent>
+                  <TabsContent value="done">
+                    <Button variant="ghost" size="sm">
+                      <icon-lucide-bookmark-check />
+                      Mark all as saved
+                    </Button>
+                  </TabsContent>
+                </div>
               </div>
             </div>
           </Tabs>

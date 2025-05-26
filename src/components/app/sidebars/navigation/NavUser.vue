@@ -15,7 +15,7 @@ const { isMobile } = useSidebar()
 
 <template>
   <SidebarMenu>
-    <SidebarMenuItem>
+    <SidebarMenuItem id="tour-account-menu">
       <TooltipProvider>
         <Tooltip>
           <DropdownMenu>

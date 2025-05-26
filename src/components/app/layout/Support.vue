@@ -54,6 +54,16 @@ const productTour = driver({
       },
     },
     {
+      element: "#tour-tasks-notifications",
+      popover: {
+        title: "Tasks and notifications",
+        description:
+          "You can manage your tasks and notifications here. This is useful to keep track of your work.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
       element: "#tour-primary-navigation",
       popover: {
         title: "Primary navigation",
@@ -61,6 +71,26 @@ const productTour = driver({
           "This is the primary navigation. You can use it to navigate between different sections of the application.",
         side: "right",
         align: "start",
+      },
+    },
+    {
+      element: "#tour-help-support",
+      popover: {
+        title: "Help and support",
+        description:
+          "You can access help and support from here. This is useful if you need assistance with the application.",
+        side: "right",
+        align: "end",
+      },
+    },
+    {
+      element: "#tour-account-menu",
+      popover: {
+        title: "Account menu",
+        description:
+          "You can manage your account settings from here. This is useful if you want to change your account settings.",
+        side: "right",
+        align: "end",
       },
     },
     {
@@ -77,7 +107,7 @@ const selectedCategory = ref("")
 </script>
 
 <template>
-  <SidebarMenuItem>
+  <SidebarMenuItem id="tour-help-support">
     <Tooltip>
       <TooltipProvider>
         <Dialog>
@@ -165,7 +195,7 @@ const selectedCategory = ref("")
                 <DropdownMenuItem
                   @click="emitter.emit('Dialog.Changelog.Open')"
                 >
-                  <icon-lucide-circle-dot />
+                  <icon-lucide-calendar />
                   Full changelog
                 </DropdownMenuItem>
               </DropdownMenuGroup>

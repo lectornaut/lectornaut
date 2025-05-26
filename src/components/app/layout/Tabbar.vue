@@ -97,14 +97,56 @@ useSortable(el, tabs, {
   dragClass: "cursor-grabbing",
 })
 
-emitter.on("Tabs.Add", (tab) => {
-  const newTab = tab as Tab
-  tabs.value = [...tabs.value, newTab]
-})
+emitter.on(
+  "Tabs.Add",
+  (
+    tab = {
+      id: generateId(),
+      name: "Sample tab",
+      url: "/workflows",
+    }
+  ) => {
+    const newTab = tab as Tab
+    tabs.value = [...tabs.value, newTab]
+    emitter.emit("Tabs.Select", newTab.id)
+  }
+)
 
-emitter.on("Tabs.Close", (id) => {
+emitter.on("Tabs.Close", (id = active.value) => {
   const newTabs = tabs.value.filter((tab) => tab.id !== id)
   tabs.value = newTabs
+  emitter.emit("Tabs.Select", newTabs[0]?.id)
+})
+
+emitter.on("Tabs.Close.Others", (id = active.value) => {
+  const newTabs = tabs.value.filter((tab) => tab.id === id)
+  tabs.value = newTabs
+})
+
+emitter.on("Tabs.Close.All", () => {
+  tabs.value = []
+  active.value = ""
+})
+
+emitter.on("Tabs.Select", (id: string) => {
+  if (id === "next") {
+    const currentIndex = tabs.value.findIndex((tab) => tab.id === active.value)
+    const nextIndex = (currentIndex + 1) % tabs.value.length
+    active.value = tabs.value[nextIndex]?.id || ""
+  } else if (id === "previous") {
+    const currentIndex = tabs.value.findIndex((tab) => tab.id === active.value)
+    const previousIndex =
+      (currentIndex - 1 + tabs.value.length) % tabs.value.length
+    active.value = tabs.value[previousIndex]?.id || ""
+  } else {
+    active.value = id
+  }
+  if (!tabs.value.some((tab) => tab.id === active.value)) {
+    console.warn(
+      `Tab with id ${active.value} not found. Resetting to first tab.`
+    )
+    active.value = tabs.value[0]?.id || ""
+  }
 })
 
 const dummyRecentTabs = [
@@ -289,13 +331,7 @@ const dummyRecentTabs = [
               <Button
                 variant="ghost"
                 size="icon"
-                @click="
-                  emitter.emit('Tabs.Add', {
-                    id: generateId(),
-                    name: 'Sample tab',
-                    url: '/workflows',
-                  })
-                "
+                @click="emitter.emit('Tabs.Add')"
               >
                 <icon-lucide-plus />
               </Button>
@@ -315,7 +351,7 @@ const dummyRecentTabs = [
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent> Tab options </TooltipContent>
-                <DropdownMenuContent class="w-56">
+                <DropdownMenuContent class="w-56" align="end" side="bottom">
                   <DropdownMenuGroup>
                     <DropdownMenuItem>
                       <icon-lucide-x />

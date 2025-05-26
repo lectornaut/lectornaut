@@ -15,6 +15,7 @@ import IconLucidePlusSquare from "~icons/lucide/plus-square"
 import IconLucideSettings from "~icons/lucide/settings"
 import IconLucideSun from "~icons/lucide/sun"
 import IconLucideTerminal from "~icons/lucide/terminal"
+import IconLucideXCircle from "~icons/lucide/x-circle"
 import IconLucideXSquare from "~icons/lucide/x-square"
 
 const isAppleDevice = () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
@@ -117,7 +118,7 @@ export const shortcuts: ShortcutCategory[] = [
     id: "tabs",
     shortcuts: [
       {
-        description: ["Open a tab"],
+        description: ["Open new tab"],
         keys: [[getPlatformSpecialKey(), "t"]],
         hotkeys: "cmd+t,ctrl+t",
         event: "Tabs.Add",
@@ -140,21 +141,52 @@ export const shortcuts: ShortcutCategory[] = [
         description: ["Close other tabs"],
         keys: [[getPlatformSpecialKey(), "shift", "w"]],
         hotkeys: "cmd+shift+w,ctrl+shift+w",
-        event: "Tabs.Close.Other",
+        event: "Tabs.Close.Others",
         parameters: undefined,
-        icon: IconLucideXSquare,
+        icon: IconLucideXCircle,
         tags: ["tab", "close", "remove", "others"],
         hidden: [],
       },
       {
+        description: ["Close all tabs"],
+        keys: [[getPlatformSpecialKey(), "shift", "q"]],
+        hotkeys: "cmd+shift+q,ctrl+shift+q",
+        event: "Tabs.Close.All",
+        parameters: undefined,
+        icon: IconLucideXSquare,
+        tags: ["tab", "close", "remove", "all"],
+        hidden: [],
+      },
+      {
+        description: ["Select next tab"],
+        keys: [[getPlatformSpecialKey(), "shift", "right"]],
+        hotkeys: "control+tab,ctrl+tab",
+        event: "Tabs.Select",
+        parameters: "next",
+        icon: IconLucideCheckSquare2,
+        tags: ["tab", "next"],
+        hidden: ["commands"],
+      },
+      {
+        description: ["Select previous tab"],
+        keys: [[getPlatformSpecialKey(), "shift", "left"]],
+        hotkeys: "control+shift+tab,ctrl+shift+tab",
+        event: "Tabs.Select",
+        parameters: "previous",
+        icon: IconLucideCheckSquare2,
+        tags: ["tab", "previous"],
+        hidden: ["commands"],
+      },
+      {
         description: ["Select Nth tab"],
         keys: [[getPlatformSpecialKey(), "1, 2, 3...n"]],
-        hotkeys: "",
+        hotkeys:
+          "cmd+num_1,cmd+num_2,cmd+num_3,cmd+num_4,cmd+num_5,cmd+num_6,cmd+num_7,cmd+num_8,cmd+num_9,ctrl+num_1,ctrl+num_2,ctrl+num_3,ctrl+num_4,ctrl+num_5,ctrl+num_6,ctrl+num_7,ctrl+num_8,ctrl+num_9",
         event: "Tabs.Select",
         parameters: undefined,
         icon: IconLucideCheckSquare2,
         tags: ["tab", "select"],
-        hidden: [],
+        hidden: ["commands"],
       },
     ],
     hidden: ["web"],

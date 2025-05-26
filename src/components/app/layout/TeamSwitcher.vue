@@ -30,17 +30,54 @@ const groups = [
 
 type Team = (typeof groups)[number]["teams"][number]
 
-const open = ref(false)
+const openTeamSwitcher = ref(false)
 const showNewTeamDialog = ref(false)
 const selectedTeam = ref<Team>(
   groups[0]?.teams[0] ?? { label: "Default Team", value: "default" }
 )
+
+type User = (typeof users.value)[number]
+
+const users = ref<User[]>([
+  {
+    name: "Tom",
+    email: "t@hey.com",
+    avatar:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+  },
+  {
+    name: "Whitney",
+    email: "w@hey.com",
+    avatar:
+      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+  },
+  {
+    name: "Leonard",
+    email: "l@hey.com",
+    avatar:
+      "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+  },
+  {
+    name: "Floyd",
+    email: "f@hey.com",
+    avatar:
+      "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+  },
+  {
+    name: "Emily",
+    email: "e@hey.com",
+    avatar:
+      "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+  },
+])
+
+const selectedUsers = ref<User[]>([])
 </script>
 
 <template>
   <div data-tauri-drag-region class="flex items-center justify-between gap-2">
     <Dialog v-model:open="showNewTeamDialog">
-      <Popover v-model:open="open">
+      <Popover v-model:open="openTeamSwitcher">
         <PopoverTrigger as-child>
           <Button
             id="tour-team-switcher"
@@ -91,7 +128,7 @@ const selectedTeam = ref<Team>(
                   @select="
                     () => {
                       selectedTeam = team
-                      open = false
+                      openTeamSwitcher = false
                     }
                   "
                 >
@@ -123,8 +160,8 @@ const selectedTeam = ref<Team>(
                     value="create-team"
                     @select="
                       () => {
-                        open = false
                         showNewTeamDialog = true
+                        openTeamSwitcher = false
                       }
                     "
                   >
@@ -144,14 +181,121 @@ const selectedTeam = ref<Team>(
             Add a new team to manage products and customers.
           </DialogDescription>
         </DialogHeader>
-        <div class="flex flex-col gap-4">
+        <div class="mt-4 grid gap-4">
           <div class="grid gap-2">
-            <Label for="name">Team name</Label>
+            <Label class="text-secondary-foreground text-xs" for="name">
+              Team name
+            </Label>
             <Input
               id="name"
               placeholder="Acme Inc."
               class="focus:border-inherit focus:ring-0"
             />
+          </div>
+          <div class="grid gap-2">
+            <Label class="text-secondary-foreground text-xs" for="members">
+              People with access
+            </Label>
+          </div>
+          <div class="grid rounded-md border">
+            <Popover>
+              <Command>
+                <PopoverTrigger>
+                  <CommandInput
+                    placeholder="Search user..."
+                    class="border-none p-0 focus:border-inherit focus:ring-0"
+                  />
+                </PopoverTrigger>
+                <PopoverContent align="center" side="bottom" class="w-md p-0">
+                  <CommandList>
+                    <CommandEmpty>No users found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        v-for="user in users"
+                        :key="user.email"
+                        :value="user"
+                        @select="
+                          () => {
+                            if (!selectedUsers.includes(user)) {
+                              selectedUsers.push(user)
+                            } else {
+                              selectedUsers.splice(
+                                selectedUsers.indexOf(user),
+                                1
+                              )
+                            }
+                          }
+                        "
+                      >
+                        <Avatar>
+                          <AvatarImage :src="user.avatar" alt="Image" />
+                          <AvatarFallback>{{ user.name[0] }}</AvatarFallback>
+                        </Avatar>
+                        <div class="ml-2">
+                          <p class="text-sm leading-none font-medium">
+                            {{ user.name }}
+                          </p>
+                          <p class="text-muted-foreground text-sm">
+                            {{ user.email }}
+                          </p>
+                        </div>
+                        <icon-lucide-circle-check-big
+                          v-if="selectedUsers.includes(user)"
+                          class="text-primary ml-auto"
+                        />
+                        <icon-lucide-circle
+                          v-else
+                          class="text-primary ml-auto"
+                        />
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </PopoverContent>
+              </Command>
+            </Popover>
+            <div v-if="selectedUsers.length" class="grid gap-4 p-4">
+              <div
+                v-for="person in selectedUsers"
+                :key="person.email"
+                class="flex justify-between space-x-4"
+              >
+                <div class="flex gap-3">
+                  <Avatar>
+                    <AvatarImage
+                      class="inline-block size-8 rounded-full"
+                      :src="person.avatar"
+                      :alt="person.name"
+                    />
+                    <AvatarFallback>
+                      {{ person.name[0] }}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p class="font-medium">
+                      {{ person.name }}
+                    </p>
+                    <p class="text-muted-foreground text-xs">
+                      {{ person.email }}
+                    </p>
+                  </div>
+                </div>
+                <Select default-value="edit">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent align="end" side="bottom">
+                    <SelectItem value="edit"> Edit </SelectItem>
+                    <SelectItem value="view"> View </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div
+              v-if="!selectedUsers.length"
+              class="text-muted-foreground flex items-center justify-center p-4 text-sm"
+            >
+              No users selected
+            </div>
           </div>
         </div>
         <DialogFooter>
