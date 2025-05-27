@@ -21,7 +21,7 @@
   --sidebar-primary-foreground: var(--color-neutral-100);
   --sidebar-accent: var(--color-neutral-200);
   --sidebar-accent-foreground: var(--color-neutral-800);
-  --sidebar-border: var(--color-neutral-200);
+  --sidebar-border: var(--color-neutral-300);
 }
 
 @mixin red-light-theme {
@@ -355,7 +355,7 @@
   --sidebar-primary-foreground: var(--color-neutral-900);
   --sidebar-accent: var(--color-neutral-800);
   --sidebar-accent-foreground: var(--color-neutral-200);
-  --sidebar-border: var(--color-neutral-800);
+  --sidebar-border: var(--color-neutral-700);
 }
 
 @mixin red-dark-theme {

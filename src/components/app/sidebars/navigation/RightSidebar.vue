@@ -22,8 +22,11 @@ const metadata = [
 
 <template>
   <Tabs default-value="details">
-    <Sidebar collapsible="none">
-      <SidebarHeader class="border-b">
+    <Sidebar
+      class="top-[calc(var(--header-height)+1px)] bottom-[calc(var(--footer-height)+1px)] h-[calc(100svh-var(--header-height)-var(--footer-height)-2px))]"
+      side="right"
+    >
+      <SidebarHeader>
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
             Information
@@ -41,6 +44,7 @@ const metadata = [
           </TooltipProvider>
         </div>
       </SidebarHeader>
+      <Separator />
       <SidebarHeader>
         <TabsList class="bg-sidebar w-full p-0">
           <TabsTrigger
@@ -72,6 +76,7 @@ const metadata = [
           </TabsContent>
         </OverlayScrollbarsComponent>
       </SidebarContent>
+      <SidebarRail />
     </Sidebar>
   </Tabs>
 </template>

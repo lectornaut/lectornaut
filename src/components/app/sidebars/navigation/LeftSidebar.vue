@@ -1,38 +1,5 @@
 <script setup lang="ts">
-import { useSidebar } from "@/components/ui/sidebar"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
-import { useCurrentUser } from "vuefire"
-import IconHome from "~icons/lucide/home"
-import IconLayers2 from "~icons/lucide/layers-2"
-import IconWorkflow from "~icons/lucide/workflow"
-
-const user = useCurrentUser()
-const userData = {
-  name: user.value?.displayName || "",
-  email: user.value?.email || "",
-  avatar: user.value?.photoURL || "",
-}
-
-const navigation = [
-  {
-    title: "Home",
-    url: "/home",
-    id: "home",
-    icon: IconHome,
-  },
-  {
-    title: "Workflows",
-    url: "/workflows",
-    id: "workflows",
-    icon: IconWorkflow,
-  },
-  {
-    title: "Drafts",
-    url: "/drafts",
-    id: "drafts",
-    icon: IconLayers2,
-  },
-]
 
 const workflows = [
   {
@@ -127,8 +94,6 @@ const workflows = [
   },
 ]
 
-const { setOpen } = useSidebar()
-
 const getStatus = () => {
   const rand = Math.random()
   if (rand > 0.75)
@@ -167,44 +132,17 @@ const route = useRoute()
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <OverlayScrollbarsComponent
-          defer
-          :options="{ scrollbars: { autoHide: 'scroll' } }"
-        >
-          <SidebarGroup>
-            <SidebarGroupContent id="tour-primary-navigation">
-              <SidebarMenu>
-                <SidebarMenuItem
-                  v-for="item in navigation"
-                  :key="item.title"
-                  class="group/nav"
-                >
-                  <SidebarMenuButton
-                    class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground relative"
-                    :tooltip="item.title"
-                    as-child
-                    @click="setOpen(true)"
-                  >
-                    <RouterLink :to="item.url">
-                      <component :is="item.icon" />
-                      <span>{{ item.title }}</span>
-                    </RouterLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </OverlayScrollbarsComponent>
+        <Navigation />
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
           <Support />
         </SidebarMenu>
-        <NavUser :user="userData" />
+        <AccountMenu />
       </SidebarFooter>
     </Sidebar>
     <Sidebar collapsible="none" class="hidden flex-1 overflow-hidden md:flex">
-      <SidebarHeader class="border-b">
+      <SidebarHeader>
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
             {{ route.meta.title }}
@@ -215,6 +153,7 @@ const route = useRoute()
           </Button>
         </div>
       </SidebarHeader>
+      <Separator />
       <SidebarHeader>
         <div class="flex items-center justify-between gap-2">
           <div class="relative flex h-full items-center justify-between gap-2">
@@ -244,7 +183,7 @@ const route = useRoute()
           :options="{ scrollbars: { autoHide: 'scroll' } }"
         >
           <SidebarGroup>
-            <SidebarGroupContent class="grid gap-2">
+            <SidebarGroupContent class="flex flex-col gap-2">
               <RouterLink
                 v-for="(workflow, index) in workflows"
                 :key="workflow.email"

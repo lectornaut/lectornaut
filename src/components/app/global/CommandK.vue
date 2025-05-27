@@ -55,10 +55,6 @@ const filteredShortcuts = computed(() => {
       <kbd class="shortcut-key">K</kbd>
     </span>
     <CommandDialog v-model:open="openCommand">
-      <DialogHeader class="sr-only">
-        <DialogTitle> Search </DialogTitle>
-        <DialogDescription> Type a command or search... </DialogDescription>
-      </DialogHeader>
       <CommandInput
         placeholder="Type a command or search..."
         class="border-none p-0 focus:border-inherit focus:ring-0"

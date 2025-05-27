@@ -1,8 +1,7 @@
 <route lang="json">
 {
   "meta": {
-    "requiresGuest": true,
-    "title": "Enter"
+    "requiresGuest": true
   }
 }
 </route>

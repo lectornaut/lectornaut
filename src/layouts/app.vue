@@ -1,5 +1,6 @@
 <template>
   <SidebarProvider
+    :default-open="false"
     class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--footer-height:--spacing(5)] [--header-height:--spacing(13)]"
   >
     <Titlebar />
@@ -16,6 +17,7 @@
         <Separator />
         <RouterView />
       </div>
+      <RightSidebar />
     </div>
     <Separator />
     <Footbar />

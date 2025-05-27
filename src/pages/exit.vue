@@ -1,8 +1,7 @@
 <route lang="json">
 {
   "meta": {
-    "requiresUser": true,
-    "title": "Exit"
+    "requiresUser": true
   }
 }
 </route>

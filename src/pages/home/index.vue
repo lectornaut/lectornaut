@@ -1,7 +1,7 @@
 <route lang="json">
 {
   "meta": {
-    "layout": "app",
+    "layout": false,
     "requiresUser": true,
     "title": "Home"
   }
@@ -15,5 +15,7 @@ useHead({
 </script>
 
 <template>
-  <RouterView />
+  <div class="flex grow items-center justify-center">
+    Select a workflow to view its details.
+  </div>
 </template>

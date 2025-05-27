@@ -174,7 +174,7 @@ const selectedUsers = ref<User[]>([])
           </Command>
         </PopoverContent>
       </Popover>
-      <DialogContent>
+      <DialogContent class="w-sm max-w-fit">
         <DialogHeader>
           <DialogTitle>Create team</DialogTitle>
           <DialogDescription>
@@ -206,7 +206,7 @@ const selectedUsers = ref<User[]>([])
                     class="border-none p-0 focus:border-inherit focus:ring-0"
                   />
                 </PopoverTrigger>
-                <PopoverContent align="center" side="bottom" class="w-md p-0">
+                <PopoverContent align="center" side="bottom" class="w-xs p-0">
                   <CommandList>
                     <CommandEmpty>No users found.</CommandEmpty>
                     <CommandGroup>
@@ -241,12 +241,9 @@ const selectedUsers = ref<User[]>([])
                         </div>
                         <icon-lucide-circle-check-big
                           v-if="selectedUsers.includes(user)"
-                          class="text-primary ml-auto"
+                          class="ml-auto"
                         />
-                        <icon-lucide-circle
-                          v-else
-                          class="text-primary ml-auto"
-                        />
+                        <icon-lucide-circle v-else class="ml-auto" />
                       </CommandItem>
                     </CommandGroup>
                   </CommandList>

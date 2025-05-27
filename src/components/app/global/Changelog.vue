@@ -6,11 +6,11 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const openChangelog = ref(false)
 
-const activeLog = ref(changelog[0].id)
+const activeLog = ref(changelog[0]?.id)
 
 emitter.on("Dialog.Changelog.Open", (id) => {
   openChangelog.value = !openChangelog.value
-  activeLog.value = id ?? changelog[0].id
+  activeLog.value = (id as string) ?? changelog[0]?.id
 })
 </script>
 
@@ -28,7 +28,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
         <Accordion
           collapsible
           type="multiple"
-          :default-value="[activeLog]"
+          :default-value="[activeLog ?? '']"
           class="px-4"
         >
           <AccordionItem v-for="log in changelog" :key="log.id" :value="log.id">
@@ -39,7 +39,9 @@ emitter.on("Dialog.Changelog.Open", (id) => {
               </span>
             </AccordionTrigger>
             <AccordionContent>
-              <ul class="marker:text-muted-foreground list-inside list-disc">
+              <ul
+                class="marker:text-muted-foreground text-secondary-foreground list-inside list-disc"
+              >
                 <li v-for="item in log.content" :key="item">{{ item }}</li>
               </ul>
             </AccordionContent>

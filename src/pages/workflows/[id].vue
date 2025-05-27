@@ -11,12 +11,12 @@
 useHead({
   title: "ID",
 })
-
-const route = useRoute()
 </script>
 
 <template>
-  <div class="p-2">
-    {{ route.params.id }}
+  <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
+    <div class="flex grow flex-col gap-2">
+      <FlowApp />
+    </div>
   </div>
 </template>

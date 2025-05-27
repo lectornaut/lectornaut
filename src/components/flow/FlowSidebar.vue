@@ -9,11 +9,11 @@ const { onDragStart } = useDragAndDrop()
 <template>
   <Tabs default-value="actions">
     <Sidebar collapsible="none">
-      <SidebarHeader class="border-b">
+      <SidebarHeader>
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
-            Widgets</span
-          >
+            Widgets
+          </span>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
@@ -26,6 +26,7 @@ const { onDragStart } = useDragAndDrop()
           </TooltipProvider>
         </div>
       </SidebarHeader>
+      <Separator />
       <SidebarHeader>
         <TabsList class="bg-sidebar w-full p-0">
           <TabsTrigger
