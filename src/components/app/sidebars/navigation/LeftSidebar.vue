@@ -109,7 +109,7 @@ const route = useRoute()
 </script>
 
 <template>
-  <Tabs default-value="details" class="bg-sidebar gap-0">
+  <Tabs default-value="details" class="bg-card gap-0">
     <SidebarHeader>
       <div class="flex items-center justify-between gap-2">
         <span class="text-foreground ml-2 text-base font-medium">

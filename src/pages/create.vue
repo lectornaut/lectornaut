@@ -3,7 +3,7 @@
   "meta": {
     "layout": "app",
     "requiresUser": true,
-    "title": "Drafts"
+    "title": "Create"
   }
 }
 </route>

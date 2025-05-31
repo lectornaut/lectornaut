@@ -7,7 +7,7 @@ import Avatar from "vue-boring-avatars"
     <TooltipProvider>
       <Tooltip v-for="index in 3" :key="index" as-child>
         <TooltipTrigger
-          class="group hover:bg-sidebar-accent flex aspect-square items-center justify-center rounded-md transition"
+          class="group hover:bg-sidebar-accent relative flex aspect-square items-center justify-center rounded-md transition"
         >
           <Avatar
             :name="`Agent ${index}`"
@@ -22,8 +22,11 @@ import Avatar from "vue-boring-avatars"
               'var(--chart-1)',
               'var(--chart-1)',
             ]"
-            class="rounded-full p-0 grayscale transition group-hover:grayscale-0"
+            class="group-hover:ring-primary ring-secondary ring-offset-sidebar rounded-full p-0 ring-2 ring-offset-2 grayscale transition group-hover:grayscale-0"
           />
+          <span
+            class="ring-sidebar ring-offset-sidebar absolute top-1 right-1 block size-2 rounded-full bg-green-500 ring-2"
+          ></span>
         </TooltipTrigger>
         <TooltipContent side="right"> Agent {{ index }} </TooltipContent>
       </Tooltip>

@@ -3,25 +3,19 @@
   "meta": {
     "layout": "app",
     "requiresUser": true,
-    "title": "Exit"
+    "title": "Tasks"
   }
 }
 </route>
 
 <script setup lang="ts">
-import emitter from "@/modules/mitt"
-
 useHead({
-  title: "Exit",
+  title: "Tasks",
 })
 </script>
 
 <template>
   <div class="flex grow flex-col overflow-auto overscroll-none">
-    <div class="flex grow flex-col gap-2 p-2">
-      <Button variant="secondary" @click="emitter.emit('Dialog.Exit.Open')">
-        Logout
-      </Button>
-    </div>
+    <div class="flex grow items-center justify-center">Tasks</div>
   </div>
 </template>

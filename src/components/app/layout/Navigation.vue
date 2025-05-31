@@ -2,6 +2,7 @@
 import { useSidebar } from "@/components/ui/sidebar"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 import IconActivity from "~icons/lucide/activity"
+import IconBadgeCheck from "~icons/lucide/badge-check"
 import IconBot from "~icons/lucide/bot"
 import IconComponent from "~icons/lucide/component"
 import IconHome from "~icons/lucide/home"
@@ -23,16 +24,22 @@ const navigation = [
     icon: IconBot,
   },
   {
-    title: "Teams",
-    url: "/teams",
-    id: "teams",
-    icon: IconComponent,
+    title: "Tasks",
+    url: "/tasks",
+    id: "tasks",
+    icon: IconBadgeCheck,
   },
   {
     title: "Runs",
     url: "/runs",
     id: "runs",
     icon: IconActivity,
+  },
+  {
+    title: "Teams",
+    url: "/teams",
+    id: "teams",
+    icon: IconComponent,
   },
   {
     title: "Create",

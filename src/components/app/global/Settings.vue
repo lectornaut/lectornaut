@@ -244,8 +244,8 @@ const navigations = [
     links: [
       { name: "General", icon: IconBolt, id: "general" },
       { name: "People", icon: IconUsersRound, id: "people" },
-      { name: "Logs", icon: IconLogs, id: "logs" },
       { name: "Billing", icon: IconCreditCard, id: "billing" },
+      { name: "Logs", icon: IconLogs, id: "logs" },
     ],
   },
 ]

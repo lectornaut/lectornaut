@@ -17,10 +17,11 @@
           :max-size="25"
           :collapsed-size="0"
           as-child
+          class="hidden lg:flex"
         >
           <LeftSidebar />
         </ResizablePanel>
-        <ResizableHandle />
+        <ResizableHandle class="hidden lg:flex" />
         <ResizablePanel
           class="flex grow flex-col overflow-auto overscroll-none"
         >
@@ -31,7 +32,7 @@
             <RouterView />
           </div>
         </ResizablePanel>
-        <ResizableHandle />
+        <ResizableHandle class="hidden lg:flex" />
         <ResizablePanel
           ref="rightPanel"
           collapsible
@@ -40,6 +41,7 @@
           :max-size="25"
           :collapsed-size="0"
           as-child
+          class="hidden lg:flex"
         >
           <RightSidebar />
         </ResizablePanel>
