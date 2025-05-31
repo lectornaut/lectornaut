@@ -18,15 +18,25 @@ import {
   useFirebaseStorage,
   useStorageFile,
 } from "vuefire"
+import IconActivity from "~icons/lucide/activity"
+import IconBell from "~icons/lucide/bell"
+import IconBlocks from "~icons/lucide/blocks"
+import IconBolt from "~icons/lucide/bolt"
+import IconBot from "~icons/lucide/bot"
 import IconCircleUserRound from "~icons/lucide/circle-user-round"
+import IconComponent from "~icons/lucide/component"
 import IconCreditCard from "~icons/lucide/credit-card"
+import IconDatabase from "~icons/lucide/database"
+import IconLock from "~icons/lucide/lock"
+import IconLogs from "~icons/lucide/logs"
 import IconPalette from "~icons/lucide/palette"
 import IconSettings from "~icons/lucide/settings"
+import IconUsersRound from "~icons/lucide/users-round"
 
 const openSettings = ref(false)
-const activeTab = ref("general")
+const activeTab = ref("preferences")
 
-emitter.on("Dialog.Settings.Open", (event: unknown) => {
+emitter.on("Dialog.Settings.Open", (event) => {
   const selected = event as string
   activeTab.value = selected
   openSettings.value = !openSettings.value
@@ -205,14 +215,40 @@ const getComputedProviderName = (provider: string) => {
 
 const accent = useStorage("accent", defaultAccent)
 
-const data = {
-  nav: [
-    { name: "General", icon: IconSettings, id: "general" },
-    { name: "Account", icon: IconCircleUserRound, id: "account" },
-    { name: "Appearance", icon: IconPalette, id: "appearance" },
-    { name: "Billing", icon: IconCreditCard, id: "billing" },
-  ],
-}
+const navigations = [
+  {
+    title: "General",
+    id: "general",
+    links: [
+      { name: "Preferences", icon: IconSettings, id: "preferences" },
+      { name: "Account", icon: IconCircleUserRound, id: "account" },
+      { name: "Notifications", icon: IconBell, id: "notifications" },
+      { name: "Appearance", icon: IconPalette, id: "appearance" },
+      { name: "Security", icon: IconLock, id: "security" },
+    ],
+  },
+  {
+    title: "Workspace",
+    id: "workspace",
+    links: [
+      { name: "Agents", icon: IconBot, id: "agents" },
+      { name: "Teams", icon: IconComponent, id: "teams" },
+      { name: "Runs", icon: IconActivity, id: "runs" },
+      { name: "Knowledge", icon: IconDatabase, id: "knowledge" },
+      { name: "Integrations", icon: IconBlocks, id: "integrations" },
+    ],
+  },
+  {
+    title: "Administration",
+    id: "administration",
+    links: [
+      { name: "General", icon: IconBolt, id: "general" },
+      { name: "People", icon: IconUsersRound, id: "people" },
+      { name: "Logs", icon: IconLogs, id: "logs" },
+      { name: "Billing", icon: IconCreditCard, id: "billing" },
+    ],
+  },
+]
 </script>
 
 <template>
@@ -229,11 +265,15 @@ const data = {
           <Sidebar collapsible="none" class="bg-muted/10">
             <TabsList class="contents">
               <SidebarContent>
-                <SidebarGroup>
+                <SidebarGroup
+                  v-for="navigation in navigations"
+                  :key="navigation.id"
+                >
+                  <SidebarGroupLabel>{{ navigation.title }}</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
                       <SidebarMenuItem
-                        v-for="item in data.nav"
+                        v-for="item in navigation.links"
                         :key="item.name"
                       >
                         <TabsTrigger
@@ -261,10 +301,10 @@ const data = {
               defer
               :options="{ scrollbars: { autoHide: 'scroll' } }"
             >
-              <TabsContent value="general">
+              <TabsContent value="preferences">
                 <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
-                    <h3 class="text-lg font-semibold">General</h3>
+                    <h3 class="text-lg font-semibold">Preferences</h3>
                     <p class="text-muted-foreground flex items-center gap-2">
                       Manage your general settings and preferences.
                     </p>
@@ -294,7 +334,7 @@ const data = {
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <Avatar
-                              class="h-16 w-16 cursor-pointer"
+                              class="size-16 cursor-pointer"
                               @click="
                                 open({ accept: 'image/*', multiple: false })
                               "
@@ -654,7 +694,54 @@ const data = {
                   </div>
                 </div>
               </TabsContent>
-              <!-- billing -->
+              <TabsContent value="notifications">
+                <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
+                  <div class="flex flex-col">
+                    <h3 class="text-lg font-semibold">Notifications</h3>
+                    <p class="text-muted-foreground flex items-center gap-2">
+                      Manage your notification preferences.
+                    </p>
+                  </div>
+                  <Separator />
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">
+                        Email notifications
+                      </p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        Manage your email notification preferences.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Switch />
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">Push notifications</p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        Manage your push notification preferences.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Switch />
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">
+                        In-app notifications
+                      </p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        Manage your in-app notification preferences.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Switch />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
               <TabsContent value="billing">
                 <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">

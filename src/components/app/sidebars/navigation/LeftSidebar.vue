@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
-const workflows = [
+const agents = [
   {
     name: "William Smith",
-    url: "/workflows",
+    url: "/agents",
     email: "williamsmith@example.com",
     subject: "Meeting Tomorrow",
     date: "09:34 AM",
@@ -13,7 +13,7 @@ const workflows = [
   },
   {
     name: "Alice Smith",
-    url: "/workflows",
+    url: "/agents",
     email: "alicesmith@example.com",
     subject: "Re: Project Update",
     date: "Yesterday",
@@ -22,7 +22,7 @@ const workflows = [
   },
   {
     name: "Bob Johnson",
-    url: "/workflows",
+    url: "/agents",
     email: "bobjohnson@example.com",
     subject: "Weekend Plans",
     date: "2 days ago",
@@ -31,7 +31,7 @@ const workflows = [
   },
   {
     name: "Emily Davis",
-    url: "/workflows",
+    url: "/agents",
     email: "emilydavis@example.com",
     subject: "Re: Question about Budget",
     date: "2 days ago",
@@ -40,7 +40,7 @@ const workflows = [
   },
   {
     name: "Michael Wilson",
-    url: "/workflows",
+    url: "/agents",
     email: "michaelwilson@example.com",
     subject: "Important Announcement",
     date: "1 week ago",
@@ -49,7 +49,7 @@ const workflows = [
   },
   {
     name: "Sarah Brown",
-    url: "/workflows",
+    url: "/agents",
     email: "sarahbrown@example.com",
     subject: "Re: Feedback on Proposal",
     date: "1 week ago",
@@ -58,7 +58,7 @@ const workflows = [
   },
   {
     name: "David Lee",
-    url: "/workflows",
+    url: "/agents",
     email: "davidlee@example.com",
     subject: "New Project Idea",
     date: "1 week ago",
@@ -67,7 +67,7 @@ const workflows = [
   },
   {
     name: "Olivia Wilson",
-    url: "/workflows",
+    url: "/agents",
     email: "oliviawilson@example.com",
     subject: "Vacation Plans",
     date: "1 week ago",
@@ -76,7 +76,7 @@ const workflows = [
   },
   {
     name: "James Martin",
-    url: "/workflows",
+    url: "/agents",
     email: "jamesmartin@example.com",
     subject: "Re: Conference Registration",
     date: "1 week ago",
@@ -85,7 +85,7 @@ const workflows = [
   },
   {
     name: "Sophia White",
-    url: "/workflows",
+    url: "/agents",
     email: "sophiawhite@example.com",
     subject: "Team Dinner",
     date: "1 week ago",
@@ -109,121 +109,93 @@ const route = useRoute()
 </script>
 
 <template>
-  <Sidebar collapsible="icon" class="[&>[data-sidebar=sidebar]]:flex-row">
-    <Sidebar
-      collapsible="none"
-      class="w-[calc(var(--sidebar-width-icon)+1px)] border-r"
-    >
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" class="md:h-8 md:p-0">
-              <div
-                class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg"
-              >
-                <icon-lucide-lab-peach class="size-4" />
-              </div>
-              <div class="grid flex-1 text-left leading-tight">
-                <span class="truncate font-semibold">Acme Inc</span>
-                <span class="truncate text-xs">Enterprise</span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <Navigation />
-      </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <Support />
-        </SidebarMenu>
-        <AccountMenu />
-      </SidebarFooter>
-    </Sidebar>
-    <Sidebar collapsible="none" class="hidden flex-1 overflow-hidden md:flex">
-      <SidebarHeader>
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-foreground ml-2 text-base font-medium">
-            {{ route.meta.title }}
-          </span>
-          <Button variant="ghost">
-            <icon-lucide-plus />
-            <span>New</span>
-          </Button>
-        </div>
-      </SidebarHeader>
-      <Separator />
-      <SidebarHeader>
-        <div class="flex items-center justify-between gap-2">
-          <div class="relative flex h-full items-center justify-between gap-2">
-            <span
-              class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
-            >
-              <icon-lucide-search />
-            </span>
-            <SidebarInput class="h-full pl-9" placeholder="Search" />
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-list-filter />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Filter </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </SidebarHeader>
-      <Separator />
-      <SidebarContent>
-        <OverlayScrollbarsComponent
-          defer
-          :options="{ scrollbars: { autoHide: 'scroll' } }"
+  <Tabs default-value="details" class="bg-sidebar gap-0">
+    <SidebarHeader>
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-foreground ml-2 text-base font-medium">
+          {{ route.meta.title }}
+        </span>
+        <Button variant="ghost">
+          <icon-lucide-plus />
+          <span>New</span>
+        </Button>
+      </div>
+    </SidebarHeader>
+    <Separator />
+    <SidebarHeader>
+      <div class="flex items-center justify-between gap-2">
+        <div
+          class="relative flex h-full grow items-center justify-between gap-2"
         >
-          <SidebarGroup>
-            <SidebarGroupContent class="flex flex-col gap-2">
-              <RouterLink
-                v-for="(workflow, index) in workflows"
-                :key="workflow.email"
-                :to="`${workflow.url}/${index}`"
-                class="ring-offset-background focus-visible:ring-ring/50 rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-              >
-                <Card class="rounded-md shadow-none">
-                  <CardHeader>
-                    <CardTitle class="flex w-full justify-between">
-                      <span>{{ workflow.name }}</span>
-                    </CardTitle>
-                    <CardDescription class="line-clamp-1">
-                      {{ workflow.subject }}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent class="flex flex-col gap-1">
-                    <Badge variant="secondary" :class="getStatus().class">
-                      <icon-mdi-circle />
-                      <span>
-                        {{ getStatus().text }}
-                      </span>
-                    </Badge>
-                    <Badge variant="secondary">
-                      <icon-lucide-hash />
-                      <span> {{ Math.floor(Math.random() * 60) }} RUNS </span>
-                    </Badge>
-                    <Badge variant="secondary">
-                      <icon-lucide-clock />
-                      <span> {{ Math.floor(Math.random() * 60) }} HOURS </span>
-                    </Badge>
-                  </CardContent>
-                </Card>
-              </RouterLink>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </OverlayScrollbarsComponent>
-      </SidebarContent>
-    </Sidebar>
-    <SidebarRail />
-  </Sidebar>
+          <span
+            class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
+          >
+            <icon-lucide-search />
+          </span>
+          <SidebarInput class="h-9 pl-9" placeholder="Search" />
+          <span
+            class="absolute inset-y-0 end-0 flex items-center justify-center"
+          >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button variant="ghost" size="icon">
+                    <icon-lucide-list-filter />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent> Filter </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </span>
+        </div>
+      </div>
+    </SidebarHeader>
+    <Separator />
+    <SidebarContent>
+      <OverlayScrollbarsComponent
+        defer
+        :options="{ scrollbars: { autoHide: 'scroll' } }"
+      >
+        <SidebarGroup>
+          <SidebarGroupContent class="flex flex-col gap-2">
+            <RouterLink
+              v-for="(workflow, index) in agents"
+              :key="workflow.email"
+              :to="`${workflow.url}/${index}`"
+              class="ring-offset-background focus-visible:ring-ring/50 rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              <Card class="rounded-md shadow-none">
+                <CardHeader>
+                  <CardTitle class="flex w-full justify-between">
+                    <span>{{ workflow.name }}</span>
+                  </CardTitle>
+                  <CardDescription class="line-clamp-1">
+                    {{ workflow.subject }}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent class="flex flex-col gap-1">
+                  <Badge variant="secondary" :class="getStatus().class">
+                    <icon-mdi-circle />
+                    <span>
+                      {{ getStatus().text }}
+                    </span>
+                  </Badge>
+                  <Badge variant="secondary">
+                    <icon-lucide-hash />
+                    <span> {{ Math.floor(Math.random() * 60) }} RUNS </span>
+                  </Badge>
+                  <Badge variant="secondary">
+                    <icon-lucide-clock />
+                    <span> {{ Math.floor(Math.random() * 60) }} HOURS </span>
+                  </Badge>
+                </CardContent>
+              </Card>
+            </RouterLink>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </OverlayScrollbarsComponent>
+    </SidebarContent>
+  </Tabs>
 </template>
 
 <!-- <style scoped>

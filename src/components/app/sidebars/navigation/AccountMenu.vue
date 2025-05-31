@@ -15,16 +15,13 @@ const user = useCurrentUser()
           <DropdownMenu>
             <TooltipTrigger as-child>
               <DropdownMenuTrigger as-child>
-                <SidebarMenuButton
-                  size="lg"
-                  class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
-                >
-                  <Avatar class="size-8 rounded-lg">
+                <SidebarMenuButton class="p-0">
+                  <Avatar class="rounded-md">
                     <AvatarImage
                       :src="user?.photoURL!"
                       :alt="user?.displayName"
                     />
-                    <AvatarFallback class="rounded-lg"> CN </AvatarFallback>
+                    <AvatarFallback class="rounded-md"> CN </AvatarFallback>
                   </Avatar>
                   <div class="grid flex-1 text-left text-sm leading-tight">
                     <span class="truncate font-semibold">{{
@@ -46,7 +43,7 @@ const user = useCurrentUser()
                 <div
                   class="flex items-center gap-2 px-1 py-1.5 text-left text-sm"
                 >
-                  <Avatar class="h-8 w-8 rounded-lg">
+                  <Avatar class="size-8 rounded-lg">
                     <AvatarImage
                       :src="user?.photoURL!"
                       :alt="user?.displayName"
@@ -66,7 +63,7 @@ const user = useCurrentUser()
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem
-                  @click="emitter.emit('Dialog.Settings.Open', 'general')"
+                  @click="emitter.emit('Dialog.Settings.Open', 'preferences')"
                 >
                   <icon-lucide-settings />
                   Settings

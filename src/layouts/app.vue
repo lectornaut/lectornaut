@@ -1,24 +1,50 @@
 <template>
   <SidebarProvider
     :default-open="false"
-    class="no-scrollbar flex grow flex-col overflow-auto overscroll-none [--footer-height:--spacing(5)] [--header-height:--spacing(13)]"
+    class="flex grow flex-col overflow-auto overscroll-none [--footer-height:--spacing(5)] [--header-height:--spacing(13)]"
   >
     <Titlebar />
     <Separator />
-    <div class="no-scrollbar flex grow overflow-hidden overscroll-none">
-      <LeftSidebar
-        class="top-[calc(var(--header-height)+1px)] bottom-[calc(var(--footer-height)+1px)] h-[calc(100svh-var(--header-height)-var(--footer-height)-2px))]"
-      />
-      <div
-        class="no-scrollbar flex grow flex-col overflow-auto overscroll-none"
-      >
-        <Tabbar />
-        <SubNavigation />
-        <Separator />
-        <RouterView />
-      </div>
-      <RightSidebar />
-    </div>
+    <main class="flex grow overflow-auto overscroll-none">
+      <MainSidebar />
+      <Separator orientation="vertical" />
+      <ResizablePanelGroup direction="horizontal" auto-save-id="app-layout">
+        <ResizablePanel
+          ref="leftPanel"
+          collapsible
+          :min-size="15"
+          :default-size="20"
+          :max-size="25"
+          :collapsed-size="0"
+          as-child
+        >
+          <LeftSidebar />
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel
+          class="flex grow flex-col overflow-auto overscroll-none"
+        >
+          <Tabbar />
+          <SubNavigation />
+          <Separator />
+          <div class="flex grow flex-col overflow-auto overscroll-none">
+            <RouterView />
+          </div>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel
+          ref="rightPanel"
+          collapsible
+          :min-size="15"
+          :default-size="20"
+          :max-size="25"
+          :collapsed-size="0"
+          as-child
+        >
+          <RightSidebar />
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </main>
     <Separator />
     <Footbar />
   </SidebarProvider>

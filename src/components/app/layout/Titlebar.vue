@@ -41,11 +41,12 @@ onBeforeUnmount(() => {
         <div class="flex gap-4">
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger
-                as-child
-                class="after:bg-border relative after:absolute after:-right-2 after:h-3 after:w-px after:rounded-full"
-              >
-                <Button variant="ghost" size="icon">
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="after:bg-border relative after:absolute after:-right-2 after:h-3 after:w-px after:rounded-full"
+                >
                   <icon-lucide-grip />
                 </Button>
               </TooltipTrigger>

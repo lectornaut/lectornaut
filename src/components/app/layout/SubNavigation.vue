@@ -28,12 +28,6 @@
       </Breadcrumb>
     </div>
     <div class="flex gap-2">
-      <Button variant="ghost" as-child>
-        <Label for="active">
-          <Switch id="active" />
-          <span>Enabled</span>
-        </Label>
-      </Button>
       <Button variant="outline">
         <icon-lucide-play />
         <span>Run</span>

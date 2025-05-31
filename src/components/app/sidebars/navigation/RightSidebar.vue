@@ -21,62 +21,56 @@ const metadata = [
 </script>
 
 <template>
-  <Tabs default-value="details">
-    <Sidebar
-      class="top-[calc(var(--header-height)+1px)] bottom-[calc(var(--footer-height)+1px)] h-[calc(100svh-var(--header-height)-var(--footer-height)-2px))]"
-      side="right"
-    >
-      <SidebarHeader>
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-foreground ml-2 text-base font-medium">
-            Information
-          </span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" @click="copy(source)">
-                  <icon-lucide-copy v-if="!copied" />
-                  <icon-lucide-check v-else />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Copy URL </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </SidebarHeader>
-      <Separator />
-      <SidebarHeader>
-        <TabsList class="bg-sidebar w-full p-0">
-          <TabsTrigger
-            v-for="tab in metadata"
-            :key="tab.id"
-            :value="tab.id"
-            class="data-[state=active]:after:bg-primary data-[state=active]:bg-sidebar text-secondary-foreground data-[state=active]:text-foreground relative w-full py-2.5 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-          >
-            <span class="flex items-center justify-center gap-2">
-              <span> {{ tab.name }} </span>
-            </span>
-          </TabsTrigger>
-        </TabsList>
-      </SidebarHeader>
-      <Separator />
-      <SidebarContent>
-        <OverlayScrollbarsComponent
-          defer
-          :options="{ scrollbars: { autoHide: 'scroll' } }"
+  <Tabs default-value="details" class="gap-0">
+    <SidebarHeader>
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-foreground ml-2 text-base font-medium">
+          Information
+        </span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon" @click="copy(source)">
+                <icon-lucide-copy v-if="!copied" />
+                <icon-lucide-check v-else />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Copy URL </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </SidebarHeader>
+    <Separator />
+    <SidebarHeader>
+      <TabsList class="bg-sidebar w-full p-0">
+        <TabsTrigger
+          v-for="tab in metadata"
+          :key="tab.id"
+          :value="tab.id"
+          class="data-[state=active]:after:bg-primary data-[state=active]:bg-sidebar text-secondary-foreground data-[state=active]:text-foreground relative w-full py-2.5 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
         >
-          <TabsContent value="details">
-            <FlowDetails />
-          </TabsContent>
-          <TabsContent value="activity">
-            <FlowActivity />
-          </TabsContent>
-          <TabsContent value="settings">
-            <FlowSettings />
-          </TabsContent>
-        </OverlayScrollbarsComponent>
-      </SidebarContent>
-      <SidebarRail />
-    </Sidebar>
+          <span class="flex items-center justify-center gap-2">
+            <span> {{ tab.name }} </span>
+          </span>
+        </TabsTrigger>
+      </TabsList>
+    </SidebarHeader>
+    <Separator />
+    <SidebarContent>
+      <OverlayScrollbarsComponent
+        defer
+        :options="{ scrollbars: { autoHide: 'scroll' } }"
+      >
+        <TabsContent value="details">
+          <FlowDetails />
+        </TabsContent>
+        <TabsContent value="activity">
+          <FlowActivity />
+        </TabsContent>
+        <TabsContent value="settings">
+          <FlowSettings />
+        </TabsContent>
+      </OverlayScrollbarsComponent>
+    </SidebarContent>
   </Tabs>
 </template>

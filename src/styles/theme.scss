@@ -3,7 +3,7 @@
 
   --background: var(--color-neutral-50);
   --foreground: var(--color-neutral-800);
-  --card: var(--color-neutral-50);
+  --card: var(--color-white);
   --card-foreground: var(--color-neutral-950);
   --popover: var(--color-neutral-50);
   --popover-foreground: var(--color-neutral-900);
@@ -25,9 +25,9 @@
 }
 
 @mixin red-light-theme {
-  --primary: var(--color-red-600);
+  --primary: var(--color-red-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-red-800);
+  --destructive: var(--color-red-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-red-600);
   --sidebar-ring: var(--color-red-600);
@@ -39,9 +39,9 @@
 }
 
 @mixin orange-light-theme {
-  --primary: var(--color-orange-600);
+  --primary: var(--color-orange-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-orange-800);
+  --destructive: var(--color-orange-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-orange-600);
   --sidebar-ring: var(--color-orange-600);
@@ -53,9 +53,9 @@
 }
 
 @mixin amber-light-theme {
-  --primary: var(--color-amber-600);
+  --primary: var(--color-amber-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-amber-800);
+  --destructive: var(--color-amber-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-amber-600);
   --sidebar-ring: var(--color-amber-600);
@@ -67,9 +67,9 @@
 }
 
 @mixin yellow-light-theme {
-  --primary: var(--color-yellow-600);
+  --primary: var(--color-yellow-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-yellow-800);
+  --destructive: var(--color-yellow-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-yellow-600);
   --sidebar-ring: var(--color-yellow-600);
@@ -81,9 +81,9 @@
 }
 
 @mixin lime-light-theme {
-  --primary: var(--color-lime-600);
+  --primary: var(--color-lime-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-lime-800);
+  --destructive: var(--color-lime-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-lime-600);
   --sidebar-ring: var(--color-lime-600);
@@ -95,9 +95,9 @@
 }
 
 @mixin green-light-theme {
-  --primary: var(--color-green-600);
+  --primary: var(--color-green-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-green-800);
+  --destructive: var(--color-green-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-green-600);
   --sidebar-ring: var(--color-green-600);
@@ -109,9 +109,9 @@
 }
 
 @mixin emerald-light-theme {
-  --primary: var(--color-emerald-600);
+  --primary: var(--color-emerald-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-emerald-800);
+  --destructive: var(--color-emerald-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-emerald-600);
   --sidebar-ring: var(--color-emerald-600);
@@ -123,9 +123,9 @@
 }
 
 @mixin teal-light-theme {
-  --primary: var(--color-teal-600);
+  --primary: var(--color-teal-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-teal-800);
+  --destructive: var(--color-teal-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-teal-600);
   --sidebar-ring: var(--color-teal-600);
@@ -137,9 +137,9 @@
 }
 
 @mixin cyan-light-theme {
-  --primary: var(--color-cyan-600);
+  --primary: var(--color-cyan-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-cyan-800);
+  --destructive: var(--color-cyan-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-cyan-600);
   --sidebar-ring: var(--color-cyan-600);
@@ -151,9 +151,9 @@
 }
 
 @mixin sky-light-theme {
-  --primary: var(--color-sky-600);
+  --primary: var(--color-sky-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-sky-800);
+  --destructive: var(--color-sky-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-sky-600);
   --sidebar-ring: var(--color-sky-600);
@@ -165,9 +165,9 @@
 }
 
 @mixin blue-light-theme {
-  --primary: var(--color-blue-600);
+  --primary: var(--color-blue-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-blue-800);
+  --destructive: var(--color-blue-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-blue-600);
   --sidebar-ring: var(--color-blue-600);
@@ -179,9 +179,9 @@
 }
 
 @mixin indigo-light-theme {
-  --primary: var(--color-indigo-600);
+  --primary: var(--color-indigo-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-indigo-800);
+  --destructive: var(--color-indigo-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-indigo-600);
   --sidebar-ring: var(--color-indigo-600);
@@ -193,9 +193,9 @@
 }
 
 @mixin violet-light-theme {
-  --primary: var(--color-violet-600);
+  --primary: var(--color-violet-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-violet-800);
+  --destructive: var(--color-violet-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-violet-600);
   --sidebar-ring: var(--color-violet-600);
@@ -207,9 +207,9 @@
 }
 
 @mixin purple-light-theme {
-  --primary: var(--color-purple-600);
+  --primary: var(--color-purple-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-purple-800);
+  --destructive: var(--color-purple-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-purple-600);
   --sidebar-ring: var(--color-purple-600);
@@ -221,9 +221,9 @@
 }
 
 @mixin fuchsia-light-theme {
-  --primary: var(--color-fuchsia-600);
+  --primary: var(--color-fuchsia-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-fuchsia-800);
+  --destructive: var(--color-fuchsia-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-fuchsia-600);
   --sidebar-ring: var(--color-fuchsia-600);
@@ -235,9 +235,9 @@
 }
 
 @mixin pink-light-theme {
-  --primary: var(--color-pink-600);
+  --primary: var(--color-pink-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-pink-800);
+  --destructive: var(--color-pink-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-pink-600);
   --sidebar-ring: var(--color-pink-600);
@@ -249,9 +249,9 @@
 }
 
 @mixin rose-light-theme {
-  --primary: var(--color-rose-600);
+  --primary: var(--color-rose-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-rose-800);
+  --destructive: var(--color-rose-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-rose-600);
   --sidebar-ring: var(--color-rose-600);
@@ -263,9 +263,9 @@
 }
 
 @mixin slate-light-theme {
-  --primary: var(--color-slate-600);
+  --primary: var(--color-slate-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-slate-800);
+  --destructive: var(--color-slate-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-slate-600);
   --sidebar-ring: var(--color-slate-600);
@@ -277,9 +277,9 @@
 }
 
 @mixin gray-light-theme {
-  --primary: var(--color-gray-600);
+  --primary: var(--color-gray-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-gray-800);
+  --destructive: var(--color-gray-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-gray-600);
   --sidebar-ring: var(--color-gray-600);
@@ -291,9 +291,9 @@
 }
 
 @mixin zinc-light-theme {
-  --primary: var(--color-zinc-600);
+  --primary: var(--color-zinc-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-zinc-800);
+  --destructive: var(--color-zinc-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-zinc-600);
   --sidebar-ring: var(--color-zinc-600);
@@ -305,9 +305,9 @@
 }
 
 @mixin neutral-light-theme {
-  --primary: var(--color-neutral-600);
+  --primary: var(--color-neutral-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-neutral-800);
+  --destructive: var(--color-neutral-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-neutral-600);
   --sidebar-ring: var(--color-neutral-600);
@@ -319,9 +319,9 @@
 }
 
 @mixin stone-light-theme {
-  --primary: var(--color-stone-600);
+  --primary: var(--color-stone-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-stone-800);
+  --destructive: var(--color-stone-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-stone-600);
   --sidebar-ring: var(--color-stone-600);
@@ -337,7 +337,7 @@
 
   --background: var(--color-neutral-900);
   --foreground: var(--color-neutral-200);
-  --card: var(--color-neutral-900);
+  --card: var(--color-neutral-950);
   --card-foreground: var(--color-neutral-50);
   --popover: var(--color-neutral-900);
   --popover-foreground: var(--color-neutral-100);
@@ -359,9 +359,9 @@
 }
 
 @mixin red-dark-theme {
-  --primary: var(--color-red-800);
+  --primary: var(--color-red-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-red-500);
+  --destructive: var(--color-red-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-red-600);
   --sidebar-ring: var(--color-red-600);
@@ -373,9 +373,9 @@
 }
 
 @mixin orange-dark-theme {
-  --primary: var(--color-orange-800);
+  --primary: var(--color-orange-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-orange-500);
+  --destructive: var(--color-orange-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-orange-600);
   --sidebar-ring: var(--color-orange-600);
@@ -387,9 +387,9 @@
 }
 
 @mixin amber-dark-theme {
-  --primary: var(--color-amber-800);
+  --primary: var(--color-amber-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-amber-500);
+  --destructive: var(--color-amber-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-amber-600);
   --sidebar-ring: var(--color-amber-600);
@@ -401,9 +401,9 @@
 }
 
 @mixin yellow-dark-theme {
-  --primary: var(--color-yellow-800);
+  --primary: var(--color-yellow-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-yellow-500);
+  --destructive: var(--color-yellow-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-yellow-600);
   --sidebar-ring: var(--color-yellow-600);
@@ -415,9 +415,9 @@
 }
 
 @mixin lime-dark-theme {
-  --primary: var(--color-lime-800);
+  --primary: var(--color-lime-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-lime-500);
+  --destructive: var(--color-lime-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-lime-600);
   --sidebar-ring: var(--color-lime-600);
@@ -429,9 +429,9 @@
 }
 
 @mixin green-dark-theme {
-  --primary: var(--color-green-800);
+  --primary: var(--color-green-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-green-500);
+  --destructive: var(--color-green-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-green-600);
   --sidebar-ring: var(--color-green-600);
@@ -443,9 +443,9 @@
 }
 
 @mixin emerald-dark-theme {
-  --primary: var(--color-emerald-800);
+  --primary: var(--color-emerald-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-emerald-500);
+  --destructive: var(--color-emerald-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-emerald-600);
   --sidebar-ring: var(--color-emerald-600);
@@ -457,9 +457,9 @@
 }
 
 @mixin teal-dark-theme {
-  --primary: var(--color-teal-800);
+  --primary: var(--color-teal-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-teal-500);
+  --destructive: var(--color-teal-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-teal-600);
   --sidebar-ring: var(--color-teal-600);
@@ -471,9 +471,9 @@
 }
 
 @mixin cyan-dark-theme {
-  --primary: var(--color-cyan-800);
+  --primary: var(--color-cyan-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-cyan-500);
+  --destructive: var(--color-cyan-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-cyan-600);
   --sidebar-ring: var(--color-cyan-600);
@@ -485,9 +485,9 @@
 }
 
 @mixin sky-dark-theme {
-  --primary: var(--color-sky-800);
+  --primary: var(--color-sky-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-sky-500);
+  --destructive: var(--color-sky-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-sky-600);
   --sidebar-ring: var(--color-sky-600);
@@ -499,9 +499,9 @@
 }
 
 @mixin blue-dark-theme {
-  --primary: var(--color-blue-800);
+  --primary: var(--color-blue-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-blue-500);
+  --destructive: var(--color-blue-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-blue-600);
   --sidebar-ring: var(--color-blue-600);
@@ -513,9 +513,9 @@
 }
 
 @mixin indigo-dark-theme {
-  --primary: var(--color-indigo-800);
+  --primary: var(--color-indigo-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-indigo-500);
+  --destructive: var(--color-indigo-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-indigo-600);
   --sidebar-ring: var(--color-indigo-600);
@@ -527,9 +527,9 @@
 }
 
 @mixin violet-dark-theme {
-  --primary: var(--color-violet-800);
+  --primary: var(--color-violet-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-violet-500);
+  --destructive: var(--color-violet-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-violet-600);
   --sidebar-ring: var(--color-violet-600);
@@ -541,9 +541,9 @@
 }
 
 @mixin purple-dark-theme {
-  --primary: var(--color-purple-800);
+  --primary: var(--color-purple-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-purple-500);
+  --destructive: var(--color-purple-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-purple-600);
   --sidebar-ring: var(--color-purple-600);
@@ -555,9 +555,9 @@
 }
 
 @mixin fuchsia-dark-theme {
-  --primary: var(--color-fuchsia-800);
+  --primary: var(--color-fuchsia-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-fuchsia-500);
+  --destructive: var(--color-fuchsia-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-fuchsia-600);
   --sidebar-ring: var(--color-fuchsia-600);
@@ -569,9 +569,9 @@
 }
 
 @mixin pink-dark-theme {
-  --primary: var(--color-pink-800);
+  --primary: var(--color-pink-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-pink-500);
+  --destructive: var(--color-pink-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-pink-600);
   --sidebar-ring: var(--color-pink-600);
@@ -583,9 +583,9 @@
 }
 
 @mixin rose-dark-theme {
-  --primary: var(--color-rose-800);
+  --primary: var(--color-rose-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-rose-500);
+  --destructive: var(--color-rose-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-rose-600);
   --sidebar-ring: var(--color-rose-600);
@@ -597,9 +597,9 @@
 }
 
 @mixin slate-dark-theme {
-  --primary: var(--color-slate-800);
+  --primary: var(--color-slate-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-slate-500);
+  --destructive: var(--color-slate-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-slate-600);
   --sidebar-ring: var(--color-slate-600);
@@ -611,9 +611,9 @@
 }
 
 @mixin gray-dark-theme {
-  --primary: var(--color-gray-800);
+  --primary: var(--color-gray-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-gray-500);
+  --destructive: var(--color-gray-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-gray-600);
   --sidebar-ring: var(--color-gray-600);
@@ -625,9 +625,9 @@
 }
 
 @mixin zinc-dark-theme {
-  --primary: var(--color-zinc-800);
+  --primary: var(--color-zinc-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-zinc-500);
+  --destructive: var(--color-zinc-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-zinc-600);
   --sidebar-ring: var(--color-zinc-600);
@@ -639,9 +639,9 @@
 }
 
 @mixin neutral-dark-theme {
-  --primary: var(--color-neutral-800);
+  --primary: var(--color-neutral-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-neutral-500);
+  --destructive: var(--color-neutral-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-neutral-600);
   --sidebar-ring: var(--color-neutral-600);
@@ -653,9 +653,9 @@
 }
 
 @mixin stone-dark-theme {
-  --primary: var(--color-stone-800);
+  --primary: var(--color-stone-500);
   --primary-foreground: var(--color-white);
-  --destructive: var(--color-stone-500);
+  --destructive: var(--color-stone-700);
   --destructive-foreground: var(--color-white);
   --ring: var(--color-stone-600);
   --sidebar-ring: var(--color-stone-600);

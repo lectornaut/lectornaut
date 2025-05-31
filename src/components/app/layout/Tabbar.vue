@@ -103,7 +103,7 @@ emitter.on(
     tab = {
       id: generateId(),
       name: "Sample tab",
-      url: "/workflows",
+      url: "/agents",
     }
   ) => {
     const newTab = tab as Tab
@@ -128,7 +128,8 @@ emitter.on("Tabs.Close.All", () => {
   active.value = ""
 })
 
-emitter.on("Tabs.Select", (id: string) => {
+emitter.on("Tabs.Select", (idOrIndex) => {
+  const id: string = idOrIndex as string
   if (id === "next") {
     const currentIndex = tabs.value.findIndex((tab) => tab.id === active.value)
     const nextIndex = (currentIndex + 1) % tabs.value.length
@@ -150,9 +151,9 @@ emitter.on("Tabs.Select", (id: string) => {
 })
 
 const dummyRecentTabs = [
-  { id: "1", name: "Tab 1", url: "/workflows" },
-  { id: "2", name: "Tab 2", url: "/workflows" },
-  { id: "3", name: "Tab 3", url: "/workflows" },
+  { id: "1", name: "Tab 1", url: "/agents" },
+  { id: "2", name: "Tab 2", url: "/agents" },
+  { id: "3", name: "Tab 3", url: "/agents" },
 ]
 </script>
 
@@ -226,7 +227,7 @@ const dummyRecentTabs = [
             :key="tab.id"
             class="group flex w-60 min-w-0 flex-1 justify-between gap-2 border border-transparent bg-transparent"
             :class="{
-              'border-border bg-background hover:bg-background min-w-24 text-inherit':
+              'border-border bg-background hover:bg-background min-w-32 text-inherit':
                 tab.id === active,
             }"
             :variant="tab.id === active ? 'secondary' : 'ghost'"
@@ -241,7 +242,7 @@ const dummyRecentTabs = [
                 class="group relative flex w-60 min-w-0 flex-1 justify-between gap-2 border border-transparent bg-transparent shadow-none"
                 :class="
                   tab.id === active
-                    ? 'border-border bg-background before:border-border before:bg-sidebar after:bg-sidebar before:text-background after:border-border after:text-background hover:bg-background min-w-24 rounded-b-none border-b-transparent text-inherit before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-10 before:w-2 before:rounded-br-full before:border-r before:border-b before:shadow-[2px_4px_0_currentcolor] after:absolute after:-right-2 after:-bottom-2.5 after:z-20 after:h-10 after:w-2 after:rounded-bl-full after:border-b after:border-l after:shadow-[-2px_4px_0_currentcolor]'
+                    ? 'border-border bg-background before:border-border before:bg-sidebar after:bg-sidebar before:text-background after:border-border after:text-background hover:bg-background min-w-32 rounded-b-none border-b-transparent text-inherit before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-10 before:w-2 before:rounded-br-full before:border-r before:border-b before:shadow-[2px_4px_0_currentcolor] after:absolute after:-right-2 after:-bottom-2.5 after:z-20 after:h-10 after:w-2 after:rounded-bl-full after:border-b after:border-l after:shadow-[-2px_4px_0_currentcolor]'
                     : 'before:bg-muted text-muted-foreground after:bg-muted before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full'
                 "
                 :variant="tab.id === active ? 'secondary' : 'ghost'"

@@ -2,7 +2,6 @@
 import { changelog } from "@/data/changelog"
 import emitter from "@/modules/mitt"
 import { useDateFormat } from "@vueuse/core"
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const openChangelog = ref(false)
 
@@ -21,10 +20,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
         <SheetTitle>Changelog</SheetTitle>
       </SheetHeader>
       <Separator />
-      <OverlayScrollbarsComponent
-        defer
-        :options="{ scrollbars: { autoHide: 'scroll' } }"
-      >
+      <div class="flex grow flex-col overflow-auto overscroll-none">
         <Accordion
           collapsible
           type="multiple"
@@ -47,7 +43,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </OverlayScrollbarsComponent>
+      </div>
     </SheetContent>
   </Sheet>
 </template>

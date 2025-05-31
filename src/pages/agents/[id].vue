@@ -1,7 +1,7 @@
 <route lang="json">
 {
   "meta": {
-    "layout": "workflows",
+    "layout": "agents",
     "requiresUser": true
   }
 }
@@ -14,7 +14,7 @@ useHead({
 </script>
 
 <template>
-  <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
+  <div class="flex grow flex-col overflow-auto overscroll-none">
     <div class="flex grow flex-col gap-2">
       <FlowApp />
     </div>

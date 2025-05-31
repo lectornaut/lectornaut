@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useSidebar } from "@/components/ui/sidebar"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
+import IconActivity from "~icons/lucide/activity"
+import IconBot from "~icons/lucide/bot"
+import IconComponent from "~icons/lucide/component"
 import IconHome from "~icons/lucide/home"
-import IconLayers2 from "~icons/lucide/layers-2"
-import IconWorkflow from "~icons/lucide/workflow"
+import IconSparkle from "~icons/lucide/sparkle"
 
 const { setOpen } = useSidebar()
 
@@ -15,16 +17,28 @@ const navigation = [
     icon: IconHome,
   },
   {
-    title: "Workflows",
-    url: "/workflows",
-    id: "workflows",
-    icon: IconWorkflow,
+    title: "Agents",
+    url: "/agents",
+    id: "agents",
+    icon: IconBot,
   },
   {
-    title: "Drafts",
-    url: "/drafts",
-    id: "drafts",
-    icon: IconLayers2,
+    title: "Teams",
+    url: "/teams",
+    id: "teams",
+    icon: IconComponent,
+  },
+  {
+    title: "Runs",
+    url: "/runs",
+    id: "runs",
+    icon: IconActivity,
+  },
+  {
+    title: "Create",
+    url: "/create",
+    id: "create",
+    icon: IconSparkle,
   },
 ]
 </script>

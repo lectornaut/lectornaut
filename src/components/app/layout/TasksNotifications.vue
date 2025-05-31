@@ -136,7 +136,7 @@ const components: { title: string; href: string; description: string }[] = [
                 </TabsList>
               </div>
               <Separator />
-              <div class="no-scrollbar flex h-80 flex-col overflow-y-auto">
+              <div class="flex h-80 flex-col overflow-y-auto">
                 <OverlayScrollbarsComponent
                   defer
                   :options="{ scrollbars: { autoHide: 'scroll' } }"
@@ -231,7 +231,7 @@ const components: { title: string; href: string; description: string }[] = [
                 </TabsList>
               </div>
               <Separator />
-              <div class="no-scrollbar flex h-80 flex-col overflow-y-auto">
+              <div class="flex h-80 flex-col overflow-y-auto">
                 <OverlayScrollbarsComponent
                   defer
                   :options="{ scrollbars: { autoHide: 'scroll' } }"

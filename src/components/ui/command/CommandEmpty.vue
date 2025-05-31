@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import type { PrimitiveProps } from "reka-ui"
 import { Primitive } from "reka-ui"
-import type { HTMLAttributes } from "vue"
+import { computed, type HTMLAttributes } from "vue"
 import { useCommand } from "."
 
 const props = defineProps<

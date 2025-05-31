@@ -7,7 +7,7 @@ const stats = [
     value: "24",
     change: "+5%",
     description:
-      "Total minutes across all workflows in this organization for current month.",
+      "Total minutes across all agents in this organization for current month.",
     changeType: "positive",
     usage: 12,
     capacity: 50,
@@ -19,7 +19,7 @@ const stats = [
     value: "12",
     change: "-2%",
     description:
-      "Total job runs across all workflows in this organization for current month.",
+      "Total job runs across all agents in this organization for current month.",
     changeType: "negative",
     usage: 60,
     capacity: 20,
@@ -31,7 +31,7 @@ const stats = [
     value: "1m 19s",
     change: "+3s",
     description:
-      "Average time taken by a job to run across all workflows in this organization for current month.",
+      "Average time taken by a job to run across all agents in this organization for current month.",
     changeType: "positive",
     usage: 70,
     capacity: 2,
@@ -43,7 +43,7 @@ const stats = [
     value: "4s",
     change: "-1s",
     description:
-      "Average time taken by a job to get queued across all workflows in this organization for current month.",
+      "Average time taken by a job to get queued across all agents in this organization for current month.",
     changeType: "positive",
     usage: 50,
     capacity: 10,
@@ -55,7 +55,7 @@ const stats = [
     value: "10%",
     change: "+10%",
     description:
-      "Percentage of jobs that failed across all workflows in this organization for current month.",
+      "Percentage of jobs that failed across all agents in this organization for current month.",
     changeType: "negative",
     usage: 90,
     capacity: 100,
@@ -67,7 +67,7 @@ const stats = [
     value: "24",
     change: "+4%",
     description:
-      "Total minutes across all workflows in this organization for current month.",
+      "Total minutes across all agents in this organization for current month.",
     changeType: "negative",
     usage: 85,
     capacity: 300,

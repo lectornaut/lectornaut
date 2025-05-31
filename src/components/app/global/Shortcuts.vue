@@ -7,7 +7,6 @@ import {
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import Fuse from "fuse.js"
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const openShortcuts = ref(false)
 
@@ -93,10 +92,7 @@ const filteredShortcuts = computed(() => {
         </SheetDescription>
       </SheetHeader>
       <Separator />
-      <OverlayScrollbarsComponent
-        defer
-        :options="{ scrollbars: { autoHide: 'scroll' } }"
-      >
+      <div class="flex grow flex-col overflow-auto overscroll-none">
         <Accordion
           collapsible
           type="multiple"
@@ -150,7 +146,7 @@ const filteredShortcuts = computed(() => {
             </p>
           </div>
         </Accordion>
-      </OverlayScrollbarsComponent>
+      </div>
     </SheetContent>
   </Sheet>
 </template>

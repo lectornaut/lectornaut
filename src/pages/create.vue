@@ -10,12 +10,12 @@
 
 <script setup lang="ts">
 useHead({
-  title: "Drafts",
+  title: "Create",
 })
 </script>
 
 <template>
-  <div class="no-scrollbar flex grow flex-col overflow-auto overscroll-none">
-    <div class="flex grow items-center justify-center">Drafts</div>
+  <div class="flex grow flex-col overflow-auto overscroll-none">
+    <div class="flex grow items-center justify-center">Create</div>
   </div>
 </template>

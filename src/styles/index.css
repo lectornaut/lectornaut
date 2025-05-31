@@ -122,7 +122,7 @@
     @apply text-foreground;
     @apply text-sm;
     @apply select-none;
-    @apply overflow-hidden;
+    @apply overflow-auto;
     @apply overscroll-none;
     @apply accent-current;
     @apply antialiased;

@@ -3,14 +3,14 @@
   "meta": {
     "layout": "app",
     "requiresUser": true,
-    "title": "Workflows"
+    "title": "Agents"
   }
 }
 </route>
 
 <script setup lang="ts">
 useHead({
-  title: "Workflows",
+  title: "Agents",
 })
 </script>
 

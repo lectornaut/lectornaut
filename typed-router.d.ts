@@ -20,15 +20,15 @@ declare module 'vue-router/auto-routes' {
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/[...path]': RouteRecordInfo<'/[...path]', '/:path(.*)', { path: ParamValue<true> }, { path: ParamValue<false> }>,
-    '/drafts': RouteRecordInfo<'/drafts', '/drafts', Record<never, never>, Record<never, never>>,
+    '/agents': RouteRecordInfo<'/agents', '/agents', Record<never, never>, Record<never, never>>,
+    '/agents/': RouteRecordInfo<'/agents/', '/agents', Record<never, never>, Record<never, never>>,
+    '/agents/[id]': RouteRecordInfo<'/agents/[id]', '/agents/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/create': RouteRecordInfo<'/create', '/create', Record<never, never>, Record<never, never>>,
     '/enter': RouteRecordInfo<'/enter', '/enter', Record<never, never>, Record<never, never>>,
     '/exit': RouteRecordInfo<'/exit', '/exit', Record<never, never>, Record<never, never>>,
     '/home': RouteRecordInfo<'/home', '/home', Record<never, never>, Record<never, never>>,
-    '/home/': RouteRecordInfo<'/home/', '/home', Record<never, never>, Record<never, never>>,
-    '/home/[id]': RouteRecordInfo<'/home/[id]', '/home/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/runs': RouteRecordInfo<'/runs', '/runs', Record<never, never>, Record<never, never>>,
+    '/teams': RouteRecordInfo<'/teams', '/teams', Record<never, never>, Record<never, never>>,
     '/welcome': RouteRecordInfo<'/welcome', '/welcome', Record<never, never>, Record<never, never>>,
-    '/workflows': RouteRecordInfo<'/workflows', '/workflows', Record<never, never>, Record<never, never>>,
-    '/workflows/': RouteRecordInfo<'/workflows/', '/workflows', Record<never, never>, Record<never, never>>,
-    '/workflows/[id]': RouteRecordInfo<'/workflows/[id]', '/workflows/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
   }
 }

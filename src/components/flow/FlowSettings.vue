@@ -284,7 +284,7 @@ const teams = [
               <Label for="enabled" class="grid gap-1">
                 <span>Workflow execution</span>
                 <span class="text-secondary-foreground/70 text-xs">
-                  Start, pause, or completion of multi-step workflows.
+                  Start, pause, or completion of multi-step agent workflow.
                 </span>
               </Label>
               <Switch id="enabled" value="enabled" />
