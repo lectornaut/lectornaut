@@ -20,7 +20,7 @@ watch(user, async (currentUser, previousUser) => {
 </script>
 
 <template>
-  <div class="flex h-dvh w-dvw flex-col">
+  <div class="grid h-full w-full">
     <RouterView />
     <Actions />
   </div>

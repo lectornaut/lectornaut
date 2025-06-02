@@ -3,7 +3,6 @@ import { changelog } from "@/data/changelog"
 import emitter from "@/modules/mitt"
 import { state } from "@/modules/theme"
 import { driver } from "driver.js"
-import "driver.js/dist/driver.css"
 
 const version = import.meta.env.VITE_APP_VERSION
 
@@ -31,6 +30,16 @@ const productTour = driver({
         title: "Welcome to Hyperjump",
         description:
           "This is a product tour to help you get started with Hyperjump.",
+      },
+    },
+    {
+      element: "#tour-apps-menu",
+      popover: {
+        title: "Apps menu",
+        description:
+          "You can access all the apps from the apps menu. This is useful to quickly navigate between different apps.",
+        side: "bottom",
+        align: "start",
       },
     },
     {
@@ -69,6 +78,16 @@ const productTour = driver({
         title: "Primary navigation",
         description:
           "This is the primary navigation. You can use it to navigate between different sections of the application.",
+        side: "right",
+        align: "start",
+      },
+    },
+    {
+      element: "#tour-team-members",
+      popover: {
+        title: "Team members",
+        description:
+          "You can see your team members here. This is useful to know who is working with you.",
         side: "right",
         align: "start",
       },

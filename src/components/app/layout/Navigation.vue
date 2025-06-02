@@ -64,14 +64,14 @@ const navigation = [
             class="group/nav"
           >
             <SidebarMenuButton
-              class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground relative"
+              class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground"
               :tooltip="item.title"
               as-child
               @click="setOpen(true)"
             >
               <RouterLink :to="item.url">
                 <component :is="item.icon" />
-                <span>{{ item.title }}</span>
+                {{ item.title }}
               </RouterLink>
             </SidebarMenuButton>
           </SidebarMenuItem>

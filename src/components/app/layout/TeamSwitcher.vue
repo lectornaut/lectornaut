@@ -202,7 +202,7 @@ const selectedUsers = ref<User[]>([])
               <Command>
                 <PopoverTrigger>
                   <CommandInput
-                    placeholder="Search user..."
+                    placeholder="Search for agents or add people by email"
                     class="border-none p-0 focus:border-inherit focus:ring-0"
                   />
                 </PopoverTrigger>

@@ -21,8 +21,9 @@
       <Navigation />
     </SidebarContent>
     <SidebarFooter>
-      <Support />
       <Members />
+      <Separator />
+      <Support />
       <AccountMenu />
     </SidebarFooter>
   </Sidebar>
