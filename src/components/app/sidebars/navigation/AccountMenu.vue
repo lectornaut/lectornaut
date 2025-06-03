@@ -18,8 +18,9 @@ const user = useCurrentUser()
                 <SidebarMenuButton class="p-0">
                   <Avatar class="rounded-md">
                     <AvatarImage
-                      :src="user?.photoURL!"
+                      :src="user?.photoURL"
                       :alt="user?.displayName"
+                      referrerpolicy="no-referrer"
                     />
                     <AvatarFallback class="rounded-md"> CN </AvatarFallback>
                   </Avatar>
@@ -45,8 +46,9 @@ const user = useCurrentUser()
                 >
                   <Avatar class="size-8 rounded-lg">
                     <AvatarImage
-                      :src="user?.photoURL!"
+                      :src="user?.photoURL"
                       :alt="user?.displayName"
+                      referrerpolicy="no-referrer"
                     />
                     <AvatarFallback class="rounded-lg"> CN </AvatarFallback>
                   </Avatar>

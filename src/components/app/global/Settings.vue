@@ -347,7 +347,7 @@ const navigations = [
                               </template>
                               <template v-else>
                                 <AvatarImage
-                                  :src="user?.photoURL as string"
+                                  :src="user?.photoURL"
                                   :alt="user?.displayName"
                                   referrerpolicy="no-referrer"
                                 />

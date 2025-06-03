@@ -3,15 +3,11 @@
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" class="md:h-8 md:p-0">
+          <SidebarMenuButton class="aspect-square p-0">
             <div
-              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg"
+              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square w-full items-center justify-center"
             >
-              <icon-lucide-lab-peach class="size-4" />
-            </div>
-            <div class="grid flex-1 text-left leading-tight">
-              <span class="truncate font-semibold">Acme Inc</span>
-              <span class="truncate text-xs">Enterprise</span>
+              <icon-lucide-lab-peach />
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
