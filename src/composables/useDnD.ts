@@ -1,5 +1,4 @@
 import { useVueFlow } from "@vue-flow/core"
-import { ref, watch } from "vue"
 
 let id = 0
 

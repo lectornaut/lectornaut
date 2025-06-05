@@ -15,8 +15,8 @@ emitter.on("Dialog.Changelog.Open", (id) => {
 
 <template>
   <Sheet v-model:open="openChangelog">
-    <SheetContent class="m-3 h-auto gap-0 rounded-md border">
-      <SheetHeader class="gap-4">
+    <SheetContent class="m-2 h-auto gap-0 rounded-md border">
+      <SheetHeader>
         <SheetTitle>Changelog</SheetTitle>
       </SheetHeader>
       <Separator />

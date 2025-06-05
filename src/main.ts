@@ -16,7 +16,6 @@ import "driver.js/dist/driver.css"
 import { ReCaptchaEnterpriseProvider } from "firebase/app-check"
 import "overlayscrollbars/overlayscrollbars.css"
 import "unfonts.css"
-import { createApp } from "vue"
 import "vue-sonner/style.css"
 import { VueFire, VueFireAppCheck, VueFireAuth } from "vuefire"
 

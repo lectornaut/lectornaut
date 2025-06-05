@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useSidebar } from "@/components/ui/sidebar"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 import IconActivity from "~icons/lucide/activity"
 import IconBadgeCheck from "~icons/lucide/badge-check"
@@ -7,8 +6,6 @@ import IconBot from "~icons/lucide/bot"
 import IconComponent from "~icons/lucide/component"
 import IconHome from "~icons/lucide/home"
 import IconSparkle from "~icons/lucide/sparkle"
-
-const { setOpen } = useSidebar()
 
 const navigation = [
   {
@@ -67,7 +64,6 @@ const navigation = [
               class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground"
               :tooltip="item.title"
               as-child
-              @click="setOpen(true)"
             >
               <RouterLink :to="item.url">
                 <component :is="item.icon" />

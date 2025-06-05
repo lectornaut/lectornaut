@@ -36,7 +36,11 @@ const selectedTeam = ref<Team>(
   groups[0]?.teams[0] ?? { label: "Default Team", value: "default" }
 )
 
-type User = (typeof users.value)[number]
+type User = {
+  name: string
+  email: string
+  avatar: string
+}
 
 const users = ref<User[]>([
   {

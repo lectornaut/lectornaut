@@ -72,7 +72,7 @@ const filteredShortcuts = computed(() => {
 
 <template>
   <Sheet v-model:open="openShortcuts">
-    <SheetContent class="m-3 h-auto gap-0 rounded-md border">
+    <SheetContent class="m-2 h-auto gap-0 rounded-md border">
       <SheetHeader class="gap-4">
         <SheetTitle>Keyboard shortcuts</SheetTitle>
         <SheetDescription>

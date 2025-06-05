@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { DrawerClose, DrawerTrigger } from "@/components/ui/drawer"
-
 const accordionItems = [
   {
     value: "item-1",

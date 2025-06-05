@@ -297,10 +297,7 @@ const navigations = [
             </TabsList>
           </Sidebar>
           <main class="flex flex-1 flex-col overflow-hidden">
-            <OverlayScrollbarsComponent
-              defer
-              :options="{ scrollbars: { autoHide: 'scroll' } }"
-            >
+            <OverlayScrollbarsComponent defer>
               <TabsContent value="preferences">
                 <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
@@ -347,7 +344,7 @@ const navigations = [
                               </template>
                               <template v-else>
                                 <AvatarImage
-                                  :src="user?.photoURL"
+                                  :src="user?.photoURL!"
                                   :alt="user?.displayName"
                                   referrerpolicy="no-referrer"
                                 />

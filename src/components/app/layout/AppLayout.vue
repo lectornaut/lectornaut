@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { ResizablePanel } from "@/components/ui/resizable"
-import emitter from "@/modules/mitt"
+// import { ResizablePanel } from "@/components/ui/resizable"
+// import emitter from "@/modules/mitt"
 
-const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
-const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
+// const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
+// const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
 
-emitter.on("Sidebar.Left.Toggle", () => {
-  console.log("Toggling left panel", leftPanel)
-  leftPanel?.value?.isCollapsed
-    ? leftPanel?.value?.expand()
-    : leftPanel?.value?.collapse()
-})
+// emitter.on("Sidebar.Left.Toggle", () => {
+//   console.log("Toggling left panel", leftPanel)
+//   leftPanel?.value?.isCollapsed
+//     ? leftPanel?.value?.expand()
+//     : leftPanel?.value?.collapse()
+// })
 
-emitter.on("Sidebar.Right.Toggle", () => {
-  console.log("Toggling right panel", rightPanel)
-  rightPanel?.value?.isCollapsed
-    ? rightPanel?.value?.expand()
-    : rightPanel?.value?.collapse()
-})
+// emitter.on("Sidebar.Right.Toggle", () => {
+//   console.log("Toggling right panel", rightPanel)
+//   rightPanel?.value?.isCollapsed
+//     ? rightPanel?.value?.expand()
+//     : rightPanel?.value?.collapse()
+// })
 </script>
 
 <template>

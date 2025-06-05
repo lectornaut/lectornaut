@@ -217,8 +217,8 @@ const range = ref({
         </CardTitle>
         <Popover>
           <PopoverTrigger as-child>
-            <Button variant="link" class="h-auto justify-start gap-2 p-0">
-              <!-- <icon-lucide-calendar /> -->
+            <Button variant="link" class="justify-start">
+              <icon-lucide-calendar />
               {{
                 range.start
                   ? df.format(range.start.toDate(getLocalTimeZone()))

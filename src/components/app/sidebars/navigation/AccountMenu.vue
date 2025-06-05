@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { useSidebar } from "@/components/ui/sidebar"
 import emitter from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
-const { isMobile } = useSidebar()
 const user = useCurrentUser()
 </script>
 
@@ -18,7 +16,7 @@ const user = useCurrentUser()
                 <SidebarMenuButton class="p-0">
                   <Avatar class="rounded-md">
                     <AvatarImage
-                      :src="user?.photoURL"
+                      :src="user?.photoURL!"
                       :alt="user?.displayName"
                       referrerpolicy="no-referrer"
                     />
@@ -36,8 +34,8 @@ const user = useCurrentUser()
             <TooltipContent side="right"> Account </TooltipContent>
             <DropdownMenuContent
               class="w-56"
-              :side="isMobile ? 'bottom' : 'right'"
               align="end"
+              side="right"
               :side-offset="4"
             >
               <DropdownMenuLabel class="p-0 font-normal">
@@ -46,7 +44,7 @@ const user = useCurrentUser()
                 >
                   <Avatar class="size-8 rounded-lg">
                     <AvatarImage
-                      :src="user?.photoURL"
+                      :src="user?.photoURL!"
                       :alt="user?.displayName"
                       referrerpolicy="no-referrer"
                     />

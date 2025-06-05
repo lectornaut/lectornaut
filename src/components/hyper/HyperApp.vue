@@ -284,7 +284,7 @@ const randomIndex = () => {
       orientation="vertical"
       :plugins="[WheelGesturesPlugin()]"
       class="focus-visible:outline-none"
-      @init-api="(val) => (emblaMainApi = val)"
+      @init-api="(val: any) => (emblaMainApi = val.carouselApi.value)"
     >
       <CarouselContent class="m-0 h-screen w-screen">
         <CarouselItem class="flex items-center justify-center gap-4 p-4">
@@ -566,7 +566,7 @@ const randomIndex = () => {
     </Carousel>
     <Carousel
       class="fixed top-4 left-1/2 w-full max-w-md -translate-x-1/2 focus-visible:outline-none"
-      @init-api="(val) => (emblaThumbnailApi = val)"
+      @init-api="(val: any) => (emblaThumbnailApi = val)"
     >
       <CarouselContent class="m-0 flex gap-2">
         <template v-for="(item, index) in navItems" :key="index">

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { NodeProps } from "@vue-flow/core"
 import { Handle, Position } from "@vue-flow/core"
-import { computed } from "vue"
 
 const props = defineProps<NodeProps>()
 

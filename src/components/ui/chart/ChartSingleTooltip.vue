@@ -15,33 +15,39 @@ const props = defineProps<{
 
 // Use weakmap to store reference to each datapoint for Tooltip
 const wm = new WeakMap()
+interface DataRecord {
+  [key: string]: unknown
+}
+
 function template(
-  d: unknown,
+  d: DataRecord,
   i: number,
   elements: (HTMLElement | SVGElement)[]
 ) {
   const valueFormatter = props.valueFormatter ?? ((tick: number) => `${tick}`)
-  if (props.index in d) {
+  if (d && typeof d === "object" && props.index in d) {
     if (wm.has(d)) {
       return wm.get(d)
     } else {
       const componentDiv = document.createElement("div")
-      const omittedData = Object.entries(omit(d, [props.index])).map(
-        ([key, value]) => {
-          const legendReference = props.items?.find((i) => i.name === key)
-          return { ...legendReference, value: valueFormatter(value) }
-        }
-      )
+      const omittedData = Object.entries(
+        omit(d as Record<string, unknown>, [props.index])
+      ).map(([key, value]) => {
+        const legendReference = props.items?.find((i) => i.name === key)
+        return { ...legendReference, value: valueFormatter(Number(value)) }
+      })
       const TooltipComponent = props.customTooltip ?? ChartTooltip
-      createApp(TooltipComponent, {
+      const app = createApp(TooltipComponent, {
         title: d[props.index],
         data: omittedData,
-      }).mount(componentDiv)
+      })
+      app.mount(componentDiv)
       wm.set(d, componentDiv.innerHTML)
+      app.unmount()
       return componentDiv.innerHTML
     }
-  } else {
-    const data = d.data
+  } else if (d && typeof d === "object" && d.data) {
+    const data = d.data as Record<string, unknown>
 
     if (wm.has(data)) {
       return wm.get(data)
@@ -49,21 +55,24 @@ function template(
       const style = getComputedStyle(elements[i] as HTMLElement)
       const omittedData = [
         {
-          name: data.name,
-          value: valueFormatter(data[props.index]),
+          name: (data as { name?: string }).name,
+          value: valueFormatter(Number(data[props.index])),
           color: style.fill,
         },
       ]
       const componentDiv = document.createElement("div")
       const TooltipComponent = props.customTooltip ?? ChartTooltip
-      createApp(TooltipComponent, {
+      const app = createApp(TooltipComponent, {
         title: d[props.index],
         data: omittedData,
-      }).mount(componentDiv)
-      wm.set(d as WeakKey, componentDiv.innerHTML)
+      })
+      app.mount(componentDiv)
+      wm.set(d as object, componentDiv.innerHTML)
+      app.unmount()
       return componentDiv.innerHTML
     }
   }
+  return ""
 }
 </script>
 
