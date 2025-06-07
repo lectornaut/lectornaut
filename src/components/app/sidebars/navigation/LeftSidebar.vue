@@ -132,22 +132,22 @@ const route = useRoute()
           >
             <icon-lucide-search />
           </span>
-          <SidebarInput class="h-9 pl-9" placeholder="Search" />
-          <span
+          <SidebarInput class="pl-9" placeholder="Search" />
+          <!-- <span
             class="absolute inset-y-0 end-0 flex items-center justify-center"
           >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon">
-                    <icon-lucide-list-filter />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent> Filter </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </span>
+          </span> -->
         </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" size="icon">
+                <icon-lucide-list-filter />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent> Filter </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </SidebarHeader>
     <Separator />

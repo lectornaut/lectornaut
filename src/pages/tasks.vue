@@ -9,7 +9,7 @@
 </route>
 
 <script setup lang="ts">
-import { columns } from "@/components/tasks/columns"
+import { columns } from "@/components/table/columns"
 import tasks from "@/data/tasks.json"
 
 useHead({
@@ -18,7 +18,7 @@ useHead({
 </script>
 
 <template>
-  <div class="flex flex-col overflow-auto overscroll-none">
+  <div class="flex grow flex-col overflow-auto overscroll-none">
     <DataTable :data="tasks" :columns="columns" />
   </div>
 </template>
