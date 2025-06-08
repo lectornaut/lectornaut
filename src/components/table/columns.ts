@@ -28,13 +28,16 @@ export const columns: ColumnDef<Task>[] = [
       }),
     enablePinning: true,
     enableSorting: false,
+    enableGrouping: false,
     enableHiding: false,
   },
   {
     accessorKey: "id",
     header: ({ column }) => h(DataTableColumnHeader, { column, title: "Task" }),
     cell: ({ row }) => h("div", { class: "" }, row.getValue("id")),
-    enableSorting: false,
+    enablePinning: false,
+    enableSorting: true,
+    enableGrouping: false,
     enableHiding: false,
   },
   {
@@ -43,17 +46,17 @@ export const columns: ColumnDef<Task>[] = [
       h(DataTableColumnHeader, { column, title: "Title" }),
     cell: ({ row }) => {
       const label = labels.find((label) => label.value === row.original.label)
-      return h(
-        "div",
-        {
-          class: "flex gap-2 items-center justify-between",
-        },
-        [
-          h("span", { class: "truncate font-medium" }, row.getValue("title")),
-          label ? h(Badge, { variant: "outline" }, () => label.label) : null,
-        ]
-      )
+      if (!label) return null
+      if (!row.getValue("title")) return null
+      return h("div", { class: "flex items-center justify-between gap-2" }, [
+        h("span", { class: "truncate font-medium" }, row.getValue("title")),
+        label ? h(Badge, { variant: "outline" }, () => label.label) : null,
+      ])
     },
+    enablePinning: false,
+    enableSorting: true,
+    enableGrouping: false,
+    enableHiding: true,
   },
   {
     accessorKey: "status",
@@ -72,6 +75,10 @@ export const columns: ColumnDef<Task>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
+    enablePinning: false,
+    enableSorting: true,
+    enableGrouping: true,
+    enableHiding: true,
   },
   {
     accessorKey: "priority",
@@ -90,11 +97,21 @@ export const columns: ColumnDef<Task>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
+    enablePinning: false,
+    enableSorting: true,
+    enableGrouping: true,
+    enableHiding: true,
   },
   {
     id: "actions",
     cell: ({ row }) =>
-      h(DataTableRowActions, { row, onExpand: row.toggleExpanded }),
+      h(DataTableRowActions, {
+        row,
+        onExpand: row.toggleExpanded,
+      }),
     enablePinning: true,
+    enableSorting: false,
+    enableGrouping: false,
+    enableHiding: false,
   },
 ]

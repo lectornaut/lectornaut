@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import useDragAndDrop from "@/composables/useDnD"
 import { nodes } from "@/data/nodes"
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 const { onDragStart } = useDragAndDrop()
 </script>
@@ -43,10 +42,7 @@ const { onDragStart } = useDragAndDrop()
       </SidebarHeader>
       <Separator />
       <SidebarContent>
-        <OverlayScrollbarsComponent
-          defer
-          :options="{ scrollbars: { autoHide: 'scroll' } }"
-        >
+        <OverlayScrollbarsWrapper>
           <TabsContent v-for="tab in nodes" :key="tab.id" :value="tab.id">
             <SidebarGroup
               v-for="group in tab.groups"
@@ -102,7 +98,7 @@ const { onDragStart } = useDragAndDrop()
               </SidebarGroupContent>
             </SidebarGroup>
           </TabsContent>
-        </OverlayScrollbarsComponent>
+        </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>
   </Tabs>

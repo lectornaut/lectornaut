@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.11.0",
+  "packageManager": "pnpm@10.11.1",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
@@ -23,7 +23,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.6",
     "@fontsource-variable/geist-mono": "^5.2.6",
-    "@fontsource-variable/playfair-display": "^5.2.5",
+    "@fontsource-variable/playfair-display": "^5.2.6",
     "@internationalized/date": "^3.8.2",
     "@tailwindcss/vite": "^4.1.8",
     "@tanstack/vue-table": "^8.21.3",

@@ -34,9 +34,9 @@ const task = computed(() => taskSchema.parse(props.row.original))
             <DropdownMenuItem>Edit</DropdownMenuItem>
             <DropdownMenuItem>Make a copy</DropdownMenuItem>
             <DropdownMenuItem>Favorite</DropdownMenuItem>
-            <DropdownMenuItem @click="$emit('expand')">
-              Expand
-            </DropdownMenuItem>
+            <!-- <DropdownMenuItem @click="$emit('expand')">
+              {{ row.getIsExpanded() ? "Collapse" : "Expand" }}
+            </DropdownMenuItem> -->
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>

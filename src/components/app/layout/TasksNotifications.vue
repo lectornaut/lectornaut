@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
-
 const components: { title: string; href: string; description: string }[] = [
   {
     title: "Alert Dialog",
@@ -137,10 +135,7 @@ const components: { title: string; href: string; description: string }[] = [
               </div>
               <Separator />
               <div class="flex h-80 flex-col overflow-y-auto">
-                <OverlayScrollbarsComponent
-                  defer
-                  :options="{ scrollbars: { autoHide: 'scroll' } }"
-                >
+                <OverlayScrollbarsWrapper>
                   <div class="grid p-2">
                     <NavigationMenuLink
                       v-for="(component, index) in components"
@@ -178,7 +173,7 @@ const components: { title: string; href: string; description: string }[] = [
                       </Alert>
                     </NavigationMenuLink>
                   </div>
-                </OverlayScrollbarsComponent>
+                </OverlayScrollbarsWrapper>
               </div>
               <Separator />
               <div
@@ -232,10 +227,7 @@ const components: { title: string; href: string; description: string }[] = [
               </div>
               <Separator />
               <div class="flex h-80 flex-col overflow-y-auto">
-                <OverlayScrollbarsComponent
-                  defer
-                  :options="{ scrollbars: { autoHide: 'scroll' } }"
-                >
+                <OverlayScrollbarsWrapper>
                   <div class="grid p-2">
                     <NavigationMenuLink
                       v-for="(component, index) in components"
@@ -273,7 +265,7 @@ const components: { title: string; href: string; description: string }[] = [
                       </Alert>
                     </NavigationMenuLink>
                   </div>
-                </OverlayScrollbarsComponent>
+                </OverlayScrollbarsWrapper>
               </div>
               <Separator />
               <div

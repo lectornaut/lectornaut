@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
-
 const source = ref(window.location.href)
 const { copy, copied } = useClipboard({ source, legacy: true })
 
@@ -57,10 +55,7 @@ const metadata = [
     </SidebarHeader>
     <Separator />
     <SidebarContent>
-      <OverlayScrollbarsComponent
-        defer
-        :options="{ scrollbars: { autoHide: 'scroll' } }"
-      >
+      <OverlayScrollbarsWrapper>
         <TabsContent value="details">
           <FlowDetails />
         </TabsContent>
@@ -70,7 +65,7 @@ const metadata = [
         <TabsContent value="settings">
           <FlowSettings />
         </TabsContent>
-      </OverlayScrollbarsComponent>
+      </OverlayScrollbarsWrapper>
     </SidebarContent>
   </Tabs>
 </template>

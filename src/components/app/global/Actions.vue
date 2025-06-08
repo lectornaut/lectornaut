@@ -20,7 +20,7 @@ useHead({
   meta: [
     {
       name: "theme-color",
-      content: () => (state.value === "dark" ? "#000000" : "#ffffff"),
+      content: () => (state.value === "light" ? "#ffffff" : "#000000"),
     },
   ],
 })

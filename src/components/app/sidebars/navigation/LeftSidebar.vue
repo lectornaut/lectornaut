@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
-
 const agents = [
   {
     name: "William Smith",
@@ -152,10 +150,7 @@ const route = useRoute()
     </SidebarHeader>
     <Separator />
     <SidebarContent>
-      <OverlayScrollbarsComponent
-        defer
-        :options="{ scrollbars: { autoHide: 'scroll' } }"
-      >
+      <OverlayScrollbarsWrapper>
         <SidebarGroup>
           <SidebarGroupContent class="flex flex-col gap-2">
             <RouterLink
@@ -193,7 +188,7 @@ const route = useRoute()
             </RouterLink>
           </SidebarGroupContent>
         </SidebarGroup>
-      </OverlayScrollbarsComponent>
+      </OverlayScrollbarsWrapper>
     </SidebarContent>
   </Tabs>
 </template>

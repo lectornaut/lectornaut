@@ -30,8 +30,9 @@ defineProps<DataTablePaginationProps>()
       <TooltipProvider>
         <Tooltip>
           <Select
+            v-model="table.getState().pagination.pageSize"
             :model-value="table.getState().pagination.pageSize"
-            @update:model-value="table.setPageSize as any"
+            @update:model-value="table.setPageSize"
           >
             <TooltipTrigger as-child>
               <SelectTrigger>

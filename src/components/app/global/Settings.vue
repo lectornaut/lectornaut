@@ -10,7 +10,6 @@ import {
   verifyBeforeUpdateEmail,
 } from "firebase/auth"
 import { ref as storageRef } from "firebase/storage"
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 import { toast } from "vue-sonner"
 import {
   updateCurrentUserProfile,
@@ -297,7 +296,7 @@ const navigations = [
             </TabsList>
           </Sidebar>
           <main class="flex flex-1 flex-col overflow-hidden">
-            <OverlayScrollbarsComponent defer>
+            <OverlayScrollbarsWrapper>
               <TabsContent value="preferences">
                 <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
@@ -778,7 +777,7 @@ const navigations = [
                   </div>
                 </div>
               </TabsContent>
-            </OverlayScrollbarsComponent>
+            </OverlayScrollbarsWrapper>
           </main>
         </SidebarProvider>
       </Tabs>

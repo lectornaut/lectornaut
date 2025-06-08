@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 import IconActivity from "~icons/lucide/activity"
 import IconBadgeCheck from "~icons/lucide/badge-check"
 import IconBot from "~icons/lucide/bot"
@@ -48,10 +47,7 @@ const navigation = [
 </script>
 
 <template>
-  <OverlayScrollbarsComponent
-    defer
-    :options="{ scrollbars: { autoHide: 'scroll' } }"
-  >
+  <OverlayScrollbarsWrapper>
     <SidebarGroup>
       <SidebarGroupContent id="tour-primary-navigation">
         <SidebarMenu>
@@ -74,5 +70,5 @@ const navigation = [
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
-  </OverlayScrollbarsComponent>
+  </OverlayScrollbarsWrapper>
 </template>

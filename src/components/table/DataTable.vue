@@ -5,6 +5,7 @@ import type {
   ColumnDef,
   ColumnFiltersState,
   ExpandedState,
+  GroupingState,
   SortingState,
   VisibilityState,
 } from "@tanstack/vue-table"
@@ -15,11 +16,11 @@ import {
   getFacetedRowModel,
   getFacetedUniqueValues,
   getFilteredRowModel,
+  getGroupedRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useVueTable,
 } from "@tanstack/vue-table"
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 
 interface DataTableProps {
   columns: ColumnDef<Task, unknown>[]
@@ -32,6 +33,7 @@ const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 const expanded = ref<ExpandedState>({})
+const grouping = ref<GroupingState>([])
 
 const table = useVueTable({
   get data() {
@@ -56,6 +58,9 @@ const table = useVueTable({
     get expanded() {
       return expanded.value
     },
+    get grouping() {
+      return grouping.value
+    },
     columnPinning: {
       left: ["select"],
       right: ["actions"],
@@ -70,6 +75,7 @@ const table = useVueTable({
   onRowSelectionChange: (updaterOrValue) =>
     valueUpdater(updaterOrValue, rowSelection),
   onExpandedChange: (updaterOrValue) => valueUpdater(updaterOrValue, expanded),
+  onGroupingChange: (updaterOrValue) => valueUpdater(updaterOrValue, grouping),
   getCoreRowModel: getCoreRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
@@ -77,6 +83,7 @@ const table = useVueTable({
   getFacetedRowModel: getFacetedRowModel(),
   getFacetedUniqueValues: getFacetedUniqueValues(),
   getExpandedRowModel: getExpandedRowModel(),
+  getGroupedRowModel: getGroupedRowModel(),
 })
 </script>
 
@@ -85,14 +92,7 @@ const table = useVueTable({
   <div
     class="bg-card flex grow flex-col overflow-auto overscroll-none border-y"
   >
-    <OverlayScrollbarsComponent
-      defer
-      :options="{
-        scrollbars: {
-          autoHide: 'scroll',
-        },
-      }"
-    >
+    <OverlayScrollbarsWrapper>
       <Table>
         <TableHeader>
           <TableRow
@@ -123,7 +123,15 @@ const table = useVueTable({
         <TableBody>
           <template v-if="table.getRowModel().rows?.length">
             <template v-for="row in table.getRowModel().rows" :key="row.id">
-              <TableRow :data-state="row.getIsSelected() && 'selected'">
+              <TableRow
+                :data-state="row.getIsSelected() && 'selected'"
+                :data-expanded="row.getIsExpanded() && 'expanded'"
+                :data-grouped="row.getIsGrouped() && 'grouped'"
+                :class="[
+                  row.getIsSelected() && 'bg-accent',
+                  row.getIsExpanded() && 'bg-accent/50',
+                ]"
+              >
                 <TableCell
                   v-for="cell in row.getVisibleCells()"
                   :key="cell.id"
@@ -137,17 +145,49 @@ const table = useVueTable({
                       : 'right-0 bg-gradient-to-l',
                   ]"
                 >
-                  <FlexRender
-                    :render="cell.column.columnDef.cell"
-                    :props="cell.getContext()"
-                  />
+                  <template v-if="cell.getIsGrouped()">
+                    <Button
+                      variant="link"
+                      class="!p-0 text-inherit"
+                      @click="row.getToggleExpandedHandler()()"
+                    >
+                      <FlexRender
+                        :render="cell.column.columnDef.cell"
+                        :props="cell.getContext()"
+                      />
+                      <span class="text-muted-foreground">
+                        {{ row.subRows.length }}
+                      </span>
+                      <icon-lucide-chevron-right
+                        :class="{ 'rotate-90': row.getIsExpanded() }"
+                      />
+                    </Button>
+                  </template>
+                  <template v-else-if="cell.getIsAggregated()">
+                    <FlexRender
+                      :render="cell.column.columnDef.cell"
+                      :props="cell.getContext()"
+                    />
+                  </template>
+                  <template v-else-if="cell.getIsPlaceholder()">
+                    <FlexRender
+                      :render="cell.column.columnDef.cell"
+                      :props="cell.getContext()"
+                    />
+                  </template>
+                  <template v-else>
+                    <FlexRender
+                      :render="cell.column.columnDef.cell"
+                      :props="cell.getContext()"
+                    />
+                  </template>
                 </TableCell>
               </TableRow>
-              <TableRow v-if="row.getIsExpanded()">
+              <!-- <TableRow v-if="row.getIsExpanded()">
                 <TableCell :colspan="row.getAllCells().length" class="px-12">
                   {{ JSON.stringify(row.original) }}
                 </TableCell>
-              </TableRow>
+              </TableRow> -->
             </template>
           </template>
           <template v-else>
@@ -157,7 +197,7 @@ const table = useVueTable({
           </template>
         </TableBody>
       </Table>
-    </OverlayScrollbarsComponent>
+    </OverlayScrollbarsWrapper>
   </div>
   <DataTablePagination :table="table" />
 </template>
