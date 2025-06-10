@@ -5,12 +5,12 @@ import AlertTriangle from "~icons/lucide/alert-triangle"
 import Ban from "~icons/lucide/ban"
 import CheckCircle from "~icons/lucide/check-circle"
 import Circle from "~icons/lucide/circle"
+import CircleX from "~icons/lucide/circle-x"
 import Clock from "~icons/lucide/clock"
 import Hourglass from "~icons/lucide/hourglass"
 import MinusCircle from "~icons/lucide/minus-circle"
 import PauseCircle from "~icons/lucide/pause-circle"
 import RefreshCw from "~icons/lucide/refresh-cw"
-import XCircle from "~icons/lucide/x-circle"
 
 const timeline = [
   {
@@ -37,7 +37,7 @@ const timeline = [
     status: "failure",
     date: "Sep 28",
     datetime: "2020-09-28",
-    icon: XCircle,
+    icon: CircleX,
     iconColor: "text-red-500",
   },
   {

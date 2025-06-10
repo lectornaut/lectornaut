@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite"
 import UnheadVite from "@unhead/addons/vite"
 import { unheadVueComposablesImports } from "@unhead/vue"
 import Vue from "@vitejs/plugin-vue"
+import MotionResolver from "motion-v/resolver"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 import RekaResolver from "reka-ui/resolver"
@@ -69,6 +70,7 @@ export default defineConfig({
     tailwindcss(),
     Components({
       resolvers: [
+        MotionResolver(),
         RekaResolver(),
         IconsResolver({
           prefix: "icon",

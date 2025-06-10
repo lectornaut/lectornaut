@@ -30,14 +30,15 @@ const columns = computed(() =>
       <DropdownMenuLabel>Group by</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        <DropdownMenuItem
+        <DropdownMenuCheckboxItem
           v-for="column in columns"
           :key="column.id"
+          :model-value="column.getIsGrouped()"
           class="capitalize"
-          @click="column.toggleGrouping()"
+          @update:model-value="(value) => column.toggleGrouping(!!value)"
         >
           {{ column.id }}
-        </DropdownMenuItem>
+        </DropdownMenuCheckboxItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>

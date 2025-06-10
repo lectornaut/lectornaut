@@ -2,6 +2,7 @@
 import { changelog } from "@/data/changelog"
 import emitter from "@/modules/mitt"
 import { state } from "@/modules/theme"
+import confetti from "canvas-confetti"
 import { driver } from "driver.js"
 
 const version = import.meta.env.VITE_APP_VERSION
@@ -12,7 +13,41 @@ emitter.on("Menu.Help.Toggle", () => {
   openSupport.value = !openSupport.value
 })
 
+const handleClick = () => {
+  const end = Date.now() + 1 * 1000 // 1 second
+  const colors = ["#a786ff", "#fd8bbc", "#eca184", "#f8deb1"]
+
+  const frame = () => {
+    if (Date.now() > end) return
+
+    confetti({
+      particleCount: 2,
+      angle: 60,
+      spread: 55,
+      startVelocity: 60,
+      origin: { x: 0, y: 0.5 },
+      colors: colors,
+    })
+
+    confetti({
+      particleCount: 2,
+      angle: 120,
+      spread: 55,
+      startVelocity: 60,
+      origin: { x: 1, y: 0.5 },
+      colors: colors,
+    })
+
+    requestAnimationFrame(frame)
+  }
+
+  frame()
+}
+
 const productTour = driver({
+  onDestroyed: () => {
+    handleClick()
+  },
   overlayColor: state.value === "light" ? "black" : "white",
   smoothScroll: true,
   stagePadding: 4,
@@ -22,7 +57,7 @@ const productTour = driver({
   showProgress: true,
   nextBtnText: "Next",
   prevBtnText: "Previous",
-  doneBtnText: "Done",
+  doneBtnText: "Finish",
   overlayOpacity: 0.1,
   steps: [
     {

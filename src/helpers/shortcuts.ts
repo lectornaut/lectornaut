@@ -1,6 +1,7 @@
 import type { FunctionalComponent, SVGAttributes } from "vue"
 import IconLucideCheckSquare2 from "~icons/lucide/check-square-2"
 import IconLucideCircleUser from "~icons/lucide/circle-user"
+import IconLucideXCircle from "~icons/lucide/circle-x"
 import IconCreditCard from "~icons/lucide/credit-card"
 import IconLucideHelpCircle from "~icons/lucide/help-circle"
 import IconLucideKeyboard from "~icons/lucide/keyboard"
@@ -13,10 +14,9 @@ import IconLucidePanelLeft from "~icons/lucide/panel-left"
 import IconLucidePanelRight from "~icons/lucide/panel-right"
 import IconLucidePlusSquare from "~icons/lucide/plus-square"
 import IconLucideSettings from "~icons/lucide/settings"
+import IconLucideXSquare from "~icons/lucide/square-x"
 import IconLucideSun from "~icons/lucide/sun"
 import IconLucideTerminal from "~icons/lucide/terminal"
-import IconLucideXCircle from "~icons/lucide/x-circle"
-import IconLucideXSquare from "~icons/lucide/x-square"
 
 const isAppleDevice = () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
 
