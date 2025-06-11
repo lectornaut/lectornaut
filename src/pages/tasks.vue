@@ -1,16 +1,15 @@
-<route lang="json">
-{
-  "meta": {
-    "layout": "app",
-    "requiresUser": true,
-    "title": "Tasks"
-  }
-}
-</route>
-
 <script setup lang="ts">
 import { columns } from "@/components/table/columns"
 import tasks from "@/data/tasks.json"
+
+definePage({
+  meta: {
+    requiresUser: true,
+    layout: "app",
+    sidebar: "Tasks",
+    breadcrumb: "Tasks",
+  },
+})
 
 useHead({
   title: "Tasks",

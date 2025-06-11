@@ -111,7 +111,7 @@ const route = useRoute()
     <SidebarHeader>
       <div class="flex items-center justify-between gap-2">
         <span class="text-foreground ml-2 text-base font-medium">
-          {{ route.meta.title }}
+          {{ route.meta.sidebar }}
         </span>
         <Button variant="ghost">
           <icon-lucide-plus />

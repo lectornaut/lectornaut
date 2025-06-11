@@ -1,11 +1,3 @@
-<route lang="json">
-{
-  "meta": {
-    "title": "404"
-  }
-}
-</route>
-
 <script setup lang="ts">
 useHead({
   title: "404",

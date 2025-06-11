@@ -1,13 +1,11 @@
-<route lang="json">
-{
-  "meta": {
-    "requiresGuest": true
-  }
-}
-</route>
-
 <script setup lang="ts">
 import { authenticateEmail } from "@/modules/auth"
+
+definePage({
+  meta: {
+    requiresGuest: true,
+  },
+})
 
 useHead({
   title: "Enter",

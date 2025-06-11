@@ -1,17 +1,16 @@
-<route lang="json">
-{
-  "meta": {
-    "layout": false,
-    "requiresUser": true,
-    "title": "Agent Network"
-  }
-}
-</route>
-
 <script setup lang="ts">
 import Autoplay from "embla-carousel-autoplay"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import Avatar from "vue-boring-avatars"
+
+definePage({
+  meta: {
+    requiresUser: true,
+    layout: false,
+    sidebar: "Agent Network",
+    breadcrumb: "Agent Network",
+  },
+})
 
 useHead({
   title: "Agent Network",

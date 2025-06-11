@@ -1,15 +1,12 @@
-<route lang="json">
-{
-  "meta": {
-    "layout": "app",
-    "requiresUser": true,
-    "title": "Exit"
-  }
-}
-</route>
-
 <script setup lang="ts">
 import emitter from "@/modules/mitt"
+
+definePage({
+  meta: {
+    requiresUser: true,
+    layout: "app",
+  },
+})
 
 useHead({
   title: "Exit",

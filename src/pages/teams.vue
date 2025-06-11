@@ -1,16 +1,15 @@
-<route lang="json">
-{
-  "meta": {
-    "layout": "app",
-    "requiresUser": true,
-    "title": "Teams"
-  }
-}
-</route>
-
 <script setup lang="ts">
 import { columns } from "@/components/table/columns"
 import teams from "@/data/teams.json"
+
+definePage({
+  meta: {
+    requiresUser: true,
+    layout: "app",
+    sidebar: "Teams",
+    breadcrumb: "Teams",
+  },
+})
 
 useHead({
   title: "Teams",

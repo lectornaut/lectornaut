@@ -1,12 +1,10 @@
-<route lang="json">
-{
-  "meta": {
-    "requiresUser": true
-  }
-}
-</route>
-
 <script setup lang="ts">
+definePage({
+  meta: {
+    requiresUser: true,
+  },
+})
+
 useHead({
   title: "Welcome",
 })

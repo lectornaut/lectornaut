@@ -1,17 +1,16 @@
-<route lang="json">
-{
-  "meta": {
-    "layout": "app",
-    "requiresUser": true,
-    "title": "Home"
-  }
-}
-</route>
-
 <script setup lang="ts">
 import { activity } from "@/data/chart"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
+
+definePage({
+  meta: {
+    requiresUser: true,
+    layout: "app",
+    sidebar: "Home",
+    breadcrumb: "Home",
+  },
+})
 
 useHead({
   title: "Home",

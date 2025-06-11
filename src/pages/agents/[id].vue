@@ -1,15 +1,16 @@
-<route lang="json">
-{
-  "meta": {
-    "layout": "agents",
-    "requiresUser": true
-  }
-}
-</route>
-
 <script setup lang="ts">
+definePage({
+  meta: {
+    layout: "agents",
+    requiresUser: true,
+    sidebar: "Agent",
+    breadcrumb: (route: { params: { id: string } }) =>
+      `Agent ${route?.params.id}`,
+  },
+})
+
 useHead({
-  title: "ID",
+  title: "Agent",
 })
 </script>
 
