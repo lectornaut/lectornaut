@@ -7,7 +7,7 @@ useHead({
 <template>
   <div class="grid grow place-items-center p-2">
     <Button variant="link" class="gap-1" as-child>
-      <RouterLink to="/enter">
+      <RouterLink to="/">
         <icon-lucide-chevron-left /> Back to Home
       </RouterLink>
     </Button>

@@ -42,7 +42,7 @@ onMounted(async () => {
       <div class="mx-auto flex flex-col items-center">
         {{ authenticateError }}
         <Button variant="link" class="gap-1" as-child>
-          <RouterLink to="/enter">
+          <RouterLink to="/">
             <icon-lucide-chevron-left /> Back to Home
           </RouterLink>
         </Button>

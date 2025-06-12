@@ -169,32 +169,10 @@ const menu = [
       >
         <TasksNotifications />
         <div class="flex">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-panel-left />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Left panel </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-panel-bottom />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Bottom panel </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-panel-right />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Right panel </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Button variant="outline" class="rounded-full">
+            <icon-mingcute-ai-fill />
+            Talk to AI
+          </Button>
         </div>
       </div>
     </div>

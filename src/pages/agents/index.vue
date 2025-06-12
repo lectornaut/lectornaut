@@ -7,13 +7,13 @@ definePage({
   meta: {
     requiresUser: true,
     layout: false,
-    sidebar: "Agent Network",
-    breadcrumb: "Agent Network",
+    sidebar: "Agents",
+    breadcrumb: "Agents",
   },
 })
 
 useHead({
-  title: "Agent Network",
+  title: "Agents",
 })
 
 const categories = [
