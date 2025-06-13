@@ -1,13 +1,8 @@
 <script setup lang="ts">
+import { menu } from "@/helpers/defaults"
 import { isTauri } from "@/helpers/utilities"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import IconActivity from "~icons/lucide/activity"
-import IconBadgeCheck from "~icons/lucide/badge-check"
-import IconBot from "~icons/lucide/bot"
-import IconComponent from "~icons/lucide/component"
-import IconHome from "~icons/lucide/home"
-import IconSparkle from "~icons/lucide/sparkle"
 
 let unlisten: UnlistenFn | undefined
 
@@ -30,49 +25,29 @@ onBeforeUnmount(() => {
   }
 })
 
-const menu = [
+const messages = [
+  { role: "agent", content: "Hi, how can I help you today?" },
+  { role: "user", content: "Hey, I'm having trouble with my account." },
+  { role: "agent", content: "What seems to be the problem?" },
+  { role: "user", content: "I can't log in." },
+  { role: "agent", content: "Let me check that for you." },
+  { role: "user", content: "Thanks!" },
+  { role: "agent", content: "You're welcome! Is there anything else?" },
+  { role: "user", content: "Actually, I have another question." },
+  { role: "agent", content: "Sure, what's your question?" },
+  { role: "user", content: "Can you help me with my billing?" },
+  { role: "agent", content: "Of course! What do you need help with?" },
+  { role: "user", content: "I need to update my payment method." },
+  { role: "agent", content: "No problem, I can assist you with that." },
+  { role: "user", content: "Great, thank you!" },
   {
-    title: "Home",
-    url: "/home",
-    id: "home",
-    icon: IconHome,
-    color: "bg-teal-500/20 text-teal-500/80",
+    role: "agent",
+    content: "You're welcome! Let me know if you need anything else.",
   },
-  {
-    title: "Agents",
-    url: "/agents",
-    id: "agents",
-    icon: IconBot,
-    color: "bg-purple-500/20 text-purple-500/80",
-  },
-  {
-    title: "Tasks",
-    url: "/tasks",
-    id: "tasks",
-    icon: IconBadgeCheck,
-    color: "bg-sky-500/20 text-sky-500/80",
-  },
-  {
-    title: "Runs",
-    url: "/runs",
-    id: "runs",
-    icon: IconActivity,
-    color: "bg-rose-500/20 text-rose-500/80",
-  },
-  {
-    title: "Teams",
-    url: "/teams",
-    id: "teams",
-    icon: IconComponent,
-    color: "bg-indigo-500/20 text-indigo-500/80",
-  },
-  {
-    title: "Create",
-    url: "/create",
-    id: "create",
-    icon: IconSparkle,
-    color: "bg-yellow-500/20 text-yellow-500/80",
-  },
+  { role: "user", content: "I will, thanks!" },
+  { role: "agent", content: "Have a great day!" },
+  { role: "user", content: "You too!" },
+  { role: "agent", content: "Goodbye!" },
 ]
 </script>
 
@@ -82,98 +57,111 @@ const menu = [
   >
     <div
       data-tauri-drag-region
-      class="grid h-full w-full grid-cols-3 items-center gap-2 p-2"
+      class="grid size-full grid-cols-3 items-center gap-2 p-2"
     >
       <div
         data-tauri-drag-region
-        class="flex grow items-center justify-between gap-2 transition-all"
+        class="flex grow items-center justify-start gap-2 transition-all"
         :class="{ 'pl-20': isTauri && !isFullscreen }"
       >
-        <div class="flex gap-4">
-          <TooltipProvider>
-            <Tooltip>
-              <Popover>
-                <PopoverTrigger as-child>
-                  <TooltipTrigger as-child>
+        <TooltipProvider>
+          <Tooltip>
+            <Popover>
+              <PopoverTrigger as-child>
+                <TooltipTrigger as-child>
+                  <Button id="tour-apps-menu" variant="ghost" size="icon">
+                    <icon-lucide-grip />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent> Menu </TooltipContent>
+              </PopoverTrigger>
+              <PopoverContent align="start" side="bottom" class="p-2">
+                <div class="grid grid-cols-3 gap-2">
+                  <div
+                    v-for="(item, index) in menu"
+                    :key="index"
+                    class="group/nav"
+                  >
                     <Button
-                      id="tour-apps-menu"
                       variant="ghost"
                       size="icon"
-                      class="after:bg-border relative after:absolute after:-right-2 after:h-3 after:w-px after:rounded-full"
+                      class="group-has-[.router-link-active]/nav:bg-accent group-has-[.router-link-active]/nav:text-accent-foreground flex aspect-square size-auto flex-col items-center justify-center gap-2 p-2"
+                      as-child
                     >
-                      <icon-lucide-grip />
+                      <RouterLink :to="item.url">
+                        <component
+                          :is="item.icon"
+                          class="size-8 rounded-full p-2"
+                          :class="item.color"
+                        />
+                        {{ item.title }}
+                      </RouterLink>
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent> Menu </TooltipContent>
-                </PopoverTrigger>
-                <PopoverContent align="start" side="bottom" class="p-2">
-                  <div class="grid grid-cols-3 gap-2">
-                    <div
-                      v-for="(item, index) in menu"
-                      :key="index"
-                      class="group/nav"
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="group-has-[.router-link-active]/nav:bg-accent group-has-[.router-link-active]/nav:text-accent-foreground flex aspect-square h-auto w-auto flex-col items-center justify-center gap-2 p-2"
-                        as-child
-                      >
-                        <RouterLink :to="item.url">
-                          <component
-                            :is="item.icon"
-                            class="size-8 rounded-full p-2"
-                            :class="item.color"
-                          />
-                          {{ item.title }}
-                        </RouterLink>
-                      </Button>
-                    </div>
                   </div>
-                </PopoverContent>
-              </Popover>
-            </Tooltip>
-          </TooltipProvider>
-          <TeamSwitcher />
-        </div>
-        <div v-if="isTauri" class="flex gap-2">
-          <TooltipProvider v-motion-fade>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-arrow-left />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Go back </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-arrow-right />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Go forward </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </Tooltip>
+        </TooltipProvider>
+        <TasksNotifications />
       </div>
       <div
         data-tauri-drag-region
         class="flex grow items-center justify-center gap-2"
       >
-        <CommandK />
+        <TeamSwitcher />
       </div>
       <div
         data-tauri-drag-region
-        class="flex grow items-center justify-between gap-2"
+        class="flex grow items-center justify-end gap-2"
       >
-        <TasksNotifications />
-        <div class="flex">
-          <Button variant="outline" class="rounded-full">
-            <icon-mingcute-ai-fill />
-            Talk to AI
-          </Button>
-        </div>
+        <CommandK />
+        <Sheet>
+          <SheetTrigger as-child>
+            <Button variant="outline">
+              <icon-mingcute-ai-fill />
+              <RadiantText :duration="5" :radiant-width="20">
+                Talk to AI
+              </RadiantText>
+            </Button>
+          </SheetTrigger>
+          <SheetContent class="m-3 h-auto gap-0 rounded-md border">
+            <SheetHeader>
+              <SheetTitle>Hype AI</SheetTitle>
+              <SheetDescription>
+                Chat with our AI assistant to get help with your tasks.
+              </SheetDescription>
+            </SheetHeader>
+            <Separator />
+            <OverlayScrollbarsWrapper class="h-full">
+              <div class="flex grow flex-col overflow-auto overscroll-none">
+                <div class="grid grid-cols-1 gap-4 p-4">
+                  <div
+                    v-for="(message, index) in messages"
+                    :key="index"
+                    :class="[
+                      'flex w-max max-w-3/4 flex-col rounded-2xl px-3 py-2',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto rounded-br-md'
+                        : 'bg-muted rounded-bl-md',
+                    ]"
+                  >
+                    {{ message.content }}
+                  </div>
+                </div>
+              </div>
+            </OverlayScrollbarsWrapper>
+            <Separator />
+            <SheetFooter>
+              <div class="flex items-center justify-between gap-2">
+                <Input placeholder="Type a message..." />
+                <Button size="icon">
+                  <icon-lucide-send-horizontal />
+                </Button>
+              </div>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   </header>

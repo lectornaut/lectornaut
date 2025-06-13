@@ -26,12 +26,15 @@ const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  build: {
+    sourcemap: true,
+  },
   plugins: [
     VueRouter(),
     Vue(),
     VitePWA({
       devOptions: {
-        enabled: process.env.NODE_ENV === "development",
+        enabled: true,
         type: "module",
       },
       pwaAssets: {
@@ -64,6 +67,26 @@ export default defineConfig({
             form_factor: "wide",
           },
         ],
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,ts,css,scss,html,png,jpg,svg,ico}"],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === "document",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "documents",
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === "image",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images",
+            },
+          },
+        ],
+        navigateFallback: "/index.html",
       },
     }),
     tailwindAutoReference("./src/styles/index.css"),

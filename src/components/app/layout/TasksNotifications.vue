@@ -109,9 +109,9 @@ const components: { title: string; href: string; description: string }[] = [
 
 <template>
   <NavigationMenu id="tour-tasks-notifications">
-    <NavigationMenuList class="flex items-center gap-2">
+    <NavigationMenuList class="gap-2">
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="px-2">
+        <NavigationMenuTrigger class="px-3">
           <icon-lucide-inbox />
           <!-- <span> Tasks </span> -->
         </NavigationMenuTrigger>
@@ -135,7 +135,7 @@ const components: { title: string; href: string; description: string }[] = [
               </div>
               <Separator />
               <div class="flex h-80 flex-col overflow-y-auto">
-                <OverlayScrollbarsWrapper>
+                <OverlayScrollbarsWrapper class="h-full">
                   <div class="grid p-2">
                     <NavigationMenuLink
                       v-for="(component, index) in components"
@@ -203,7 +203,7 @@ const components: { title: string; href: string; description: string }[] = [
         </NavigationMenuContent>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="px-2">
+        <NavigationMenuTrigger class="px-3">
           <icon-lucide-bell />
           <!-- <span> Notifications </span> -->
         </NavigationMenuTrigger>
@@ -227,7 +227,7 @@ const components: { title: string; href: string; description: string }[] = [
               </div>
               <Separator />
               <div class="flex h-80 flex-col overflow-y-auto">
-                <OverlayScrollbarsWrapper>
+                <OverlayScrollbarsWrapper class="h-full">
                   <div class="grid p-2">
                     <NavigationMenuLink
                       v-for="(component, index) in components"

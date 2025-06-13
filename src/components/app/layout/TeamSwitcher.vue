@@ -112,7 +112,7 @@ const selectedUsers = ref<User[]>([])
             <icon-lucide-chevron-down />
           </Button>
         </PopoverTrigger>
-        <PopoverContent class="w-auto p-0" align="start">
+        <PopoverContent class="w-auto p-0" align="center">
           <Command>
             <CommandInput
               placeholder="Search team..."
@@ -129,6 +129,7 @@ const selectedUsers = ref<User[]>([])
                   v-for="team in group.teams"
                   :key="team.value"
                   :value="team"
+                  class="py-2"
                   @select="
                     () => {
                       selectedTeam = team
@@ -162,6 +163,7 @@ const selectedUsers = ref<User[]>([])
                 <DialogTrigger as-child>
                   <CommandItem
                     value="create-team"
+                    class="py-2"
                     @select="
                       () => {
                         showNewTeamDialog = true
@@ -218,6 +220,7 @@ const selectedUsers = ref<User[]>([])
                         v-for="user in users"
                         :key="user.email"
                         :value="user"
+                        class="py-2"
                         @select="
                           () => {
                             if (!selectedUsers.includes(user)) {

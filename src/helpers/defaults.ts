@@ -1,3 +1,10 @@
+import IconActivity from "~icons/lucide/activity"
+import IconBadgeCheck from "~icons/lucide/badge-check"
+import IconBot from "~icons/lucide/bot"
+import IconComponent from "~icons/lucide/component"
+import IconHome from "~icons/lucide/home"
+import IconSparkle from "~icons/lucide/sparkle"
+
 export const languages = [
   {
     id: "en-US",
@@ -13,16 +20,16 @@ export const defaultLanguage = "en-US"
 
 export const themes = [
   {
+    id: "auto",
+    name: "System",
+  },
+  {
     id: "light",
     name: "Light",
   },
   {
     id: "dark",
     name: "Dark",
-  },
-  {
-    id: "auto",
-    name: "System",
   },
 ]
 
@@ -54,3 +61,48 @@ export const accents = [
 ]
 
 export const defaultAccent = "neutral"
+
+export const menu = [
+  {
+    title: "Home",
+    url: "/home",
+    id: "home",
+    icon: IconHome,
+    color: "bg-teal-500/20 text-teal-500/80",
+  },
+  {
+    title: "Agents",
+    url: "/agents",
+    id: "agents",
+    icon: IconBot,
+    color: "bg-purple-500/20 text-purple-500/80",
+  },
+  {
+    title: "Tasks",
+    url: "/tasks",
+    id: "tasks",
+    icon: IconBadgeCheck,
+    color: "bg-sky-500/20 text-sky-500/80",
+  },
+  {
+    title: "Runs",
+    url: "/runs",
+    id: "runs",
+    icon: IconActivity,
+    color: "bg-rose-500/20 text-rose-500/80",
+  },
+  {
+    title: "Teams",
+    url: "/teams",
+    id: "teams",
+    icon: IconComponent,
+    color: "bg-indigo-500/20 text-indigo-500/80",
+  },
+  {
+    title: "Create",
+    url: "/create",
+    id: "create",
+    icon: IconSparkle,
+    color: "bg-yellow-500/20 text-yellow-500/80",
+  },
+]

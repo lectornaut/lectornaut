@@ -3,28 +3,30 @@
     <li class="flex items-start gap-3 leading-none">
       <icon-lucide-disc />
       <p class="leading-loose first-line:leading-none">
-        <span class="font-semibold">Record</span>
+        <span class="font-semibold"> Agents </span>
         <span class="text-muted-foreground">
-          your expenses, income, transactions and never lose track of your
-          money.
-        </span>
-      </p>
-    </li>
-    <li class="flex items-start gap-3 leading-none">
-      <icon-lucide-message-circle-more />
-      <p class="leading-loose first-line:leading-none">
-        <span class="font-semibold">Ask AI</span>
-        <span class="text-muted-foreground">
-          to categorize your transactions, track your spending, and more.
+          are the future of work. They can automate tasks, make decisions, and
+          collaborate with humans.
         </span>
       </p>
     </li>
     <li class="flex items-start gap-3 leading-none">
       <icon-lucide-pencil />
       <p class="leading-loose first-line:leading-none">
-        <span class="font-semibold">Create</span>
+        <span class="font-semibold"> Create </span>
         <span class="text-muted-foreground">
-          your own categories, tags, and notes to keep your finances organized.
+          tasks, assign them to your Agents, and track their progress. You can
+          focus on what matters most.
+        </span>
+      </p>
+    </li>
+    <li class="flex items-start gap-3 leading-none">
+      <icon-lucide-message-circle-more />
+      <p class="leading-loose first-line:leading-none">
+        <span class="font-semibold"> Communicate </span>
+        <span class="text-muted-foreground">
+          with your Agents using natural language. No need to learn a new
+          language or syntax.
         </span>
       </p>
     </li>

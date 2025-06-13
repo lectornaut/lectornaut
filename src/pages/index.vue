@@ -6,16 +6,11 @@ useHead({
 
 <template>
   <div class="flex grow flex-col">
-    <OverlayScrollbarsWrapper>
+    <OverlayScrollbarsWrapper class="h-full">
       <Header />
       <Separator />
-      <div
-        class="mx-auto my-32 flex w-full max-w-2xl grow flex-col items-center"
-      >
-        <Tabs
-          default-value="personal"
-          class="flex w-full flex-col items-center"
-        >
+      <div class="mx-auto my-32 flex max-w-4xl grow flex-col items-center">
+        <Tabs default-value="personal" class="grid w-full">
           <TabsList class="mx-auto">
             <TabsTrigger value="personal"> Personal </TabsTrigger>
             <TabsTrigger value="team"> Team </TabsTrigger>
@@ -26,22 +21,27 @@ useHead({
             class="animate-in fade-in transition"
             tabindex="-1"
           >
-            <div class="w-full rounded-2xl px-8 py-4">
+            <div class="mx-auto flex max-w-3xl flex-col gap-16 px-8 py-4">
               <Features />
-              <div class="mt-12 flex w-full flex-col gap-4 sm:flex-row">
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <RouterLink
                   to="/enter"
-                  class="focus-visible:ring-primary relative flex w-full rounded-xl transition focus-visible:ring-2 focus-visible:outline-hidden"
+                  class="group relative flex items-stretch rounded-lg"
                 >
                   <Alert
-                    class="z-10 flex flex-col items-stretch gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                    class="flex flex-col items-stretch gap-4 p-4 shadow-md transition group-hover:shadow-lg"
                   >
                     <AlertTitle class="flex justify-between gap-2">
-                      <span class="flex items-center gap-1.5 font-semibold">
-                        <span class="">Free</span>
-                      </span>
+                      <div class="flex items-center gap-1.5 font-semibold">
+                        <span>Free</span>
+                      </div>
+                      <Badge variant="secondary">
+                        <span class="text-primary"> Free for everyone </span>
+                      </Badge>
                     </AlertTitle>
-                    <AlertDescription class="flex flex-col gap-4">
+                    <AlertDescription
+                      class="flex grow flex-col justify-between gap-4"
+                    >
                       <ul class="flex flex-col gap-2.5">
                         <li class="flex items-start gap-2 leading-none">
                           <icon-lucide-check />
@@ -73,32 +73,29 @@ useHead({
                 </RouterLink>
                 <RouterLink
                   to="/enter"
-                  class="focus-visible:ring-primary relative flex w-full rounded-xl transition focus-visible:ring-2 focus-visible:outline-hidden"
+                  class="group relative flex items-stretch rounded-lg after:absolute after:-inset-0.5 after:-z-10 after:rounded-xl after:bg-linear-to-r after:from-lime-500 after:via-amber-500 after:to-pink-500 after:opacity-20 after:blur-2xl"
                 >
-                  <div
-                    className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
-                  ></div>
                   <Alert
-                    class="z-10 flex flex-col items-stretch gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                    class="flex flex-col items-stretch gap-4 p-4 shadow-md transition group-hover:shadow-lg"
                   >
                     <AlertTitle class="flex justify-between gap-2">
-                      <span class="flex items-center gap-1.5 font-semibold">
-                        <span class="">Pro</span>
+                      <div class="flex items-center gap-1.5 font-semibold">
+                        <span>Basic</span>
                         <Badge>
                           <icon-mingcute-ai-fill />
                           AI
                         </Badge>
-                      </span>
+                      </div>
                       <Badge variant="secondary">
-                        <span
-                          class="text-muted-foreground truncate line-through"
-                        >
+                        <span class="text-muted-foreground line-through">
                           $10/mo
                         </span>
-                        <span class="text-primary truncate">$50/one-time</span>
+                        <span class="text-primary">$8/mo</span>
                       </Badge>
                     </AlertTitle>
-                    <AlertDescription class="flex flex-col gap-4">
+                    <AlertDescription
+                      class="flex grow flex-col justify-between gap-4"
+                    >
                       <ul class="flex flex-col gap-2.5">
                         <li class="flex items-start gap-2 leading-none">
                           <icon-lucide-check />
@@ -136,38 +133,92 @@ useHead({
             class="animate-in fade-in transition"
             tabindex="-1"
           >
-            <div class="w-full rounded-2xl px-8 py-4">
-              <div
-                class="mx-auto mb-16 flex w-full max-w-sm flex-col gap-4 sm:flex-row"
-              >
+            <div class="mx-auto flex max-w-3xl flex-col gap-16 px-8 py-4">
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <RouterLink
                   to="/enter"
-                  class="focus-visible:ring-primary relative flex w-full rounded-xl transition focus-visible:ring-2 focus-visible:outline-hidden"
+                  class="group relative flex items-stretch rounded-lg after:absolute after:-inset-0.5 after:-z-10 after:rounded-xl after:bg-linear-to-r after:from-lime-500 after:via-amber-500 after:to-pink-500 after:opacity-20 after:blur-2xl"
                 >
-                  <div
-                    className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-lime-500 opacity-35 via-amber-500 to-pink-500 blur-2xl"
-                  ></div>
                   <Alert
-                    class="z-10 flex flex-col items-stretch gap-2 rounded-xl shadow-lg transition hover:shadow-xl"
+                    class="flex flex-col items-stretch gap-4 p-4 shadow-md transition group-hover:shadow-lg"
                   >
                     <AlertTitle class="flex justify-between gap-2">
-                      <span class="flex items-center gap-1.5 font-semibold">
-                        <span class="">Team</span>
+                      <div class="flex items-center gap-1.5 font-semibold">
+                        <span>Business</span>
                         <Badge>
                           <icon-mingcute-ai-fill />
                           AI
                         </Badge>
-                      </span>
+                      </div>
                       <Badge variant="secondary">
-                        <span
-                          class="text-muted-foreground truncate line-through"
-                        >
-                          $8/user/mo
+                        <span class="text-muted-foreground line-through">
+                          $16/user/mo
                         </span>
-                        <span class="text-primary truncate">$5/user/mo</span>
+                        <span class="text-primary"> $14/user/mo </span>
                       </Badge>
                     </AlertTitle>
-                    <AlertDescription class="flex flex-col gap-4">
+                    <AlertDescription
+                      class="flex grow flex-col justify-between gap-4"
+                    >
+                      <ul class="flex flex-col gap-2.5">
+                        <li class="flex items-start gap-2 leading-none">
+                          <icon-lucide-check />
+                          <p
+                            class="text-muted-foreground leading-loose first-line:leading-none"
+                          >
+                            Unlimited notes, upto 100MB per note.
+                          </p>
+                        </li>
+                        <li class="flex items-start gap-2 leading-none">
+                          <icon-lucide-check />
+                          <p
+                            class="text-muted-foreground leading-loose first-line:leading-none"
+                          >
+                            Smarter AI with more features.
+                          </p>
+                        </li>
+                        <li class="flex items-start gap-2 leading-none">
+                          <icon-lucide-check />
+                          <p
+                            class="text-muted-foreground leading-loose first-line:leading-none"
+                          >
+                            1GB storage.
+                          </p>
+                        </li>
+                        <li class="flex items-start gap-2 leading-none">
+                          <icon-lucide-check />
+                          <p
+                            class="text-muted-foreground leading-loose first-line:leading-none"
+                          >
+                            Team collaboration features.
+                          </p>
+                        </li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </RouterLink>
+                <RouterLink
+                  to="/enter"
+                  class="group relative flex items-stretch rounded-lg"
+                >
+                  <Alert
+                    class="flex flex-col items-stretch gap-4 p-4 shadow-md transition group-hover:shadow-lg"
+                  >
+                    <AlertTitle class="flex justify-between gap-2">
+                      <div class="flex items-center gap-1.5 font-semibold">
+                        <span>Enterprise</span>
+                        <Badge>
+                          <icon-mingcute-ai-fill />
+                          AI
+                        </Badge>
+                      </div>
+                      <Badge variant="secondary">
+                        <span class="text-primary"> Contact us </span>
+                      </Badge>
+                    </AlertTitle>
+                    <AlertDescription
+                      class="flex grow flex-col justify-between gap-4"
+                    >
                       <ul class="flex flex-col gap-2.5">
                         <li class="flex items-start gap-2 leading-none">
                           <icon-lucide-check />
@@ -193,10 +244,15 @@ useHead({
                             Limitless storage for images and files.
                           </p>
                         </li>
+                        <li class="flex items-start gap-2 leading-none">
+                          <icon-lucide-check />
+                          <p
+                            class="text-muted-foreground leading-loose first-line:leading-none"
+                          >
+                            Team collaboration features.
+                          </p>
+                        </li>
                       </ul>
-                      <Button class="rounded-lg">
-                        Get Hyperjump for Teams
-                      </Button>
                     </AlertDescription>
                   </Alert>
                 </RouterLink>
@@ -208,6 +264,11 @@ useHead({
       </div>
       <QRCode />
       <Footer />
+      <img
+        src="/assets/images/shadow.png"
+        alt="Hero"
+        class="pointer-events-none absolute inset-0 opacity-25 invert"
+      />
     </OverlayScrollbarsWrapper>
   </div>
 </template>

@@ -71,9 +71,9 @@
     @apply selection:text-secondary-foreground;
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-linear-to-b;
+    /* @apply bg-linear-to-b;
     @apply from-background;
-    @apply to-background/95;
+    @apply to-background/5; */
     @apply bg-background;
     @apply text-foreground;
     @apply text-sm;
@@ -89,7 +89,7 @@
   }
 
   :root {
-    --radius: 0.5rem;
+    --radius: 1.375rem;
     --vis-tooltip-background-color: none;
     --vis-tooltip-border-color: none;
     --vis-tooltip-text-color: none;

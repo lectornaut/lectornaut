@@ -239,13 +239,13 @@ const dummyRecentTabs = [
             <ContextMenuTrigger as-child>
               <!-- <HoverCardTrigger as-child> -->
               <Button
+                :variant="tab.id === active ? 'secondary' : 'ghost'"
                 class="group relative flex w-60 min-w-0 flex-1 justify-between gap-2 border border-transparent bg-transparent shadow-none"
                 :class="
                   tab.id === active
-                    ? 'border-border bg-background before:border-border before:bg-sidebar after:bg-sidebar before:text-background after:border-border after:text-background hover:bg-background min-w-32 rounded-b-none border-b-transparent text-inherit before:absolute before:-bottom-2.5 before:-left-2 before:z-20 before:h-10 before:w-2 before:rounded-br-full before:border-r before:border-b before:shadow-[2px_4px_0_currentcolor] after:absolute after:-right-2 after:-bottom-2.5 after:z-20 after:h-10 after:w-2 after:rounded-bl-full after:border-b after:border-l after:shadow-[-2px_4px_0_currentcolor]'
-                    : 'before:bg-muted text-muted-foreground after:bg-muted before:absolute before:-left-1.5 before:h-3 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-3 after:w-0.5 after:rounded-full'
+                    ? 'border-border bg-card before:border-border before:text-card after:border-border after:text-card hover:bg-card min-w-32 rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-6 before:z-20 before:h-6 before:w-6 before:rounded-br-full before:border-r before:border-b before:bg-transparent before:shadow-[0px_5px_0_currentcolor,5px_0px_0_currentcolor,10px_5px_0_currentcolor] after:pointer-events-none after:absolute after:-right-6 after:-bottom-2.5 after:z-20 after:h-6 after:w-6 after:rounded-bl-full after:border-b after:border-l after:bg-transparent after:shadow-[0px_5px_0_currentcolor,-5px_0px_0_currentcolor,-10px_5px_0_currentcolor]'
+                    : 'before:bg-border text-muted-foreground after:bg-border before:absolute before:-left-1.5 before:h-2 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-2 after:w-0.5 after:rounded-full'
                 "
-                :variant="tab.id === active ? 'secondary' : 'ghost'"
                 as-child
                 @click="active = tab.id"
               >
@@ -271,7 +271,7 @@ const dummyRecentTabs = [
                   </TooltipProvider>
                   <span
                     v-if="tab.id === active"
-                    class="bg-background absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
+                    class="bg-card absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
                   ></span>
                 </RouterLink>
               </Button>

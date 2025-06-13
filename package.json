@@ -56,7 +56,7 @@
     "firebase": "^11.9.1",
     "fuse.js": "^7.1.0",
     "hotkeys-js": "^3.13.11",
-    "lucide-vue-next": "^0.514.0",
+    "lucide-vue-next": "^0.515.0",
     "mitt": "^3.0.1",
     "motion-v": "^1.2.1",
     "nprogress": "^0.2.0",
@@ -74,11 +74,11 @@
     "vue-router": "^4.5.1",
     "vue-sonner": "^2.0.0",
     "vuefire": "^3.2.1",
-    "zod": "^3.25.62"
+    "zod": "^3.25.64"
   },
   "devDependencies": {
-    "@eslint/js": "^9.28.0",
-    "@iconify/json": "^2.2.347",
+    "@eslint/js": "^9.29.0",
+    "@iconify/json": "^2.2.348",
     "@intlify/unplugin-vue-i18n": "^6.0.8",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
@@ -89,7 +89,7 @@
     "@vite-pwa/assets-generator": "^1.0.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vue/tsconfig": "^0.7.0",
-    "eslint": "^9.28.0",
+    "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.1",
     "eslint-plugin-vue": "^10.2.0",

@@ -25,8 +25,6 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
         </TooltipTrigger>
         <TooltipContent> Change language </TooltipContent>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Language</DropdownMenuLabel>
-          <DropdownMenuSeparator />
           <DropdownMenuRadioGroup v-model="locale">
             <DropdownMenuRadioItem
               v-for="language in languages"

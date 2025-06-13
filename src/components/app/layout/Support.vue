@@ -45,13 +45,14 @@ const handleClick = () => {
 }
 
 const productTour = driver({
+  showButtons: ["next", "previous"],
   onDestroyed: () => {
     handleClick()
   },
   overlayColor: state.value === "light" ? "black" : "white",
   smoothScroll: true,
   stagePadding: 4,
-  stageRadius: 8,
+  stageRadius: 22,
   popoverClass: "driverjs-theme",
   popoverOffset: 8,
   showProgress: true,
@@ -423,7 +424,7 @@ const selectedCategory = ref("")
   @apply flex;
   @apply items-center;
   @apply justify-center;
-  @apply rounded;
+  @apply rounded-md;
   @apply px-3;
   @apply py-2;
   @apply text-sm;

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import Avatar from "vue-boring-avatars"
 
-const agents = ref([
+const agents = [
   { id: 1, name: "Alice" },
   { id: 2, name: "Bob" },
   { id: 3, name: "Charlie" },
-])
+]
 
-const messages = ref([
+const messages = [
   { role: "agent", content: "Hi, how can I help you today?" },
   { role: "user", content: "Hey, I'm having trouble with my account." },
   { role: "agent", content: "What seems to be the problem?" },
@@ -30,7 +30,7 @@ const messages = ref([
   { role: "agent", content: "Have a great day!" },
   { role: "user", content: "You too!" },
   { role: "agent", content: "Goodbye!" },
-])
+]
 </script>
 
 <template>
@@ -71,27 +71,29 @@ const messages = ref([
               </SheetDescription>
             </SheetHeader>
             <Separator />
-            <div class="flex grow flex-col overflow-auto overscroll-none">
-              <div class="grid grid-cols-1 gap-4 p-4">
-                <div
-                  v-for="(message, index) in messages"
-                  :key="index"
-                  :class="[
-                    'flex w-max max-w-3/4 flex-col rounded-2xl px-3 py-2',
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground ml-auto rounded-br-md'
-                      : 'bg-muted rounded-bl-md',
-                  ]"
-                >
-                  {{ message.content }}
+            <OverlayScrollbarsWrapper class="h-full">
+              <div class="flex grow flex-col overflow-auto overscroll-none">
+                <div class="grid grid-cols-1 gap-4 p-4">
+                  <div
+                    v-for="(message, index) in messages"
+                    :key="index"
+                    :class="[
+                      'flex w-max max-w-3/4 flex-col rounded-2xl px-3 py-2',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto rounded-br-md'
+                        : 'bg-muted rounded-bl-md',
+                    ]"
+                  >
+                    {{ message.content }}
+                  </div>
                 </div>
               </div>
-            </div>
+            </OverlayScrollbarsWrapper>
             <Separator />
             <SheetFooter>
               <div class="flex items-center justify-between gap-2">
                 <Input placeholder="Type a message..." />
-                <Button>
+                <Button size="icon">
                   <icon-lucide-send-horizontal />
                 </Button>
               </div>

@@ -64,6 +64,7 @@ const selectedValues = computed(
               v-for="option in options"
               :key="option.value"
               :value="option"
+              class="py-2"
               @select="
                 (e) => {
                   const isSelected = selectedValues.has(option.value)
@@ -95,7 +96,7 @@ const selectedValues = computed(
             <CommandGroup>
               <CommandItem
                 :value="{ label: 'Clear filters' }"
-                class="justify-center"
+                class="justify-center py-2"
                 @select="column?.setFilterValue(undefined)"
               >
                 Clear filters

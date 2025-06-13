@@ -296,9 +296,9 @@ const navigations = [
             </TabsList>
           </Sidebar>
           <main class="flex flex-1 flex-col overflow-hidden">
-            <OverlayScrollbarsWrapper>
+            <OverlayScrollbarsWrapper class="h-full">
               <TabsContent value="preferences">
-                <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
+                <div class="flex size-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
                     <h3 class="text-lg font-semibold">Preferences</h3>
                     <p class="text-muted-foreground flex items-center gap-2">
@@ -314,7 +314,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent value="account">
-                <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
+                <div class="flex size-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
                     <h3 class="text-lg font-semibold">Account</h3>
                     <p class="text-muted-foreground flex items-center gap-2">
@@ -605,7 +605,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent value="appearance">
-                <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
+                <div class="flex size-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
                     <h3 class="text-lg font-semibold">Appearance</h3>
                     <p class="text-muted-foreground flex items-center gap-2">
@@ -691,7 +691,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent value="notifications">
-                <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
+                <div class="flex size-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
                     <h3 class="text-lg font-semibold">Notifications</h3>
                     <p class="text-muted-foreground flex items-center gap-2">
@@ -739,7 +739,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent value="billing">
-                <div class="flex h-full w-full flex-col gap-6 px-8 py-6">
+                <div class="flex size-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
                     <h3 class="text-lg font-semibold">Billing</h3>
                     <p class="text-muted-foreground flex items-center gap-2">

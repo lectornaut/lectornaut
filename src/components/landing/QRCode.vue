@@ -14,7 +14,7 @@ import { state } from "@/modules/theme"
         <img
           :src="`/assets/images/qr-code-${state}.svg`"
           alt="QR Code"
-          class="bg-muted/50 h-28 w-28 cursor-pointer rounded-xl border p-1 opacity-75 backdrop-blur-xl transition hover:scale-110 hover:opacity-100"
+          class="bg-muted/50 h-28 w-28 cursor-pointer rounded-lg border p-1 opacity-75 backdrop-blur-lg transition hover:scale-110 hover:opacity-100"
         />
       </div>
     </DialogTrigger>

@@ -183,11 +183,12 @@ const authenticateApple = async () => {
                 required
               />
               <span
-                class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
+                class="absolute inset-y-0 end-0 right-0 flex items-center justify-center"
               >
                 <Button
                   variant="ghost"
                   tabindex="-1"
+                  size="icon"
                   @click="togglePasswordVisibility()"
                 >
                   <icon-lucide-eye
@@ -261,11 +262,12 @@ const authenticateApple = async () => {
                 required
               />
               <span
-                class="absolute inset-y-0 end-0 right-0.5 flex items-center justify-center"
+                class="absolute inset-y-0 end-0 right-0 flex items-center justify-center"
               >
                 <Button
                   variant="ghost"
                   tabindex="-1"
+                  size="icon"
                   @click="togglePasswordVisibility()"
                 >
                   <icon-lucide-eye

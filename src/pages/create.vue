@@ -24,7 +24,7 @@ const model = ref("gpt-3.5-turbo")
     <div
       class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none rounded border"
     >
-      <OverlayScrollbarsWrapper>
+      <OverlayScrollbarsWrapper class="h-full">
         <div class="grid grid-cols-1 gap-4 p-2">
           <div class="grid gap-2">
             <Label class="text-secondary-foreground text-xs" for="agent">
@@ -166,7 +166,7 @@ const model = ref("gpt-3.5-turbo")
     <div
       class="bg-secondary flex grow basis-3/5 flex-col overflow-auto overscroll-none rounded border"
     >
-      <OverlayScrollbarsWrapper>
+      <OverlayScrollbarsWrapper class="h-full">
         <div class="grid grid-cols-1 gap-4 p-2"></div>
       </OverlayScrollbarsWrapper>
     </div>

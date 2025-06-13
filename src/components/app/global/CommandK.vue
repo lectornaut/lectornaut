@@ -38,75 +38,67 @@ const filteredShortcuts = computed(() => {
 </script>
 
 <template>
-  <div class="relative flex grow items-center">
-    <Button
-      id="tour-search-bar"
-      variant="secondary"
-      class="grow shadow-none"
-      @click="openCommand = true"
-    >
-      <icon-lucide-search />
-      <span>Search or command</span>
-    </Button>
-    <span
-      class="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center p-2"
-    >
-      <kbd class="shortcut-key">⌘</kbd>
-      <kbd class="shortcut-key">K</kbd>
-    </span>
-    <CommandDialog v-model:open="openCommand">
-      <CommandInput
-        placeholder="Type a command or search..."
-        class="border-none p-0 focus:border-inherit focus:ring-0"
-      />
-      <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
-        <template
-          v-for="(category, index) in filteredShortcuts"
-          :key="category.id"
-        >
-          <CommandGroup :heading="category.title">
-            <CommandItem
-              v-for="shortcut in category.shortcuts"
-              :key="shortcut.event"
-              :value="shortcut.event + shortcut.parameters + shortcut.tags"
-              @select="
-                () => {
-                  emitter.emit(shortcut.event, shortcut.parameters)
-                  openCommand = false
-                }
-              "
-            >
-              <Component :is="shortcut.icon" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <template
-                    v-for="(step, stepIndex) in shortcut.description"
-                    :key="stepIndex"
-                  >
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>
-                        {{ step }}
-                      </BreadcrumbPage>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator
-                      v-if="stepIndex < shortcut.description.length - 1"
-                    />
-                  </template>
-                </BreadcrumbList>
-              </Breadcrumb>
-              <CommandShortcut v-if="shortcut.keys">
-                <template v-for="keys in shortcut.keys" :key="keys.toString()">
-                  <kbd v-for="key in keys" :key="key" class="shortcut-key">{{
-                    key
-                  }}</kbd>
+  <Button
+    id="tour-search-bar"
+    variant="ghost"
+    size="icon"
+    @click="openCommand = true"
+  >
+    <icon-lucide-search />
+  </Button>
+  <CommandDialog v-model:open="openCommand">
+    <CommandInput
+      placeholder="Type a command or search..."
+      class="border-none p-0 focus:border-inherit focus:ring-0"
+    />
+    <CommandList>
+      <CommandEmpty>No results found.</CommandEmpty>
+      <template
+        v-for="(category, index) in filteredShortcuts"
+        :key="category.id"
+      >
+        <CommandGroup :heading="category.title">
+          <CommandItem
+            v-for="shortcut in category.shortcuts"
+            :key="shortcut.event"
+            :value="shortcut.event + shortcut.parameters + shortcut.tags"
+            class="py-2"
+            @select="
+              () => {
+                emitter.emit(shortcut.event, shortcut.parameters)
+                openCommand = false
+              }
+            "
+          >
+            <Component :is="shortcut.icon" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <template
+                  v-for="(step, stepIndex) in shortcut.description"
+                  :key="stepIndex"
+                >
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>
+                      {{ step }}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator
+                    v-if="stepIndex < shortcut.description.length - 1"
+                  />
                 </template>
-              </CommandShortcut>
-            </CommandItem>
-          </CommandGroup>
-          <CommandSeparator v-if="index < filteredShortcuts.length - 1" />
-        </template>
-      </CommandList>
-    </CommandDialog>
-  </div>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <CommandShortcut v-if="shortcut.keys">
+              <template v-for="keys in shortcut.keys" :key="keys.toString()">
+                <kbd v-for="key in keys" :key="key" class="shortcut-key">{{
+                  key
+                }}</kbd>
+              </template>
+            </CommandShortcut>
+          </CommandItem>
+        </CommandGroup>
+        <CommandSeparator v-if="index < filteredShortcuts.length - 1" />
+      </template>
+    </CommandList>
+  </CommandDialog>
 </template>

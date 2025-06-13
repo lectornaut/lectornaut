@@ -177,7 +177,7 @@ const teams = [
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent align="end">
                     <SelectItem value="edit"> Edit </SelectItem>
                     <SelectItem value="view"> View </SelectItem>
                   </SelectContent>
@@ -212,7 +212,7 @@ const teams = [
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent align="end">
                     <SelectItem value="edit"> Edit </SelectItem>
                     <SelectItem value="view"> View </SelectItem>
                   </SelectContent>

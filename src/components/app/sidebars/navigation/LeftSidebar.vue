@@ -150,7 +150,7 @@ const route = useRoute()
     </SidebarHeader>
     <Separator />
     <SidebarContent>
-      <OverlayScrollbarsWrapper>
+      <OverlayScrollbarsWrapper class="h-full">
         <SidebarGroup>
           <SidebarGroupContent class="flex flex-col gap-2">
             <RouterLink

@@ -61,15 +61,15 @@ const categories = [
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup heading="Trending Agents">
-              <CommandItem value="calendar">
+              <CommandItem value="calendar" class="py-2">
                 <icon-lucide-calendar />
                 <span>Calendar</span>
               </CommandItem>
-              <CommandItem value="search">
+              <CommandItem value="search" class="py-2">
                 <icon-lucide-smile />
                 <span>Search Emoji</span>
               </CommandItem>
-              <CommandItem disabled value="calculator">
+              <CommandItem value="calculator" class="py-2">
                 <icon-lucide-calculator />
                 <span>Calculator</span>
               </CommandItem>

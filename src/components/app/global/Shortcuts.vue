@@ -92,61 +92,75 @@ const filteredShortcuts = computed(() => {
         </SheetDescription>
       </SheetHeader>
       <Separator />
-      <div class="flex grow flex-col overflow-auto overscroll-none">
-        <Accordion
-          collapsible
-          type="multiple"
-          :default-value="filteredShortcuts.map((category) => category.id)"
-          class="px-4"
-        >
-          <AccordionItem
-            v-for="category in filteredShortcuts"
-            :key="category.id"
-            :value="category.id"
+      <OverlayScrollbarsWrapper class="h-full">
+        <div class="flex grow flex-col overflow-auto overscroll-none">
+          <Accordion
+            collapsible
+            type="multiple"
+            :default-value="filteredShortcuts.map((category) => category.id)"
+            class="px-4"
           >
-            <AccordionTrigger>
-              {{ category.title }}
-            </AccordionTrigger>
-            <AccordionContent>
-              <div
-                v-for="(shortcut, shortcutIndex) in category.shortcuts"
-                :key="shortcutIndex"
-                class="flex items-center justify-between py-2"
-              >
-                <div class="text-muted-foreground flex items-center gap-2">
-                  <template
-                    v-for="(step, stepIndex) in shortcut.description"
-                    :key="stepIndex"
-                  >
-                    <span>
-                      {{ step }}
-                    </span>
-                    <span v-if="stepIndex < shortcut.description.length - 1">
-                      ›
-                    </span>
-                  </template>
-                </div>
-                <span class="flex gap-8">
-                  <div
-                    v-for="keys in shortcut.keys"
-                    :key="keys.toString()"
-                    class="after:text-muted-foreground relative flex after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:content-['or'] last-of-type:after:hidden"
-                  >
-                    <kbd v-for="key in keys" :key="key" class="shortcut-key">
-                      {{ key }}
-                    </kbd>
+            <AccordionItem
+              v-for="category in filteredShortcuts"
+              :key="category.id"
+              :value="category.id"
+            >
+              <AccordionTrigger>
+                {{ category.title }}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div
+                  v-for="(shortcut, shortcutIndex) in category.shortcuts"
+                  :key="shortcutIndex"
+                  class="flex items-center justify-between py-2"
+                >
+                  <div class="text-muted-foreground flex items-center gap-2">
+                    <template
+                      v-for="(step, stepIndex) in shortcut.description"
+                      :key="stepIndex"
+                    >
+                      <span>
+                        {{ step }}
+                      </span>
+                      <span v-if="stepIndex < shortcut.description.length - 1">
+                        ›
+                      </span>
+                    </template>
                   </div>
-                </span>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <div v-if="filteredShortcuts.length === 0" class="">
-            <p class="text-muted-foreground p-4 text-center">
-              No shortcuts found.
-            </p>
-          </div>
-        </Accordion>
-      </div>
+                  <span class="flex gap-8">
+                    <div
+                      v-for="keys in shortcut.keys"
+                      :key="keys.toString()"
+                      class="after:text-muted-foreground relative flex after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:content-['or'] last-of-type:after:hidden"
+                    >
+                      <kbd v-for="key in keys" :key="key" class="shortcut-key">
+                        {{ key }}
+                      </kbd>
+                    </div>
+                  </span>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <div v-if="filteredShortcuts.length === 0" class="">
+              <p class="text-muted-foreground p-4 text-center">
+                No shortcuts found.
+              </p>
+            </div>
+          </Accordion>
+        </div>
+      </OverlayScrollbarsWrapper>
+      <Separator />
+      <SheetFooter>
+        <Button class="justify-start" variant="secondary">
+          <icon-lucide-message-circle />
+          Get support
+        </Button>
+        <Button class="justify-start" variant="secondary">
+          <icon-lucide-book-open />
+          Documentation
+          <icon-lucide-arrow-up-right />
+        </Button>
+      </SheetFooter>
     </SheetContent>
   </Sheet>
 </template>
