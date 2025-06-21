@@ -1,9 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@/styles/theme.scss";
+@import "@/styles/theme.css";
 @plugin "@tailwindcss/typography";
 @plugin "@tailwindcss/forms";
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -71,6 +71,7 @@
     @apply selection:text-secondary-foreground;
     @apply h-dvh;
     @apply w-dvw;
+
     /* @apply bg-linear-to-b;
     @apply from-background;
     @apply to-background/5; */

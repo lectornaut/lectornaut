@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getFunctions, httpsCallable } from "firebase/functions"
+
 definePage({
   meta: {
     requiresUser: true,
@@ -17,6 +19,17 @@ const maxLength = ref([1000])
 const topP = ref([0.9])
 
 const model = ref("gpt-3.5-turbo")
+
+const subject = ref("")
+const poem = ref("")
+
+const generatePoem = async () => {
+  const poemFlow = httpsCallable(getFunctions(), "generateFlow")
+  const response = await poemFlow.stream(subject.value)
+  for await (const chunk of response.stream) {
+    poem.value += chunk
+  }
+}
 </script>
 
 <template>
@@ -164,10 +177,16 @@ const model = ref("gpt-3.5-turbo")
       </OverlayScrollbarsWrapper>
     </div>
     <div
-      class="bg-secondary flex grow basis-3/5 flex-col overflow-auto overscroll-none rounded border"
+      class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none rounded border"
     >
       <OverlayScrollbarsWrapper class="h-full">
-        <div class="grid grid-cols-1 gap-4 p-2"></div>
+        <div class="grid grid-cols-1 gap-4 p-2">
+          <Input v-model="subject" placeholder="Subject" />
+          <Button @click="generatePoem()">Compose</Button>
+          <p class="rounded border p-2">
+            {{ poem ? poem : "Your poem will appear here." }}
+          </p>
+        </div>
       </OverlayScrollbarsWrapper>
     </div>
   </div>

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu"
-import { menu } from "@/helpers/defaults"
+import {
+  companyMenu,
+  productsMenu,
+  resourcesMenu,
+  solutionsMenu,
+} from "@/helpers/defaults"
 import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 
 const user = useCurrentUser()
@@ -11,7 +16,9 @@ const isUserLoaded = useIsCurrentUserLoaded()
   <div
     class="fixed inset-x-0 top-0 z-20 mx-auto flex max-w-6xl items-center justify-center p-2"
   >
-    <div class="grid grid-cols-3 gap-2 rounded-full p-2 backdrop-blur-lg">
+    <div
+      class="bg-background/5 grid grid-cols-3 gap-2 rounded-full p-2 backdrop-blur-lg"
+    >
       <div class="flex grow items-center justify-start gap-2">
         <ContextMenu>
           <ContextMenuTrigger as-child>
@@ -47,16 +54,16 @@ const isUserLoaded = useIsCurrentUserLoaded()
                 Products
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div class="grid w-lg grid-cols-3 gap-2">
+                <div class="grid w-lg grid-cols-4 gap-2">
                   <NavigationMenuLink
-                    v-for="(item, index) in menu"
+                    v-for="(item, index) in productsMenu"
                     :key="index"
                     as-child
                   >
                     <Button
                       variant="ghost"
                       size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 p-2"
+                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
                       as-child
                     >
                       <RouterLink :to="item.url">
@@ -77,16 +84,21 @@ const isUserLoaded = useIsCurrentUserLoaded()
                 Solutions
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div class="grid w-lg grid-cols-3 gap-2">
+                <div
+                  v-for="(solution, idx) in solutionsMenu"
+                  :key="idx"
+                  class="grid w-lg grid-cols-4 gap-2"
+                >
+                  {{ solution.title }}
                   <NavigationMenuLink
-                    v-for="(item, index) in menu"
+                    v-for="(item, index) in solution.items"
                     :key="index"
                     as-child
                   >
                     <Button
                       variant="ghost"
                       size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 p-2"
+                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
                       as-child
                     >
                       <RouterLink :to="item.url">
@@ -107,16 +119,16 @@ const isUserLoaded = useIsCurrentUserLoaded()
                 Resources
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div class="grid w-lg grid-cols-3 gap-2">
+                <div class="grid w-lg grid-cols-4 gap-2">
                   <NavigationMenuLink
-                    v-for="(item, index) in menu"
+                    v-for="(item, index) in resourcesMenu"
                     :key="index"
                     as-child
                   >
                     <Button
                       variant="ghost"
                       size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 p-2"
+                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
                       as-child
                     >
                       <RouterLink :to="item.url">
@@ -137,16 +149,16 @@ const isUserLoaded = useIsCurrentUserLoaded()
                 Company
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div class="grid w-lg grid-cols-3 gap-2">
+                <div class="grid w-lg grid-cols-4 gap-2">
                   <NavigationMenuLink
-                    v-for="(item, index) in menu"
+                    v-for="(item, index) in companyMenu"
                     :key="index"
                     as-child
                   >
                     <Button
                       variant="ghost"
                       size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 p-2"
+                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
                       as-child
                     >
                       <RouterLink :to="item.url">
@@ -166,9 +178,9 @@ const isUserLoaded = useIsCurrentUserLoaded()
               <NavigationMenuLink
                 :class="navigationMenuTriggerStyle()"
                 class="bg-transparent"
-                href="/pricing"
+                as-child
               >
-                Pricing
+                <RouterLink to="/pricing"> Pricing </RouterLink>
               </NavigationMenuLink>
             </NavigationMenuItem>
           </NavigationMenuList>
@@ -177,7 +189,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
       <div class="flex grow items-center justify-end gap-2">
         <ColorMode />
         <LanguageSwitcher />
-        <Button v-if="!isUserLoaded" variant="ghost" disabled>
+        <Button v-if="!isUserLoaded" variant="ghost" size="icon" disabled>
           <icon-lucide-loader class="animate-spin" />
         </Button>
         <Button v-else-if="user" variant="destructive" as-child>

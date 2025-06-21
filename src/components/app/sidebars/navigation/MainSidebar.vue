@@ -1,6 +1,6 @@
 <template>
   <Sidebar collapsible="none" class="w-[calc(var(--sidebar-width-icon))]">
-    <SidebarHeader>
+    <!-- <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton class="aspect-square p-0">
@@ -12,7 +12,7 @@
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-    </SidebarHeader>
+    </SidebarHeader> -->
     <SidebarContent>
       <Navigation />
     </SidebarContent>

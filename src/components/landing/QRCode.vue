@@ -7,7 +7,7 @@ import { state } from "@/modules/theme"
     <DialogTrigger
       v-motion-fade
       as-child
-      class="fixed right-4 bottom-4 z-50 flex flex-col items-center gap-4"
+      class="fixed right-4 bottom-4 z-50 hidden flex-col items-center gap-4 md:flex"
     >
       <div>
         <span class="text-muted-foreground">Scan to get the app</span>

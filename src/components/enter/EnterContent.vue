@@ -367,7 +367,7 @@ const authenticateApple = async () => {
       variant="destructive"
       class="bg-destructive/5 border-destructive/10"
     >
-      <icon-lucide-alert-circle />
+      <icon-lucide-circle-alert />
       <AlertTitle> Message: </AlertTitle>
       <AlertDescription>
         {{ authenticateError }}

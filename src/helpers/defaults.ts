@@ -106,3 +106,168 @@ export const menu = [
     color: "bg-yellow-500/20 text-yellow-500/80",
   },
 ]
+
+export const productsMenu = [
+  {
+    title: "Hyperjump",
+    url: "https://hyperjump.io",
+    id: "hyperjump",
+    icon: IconHome,
+    color: "bg-teal-500/20 text-teal-500/80",
+  },
+  {
+    title: "Hyperjump AI",
+    url: "https://hyperjump.ai",
+    id: "hyperjump-ai",
+    icon: IconBot,
+    color: "bg-purple-500/20 text-purple-500/80",
+  },
+]
+
+export const solutionsMenu = [
+  {
+    title: "Personal",
+    items: [
+      {
+        title: "Hyperjump CLI",
+        url: "https://hyperjump.io/cli",
+        id: "hyperjump-cli",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+      {
+        title: "Hyperjump SDK",
+        url: "https://hyperjump.io/sdk",
+        id: "hyperjump-sdk",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+    ],
+  },
+  {
+    title: "Basic",
+    items: [
+      {
+        title: "Hyperjump Teams",
+        url: "https://hyperjump.io/teams",
+        id: "hyperjump-teams",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+      {
+        title: "Hyperjump Tasks",
+        url: "https://hyperjump.io/tasks",
+        id: "hyperjump-tasks",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+      {
+        title: "Hyperjump Runs",
+        url: "https://hyperjump.io/runs",
+        id: "hyperjump-runs",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+    ],
+  },
+  {
+    title: "Business",
+    items: [
+      {
+        title: "Hyperjump Agents",
+        url: "https://hyperjump.io/agents",
+        id: "hyperjump-agents",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+      {
+        title: "Hyperjump AI",
+        url: "https://hyperjump.io/ai",
+        id: "hyperjump-ai",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+      {
+        title: "Hyperjump Platform",
+        url: "https://hyperjump.io/platform",
+        id: "hyperjump-platform",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+    ],
+  },
+  {
+    title: "Enterprise",
+    items: [
+      {
+        title: "Hyperjump Enterprise",
+        url: "https://hyperjump.io/enterprise",
+        id: "hyperjump-enterprise",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+      {
+        title: "Hyperjump Cloud",
+        url: "https://hyperjump.io/cloud",
+        id: "hyperjump-cloud",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+      {
+        title: "Hyperjump On-Premise",
+        url: "https://hyperjump.io/on-premise",
+        id: "hyperjump-on-premise",
+        icon: IconComponent,
+        color: "bg-indigo-500/20 text-indigo-500/80",
+      },
+    ],
+  },
+]
+
+export const resourcesMenu = [
+  {
+    title: "Documentation",
+    url: "https://docs.hyperjump.io",
+    id: "documentation",
+    icon: IconComponent,
+    color: "bg-blue-500/20 text-blue-500/80",
+  },
+  {
+    title: "Blog",
+    url: "https://blog.hyperjump.io",
+    id: "blog",
+    icon: IconComponent,
+    color: "bg-green-500/20 text-green-500/80",
+  },
+  {
+    title: "Community",
+    url: "https://community.hyperjump.io",
+    id: "community",
+    icon: IconComponent,
+    color: "bg-yellow-500/20 text-yellow-500/80",
+  },
+]
+
+export const companyMenu = [
+  {
+    title: "About Us",
+    url: "https://hyperjump.io/about",
+    id: "about-us",
+    icon: IconComponent,
+    color: "bg-gray-500/20 text-gray-500/80",
+  },
+  {
+    title: "Careers",
+    url: "https://hyperjump.io/careers",
+    id: "careers",
+    icon: IconComponent,
+    color: "bg-gray-500/20 text-gray-500/80",
+  },
+  {
+    title: "Contact Us",
+    url: "https://hyperjump.io/contact",
+    id: "contact-us",
+    icon: IconComponent,
+    color: "bg-gray-500/20 text-gray-500/80",
+  },
+]

@@ -22,7 +22,9 @@ const accordionItems = [
 <template>
   <Drawer>
     <DrawerTrigger as-child>
-      <Button variant="secondary" size="lg"> FAQ </Button>
+      <Button variant="secondary" size="icon">
+        <icon-lucide-circle-help />
+      </Button>
     </DrawerTrigger>
     <DrawerContent class="outline-hidden">
       <div class="mx-auto flex w-full max-w-sm flex-col">

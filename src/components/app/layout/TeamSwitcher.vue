@@ -171,7 +171,7 @@ const selectedUsers = ref<User[]>([])
                       }
                     "
                   >
-                    <icon-lucide-plus-circle />
+                    <icon-lucide-circle-plus />
                     Create Team
                   </CommandItem>
                 </DialogTrigger>
