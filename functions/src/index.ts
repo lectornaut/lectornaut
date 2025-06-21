@@ -1,9 +1,12 @@
+import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
 import { googleAI } from "@genkit-ai/googleai"
 import { hasClaim, onCallGenkit } from "firebase-functions/https"
 import { defineSecret } from "firebase-functions/params"
 import { genkit, z } from "genkit"
 
 const apiKey = defineSecret("GEMINI_API_KEY")
+
+enableFirebaseTelemetry()
 
 const ai = genkit({
   plugins: [googleAI()],
