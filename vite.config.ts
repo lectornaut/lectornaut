@@ -27,7 +27,7 @@ const host = process.env.TAURI_DEV_HOST
 // https://vitejs.dev/config/
 export default defineConfig({
   build: {
-    sourcemap: true,
+    sourcemap: process.env.NODE_ENV !== "production",
   },
   plugins: [
     VueRouter(),
