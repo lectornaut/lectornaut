@@ -29,7 +29,6 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
             <DropdownMenuRadioItem
               v-for="language in languages"
               :key="language.id"
-              class="gap-4"
               :value="language.id"
             >
               {{ language.name }}

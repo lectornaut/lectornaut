@@ -55,7 +55,7 @@ const metadata = [
     </SidebarHeader>
     <Separator />
     <SidebarContent>
-      <OverlayScrollbarsWrapper class="h-full">
+      <OverlayScrollbarsWrapper>
         <TabsContent value="details">
           <FlowDetails />
         </TabsContent>

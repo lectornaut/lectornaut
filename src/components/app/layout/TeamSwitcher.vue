@@ -40,6 +40,7 @@ type User = {
   name: string
   email: string
   avatar: string
+  role: string
 }
 
 const users = ref<User[]>([
@@ -48,30 +49,35 @@ const users = ref<User[]>([
     email: "t@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "edit",
   },
   {
     name: "Whitney",
     email: "w@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
   {
     name: "Leonard",
     email: "l@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
   {
     name: "Floyd",
     email: "f@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
   {
     name: "Emily",
     email: "e@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
 ])
 
@@ -283,7 +289,7 @@ const selectedUsers = ref<User[]>([])
                     </p>
                   </div>
                 </div>
-                <Select default-value="edit">
+                <Select v-model="person.role" class="w-24">
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>

@@ -1,18 +1,25 @@
+import IconJapan from "~icons/circle-flags/jp"
+import IconUSA from "~icons/circle-flags/us"
 import IconActivity from "~icons/lucide/activity"
 import IconBadgeCheck from "~icons/lucide/badge-check"
 import IconBot from "~icons/lucide/bot"
 import IconComponent from "~icons/lucide/component"
 import IconHome from "~icons/lucide/home"
+import IconSystem from "~icons/lucide/monitor"
+import IconDark from "~icons/lucide/moon"
 import IconSparkle from "~icons/lucide/sparkle"
+import IconLight from "~icons/lucide/sun"
 
 export const languages = [
   {
     id: "en-US",
     name: "English",
+    icon: IconUSA,
   },
   {
     id: "ja-JP",
     name: "Japanese",
+    icon: IconJapan,
   },
 ]
 
@@ -22,14 +29,17 @@ export const themes = [
   {
     id: "auto",
     name: "System",
+    icon: IconSystem,
   },
   {
     id: "light",
     name: "Light",
+    icon: IconLight,
   },
   {
     id: "dark",
     name: "Dark",
+    icon: IconDark,
   },
 ]
 

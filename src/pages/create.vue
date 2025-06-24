@@ -18,7 +18,49 @@ const temperature = ref([0.5])
 const maxLength = ref([1000])
 const topP = ref([0.9])
 
-const model = ref("gpt-3.5-turbo")
+const selectedModel = ref()
+const modelGroups = [
+  {
+    label: "OpenAI",
+    models: [
+      { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo" },
+      { value: "gpt-4", label: "GPT-4" },
+      { value: "gpt-4-1106-preview", label: "GPT-4 1106 Preview" },
+    ],
+  },
+  {
+    label: "Anthropic",
+    models: [
+      { value: "claude-2", label: "Claude 2" },
+      { value: "claude-3", label: "Claude 3" },
+      { value: "claude-instant-100k", label: "Claude Instant 100k" },
+    ],
+  },
+  {
+    label: "Google",
+    models: [
+      { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
+      { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+    ],
+  },
+  {
+    label: "Mistral",
+    models: [
+      { value: "mistral-7b", label: "Mistral 7B" },
+      { value: "mistral-large", label: "Mistral Large" },
+      { value: "mixtral-8x7b", label: "Mixtral 8x7B" },
+    ],
+  },
+  {
+    label: "Meta",
+    models: [
+      { value: "llama-3-8b", label: "Llama 3 8B" },
+      { value: "llama-3-70b", label: "Llama 3 70B" },
+      { value: "llama-3-8b-instruct", label: "Llama 3 8B Instruct" },
+      { value: "llama-3-70b-instruct", label: "Llama 3 70B Instruct" },
+    ],
+  },
+]
 
 const subject = ref("")
 const poem = ref("")
@@ -37,7 +79,7 @@ const generatePoem = async () => {
     <div
       class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none rounded-md border"
     >
-      <OverlayScrollbarsWrapper class="h-full">
+      <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">
           <div class="grid gap-2">
             <Label class="text-secondary-foreground text-xs" for="agent">
@@ -80,57 +122,29 @@ const generatePoem = async () => {
             <Label class="text-secondary-foreground text-xs" for="model">
               Model
             </Label>
-            <Select id="model" v-model="model">
+            <Select id="model" v-model="selectedModel">
               <SelectTrigger class="w-full">
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>OpenAI</SelectLabel>
-                  <SelectItem value="gpt-3.5-turbo">gpt-3.5-turbo</SelectItem>
-                  <SelectItem value="gpt-4">gpt-4</SelectItem>
-                  <SelectItem value="gpt-4-1106-preview"
-                    >gpt-4-1106-preview</SelectItem
-                  >
-                  <SelectItem value="gpt-4-vision-preview"
-                    >gpt-4-vision-preview</SelectItem
-                  >
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Meta</SelectLabel>
-                  <SelectItem value="Meta Llama 3.1">Meta Llama 3.1</SelectItem>
-                  <SelectItem value="Meta Llama 3">Meta Llama 3</SelectItem>
-                  <SelectItem value="Meta Llama 2">Meta Llama 2</SelectItem>
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Anthropic</SelectLabel>
-                  <SelectItem value="claude-2">claude-2</SelectItem>
-                  <SelectItem value="claude-3">claude-3</SelectItem>
-                  <SelectItem value="claude-3-opus">claude-3-opus</SelectItem>
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Google</SelectLabel>
-                  <SelectItem value="gemini-1.5-flash"
-                    >gemini-1.5-flash</SelectItem
-                  >
-                  <SelectItem value="gemini-1.5-pro">gemini-1.5-pro</SelectItem>
-                  <SelectItem value="gemini-1.5-ultra"
-                    >gemini-1.5-ultra</SelectItem
-                  >
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Other</SelectLabel>
-                  <SelectItem value="mistral-7b-instruct"
-                    >mistral-7b-instruct</SelectItem
-                  >
-                  <SelectItem value="mistral-7b">mistral-7b</SelectItem>
-                  <SelectItem value="mistral-large">mistral-large</SelectItem>
-                  <SelectItem value="mistral-small">mistral-small</SelectItem>
-                  <SelectItem value="mistral-medium">mistral-medium</SelectItem>
-                  <SelectItem value="mistral-7b-v0.1"
-                    >mistral-7b-v0.1</SelectItem
-                  >
-                </SelectGroup>
+                <template
+                  v-for="(group, index) in modelGroups"
+                  :key="group.label"
+                >
+                  <SelectGroup>
+                    <SelectLabel class="text-muted-foreground">
+                      {{ group.label }}
+                    </SelectLabel>
+                    <SelectItem
+                      v-for="model in group.models"
+                      :key="model.value"
+                      :value="model.value"
+                    >
+                      {{ model.label }}
+                    </SelectItem>
+                  </SelectGroup>
+                  <SelectSeparator v-if="index < modelGroups.length - 1" />
+                </template>
               </SelectContent>
             </Select>
           </div>
@@ -179,7 +193,7 @@ const generatePoem = async () => {
     <div
       class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none rounded-md border"
     >
-      <OverlayScrollbarsWrapper class="h-full">
+      <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">
           <Input v-model="subject" placeholder="Subject" />
           <Button @click="generatePoem()">Compose</Button>

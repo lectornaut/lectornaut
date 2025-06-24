@@ -80,13 +80,15 @@
     @apply overscroll-none;
     @apply accent-current;
     @apply antialiased;
+  }
+
+  :root {
+    @apply overscroll-none;
     @apply pl-safe-left;
     @apply pr-safe-right;
     @apply pt-safe-top;
     @apply pb-safe-bottom;
-  }
 
-  :root {
     --radius: 1.25rem;
     --vis-tooltip-background-color: none;
     --vis-tooltip-border-color: none;

@@ -118,7 +118,11 @@ const messages = [
         <CommandK />
         <Sheet>
           <SheetTrigger as-child>
-            <Button id="tour-ai-assistant" variant="outline">
+            <Button
+              id="tour-ai-assistant"
+              variant="outline"
+              class="shadow-none"
+            >
               <icon-mingcute-ai-fill />
               <RadiantText :duration="5" :radiant-width="20">
                 Talk to AI
@@ -133,7 +137,7 @@ const messages = [
               </SheetDescription>
             </SheetHeader>
             <Separator />
-            <OverlayScrollbarsWrapper class="h-full">
+            <OverlayScrollbarsWrapper>
               <div class="flex grow flex-col overflow-auto overscroll-none">
                 <div class="grid grid-cols-1 gap-4 p-4">
                   <div

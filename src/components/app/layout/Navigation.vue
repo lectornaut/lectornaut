@@ -47,7 +47,7 @@ const navigation = [
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper class="h-full">
+  <OverlayScrollbarsWrapper>
     <SidebarGroup>
       <SidebarGroupContent id="tour-primary-navigation">
         <SidebarMenu>

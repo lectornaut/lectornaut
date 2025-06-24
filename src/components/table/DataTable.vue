@@ -92,7 +92,7 @@ const table = useVueTable({
   <div
     class="bg-card flex grow flex-col overflow-auto overscroll-none border-y"
   >
-    <OverlayScrollbarsWrapper class="h-full">
+    <OverlayScrollbarsWrapper>
       <Table>
         <TableHeader>
           <TableRow

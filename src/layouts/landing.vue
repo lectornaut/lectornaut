@@ -1,6 +1,6 @@
 <template>
   <div class="flex grow flex-col">
-    <OverlayScrollbarsWrapper class="h-full">
+    <OverlayScrollbarsWrapper>
       <Header />
       <Separator />
       <RouterView />

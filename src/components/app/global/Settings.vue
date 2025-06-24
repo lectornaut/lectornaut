@@ -296,7 +296,7 @@ const navigations = [
             </TabsList>
           </Sidebar>
           <main class="flex flex-1 flex-col overflow-hidden">
-            <OverlayScrollbarsWrapper class="h-full">
+            <OverlayScrollbarsWrapper>
               <TabsContent value="preferences">
                 <div class="flex size-full flex-col gap-6 px-8 py-6">
                   <div class="flex flex-col">
@@ -621,7 +621,7 @@ const navigations = [
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">
-                      <Select v-model="store" :default-value="store">
+                      <Select v-model="store">
                         <SelectTrigger class="h-9 gap-2">
                           <SelectValue placeholder="Select a theme" />
                         </SelectTrigger>
@@ -630,8 +630,8 @@ const navigations = [
                             v-for="mode in themes"
                             :key="mode.id"
                             :value="mode.id"
-                            class="gap-4"
                           >
+                            <Component :is="mode.icon" />
                             {{ mode.name }}
                           </SelectItem>
                         </SelectContent>
@@ -646,7 +646,7 @@ const navigations = [
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">
-                      <Select v-model="accent" :default-value="accent">
+                      <Select v-model="accent">
                         <SelectTrigger class="h-9 gap-2">
                           <SelectValue placeholder="Select an accent color" />
                         </SelectTrigger>
@@ -655,8 +655,8 @@ const navigations = [
                             v-for="color in accents"
                             :key="color.id"
                             :value="color.id"
-                            class="gap-4"
                           >
+                            <icon-mdi-circle :class="`text-${color.id}-500`" />
                             {{ color.name }}
                           </SelectItem>
                         </SelectContent>
@@ -671,7 +671,7 @@ const navigations = [
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">
-                      <Select v-model="locale" :default-value="locale">
+                      <Select v-model="locale">
                         <SelectTrigger class="h-9 gap-2">
                           <SelectValue placeholder="Select a language" />
                         </SelectTrigger>
@@ -680,8 +680,8 @@ const navigations = [
                             v-for="language in languages"
                             :key="language.id"
                             :value="language.id"
-                            class="gap-4"
                           >
+                            <Component :is="language.icon" />
                             {{ language.name }}
                           </SelectItem>
                         </SelectContent>

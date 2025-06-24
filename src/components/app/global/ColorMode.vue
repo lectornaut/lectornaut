@@ -26,7 +26,6 @@ import { state, store } from "@/modules/theme"
               v-for="mode in themes"
               :key="mode.id"
               :value="mode.id"
-              class="gap-4"
             >
               {{ mode.name }}
             </DropdownMenuRadioItem>

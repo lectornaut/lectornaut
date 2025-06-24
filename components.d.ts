@@ -285,6 +285,7 @@ declare module 'vue' {
     IconMdiMicrosoft: typeof import('~icons/mdi/microsoft')['default']
     IconMingcuteAiFill: typeof import('~icons/mingcute/ai-fill')['default']
     IconMingcuteAppleIntelligenceLine: typeof import('~icons/mingcute/apple-intelligence-line')['default']
+    IconMingcuteCircleFill: typeof import('~icons/mingcute/circle-fill')['default']
     IconMingcuteDownloadFill: typeof import('~icons/mingcute/download-fill')['default']
     IconMingcuteSignatureFill: typeof import('~icons/mingcute/signature-fill')['default']
     IconSimpleIconsFlathub: typeof import('~icons/simple-icons/flathub')['default']

@@ -5,30 +5,35 @@ const persons = [
     email: "t@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "edit",
   },
   {
     name: "Whitney",
     email: "w@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
   {
     name: "Leonard",
     email: "l@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
   {
     name: "Floyd",
     email: "f@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
   {
     name: "Emily",
     email: "e@hey.com",
     avatar:
       "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    role: "view",
   },
 ]
 
@@ -57,6 +62,7 @@ const teams = [
           "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       },
     ],
+    role: "edit",
   },
   {
     id: "2",
@@ -76,6 +82,7 @@ const teams = [
           "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       },
     ],
+    role: "view",
   },
 ]
 </script>
@@ -173,7 +180,7 @@ const teams = [
                     </p>
                   </div>
                 </div>
-                <Select default-value="edit">
+                <Select v-model="team.role">
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
@@ -208,7 +215,7 @@ const teams = [
                     </p>
                   </div>
                 </div>
-                <Select default-value="edit">
+                <Select v-model="person.role">
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>

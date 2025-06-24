@@ -42,7 +42,7 @@ const { onDragStart } = useDragAndDrop()
       </SidebarHeader>
       <Separator />
       <SidebarContent>
-        <OverlayScrollbarsWrapper class="h-full">
+        <OverlayScrollbarsWrapper>
           <TabsContent v-for="tab in nodes" :key="tab.id" :value="tab.id">
             <SidebarGroup
               v-for="group in tab.groups"

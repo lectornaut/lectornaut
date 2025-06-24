@@ -1,5 +1,29 @@
 <script setup lang="ts">
+import { isTauri } from "@/helpers/utilities"
+import type { UnlistenFn } from "@tauri-apps/api/event"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import Avatar from "vue-boring-avatars"
+
+let unlisten: UnlistenFn | undefined
+
+const isFullscreen = computedAsync(
+  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
+  false
+)
+
+onMounted(async () => {
+  if (isTauri.value) {
+    unlisten = await getCurrentWindow().onResized(async () => {
+      isFullscreen.value = await getCurrentWindow().isFullscreen()
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (unlisten) {
+    unlisten()
+  }
+})
 
 const agents = [
   { id: 1, name: "Alice" },
@@ -63,7 +87,11 @@ const messages = [
             </TooltipTrigger>
             <TooltipContent side="right"> {{ agent.name }} </TooltipContent>
           </SheetTrigger>
-          <SheetContent class="m-3 h-auto gap-0 rounded-md border" side="left">
+          <SheetContent
+            class="m-3 h-auto gap-0 rounded-md border"
+            side="left"
+            :class="{ 'mt-13': isTauri && !isFullscreen }"
+          >
             <SheetHeader>
               <SheetTitle>{{ agent.name }}</SheetTitle>
               <SheetDescription>
@@ -71,7 +99,7 @@ const messages = [
               </SheetDescription>
             </SheetHeader>
             <Separator />
-            <OverlayScrollbarsWrapper class="h-full">
+            <OverlayScrollbarsWrapper>
               <div class="flex grow flex-col overflow-auto overscroll-none">
                 <div class="grid grid-cols-1 gap-4 p-4">
                   <div

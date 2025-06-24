@@ -169,6 +169,21 @@ const productTour = driver({
 })
 
 const selectedCategory = ref("")
+const supportCategories = [
+  { value: "demo", label: "Request a demo" },
+  { value: "pricing", label: "Pricing information" },
+  { value: "support", label: "Support inquiry" },
+  { value: "feedback", label: "Feedback or suggestions" },
+  { value: "other", label: "Other" },
+]
+
+const selectedCompanySize = ref()
+const companySizes = [
+  { value: "1-99", label: "1-99 employees" },
+  { value: "100-299", label: "100-299 employees" },
+  { value: "300-1999", label: "300-1,999 employees" },
+  { value: "2000+", label: "2,000+ employees" },
+]
 </script>
 
 <template>
@@ -324,19 +339,18 @@ const selectedCategory = ref("")
                     >
                       Company size
                     </Label>
-                    <Select>
+                    <Select v-model="selectedCompanySize">
                       <SelectTrigger class="w-full">
                         <SelectValue placeholder="Number of employees" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1-99">1-99 employees</SelectItem>
-                        <SelectItem value="100-299"
-                          >100-299 employees</SelectItem
+                        <SelectItem
+                          v-for="size in companySizes"
+                          :key="size.value"
+                          :value="size.value"
                         >
-                        <SelectItem value="300-1999"
-                          >300-1,999 employees</SelectItem
-                        >
-                        <SelectItem value="2000+">2,000+ employees</SelectItem>
+                          {{ size.label }}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -352,15 +366,13 @@ const selectedCategory = ref("")
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="demo">Request a demo</SelectItem>
-                        <SelectItem value="pricing"
-                          >Pricing information</SelectItem
+                        <SelectItem
+                          v-for="item in supportCategories"
+                          :key="item.value"
+                          :value="item.value"
                         >
-                        <SelectItem value="support">Support inquiry</SelectItem>
-                        <SelectItem value="feedback"
-                          >Feedback or suggestions</SelectItem
-                        >
-                        <SelectItem value="other">Other</SelectItem>
+                          {{ item.label }}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

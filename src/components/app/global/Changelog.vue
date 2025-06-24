@@ -20,7 +20,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
         <SheetTitle>Changelog</SheetTitle>
       </SheetHeader>
       <Separator />
-      <OverlayScrollbarsWrapper class="h-full">
+      <OverlayScrollbarsWrapper>
         <div class="flex grow flex-col overflow-auto overscroll-none">
           <Accordion
             collapsible

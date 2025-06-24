@@ -92,7 +92,7 @@ const filteredShortcuts = computed(() => {
         </SheetDescription>
       </SheetHeader>
       <Separator />
-      <OverlayScrollbarsWrapper class="h-full">
+      <OverlayScrollbarsWrapper>
         <div class="flex grow flex-col overflow-auto overscroll-none">
           <Accordion
             collapsible

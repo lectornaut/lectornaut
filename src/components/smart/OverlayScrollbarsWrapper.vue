@@ -12,6 +12,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
         autoHide: 'scroll',
       },
     }"
+    class="h-full w-full"
   >
     <slot />
   </OverlayScrollbarsComponent>
