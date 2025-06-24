@@ -280,7 +280,7 @@ const range = ref({
                 </div>
                 <div class="flex min-w-0 flex-1 justify-between space-x-4">
                   <div>
-                    <p class="">
+                    <p>
                       {{ event.content }}
                       <span class="text-muted-foreground">
                         {{ event.status }}

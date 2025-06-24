@@ -228,7 +228,7 @@ const dummyRecentTabs = [
                 <HoverCardTrigger as-child>
                   <Button
                     :variant="tab.id === active ? 'secondary' : 'ghost'"
-                    class="group relative flex w-60 min-w-0 flex-1 justify-between gap-2 border border-transparent bg-transparent shadow-none"
+                    class="group relative flex w-60 min-w-0 flex-1 justify-between gap-2 rounded-xs border border-transparent bg-transparent shadow-none"
                     :class="
                       tab.id === active
                         ? 'border-border bg-card before:border-border before:text-card after:border-border after:text-card hover:bg-card min-w-32 rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-20 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0px_5px_0_currentcolor,5px_0px_0_currentcolor,10px_5px_0_currentcolor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-20 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0px_5px_0_currentcolor,-5px_0px_0_currentcolor,-10px_5px_0_currentcolor]'

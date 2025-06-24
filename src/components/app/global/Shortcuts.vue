@@ -141,7 +141,7 @@ const filteredShortcuts = computed(() => {
                 </div>
               </AccordionContent>
             </AccordionItem>
-            <div v-if="filteredShortcuts.length === 0" class="">
+            <div v-if="filteredShortcuts.length === 0">
               <p class="text-muted-foreground p-4 text-center">
                 No shortcuts found.
               </p>

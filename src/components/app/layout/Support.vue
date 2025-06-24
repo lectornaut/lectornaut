@@ -59,7 +59,7 @@ const productTour = driver({
   nextBtnText: "Next",
   prevBtnText: "Previous",
   doneBtnText: "Finish",
-  overlayOpacity: 0.1,
+  overlayOpacity: 0.25,
   steps: [
     {
       popover: {
@@ -79,13 +79,23 @@ const productTour = driver({
       },
     },
     {
+      element: "#tour-tasks-notifications",
+      popover: {
+        title: "Tasks and notifications",
+        description:
+          "You can manage your tasks and notifications here. This is useful to keep track of your work.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
       element: "#tour-team-switcher",
       popover: {
         title: "Select your team",
         description:
           "You can switch between teams using the team switcher. This is useful if you are part of multiple teams.",
         side: "bottom",
-        align: "start",
+        align: "center",
       },
     },
     {
@@ -95,17 +105,17 @@ const productTour = driver({
         description:
           "You can search for anything using the search bar. This is useful if you want to quickly find something.",
         side: "bottom",
-        align: "center",
+        align: "end",
       },
     },
     {
-      element: "#tour-tasks-notifications",
+      element: "#tour-ai-assistant",
       popover: {
-        title: "Tasks and notifications",
+        title: "AI Assistant",
         description:
-          "You can manage your tasks and notifications here. This is useful to keep track of your work.",
+          "You can interact with the AI assistant from here. This is useful if you need help with your tasks.",
         side: "bottom",
-        align: "end",
+        align: "center",
       },
     },
     {
@@ -392,7 +402,7 @@ const selectedCategory = ref("")
   @apply border-border;
   @apply p-4;
   @apply shadow-lg;
-  @apply rounded-lg;
+  @apply rounded-sm;
   @apply min-w-sm;
 }
 

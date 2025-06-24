@@ -25,6 +25,7 @@ const activeBillingDuration = ref("monthly")
 const pricingPlans = [
   {
     title: "Free",
+    id: "free",
     monthlyPrice: "Free for everyone",
     annualPrice: "Free for everyone",
     overview: ["Unlimited connections", "Basic features", "Community support"],
@@ -33,6 +34,7 @@ const pricingPlans = [
   },
   {
     title: "Basic",
+    id: "basic",
     monthlyPrice: "$10/month",
     annualPrice: "$8/month",
     overview: ["Everything in Free", "Advanced features", "Priority support"],
@@ -41,6 +43,7 @@ const pricingPlans = [
   },
   {
     title: "Business",
+    id: "business",
     monthlyPrice: "$16/user/month",
     annualPrice: "$14/user/month",
     overview: [
@@ -56,6 +59,7 @@ const pricingPlans = [
   },
   {
     title: "Enterprise",
+    id: "enterprise",
     monthlyPrice: "Contact us",
     annualPrice: "Contact us",
     overview: [
@@ -168,13 +172,13 @@ const comparisonPlans = [
         <TableHeader>
           <TableRow>
             <TableHead> Feature </TableHead>
-            <TableHead v-for="plan in pricingPlans" :key="plan.title">
+            <TableHead v-for="plan in pricingPlans" :key="plan.id">
               {{ plan.title }}
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="plan in comparisonPlans" :key="plan.plan" class="">
+          <TableRow v-for="plan in comparisonPlans" :key="plan.feature">
             <TableCell>
               {{ plan.feature }}
             </TableCell>

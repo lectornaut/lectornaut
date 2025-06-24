@@ -77,14 +77,36 @@ const messages = [
                   <div
                     v-for="(message, index) in messages"
                     :key="index"
-                    :class="[
-                      'flex w-max max-w-3/4 flex-col rounded-2xl px-3 py-2',
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground ml-auto rounded-br-md'
-                        : 'bg-muted rounded-bl-md',
-                    ]"
+                    class="flex items-end gap-2"
+                    :class="{
+                      'flex-row-reverse': message.role === 'user',
+                    }"
                   >
-                    {{ message.content }}
+                    <Avatar
+                      :size="20"
+                      :square="false"
+                      :title="false"
+                      :name="`Agent ${index + 1}`"
+                      variant="beam"
+                      :colors="[
+                        'var(--chart-1)',
+                        'var(--chart-2)',
+                        'var(--chart-3)',
+                        'var(--chart-4)',
+                        'var(--chart-5)',
+                      ]"
+                      class="sticky bottom-0 rounded-full"
+                    />
+                    <div
+                      :class="[
+                        'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground ml-auto rounded-br'
+                          : 'bg-muted rounded-bl',
+                      ]"
+                    >
+                      {{ message.content }}
+                    </div>
                   </div>
                 </div>
               </div>

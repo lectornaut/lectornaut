@@ -35,7 +35,7 @@ const generatePoem = async () => {
 <template>
   <div class="flex grow gap-2 overflow-auto overscroll-none p-2">
     <div
-      class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none rounded border"
+      class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none rounded-md border"
     >
       <OverlayScrollbarsWrapper class="h-full">
         <div class="grid grid-cols-1 gap-4 p-2">
@@ -177,13 +177,13 @@ const generatePoem = async () => {
       </OverlayScrollbarsWrapper>
     </div>
     <div
-      class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none rounded border"
+      class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none rounded-md border"
     >
       <OverlayScrollbarsWrapper class="h-full">
         <div class="grid grid-cols-1 gap-4 p-2">
           <Input v-model="subject" placeholder="Subject" />
           <Button @click="generatePoem()">Compose</Button>
-          <p class="rounded border p-2">
+          <p class="rounded-md border p-2">
             {{ poem ? poem : "Your poem will appear here." }}
           </p>
         </div>

@@ -104,14 +104,14 @@ const categories = [
           </TabsList>
         </div>
         <TabsContent value="featured" class="grid gap-16">
-          <div class="">
+          <div>
             <h3 class="text-2xl font-bold tracking-tight">Featured</h3>
             <p class="text-muted-foreground">
               Explore our featured agents, showcasing their capabilities and
               functionalities.
             </p>
           </div>
-          <div class="">
+          <div>
             <Carousel
               class="focus-visible:outline-none"
               :opts="{
@@ -222,7 +222,7 @@ const categories = [
               <CarouselNext />
             </Carousel>
           </div>
-          <div class="">
+          <div>
             <h3 class="text-2xl font-bold tracking-tight">Trending</h3>
             <p class="text-muted-foreground">
               Discover the most popular agents in our network, each with unique
@@ -280,7 +280,7 @@ const categories = [
               </CardFooter>
             </Card>
           </div>
-          <div class="">
+          <div>
             <h3 class="text-2xl font-bold tracking-tight">By Agent Network</h3>
             <p class="text-muted-foreground">
               Agents created by the Agent Network team.

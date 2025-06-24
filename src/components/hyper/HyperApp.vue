@@ -267,7 +267,7 @@ const randomIndex = () => {
           <CarouselItem
             v-for="(__, rowIndex) in 15"
             :key="rowIndex"
-            class="bg-background group relative m-1 flex aspect-square basis-auto items-center justify-center rounded bg-cover bg-center p-0"
+            class="bg-background group relative m-1 flex aspect-square basis-auto items-center justify-center rounded-md bg-cover bg-center p-0"
             :style="{
               backgroundImage: `url(https://flowbite.s3.amazonaws.com/docs/gallery/masonry/image-${randomIndex()}.jpg)`,
             }"
@@ -508,7 +508,7 @@ const randomIndex = () => {
                           </TooltipTrigger>
                           <TooltipContent side="top">Attach</TooltipContent>
                           <DropdownMenuContent
-                            class="w-48 rounded-2xl shadow-none"
+                            class="w-48 rounded-xl shadow-none"
                             align="start"
                             side="top"
                           >

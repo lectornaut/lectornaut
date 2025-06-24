@@ -118,7 +118,7 @@ const messages = [
         <CommandK />
         <Sheet>
           <SheetTrigger as-child>
-            <Button variant="outline">
+            <Button id="tour-ai-assistant" variant="outline">
               <icon-mingcute-ai-fill />
               <RadiantText :duration="5" :radiant-width="20">
                 Talk to AI
@@ -140,10 +140,10 @@ const messages = [
                     v-for="(message, index) in messages"
                     :key="index"
                     :class="[
-                      'flex w-max max-w-3/4 flex-col rounded-2xl px-3 py-2',
+                      'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground ml-auto rounded-br-md'
-                        : 'bg-muted rounded-bl-md',
+                        ? 'bg-primary text-primary-foreground ml-auto rounded-br'
+                        : 'bg-muted rounded-bl',
                     ]"
                   >
                     {{ message.content }}

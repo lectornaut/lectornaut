@@ -38,10 +38,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xs: calc(var(--radius) - 8px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 8px);
   --spacing-safe-top: env(safe-area-inset-top);
   --spacing-safe-bottom: env(safe-area-inset-bottom);
   --spacing-safe-left: env(safe-area-inset-left);
@@ -71,10 +72,6 @@
     @apply selection:text-secondary-foreground;
     @apply h-dvh;
     @apply w-dvw;
-
-    /* @apply bg-linear-to-b;
-    @apply from-background;
-    @apply to-background/5; */
     @apply bg-background;
     @apply text-foreground;
     @apply text-sm;
@@ -90,7 +87,7 @@
   }
 
   :root {
-    --radius: 1.375rem;
+    --radius: 1.25rem;
     --vis-tooltip-background-color: none;
     --vis-tooltip-border-color: none;
     --vis-tooltip-text-color: none;
@@ -150,7 +147,7 @@
     @apply inline-flex;
     @apply items-center;
     @apply justify-center;
-    @apply max-h-5;
+    @apply h-5;
     @apply min-w-5;
     @apply p-1;
     @apply shrink-0;
@@ -158,12 +155,13 @@
     @apply border;
     @apply shadow-xs;
     @apply font-sans;
-    @apply align-baseline;
+    @apply align-middle;
     @apply capitalize;
-    @apply bg-background/90;
-    @apply text-foreground/80;
+    @apply bg-background/50;
+    @apply text-secondary-foreground;
     @apply text-xs;
     @apply tracking-tight;
+    @apply leading-0;
     @apply scale-90;
   }
 }

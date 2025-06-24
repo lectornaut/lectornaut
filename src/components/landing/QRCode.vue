@@ -4,18 +4,20 @@ import { state } from "@/modules/theme"
 
 <template>
   <Dialog>
-    <DialogTrigger
-      v-motion-fade
-      as-child
-      class="fixed right-4 bottom-4 z-50 hidden flex-col items-center gap-4 md:flex"
-    >
-      <div>
+    <DialogTrigger v-motion-fade as-child>
+      <div
+        class="fixed right-4 bottom-4 z-50 hidden flex-col items-center gap-4 md:flex"
+      >
         <span class="text-muted-foreground">Scan to get the app</span>
-        <img
-          :src="`/assets/images/qr-code-${state}.svg`"
-          alt="QR Code"
-          class="bg-muted/50 h-28 w-28 cursor-pointer rounded-lg border p-1 opacity-75 backdrop-blur-lg transition hover:scale-110 hover:opacity-100"
-        />
+        <div
+          class="bg-background/50 group hover:bg-background/75 cursor-pointer rounded-lg border backdrop-blur-lg transition hover:scale-110"
+        >
+          <img
+            :src="`/assets/images/qr-code-${state}.svg`"
+            alt="QR Code"
+            class="h-28 w-28 opacity-50 transition group-hover:opacity-100"
+          />
+        </div>
       </div>
     </DialogTrigger>
     <DialogContent class="w-sm max-w-fit">
