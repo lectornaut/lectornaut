@@ -302,7 +302,7 @@ const randomIndex = () => {
                 "
               >
                 <span :class="item.style.icon" class="rounded-full p-4">
-                  <component :is="item.icon" class="size-8" />
+                  <Component :is="item.icon" class="size-8" />
                 </span>
                 <span
                   class="text-lg leading-tight font-semibold tracking-tight"
@@ -578,7 +578,7 @@ const randomIndex = () => {
             ]"
             @click="onThumbClick(index)"
           >
-            <component :is="item.icon" />
+            <Component :is="item.icon" />
             <span v-if="selectedIndex === index" class="font-medium">
               {{ item.text }}
             </span>

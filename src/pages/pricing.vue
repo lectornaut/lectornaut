@@ -24,20 +24,28 @@ const activeBillingDuration = ref("monthly")
 
 const pricingPlans = [
   {
-    title: "Free",
-    id: "free",
+    title: "Personal",
+    id: "personal",
     monthlyPrice: "Free for everyone",
     annualPrice: "Free for everyone",
-    overview: ["Unlimited connections", "Basic features", "Community support"],
+    overview: [
+      "Unlimited connections",
+      "Professional features",
+      "Community support",
+    ],
     cta: "Get Started",
     ctaLink: "/enter",
   },
   {
-    title: "Basic",
-    id: "basic",
+    title: "Professional",
+    id: "professional",
     monthlyPrice: "$10/month",
     annualPrice: "$8/month",
-    overview: ["Everything in Free", "Advanced features", "Priority support"],
+    overview: [
+      "Everything in Personal",
+      "Advanced features",
+      "Priority support",
+    ],
     cta: "Get Started",
     ctaLink: "/enter",
   },
@@ -47,7 +55,7 @@ const pricingPlans = [
     monthlyPrice: "$16/user/month",
     annualPrice: "$14/user/month",
     overview: [
-      "Everything in Basic",
+      "Everything in Professional",
       "Team management",
       "Enhanced security",
       "Customizable workflows",
@@ -77,29 +85,29 @@ const pricingPlans = [
 const comparisonPlans = [
   {
     feature: "Members",
-    free: "1 member",
-    basic: "1 member",
+    personal: "1 member",
+    professional: "1 member",
     business: "Unlimited members",
     enterprise: "Unlimited members",
   },
   {
     feature: "Storage",
-    free: "10 MB",
-    basic: "100 MB",
+    personal: "10 MB",
+    professional: "100 MB",
     business: "1 GB",
     enterprise: "Unlimited storage",
   },
   {
     feature: "Workflows",
-    free: "10 runs/month",
-    basic: "100 runs/month",
+    personal: "10 runs/month",
+    professional: "100 runs/month",
     business: "500 runs/month",
     enterprise: "Unlimited runs",
   },
   {
     feature: "Teams",
-    free: "1 team",
-    basic: "5 teams",
+    personal: "1 team",
+    professional: "5 teams",
     business: "Unlimited teams",
     enterprise: "Unlimited teams",
   },
@@ -111,8 +119,8 @@ const comparisonPlans = [
     <div class="space-y-6 text-center">
       <h2 class="font-serif text-6xl font-bold">Pricing</h2>
       <p class="text-secondary-foreground">
-        Choose the plan that fits your needs. All plans come with a 14-day free
-        trial. Cancel anytime.
+        Choose the plan that fits your needs. All plans come with a 14-day
+        personal trial. Cancel anytime.
       </p>
     </div>
     <div class="px-8 py-4">
@@ -147,7 +155,7 @@ const comparisonPlans = [
                 <li
                   v-for="feature in card.overview"
                   :key="feature"
-                  class="flex items-start gap-3 leading-none"
+                  class="flex items-start gap-3"
                 >
                   <icon-lucide-circle-check />
                   <p class="leading-loose first-line:leading-none">
@@ -183,10 +191,10 @@ const comparisonPlans = [
               {{ plan.feature }}
             </TableCell>
             <TableCell>
-              {{ plan.free }}
+              {{ plan.personal }}
             </TableCell>
             <TableCell>
-              {{ plan.basic }}
+              {{ plan.professional }}
             </TableCell>
             <TableCell>
               {{ plan.enterprise }}

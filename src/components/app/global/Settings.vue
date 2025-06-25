@@ -284,7 +284,7 @@ const navigations = [
                             :is-active="item.id === activeTab"
                             class="justify-start"
                           >
-                            <component :is="item.icon" />
+                            <Component :is="item.icon" />
                             <span>{{ item.name }}</span>
                           </SidebarMenuButton>
                         </TabsTrigger>

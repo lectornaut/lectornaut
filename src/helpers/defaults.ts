@@ -9,6 +9,7 @@ import IconSystem from "~icons/lucide/monitor"
 import IconDark from "~icons/lucide/moon"
 import IconSparkle from "~icons/lucide/sparkle"
 import IconLight from "~icons/lucide/sun"
+import IconProduct1 from "~icons/mingcute/asterisk-line"
 
 export const languages = [
   {
@@ -120,115 +121,120 @@ export const menu = [
 export const productsMenu = [
   {
     title: "Hyperjump",
+    description: "The core platform for building AI agents",
     url: "https://hyperjump.io",
     id: "hyperjump",
-    icon: IconHome,
-    color: "bg-teal-500/20 text-teal-500/80",
+    icon: IconProduct1,
+    style: { text: "text-teal-500/80", bg: "bg-teal-500/20" },
   },
   {
     title: "Hyperjump AI",
+    description: "AI capabilities for your agents",
     url: "https://hyperjump.ai",
     id: "hyperjump-ai",
     icon: IconBot,
-    color: "bg-purple-500/20 text-purple-500/80",
+    style: { text: "text-purple-500/80", bg: "bg-purple-500/20" },
+  },
+  {
+    title: "Hyperjump CLI",
+    description: "Command line interface for Hyperjump",
+    url: "https://hyperjump.io/cli",
+    id: "hyperjump-cli",
+    icon: IconComponent,
+    style: { text: "text-indigo-500/80", bg: "bg-indigo-500/20" },
+  },
+  {
+    title: "Hyperjump SDK",
+    description: "Software Development Kit for Hyperjump",
+    url: "https://hyperjump.io/sdk",
+    id: "hyperjump-sdk",
+    icon: IconBadgeCheck,
+    style: { text: "text-sky-500/80", bg: "bg-sky-500/20" },
   },
 ]
 
 export const solutionsMenu = [
   {
-    title: "Personal",
+    title: "For Personal",
     items: [
       {
         title: "Hyperjump CLI",
+        description: "Command line interface for Hyperjump",
         url: "https://hyperjump.io/cli",
         id: "hyperjump-cli",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-blue-500/80", bg: "bg-blue-500/20" },
       },
       {
         title: "Hyperjump SDK",
+        description: "Software Development Kit for Hyperjump",
         url: "https://hyperjump.io/sdk",
         id: "hyperjump-sdk",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-blue-500/80", bg: "bg-blue-500/20" },
       },
     ],
   },
   {
-    title: "Basic",
+    title: "For Professional",
     items: [
       {
         title: "Hyperjump Teams",
+        description: "Collaborate with teams on Hyperjump",
         url: "https://hyperjump.io/teams",
         id: "hyperjump-teams",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
-      },
-      {
-        title: "Hyperjump Tasks",
-        url: "https://hyperjump.io/tasks",
-        id: "hyperjump-tasks",
-        icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-emerald-500/80", bg: "bg-emerald-500/20" },
       },
       {
         title: "Hyperjump Runs",
+        description: "Monitor and manage runs on Hyperjump",
         url: "https://hyperjump.io/runs",
         id: "hyperjump-runs",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-emerald-500/80", bg: "bg-emerald-500/20" },
       },
     ],
   },
   {
-    title: "Business",
+    title: "For Business",
     items: [
       {
         title: "Hyperjump Agents",
+        description: "Build and deploy AI agents",
         url: "https://hyperjump.io/agents",
         id: "hyperjump-agents",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-purple-500/80", bg: "bg-purple-500/20" },
       },
       {
         title: "Hyperjump AI",
+        description: "AI capabilities for your agents",
         url: "https://hyperjump.io/ai",
         id: "hyperjump-ai",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
-      },
-      {
-        title: "Hyperjump Platform",
-        url: "https://hyperjump.io/platform",
-        id: "hyperjump-platform",
-        icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-purple-500/80", bg: "bg-purple-500/20" },
       },
     ],
   },
   {
-    title: "Enterprise",
+    title: "For Enterprise",
     items: [
       {
         title: "Hyperjump Enterprise",
+        description: "Enterprise solutions for Hyperjump",
         url: "https://hyperjump.io/enterprise",
         id: "hyperjump-enterprise",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-pink-500/80", bg: "bg-pink-500/20" },
       },
       {
         title: "Hyperjump Cloud",
+        description: "Cloud solutions for Hyperjump",
         url: "https://hyperjump.io/cloud",
         id: "hyperjump-cloud",
         icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
-      },
-      {
-        title: "Hyperjump On-Premise",
-        url: "https://hyperjump.io/on-premise",
-        id: "hyperjump-on-premise",
-        icon: IconComponent,
-        color: "bg-indigo-500/20 text-indigo-500/80",
+        style: { text: "text-pink-500/80", bg: "bg-pink-500/20" },
       },
     ],
   },

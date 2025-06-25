@@ -81,7 +81,7 @@ const selectedValues = computed(
               "
             >
               <Checkbox :model-value="selectedValues.has(option.value)" />
-              <component :is="option.icon" v-if="option.icon" />
+              <Component :is="option.icon" v-if="option.icon" />
               {{ option.label }}
               <kbd
                 v-if="facets?.get(option.value)"

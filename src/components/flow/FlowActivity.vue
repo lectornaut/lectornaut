@@ -275,7 +275,7 @@ const range = ref({
                       'ring-background bg-background flex size-5 items-center justify-center rounded-full ring-6',
                     ]"
                   >
-                    <component :is="event.icon" />
+                    <Component :is="event.icon" />
                   </span>
                 </div>
                 <div class="flex min-w-0 flex-1 justify-between space-x-4">

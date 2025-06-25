@@ -62,7 +62,7 @@ const { onDragStart } = useDragAndDrop()
                     <SidebarMenuItem class="grid gap-2">
                       <CollapsibleTrigger as-child>
                         <SidebarMenuButton :class="[list.bg, list.color]">
-                          <component :is="list.icon" />
+                          <Component :is="list.icon" />
                           <span class="truncate font-medium">
                             {{ list.name }}
                           </span>

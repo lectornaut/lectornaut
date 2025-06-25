@@ -89,7 +89,7 @@ const messages = [
                       as-child
                     >
                       <RouterLink :to="item.url">
-                        <component
+                        <Component
                           :is="item.icon"
                           class="size-8 rounded-full p-2"
                           :class="item.color"

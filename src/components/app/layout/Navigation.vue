@@ -62,7 +62,7 @@ const navigation = [
               as-child
             >
               <RouterLink :to="item.url">
-                <component :is="item.icon" />
+                <Component :is="item.icon" />
                 {{ item.title }}
               </RouterLink>
             </SidebarMenuButton>

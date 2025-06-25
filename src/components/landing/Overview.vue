@@ -1,6 +1,6 @@
 <template>
   <ul class="flex flex-col gap-5">
-    <li class="flex items-start gap-3 leading-none">
+    <li class="flex items-start gap-3">
       <icon-lucide-disc />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Agents </span>
@@ -10,7 +10,7 @@
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3 leading-none">
+    <li class="flex items-start gap-3">
       <icon-lucide-pencil />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Create </span>
@@ -20,7 +20,7 @@
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3 leading-none">
+    <li class="flex items-start gap-3">
       <icon-lucide-message-circle-more />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Communicate </span>
@@ -30,7 +30,7 @@
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3 leading-none">
+    <li class="flex items-start gap-3">
       <icon-lucide-leaf />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
@@ -63,7 +63,7 @@
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3 leading-none">
+    <li class="flex items-start gap-3">
       <icon-lucide-heart />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">

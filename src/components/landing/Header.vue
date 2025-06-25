@@ -48,13 +48,13 @@ const isUserLoaded = useIsCurrentUserLoaded()
       </div>
       <div class="flex grow items-center justify-center gap-2">
         <NavigationMenu>
-          <NavigationMenuList class="gap-1">
+          <NavigationMenuList class="gap-0.5">
             <NavigationMenuItem>
               <NavigationMenuTrigger class="bg-transparent">
                 Products
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div class="grid w-lg grid-cols-4 gap-2">
+                <div class="grid w-lg grid-cols-2 gap-2">
                   <NavigationMenuLink
                     v-for="(item, index) in productsMenu"
                     :key="index"
@@ -62,17 +62,30 @@ const isUserLoaded = useIsCurrentUserLoaded()
                   >
                     <Button
                       variant="ghost"
-                      size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
+                      class="h-auto items-start gap-0 !p-0"
                       as-child
                     >
                       <RouterLink :to="item.url">
-                        <component
-                          :is="item.icon"
-                          class="size-8 rounded-full p-2"
-                          :class="item.color"
-                        />
-                        {{ item.title }}
+                        <div
+                          class="flex h-32 w-full items-center justify-center rounded-t-md p-4"
+                          :class="item.style.bg"
+                        >
+                          <Component
+                            :is="item.icon"
+                            class="size-8"
+                            :class="item.style.text"
+                          />
+                        </div>
+                        <div
+                          class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                        >
+                          <span class="">
+                            {{ item.title }}
+                          </span>
+                          <span class="text-muted-foreground text-xs">
+                            {{ item.description }}
+                          </span>
+                        </div>
                       </RouterLink>
                     </Button>
                   </NavigationMenuLink>
@@ -84,33 +97,53 @@ const isUserLoaded = useIsCurrentUserLoaded()
                 Solutions
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div
-                  v-for="(solution, idx) in solutionsMenu"
-                  :key="idx"
-                  class="grid w-lg grid-cols-4 gap-2"
-                >
-                  {{ solution.title }}
-                  <NavigationMenuLink
-                    v-for="(item, index) in solution.items"
-                    :key="index"
-                    as-child
+                <div class="grid w-lg grid-cols-1 gap-2">
+                  <div
+                    v-for="(solution, idx) in solutionsMenu"
+                    :key="idx"
+                    class="flex flex-col gap-2"
                   >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
-                      as-child
+                    <span
+                      class="text-secondary-foreground px-2 pt-2 text-xs font-semibold"
                     >
-                      <RouterLink :to="item.url">
-                        <component
-                          :is="item.icon"
-                          class="size-8 rounded-full p-2"
-                          :class="item.color"
-                        />
-                        {{ item.title }}
-                      </RouterLink>
-                    </Button>
-                  </NavigationMenuLink>
+                      {{ solution.title }}
+                    </span>
+                    <div class="grid grid-cols-2 gap-2">
+                      <NavigationMenuLink
+                        v-for="(item, index) in solution.items"
+                        :key="index"
+                        as-child
+                      >
+                        <Button
+                          variant="ghost"
+                          class="h-auto items-start gap-0 !p-0"
+                          as-child
+                        >
+                          <RouterLink :to="item.url">
+                            <div
+                              class="flex w-full items-center justify-start rounded-t-md p-4"
+                              :class="item.style.bg"
+                            >
+                              <Component
+                                :is="item.icon"
+                                :class="item.style.text"
+                              />
+                            </div>
+                            <div
+                              class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                            >
+                              <span class="">
+                                {{ item.title }}
+                              </span>
+                              <span class="text-muted-foreground text-xs">
+                                {{ item.description }}
+                              </span>
+                            </div>
+                          </RouterLink>
+                        </Button>
+                      </NavigationMenuLink>
+                    </div>
+                  </div>
                 </div>
               </NavigationMenuContent>
             </NavigationMenuItem>
@@ -125,16 +158,14 @@ const isUserLoaded = useIsCurrentUserLoaded()
                     :key="index"
                     as-child
                   >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
-                      as-child
-                    >
-                      <RouterLink :to="item.url">
-                        <component
+                    <Button variant="ghost" as-child>
+                      <RouterLink
+                        :to="item.url"
+                        class="h-auto items-start gap-2"
+                      >
+                        <Component
                           :is="item.icon"
-                          class="size-8 rounded-full p-2"
+                          class="h-32 w-full rounded-md p-2"
                           :class="item.color"
                         />
                         {{ item.title }}
@@ -155,16 +186,14 @@ const isUserLoaded = useIsCurrentUserLoaded()
                     :key="index"
                     as-child
                   >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="flex aspect-square size-full flex-col items-center justify-center gap-2 rounded-sm p-2"
-                      as-child
-                    >
-                      <RouterLink :to="item.url">
-                        <component
+                    <Button variant="ghost" as-child>
+                      <RouterLink
+                        :to="item.url"
+                        class="h-auto items-start gap-2"
+                      >
+                        <Component
                           :is="item.icon"
-                          class="size-8 rounded-full p-2"
+                          class="h-32 w-full rounded-md p-2"
                           :class="item.color"
                         />
                         {{ item.title }}

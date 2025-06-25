@@ -45,7 +45,7 @@ useHead({
                   class="flex grow flex-col justify-between gap-4"
                 >
                   <ul class="flex flex-col gap-2.5">
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -53,7 +53,7 @@ useHead({
                         Unlimited notes, upto 10MB per note.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -61,7 +61,7 @@ useHead({
                         Basic AI model and features.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -99,7 +99,7 @@ useHead({
                   class="flex grow flex-col justify-between gap-4"
                 >
                   <ul class="flex flex-col gap-2.5">
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -107,7 +107,7 @@ useHead({
                         Unlimited notes.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -115,7 +115,7 @@ useHead({
                         Smarter AI with more features.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -163,7 +163,7 @@ useHead({
                   class="flex grow flex-col justify-between gap-4"
                 >
                   <ul class="flex flex-col gap-2.5">
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -171,7 +171,7 @@ useHead({
                         Unlimited notes, upto 100MB per note.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -179,7 +179,7 @@ useHead({
                         Smarter AI with more features.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -187,7 +187,7 @@ useHead({
                         1GB storage.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -222,7 +222,7 @@ useHead({
                   class="flex grow flex-col justify-between gap-4"
                 >
                   <ul class="flex flex-col gap-2.5">
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -230,7 +230,7 @@ useHead({
                         Unlimited notes.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -238,7 +238,7 @@ useHead({
                         Smarter AI with more features.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
@@ -246,7 +246,7 @@ useHead({
                         Limitless storage for images and files.
                       </p>
                     </li>
-                    <li class="flex items-start gap-2 leading-none">
+                    <li class="flex items-start gap-2">
                       <icon-lucide-check />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
