@@ -1,40 +1,52 @@
 <script setup lang="ts">
-// import { ResizablePanel } from "@/components/ui/resizable"
-// import emitter from "@/modules/mitt"
+import { ResizablePanel } from "@/components/ui/resizable"
+import emitter from "@/modules/mitt"
 
-// const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
-// const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
+const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
+const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
 
-// emitter.on("Sidebar.Left.Toggle", () => {
-//   console.log("Toggling left panel", leftPanel)
-//   leftPanel?.value?.isCollapsed
-//     ? leftPanel?.value?.expand()
-//     : leftPanel?.value?.collapse()
-// })
+emitter.on("Sidebar.Left.Toggle", () => {
+  console.log("Toggling left panel", leftPanel.value)
+  if (leftPanel.value?.splitterPanel?.isCollapsed) {
+    leftPanel.value?.splitterPanel?.expand()
+  } else {
+    leftPanel.value?.splitterPanel?.collapse()
+  }
+})
 
-// emitter.on("Sidebar.Right.Toggle", () => {
-//   console.log("Toggling right panel", rightPanel)
-//   rightPanel?.value?.isCollapsed
-//     ? rightPanel?.value?.expand()
-//     : rightPanel?.value?.collapse()
-// })
+emitter.on("Sidebar.Right.Toggle", () => {
+  console.log("Toggling right panel", rightPanel.value)
+  if (rightPanel.value?.splitterPanel?.isCollapsed) {
+    rightPanel.value?.splitterPanel?.expand()
+  } else {
+    rightPanel.value?.splitterPanel?.collapse()
+  }
+})
 </script>
 
 <template>
-  <!-- <button
+  <button
     @click="
-      leftPanel?.isCollapsed ? leftPanel?.expand() : leftPanel?.collapse()
+      leftPanel?.splitterPanel?.isCollapsed
+        ? leftPanel?.splitterPanel?.expand()
+        : leftPanel?.splitterPanel?.collapse()
     "
   >
-    {{ leftPanel?.isCollapsed ? "Expand Left" : "Collapse Left" }}
+    {{
+      leftPanel?.splitterPanel?.isCollapsed ? "Expand Left" : "Collapse Left"
+    }}
   </button>
   <button
     @click="
-      rightPanel?.isCollapsed ? rightPanel?.expand() : rightPanel?.collapse()
+      rightPanel?.splitterPanel?.isCollapsed
+        ? rightPanel?.splitterPanel?.expand()
+        : rightPanel?.splitterPanel?.collapse()
     "
   >
-    {{ rightPanel?.isCollapsed ? "Expand Right" : "Collapse Right" }}
-  </button> -->
+    {{
+      rightPanel?.splitterPanel?.isCollapsed ? "Expand Right" : "Collapse Right"
+    }}
+  </button>
   <main class="flex grow overflow-auto overscroll-none">
     <MainSidebar />
     <Separator orientation="vertical" />

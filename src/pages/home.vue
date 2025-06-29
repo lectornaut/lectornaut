@@ -319,10 +319,13 @@ const range = ref({
                   'MediumPurple',
                 ]"
                 :y-formatter="
-                  (tick, i) => {
-                    return typeof tick === 'number'
-                      ? `$ ${new Intl.NumberFormat('us').format(tick).toString()}`
-                      : ''
+                  (tick: number | Date) => {
+                    if (typeof tick === 'number') {
+                      return `$ ${new Intl.NumberFormat('us').format(tick).toString()}`
+                    } else if (tick instanceof Date) {
+                      return tick.toLocaleDateString('en-US')
+                    }
+                    return ''
                   }
                 "
                 :show-tooltip="false"

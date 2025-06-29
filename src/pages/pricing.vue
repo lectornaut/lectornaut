@@ -84,6 +84,13 @@ const pricingPlans = [
 
 const comparisonPlans = [
   {
+    feature: "Agents",
+    personal: "5 agents",
+    professional: "10 agents",
+    business: "Unlimited agents",
+    enterprise: "Unlimited agents",
+  },
+  {
     feature: "Members",
     personal: "1 member",
     professional: "1 member",
@@ -91,10 +98,17 @@ const comparisonPlans = [
     enterprise: "Unlimited members",
   },
   {
+    feature: "Teams",
+    personal: "2 teams",
+    professional: "5 teams",
+    business: "Unlimited teams",
+    enterprise: "Unlimited teams",
+  },
+  {
     feature: "Storage",
-    personal: "10 MB",
-    professional: "100 MB",
-    business: "1 GB",
+    personal: "10 MB/month",
+    professional: "100 MB/month",
+    business: "1 GB/month",
     enterprise: "Unlimited storage",
   },
   {
@@ -105,11 +119,74 @@ const comparisonPlans = [
     enterprise: "Unlimited runs",
   },
   {
-    feature: "Teams",
-    personal: "1 team",
-    professional: "5 teams",
-    business: "Unlimited teams",
-    enterprise: "Unlimited teams",
+    feature: "Authentication",
+    personal: "OAuth and SFA",
+    professional: "OAuth, SFA, and MFA",
+    business: "OAuth, SFA, MFA, and SSO",
+    enterprise: "OAuth, SFA, MFA, SSO, and OIDC",
+  },
+  {
+    feature: "Support",
+    personal: "Community support",
+    professional: "Email support",
+    business: "Priority support",
+    enterprise: "Dedicated support",
+  },
+  {
+    feature: "Integrations",
+    personal: "No",
+    professional: "Yes",
+    business: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "API Access",
+    personal: "No",
+    professional: "Yes",
+    business: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Account Manager",
+    personal: "No",
+    professional: "No",
+    business: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Analytics and Reporting",
+    personal: "No",
+    professional: "No",
+    business: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Audit Log",
+    personal: "No",
+    professional: "No",
+    business: "No",
+    enterprise: "Yes",
+  },
+  {
+    feature: "SCIM Provisioning",
+    personal: "No",
+    professional: "No",
+    business: "No",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Compliance and Audits",
+    personal: "No",
+    professional: "No",
+    business: "No",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Uptime SLA",
+    personal: "No",
+    professional: "No",
+    business: "No",
+    enterprise: "Yes",
   },
 ]
 </script>
@@ -180,7 +257,11 @@ const comparisonPlans = [
         <TableHeader>
           <TableRow>
             <TableHead> Feature </TableHead>
-            <TableHead v-for="plan in pricingPlans" :key="plan.id">
+            <TableHead
+              v-for="plan in pricingPlans"
+              :key="plan.id"
+              class="text-lg font-semibold tracking-tight"
+            >
               {{ plan.title }}
             </TableHead>
           </TableRow>
@@ -197,10 +278,10 @@ const comparisonPlans = [
               {{ plan.professional }}
             </TableCell>
             <TableCell>
-              {{ plan.enterprise }}
+              {{ plan.business }}
             </TableCell>
             <TableCell>
-              {{ plan.business }}
+              {{ plan.enterprise }}
             </TableCell>
           </TableRow>
         </TableBody>

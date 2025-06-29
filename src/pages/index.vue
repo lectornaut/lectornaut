@@ -12,14 +12,14 @@ useHead({
 
 <template>
   <div class="mx-auto my-32 grid max-w-4xl gap-32">
-    <Tabs default-value="personal" class="grid w-full">
+    <Tabs default-value="you" class="grid w-full">
       <TabsList class="mx-auto">
-        <TabsTrigger value="personal"> Personal </TabsTrigger>
-        <TabsTrigger value="team"> Team </TabsTrigger>
+        <TabsTrigger value="you"> For you </TabsTrigger>
+        <TabsTrigger value="team"> For team </TabsTrigger>
       </TabsList>
       <HeroText />
       <TabsContent
-        value="personal"
+        value="you"
         class="animate-in fade-in transition"
         tabindex="-1"
       >
@@ -35,7 +35,7 @@ useHead({
               >
                 <AlertTitle class="flex justify-between gap-2">
                   <div class="flex items-center gap-1.5 font-semibold">
-                    <span>Free</span>
+                    <span>Personal</span>
                   </div>
                   <Badge variant="secondary">
                     <span class="text-primary"> Free for everyone </span>
@@ -82,7 +82,7 @@ useHead({
               >
                 <AlertTitle class="flex justify-between gap-2">
                   <div class="flex items-center gap-1.5 font-semibold">
-                    <span>Basic</span>
+                    <span>Professional</span>
                     <Badge>
                       <icon-mingcute-ai-fill />
                       AI

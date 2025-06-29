@@ -62,19 +62,16 @@ const isUserLoaded = useIsCurrentUserLoaded()
                   >
                     <Button
                       variant="ghost"
-                      class="h-auto items-start gap-0 !p-0"
+                      class="h-full items-start gap-0 !p-0"
+                      :class="item.style.grid"
                       as-child
                     >
                       <RouterLink :to="item.url">
                         <div
-                          class="flex h-32 w-full items-center justify-center rounded-t-md p-4"
+                          class="flex size-full items-start justify-start rounded-t-md p-4"
                           :class="item.style.bg"
                         >
-                          <Component
-                            :is="item.icon"
-                            class="size-8"
-                            :class="item.style.text"
-                          />
+                          <Component :is="item.icon" :class="item.style.text" />
                         </div>
                         <div
                           class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
@@ -116,12 +113,13 @@ const isUserLoaded = useIsCurrentUserLoaded()
                       >
                         <Button
                           variant="ghost"
-                          class="h-auto items-start gap-0 !p-0"
+                          class="h-full items-start gap-0 !p-0"
+                          :class="item.style.grid"
                           as-child
                         >
                           <RouterLink :to="item.url">
                             <div
-                              class="flex w-full items-center justify-start rounded-t-md p-4"
+                              class="flex size-full items-start justify-start rounded-t-md p-4"
                               :class="item.style.bg"
                             >
                               <Component
@@ -152,23 +150,35 @@ const isUserLoaded = useIsCurrentUserLoaded()
                 Resources
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div class="grid w-lg grid-cols-4 gap-2">
+                <div class="grid w-lg grid-cols-2 gap-2">
                   <NavigationMenuLink
                     v-for="(item, index) in resourcesMenu"
                     :key="index"
                     as-child
                   >
-                    <Button variant="ghost" as-child>
-                      <RouterLink
-                        :to="item.url"
-                        class="h-auto items-start gap-2"
-                      >
-                        <Component
-                          :is="item.icon"
-                          class="h-32 w-full rounded-md p-2"
-                          :class="item.color"
-                        />
-                        {{ item.title }}
+                    <Button
+                      variant="ghost"
+                      class="h-full items-start gap-0 !p-0"
+                      :class="item.style.grid"
+                      as-child
+                    >
+                      <RouterLink :to="item.url">
+                        <div
+                          class="flex size-full items-start justify-start rounded-t-md p-4"
+                          :class="item.style.bg"
+                        >
+                          <Component :is="item.icon" :class="item.style.text" />
+                        </div>
+                        <div
+                          class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                        >
+                          <span class="">
+                            {{ item.title }}
+                          </span>
+                          <span class="text-muted-foreground text-xs">
+                            {{ item.description }}
+                          </span>
+                        </div>
                       </RouterLink>
                     </Button>
                   </NavigationMenuLink>
@@ -180,23 +190,35 @@ const isUserLoaded = useIsCurrentUserLoaded()
                 Company
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div class="grid w-lg grid-cols-4 gap-2">
+                <div class="grid w-lg grid-cols-3 gap-2">
                   <NavigationMenuLink
                     v-for="(item, index) in companyMenu"
                     :key="index"
                     as-child
                   >
-                    <Button variant="ghost" as-child>
-                      <RouterLink
-                        :to="item.url"
-                        class="h-auto items-start gap-2"
-                      >
-                        <Component
-                          :is="item.icon"
-                          class="h-32 w-full rounded-md p-2"
-                          :class="item.color"
-                        />
-                        {{ item.title }}
+                    <Button
+                      variant="ghost"
+                      class="h-full items-start gap-0 !p-0"
+                      :class="item.style.grid"
+                      as-child
+                    >
+                      <RouterLink :to="item.url">
+                        <div
+                          class="flex size-full items-start justify-start rounded-t-md p-4"
+                          :class="item.style.bg"
+                        >
+                          <Component :is="item.icon" :class="item.style.text" />
+                        </div>
+                        <div
+                          class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                        >
+                          <span class="">
+                            {{ item.title }}
+                          </span>
+                          <span class="text-muted-foreground text-xs">
+                            {{ item.description }}
+                          </span>
+                        </div>
                       </RouterLink>
                     </Button>
                   </NavigationMenuLink>

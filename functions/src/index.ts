@@ -1,6 +1,6 @@
 import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
 import { googleAI } from "@genkit-ai/googleai"
-import { hasClaim, onCallGenkit } from "firebase-functions/https"
+import { onCallGenkit } from "firebase-functions/https"
 import { defineSecret } from "firebase-functions/params"
 import { genkit, z } from "genkit"
 
@@ -38,7 +38,7 @@ const generatePoemStreamingFlow = ai.defineFlow(
 export const generateFlow = onCallGenkit(
   {
     secrets: [apiKey],
-    authPolicy: hasClaim("email_verified"),
+    authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },
   generatePoemStreamingFlow
