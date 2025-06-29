@@ -25,30 +25,7 @@ onBeforeUnmount(() => {
   }
 })
 
-const messages = [
-  { role: "agent", content: "Hi, how can I help you today?" },
-  { role: "user", content: "Hey, I'm having trouble with my account." },
-  { role: "agent", content: "What seems to be the problem?" },
-  { role: "user", content: "I can't log in." },
-  { role: "agent", content: "Let me check that for you." },
-  { role: "user", content: "Thanks!" },
-  { role: "agent", content: "You're welcome! Is there anything else?" },
-  { role: "user", content: "Actually, I have another question." },
-  { role: "agent", content: "Sure, what's your question?" },
-  { role: "user", content: "Can you help me with my billing?" },
-  { role: "agent", content: "Of course! What do you need help with?" },
-  { role: "user", content: "I need to update my payment method." },
-  { role: "agent", content: "No problem, I can assist you with that." },
-  { role: "user", content: "Great, thank you!" },
-  {
-    role: "agent",
-    content: "You're welcome! Let me know if you need anything else.",
-  },
-  { role: "user", content: "I will, thanks!" },
-  { role: "agent", content: "Have a great day!" },
-  { role: "user", content: "You too!" },
-  { role: "agent", content: "Goodbye!" },
-]
+const isDocked = ref(false)
 </script>
 
 <template>
@@ -117,54 +94,62 @@ const messages = [
       >
         <CommandK />
         <Sheet>
-          <SheetTrigger as-child>
-            <Button
-              id="tour-ai-assistant"
-              variant="outline"
-              class="shadow-none"
-            >
-              <icon-mingcute-ai-fill />
-              <RadiantText :duration="5" :radiant-width="20">
-                Talk to AI
-              </RadiantText>
-            </Button>
-          </SheetTrigger>
-          <SheetContent class="m-3 h-auto gap-0 rounded-md border">
-            <SheetHeader>
-              <SheetTitle>Hype AI</SheetTitle>
-              <SheetDescription>
-                Chat with our AI assistant to get help with your tasks.
-              </SheetDescription>
-            </SheetHeader>
-            <Separator />
-            <OverlayScrollbarsWrapper>
-              <div class="flex grow flex-col overflow-auto overscroll-none">
-                <div class="grid grid-cols-1 gap-4 p-4">
-                  <div
-                    v-for="(message, index) in messages"
-                    :key="index"
-                    :class="[
-                      'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground ml-auto rounded-br'
-                        : 'bg-muted rounded-bl',
-                    ]"
+          <TooltipProvider>
+            <Tooltip>
+              <SheetTrigger as-child>
+                <TooltipTrigger as-child>
+                  <Button
+                    id="tour-ai-assistant"
+                    variant="outline"
+                    class="shadow-none"
                   >
-                    {{ message.content }}
+                    <icon-mingcute-ai-fill />
+                    <RadiantText :duration="5" :radiant-width="20">
+                      Talk to AI
+                    </RadiantText>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent class="px-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    @click="isDocked = !isDocked"
+                  >
+                    <icon-lucide-pin v-if="!isDocked" />
+                    <icon-lucide-pin-off v-else />
+                    {{ isDocked ? "Unpin" : "Pin" }}
+                  </Button>
+                </TooltipContent>
+              </SheetTrigger>
+              <Teleport
+                v-if="isDocked"
+                defer
+                to="#right-dock"
+                :disabled="!isDocked"
+              >
+                <AiChat class="shadow-border z-10 shadow-[-1px_0px_0px]" />
+              </Teleport>
+              <SheetContent class="m-3 h-auto gap-0 rounded-md border">
+                <SheetHeader>
+                  <SheetTitle> Hype AI </SheetTitle>
+                  <SheetDescription>
+                    Chat with our AI assistant to get help with your tasks.
+                  </SheetDescription>
+                </SheetHeader>
+                <Separator />
+                <AiChat />
+                <Separator />
+                <SheetFooter>
+                  <div class="flex items-center justify-between gap-2">
+                    <Input placeholder="Type a message..." />
+                    <Button size="icon">
+                      <icon-lucide-send-horizontal />
+                    </Button>
                   </div>
-                </div>
-              </div>
-            </OverlayScrollbarsWrapper>
-            <Separator />
-            <SheetFooter>
-              <div class="flex items-center justify-between gap-2">
-                <Input placeholder="Type a message..." />
-                <Button size="icon">
-                  <icon-lucide-send-horizontal />
-                </Button>
-              </div>
-            </SheetFooter>
-          </SheetContent>
+                </SheetFooter>
+              </SheetContent>
+            </Tooltip>
+          </TooltipProvider>
         </Sheet>
       </div>
     </div>

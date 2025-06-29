@@ -6,7 +6,6 @@ const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
 const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
 
 emitter.on("Sidebar.Left.Toggle", () => {
-  console.log("Toggling left panel", leftPanel.value)
   if (leftPanel.value?.splitterPanel?.isCollapsed) {
     leftPanel.value?.splitterPanel?.expand()
   } else {
@@ -15,7 +14,6 @@ emitter.on("Sidebar.Left.Toggle", () => {
 })
 
 emitter.on("Sidebar.Right.Toggle", () => {
-  console.log("Toggling right panel", rightPanel.value)
   if (rightPanel.value?.splitterPanel?.isCollapsed) {
     rightPanel.value?.splitterPanel?.expand()
   } else {
@@ -25,31 +23,9 @@ emitter.on("Sidebar.Right.Toggle", () => {
 </script>
 
 <template>
-  <button
-    @click="
-      leftPanel?.splitterPanel?.isCollapsed
-        ? leftPanel?.splitterPanel?.expand()
-        : leftPanel?.splitterPanel?.collapse()
-    "
-  >
-    {{
-      leftPanel?.splitterPanel?.isCollapsed ? "Expand Left" : "Collapse Left"
-    }}
-  </button>
-  <button
-    @click="
-      rightPanel?.splitterPanel?.isCollapsed
-        ? rightPanel?.splitterPanel?.expand()
-        : rightPanel?.splitterPanel?.collapse()
-    "
-  >
-    {{
-      rightPanel?.splitterPanel?.isCollapsed ? "Expand Right" : "Collapse Right"
-    }}
-  </button>
   <main class="flex grow overflow-auto overscroll-none">
-    <MainSidebar />
-    <Separator orientation="vertical" />
+    <MainSidebar class="shadow-border z-10 shadow-[1px_0px_0px]" />
+    <div id="left-dock"></div>
     <ResizablePanelGroup direction="horizontal" auto-save-id="app-layout">
       <ResizablePanel
         ref="leftPanel"
@@ -90,5 +66,6 @@ emitter.on("Sidebar.Right.Toggle", () => {
         <RightSidebar />
       </ResizablePanel>
     </ResizablePanelGroup>
+    <div id="right-dock"></div>
   </main>
 </template>
