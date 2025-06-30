@@ -365,3 +365,66 @@ export const companyMenu = [
     style: { text: "text-neutral-500/80", bg: "bg-neutral-500/20", grid: "" },
   },
 ]
+
+export const footerSections = [
+  {
+    title: "Features",
+    links: [
+      { title: "Agents", href: "#" },
+      { title: "Tasks", href: "#" },
+      { title: "Runs", href: "#" },
+      { title: "Teams", href: "#" },
+      { title: "Builder", href: "#" },
+      { title: "Assistant", href: "#" },
+    ],
+  },
+  {
+    title: "Products",
+    links: [
+      { title: "Pricing", href: "#" },
+      { title: "Download", href: "#" },
+      { title: "Changelog", href: "#" },
+      { title: "Status", href: "#" },
+    ],
+  },
+  {
+    title: "Solutions",
+    links: [
+      { title: "Personal", href: "#" },
+      { title: "Professional", href: "#" },
+      { title: "Business", href: "#" },
+      { title: "Enterprise", href: "#" },
+      { title: "Non-Profit", href: "#" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { title: "About", href: "#" },
+      { title: "Careers", href: "#" },
+      { title: "Contact", href: "#" },
+      { title: "Customers", href: "#" },
+      { title: "Community", href: "#" },
+      { title: "Brand", href: "#" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { title: "Developers", href: "#" },
+      { title: "Integrations", href: "#" },
+      { title: "Documentation", href: "#" },
+      { title: "Blog", href: "#" },
+      { title: "Security", href: "#" },
+      { title: "Help Center", href: "#" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { title: "Terms", href: "#" },
+      { title: "Privacy", href: "#" },
+      { title: "DPA", href: "#" },
+    ],
+  },
+]

@@ -1,49 +1,40 @@
 <script setup lang="ts">
-import hotkeys from "hotkeys-js"
-import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
-
-const { t } = useI18n()
-const router = useRouter()
-const user = useCurrentUser()
-const isUserLoaded = useIsCurrentUserLoaded()
-
-hotkeys("enter", (event) => {
-  console.log("Enter key pressed")
-  event.preventDefault()
-  if (user.value) {
-    router.push("/home")
-  } else {
-    router.push("/enter")
-  }
-})
+import { footerSections } from "@/helpers/defaults"
 </script>
 
 <template>
-  <div
-    class="before:from-background fixed inset-x-0 bottom-0 z-20 flex flex-col items-center justify-center gap-6 p-4 before:absolute before:inset-0 before:bg-linear-to-t before:backdrop-blur-lg before:[mask:linear-gradient(transparent,_black_50%)]"
-  >
-    <div
-      class="bg-background/5 flex items-center gap-1.5 rounded-full border p-1.5 shadow-xl backdrop-blur-lg"
-    >
-      <Button v-if="!isUserLoaded" variant="ghost" size="icon" disabled>
-        <icon-lucide-loader class="animate-spin" />
-      </Button>
-      <Button v-else-if="user" as-child>
-        <RouterLink to="/home">
-          Enter
-          <icon-lucide-corner-down-left />
-        </RouterLink>
-      </Button>
-      <EnterTrigger v-else>
-        <Button>
-          Enter
-          <icon-lucide-corner-down-left />
-        </Button>
-      </EnterTrigger>
-      <Faq />
+  <footer>
+    <div class="mx-auto my-16 max-w-6xl p-4">
+      <div
+        class="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7"
+      >
+        <div class="col-span-full xl:col-span-1">
+          <Button variant="ghost" size="icon" as-child>
+            <RouterLink to="/">
+              <icon-mingcute-apple-intelligence-line />
+            </RouterLink>
+          </Button>
+        </div>
+        <div
+          v-for="{ title, links } in footerSections"
+          :key="title"
+          class="flex flex-col gap-4"
+        >
+          <h6 class="font-semibold">{{ title }}</h6>
+          <ul class="flex flex-col gap-2">
+            <li v-for="{ title: linkTitle, href } in links" :key="linkTitle">
+              <RouterLink
+                :to="href"
+                class="text-muted-foreground hover:text-foreground"
+              >
+                {{ linkTitle }}
+              </RouterLink>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
-    <div class="mb-safe-bottom text-muted-foreground z-10 text-center">
-      {{ t("hello") }}, track expenses, set goals, and save money.
-    </div>
-  </div>
+    <Separator />
+    <FooterText class="mb-32" />
+  </footer>
 </template>

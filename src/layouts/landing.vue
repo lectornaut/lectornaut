@@ -4,8 +4,8 @@
       <Header />
       <Separator />
       <RouterView />
-      <FooterText />
       <QRCode />
+      <CTA />
       <Footer />
       <img
         src="/assets/images/shadow.png"
