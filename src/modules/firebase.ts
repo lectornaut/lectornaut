@@ -1,5 +1,6 @@
 import { getAnalytics } from "firebase/analytics"
 import { initializeApp } from "firebase/app"
+import { getFirestore } from "firebase/firestore"
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
@@ -12,7 +13,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_MEASUREMENT_ID,
 }
 
-const firebaseApp = initializeApp(firebaseConfig)
-const analytics = getAnalytics(firebaseApp)
-
-export { analytics, firebaseApp }
+export const firebaseApp = initializeApp(firebaseConfig)
+export const analytics = getAnalytics(firebaseApp)
+export const firestore = getFirestore(firebaseApp)

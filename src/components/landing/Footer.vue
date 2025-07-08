@@ -11,7 +11,7 @@ import { footerSections } from "@/helpers/defaults"
         <div class="col-span-full xl:col-span-1">
           <Button variant="ghost" size="icon" as-child>
             <RouterLink to="/">
-              <icon-mingcute-apple-intelligence-line />
+              <Logo />
             </RouterLink>
           </Button>
         </div>

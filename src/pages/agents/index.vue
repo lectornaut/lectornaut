@@ -44,7 +44,7 @@ const categories = [
 
 <template>
   <OverlayScrollbarsWrapper>
-    <div class="mx-auto grid grid-cols-1">
+    <div class="mx-auto grid w-fit grid-cols-1">
       <div class="flex max-w-6xl flex-col gap-16 p-16">
         <div class="mx-auto grid max-w-lg gap-8">
           <h1 class="text-center text-5xl font-semibold tracking-tight">

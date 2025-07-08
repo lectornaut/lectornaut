@@ -14,6 +14,7 @@ import { MotionPlugin } from "@vueuse/motion"
 import "driver.js/dist/driver.css"
 import { ReCaptchaEnterpriseProvider } from "firebase/app-check"
 import "overlayscrollbars/overlayscrollbars.css"
+import { createPinia } from "pinia"
 import "unfonts.css"
 import "vue-sonner/style.css"
 import { VueFire, VueFireAppCheck, VueFireAuth } from "vuefire"
@@ -21,7 +22,7 @@ import { VueFire, VueFireAppCheck, VueFireAuth } from "vuefire"
 const head = createHead({
   plugins: [InferSeoMetaPlugin()],
 })
-
+const pinia = createPinia()
 const app = createApp(App)
 
 app.use(VueFire, {
@@ -41,6 +42,7 @@ app.use(router)
 app.use(head)
 app.use(MotionPlugin)
 app.use(i18n)
+app.use(pinia)
 
 app.mount("#app")
 

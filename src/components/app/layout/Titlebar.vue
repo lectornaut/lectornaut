@@ -100,10 +100,10 @@ const isDocked = ref(false)
                 <TooltipTrigger as-child>
                   <Button
                     id="tour-ai-assistant"
-                    variant="outline"
+                    variant="ghost"
                     class="shadow-none"
                   >
-                    <icon-mingcute-ai-fill />
+                    <Logo />
                     <RadiantText :duration="5" :radiant-width="20">
                       Talk to AI
                     </RadiantText>

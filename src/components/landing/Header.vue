@@ -14,17 +14,17 @@ const isUserLoaded = useIsCurrentUserLoaded()
 
 <template>
   <div
-    class="fixed inset-x-0 top-0 z-20 mx-auto flex max-w-6xl items-center justify-center  p-2"
+    class="fixed inset-x-0 top-0 z-20 mx-auto flex max-w-6xl items-center justify-center p-2"
   >
     <div
-      class="bg-background/5 grid grid-cols-3 gap-2 rounded-full  p-2 backdrop-blur-lg"
+      class="bg-background/5 grid grid-cols-3 gap-2 rounded-full p-2 backdrop-blur-lg"
     >
       <div class="flex grow items-center justify-start gap-2">
         <ContextMenu>
           <ContextMenuTrigger as-child>
             <Button variant="ghost" as-child>
               <RouterLink to="/">
-                <icon-mingcute-apple-intelligence-line />
+                <Logo />
                 Hyperjump
               </RouterLink>
             </Button>

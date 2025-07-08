@@ -300,6 +300,7 @@ declare module 'vue' {
     LanguageSwitcher: typeof import('./src/components/app/global/LanguageSwitcher.vue')['default']
     LeftSidebar: typeof import('./src/components/app/sidebars/LeftSidebar.vue')['default']
     LineChart: typeof import('./src/components/ui/chart-line/LineChart.vue')['default']
+    Logo: typeof import('./src/components/app/global/Logo.vue')['default']
     MainSidebar: typeof import('./src/components/app/sidebars/MainSidebar.vue')['default']
     Members: typeof import('./src/components/app/sidebars/Members.vue')['default']
     Navigation: typeof import('./src/components/app/layout/Navigation.vue')['default']
