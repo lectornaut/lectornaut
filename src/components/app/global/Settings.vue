@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { accents, defaultAccent, languages, themes } from "@/helpers/defaults"
+import { accents, fonts, languages, sizes, themes } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
-import { store } from "@/modules/theme"
+import { accent, font, size, store } from "@/modules/theme"
 import {
   deleteUser,
   sendEmailVerification,
@@ -211,8 +211,6 @@ const getComputedProviderName = (provider: string) => {
       return "Unknown"
   }
 }
-
-const accent = useStorage("accent", defaultAccent)
 
 const navigations = [
   {
@@ -606,6 +604,58 @@ const navigations = [
                 <Separator />
                 <div class="flex items-center gap-4">
                   <div class="flex flex-col gap-1">
+                    <p class="leading-none font-medium">Font</p>
+                    <p class="text-muted-foreground flex items-center gap-2">
+                      Choose your preferred font.
+                    </p>
+                  </div>
+                  <div class="ml-auto flex gap-2">
+                    <Select v-model="font">
+                      <SelectTrigger class="h-9 gap-2">
+                        <SelectValue placeholder="Select a font" />
+                      </SelectTrigger>
+                      <SelectContent align="end">
+                        <SelectItem
+                          v-for="family in fonts"
+                          :key="family.id"
+                          :value="family.id"
+                        >
+                          <span :class="`font-${family.id}`">
+                            {{ family.name }}
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div class="flex items-center gap-4">
+                  <div class="flex flex-col gap-1">
+                    <p class="leading-none font-medium">Text</p>
+                    <p class="text-muted-foreground flex items-center gap-2">
+                      Adjust the text size for better readability.
+                    </p>
+                  </div>
+                  <div class="ml-auto flex gap-2">
+                    <Select v-model="size" class="w-40">
+                      <SelectTrigger class="h-9 gap-2">
+                        <SelectValue placeholder="Select text size" />
+                      </SelectTrigger>
+                      <SelectContent align="end">
+                        <SelectItem
+                          v-for="scale in sizes"
+                          :key="scale.id"
+                          :value="scale.id"
+                        >
+                          <span :class="`text-${scale.id}`">
+                            {{ scale.name }}
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div class="flex items-center gap-4">
+                  <div class="flex flex-col gap-1">
                     <p class="leading-none font-medium">Theme</p>
                     <p class="text-muted-foreground flex items-center gap-2">
                       Customize how Hyperjump looks on your device.
@@ -631,7 +681,7 @@ const navigations = [
                 </div>
                 <div class="flex items-center gap-4">
                   <div class="flex flex-col gap-1">
-                    <p class="leading-none font-medium">Accent color</p>
+                    <p class="leading-none font-medium">Accent</p>
                     <p class="text-muted-foreground flex items-center gap-2">
                       Choose your preferred accent color.
                     </p>

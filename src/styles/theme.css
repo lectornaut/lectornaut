@@ -1,19 +1,51 @@
 @layer base {
+  :root[data-font="sans"] {
+    --display: "Geist Variable", "sans-serif";
+  }
+
+  :root[data-font="serif"] {
+    --display: "Playfair Display Variable", "serif";
+  }
+
+  :root[data-font="mono"] {
+    --display: "Geist Mono Variable", "monospace";
+  }
+
+  :root[data-size="xs"] {
+    --size: var(--text-xs);
+  }
+
+  :root[data-size="sm"] {
+    --size: var(--text-sm);
+  }
+
+  :root[data-size="base"] {
+    --size: var(--text-base);
+  }
+
+  :root[data-size="lg"] {
+    --size: var(--text-lg);
+  }
+
+  :root[data-size="xl"] {
+    --size: var(--text-xl);
+  }
+
   :root {
     color-scheme: light;
 
     --background: var(--color-stone-50);
     --foreground: var(--color-stone-800);
-    --card: var(--color-white);
+    --card: var(--color-stone-50);
     --card-foreground: var(--color-stone-950);
-    --popover: var(--color-white);
+    --popover: var(--color-stone-50);
     --popover-foreground: var(--color-stone-800);
     --secondary: var(--color-stone-200);
     --secondary-foreground: var(--color-stone-600);
     --muted: var(--color-stone-200);
     --muted-foreground: var(--color-stone-500);
     --accent: var(--color-stone-200);
-    --accent-foreground: var(--color-black);
+    --accent-foreground: var(--color-stone-950);
     --border: var(--color-stone-200);
     --input: var(--color-stone-200);
     --sidebar: var(--color-stone-100);
@@ -336,21 +368,21 @@
   .dark {
     color-scheme: dark;
 
-    --background: var(--color-zinc-900);
+    --background: var(--color-zinc-950);
     --foreground: var(--color-zinc-200);
     --card: var(--color-zinc-950);
     --card-foreground: var(--color-zinc-50);
-    --popover: var(--color-zinc-900);
-    --popover-foreground: var(--color-zinc-100);
+    --popover: var(--color-zinc-950);
+    --popover-foreground: var(--color-zinc-200);
     --secondary: var(--color-zinc-800);
     --secondary-foreground: var(--color-zinc-400);
     --muted: var(--color-zinc-800);
     --muted-foreground: var(--color-zinc-500);
     --accent: var(--color-zinc-800);
-    --accent-foreground: var(--color-white);
+    --accent-foreground: var(--color-zinc-50);
     --border: var(--color-zinc-800);
     --input: var(--color-zinc-800);
-    --sidebar: var(--color-zinc-950);
+    --sidebar: var(--color-zinc-900);
     --sidebar-foreground: var(--color-zinc-200);
     --sidebar-primary: var(--color-zinc-200);
     --sidebar-primary-foreground: var(--color-zinc-900);

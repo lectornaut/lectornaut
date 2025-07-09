@@ -85,6 +85,24 @@ export const accents = [
 
 export const defaultAccent = "neutral"
 
+export const fonts = [
+  { id: "sans", name: "Sans" },
+  { id: "serif", name: "Serif" },
+  { id: "mono", name: "Mono" },
+]
+
+export const defaultFont = "sans"
+
+export const sizes = [
+  { id: "xs", name: "Extra small" },
+  { id: "sm", name: "Small" },
+  { id: "base", name: "Medium" },
+  { id: "lg", name: "Large" },
+  { id: "xl", name: "Extra large" },
+]
+
+export const defaultSize = "sm"
+
 export const menu = [
   {
     title: "Home",

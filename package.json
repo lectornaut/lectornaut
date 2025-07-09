@@ -83,7 +83,7 @@
     "@intlify/unplugin-vue-i18n": "^6.0.8",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
-    "@types/node": "^24.0.11",
+    "@types/node": "^24.0.12",
     "@types/nprogress": "^0.2.3",
     "@types/uuid": "^10.0.0",
     "@unhead/addons": "2.0.12",
