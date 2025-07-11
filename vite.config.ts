@@ -115,8 +115,9 @@ export default defineConfig({
     Unfonts({
       fontsource: {
         families: [
-          "Geist Variable",
-          "Geist Mono Variable",
+          "Roboto Flex Variable",
+          "Roboto Slab Variable",
+          "Roboto Mono Variable",
           "Playfair Display Variable",
         ],
       },

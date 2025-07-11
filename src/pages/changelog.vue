@@ -90,7 +90,7 @@ const entries: ChangelogEntry[] = [
 <template>
   <div class="mx-auto my-32 grid max-w-6xl gap-10">
     <div class="space-y-6 text-center">
-      <h2 class="font-serif text-6xl font-bold">Changelog</h2>
+      <h2 class="font-display text-6xl font-bold">Changelog</h2>
       <p class="text-secondary-foreground">
         Stay up to date with the latest changes and improvements to our
         platform.

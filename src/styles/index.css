@@ -53,11 +53,13 @@
   --spacing-titlebar-bottom: env(titlebar-area-y);
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
-  --font-sans: "Geist Variable", "sans-serif";
-  --font-mono: "Geist Mono Variable", "monospace";
-  --font-serif: "Playfair Display Variable", "serif";
-  --font-display: var(--display);
+  --font-sans: "Roboto Flex Variable", "sans-serif";
+  --font-serif: "Roboto Slab Variable", "serif";
+  --font-mono: "Roboto Mono Variable", "monospace";
+  --font-display: "Playfair Display Variable", "serif";
+  --font-flex: var(--flex);
   --text-size: var(--size);
+  --zoom-scale: var(--scale);
 }
 
 @layer base {
@@ -69,6 +71,7 @@
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
+    zoom: var(--zoom-scale);
 
     @apply selection:bg-secondary;
     @apply selection:text-secondary-foreground;
@@ -81,7 +84,7 @@
     @apply overscroll-none;
     @apply accent-current;
     @apply antialiased;
-    @apply font-display;
+    @apply font-flex;
     @apply text-size;
   }
 

@@ -1,4 +1,9 @@
-import { defaultAccent, defaultFont, defaultSize } from "@/helpers/defaults"
+import {
+  defaultAccent,
+  defaultFont,
+  defaultSize,
+  defaultZoom,
+} from "@/helpers/defaults"
 import { isTauri } from "@/helpers/utilities"
 import { setTheme } from "@tauri-apps/api/app"
 
@@ -41,11 +46,23 @@ const initSize = () => {
   document.documentElement.setAttribute("data-size", size.value)
 }
 
+export const zoom = useStorage("zoom", defaultZoom)
+
+watch(zoom, (value) => {
+  document.documentElement.setAttribute("data-zoom", value)
+})
+
+const initZoom = () => {
+  useStorage("zoom", defaultZoom)
+  document.documentElement.setAttribute("data-zoom", zoom.value)
+}
+
 export const initTheme = () => {
   initMode()
   initAccent()
   initFont()
   initSize()
+  initZoom()
 }
 
 export const { store, system, state } = useColorMode({

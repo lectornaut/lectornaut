@@ -15,7 +15,7 @@
         text-anchor="middle"
         text-rendering="geometricPrecision"
         stroke-width="0"
-        class="fill-current font-serif leading-tight tracking-tight"
+        class="font-display fill-current leading-tight tracking-tight"
       >
         Hyperjump
       </text>

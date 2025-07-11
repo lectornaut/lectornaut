@@ -22,6 +22,13 @@ import IconSecurity from "~icons/lucide/shield-check"
 import IconSparkle from "~icons/lucide/sparkle"
 import IconLight from "~icons/lucide/sun"
 import IconCustomers from "~icons/lucide/users"
+import IconFont from "~icons/mdi/format-text-variant"
+import IconMono from "~icons/ri/font-mono"
+import IconSans from "~icons/ri/font-sans"
+import IconSerif from "~icons/ri/font-sans-serif"
+import IconZoom from "~icons/ri/search-line"
+import IconZoomIn from "~icons/ri/zoom-in-line"
+import IconZoomOut from "~icons/ri/zoom-out-line"
 
 export const languages = [
   {
@@ -86,22 +93,34 @@ export const accents = [
 export const defaultAccent = "neutral"
 
 export const fonts = [
-  { id: "sans", name: "Sans" },
-  { id: "serif", name: "Serif" },
-  { id: "mono", name: "Mono" },
+  { id: "sans", name: "Sans", icon: IconSans },
+  { id: "serif", name: "Serif", icon: IconSerif },
+  { id: "mono", name: "Mono", icon: IconMono },
 ]
 
 export const defaultFont = "sans"
 
 export const sizes = [
-  { id: "xs", name: "Extra small" },
-  { id: "sm", name: "Small" },
-  { id: "base", name: "Medium" },
-  { id: "lg", name: "Large" },
-  { id: "xl", name: "Extra large" },
+  { id: "xs", name: "Extra small", icon: IconFont },
+  { id: "sm", name: "Small", icon: IconFont },
+  { id: "base", name: "Normal", icon: IconFont },
+  { id: "lg", name: "Large", icon: IconFont },
+  { id: "xl", name: "Extra large", icon: IconFont },
 ]
 
 export const defaultSize = "sm"
+
+export const zooms = [
+  { id: "50", name: "50%", icon: IconZoomOut },
+  { id: "75", name: "75%", icon: IconZoomOut },
+  { id: "100", name: "100%", icon: IconZoom },
+  { id: "125", name: "125%", icon: IconZoomIn },
+  { id: "150", name: "150%", icon: IconZoomIn },
+  { id: "175", name: "175%", icon: IconZoomIn },
+  { id: "200", name: "200%", icon: IconZoomIn },
+]
+
+export const defaultZoom = "100"
 
 export const menu = [
   {

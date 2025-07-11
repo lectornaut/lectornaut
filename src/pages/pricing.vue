@@ -194,7 +194,7 @@ const comparisonPlans = [
 <template>
   <div class="mx-auto my-32 grid max-w-6xl gap-10">
     <div class="space-y-6 text-center">
-      <h2 class="font-serif text-6xl font-bold">Pricing</h2>
+      <h2 class="font-display text-6xl font-bold">Pricing</h2>
       <p class="text-secondary-foreground">
         Choose the plan that fits your needs. All plans come with a 14-day
         personal trial. Cancel anytime.

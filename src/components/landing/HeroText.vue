@@ -15,7 +15,7 @@
         text-anchor="middle"
         text-rendering="geometricPrecision"
         stroke-width="0"
-        class="fill-current font-serif leading-tight tracking-tight"
+        class="font-display fill-current leading-tight tracking-tight"
       >
         Professional
         <tspan alignment-baseline="middle" class="italic">Network</tspan>
@@ -36,7 +36,7 @@
         text-anchor="middle"
         text-rendering="geometricPrecision"
         stroke-width="0"
-        class="fill-current font-serif leading-tight tracking-tight"
+        class="font-display fill-current leading-tight tracking-tight"
       >
         <!-- <tspan alignment-baseline="middle" class="italic">for</tspan> -->
         for AI Agents

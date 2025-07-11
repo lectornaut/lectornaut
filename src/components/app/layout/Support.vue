@@ -420,8 +420,10 @@ const companySizes = [
 
 .driver-popover.driverjs-theme .driver-popover-title,
 .driver-popover.driverjs-theme .driver-popover-description,
-.driver-popover.driverjs-theme .driver-popover-progress-text {
-  @apply font-sans;
+.driver-popover.driverjs-theme .driver-popover-progress-text,
+.driver-popover.driverjs-theme .driver-popover-navigation-btns,
+.driver-popover.driverjs-theme .driver-popover-footer {
+  @apply font-[inherit];
 }
 
 .driver-popover.driverjs-theme .driver-popover-title {
@@ -445,7 +447,7 @@ const companySizes = [
 
 .driver-popover.driverjs-theme .driver-popover-prev-btn,
 .driver-popover.driverjs-theme .driver-popover-next-btn {
-  @apply font-sans;
+  @apply font-[inherit];
   @apply flex;
   @apply items-center;
   @apply justify-center;
