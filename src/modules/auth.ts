@@ -127,6 +127,18 @@ export const signInWithMicrosoft = async () => {
     })
 }
 
+export const signInWithApple = async () => {
+  const provider = new OAuthProvider("apple.com")
+  return signInWithPopup(auth, provider)
+    .then(async (result) => {
+      finishAuthentication(result)
+    })
+    .catch((error) => {
+      console.error("Error in signInWithApple:", error)
+      throw error
+    })
+}
+
 export const logout = async () => {
   return auth
     .signOut()

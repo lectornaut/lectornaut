@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   resetEmailPassword,
+  signInWithApple,
   signInWithEmailPassword,
   signInWithGoogle,
   signInWithMicrosoft,
@@ -50,14 +51,21 @@ const signinViaEmailPassword = async () => {
     })
 }
 
+const resettingPassword = ref(false)
+
 const resetPassword = async () => {
+  resettingPassword.value = true
   authenticateError.value = false
+
   await resetEmailPassword(email.value)
     .then(() => {
-      authenticateError.value = "Password reset email sent"
+      resettingPassword.value = true
     })
     .catch((error) => {
       authenticateError.value = String(error)
+    })
+    .finally(() => {
+      resettingPassword.value = false
     })
 }
 
@@ -105,13 +113,16 @@ const authenticateApple = async () => {
   authenticateAppleInProgress.value = true
   authenticateError.value = false
 
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-  } catch (error) {
-    authenticateError.value = String(error)
-  } finally {
-    authenticateAppleInProgress.value = false
-  }
+  await signInWithApple()
+    .then(() => {
+      authenticateAppleInProgress.value = true
+    })
+    .catch((error) => {
+      authenticateError.value = String(error)
+    })
+    .finally(() => {
+      authenticateAppleInProgress.value = false
+    })
 }
 </script>
 
@@ -237,14 +248,46 @@ const authenticateApple = async () => {
           <div class="grid gap-4">
             <div class="relative flex w-full items-center justify-between">
               <Label for="password">Password</Label>
-              <Button
-                variant="link"
-                class="h-auto p-0 text-xs leading-1"
-                tabindex="-1"
-                @click="resetPassword()"
-              >
-                Forgot password
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger as-child>
+                  <Button
+                    variant="link"
+                    class="h-auto p-0 text-xs leading-1"
+                    tabindex="-1"
+                  >
+                    Forgot password
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle> Forgot password </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Enter your email address to receive a password reset link.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div>
+                    <Input
+                      v-model="email"
+                      label="Email"
+                      placeholder="Email address"
+                    />
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <Button
+                      :disabled="!email"
+                      variant="destructive"
+                      @click="resetPassword"
+                    >
+                      <icon-lucide-loader
+                        v-if="resettingPassword"
+                        class="animate-spin"
+                      />
+                      Send reset link
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
             <div class="relative flex w-full items-center">
               <span
@@ -292,7 +335,6 @@ const authenticateApple = async () => {
         </Button>
       </div>
     </TabsContent>
-
     <TabsContent value="sign-up">
       <div class="flex items-center justify-center gap-1">
         <span class="text-muted-foreground"> Already have an account? </span>

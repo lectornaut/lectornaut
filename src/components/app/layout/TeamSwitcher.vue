@@ -198,11 +198,7 @@ const selectedUsers = ref<User[]>([])
             <Label class="text-secondary-foreground text-xs" for="name">
               Team name
             </Label>
-            <Input
-              id="name"
-              placeholder="Acme Inc."
-              class="focus:border-inherit focus:ring-0"
-            />
+            <Input id="name" placeholder="Acme Inc." />
           </div>
           <div class="grid gap-2">
             <Label class="text-secondary-foreground text-xs" for="members">

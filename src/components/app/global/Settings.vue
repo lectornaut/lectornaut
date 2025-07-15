@@ -14,6 +14,7 @@ import {
   deleteUser,
   sendEmailVerification,
   unlink,
+  updatePassword,
   verifyBeforeUpdateEmail,
 } from "firebase/auth"
 import { ref as storageRef } from "firebase/storage"
@@ -102,6 +103,27 @@ const changeEmail = async () => {
     })
     .finally(() => {
       changingEmail.value = false
+    })
+}
+
+const newPassword = ref("")
+const changingPassword = ref(false)
+const changePassword = async () => {
+  changingPassword.value = true
+
+  await updatePassword(user.value!, newPassword.value)
+    .then(() => {
+      toast.success("Password updated", {
+        description: "Your password has been successfully updated.",
+      })
+    })
+    .catch((error) => {
+      toast.error("Failed to update password", {
+        description: error.message,
+      })
+    })
+    .finally(() => {
+      changingPassword.value = false
     })
 }
 
@@ -211,13 +233,19 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 const getComputedProviderName = (provider: string) => {
   switch (provider) {
     case "google.com":
-      return "Google"
+      return "Google.com"
     case "password":
-      return "Primary email"
+      return "Password"
     default:
       return "Unknown"
   }
 }
+
+const passwordExists = computed(() => {
+  return user.value?.providerData.some(
+    (provider) => provider.providerId === "password"
+  )
+})
 
 const navigations = [
   {
@@ -456,7 +484,8 @@ const navigations = [
                           <TooltipTrigger as-child>
                             <Button
                               v-if="photoURL"
-                              class="border-background absolute top-0 right-0 size-4 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                              class="border-background absolute top-0 right-0 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                              size="icon"
                               @click="photoURL = ''"
                             >
                               <icon-lucide-x />
@@ -484,7 +513,7 @@ const navigations = [
                   <Separator />
                   <div class="flex items-center gap-4">
                     <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Primary email</p>
+                      <p class="leading-none font-medium">Email</p>
                       <p class="text-muted-foreground flex items-center gap-2">
                         {{ user?.email }}
                         <TooltipProvider v-if="user?.emailVerified">
@@ -520,9 +549,7 @@ const navigations = [
                       </Button>
                       <Dialog>
                         <DialogTrigger>
-                          <Button variant="outline">
-                            Change primary email
-                          </Button>
+                          <Button variant="outline"> Change email </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
@@ -535,8 +562,7 @@ const navigations = [
                             <Input
                               v-model="newEmail"
                               label="New email"
-                              placeholder="Your new email address"
-                              class="focus:border-inherit focus:ring-0"
+                              placeholder="New email address"
                             />
                           </div>
                           <DialogFooter>
@@ -557,14 +583,70 @@ const navigations = [
                   </div>
                   <div class="flex items-center gap-4">
                     <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Connected accounts</p>
+                      <p class="leading-none font-medium">Password</p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        Set a password to log in to your account.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Dialog>
+                        <DialogTrigger>
+                          <Button variant="outline">
+                            <span>
+                              {{
+                                passwordExists
+                                  ? "Change password"
+                                  : "Set password"
+                              }}
+                            </span>
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>
+                              {{
+                                passwordExists
+                                  ? "Change password"
+                                  : "Set password"
+                              }}
+                            </DialogTitle>
+                            <DialogDescription>
+                              Update your password.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div>
+                            <Input
+                              v-model="newPassword"
+                              label="New password"
+                              placeholder="New password"
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              :disabled="changingPassword || !newPassword"
+                              @click="changePassword"
+                            >
+                              <icon-lucide-loader
+                                v-if="changingPassword"
+                                class="animate-spin"
+                              />
+                              <span>Change password</span>
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">Identity providers</p>
                       <p class="text-muted-foreground flex items-center gap-2">
                         Manage your connected accounts and sign-in methods.
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">
                       <Button variant="outline">
-                        <icon-lucide-plus />
                         <span>Connect a new account</span>
                       </Button>
                     </div>
@@ -593,15 +675,13 @@ const navigations = [
                           <Tooltip>
                             <TooltipTrigger as-child>
                               <span
-                                class="border-background bg-background absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full border-2"
+                                class="bg-background border-background absolute -right-2 -bottom-2 flex items-center justify-center rounded-full border-4"
                               >
                                 <icon-logos-google-icon
                                   v-if="provider.providerId === 'google.com'"
-                                  class="text-muted-foreground"
                                 />
-                                <icon-heroicons-check-badge-solid
+                                <icon-lucide-asterisk
                                   v-else-if="provider.providerId === 'password'"
-                                  class="text-green-500"
                                 />
                               </span>
                             </TooltipTrigger>
@@ -623,22 +703,15 @@ const navigations = [
                       </div>
                       <div class="ml-auto flex gap-2">
                         <Button
-                          v-if="provider.providerId === 'password'"
-                          variant="secondary"
-                        >
-                          <icon-lucide-lock />
-                          <span>Change password</span>
-                        </Button>
-                        <Button
                           :disabled="unlinkingProviderMap[provider.providerId]"
-                          variant="destructive"
+                          variant="secondary"
                           @click="unlinkProvider(provider.providerId)"
                         >
                           <icon-lucide-loader
                             v-if="unlinkingProviderMap[provider.providerId]"
                             class="animate-spin"
                           />
-                          <span>Disconnect</span>
+                          <span> Remove </span>
                         </Button>
                       </div>
                     </div>
@@ -656,13 +729,12 @@ const navigations = [
                     </div>
                     <div class="ml-auto flex gap-2">
                       <AlertDialog>
-                        <AlertDialogTrigger>
+                        <AlertDialogTrigger as-child>
                           <Button variant="destructive">
                             <icon-lucide-loader
                               v-if="deletingAccount"
                               class="animate-spin"
                             />
-                            <icon-lucide-trash-2 v-else />
                             <span>Delete account</span>
                           </Button>
                         </AlertDialogTrigger>
@@ -686,7 +758,7 @@ const navigations = [
                                 v-if="deletingAccount"
                                 class="animate-spin"
                               />
-                              Delete account
+                              Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
