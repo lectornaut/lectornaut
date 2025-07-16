@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   resetEmailPassword,
+  sendAuthenticateEmail,
   signInWithApple,
   signInWithEmailPassword,
   signInWithGoogle,
@@ -16,7 +17,6 @@ const password = ref<string>("")
 const passwordInputType = ref<"password" | "text">("password")
 
 const signupViaEmailPasswordInProgress = ref(false)
-
 const signupViaEmailPassword = async () => {
   signupViaEmailPasswordInProgress.value = true
   authenticateError.value = false
@@ -34,7 +34,6 @@ const signupViaEmailPassword = async () => {
 }
 
 const signinViaEmailPasswordInProgress = ref(false)
-
 const signinViaEmailPassword = async () => {
   signinViaEmailPasswordInProgress.value = true
   authenticateError.value = false
@@ -52,7 +51,6 @@ const signinViaEmailPassword = async () => {
 }
 
 const resettingPassword = ref(false)
-
 const resetPassword = async () => {
   resettingPassword.value = true
   authenticateError.value = false
@@ -72,6 +70,23 @@ const resetPassword = async () => {
 const togglePasswordVisibility = () => {
   passwordInputType.value =
     passwordInputType.value === "password" ? "text" : "password"
+}
+
+const authenticateEmailInProgress = ref(false)
+const authenticateEmail = async () => {
+  authenticateEmailInProgress.value = true
+  authenticateError.value = false
+
+  await sendAuthenticateEmail(email.value)
+    .then(() => {
+      authenticateEmailInProgress.value = true
+    })
+    .catch((error) => {
+      authenticateError.value = String(error)
+    })
+    .finally(() => {
+      authenticateEmailInProgress.value = false
+    })
 }
 
 const authenticateGoogleInProgress = ref(false)
@@ -129,27 +144,19 @@ const authenticateApple = async () => {
 <template>
   <Tabs v-model="authMode" class="gap-6">
     <TabsContent value="sign-up">
-      <h2 class="text-center text-2xl font-semibold tracking-tight">Sign up</h2>
+      <h2
+        class="font-display text-center text-3xl leading-tight font-semibold tracking-tight"
+      >
+        Sign up
+      </h2>
     </TabsContent>
     <TabsContent value="sign-in">
-      <h2 class="text-center text-2xl font-semibold tracking-tight">Sign in</h2>
+      <h2
+        class="font-display text-center text-3xl leading-tight font-semibold tracking-tight"
+      >
+        Sign in
+      </h2>
     </TabsContent>
-    <!-- <TabsContent value="sign-up">
-      <div class="flex items-center gap-1">
-        <span class="text-muted-foreground"> Already have an account? </span>
-        <Button variant="link" @click="authMode = 'sign-in'" class="p-0">
-          Sign in
-        </Button>
-      </div>
-    </TabsContent>
-    <TabsContent value="sign-in">
-      <div class="flex items-center gap-1">
-        <span class="text-muted-foreground"> Don't have an account? </span>
-        <Button variant="link" @click="authMode = 'sign-up'" class="p-0">
-          Sign up
-        </Button>
-      </div>
-    </TabsContent> -->
     <!-- <TabsList class="mx-auto">
       <TabsTrigger value="sign-up"> Sign up </TabsTrigger>
       <TabsTrigger value="sign-in"> Sign in </TabsTrigger>
@@ -227,7 +234,49 @@ const authenticateApple = async () => {
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-4">
           <div class="grid gap-4">
-            <Label for="email">Email</Label>
+            <div class="relative flex w-full items-center justify-between">
+              <Label for="email">Email</Label>
+              <AlertDialog>
+                <AlertDialogTrigger as-child>
+                  <Button
+                    variant="link"
+                    class="h-auto p-0 text-xs leading-1"
+                    tabindex="-1"
+                  >
+                    Send magic link
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle> Send magic link </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Enter your email address to receive a magic link.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div>
+                    <Input
+                      v-model="email"
+                      label="Email"
+                      placeholder="Email address"
+                    />
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <Button
+                      :disabled="!email"
+                      variant="destructive"
+                      @click="authenticateEmail"
+                    >
+                      <icon-lucide-loader
+                        v-if="authenticateEmailInProgress"
+                        class="animate-spin"
+                      />
+                      Send magic link
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
             <div class="relative flex w-full items-center">
               <span
                 class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
@@ -340,7 +389,8 @@ const authenticateApple = async () => {
         <span class="text-muted-foreground"> Already have an account? </span>
         <Button
           variant="link"
-          class="h-auto p-0 leading-0"
+          class="h-auto p-0 leading-1"
+          tabindex="-1"
           @click="authMode = 'sign-in'"
         >
           Sign in
@@ -353,6 +403,7 @@ const authenticateApple = async () => {
         <Button
           variant="link"
           class="h-auto p-0 leading-0"
+          tabindex="-1"
           @click="authMode = 'sign-up'"
         >
           Sign up

@@ -1,6 +1,7 @@
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { updateUserData } from "@/queries/updateUserData"
+import type { FirebaseError } from "firebase/app"
 import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
@@ -15,6 +16,7 @@ import {
   signInWithPopup,
   type UserCredential,
 } from "firebase/auth"
+import { toast } from "vue-sonner"
 
 const auth = getAuth()
 
@@ -27,14 +29,17 @@ export const sendAuthenticateEmail = async (email: string) => {
   return sendSignInLinkToEmail(auth, email, actionCodeSettings)
     .then(() => {
       window.localStorage.setItem("emailForSignIn", email)
+      toast.success("Authentication email sent")
     })
     .catch((error) => {
       console.error("Error in sendAuthenticateEmail:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }
 
 const finishAuthentication = async (result: UserCredential) => {
+  toast.success("Logged in")
   if (getAdditionalUserInfo(result)?.isNewUser) {
     setDefaultUserData()
     await router.push("/welcome")
@@ -58,6 +63,7 @@ export const authenticateEmail = async () => {
         })
         .catch((error) => {
           console.error("Error in authenticateEmail:", error)
+          toast.error((error as FirebaseError).message)
           throw error
         })
     }
@@ -74,6 +80,7 @@ export const signUpWithEmailPassword = async (
     })
     .catch((error) => {
       console.error("Error in signUpWithEmail:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }
@@ -88,6 +95,7 @@ export const signInWithEmailPassword = async (
     })
     .catch((error) => {
       console.error("Error in signInWithEmail:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }
@@ -95,10 +103,11 @@ export const signInWithEmailPassword = async (
 export const resetEmailPassword = async (email: string) => {
   return sendPasswordResetEmail(auth, email)
     .then(() => {
-      alert("Password reset email sent")
+      toast.success("Password reset email sent")
     })
     .catch((error) => {
       console.error("Error in resetPassword:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }
@@ -111,6 +120,7 @@ export const signInWithGoogle = async () => {
     })
     .catch((error) => {
       console.error("Error in signInWithGoogle:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }
@@ -123,6 +133,7 @@ export const signInWithMicrosoft = async () => {
     })
     .catch((error) => {
       console.error("Error in signInWithMicrosoft:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }
@@ -135,6 +146,7 @@ export const signInWithApple = async () => {
     })
     .catch((error) => {
       console.error("Error in signInWithApple:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }
@@ -143,10 +155,12 @@ export const logout = async () => {
   return auth
     .signOut()
     .then(async () => {
+      toast.success("Logged out")
       await router.push("/")
     })
     .catch((error) => {
       console.error("Error in logout:", error)
+      toast.error((error as FirebaseError).message)
       throw error
     })
 }

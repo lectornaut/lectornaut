@@ -12,7 +12,8 @@ export async function useAddDoc(colRef: CollectionReference, document: object) {
   try {
     await addDoc(colRef, document)
     toast.success("Added")
-  } catch (error: FirebaseError | unknown) {
+  } catch (error) {
+    console.error("Error in useAddDoc:", error)
     toast.error((error as FirebaseError).message)
   }
 }
@@ -35,7 +36,8 @@ export async function useDeleteDoc(
         },
       },
     })
-  } catch (error: FirebaseError | unknown) {
+  } catch (error) {
+    console.error("Error in useDeleteDoc", error)
     toast.error((error as FirebaseError).message)
   }
 }
@@ -59,7 +61,8 @@ export async function useUpdateDoc(
         },
       },
     })
-  } catch (error: FirebaseError | unknown) {
+  } catch (error) {
+    console.error("Error in useUpdateDoc", error)
     toast.error((error as FirebaseError).message)
   }
 }
