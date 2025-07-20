@@ -88,7 +88,7 @@ const messages = [
             <TooltipContent side="right"> {{ agent.name }} </TooltipContent>
           </SheetTrigger>
           <SheetContent
-            class="m-3 h-auto gap-0 rounded-md border"
+            class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
             side="left"
             :class="{ 'mt-13': isTauri && !isFullscreen }"
           >

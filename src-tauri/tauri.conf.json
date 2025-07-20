@@ -59,6 +59,7 @@
   },
   "plugins": {
     "deep-link": {
+      "schema": "hyperjump",
       "desktop": {
         "schemes": ["hyperjump"]
       }

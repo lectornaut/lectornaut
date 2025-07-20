@@ -1,7 +1,31 @@
 <script setup lang="ts">
 import { changelog } from "@/data/changelog"
+import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
+import type { UnlistenFn } from "@tauri-apps/api/event"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useDateFormat } from "@vueuse/core"
+
+let unlisten: UnlistenFn | undefined
+
+const isFullscreen = computedAsync(
+  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
+  false
+)
+
+onMounted(async () => {
+  if (isTauri.value) {
+    unlisten = await getCurrentWindow().onResized(async () => {
+      isFullscreen.value = await getCurrentWindow().isFullscreen()
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (unlisten) {
+    unlisten()
+  }
+})
 
 const openChangelog = ref(false)
 
@@ -15,7 +39,10 @@ emitter.on("Dialog.Changelog.Open", (id) => {
 
 <template>
   <Sheet v-model:open="openChangelog">
-    <SheetContent class="m-2 h-auto gap-0 rounded-md border">
+    <SheetContent
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
+      :class="{ 'mt-13': isTauri && !isFullscreen }"
+    >
       <SheetHeader>
         <SheetTitle>Changelog</SheetTitle>
       </SheetHeader>

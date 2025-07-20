@@ -30,7 +30,7 @@ const isDocked = ref(false)
 
 <template>
   <header
-    class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top"
+    class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar z-20 flex w-full shrink-0"
   >
     <div
       data-tauri-drag-region
@@ -129,7 +129,10 @@ const isDocked = ref(false)
               >
                 <AiChat class="shadow-border z-10 shadow-[-1px_0px_0px]" />
               </Teleport>
-              <SheetContent class="m-3 h-auto gap-0 rounded-md border">
+              <SheetContent
+                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
+                :class="{ 'mt-13': isTauri && !isFullscreen }"
+              >
                 <SheetHeader>
                   <SheetTitle> Hype AI </SheetTitle>
                   <SheetDescription>
@@ -155,3 +158,13 @@ const isDocked = ref(false)
     </div>
   </header>
 </template>
+
+<style scoped>
+.titlebar {
+  -webkit-app-region: drag;
+
+  button {
+    -webkit-app-region: no-drag;
+  }
+}
+</style>

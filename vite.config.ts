@@ -20,7 +20,6 @@ import { ViteImageOptimizer } from "vite-plugin-image-optimizer"
 import { VitePWA } from "vite-plugin-pwa"
 import Sitemap from "vite-plugin-sitemap"
 import Layouts from "vite-plugin-vue-layouts"
-import tailwindAutoReference from "vite-plugin-vue-tailwind-auto-reference"
 
 const host = process.env.TAURI_DEV_HOST
 
@@ -70,7 +69,7 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 3000000,
-        globPatterns: ["**/*.{js,ts,css,scss,html,png,jpg,svg,ico}"],
+        globPatterns: ["**/*.{js,ts,json,css,scss,html,png,jpg,svg,ico}"],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === "document",
@@ -80,17 +79,44 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: ({ request }) => request.destination === "font",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "fonts",
+            },
+          },
+          {
             urlPattern: ({ request }) => request.destination === "image",
             handler: "CacheFirst",
             options: {
               cacheName: "images",
             },
           },
+          {
+            urlPattern: ({ request }) => request.destination === "manifest",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "manifests",
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === "script",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "scripts",
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === "style",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "styles",
+            },
+          },
         ],
         navigateFallback: "/index.html",
       },
     }),
-    tailwindAutoReference("./src/styles/index.css"),
     tailwindcss(),
     Components({
       resolvers: [

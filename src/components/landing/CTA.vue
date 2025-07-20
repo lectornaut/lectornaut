@@ -29,16 +29,10 @@ hotkeys("enter", (event) => {
         <icon-lucide-loader class="animate-spin" />
       </Button>
       <Button v-else-if="user" as-child>
-        <RouterLink to="/home">
-          Enter
-          <icon-lucide-corner-down-left />
-        </RouterLink>
+        <RouterLink to="/home"> Enter </RouterLink>
       </Button>
       <EnterTrigger v-else>
-        <Button>
-          Enter
-          <icon-lucide-corner-down-left />
-        </Button>
+        <Button> Enter </Button>
       </EnterTrigger>
       <Faq />
     </div>

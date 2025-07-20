@@ -20,7 +20,10 @@ useHead({
   meta: [
     {
       name: "theme-color",
-      content: () => (state.value === "light" ? "#ffffff" : "#000000"),
+      content: () =>
+        state.value === "light"
+          ? "oklch(98.5% 0.001 106.423)"
+          : "oklch(21% 0.006 285.885)",
     },
   ],
 })
