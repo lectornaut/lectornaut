@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { activity } from "@/data/chart"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
+import {
+  Blocks,
+  Calendar,
+  Home,
+  Inbox,
+  MessageCircleQuestion,
+  Search,
+  Settings2,
+  Sparkles,
+  Trash2,
+} from "lucide-vue-next"
 import type { DateRange } from "reka-ui"
 
 definePage({
@@ -137,9 +148,367 @@ const range = ref({
   start: defaultRange.value.start,
   end: defaultRange.value.end,
 }) as Ref<DateRange>
+
+const navMain = [
+  {
+    title: "Search",
+    url: "#",
+    icon: Search,
+  },
+  {
+    title: "Ask AI",
+    url: "#",
+    icon: Sparkles,
+  },
+  {
+    title: "Home",
+    url: "#",
+    icon: Home,
+    isActive: true,
+  },
+  {
+    title: "Inbox",
+    url: "#",
+    icon: Inbox,
+    badge: false,
+  },
+]
+
+const navSecondary = [
+  {
+    title: "Calendar",
+    url: "#",
+    icon: Calendar,
+    badge: false,
+  },
+  {
+    title: "Settings",
+    url: "#",
+    icon: Settings2,
+    badge: false,
+  },
+  {
+    title: "Templates",
+    url: "#",
+    icon: Blocks,
+    badge: false,
+  },
+  {
+    title: "Trash",
+    url: "#",
+    icon: Trash2,
+    badge: false,
+  },
+  {
+    title: "Help",
+    url: "#",
+    icon: MessageCircleQuestion,
+    badge: false,
+  },
+]
+
+const favorites = [
+  {
+    name: "Project Management & Task Tracking",
+    url: "#",
+    emoji: "📊",
+  },
+  {
+    name: "Family Recipe Collection & Meal Planning",
+    url: "#",
+    emoji: "🍳",
+  },
+  {
+    name: "Fitness Tracker & Workout Routines",
+    url: "#",
+    emoji: "💪",
+  },
+  {
+    name: "Book Notes & Reading List",
+    url: "#",
+    emoji: "📚",
+  },
+  {
+    name: "Sustainable Gardening Tips & Plant Care",
+    url: "#",
+    emoji: "🌱",
+  },
+  {
+    name: "Language Learning Progress & Resources",
+    url: "#",
+    emoji: "🗣️",
+  },
+  {
+    name: "Home Renovation Ideas & Budget Tracker",
+    url: "#",
+    emoji: "🏠",
+  },
+  {
+    name: "Personal Finance & Investment Portfolio",
+    url: "#",
+    emoji: "💰",
+  },
+  {
+    name: "Movie & TV Show Watchlist with Reviews",
+    url: "#",
+    emoji: "🎬",
+  },
+  {
+    name: "Daily Habit Tracker & Goal Setting",
+    url: "#",
+    emoji: "✅",
+  },
+]
+
+const teams = [
+  {
+    name: "Personal Life Management",
+    emoji: "🏠",
+    pages: [
+      {
+        name: "Daily Journal & Reflection",
+        url: "#",
+        emoji: "📔",
+      },
+      {
+        name: "Health & Wellness Tracker",
+        url: "#",
+        emoji: "🍏",
+      },
+      {
+        name: "Personal Growth & Learning Goals",
+        url: "#",
+        emoji: "🌟",
+      },
+    ],
+  },
+  {
+    name: "Professional Development",
+    emoji: "💼",
+    pages: [
+      {
+        name: "Career Objectives & Milestones",
+        url: "#",
+        emoji: "🎯",
+      },
+      {
+        name: "Skill Acquisition & Training Log",
+        url: "#",
+        emoji: "🧠",
+      },
+      {
+        name: "Networking Contacts & Events",
+        url: "#",
+        emoji: "🤝",
+      },
+    ],
+  },
+  {
+    name: "Creative Projects",
+    emoji: "🎨",
+    pages: [
+      {
+        name: "Writing Ideas & Story Outlines",
+        url: "#",
+        emoji: "✍️",
+      },
+      {
+        name: "Art & Design Portfolio",
+        url: "#",
+        emoji: "🖼️",
+      },
+      {
+        name: "Music Composition & Practice Log",
+        url: "#",
+        emoji: "🎵",
+      },
+    ],
+  },
+  {
+    name: "Home Management",
+    emoji: "🏡",
+    pages: [
+      {
+        name: "Household Budget & Expense Tracking",
+        url: "#",
+        emoji: "💰",
+      },
+      {
+        name: "Home Maintenance Schedule & Tasks",
+        url: "#",
+        emoji: "🔧",
+      },
+      {
+        name: "Family Calendar & Event Planning",
+        url: "#",
+        emoji: "📅",
+      },
+    ],
+  },
+  {
+    name: "Travel & Adventure",
+    emoji: "🧳",
+    pages: [
+      {
+        name: "Trip Planning & Itineraries",
+        url: "#",
+        emoji: "🗺️",
+      },
+      {
+        name: "Travel Bucket List & Inspiration",
+        url: "#",
+        emoji: "🌎",
+      },
+      {
+        name: "Travel Journal & Photo Gallery",
+        url: "#",
+        emoji: "📸",
+      },
+    ],
+  },
+]
 </script>
 
 <template>
+  <Teleport defer to="#left-sidebar">
+    <Sidebar collapsible="none" class="w-full">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem v-for="item in navMain" :key="item.title">
+            <SidebarMenuButton as-child :is-active="item.isActive">
+              <a :href="item.url">
+                <component :is="item.icon" />
+                <span>{{ item.title }}</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <Separator />
+      <SidebarContent>
+        <OverlayScrollbarsWrapper>
+          <SidebarGroup class="group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel>Favorites</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem v-for="item in favorites" :key="item.name">
+                <SidebarMenuButton as-child>
+                  <a :href="item.url" :title="item.name">
+                    <span>{{ item.emoji }}</span>
+                    <span>{{ item.name }}</span>
+                  </a>
+                </SidebarMenuButton>
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <SidebarMenuAction show-on-hover>
+                      <icon-lucide-more-vertical />
+                      <span class="sr-only">More</span>
+                    </SidebarMenuAction>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    class="w-56 rounded-lg"
+                    align="start"
+                    side="right"
+                  >
+                    <DropdownMenuItem>
+                      <icon-lucide-star-off class="text-muted-foreground" />
+                      <span>Remove from Favorites</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <icon-lucide-link class="text-muted-foreground" />
+                      <span>Copy Link</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <icon-lucide-arrow-up-right
+                        class="text-muted-foreground"
+                      />
+                      <span>Open in New Tab</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <icon-lucide-trash-2 class="text-muted-foreground" />
+                      <span>Delete</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton class="text-sidebar-foreground/70">
+                  <icon-lucide-more-horizontal />
+                  <span>More</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Teams</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <Collapsible v-for="team in teams" :key="team.name">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton as-child>
+                      <a href="#">
+                        <span>{{ team.emoji }}</span>
+                        <span>{{ team.name }}</span>
+                      </a>
+                    </SidebarMenuButton>
+                    <CollapsibleTrigger as-child>
+                      <SidebarMenuAction
+                        class="bg-sidebar-accent text-sidebar-accent-foreground left-2 data-[state=open]:rotate-90"
+                        show-on-hover
+                      >
+                        <icon-lucide-chevron-right />
+                      </SidebarMenuAction>
+                    </CollapsibleTrigger>
+                    <SidebarMenuAction show-on-hover>
+                      <Plus />
+                    </SidebarMenuAction>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem
+                          v-for="page in team.pages"
+                          :key="page.name"
+                        >
+                          <SidebarMenuSubButton as-child>
+                            <a href="#">
+                              <span>{{ page.emoji }}</span>
+                              <span>{{ page.name }}</span>
+                            </a>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+                <SidebarMenuItem>
+                  <SidebarMenuButton class="text-sidebar-foreground/70">
+                    <icon-lucide-more-horizontal />
+                    <span>More</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </OverlayScrollbarsWrapper>
+      </SidebarContent>
+      <Separator />
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem v-for="item in navSecondary" :key="item.title">
+            <SidebarMenuButton as-child>
+              <a :href="item.url">
+                <component :is="item.icon" />
+                <span>{{ item.title }}</span>
+              </a>
+            </SidebarMenuButton>
+            <SidebarMenuBadge v-if="item.badge">
+              <component :is="item.badge" />
+            </SidebarMenuBadge>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  </Teleport>
   <OverlayScrollbarsWrapper>
     <div class="flex grow flex-col overflow-auto overscroll-none">
       <Tabs default-value="overview" class="gap-0">
@@ -375,4 +744,5 @@ const range = ref({
       </Tabs>
     </div>
   </OverlayScrollbarsWrapper>
+  <Teleport defer to="#right-sidebar">test</Teleport>
 </template>

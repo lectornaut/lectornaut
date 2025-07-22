@@ -47,28 +47,26 @@ const navigation = [
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper>
-    <SidebarGroup>
-      <SidebarGroupContent id="tour-primary-navigation">
-        <SidebarMenu>
-          <SidebarMenuItem
-            v-for="item in navigation"
-            :key="item.title"
-            class="group/nav"
+  <SidebarGroup>
+    <SidebarGroupContent id="tour-primary-navigation">
+      <SidebarMenu>
+        <SidebarMenuItem
+          v-for="item in navigation"
+          :key="item.title"
+          class="group/nav"
+        >
+          <SidebarMenuButton
+            class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground"
+            :tooltip="item.title"
+            as-child
           >
-            <SidebarMenuButton
-              class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground"
-              :tooltip="item.title"
-              as-child
-            >
-              <RouterLink :to="item.url">
-                <Component :is="item.icon" />
-                {{ item.title }}
-              </RouterLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  </OverlayScrollbarsWrapper>
+            <RouterLink :to="item.url">
+              <Component :is="item.icon" />
+              {{ item.title }}
+            </RouterLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarGroupContent>
+  </SidebarGroup>
 </template>

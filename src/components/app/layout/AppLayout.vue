@@ -37,7 +37,7 @@ emitter.on("Sidebar.Right.Toggle", () => {
         as-child
         class="hidden lg:flex"
       >
-        <LeftSidebar />
+        <div id="left-sidebar"></div>
       </ResizablePanel>
       <ResizableHandle
         class="data-[state=hover]:bg-sidebar-border focus-visible:ring-sidebar-border focus-visible:bg-sidebar-border data-[state=drag]:bg-sidebar-border z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
@@ -63,7 +63,7 @@ emitter.on("Sidebar.Right.Toggle", () => {
         as-child
         class="hidden lg:flex"
       >
-        <RightSidebar />
+        <div id="right-sidebar"></div>
       </ResizablePanel>
     </ResizablePanelGroup>
     <div id="right-dock"></div>

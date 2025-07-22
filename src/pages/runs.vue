@@ -14,9 +14,47 @@ definePage({
 useHead({
   title: "Runs",
 })
+
+const tree = [
+  [
+    "app",
+    [
+      "api",
+      ["hello", ["route.ts"]],
+      "page.tsx",
+      "layout.tsx",
+      ["blog", ["page.tsx"]],
+    ],
+  ],
+  ["components", ["ui", "button.tsx", "card.tsx"], "header.tsx", "footer.tsx"],
+  ["lib", ["util.ts"]],
+  ["public", "favicon.ico", "vercel.svg"],
+  ".eslintrc.json",
+  ".gitignore",
+  "next.config.js",
+  "tailwind.config.js",
+  "package.json",
+  "README.md",
+]
 </script>
 
 <template>
+  <Teleport defer to="#left-sidebar">
+    <Sidebar collapsible="none" class="w-full">
+      <SidebarContent>
+        <OverlayScrollbarsWrapper>
+          <SidebarGroup>
+            <SidebarGroupLabel>Files</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <Tree v-for="(item, index) in tree" :key="index" :item="item" />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </OverlayScrollbarsWrapper>
+      </SidebarContent>
+    </Sidebar>
+  </Teleport>
   <div class="flex grow flex-col overflow-auto overscroll-none">
     <DataTable :data="runs" :columns="columns" />
   </div>
