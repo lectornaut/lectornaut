@@ -14,9 +14,7 @@ const [name, ...items] = Array.isArray(props.item) ? props.item : [props.item]
     </span>
   </SidebarMenuButton>
   <SidebarMenuItem v-else>
-    <Collapsible
-      class="p-0 [&[data-state=open]>button>svg:first-child]:rotate-90"
-    >
+    <Collapsible class="[&[data-state=open]>button>svg:first-child]:rotate-90">
       <CollapsibleTrigger as-child>
         <SidebarMenuButton>
           <icon-lucide-chevron-right class="transition-transform" />

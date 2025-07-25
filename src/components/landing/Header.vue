@@ -26,7 +26,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
               <Button variant="ghost" as-child>
                 <RouterLink to="/">
                   <Logo />
-                  Hyperjump
+                  Lectornaut
                 </RouterLink>
               </Button>
             </ContextMenuTrigger>

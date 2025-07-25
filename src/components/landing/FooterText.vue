@@ -17,7 +17,7 @@
         stroke-width="0"
         class="font-display fill-current leading-tight tracking-tight"
       >
-        Hyperjump
+        Lectornaut
       </text>
     </svg>
   </div>

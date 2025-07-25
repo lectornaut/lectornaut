@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useRouteBreadcrumbs } from "@/helpers/breadcrumber"
-import { isTauri } from "@/helpers/utilities"
 
 const breadcrumbs = useRouteBreadcrumbs()
 </script>
@@ -8,26 +7,24 @@ const breadcrumbs = useRouteBreadcrumbs()
 <template>
   <div class="bg-card flex items-center justify-between gap-2 p-2">
     <div class="flex gap-2">
-      <div v-if="isTauri">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon">
-                <icon-lucide-arrow-left />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Go back </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon">
-                <icon-lucide-arrow-right />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent> Go forward </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon">
+              <icon-lucide-arrow-left />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> Go back </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon">
+              <icon-lucide-arrow-right />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> Go forward </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Breadcrumb>
         <BreadcrumbList>
           <template v-for="(item, index) in breadcrumbs" :key="index">

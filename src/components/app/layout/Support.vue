@@ -63,9 +63,9 @@ const productTour = driver({
   steps: [
     {
       popover: {
-        title: "Welcome to Hyperjump",
+        title: "Welcome to Lectornaut",
         description:
-          "This is a product tour to help you get started with Hyperjump.",
+          "This is a product tour to help you get started with Lectornaut.",
       },
     },
     {
@@ -259,7 +259,7 @@ const companySizes = [
                         <DropdownMenuLabel
                           class="text-muted-foreground text-xs"
                         >
-                          Hyperjump v{{ version }}
+                          Lectornaut v{{ version }}
                         </DropdownMenuLabel>
                       </DropdownMenuGroup>
                     </DropdownMenuSubContent>

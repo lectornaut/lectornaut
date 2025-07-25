@@ -1,7 +1,7 @@
 [package]
-name = "Hyperjump"
+name = "Lectornaut"
 version = "0.0.0"
-description = "Hyperjump App"
+description = "Lectornaut App"
 authors = ["you"]
 edition = "2021"
 

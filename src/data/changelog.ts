@@ -8,7 +8,7 @@ interface ChangelogEntry {
 export const changelog: ChangelogEntry[] = [
   {
     id: "2.9.0",
-    title: "Hyperjump for Agents",
+    title: "Lectornaut for Agents",
     content: ["Fixed minor bugs.", "Improved overall stability."],
     date: "2023-10-15T00:00:00Z",
   },
@@ -138,7 +138,7 @@ export const changelog: ChangelogEntry[] = [
   {
     id: "1.0.0",
     title: "Initial Release",
-    content: ["First release of Hyperjump.", "Core features implemented."],
+    content: ["First release of Lectornaut.", "Core features implemented."],
     date: "2023-01-01T00:00:00Z",
   },
 ]

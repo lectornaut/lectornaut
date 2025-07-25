@@ -773,7 +773,7 @@ const navigations = [
                     <div class="flex flex-col gap-1">
                       <p class="leading-none font-medium">Theme</p>
                       <p class="text-muted-foreground flex items-center gap-2">
-                        Customize how Hyperjump looks on your device.
+                        Customize how Lectornaut looks on your device.
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">

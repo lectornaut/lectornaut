@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { activity } from "@/data/chart"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
-import {
-  Blocks,
-  Calendar,
-  Home,
-  Inbox,
-  MessageCircleQuestion,
-  Search,
-  Settings2,
-  Sparkles,
-  Trash2,
-} from "lucide-vue-next"
 import type { DateRange } from "reka-ui"
+import Avatar from "vue-boring-avatars"
+import Blocks from "~icons/lucide/blocks"
+import Calendar from "~icons/lucide/calendar"
+import Home from "~icons/lucide/home"
+import Inbox from "~icons/lucide/inbox"
+import MessageCircleQuestion from "~icons/lucide/message-circle-question"
+import Search from "~icons/lucide/search"
+import Settings2 from "~icons/lucide/settings-2"
+import Sparkles from "~icons/lucide/sparkles"
+import Trash2 from "~icons/lucide/trash-2"
 
 definePage({
   meta: {
@@ -211,158 +210,128 @@ const favorites = [
   {
     name: "Project Management & Task Tracking",
     url: "#",
-    emoji: "📊",
   },
   {
     name: "Family Recipe Collection & Meal Planning",
     url: "#",
-    emoji: "🍳",
   },
   {
     name: "Fitness Tracker & Workout Routines",
     url: "#",
-    emoji: "💪",
   },
   {
     name: "Book Notes & Reading List",
     url: "#",
-    emoji: "📚",
   },
   {
     name: "Sustainable Gardening Tips & Plant Care",
     url: "#",
-    emoji: "🌱",
   },
   {
     name: "Language Learning Progress & Resources",
     url: "#",
-    emoji: "🗣️",
   },
   {
     name: "Home Renovation Ideas & Budget Tracker",
     url: "#",
-    emoji: "🏠",
   },
   {
     name: "Personal Finance & Investment Portfolio",
     url: "#",
-    emoji: "💰",
   },
   {
     name: "Movie & TV Show Watchlist with Reviews",
     url: "#",
-    emoji: "🎬",
   },
   {
     name: "Daily Habit Tracker & Goal Setting",
     url: "#",
-    emoji: "✅",
   },
 ]
 
 const teams = [
   {
     name: "Personal Life Management",
-    emoji: "🏠",
     pages: [
       {
         name: "Daily Journal & Reflection",
         url: "#",
-        emoji: "📔",
       },
       {
         name: "Health & Wellness Tracker",
         url: "#",
-        emoji: "🍏",
       },
       {
         name: "Personal Growth & Learning Goals",
         url: "#",
-        emoji: "🌟",
       },
     ],
   },
   {
     name: "Professional Development",
-    emoji: "💼",
     pages: [
       {
         name: "Career Objectives & Milestones",
         url: "#",
-        emoji: "🎯",
       },
       {
         name: "Skill Acquisition & Training Log",
         url: "#",
-        emoji: "🧠",
       },
       {
         name: "Networking Contacts & Events",
         url: "#",
-        emoji: "🤝",
       },
     ],
   },
   {
     name: "Creative Projects",
-    emoji: "🎨",
     pages: [
       {
         name: "Writing Ideas & Story Outlines",
         url: "#",
-        emoji: "✍️",
       },
       {
         name: "Art & Design Portfolio",
         url: "#",
-        emoji: "🖼️",
       },
       {
         name: "Music Composition & Practice Log",
         url: "#",
-        emoji: "🎵",
       },
     ],
   },
   {
     name: "Home Management",
-    emoji: "🏡",
     pages: [
       {
         name: "Household Budget & Expense Tracking",
         url: "#",
-        emoji: "💰",
       },
       {
         name: "Home Maintenance Schedule & Tasks",
         url: "#",
-        emoji: "🔧",
       },
       {
         name: "Family Calendar & Event Planning",
         url: "#",
-        emoji: "📅",
       },
     ],
   },
   {
     name: "Travel & Adventure",
-    emoji: "🧳",
     pages: [
       {
         name: "Trip Planning & Itineraries",
         url: "#",
-        emoji: "🗺️",
       },
       {
         name: "Travel Bucket List & Inspiration",
         url: "#",
-        emoji: "🌎",
       },
       {
         name: "Travel Journal & Photo Gallery",
         url: "#",
-        emoji: "📸",
       },
     ],
   },
@@ -391,11 +360,22 @@ const teams = [
             <SidebarGroupLabel>Favorites</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem v-for="item in favorites" :key="item.name">
-                <SidebarMenuButton as-child>
-                  <a :href="item.url" :title="item.name">
-                    <span>{{ item.emoji }}</span>
-                    <span>{{ item.name }}</span>
-                  </a>
+                <SidebarMenuButton>
+                  <Avatar
+                    :square="false"
+                    :title="false"
+                    :name="item.name"
+                    variant="beam"
+                    :colors="[
+                      'var(--chart-1)',
+                      'var(--chart-2)',
+                      'var(--chart-3)',
+                      'var(--chart-4)',
+                      'var(--chart-5)',
+                    ]"
+                    class="rounded-full"
+                  />
+                  <span>{{ item.name }}</span>
                 </SidebarMenuButton>
                 <DropdownMenu>
                   <DropdownMenuTrigger as-child>
@@ -433,7 +413,7 @@ const teams = [
                 </DropdownMenu>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton class="text-sidebar-foreground/70">
+                <SidebarMenuButton class="text-sidebar-foreground">
                   <icon-lucide-more-horizontal />
                   <span>More</span>
                 </SidebarMenuButton>
@@ -446,34 +426,56 @@ const teams = [
               <SidebarMenu>
                 <Collapsible v-for="team in teams" :key="team.name">
                   <SidebarMenuItem>
-                    <SidebarMenuButton as-child>
-                      <a href="#">
-                        <span>{{ team.emoji }}</span>
-                        <span>{{ team.name }}</span>
-                      </a>
+                    <SidebarMenuButton>
+                      <Avatar
+                        :square="false"
+                        :title="false"
+                        :name="team.name"
+                        variant="beam"
+                        :colors="[
+                          'var(--chart-1)',
+                          'var(--chart-2)',
+                          'var(--chart-3)',
+                          'var(--chart-4)',
+                          'var(--chart-5)',
+                        ]"
+                        class="rounded-full"
+                      />
+                      <span>{{ team.name }}</span>
                     </SidebarMenuButton>
                     <CollapsibleTrigger as-child>
                       <SidebarMenuAction
-                        class="bg-sidebar-accent text-sidebar-accent-foreground left-2 data-[state=open]:rotate-90"
+                        class="bg-sidebar-accent text-sidebar-accent-foreground left-1.5 data-[state=open]:rotate-90"
                         show-on-hover
                       >
                         <icon-lucide-chevron-right />
                       </SidebarMenuAction>
                     </CollapsibleTrigger>
                     <SidebarMenuAction show-on-hover>
-                      <Plus />
+                      <icon-lucide-plus />
                     </SidebarMenuAction>
                     <CollapsibleContent>
-                      <SidebarMenuSub>
+                      <SidebarMenuSub class="mr-0 pr-0">
                         <SidebarMenuSubItem
                           v-for="page in team.pages"
                           :key="page.name"
                         >
-                          <SidebarMenuSubButton as-child>
-                            <a href="#">
-                              <span>{{ page.emoji }}</span>
-                              <span>{{ page.name }}</span>
-                            </a>
+                          <SidebarMenuSubButton>
+                            <Avatar
+                              :square="false"
+                              :title="false"
+                              :name="page.name"
+                              variant="beam"
+                              :colors="[
+                                'var(--chart-1)',
+                                'var(--chart-2)',
+                                'var(--chart-3)',
+                                'var(--chart-4)',
+                                'var(--chart-5)',
+                              ]"
+                              class="rounded-full"
+                            />
+                            <span>{{ page.name }}</span>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       </SidebarMenuSub>
@@ -481,7 +483,7 @@ const teams = [
                   </SidebarMenuItem>
                 </Collapsible>
                 <SidebarMenuItem>
-                  <SidebarMenuButton class="text-sidebar-foreground/70">
+                  <SidebarMenuButton class="text-sidebar-foreground">
                     <icon-lucide-more-horizontal />
                     <span>More</span>
                   </SidebarMenuButton>
@@ -495,11 +497,9 @@ const teams = [
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem v-for="item in navSecondary" :key="item.title">
-            <SidebarMenuButton as-child>
-              <a :href="item.url">
-                <component :is="item.icon" />
-                <span>{{ item.title }}</span>
-              </a>
+            <SidebarMenuButton>
+              <component :is="item.icon" />
+              <span>{{ item.title }}</span>
             </SidebarMenuButton>
             <SidebarMenuBadge v-if="item.badge">
               <component :is="item.badge" />
@@ -744,5 +744,13 @@ const teams = [
       </Tabs>
     </div>
   </OverlayScrollbarsWrapper>
-  <Teleport defer to="#right-sidebar">test</Teleport>
+  <Teleport defer to="#right-sidebar">
+    <Sidebar collapsible="none" class="w-full">
+      <SidebarContent>
+        <OverlayScrollbarsWrapper>
+          <FlowActivity />
+        </OverlayScrollbarsWrapper>
+      </SidebarContent>
+    </Sidebar>
+  </Teleport>
 </template>
