@@ -6,7 +6,31 @@ import {
   resourcesMenu,
   solutionsMenu,
 } from "@/helpers/defaults"
+import { isTauri } from "@/helpers/utilities"
+import type { UnlistenFn } from "@tauri-apps/api/event"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
+
+let unlisten: UnlistenFn | undefined
+
+const isFullscreen = computedAsync(
+  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
+  false
+)
+
+onMounted(async () => {
+  if (isTauri.value) {
+    unlisten = await getCurrentWindow().onResized(async () => {
+      isFullscreen.value = await getCurrentWindow().isFullscreen()
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (unlisten) {
+    unlisten()
+  }
+})
 
 const user = useCurrentUser()
 const isUserLoaded = useIsCurrentUserLoaded()
@@ -16,9 +40,9 @@ const isUserLoaded = useIsCurrentUserLoaded()
   <div
     class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top fixed z-20 flex w-full shrink-0"
   >
-    <div class="mx-auto flex max-w-6xl items-center justify-center">
+    <div class="mx-auto flex w-full max-w-6xl items-center justify-center">
       <div
-        class="bg-background/5 grid grid-cols-3 gap-2 rounded-full p-2 backdrop-blur-lg"
+        class="bg-background/5 grid w-full grid-cols-3 gap-2 p-2 backdrop-blur-lg"
       >
         <div class="flex grow items-center justify-start gap-2">
           <ContextMenu>
@@ -48,7 +72,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
           </ContextMenu>
         </div>
         <div class="flex grow items-center justify-center gap-2">
-          <NavigationMenu>
+          <NavigationMenu class="hidden md:flex">
             <NavigationMenuList class="gap-0.5">
               <NavigationMenuItem>
                 <NavigationMenuTrigger class="bg-transparent">
@@ -248,12 +272,16 @@ const isUserLoaded = useIsCurrentUserLoaded()
           </NavigationMenu>
         </div>
         <div class="flex grow items-center justify-end gap-2">
-          <ColorMode />
-          <LanguageSwitcher />
+          <div class="hidden lg:flex">
+            <ColorMode />
+          </div>
+          <div class="hidden lg:flex">
+            <LanguageSwitcher />
+          </div>
           <Button v-if="!isUserLoaded" variant="ghost" size="icon" disabled>
             <icon-lucide-loader class="animate-spin" />
           </Button>
-          <Button v-else-if="user" variant="destructive" as-child>
+          <Button v-else-if="user" as-child>
             <RouterLink to="/home">Open app</RouterLink>
           </Button>
           <EnterTrigger v-else>
@@ -261,6 +289,98 @@ const isUserLoaded = useIsCurrentUserLoaded()
               <RouterLink to="/enter">Get started</RouterLink>
             </Button>
           </EnterTrigger>
+          <div class="flex md:hidden">
+            <Sheet>
+              <TooltipProvider>
+                <Tooltip>
+                  <SheetTrigger as-child>
+                    <TooltipTrigger as-child>
+                      <Button variant="ghost" size="icon">
+                        <icon-lucide-menu />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent> Menu </TooltipContent>
+                  </SheetTrigger>
+                  <SheetContent
+                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
+                    :class="{ 'mt-13': isTauri && !isFullscreen }"
+                  >
+                    <SheetHeader>
+                      <SheetTitle> Menu </SheetTitle>
+                      <SheetDescription>
+                        Access all the features and settings of Lectornaut.
+                      </SheetDescription>
+                    </SheetHeader>
+                    <Separator />
+                    <OverlayScrollbarsWrapper>
+                      <div
+                        class="flex grow flex-col overflow-auto overscroll-none"
+                      >
+                        <Accordion collapsible type="multiple" class="px-4">
+                          <AccordionItem value="products">
+                            <AccordionTrigger> Products </AccordionTrigger>
+                            <AccordionContent>
+                              <Button
+                                v-for="item in productsMenu"
+                                :key="item.id"
+                              >
+                                {{ item.title }}
+                              </Button>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="solutions">
+                            <AccordionTrigger> Solutions </AccordionTrigger>
+                            <AccordionContent>
+                              <div v-for="menu in solutionsMenu" :key="menu.id">
+                                <Button
+                                  v-for="item in menu.items"
+                                  :key="item.id"
+                                >
+                                  {{ item.title }}
+                                </Button>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="resources">
+                            <AccordionTrigger> Resources </AccordionTrigger>
+                            <AccordionContent>
+                              <Button
+                                v-for="item in resourcesMenu"
+                                :key="item.id"
+                              >
+                                {{ item.title }}
+                              </Button>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="company">
+                            <AccordionTrigger> Company </AccordionTrigger>
+                            <AccordionContent>
+                              <Button
+                                v-for="item in companyMenu"
+                                :key="item.id"
+                              >
+                                {{ item.title }}
+                              </Button>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <Button variant="ghost" as-child>
+                            <RouterLink to="/pricing"> Pricing </RouterLink>
+                          </Button>
+                        </Accordion>
+                      </div>
+                    </OverlayScrollbarsWrapper>
+                    <Separator />
+                    <SheetFooter>
+                      <div class="flex items-center justify-between gap-2">
+                        <ColorMode />
+                        <LanguageSwitcher />
+                      </div>
+                    </SheetFooter>
+                  </SheetContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Sheet>
+          </div>
         </div>
       </div>
     </div>

@@ -205,6 +205,7 @@ export const productsMenu = [
 export const solutionsMenu = [
   {
     title: "For Personal",
+    id: "personal",
     items: [
       {
         title: "Lectornaut CLI",
@@ -226,6 +227,7 @@ export const solutionsMenu = [
   },
   {
     title: "For Professional",
+    id: "professional",
     items: [
       {
         title: "Lectornaut Teams",
@@ -247,6 +249,7 @@ export const solutionsMenu = [
   },
   {
     title: "For Business",
+    id: "business",
     items: [
       {
         title: "Lectornaut Agents",
@@ -276,6 +279,7 @@ export const solutionsMenu = [
   },
   {
     title: "For Enterprise",
+    id: "enterprise",
     items: [
       {
         title: "Lectornaut Enterprise",

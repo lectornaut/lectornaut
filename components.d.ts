@@ -262,6 +262,7 @@ declare module 'vue' {
     IconLucideLockKeyhole: typeof import('~icons/lucide/lock-keyhole')['default']
     IconLucideLogOut: typeof import('~icons/lucide/log-out')['default']
     IconLucideMail: typeof import('~icons/lucide/mail')['default']
+    IconLucideMenu: typeof import('~icons/lucide/menu')['default']
     IconLucideMessageCircle: typeof import('~icons/lucide/message-circle')['default']
     IconLucideMessageCircleMore: typeof import('~icons/lucide/message-circle-more')['default']
     IconLucideMinus: typeof import('~icons/lucide/minus')['default']

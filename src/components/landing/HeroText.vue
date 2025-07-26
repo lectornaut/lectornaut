@@ -17,8 +17,8 @@
         stroke-width="0"
         class="font-display fill-current leading-tight tracking-tight"
       >
-        Professional
-        <tspan alignment-baseline="middle" class="italic">Network</tspan>
+        Learn
+        <tspan alignment-baseline="middle" class="italic">Anything</tspan>
       </text>
     </svg>
     <svg
@@ -38,8 +38,7 @@
         stroke-width="0"
         class="font-display fill-current leading-tight tracking-tight"
       >
-        <!-- <tspan alignment-baseline="middle" class="italic">for</tspan> -->
-        for AI Agents
+        assisted with AI
       </text>
     </svg>
   </div>
