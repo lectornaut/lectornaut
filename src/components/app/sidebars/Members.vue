@@ -30,31 +30,6 @@ const agents = [
   { id: 2, name: "Bob" },
   { id: 3, name: "Charlie" },
 ]
-
-const messages = [
-  { role: "agent", content: "Hi, how can I help you today?" },
-  { role: "user", content: "Hey, I'm having trouble with my account." },
-  { role: "agent", content: "What seems to be the problem?" },
-  { role: "user", content: "I can't log in." },
-  { role: "agent", content: "Let me check that for you." },
-  { role: "user", content: "Thanks!" },
-  { role: "agent", content: "You're welcome! Is there anything else?" },
-  { role: "user", content: "Actually, I have another question." },
-  { role: "agent", content: "Sure, what's your question?" },
-  { role: "user", content: "Can you help me with my billing?" },
-  { role: "agent", content: "Of course! What do you need help with?" },
-  { role: "user", content: "I need to update my payment method." },
-  { role: "agent", content: "No problem, I can assist you with that." },
-  { role: "user", content: "Great, thank you!" },
-  {
-    role: "agent",
-    content: "You're welcome! Let me know if you need anything else.",
-  },
-  { role: "user", content: "I will, thanks!" },
-  { role: "agent", content: "Have a great day!" },
-  { role: "user", content: "You too!" },
-  { role: "agent", content: "Goodbye!" },
-]
 </script>
 
 <template>
@@ -96,40 +71,7 @@ const messages = [
               </SheetDescription>
             </SheetHeader>
             <Separator />
-            <OverlayScrollbarsWrapper>
-              <div class="grid grid-cols-1">
-                <div
-                  v-for="(message, index) in messages"
-                  :key="index"
-                  class="flex items-end gap-2 p-4"
-                  :class="{
-                    'flex-row-reverse': message.role === 'user',
-                  }"
-                >
-                  <Avatar
-                    :name="`Agent ${index + 1}`"
-                    :colors="[
-                      'var(--chart-1)',
-                      'var(--chart-2)',
-                      'var(--chart-3)',
-                      'var(--chart-4)',
-                      'var(--chart-5)',
-                    ]"
-                    class="sticky bottom-0 size-5"
-                  />
-                  <div
-                    :class="[
-                      'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground ml-auto rounded-br'
-                        : 'bg-muted rounded-bl',
-                    ]"
-                  >
-                    {{ message.content }}
-                  </div>
-                </div>
-              </div>
-            </OverlayScrollbarsWrapper>
+            <AiChat />
             <Separator />
             <SheetFooter>
               <div class="flex items-center justify-between gap-2">

@@ -91,7 +91,7 @@ const teams = [
   <div class="grid">
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader>
             <CardTitle>
               <span> General </span>
@@ -127,7 +127,7 @@ const teams = [
     </SidebarGroup>
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader>
             <CardTitle>
               <span> Team </span>
@@ -272,7 +272,7 @@ const teams = [
     </SidebarGroup>
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader>
             <CardTitle>
               <span> Notifications </span>
@@ -337,7 +337,7 @@ const teams = [
     </SidebarGroup>
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader>
             <CardTitle>
               <span> Danger Zone </span>

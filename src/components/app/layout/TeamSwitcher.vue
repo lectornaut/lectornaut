@@ -106,13 +106,12 @@ const selectedUsers = ref<User[]>([])
             </Avatar>
             <span
               v-if="!online"
-              v-motion-fade
               class="bg-muted text-muted-foreground flex items-center gap-1 rounded-full border px-1.5 py-0.5"
             >
               <icon-bx-bxs-zap />
               Offline
             </span>
-            <span v-else v-motion-fade>
+            <span v-else>
               {{ selectedTeam.label }}
             </span>
             <icon-lucide-chevron-down />

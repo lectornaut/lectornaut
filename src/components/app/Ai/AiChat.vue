@@ -30,36 +30,61 @@ const messages = [
 <template>
   <OverlayScrollbarsWrapper>
     <div class="grid grid-cols-1">
-      <div
-        v-for="(message, index) in messages"
-        :key="index"
-        class="flex items-end gap-2 p-4"
-        :class="{
-          'flex-row-reverse': message.role === 'user',
-        }"
-      >
-        <Avatar
-          :name="`Agent ${index + 1}`"
-          :colors="[
-            'var(--chart-1)',
-            'var(--chart-2)',
-            'var(--chart-3)',
-            'var(--chart-4)',
-            'var(--chart-5)',
-          ]"
-          class="sticky bottom-0 size-5"
-        />
-        <div
-          :class="[
-            'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
-            message.role === 'user'
-              ? 'bg-primary text-primary-foreground ml-auto rounded-br'
-              : 'bg-muted rounded-bl',
-          ]"
-        >
-          {{ message.content }}
-        </div>
-      </div>
+      <ContextMenu v-for="(message, index) in messages" :key="index">
+        <ContextMenuTrigger as-child>
+          <div
+            class="flex items-end gap-2 p-4"
+            :class="{
+              'flex-row-reverse': message.role === 'user',
+            }"
+          >
+            <Avatar
+              :name="`Agent ${index + 1}`"
+              :colors="[
+                'var(--chart-1)',
+                'var(--chart-2)',
+                'var(--chart-3)',
+                'var(--chart-4)',
+                'var(--chart-5)',
+              ]"
+              class="sticky bottom-0 size-5"
+            />
+            <div
+              :class="[
+                'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
+                message.role === 'user'
+                  ? 'bg-primary text-primary-foreground ml-auto rounded-br'
+                  : 'bg-muted rounded-bl',
+              ]"
+            >
+              {{ message.content }}
+            </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuGroup>
+            <ContextMenuItem>
+              <icon-lucide-copy />
+              Copy
+            </ContextMenuItem>
+            <ContextMenuItem>
+              <icon-lucide-reply />
+              Reply
+            </ContextMenuItem>
+          </ContextMenuGroup>
+          <ContextMenuSeparator />
+          <ContextMenuGroup>
+            <ContextMenuItem v-if="message.role === 'user'">
+              <icon-lucide-pen-line />
+              Edit
+            </ContextMenuItem>
+            <ContextMenuItem>
+              <icon-lucide-trash />
+              Delete
+            </ContextMenuItem>
+          </ContextMenuGroup>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   </OverlayScrollbarsWrapper>
 </template>

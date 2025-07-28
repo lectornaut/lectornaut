@@ -86,7 +86,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
   <div class="grid">
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader>
             <CardTitle>
               <span> Runs </span>
@@ -181,7 +181,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     </SidebarGroup>
     <SidebarGroup v-for="stat in stats" :key="stat.name">
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader>
             <CardTitle class="flex w-full justify-between">
               <span> {{ stat.name }} </span>
@@ -243,7 +243,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     </SidebarGroup>
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader class="gap-4">
             <CardTitle>
               <span> Information </span>
@@ -278,7 +278,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     </SidebarGroup>
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader class="gap-4">
             <CardTitle>
               <span>Description</span>
@@ -299,7 +299,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
     </SidebarGroup>
     <SidebarGroup>
       <SidebarGroupContent>
-        <Card class="border-0 shadow-none">
+        <Card class="shadow-none">
           <CardHeader class="gap-4">
             <CardTitle>
               <span>Shared with</span>
