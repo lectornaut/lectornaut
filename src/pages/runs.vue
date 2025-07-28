@@ -58,4 +58,7 @@ const tree = [
   <div class="flex grow flex-col overflow-auto overscroll-none">
     <DataTable :data="runs" :columns="columns" />
   </div>
+  <Teleport defer to="#right-sidebar">
+    <Sidebar collapsible="none" class="w-full"> </Sidebar>
+  </Teleport>
 </template>

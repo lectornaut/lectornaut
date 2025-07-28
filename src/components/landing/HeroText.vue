@@ -17,8 +17,7 @@
         stroke-width="0"
         class="font-display fill-current leading-tight tracking-tight"
       >
-        Learn
-        <tspan alignment-baseline="middle" class="italic">Anything</tspan>
+        Learn anything
       </text>
     </svg>
     <svg
@@ -38,7 +37,8 @@
         stroke-width="0"
         class="font-display fill-current leading-tight tracking-tight"
       >
-        assisted with AI
+        <tspan alignment-baseline="middle" class="italic">your</tspan>
+        way
       </text>
     </svg>
   </div>

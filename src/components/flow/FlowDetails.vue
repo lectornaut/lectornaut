@@ -83,243 +83,259 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
 </script>
 
 <template>
-  <dl class="grid divide-y">
-    <div>
-      <Card class="border-0 shadow-none">
-        <CardHeader>
-          <CardTitle>
-            <span> Runs </span>
-          </CardTitle>
-          <CardDescription>
-            <div class="flex gap-2">
-              <span class="flex items-center gap-1">
-                <icon-mdi-circle-medium class="text-[MediumSlateBlue]" />
-                <span class="text-xs text-[MediumSlateBlue]">
-                  {{ Math.round(Math.random() * 100) }}
-                  runs
+  <div class="grid">
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <Card class="border-0 shadow-none">
+          <CardHeader>
+            <CardTitle>
+              <span> Runs </span>
+            </CardTitle>
+            <CardDescription>
+              <div class="flex gap-2">
+                <span class="flex items-center gap-1">
+                  <icon-mdi-circle-medium class="text-[MediumSlateBlue]" />
+                  <span class="text-xs text-[MediumSlateBlue]">
+                    {{ Math.round(Math.random() * 100) }}
+                    runs
+                  </span>
                 </span>
-              </span>
-              <span class="flex items-center gap-1">
-                <icon-mdi-circle-medium class="text-[MediumOrchid]" />
-                <span class="text-xs text-[MediumOrchid]">
-                  {{ Math.round(Math.random() * 100) }}
-                  jobs
+                <span class="flex items-center gap-1">
+                  <icon-mdi-circle-medium class="text-[MediumOrchid]" />
+                  <span class="text-xs text-[MediumOrchid]">
+                    {{ Math.round(Math.random() * 100) }}
+                    jobs
+                  </span>
                 </span>
-              </span>
-              <span class="flex items-center gap-1">
-                <icon-mdi-circle-medium class="text-[Crimson]" />
-                <span class="text-xs text-[Crimson]">
-                  {{ Math.round(Math.random() * 100) }}
-                  errors
+                <span class="flex items-center gap-1">
+                  <icon-mdi-circle-medium class="text-[Crimson]" />
+                  <span class="text-xs text-[Crimson]">
+                    {{ Math.round(Math.random() * 100) }}
+                    errors
+                  </span>
                 </span>
-              </span>
-            </div>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LineChart
-            class="-mx-5 h-16 w-0 min-w-[-webkit-fill-available] p-0"
-            :data="activity"
-            index="day"
-            :categories="['runs', 'jobs', 'errors', 'duration']"
-            :colors="[
-              'MediumSlateBlue',
-              'MediumOrchid',
-              'Crimson',
-              'MediumPurple',
-            ]"
-            :y-formatter="
-              (tick, i) => {
-                return typeof tick === 'number'
-                  ? `$ ${new Intl.NumberFormat('us').format(tick).toString()}`
-                  : ''
-              }
-            "
-            :show-tooltip="false"
-            :show-grid-line="false"
-            :show-legend="false"
-            :show-y-axis="false"
-            :show-x-axis="false"
-          />
-        </CardContent>
-        <CardFooter>
-          <div class="flex w-full items-center">
-            <div class="flex grow flex-col gap-1">
-              <span class="text-muted-foreground truncate text-xs">
-                First run
-              </span>
-              <span>
-                {{
-                  new Date().toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                }}
-              </span>
-            </div>
-            <div class="flex grow flex-col gap-1">
-              <span class="text-muted-foreground truncate text-xs">
-                Last run
-              </span>
-              <span>
-                {{
-                  new Date().toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                }}
-              </span>
-            </div>
-          </div>
-        </CardFooter>
-      </Card>
-    </div>
-    <div v-for="stat in stats" :key="stat.name">
-      <Card class="border-0 shadow-none">
-        <CardHeader>
-          <CardTitle class="flex w-full justify-between">
-            <span> {{ stat.name }} </span>
-            <span
-              :class="[
-                stat.changeType === 'negative'
-                  ? 'text-red-600'
-                  : 'text-green-600',
-                'text-xs font-medium',
-              ]"
-            >
-              {{ stat.change }}
-            </span>
-          </CardTitle>
-          <div class="w-full text-2xl font-medium tracking-tight">
-            {{ stat.value }}
-          </div>
-          <CardDescription class="text-xs">
-            {{ stat.description }}
-          </CardDescription>
-        </CardHeader>
-        <CardFooter v-if="stat.showUpgrade">
-          <Card class="w-full shadow-none">
-            <CardHeader>
-              <CardTitle>
-                <span> {{ stat.usage }} {{ stat.unit }} </span>
-              </CardTitle>
-              <CardDescription class="text-xs">
-                {{ getUsagePercentage(stat.usage, stat.capacity) }}% used in
-                billing cycle.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Progress
-                :model-value="getUsagePercentage(stat.usage, stat.capacity)"
-                class="h-1.5"
-              />
-            </CardContent>
-            <Separator />
-            <CardFooter class="px-0">
-              <div class="flex w-full flex-col gap-6">
-                <div class="flex grow flex-col items-center gap-1">
-                  <span> {{ stat.usage }} {{ stat.unit }} </span>
-                  <span class="text-muted-foreground text-xs"> Used </span>
-                </div>
-                <Separator />
-                <div class="flex grow flex-col items-center gap-1">
-                  <span> {{ stat.capacity }} {{ stat.unit }} </span>
-                  <span class="text-muted-foreground text-xs"> Reserved </span>
-                </div>
               </div>
-            </CardFooter>
-          </Card>
-        </CardFooter>
-      </Card>
-    </div>
-    <div>
-      <Card class="border-0 shadow-none">
-        <CardHeader class="gap-4">
-          <CardTitle>
-            <span> Information </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl class="flex flex-col gap-3">
-            <div class="flex justify-between">
-              <dt class="text-muted-foreground">Created by</dt>
-              <dd>Marie Culver</dd>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LineChart
+              class="-mx-5 h-16 w-0 min-w-[-webkit-fill-available] p-0"
+              :data="activity"
+              index="day"
+              :categories="['runs', 'jobs', 'errors', 'duration']"
+              :colors="[
+                'MediumSlateBlue',
+                'MediumOrchid',
+                'Crimson',
+                'MediumPurple',
+              ]"
+              :y-formatter="
+                (tick, i) => {
+                  return typeof tick === 'number'
+                    ? `$ ${new Intl.NumberFormat('us').format(tick).toString()}`
+                    : ''
+                }
+              "
+              :show-tooltip="false"
+              :show-grid-line="false"
+              :show-legend="false"
+              :show-y-axis="false"
+              :show-x-axis="false"
+            />
+          </CardContent>
+          <CardFooter>
+            <div class="flex w-full items-center">
+              <div class="flex grow flex-col gap-1">
+                <span class="text-muted-foreground truncate text-xs">
+                  First run
+                </span>
+                <span>
+                  {{
+                    new Date().toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  }}
+                </span>
+              </div>
+              <div class="flex grow flex-col gap-1">
+                <span class="text-muted-foreground truncate text-xs">
+                  Last run
+                </span>
+                <span>
+                  {{
+                    new Date().toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  }}
+                </span>
+              </div>
             </div>
-            <div class="flex justify-between">
-              <dt class="text-muted-foreground">Created on</dt>
-              <dd>June 8, 2020</dd>
+          </CardFooter>
+        </Card>
+      </SidebarGroupContent>
+    </SidebarGroup>
+    <SidebarGroup v-for="stat in stats" :key="stat.name">
+      <SidebarGroupContent>
+        <Card class="border-0 shadow-none">
+          <CardHeader>
+            <CardTitle class="flex w-full justify-between">
+              <span> {{ stat.name }} </span>
+              <span
+                :class="[
+                  stat.changeType === 'negative'
+                    ? 'text-red-600'
+                    : 'text-green-600',
+                  'text-xs font-medium',
+                ]"
+              >
+                {{ stat.change }}
+              </span>
+            </CardTitle>
+            <div class="w-full text-2xl font-medium tracking-tight">
+              {{ stat.value }}
             </div>
-            <div class="flex justify-between">
-              <dt class="text-muted-foreground">Last modified</dt>
-              <dd>June 8, 2020</dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="text-muted-foreground">Dimensions</dt>
-              <dd>4032 x 3024</dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="text-muted-foreground">Resolution</dt>
-              <dd>72 x 72</dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
-    </div>
-    <div>
-      <Card class="border-0 shadow-none">
-        <CardHeader class="gap-4">
-          <CardTitle>
-            <span>Description</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="flex items-center justify-between">
-            <span class="text-muted-foreground truncate italic">
-              Add a description.
-            </span>
-            <!-- <Button variant="secondary" size="icon">
+            <CardDescription class="text-xs">
+              {{ stat.description }}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter v-if="stat.showUpgrade">
+            <Card class="w-full shadow-none">
+              <CardHeader>
+                <CardTitle>
+                  <span> {{ stat.usage }} {{ stat.unit }} </span>
+                </CardTitle>
+                <CardDescription class="text-xs">
+                  {{ getUsagePercentage(stat.usage, stat.capacity) }}% used in
+                  billing cycle.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Progress
+                  :model-value="getUsagePercentage(stat.usage, stat.capacity)"
+                  class="h-1.5"
+                />
+              </CardContent>
+              <Separator />
+              <CardFooter class="px-0">
+                <div class="flex w-full flex-col gap-6">
+                  <div class="flex grow flex-col items-center gap-1">
+                    <span> {{ stat.usage }} {{ stat.unit }} </span>
+                    <span class="text-muted-foreground text-xs"> Used </span>
+                  </div>
+                  <Separator />
+                  <div class="flex grow flex-col items-center gap-1">
+                    <span> {{ stat.capacity }} {{ stat.unit }} </span>
+                    <span class="text-muted-foreground text-xs">
+                      Reserved
+                    </span>
+                  </div>
+                </div>
+              </CardFooter>
+            </Card>
+          </CardFooter>
+        </Card>
+      </SidebarGroupContent>
+    </SidebarGroup>
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <Card class="border-0 shadow-none">
+          <CardHeader class="gap-4">
+            <CardTitle>
+              <span> Information </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl class="flex flex-col gap-3">
+              <div class="flex justify-between">
+                <dt class="text-muted-foreground">Created by</dt>
+                <dd>Marie Culver</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-muted-foreground">Created on</dt>
+                <dd>June 8, 2020</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-muted-foreground">Last modified</dt>
+                <dd>June 8, 2020</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-muted-foreground">Dimensions</dt>
+                <dd>4032 x 3024</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-muted-foreground">Resolution</dt>
+                <dd>72 x 72</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+      </SidebarGroupContent>
+    </SidebarGroup>
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <Card class="border-0 shadow-none">
+          <CardHeader class="gap-4">
+            <CardTitle>
+              <span>Description</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="flex items-center justify-between">
+              <span class="text-muted-foreground truncate italic">
+                Add a description.
+              </span>
+              <!-- <Button variant="secondary" size="icon">
               <icon-lucide-pencil />
             </Button> -->
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-    <div>
-      <Card class="border-0 shadow-none">
-        <CardHeader class="gap-4">
-          <CardTitle>
-            <span>Shared with</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul role="list" class="flex flex-col gap-3">
-            <li class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <img
-                  src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=3&w=1024&h=1024&q=80"
-                  alt=""
-                  class="size-6 rounded-full"
-                />
-                <p class="font-medium">Aimee Douglas</p>
-              </div>
-              <span class="text-muted-foreground truncate text-xs">Owner</span>
-            </li>
-            <li class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixqx=oilqXxSqey&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                  alt=""
-                  class="size-6 rounded-full"
-                />
-                <p class="font-medium">Andrea McMillan</p>
-              </div>
-              <span class="text-muted-foreground truncate text-xs">Viewer</span>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
-  </dl>
+            </div>
+          </CardContent>
+        </Card>
+      </SidebarGroupContent>
+    </SidebarGroup>
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <Card class="border-0 shadow-none">
+          <CardHeader class="gap-4">
+            <CardTitle>
+              <span>Shared with</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul role="list" class="flex flex-col gap-3">
+              <li class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=3&w=1024&h=1024&q=80"
+                    alt=""
+                    class="size-6 rounded-full"
+                  />
+                  <p class="font-medium">Aimee Douglas</p>
+                </div>
+                <span class="text-muted-foreground truncate text-xs"
+                  >Owner</span
+                >
+              </li>
+              <li class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixqx=oilqXxSqey&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                    alt=""
+                    class="size-6 rounded-full"
+                  />
+                  <p class="font-medium">Andrea McMillan</p>
+                </div>
+                <span class="text-muted-foreground truncate text-xs"
+                  >Viewer</span
+                >
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  </div>
 </template>

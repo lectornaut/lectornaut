@@ -33,7 +33,9 @@ const metadata = [
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">test</Teleport>
+  <Teleport defer to="#left-sidebar">
+    <Sidebar collapsible="none" class="w-full"> </Sidebar>
+  </Teleport>
   <div class="flex grow flex-col overflow-auto overscroll-none">
     <div class="flex grow flex-col gap-2">
       <FlowApp />

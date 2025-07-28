@@ -109,4 +109,7 @@ const calendars = [
   <div class="flex grow flex-col overflow-auto overscroll-none">
     <DataTable :data="tasks" :columns="columns" />
   </div>
+  <Teleport defer to="#right-sidebar">
+    <Sidebar collapsible="none" class="w-full"> </Sidebar>
+  </Teleport>
 </template>

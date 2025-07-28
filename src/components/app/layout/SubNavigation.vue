@@ -5,7 +5,7 @@ const breadcrumbs = useRouteBreadcrumbs()
 </script>
 
 <template>
-  <div class="bg-card flex items-center justify-between gap-2 p-2">
+  <div class="bg-background flex items-center justify-between gap-2 p-2">
     <div class="flex gap-2">
       <TooltipProvider>
         <Tooltip>

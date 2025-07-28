@@ -540,7 +540,9 @@ const route = useRoute()
       </div>
     </div>
   </OverlayScrollbarsWrapper>
-  <Teleport defer to="#right-sidebar">test</Teleport>
+  <Teleport defer to="#right-sidebar">
+    <Sidebar collapsible="none" class="w-full"> </Sidebar>
+  </Teleport>
 </template>
 
 <!-- <style scoped>

@@ -66,14 +66,12 @@ const users = [
 </script>
 
 <template>
-  <div
-    class="before:from-background after:from-background relative grid grid-cols-1 before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-16 before:bg-gradient-to-r after:absolute after:inset-y-0 after:right-0 after:z-10 after:w-16 after:bg-gradient-to-l"
-  >
-    <p class="text-secondary-foreground mx-auto mb-16 max-w-4xl text-center">
+  <div class="mx-8 my-4 grid grid-cols-1">
+    <p class="text-muted-foreground mx-auto mb-16 max-w-4xl text-center">
       Powering the world's best teams, from startups to Fortune 500 companies.
     </p>
     <Carousel
-      class="w-full focus-visible:outline-none"
+      class="before:from-background after:from-background relative w-full before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-16 before:bg-gradient-to-r after:absolute after:inset-y-0 after:right-0 after:z-10 after:w-16 after:bg-gradient-to-l focus-visible:outline-none"
       :opts="{
         align: 'start',
         loop: true,
@@ -91,9 +89,12 @@ const users = [
         <CarouselItem
           v-for="(user, index) in users"
           :key="index"
-          class="text-muted-foreground/50 basis-auto pl-16"
+          class="basis-auto pl-16"
         >
-          <Component :is="user.logo" class="h-6 w-auto" />
+          <Component
+            :is="user.logo"
+            class="h-5 w-auto opacity-50 contrast-0 grayscale-100 invert-100"
+          />
         </CarouselItem>
       </CarouselContent>
     </Carousel>
