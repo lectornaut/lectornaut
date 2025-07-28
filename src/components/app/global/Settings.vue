@@ -361,7 +361,7 @@ const navigations = [
       <Tabs
         v-model="activeTab"
         :default-value="activeTab"
-        class="flex h-full w-full flex-col overflow-hidden"
+        class="flex size-full flex-col overflow-hidden"
         orientation="vertical"
       >
         <SidebarProvider

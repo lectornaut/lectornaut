@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import Avatar from "vue-boring-avatars"
+
 const messages = [
   { role: "agent", content: "Hi, how can I help you today?" },
   { role: "user", content: "Hey, I'm having trouble with my account." },
@@ -27,11 +29,27 @@ const messages = [
 
 <template>
   <OverlayScrollbarsWrapper>
-    <div class="flex grow flex-col overflow-auto overscroll-none">
-      <div class="grid grid-cols-1 gap-4 p-4">
+    <div class="grid grid-cols-1">
+      <div
+        v-for="(message, index) in messages"
+        :key="index"
+        class="flex items-end gap-2 p-4"
+        :class="{
+          'flex-row-reverse': message.role === 'user',
+        }"
+      >
+        <Avatar
+          :name="`Agent ${index + 1}`"
+          :colors="[
+            'var(--chart-1)',
+            'var(--chart-2)',
+            'var(--chart-3)',
+            'var(--chart-4)',
+            'var(--chart-5)',
+          ]"
+          class="sticky bottom-0 size-5"
+        />
         <div
-          v-for="(message, index) in messages"
-          :key="index"
           :class="[
             'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
             message.role === 'user'

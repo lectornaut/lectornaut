@@ -336,6 +336,144 @@ const teams = [
     ],
   },
 ]
+
+const navToc = [
+  {
+    title: "Getting Started",
+    url: "#",
+    items: [
+      {
+        title: "Installation",
+        url: "#",
+      },
+      {
+        title: "Project Structure",
+        url: "#",
+      },
+    ],
+  },
+  {
+    title: "Building Your Application",
+    url: "#",
+    items: [
+      {
+        title: "Routing",
+        url: "#",
+      },
+      {
+        title: "Data Fetching",
+        url: "#",
+        isActive: true,
+      },
+      {
+        title: "Rendering",
+        url: "#",
+      },
+      {
+        title: "Caching",
+        url: "#",
+      },
+      {
+        title: "Styling",
+        url: "#",
+      },
+      {
+        title: "Optimizing",
+        url: "#",
+      },
+      {
+        title: "Configuring",
+        url: "#",
+      },
+      {
+        title: "Testing",
+        url: "#",
+      },
+      {
+        title: "Authentication",
+        url: "#",
+      },
+      {
+        title: "Deploying",
+        url: "#",
+      },
+      {
+        title: "Upgrading",
+        url: "#",
+      },
+      {
+        title: "Examples",
+        url: "#",
+      },
+    ],
+  },
+  {
+    title: "API Reference",
+    url: "#",
+    items: [
+      {
+        title: "Components",
+        url: "#",
+      },
+      {
+        title: "File Conventions",
+        url: "#",
+      },
+      {
+        title: "Functions",
+        url: "#",
+      },
+      {
+        title: "next.config.js Options",
+        url: "#",
+      },
+      {
+        title: "CLI",
+        url: "#",
+      },
+      {
+        title: "Edge Runtime",
+        url: "#",
+      },
+    ],
+  },
+  {
+    title: "Architecture",
+    url: "#",
+    items: [
+      {
+        title: "Accessibility",
+        url: "#",
+      },
+      {
+        title: "Fast Refresh",
+        url: "#",
+      },
+      {
+        title: "Next.js Compiler",
+        url: "#",
+      },
+      {
+        title: "Supported Browsers",
+        url: "#",
+      },
+      {
+        title: "Turbopack",
+        url: "#",
+      },
+    ],
+  },
+  {
+    title: "Community",
+    url: "#",
+    items: [
+      {
+        title: "Contribution Guide",
+        url: "#",
+      },
+    ],
+  },
+]
 </script>
 
 <template>
@@ -362,10 +500,7 @@ const teams = [
               <SidebarMenuItem v-for="item in favorites" :key="item.name">
                 <SidebarMenuButton>
                   <Avatar
-                    :square="false"
-                    :title="false"
                     :name="item.name"
-                    variant="beam"
                     :colors="[
                       'var(--chart-1)',
                       'var(--chart-2)',
@@ -373,7 +508,6 @@ const teams = [
                       'var(--chart-4)',
                       'var(--chart-5)',
                     ]"
-                    class="rounded-full"
                   />
                   <span>{{ item.name }}</span>
                 </SidebarMenuButton>
@@ -428,10 +562,7 @@ const teams = [
                   <SidebarMenuItem>
                     <SidebarMenuButton>
                       <Avatar
-                        :square="false"
-                        :title="false"
                         :name="team.name"
-                        variant="beam"
                         :colors="[
                           'var(--chart-1)',
                           'var(--chart-2)',
@@ -439,7 +570,6 @@ const teams = [
                           'var(--chart-4)',
                           'var(--chart-5)',
                         ]"
-                        class="rounded-full"
                       />
                       <span>{{ team.name }}</span>
                     </SidebarMenuButton>
@@ -462,10 +592,7 @@ const teams = [
                         >
                           <SidebarMenuSubButton>
                             <Avatar
-                              :square="false"
-                              :title="false"
                               :name="page.name"
-                              variant="beam"
                               :colors="[
                                 'var(--chart-1)',
                                 'var(--chart-2)',
@@ -473,7 +600,6 @@ const teams = [
                                 'var(--chart-4)',
                                 'var(--chart-5)',
                               ]"
-                              class="rounded-full"
                             />
                             <span>{{ page.name }}</span>
                           </SidebarMenuSubButton>
@@ -575,20 +701,7 @@ const teams = [
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
               <CardTitle class="text-sm font-medium"> Agents </CardTitle>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                class="text-muted-foreground h-4 w-4"
-              >
-                <path
-                  d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
-                />
-              </svg>
+              <icon-lucide-dollar-sign />
             </CardHeader>
             <CardContent>
               <div class="text-2xl font-bold">$45,231.89</div>
@@ -602,20 +715,7 @@ const teams = [
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
               <CardTitle class="text-sm font-medium"> Performance </CardTitle>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                class="text-muted-foreground h-4 w-4"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
+              <icon-lucide-trending-up />
             </CardHeader>
             <CardContent>
               <div class="text-2xl font-bold">+2350</div>
@@ -629,19 +729,7 @@ const teams = [
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
               <CardTitle class="text-sm font-medium"> Tasks </CardTitle>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                class="text-muted-foreground h-4 w-4"
-              >
-                <rect width="20" height="14" x="2" y="5" rx="2" />
-                <path d="M2 10h20" />
-              </svg>
+              <icon-lucide-check-square />
             </CardHeader>
             <CardContent>
               <div class="text-2xl font-bold">+12,234</div>
@@ -653,18 +741,7 @@ const teams = [
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
               <CardTitle class="text-sm font-medium"> Efficiency </CardTitle>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                class="text-muted-foreground h-4 w-4"
-              >
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-              </svg>
+              <icon-lucide-clock />
             </CardHeader>
             <CardContent>
               <div class="text-2xl font-bold">+573</div>
@@ -682,10 +759,11 @@ const teams = [
                 index="day"
                 :categories="['runs', 'jobs', 'errors', 'duration']"
                 :colors="[
-                  'MediumSlateBlue',
-                  'MediumOrchid',
-                  'Crimson',
-                  'MediumPurple',
+                  'var(--chart-1)',
+                  'var(--chart-2)',
+                  'var(--chart-3)',
+                  'var(--chart-4)',
+                  'var(--chart-5)',
                 ]"
                 :y-formatter="
                   (tick: number | Date) => {
@@ -719,13 +797,16 @@ const teams = [
                   :key="sale.email"
                   class="flex items-center"
                 >
-                  <Avatar class="h-9 w-9">
-                    <AvatarImage
-                      :src="sale.avatar"
-                      :alt="sale.name + ' Avatar'"
-                    />
-                    <AvatarFallback>{{ sale.initials }}</AvatarFallback>
-                  </Avatar>
+                  <Avatar
+                    :name="sale.name"
+                    :colors="[
+                      'var(--chart-1)',
+                      'var(--chart-2)',
+                      'var(--chart-3)',
+                      'var(--chart-4)',
+                      'var(--chart-5)',
+                    ]"
+                  />
                   <div class="ml-4 space-y-1">
                     <p class="text-sm leading-none font-medium">
                       {{ sale.name }}
@@ -748,7 +829,33 @@ const teams = [
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
-          <FlowActivity />
+          <SidebarGroup>
+            <SidebarGroupLabel>Table of Contents</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem v-for="item in navToc" :key="item.title">
+                  <SidebarMenuButton as-child>
+                    <a :href="item.url" class="font-medium">
+                      {{ item.title }}
+                    </a>
+                  </SidebarMenuButton>
+                  <SidebarMenuSub v-if="item.items.length">
+                    <SidebarMenuSubItem
+                      v-for="subItem in item.items"
+                      :key="subItem.title"
+                    >
+                      <SidebarMenuSubButton
+                        as-child
+                        :is-active="subItem.isActive"
+                      >
+                        <a :href="subItem.url">{{ subItem.title }}</a>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>

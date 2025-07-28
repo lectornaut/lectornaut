@@ -104,7 +104,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
                           <div
                             class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
                           >
-                            <span class="">
+                            <span>
                               {{ item.title }}
                             </span>
                             <span class="text-muted-foreground text-xs">
@@ -158,7 +158,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
                               <div
                                 class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
                               >
-                                <span class="">
+                                <span>
                                   {{ item.title }}
                                 </span>
                                 <span class="text-muted-foreground text-xs">
@@ -203,7 +203,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
                           <div
                             class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
                           >
-                            <span class="">
+                            <span>
                               {{ item.title }}
                             </span>
                             <span class="text-muted-foreground text-xs">
@@ -246,7 +246,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
                           <div
                             class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
                           >
-                            <span class="">
+                            <span>
                               {{ item.title }}
                             </span>
                             <span class="text-muted-foreground text-xs">

@@ -329,11 +329,7 @@ const route = useRoute()
                         <div class="flex flex-col gap-2">
                           <CardTitle class="flex items-center gap-3 text-base">
                             <Avatar
-                              :size="20"
-                              :square="false"
-                              :title="false"
                               :name="`Agent ${index + 1}`"
-                              variant="beam"
                               :colors="[
                                 'var(--chart-1)',
                                 'var(--chart-2)',
@@ -428,11 +424,7 @@ const route = useRoute()
                   <div class="flex flex-col gap-2">
                     <CardTitle class="flex items-center gap-3 text-base">
                       <Avatar
-                        :size="20"
-                        :square="false"
-                        :title="false"
                         :name="`Agent ${index + 1}`"
-                        variant="beam"
                         :colors="[
                           'var(--chart-1)',
                           'var(--chart-2)',
@@ -487,11 +479,7 @@ const route = useRoute()
                   <div class="flex flex-col gap-2">
                     <CardTitle class="flex items-center gap-3 text-base">
                       <Avatar
-                        :size="20"
-                        :square="false"
-                        :title="false"
                         :name="`Agent ${index + 1}`"
-                        variant="beam"
                         :colors="[
                           'var(--chart-1)',
                           'var(--chart-2)',
@@ -499,7 +487,6 @@ const route = useRoute()
                           'var(--chart-4)',
                           'var(--chart-5)',
                         ]"
-                        class="rounded-full"
                       />
                       Agent {{ index + 1 }}
                     </CardTitle>

@@ -85,7 +85,7 @@ const selectedUsers = ref<User[]>([])
 </script>
 
 <template>
-  <div data-tauri-drag-region class="flex items-center justify-between gap-2">
+  <div class="flex items-center justify-between gap-2">
     <Dialog v-model:open="showNewTeamDialog">
       <Popover v-model:open="openTeamSwitcher">
         <PopoverTrigger as-child>

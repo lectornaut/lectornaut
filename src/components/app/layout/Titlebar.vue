@@ -103,9 +103,9 @@ const isDocked = ref(false)
                     variant="ghost"
                     class="shadow-none"
                   >
-                    <Logo />
+                    <icon-mingcute-ai-fill />
                     <RadiantText :duration="5" :radiant-width="20">
-                      Talk to AI
+                      Ask AI
                     </RadiantText>
                   </Button>
                 </TooltipTrigger>

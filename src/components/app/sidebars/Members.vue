@@ -64,23 +64,19 @@ const messages = [
         <Sheet>
           <SheetTrigger as-child>
             <TooltipTrigger
-              class="group relative flex aspect-square items-center justify-center rounded-md transition"
+              class="group flex aspect-square items-center justify-center rounded-md transition"
               as-child
             >
               <SidebarMenuItem>
-                <SidebarMenuButton as-child>
+                <SidebarMenuButton>
                   <Avatar
                     :name="`Agent ${agent.id}`"
-                    :size="14"
-                    variant="beam"
-                    :title="false"
-                    :square="true"
                     :colors="[
-                      'var(--chart-5)',
-                      'var(--chart-4)',
+                      'var(--chart-1)',
+                      'var(--chart-2)',
                       'var(--chart-3)',
-                      'var(--chart-1)',
-                      'var(--chart-1)',
+                      'var(--chart-4)',
+                      'var(--chart-5)',
                     ]"
                   />
                 </SidebarMenuButton>
@@ -101,41 +97,35 @@ const messages = [
             </SheetHeader>
             <Separator />
             <OverlayScrollbarsWrapper>
-              <div class="flex grow flex-col overflow-auto overscroll-none">
-                <div class="grid grid-cols-1 gap-4 p-4">
+              <div class="grid grid-cols-1">
+                <div
+                  v-for="(message, index) in messages"
+                  :key="index"
+                  class="flex items-end gap-2 p-4"
+                  :class="{
+                    'flex-row-reverse': message.role === 'user',
+                  }"
+                >
+                  <Avatar
+                    :name="`Agent ${index + 1}`"
+                    :colors="[
+                      'var(--chart-1)',
+                      'var(--chart-2)',
+                      'var(--chart-3)',
+                      'var(--chart-4)',
+                      'var(--chart-5)',
+                    ]"
+                    class="sticky bottom-0 size-5"
+                  />
                   <div
-                    v-for="(message, index) in messages"
-                    :key="index"
-                    class="flex items-end gap-2"
-                    :class="{
-                      'flex-row-reverse': message.role === 'user',
-                    }"
+                    :class="[
+                      'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto rounded-br'
+                        : 'bg-muted rounded-bl',
+                    ]"
                   >
-                    <Avatar
-                      :size="20"
-                      :square="false"
-                      :title="false"
-                      :name="`Agent ${index + 1}`"
-                      variant="beam"
-                      :colors="[
-                        'var(--chart-1)',
-                        'var(--chart-2)',
-                        'var(--chart-3)',
-                        'var(--chart-4)',
-                        'var(--chart-5)',
-                      ]"
-                      class="sticky bottom-0 rounded-full"
-                    />
-                    <div
-                      :class="[
-                        'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground ml-auto rounded-br'
-                          : 'bg-muted rounded-bl',
-                      ]"
-                    >
-                      {{ message.content }}
-                    </div>
+                    {{ message.content }}
                   </div>
                 </div>
               </div>
