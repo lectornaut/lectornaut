@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { activity } from "@/data/chart"
+import { dailyActivity } from "@/data/chart"
 
 const stats = [
   {
@@ -120,7 +120,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
           <CardContent>
             <LineChart
               class="-mx-5 h-16 w-0 min-w-[-webkit-fill-available] p-0"
-              :data="activity"
+              :data="dailyActivity"
               index="day"
               :categories="['runs', 'jobs', 'errors', 'duration']"
               :colors="[
@@ -137,11 +137,11 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                     : ''
                 }
               "
-              :show-tooltip="false"
-              :show-grid-line="false"
-              :show-legend="false"
-              :show-y-axis="false"
               :show-x-axis="false"
+              :show-y-axis="false"
+              :show-tooltip="false"
+              :show-legend="false"
+              :show-grid-line="false"
             />
           </CardContent>
           <CardFooter>

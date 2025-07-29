@@ -1,32 +1,45 @@
-export const activity = [
-  { day: 1, runs: 140, jobs: 125, errors: 5, duration: 320 },
-  { day: 2, runs: 150, jobs: 128, errors: 6, duration: 340 },
-  { day: 3, runs: 138, jobs: 120, errors: 8, duration: 310 },
-  { day: 4, runs: 160, jobs: 130, errors: 7, duration: 350 },
-  { day: 5, runs: 155, jobs: 135, errors: 9, duration: 345 },
-  { day: 6, runs: 170, jobs: 140, errors: 10, duration: 370 },
-  { day: 7, runs: 165, jobs: 138, errors: 8, duration: 360 },
-  { day: 8, runs: 175, jobs: 145, errors: 9, duration: 375 },
-  { day: 9, runs: 162, jobs: 132, errors: 11, duration: 355 },
-  { day: 10, runs: 180, jobs: 150, errors: 12, duration: 390 },
-  { day: 11, runs: 172, jobs: 140, errors: 11, duration: 365 },
-  { day: 12, runs: 185, jobs: 148, errors: 10, duration: 400 },
-  { day: 13, runs: 178, jobs: 142, errors: 9, duration: 380 },
-  { day: 14, runs: 195, jobs: 155, errors: 13, duration: 420 },
-  { day: 15, runs: 188, jobs: 150, errors: 12, duration: 400 },
-  { day: 16, runs: 180, jobs: 145, errors: 10, duration: 390 },
-  { day: 17, runs: 200, jobs: 160, errors: 14, duration: 440 },
-  { day: 18, runs: 190, jobs: 150, errors: 13, duration: 415 },
-  { day: 19, runs: 185, jobs: 148, errors: 12, duration: 405 },
-  { day: 20, runs: 205, jobs: 165, errors: 10, duration: 450 },
-  { day: 21, runs: 198, jobs: 155, errors: 9, duration: 430 },
-  { day: 22, runs: 210, jobs: 168, errors: 11, duration: 460 },
-  { day: 23, runs: 202, jobs: 158, errors: 12, duration: 440 },
-  { day: 24, runs: 220, jobs: 170, errors: 10, duration: 480 },
-  { day: 25, runs: 230, jobs: 175, errors: 9, duration: 500 },
-  { day: 26, runs: 215, jobs: 160, errors: 11, duration: 470 },
-  { day: 27, runs: 225, jobs: 172, errors: 10, duration: 490 },
-  { day: 28, runs: 218, jobs: 165, errors: 12, duration: 475 },
-  { day: 29, runs: 240, jobs: 180, errors: 13, duration: 520 },
-  { day: 30, runs: 225, jobs: 170, errors: 11, duration: 495 },
+export const dailyActivity = Array.from({ length: 30 }, (_, index) => ({
+  day: index + 1,
+  runs: Math.floor(Math.random() * 100) + 120, // Random runs between 120-220
+  jobs: Math.floor(Math.random() * 60) + 110, // Random jobs between 110-170
+  errors: Math.floor(Math.random() * 15) + 5, // Random errors between 5-20
+  duration: Math.floor(Math.random() * 200) + 300, // Random duration between 300-500
+}))
+
+export const monthlyActivity = [
+  {
+    name: "Jan",
+    total: Math.floor(Math.random() * 2000) + 500,
+    predicted: Math.floor(Math.random() * 2000) + 500,
+  },
+  {
+    name: "Feb",
+    total: Math.floor(Math.random() * 2000) + 500,
+    predicted: Math.floor(Math.random() * 2000) + 500,
+  },
+  {
+    name: "Mar",
+    total: Math.floor(Math.random() * 2000) + 500,
+    predicted: Math.floor(Math.random() * 2000) + 500,
+  },
+  {
+    name: "Apr",
+    total: Math.floor(Math.random() * 2000) + 500,
+    predicted: Math.floor(Math.random() * 2000) + 500,
+  },
+  {
+    name: "May",
+    total: Math.floor(Math.random() * 2000) + 500,
+    predicted: Math.floor(Math.random() * 2000) + 500,
+  },
+  {
+    name: "Jun",
+    total: Math.floor(Math.random() * 2000) + 500,
+    predicted: Math.floor(Math.random() * 2000) + 500,
+  },
+  {
+    name: "Jul",
+    total: Math.floor(Math.random() * 2000) + 500,
+    predicted: Math.floor(Math.random() * 2000) + 500,
+  },
 ]

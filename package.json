@@ -79,7 +79,7 @@
     "vue-router": "^4.5.1",
     "vue-sonner": "^2.0.2",
     "vuefire": "^3.2.2",
-    "zod": "^4.0.10"
+    "zod": "^4.0.11"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

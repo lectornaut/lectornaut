@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { activity } from "@/data/chart"
+import { monthlyActivity } from "@/data/chart"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
 import Avatar from "vue-boring-avatars"
@@ -694,9 +694,9 @@ const navToc = [
         </div>
         <TabsContent
           value="overview"
-          class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-8"
+          class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-12"
         >
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-2">
+          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
             <CardHeader
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
@@ -710,7 +710,7 @@ const navToc = [
               </p>
             </CardContent>
           </Card>
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-2">
+          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
             <CardHeader
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
@@ -724,7 +724,7 @@ const navToc = [
               </p>
             </CardContent>
           </Card>
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-2">
+          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
             <CardHeader
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
@@ -736,7 +736,7 @@ const navToc = [
               <p class="text-muted-foreground text-xs">+19% from last month</p>
             </CardContent>
           </Card>
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-2">
+          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
             <CardHeader
               class="flex flex-row items-center justify-between space-y-0 pb-2"
             >
@@ -748,16 +748,20 @@ const navToc = [
               <p class="text-muted-foreground text-xs">+201 since last hour</p>
             </CardContent>
           </Card>
-          <Card class="col-span-1 shadow-none md:col-span-2 lg:col-span-4">
+          <Card
+            v-for="item in 3"
+            :key="item"
+            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
+          >
             <CardHeader>
               <CardTitle>Interactions</CardTitle>
             </CardHeader>
             <CardContent>
-              <LineChart
-                class="-mx-5 h-64 w-0 min-w-[-webkit-fill-available] p-0"
-                :data="activity"
-                index="day"
-                :categories="['runs', 'jobs', 'errors', 'duration']"
+              <BarChart
+                class="-mb-6 h-48 min-w-[-webkit-fill-available] p-0"
+                :data="monthlyActivity"
+                :categories="['total', 'predicted']"
+                index="total"
                 :colors="[
                   'var(--chart-1)',
                   'var(--chart-2)',
@@ -775,15 +779,22 @@ const navToc = [
                     return ''
                   }
                 "
-                :show-tooltip="false"
-                :show-grid-line="false"
-                :show-legend="false"
-                :show-y-axis="false"
+                :type="'stacked'"
+                :rounded-corners="16"
+                :bar-padding="0.5"
                 :show-x-axis="false"
+                :show-y-axis="false"
+                :show-tooltip="false"
+                :show-legend="false"
+                :show-grid-line="false"
               />
             </CardContent>
+            <Separator />
+            <CardFooter>
+              <CardDescription> +265 sales this month. </CardDescription>
+            </CardFooter>
           </Card>
-          <Card class="col-span-1 shadow-none md:col-span-2 lg:col-span-4">
+          <Card class="col-span-1 shadow-none md:col-span-2 lg:col-span-12">
             <CardHeader>
               <CardTitle>Recent</CardTitle>
               <CardDescription>
