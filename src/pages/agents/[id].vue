@@ -34,7 +34,7 @@ const metadata = [
 
 <template>
   <Teleport defer to="#left-sidebar">
-    <Sidebar collapsible="none" class="w-full"> </Sidebar>
+    <Sidebar collapsible="none" class="bg-sidebar/50 w-full"> </Sidebar>
   </Teleport>
   <div class="flex grow flex-col overflow-auto overscroll-none">
     <div class="flex grow flex-col gap-2">
@@ -43,7 +43,7 @@ const metadata = [
   </div>
   <Teleport defer to="#right-sidebar">
     <Tabs default-value="details" class="grow gap-0">
-      <Sidebar collapsible="none" class="w-full">
+      <Sidebar collapsible="none" class="bg-sidebar/50 w-full">
         <SidebarHeader>
           <div class="flex items-center justify-between gap-2">
             <span class="text-foreground ml-2 text-base font-medium">

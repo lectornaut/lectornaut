@@ -158,7 +158,7 @@ const dummyRecentTabs = [
 </script>
 
 <template>
-  <div class="bg-sidebar flex flex-col">
+  <div class="bg-sidebar/50 flex flex-col">
     <div
       data-tauri-drag-region
       class="relative flex grow items-center gap-2 p-2 transition-all"

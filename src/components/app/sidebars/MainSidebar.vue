@@ -1,7 +1,7 @@
 <template>
   <Sidebar
     collapsible="none"
-    class="bg-background w-[calc(var(--sidebar-width-icon))]"
+    class="w-[calc(var(--sidebar-width-icon))] bg-transparent"
   >
     <SidebarHeader>
       <SidebarMenu>

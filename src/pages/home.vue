@@ -478,7 +478,7 @@ const navToc = [
 
 <template>
   <Teleport defer to="#left-sidebar">
-    <Sidebar collapsible="none" class="w-full">
+    <Sidebar collapsible="none" class="bg-sidebar/50 w-full">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem v-for="item in navMain" :key="item.title">
@@ -837,7 +837,7 @@ const navToc = [
     </div>
   </OverlayScrollbarsWrapper>
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="w-full">
+    <Sidebar collapsible="none" class="bg-sidebar/50 w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
           <SidebarGroup>

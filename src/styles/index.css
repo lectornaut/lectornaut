@@ -92,11 +92,13 @@
     scrollbar-width: thin;
     zoom: var(--zoom-scale);
 
-    @apply selection:bg-secondary;
-    @apply selection:text-secondary-foreground;
+    @apply selection:bg-primary;
+    @apply selection:text-primary-foreground;
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-background;
+    @apply bg-linear-to-b;
+    @apply from-background;
+    @apply to-background/95;
     @apply text-foreground;
     @apply select-none;
     @apply overflow-auto;
