@@ -31,8 +31,8 @@ emitter.on("Sidebar.Right.Toggle", () => {
         ref="leftPanel"
         collapsible
         :min-size="15"
-        :default-size="20"
-        :max-size="25"
+        :default-size="16"
+        :max-size="22"
         :collapsed-size="0"
         as-child
         class="hidden lg:flex"
@@ -40,7 +40,7 @@ emitter.on("Sidebar.Right.Toggle", () => {
         <div id="left-sidebar"></div>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-sidebar-border focus-visible:ring-sidebar-border focus-visible:bg-sidebar-border data-[state=drag]:bg-sidebar-border z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel class="flex grow flex-col overflow-auto overscroll-none">
         <Tabbar />
@@ -51,14 +51,14 @@ emitter.on("Sidebar.Right.Toggle", () => {
         </div>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-sidebar-border focus-visible:ring-sidebar-border focus-visible:bg-sidebar-border data-[state=drag]:bg-sidebar-border z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel
         ref="rightPanel"
         collapsible
         :min-size="15"
-        :default-size="20"
-        :max-size="25"
+        :default-size="16"
+        :max-size="22"
         :collapsed-size="0"
         as-child
         class="hidden lg:flex"

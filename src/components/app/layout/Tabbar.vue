@@ -213,7 +213,7 @@ const dummyRecentTabs = [
         class="relative flex w-fit min-w-0 items-center justify-start gap-2"
       >
         <template v-if="pending">
-          <Skeleton v-for="n in 3" :key="n" class="h-9 w-60" />
+          <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
         </template>
         <template v-else-if="error">
           <icon-lucide-alert-triangle /> error

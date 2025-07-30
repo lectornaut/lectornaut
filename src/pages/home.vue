@@ -6,7 +6,6 @@ import Avatar from "vue-boring-avatars"
 import Blocks from "~icons/lucide/blocks"
 import Calendar from "~icons/lucide/calendar"
 import Home from "~icons/lucide/home"
-import Inbox from "~icons/lucide/inbox"
 import MessageCircleQuestion from "~icons/lucide/message-circle-question"
 import Search from "~icons/lucide/search"
 import Settings2 from "~icons/lucide/settings-2"
@@ -150,6 +149,12 @@ const range = ref({
 
 const navMain = [
   {
+    title: "Home",
+    url: "#",
+    icon: Home,
+    isActive: true,
+  },
+  {
     title: "Search",
     url: "#",
     icon: Search,
@@ -158,18 +163,6 @@ const navMain = [
     title: "Ask AI",
     url: "#",
     icon: Sparkles,
-  },
-  {
-    title: "Home",
-    url: "#",
-    icon: Home,
-    isActive: true,
-  },
-  {
-    title: "Inbox",
-    url: "#",
-    icon: Inbox,
-    badge: false,
   },
 ]
 
@@ -758,7 +751,7 @@ const navToc = [
             </CardHeader>
             <CardContent>
               <BarChart
-                class="-mb-6 h-48 min-w-[-webkit-fill-available] p-0"
+                class="-mb-6 h-40 min-w-[-webkit-fill-available]"
                 :data="monthlyActivity"
                 :categories="['total', 'predicted']"
                 index="total"
@@ -780,7 +773,7 @@ const navToc = [
                   }
                 "
                 :type="'stacked'"
-                :rounded-corners="16"
+                :rounded-corners="8"
                 :bar-padding="0.5"
                 :show-x-axis="false"
                 :show-y-axis="false"
@@ -845,21 +838,16 @@ const navToc = [
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem v-for="item in navToc" :key="item.title">
-                  <SidebarMenuButton as-child>
-                    <a :href="item.url" class="font-medium">
-                      {{ item.title }}
-                    </a>
+                  <SidebarMenuButton>
+                    {{ item.title }}
                   </SidebarMenuButton>
-                  <SidebarMenuSub v-if="item.items.length">
+                  <SidebarMenuSub v-if="item.items.length" class="mr-0 pr-0">
                     <SidebarMenuSubItem
                       v-for="subItem in item.items"
                       :key="subItem.title"
                     >
-                      <SidebarMenuSubButton
-                        as-child
-                        :is-active="subItem.isActive"
-                      >
-                        <a :href="subItem.url">{{ subItem.title }}</a>
+                      <SidebarMenuSubButton :is-active="subItem.isActive">
+                        {{ subItem.title }}
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
