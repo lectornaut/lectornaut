@@ -4,7 +4,9 @@ import IconBadgeCheck from "~icons/lucide/badge-check"
 import IconBot from "~icons/lucide/bot"
 import IconComponent from "~icons/lucide/component"
 import IconHome from "~icons/lucide/home"
+import IconPen from "~icons/lucide/pen"
 import IconSparkle from "~icons/lucide/sparkle"
+import IconExplore from "~icons/lucide/telescope"
 
 const navigation = [
   {
@@ -12,6 +14,18 @@ const navigation = [
     url: "/home",
     id: "home",
     icon: IconHome,
+  },
+  {
+    title: "Write",
+    url: "/write",
+    id: "write",
+    icon: IconPen,
+  },
+  {
+    title: "Explore",
+    url: "/explore",
+    id: "explore",
+    icon: IconExplore,
   },
   {
     title: "Agents",

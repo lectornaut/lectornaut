@@ -226,14 +226,14 @@ const dummyRecentTabs = [
             <HoverCard :close-delay="0">
               <ContextMenuTrigger as-child>
                 <HoverCardTrigger as-child>
-                  <Button
-                    :variant="tab.id === active ? 'secondary' : 'ghost'"
-                    class="group relative flex w-60 min-w-0 flex-1 justify-between gap-2 rounded-xs border border-transparent bg-transparent shadow-none"
-                    :class="
+                  <!-- :class="
                       tab.id === active
                         ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:bg-background min-w-32 rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-10 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0px_5px_0_currentcolor,5px_0px_0_currentcolor,10px_5px_0_currentcolor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-10 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0px_5px_0_currentcolor,-5px_0px_0_currentcolor,-10px_5px_0_currentcolor]'
                         : 'before:bg-border text-muted-foreground after:bg-border before:absolute before:-left-1.5 before:h-2 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-2 after:w-0.5 after:rounded-full'
-                    "
+                    " -->
+                  <Button
+                    :variant="tab.id === active ? 'secondary' : 'outline'"
+                    class="group relative flex max-w-60 min-w-0 flex-1 border-0 shadow-none"
                     as-child
                     @click="active = tab.id"
                   >
@@ -259,10 +259,10 @@ const dummyRecentTabs = [
                           <TooltipContent>Close tab</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <span
+                      <!-- <span
                         v-if="tab.id === active"
                         class="bg-background absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
-                      ></span>
+                      ></span> -->
                     </RouterLink>
                   </Button>
                 </HoverCardTrigger>

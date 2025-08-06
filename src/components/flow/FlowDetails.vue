@@ -119,7 +119,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
           </CardHeader>
           <CardContent>
             <LineChart
-              class="-mx-5 h-16 w-0 min-w-[-webkit-fill-available] p-0"
+              class="-mx-6 h-32 min-w-[-webkit-fill-available]"
               :data="dailyActivity"
               index="day"
               :categories="['runs', 'jobs', 'errors', 'duration']"

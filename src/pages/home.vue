@@ -753,7 +753,7 @@ const navToc = [
               <BarChart
                 class="-mb-6 h-40 min-w-[-webkit-fill-available]"
                 :data="monthlyActivity"
-                :categories="['total', 'predicted']"
+                :categories="['name', 'total', 'predicted']"
                 index="total"
                 :colors="[
                   'var(--chart-1)',
