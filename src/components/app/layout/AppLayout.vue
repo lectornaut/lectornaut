@@ -111,7 +111,7 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
   </main>
   <div
     data-tauri-drag-region
-    class="pb-safe-bottom shadow-border grid shrink-0 grid-cols-3 gap-2 shadow-[0_0_0_1px]"
+    class="pb-safe-bottom shadow-border z-0 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px_0px]"
   >
     <div class="flex items-center justify-start" data-tauri-drag-region></div>
     <div class="flex items-center justify-center" data-tauri-drag-region></div>

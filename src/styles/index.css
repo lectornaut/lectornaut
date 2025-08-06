@@ -98,7 +98,7 @@
     @apply w-dvw;
     @apply bg-linear-to-b;
     @apply from-background;
-    @apply to-background/95;
+    @apply to-background/90;
     @apply text-foreground;
     @apply select-none;
     @apply overflow-auto;

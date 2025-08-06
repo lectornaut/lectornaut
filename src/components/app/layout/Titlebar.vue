@@ -30,7 +30,7 @@ const isDocked = ref(false)
 
 <template>
   <header
-    class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar z-20 flex w-full shrink-0"
+    class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar shadow-border z-10 flex w-full shrink-0 shadow-[0px_1px_0px]"
   >
     <div
       data-tauri-drag-region
