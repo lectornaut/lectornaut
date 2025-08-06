@@ -4,8 +4,6 @@
       <Titlebar />
       <Separator />
       <AppLayout />
-      <Separator />
-      <Footbar />
     </SidebarInset>
   </SidebarProvider>
 </template>
