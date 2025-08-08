@@ -14,12 +14,12 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "@genkit-ai/firebase": "^1.15.5",
-    "@genkit-ai/googleai": "^1.15.5",
+    "@genkit-ai/firebase": "^1.16.0",
+    "@genkit-ai/googleai": "^1.16.0",
     "@google-cloud/functions-framework": "^4.0.0",
     "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.4.0",
-    "genkit": "^1.15.5"
+    "genkit": "^1.16.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.1.0",

@@ -29,11 +29,17 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
     bottomPanel.value?.splitterPanel?.collapse()
   }
 })
+
+const isLoading = ref(false)
+
+setInterval(() => {
+  isLoading.value = Math.random() > 0.5
+}, 2000)
 </script>
 
 <template>
   <main class="flex grow overflow-auto overscroll-none">
-    <MainSidebar class="shadow-border z-10 shadow-[1px_0px_0px]" />
+    <MainSidebar class="shadow-border z-10 shadow-[1px_0px]" />
     <div id="left-dock"></div>
     <ResizablePanelGroup
       direction="horizontal"
@@ -52,7 +58,7 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
         <div id="left-sidebar"></div>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-20 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel>
         <ResizablePanelGroup
@@ -75,7 +81,7 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
             </div>
           </ResizablePanel>
           <ResizableHandle
-            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-20 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
           />
           <ResizablePanel
             ref="bottomPanel"
@@ -92,7 +98,7 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
         </ResizablePanelGroup>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-20 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel
         ref="rightPanel"
@@ -111,12 +117,43 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
   </main>
   <div
     data-tauri-drag-region
-    class="pb-safe-bottom shadow-border z-0 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px_0px]"
+    class="pb-safe-bottom shadow-border z-10 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
   >
-    <div class="flex items-center justify-start" data-tauri-drag-region></div>
+    <div class="flex items-center justify-start" data-tauri-drag-region>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button
+              size="sm"
+              class="w-[calc(var(--sidebar-width-icon))] rounded-none"
+            >
+              <icon-lucide-cloudy v-if="!isLoading" />
+              <icon-lucide-loader-2 v-else class="animate-spin" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> Menu </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="sm" class="rounded-none">
+              <icon-lucide-layers />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> Menu </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
     <div class="flex items-center justify-center" data-tauri-drag-region></div>
     <div class="flex items-center justify-end" data-tauri-drag-region>
       <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="sm" class="rounded-none">
+              <icon-lucide-layout />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> Top panel </TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
@@ -125,10 +162,10 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
               class="rounded-none"
               @click="emitter.emit('Sidebar.Left.Toggle')"
             >
-              <icon-tabler-layout-sidebar
+              <icon-lucide-panel-left
                 v-if="leftPanel?.splitterPanel?.isCollapsed"
               />
-              <icon-tabler-layout-sidebar-filled v-else />
+              <icon-lucide-panel-left-close v-else />
             </Button>
           </TooltipTrigger>
           <TooltipContent> Left panel </TooltipContent>
@@ -141,10 +178,10 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
               class="rounded-none"
               @click="emitter.emit('Sidebar.Bottom.Toggle')"
             >
-              <icon-tabler-layout-bottombar
+              <icon-lucide-panel-bottom
                 v-if="bottomPanel?.splitterPanel?.isCollapsed"
               />
-              <icon-tabler-layout-bottombar-filled v-else />
+              <icon-lucide-panel-bottom-close v-else />
             </Button>
           </TooltipTrigger>
           <TooltipContent> Bottom panel </TooltipContent>
@@ -157,10 +194,10 @@ emitter.on("Sidebar.Bottom.Toggle", () => {
               class="rounded-none"
               @click="emitter.emit('Sidebar.Right.Toggle')"
             >
-              <icon-tabler-layout-sidebar-right
+              <icon-lucide-panel-right
                 v-if="rightPanel?.splitterPanel?.isCollapsed"
               />
-              <icon-tabler-layout-sidebar-right-filled v-else />
+              <icon-lucide-panel-right-close v-else />
             </Button>
           </TooltipTrigger>
           <TooltipContent> Right panel </TooltipContent>

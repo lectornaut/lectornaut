@@ -7,7 +7,7 @@ const { onDragStart } = useDragAndDrop()
 
 <template>
   <Tabs default-value="actions">
-    <Sidebar collapsible="none">
+    <Sidebar collapsible="none" class="bg-sidebar/50">
       <SidebarHeader>
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">
@@ -27,13 +27,8 @@ const { onDragStart } = useDragAndDrop()
       </SidebarHeader>
       <Separator />
       <SidebarHeader>
-        <TabsList class="bg-sidebar w-full p-0">
-          <TabsTrigger
-            v-for="tab in nodes"
-            :key="tab.id"
-            :value="tab.id"
-            class="data-[state=active]:after:bg-primary data-[state=active]:bg-sidebar text-secondary-foreground data-[state=active]:text-foreground relative w-full py-2.5 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-          >
+        <TabsList class="w-full bg-transparent">
+          <TabsTrigger v-for="tab in nodes" :key="tab.id" :value="tab.id">
             <span class="flex items-center justify-center gap-2">
               <span> {{ tab.name }} </span>
             </span>

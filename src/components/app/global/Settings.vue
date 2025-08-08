@@ -368,7 +368,7 @@ const navigations = [
           :default-open="true"
           class="h-full min-h-auto overflow-auto"
         >
-          <Sidebar collapsible="none" class="bg-sidebar-accent/25">
+          <Sidebar collapsible="none" class="bg-sidebar/50">
             <TabsList class="contents">
               <SidebarContent>
                 <OverlayScrollbarsWrapper>

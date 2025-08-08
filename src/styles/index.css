@@ -181,12 +181,10 @@
     @apply p-1;
     @apply shrink-0;
     @apply rounded-sm;
-    @apply border;
-    @apply shadow-xs;
     @apply font-sans;
     @apply align-middle;
     @apply capitalize;
-    @apply bg-background/50;
+    @apply bg-secondary;
     @apply text-secondary-foreground;
     @apply text-xs;
     @apply tracking-tight;

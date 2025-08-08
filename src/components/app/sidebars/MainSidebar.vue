@@ -21,6 +21,7 @@
       <Members />
       <Separator />
       <Support />
+      <SettingsMenu />
       <AccountMenu />
     </SidebarFooter>
   </Sidebar>

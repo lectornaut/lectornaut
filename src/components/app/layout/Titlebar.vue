@@ -30,7 +30,7 @@ const isDocked = ref(false)
 
 <template>
   <header
-    class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar shadow-border z-10 flex w-full shrink-0 shadow-[0px_1px_0px]"
+    class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar shadow-border z-10 flex w-full shrink-0 shadow-[0px_1px]"
   >
     <div
       data-tauri-drag-region
@@ -127,7 +127,7 @@ const isDocked = ref(false)
                 to="#right-dock"
                 :disabled="!isDocked"
               >
-                <AiChat class="shadow-border z-10 shadow-[-1px_0px_0px]" />
+                <AiChat class="shadow-border z-10 shadow-[-1px_0px]" />
               </Teleport>
               <SheetContent
                 class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"

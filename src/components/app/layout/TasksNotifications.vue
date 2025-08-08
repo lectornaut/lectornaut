@@ -8,7 +8,6 @@ const isDocked = ref(false)
       <NavigationMenuItem>
         <NavigationMenuTrigger class="px-3">
           <icon-lucide-inbox />
-          <!-- <span> Tasks </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="saved">
@@ -72,7 +71,6 @@ const isDocked = ref(false)
       <NavigationMenuItem>
         <NavigationMenuTrigger class="px-3">
           <icon-lucide-bell />
-          <!-- <span> Notifications </span> -->
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="saved">
@@ -134,7 +132,7 @@ const isDocked = ref(false)
         </NavigationMenuContent>
       </NavigationMenuItem>
       <Teleport v-if="isDocked" defer to="#left-dock" :disabled="!isDocked">
-        <Tasks class="shadow-border z-10 shadow-[1px_0px_0px]" />
+        <Tasks class="shadow-border z-10 shadow-[1px_0px]" />
       </Teleport>
     </NavigationMenuList>
   </NavigationMenu>

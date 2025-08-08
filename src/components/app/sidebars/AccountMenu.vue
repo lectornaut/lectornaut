@@ -63,13 +63,6 @@ const user = useCurrentUser()
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem
-                  @click="emitter.emit('Dialog.Settings.Open', 'preferences')"
-                >
-                  <icon-lucide-settings />
-                  Settings
-                  <DropdownMenuShortcut>⌘ ,</DropdownMenuShortcut>
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   @click="emitter.emit('Dialog.Settings.Open', 'account')"
                 >
                   <icon-lucide-circle-user />

@@ -64,13 +64,8 @@ const metadata = [
         </SidebarHeader>
         <Separator />
         <SidebarHeader>
-          <TabsList class="bg-card w-full p-0">
-            <TabsTrigger
-              v-for="tab in metadata"
-              :key="tab.id"
-              :value="tab.id"
-              class="data-[state=active]:after:bg-primary data-[state=active]:bg-card text-secondary-foreground data-[state=active]:text-foreground relative w-full py-2.5 data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:-bottom-2.5 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full"
-            >
+          <TabsList class="w-full bg-transparent p-0">
+            <TabsTrigger v-for="tab in metadata" :key="tab.id" :value="tab.id">
               <span class="flex items-center justify-center gap-2">
                 <span> {{ tab.name }} </span>
               </span>
