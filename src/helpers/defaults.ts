@@ -48,7 +48,7 @@ export const defaultLanguage = "en-US"
 export const themes = [
   {
     id: "auto",
-    name: "System",
+    name: "Auto",
     icon: IconSystem,
   },
   {

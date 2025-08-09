@@ -1,4 +1,5 @@
 import type { FunctionalComponent, SVGAttributes } from "vue"
+import IconLucideBolt from "~icons/lucide/bolt"
 import IconLucideCheckSquare2 from "~icons/lucide/check-square-2"
 import IconLucideCircleUser from "~icons/lucide/circle-user"
 import IconLucideXCircle from "~icons/lucide/circle-x"
@@ -72,16 +73,6 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
       {
-        description: ["Settings"],
-        keys: [[getPlatformSpecialKey(), ","]],
-        hotkeys: "cmd+,,ctrl+,",
-        event: "Dialog.Settings.Open",
-        parameters: "preferences",
-        icon: IconLucideSettings,
-        tags: ["settings"],
-        hidden: [],
-      },
-      {
         description: ["Help and support"],
         keys: [["?"]],
         hotkeys: "shift+/",
@@ -89,6 +80,16 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucideHelpCircle,
         tags: ["help", "support"],
+        hidden: [],
+      },
+      {
+        description: ["Settings"],
+        keys: [[getPlatformSpecialKey(), ","]],
+        hotkeys: "cmd+,,ctrl+,",
+        event: "Dialog.Settings.Open",
+        parameters: "preferences",
+        icon: IconLucideSettings,
+        tags: ["settings"],
         hidden: [],
       },
     ],
@@ -105,7 +106,7 @@ export const shortcuts: ShortcutCategory[] = [
         event: "Sidebar.Left.Toggle",
         parameters: undefined,
         icon: IconLucidePanelLeft,
-        tags: ["sidebar", "toggle"],
+        tags: ["sidebar", "toggle", "layout"],
         hidden: [],
       },
       {
@@ -115,17 +116,17 @@ export const shortcuts: ShortcutCategory[] = [
         event: "Sidebar.Right.Toggle",
         parameters: undefined,
         icon: IconLucidePanelRight,
-        tags: ["sidebar", "toggle"],
+        tags: ["sidebar", "toggle", "layout"],
         hidden: [],
       },
       {
-        description: ["Sidebar", "Bottom"],
+        description: ["Panel", "Bottom"],
         keys: [[getPlatformSpecialKey(), "`"]],
         hotkeys: "cmd+`,ctrl+`",
-        event: "Sidebar.Bottom.Toggle",
+        event: "Panel.Bottom.Toggle",
         parameters: undefined,
         icon: IconLucidePanelBottom,
-        tags: ["sidebar", "toggle"],
+        tags: ["panel", "toggle", "layout"],
         hidden: [],
       },
     ],
@@ -219,7 +220,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "general",
-        icon: IconLucideSettings,
+        icon: IconLucideBolt,
         tags: ["settings", "general"],
         hidden: [],
       },
@@ -261,7 +262,7 @@ export const shortcuts: ShortcutCategory[] = [
     id: "appearance",
     shortcuts: [
       {
-        description: ["Change theme", "Light"],
+        description: ["Theme", "Light"],
         keys: [],
         hotkeys: "",
         event: "Theme.Change",
@@ -271,7 +272,7 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
       {
-        description: ["Change theme", "Dark"],
+        description: ["Theme", "Dark"],
         keys: [],
         hotkeys: "",
         event: "Theme.Change",
@@ -281,7 +282,7 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
       {
-        description: ["Change theme", "Auto"],
+        description: ["Theme", "Auto"],
         keys: [],
         hotkeys: "",
         event: "Theme.Change",

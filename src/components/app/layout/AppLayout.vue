@@ -23,7 +23,7 @@ emitter.on("Sidebar.Right.Toggle", () => {
   }
 })
 
-emitter.on("Sidebar.Bottom.Toggle", () => {
+emitter.on("Panel.Bottom.Toggle", () => {
   if (bottomPanel.value?.splitterPanel?.isCollapsed) {
     bottomPanel.value?.splitterPanel?.expand()
   } else {
@@ -231,7 +231,7 @@ setInterval(() => {
               variant="ghost"
               size="sm"
               class="rounded-none"
-              @click="emitter.emit('Sidebar.Bottom.Toggle')"
+              @click="emitter.emit('Panel.Bottom.Toggle')"
             >
               <icon-lucide-panel-bottom
                 v-if="bottomPanel?.splitterPanel?.isCollapsed"

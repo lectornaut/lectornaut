@@ -149,7 +149,7 @@ const filteredShortcuts = computed(() => {
                         {{ step }}
                       </span>
                       <span v-if="stepIndex < shortcut.description.length - 1">
-                        ›
+                        <icon-lucide-chevron-right />
                       </span>
                     </template>
                   </div>
