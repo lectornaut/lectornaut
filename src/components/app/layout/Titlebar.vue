@@ -47,7 +47,7 @@ const isDocked = ref(false)
               <PopoverTrigger as-child>
                 <TooltipTrigger as-child>
                   <Button id="tour-apps-menu" variant="ghost" size="icon">
-                    <icon-lucide-grip />
+                    <icon-lucide-menu />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent> Menu </TooltipContent>
@@ -127,7 +127,7 @@ const isDocked = ref(false)
                 to="#right-dock"
                 :disabled="!isDocked"
               >
-                <AiChat class="shadow-border z-10 shadow-[-1px_0px]" />
+                <AiChat class="shadow-border shadow-[-1px_0px]" />
               </Teleport>
               <SheetContent
                 class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"

@@ -10,6 +10,7 @@ import IconLucideMinusSquare from "~icons/lucide/minus-square"
 import IconLucideMonitor from "~icons/lucide/monitor"
 import IconLucideMoon from "~icons/lucide/moon"
 import IconLucidePalette from "~icons/lucide/palette"
+import IconLucidePanelBottom from "~icons/lucide/panel-bottom"
 import IconLucidePanelLeft from "~icons/lucide/panel-left"
 import IconLucidePanelRight from "~icons/lucide/panel-right"
 import IconLucidePlusSquare from "~icons/lucide/plus-square"
@@ -90,6 +91,13 @@ export const shortcuts: ShortcutCategory[] = [
         tags: ["help", "support"],
         hidden: [],
       },
+    ],
+    hidden: [],
+  },
+  {
+    title: "Layout",
+    id: "layout",
+    shortcuts: [
       {
         description: ["Sidebar", "Left"],
         keys: [[getPlatformSpecialKey(), "\\"]],
@@ -107,6 +115,16 @@ export const shortcuts: ShortcutCategory[] = [
         event: "Sidebar.Right.Toggle",
         parameters: undefined,
         icon: IconLucidePanelRight,
+        tags: ["sidebar", "toggle"],
+        hidden: [],
+      },
+      {
+        description: ["Sidebar", "Bottom"],
+        keys: [[getPlatformSpecialKey(), "`"]],
+        hotkeys: "cmd+`,ctrl+`",
+        event: "Sidebar.Bottom.Toggle",
+        parameters: undefined,
+        icon: IconLucidePanelBottom,
         tags: ["sidebar", "toggle"],
         hidden: [],
       },

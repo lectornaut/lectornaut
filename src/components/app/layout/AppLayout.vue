@@ -4,6 +4,7 @@ import emitter from "@/modules/mitt"
 
 const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
 const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
+const topPanel = ref<InstanceType<typeof ResizablePanel>>()
 const bottomPanel = ref<InstanceType<typeof ResizablePanel>>()
 
 emitter.on("Sidebar.Left.Toggle", () => {
@@ -58,7 +59,7 @@ setInterval(() => {
         <div id="left-sidebar"></div>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-20 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel>
         <ResizablePanelGroup
@@ -66,6 +67,7 @@ setInterval(() => {
           auto-save-id="app-vertical-layout"
         >
           <ResizablePanel
+            ref="topPanel"
             class="flex grow flex-col overflow-auto overscroll-none"
             collapsible
             :min-size="15"
@@ -81,7 +83,7 @@ setInterval(() => {
             </div>
           </ResizablePanel>
           <ResizableHandle
-            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-20 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
           />
           <ResizablePanel
             ref="bottomPanel"
@@ -93,12 +95,64 @@ setInterval(() => {
             as-child
             class="hidden lg:flex"
           >
-            <div id="bottom-sidebar" class="bg-sidebar/50 w-full"></div>
+            <div id="bottom-sidebar" class="bg-sidebar/50 flex flex-col">
+              <div class="grid shrink-0 grid-cols-3 gap-2">
+                <div class="flex items-center justify-start"></div>
+                <div class="flex items-center justify-center"></div>
+                <div class="flex items-center justify-end">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="rounded-none"
+                          @click="
+                            topPanel?.splitterPanel?.isCollapsed
+                              ? topPanel?.splitterPanel?.expand()
+                              : topPanel?.splitterPanel?.collapse()
+                          "
+                        >
+                          <icon-lucide-minimize
+                            v-if="topPanel?.splitterPanel?.isCollapsed"
+                          />
+                          <icon-lucide-maximize v-else />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {{
+                          topPanel?.splitterPanel?.isCollapsed
+                            ? "Minimize"
+                            : "Maximize"
+                        }}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="rounded-none"
+                          @click="bottomPanel?.splitterPanel?.collapse()"
+                        >
+                          <icon-lucide-x />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent> Close </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <Separator />
+              <OverlayScrollbarsWrapper>
+                <div class="h-80 p-2">content</div>
+              </OverlayScrollbarsWrapper>
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-20 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel
         ref="rightPanel"
@@ -117,21 +171,22 @@ setInterval(() => {
   </main>
   <div
     data-tauri-drag-region
-    class="pb-safe-bottom shadow-border z-10 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
+    class="pb-safe-bottom shadow-border grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
   >
     <div class="flex items-center justify-start" data-tauri-drag-region>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
+              variant="destructive"
               size="sm"
               class="w-[calc(var(--sidebar-width-icon))] rounded-none"
             >
-              <icon-lucide-cloudy v-if="!isLoading" />
-              <icon-lucide-loader-2 v-else class="animate-spin" />
+              <icon-lucide-loader-2 v-if="isLoading" class="animate-spin" />
+              <icon-lucide-cloud-check v-else />
             </Button>
           </TooltipTrigger>
-          <TooltipContent> Menu </TooltipContent>
+          <TooltipContent> Synced to cloud </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>

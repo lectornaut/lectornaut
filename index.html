@@ -11,110 +11,30 @@
     <meta name="description" content="Lectornaut" />
   </head>
   <body>
-    <div id="app" class="flex size-full">
+    <div id="app" class="flex size-full overscroll-none">
       <div
         style="
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 100vh;
-          width: 100vw;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          mix-blend-mode: difference;
         "
       >
-        <style>
-          .loader {
-            position: relative;
-            width: 2.5em;
-            height: 2.5em;
-            transform: rotate(165deg);
-          }
-
-          .loader:before,
-          .loader:after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            display: block;
-            width: 0.5em;
-            height: 0.5em;
-            border-radius: 0.25em;
-            transform: translate(-50%, -50%);
-          }
-
-          .loader:before {
-            animation: before8 2s infinite;
-          }
-
-          .loader:after {
-            animation: after6 2s infinite;
-          }
-
-          @keyframes before8 {
-            0% {
-              width: 0.5em;
-              box-shadow:
-                1em -0.5em rgba(225, 20, 98, 0.75),
-                -1em 0.5em rgba(111, 202, 220, 0.75);
-            }
-
-            35% {
-              width: 2.5em;
-              box-shadow:
-                0 -0.5em rgba(225, 20, 98, 0.75),
-                0 0.5em rgba(111, 202, 220, 0.75);
-            }
-
-            70% {
-              width: 0.5em;
-              box-shadow:
-                -1em -0.5em rgba(225, 20, 98, 0.75),
-                1em 0.5em rgba(111, 202, 220, 0.75);
-            }
-
-            100% {
-              box-shadow:
-                1em -0.5em rgba(225, 20, 98, 0.75),
-                -1em 0.5em rgba(111, 202, 220, 0.75);
-            }
-          }
-
-          @keyframes after6 {
-            0% {
-              height: 0.5em;
-              box-shadow:
-                0.5em 1em rgba(61, 184, 143, 0.75),
-                -0.5em -1em rgba(233, 169, 32, 0.75);
-            }
-
-            35% {
-              height: 2.5em;
-              box-shadow:
-                0.5em 0 rgba(61, 184, 143, 0.75),
-                -0.5em 0 rgba(233, 169, 32, 0.75);
-            }
-
-            70% {
-              height: 0.5em;
-              box-shadow:
-                0.5em -1em rgba(61, 184, 143, 0.75),
-                -0.5em 1em rgba(233, 169, 32, 0.75);
-            }
-
-            100% {
-              box-shadow:
-                0.5em 1em rgba(61, 184, 143, 0.75),
-                -0.5em -1em rgba(233, 169, 32, 0.75);
-            }
-          }
-
-          .loader {
-            position: absolute;
-            top: calc(50% - 1.25em);
-            left: calc(50% - 1.25em);
-          }
-        </style>
-        <span class="loader"></span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          aria-label="Logo"
+          viewBox="0 0 32 32"
+          width="32"
+          height="32"
+        >
+          <path
+            fill="white"
+            fill-rule="evenodd"
+            d="M16.075 0C7.211 0 0 7.186 0 16.05v14.335C0 31.277.723 32 1.615 32H16.1c8.837 0 16-7.163 16-16S24.912 0 16.075 0Zm8.727 19.402a3.431 3.431 0 1 0 0-6.862 3.431 3.431 0 0 0 0 6.862Zm-10.184 0a3.431 3.431 0 1 0 0-6.862 3.431 3.431 0 0 0 0 6.862Z"
+            clip-rule="evenodd"
+          />
+        </svg>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -67,14 +67,17 @@
     from {
       height: 0;
     }
+
     to {
       height: var(--reka-accordion-content-height);
     }
   }
+
   @keyframes accordion-up {
     from {
       height: var(--reka-accordion-content-height);
     }
+
     to {
       height: 0;
     }
