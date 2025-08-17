@@ -3,7 +3,6 @@
   "compilerOptions": {
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
-    "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "outDir": "dist",
     "sourceMap": true,

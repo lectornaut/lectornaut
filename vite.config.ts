@@ -208,7 +208,6 @@ export default defineConfig({
     }),
     ViteImageOptimizer(),
     Icons({
-      scale: 1,
       defaultClass: "inline-flex shrink-0 size-4",
     }),
     VueI18nPlugin({
@@ -223,7 +222,7 @@ export default defineConfig({
       enableBuild: false,
       typescript: true,
       vueTsc: true,
-      overlay: false,
+      overlay: true,
     }),
   ],
   resolve: {
@@ -246,7 +245,7 @@ export default defineConfig({
           host,
           port: 1421,
         }
-      : undefined,
+      : false,
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
