@@ -26,6 +26,7 @@ onBeforeUnmount(() => {
 })
 
 const isDocked = ref(false)
+const iconDisplay = ref<"icon" | "text">("icon")
 </script>
 
 <template>
@@ -49,7 +50,7 @@ const isDocked = ref(false)
                   <PopoverTrigger as-child>
                     <TooltipTrigger as-child>
                       <Button id="tour-apps-menu" variant="ghost" size="icon">
-                        <icon-lucide-menu />
+                        <icon-lucide-grip />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent> Menu </TooltipContent>
@@ -160,7 +161,17 @@ const isDocked = ref(false)
         </div>
       </header>
     </ContextMenuTrigger>
-    <ContextMenuContent></ContextMenuContent>
+    <ContextMenuContent align="end" side="bottom">
+      <ContextMenuLabel class="text-muted-foreground text-xs">
+        Appearance
+      </ContextMenuLabel>
+      <ContextMenuRadioGroup v-model="iconDisplay">
+        <ContextMenuRadioItem value="icon"> Icons only </ContextMenuRadioItem>
+        <ContextMenuRadioItem value="text">
+          Icons and text
+        </ContextMenuRadioItem>
+      </ContextMenuRadioGroup>
+    </ContextMenuContent>
   </ContextMenu>
 </template>
 

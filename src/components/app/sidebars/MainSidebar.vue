@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const iconDisplay = ref<"icon" | "text">("icon")
+</script>
+
 <template>
   <ContextMenu>
     <ContextMenuTrigger>
@@ -28,6 +32,16 @@
         </SidebarFooter>
       </Sidebar>
     </ContextMenuTrigger>
-    <div id="main-sidebar-context-menu"></div>
+    <ContextMenuContent align="end" side="bottom">
+      <ContextMenuLabel class="text-muted-foreground text-xs">
+        Appearance
+      </ContextMenuLabel>
+      <ContextMenuRadioGroup v-model="iconDisplay">
+        <ContextMenuRadioItem value="icon"> Icons only </ContextMenuRadioItem>
+        <ContextMenuRadioItem value="text">
+          Icons and text
+        </ContextMenuRadioItem>
+      </ContextMenuRadioGroup>
+    </ContextMenuContent>
   </ContextMenu>
 </template>
