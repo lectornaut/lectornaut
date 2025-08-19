@@ -111,7 +111,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Sidebar", "Right"],
-        keys: [[getPlatformSpecialKey(), "shift", "\\"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "\\"]],
         hotkeys: "cmd+shift+\\,ctrl+shift+\\",
         event: "Sidebar.Right.Toggle",
         parameters: undefined,
@@ -158,7 +158,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close other tabs"],
-        keys: [[getPlatformSpecialKey(), "shift", "w"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "w"]],
         hotkeys: "cmd+shift+w,ctrl+shift+w",
         event: "Tabs.Close.Others",
         parameters: undefined,
@@ -168,7 +168,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close all tabs"],
-        keys: [[getPlatformSpecialKey(), "shift", "q"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "q"]],
         hotkeys: "cmd+shift+q,ctrl+shift+q",
         event: "Tabs.Close.All",
         parameters: undefined,
@@ -178,7 +178,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select next tab"],
-        keys: [[getPlatformSpecialKey(), "shift", "right"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "right"]],
         hotkeys: "control+tab,ctrl+tab",
         event: "Tabs.Select",
         parameters: "next",
@@ -188,7 +188,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select previous tab"],
-        keys: [[getPlatformSpecialKey(), "shift", "left"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "left"]],
         hotkeys: "control+shift+tab,ctrl+shift+tab",
         event: "Tabs.Select",
         parameters: "previous",

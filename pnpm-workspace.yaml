@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - '@firebase/util'
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - maplibre-gl
+  - protobufjs
+  - sharp
+  - vue-demi

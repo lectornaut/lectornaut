@@ -31,7 +31,7 @@ const messages = [
   <OverlayScrollbarsWrapper>
     <div class="grid grid-cols-1">
       <ContextMenu v-for="(message, index) in messages" :key="index">
-        <ContextMenuTrigger as-child>
+        <ContextMenuTrigger>
           <div
             class="flex items-end gap-2 p-4"
             :class="{

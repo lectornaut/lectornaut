@@ -219,10 +219,9 @@ export default defineConfig({
     UnheadVite(),
     Sitemap(),
     checker({
-      enableBuild: false,
       typescript: true,
       vueTsc: true,
-      overlay: true,
+      overlay: false,
     }),
   ],
   resolve: {
@@ -249,6 +248,7 @@ export default defineConfig({
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
+      usePolling: true,
     },
   },
 })

@@ -40,7 +40,7 @@ setInterval(() => {
 
 <template>
   <main class="flex grow overflow-auto overscroll-none">
-    <MainSidebar class="shadow-border z-10 shadow-[1px_0px]" />
+    <MainSidebar />
     <div id="left-dock"></div>
     <ResizablePanelGroup
       direction="horizontal"
@@ -59,7 +59,7 @@ setInterval(() => {
         <div id="left-sidebar"></div>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel>
         <ResizablePanelGroup
@@ -83,7 +83,7 @@ setInterval(() => {
             </div>
           </ResizablePanel>
           <ResizableHandle
-            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
           />
           <ResizablePanel
             ref="bottomPanel"
@@ -152,7 +152,7 @@ setInterval(() => {
         </ResizablePanelGroup>
       </ResizablePanel>
       <ResizableHandle
-        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary z-10 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
       />
       <ResizablePanel
         ref="rightPanel"
@@ -169,95 +169,103 @@ setInterval(() => {
     </ResizablePanelGroup>
     <div id="right-dock"></div>
   </main>
-  <div
-    data-tauri-drag-region
-    class="pb-safe-bottom shadow-border grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
-  >
-    <div class="flex items-center justify-start" data-tauri-drag-region>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="destructive"
-              size="sm"
-              class="w-[calc(var(--sidebar-width-icon))] rounded-none"
-            >
-              <icon-lucide-loader-2 v-if="isLoading" class="animate-spin" />
-              <icon-lucide-cloud-check v-else />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Synced to cloud </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="ghost" size="sm" class="rounded-none">
-              <icon-lucide-layers />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Menu </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-    <div class="flex items-center justify-center" data-tauri-drag-region></div>
-    <div class="flex items-center justify-end" data-tauri-drag-region>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="ghost" size="sm" class="rounded-none">
-              <icon-lucide-layout />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Top panel </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="rounded-none"
-              @click="emitter.emit('Sidebar.Left.Toggle')"
-            >
-              <icon-lucide-panel-left
-                v-if="leftPanel?.splitterPanel?.isCollapsed"
-              />
-              <icon-lucide-panel-left-close v-else />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Left panel </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="rounded-none"
-              @click="emitter.emit('Panel.Bottom.Toggle')"
-            >
-              <icon-lucide-panel-bottom
-                v-if="bottomPanel?.splitterPanel?.isCollapsed"
-              />
-              <icon-lucide-panel-bottom-close v-else />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Bottom panel </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="rounded-none"
-              @click="emitter.emit('Sidebar.Right.Toggle')"
-            >
-              <icon-lucide-panel-right
-                v-if="rightPanel?.splitterPanel?.isCollapsed"
-              />
-              <icon-lucide-panel-right-close v-else />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent> Right panel </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  </div>
+  <ContextMenu>
+    <ContextMenuTrigger as-child>
+      <div
+        data-tauri-drag-region
+        class="pb-safe-bottom shadow-border z-20 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
+      >
+        <div class="flex items-center justify-start" data-tauri-drag-region>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  class="w-[calc(var(--sidebar-width-icon))] rounded-none"
+                >
+                  <icon-lucide-loader-2 v-if="isLoading" class="animate-spin" />
+                  <icon-lucide-cloud-check v-else />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Synced to cloud </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="sm" class="rounded-none">
+                  <icon-lucide-layers />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Menu </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <div
+          class="flex items-center justify-center"
+          data-tauri-drag-region
+        ></div>
+        <div class="flex items-center justify-end" data-tauri-drag-region>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="sm" class="rounded-none">
+                  <icon-lucide-layout />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Top panel </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="rounded-none"
+                  @click="emitter.emit('Sidebar.Left.Toggle')"
+                >
+                  <icon-lucide-panel-left
+                    v-if="leftPanel?.splitterPanel?.isCollapsed"
+                  />
+                  <icon-lucide-panel-left-close v-else />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Left panel </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="rounded-none"
+                  @click="emitter.emit('Panel.Bottom.Toggle')"
+                >
+                  <icon-lucide-panel-bottom
+                    v-if="bottomPanel?.splitterPanel?.isCollapsed"
+                  />
+                  <icon-lucide-panel-bottom-close v-else />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Bottom panel </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="rounded-none"
+                  @click="emitter.emit('Sidebar.Right.Toggle')"
+                >
+                  <icon-lucide-panel-right
+                    v-if="rightPanel?.splitterPanel?.isCollapsed"
+                  />
+                  <icon-lucide-panel-right-close v-else />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> Right panel </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    </ContextMenuTrigger>
+    <ContextMenuContent></ContextMenuContent>
+  </ContextMenu>
 </template>
