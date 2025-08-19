@@ -222,6 +222,7 @@ export default defineConfig({
       typescript: true,
       vueTsc: true,
       overlay: false,
+      enableBuild: false,
     }),
   ],
   resolve: {
