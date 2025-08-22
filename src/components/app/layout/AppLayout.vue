@@ -95,7 +95,7 @@ setInterval(() => {
             as-child
             class="hidden lg:flex"
           >
-            <div id="bottom-sidebar" class="bg-sidebar/50 flex flex-col">
+            <div id="bottom-sidebar" class="bg-sidebar flex flex-col">
               <div class="grid shrink-0 grid-cols-3 gap-2">
                 <div class="flex items-center justify-start"></div>
                 <div class="flex items-center justify-center"></div>
@@ -173,7 +173,7 @@ setInterval(() => {
     <ContextMenuTrigger as-child>
       <div
         data-tauri-drag-region
-        class="pb-safe-bottom shadow-border z-20 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
+        class="pb-safe-bottom shadow-border relative z-20 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
       >
         <div class="flex items-center justify-start" data-tauri-drag-region>
           <TooltipProvider>

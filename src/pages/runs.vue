@@ -40,7 +40,7 @@ const tree = [
 
 <template>
   <Teleport defer to="#left-sidebar">
-    <Sidebar collapsible="none" class="bg-sidebar/50 w-full">
+    <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
           <SidebarGroup>
@@ -59,6 +59,6 @@ const tree = [
     <DataTable :data="runs" :columns="columns" />
   </div>
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="bg-sidebar/50 w-full"> </Sidebar>
+    <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>
 </template>

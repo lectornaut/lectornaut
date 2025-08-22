@@ -8,14 +8,19 @@ import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 const el = ref<HTMLElement | null>(null)
 
 type Tab = {
+  // Stable identifier for the tab (used for selection and ordering)
   id: string
+  // User-visible title shown in the tab button
   name: string
-  url: string
+  // Router fullPath to navigate when tab is activated
+  fullPath: string
 }
 
 const db = useFirestore()
 const user = useCurrentUser()
 
+// Firestore document reference for persisting tabs per user under
+// users/{uid}/layout/tabs
 const tabsDocRef = computed(() => {
   if (!user.value?.uid) return null
   return doc(
@@ -24,72 +29,63 @@ const tabsDocRef = computed(() => {
   )
 })
 
+// Remote state binding: data (document snapshot as reactive object),
+// pending (loading), error
 const { data: tabsDocData, pending, error } = useDocument(tabsDocRef)
 
-const localTabs = ref<Tab[]>([])
-const localActive = ref("")
+// Local UI state for tabs and selection
+const tabs = ref<Tab[]>([])
+const active = ref("")
+// Stack of recently-closed tabs (for quick reopen)
+const recentlyClosed = ref<Tab[]>([])
 
-const computedTabs = computed(() => tabsDocData.value?.tabs || [])
-const computedActive = computed(() => tabsDocData.value?.active || "")
+// Limit how many recently-closed items we keep
+const MAX_RECENT = 20
 
+// Guard for avoiding save loops when we hydrate from Firestore
+let internalUpdate = false
+// Guard to differentiate between route changes triggered by tab clicks
+// vs. other router navigations (so we don't create new tabs unnecessarily)
+let isTabClickNavigation = false
+
+// Hydrate local state from Firestore and avoid triggering save until applied
 watch(
-  () => computedTabs.value,
-  (newTabs) => {
-    localTabs.value = newTabs
-  },
-  { immediate: true }
-)
-
-watch(
-  () => computedActive.value,
-  (newActive) => {
-    localActive.value = newActive
-  },
-  { immediate: true }
-)
-
-watch(
-  localTabs,
-  async (newTabs) => {
-    if (!tabsDocRef.value) {
-      console.error("tabsDocRef is null. Cannot update tabs.")
-      return
-    }
-    try {
-      await setDoc(tabsDocRef.value, { tabs: newTabs }, { merge: true })
-    } catch (error) {
-      console.error("Failed to update tabs:", error)
+  tabsDocData,
+  (doc) => {
+    if (doc) {
+      internalUpdate = true
+      tabs.value = doc.tabs ?? []
+      active.value = doc.active ?? ""
+      // Load recently closed list if present
+      recentlyClosed.value = doc.recentlyClosed ?? []
+      nextTick(() => {
+        internalUpdate = false
+      })
     }
   },
-  { deep: true }
+  { deep: true, immediate: true }
 )
 
-watch(localActive, async (newActive) => {
-  if (!tabsDocRef.value) {
-    console.error("tabsDocRef is null. Cannot update active tab.")
-    return
-  }
-  try {
-    await setDoc(tabsDocRef.value, { active: newActive }, { merge: true })
-  } catch (error) {
-    console.error("Failed to update active tab:", error)
-  }
-})
+// Persist local changes (tabs, active) to Firestore with debounce.
+// Merge to avoid clobbering other server fields accidentally.
+watchDebounced(
+  [tabs, active, recentlyClosed],
+  ([newTabs, newActive, newRecent]) => {
+    if (internalUpdate) return
+    if (!tabsDocRef.value) return
 
-const tabs = computed({
-  get: () => localTabs.value,
-  set: (newTabs) => {
-    localTabs.value = newTabs
+    setDoc(
+      tabsDocRef.value,
+      { tabs: newTabs, active: newActive, recentlyClosed: newRecent },
+      { merge: true }
+    ).catch((err) => {
+      console.error("Failed to sync tabs to Firestore", err)
+    })
   },
-})
+  { debounce: 500, deep: true }
+)
 
-const active = computed({
-  get: () => localActive.value,
-  set: (newActive) => {
-    localActive.value = newActive
-  },
-})
-
+// Enable drag-and-drop reordering of tabs in the nav container
 useSortable(el, tabs, {
   animation: 150,
   ghostClass: "cursor-grab",
@@ -97,68 +93,237 @@ useSortable(el, tabs, {
   dragClass: "cursor-grabbing",
 })
 
-emitter.on(
-  "Tabs.Add",
-  (
-    tab = {
-      id: generateId(),
-      name: "Sample tab",
-      url: "/agents",
-    }
-  ) => {
-    const newTab = tab as Tab
-    tabs.value = [...tabs.value, newTab]
-    emitter.emit("Tabs.Select", newTab.id)
+const router = useRouter()
+const route = useRoute()
+
+// Create a Tab object from the current route (generates a new id)
+function buildTabFromRoute(r: typeof route): Tab {
+  return {
+    id: generateId(),
+    name: (r.meta?.breadcrumb as string) || (r.name as string) || "Tab",
+    fullPath: r.fullPath,
   }
+}
+
+// Maintain a small MRU list of recently closed tabs.
+// We dedupe by comparing to the head to avoid consecutive duplicates.
+function addToRecentlyClosed(tab: Tab) {
+  const entry = { id: tab.id, name: tab.name, fullPath: tab.fullPath }
+  const head = recentlyClosed.value[0]
+  if (head && head.fullPath === entry.fullPath && head.name === entry.name)
+    return
+  recentlyClosed.value = [entry, ...recentlyClosed.value].slice(0, MAX_RECENT)
+}
+
+// Close a tab by id, push it to recently closed, and select a sensible neighbor
+function closeTabById(id: string) {
+  const idx = tabs.value.findIndex((t) => t.id === id)
+  if (idx === -1) return
+  const closing = tabs.value[idx]
+  if (!closing) return
+  addToRecentlyClosed(closing)
+  const newTabs = tabs.value.slice()
+  newTabs.splice(idx, 1)
+  tabs.value = newTabs
+
+  if (newTabs.length === 0) {
+    active.value = ""
+    return
+  }
+
+  const stillExists = newTabs.some((t) => t.id === active.value)
+  if (!stillExists || closing.id === active.value) {
+    const nextIndex = Math.min(idx, newTabs.length - 1)
+    const nextTab = newTabs[nextIndex]!
+    emitter.emit("Tabs.Select", nextTab.id)
+  }
+}
+
+// Make a copy of a tab and select it
+function duplicateTab(id: string) {
+  const src = tabs.value.find((t) => t.id === id)
+  if (!src) return
+  const duplicate: Tab = {
+    id: generateId(),
+    name: src.name.endsWith(" (copy)") ? src.name : `${src.name} (copy)`,
+    fullPath: src.fullPath,
+  }
+  tabs.value = [...tabs.value, duplicate]
+  emitter.emit("Tabs.Select", duplicate.id)
+}
+
+// Prompt-based rename of a tab title
+function renameTab(id: string) {
+  const idx = tabs.value.findIndex((t) => t.id === id)
+  if (idx === -1) return
+  const current = tabs.value[idx]
+  if (!current) return
+  const nextName = window.prompt("Rename tab", current.name)
+  if (!nextName) return
+  tabs.value[idx] = {
+    id: current.id,
+    name: nextName,
+    fullPath: current.fullPath,
+  }
+}
+
+// Clear the entire recently-closed list
+function clearRecentlyClosed() {
+  recentlyClosed.value = []
+}
+
+// Keep tabs in sync with route changes:
+// 1) If the change came from clicking a tab, skip creating/updating.
+// 2) If a tab already exists for the fullPath, just activate it.
+// 3) If an active tab exists, update it in-place to reflect new route meta/path.
+// 4) On first load or no active, create a new tab from the route.
+watch(
+  () => route.fullPath,
+  () => {
+    if (isTabClickNavigation) {
+      isTabClickNavigation = false
+      return
+    }
+
+    const existing = tabs.value.find((t) => t.fullPath === route.fullPath)
+    if (existing) {
+      active.value = existing.id
+      return
+    }
+
+    if (active.value && tabs.value.length > 0) {
+      const activeTabIndex = tabs.value.findIndex((t) => t.id === active.value)
+      if (activeTabIndex !== -1) {
+        const updatedTab = buildTabFromRoute(route)
+        updatedTab.id = active.value
+        tabs.value[activeTabIndex] = updatedTab
+        return
+      }
+    }
+
+    if (tabs.value.length === 0 || !active.value) {
+      if (!route.name) return
+      const newTab = buildTabFromRoute(route)
+      tabs.value = [...tabs.value, newTab]
+      active.value = newTab.id
+    }
+  },
+  { immediate: true }
 )
 
-emitter.on("Tabs.Close", (id = active.value) => {
-  const newTabs = tabs.value.filter((tab) => tab.id !== id)
-  tabs.value = newTabs
-  emitter.emit("Tabs.Select", newTabs[0]?.id)
+// Navigate to a tab, flagging that the route update is a user tab selection
+function navigateToTab(tab: Tab) {
+  if (!tab.fullPath) return
+  isTabClickNavigation = true
+  router.push(tab.fullPath).catch(() => {})
+}
+
+// Open or focus tabs via events from elsewhere in the app
+emitter.on("Tabs.Add", (raw?: unknown) => {
+  const tab = raw as Partial<Tab> & {
+    path?: string
+    fullPath?: string
+    url?: string
+  }
+  let newTab: Tab
+  if (tab && (tab.name || tab.fullPath || tab.path || tab.url)) {
+    const targetPath = tab.fullPath || tab.path || tab.url || route.fullPath
+    const existing = tabs.value.find((t) => t.fullPath === targetPath)
+    if (existing) {
+      emitter.emit("Tabs.Select", existing.id)
+      return
+    }
+    newTab = {
+      id: tab.id || generateId(),
+      name: tab.name || "Tab",
+      fullPath: targetPath,
+    }
+  } else {
+    newTab = {
+      id: generateId(),
+      name: "New tab",
+      fullPath: "/new",
+    }
+  }
+  tabs.value = [...tabs.value, newTab]
+  emitter.emit("Tabs.Select", newTab.id)
 })
 
+// Close current or specific tab id
+emitter.on("Tabs.Close", (id?: unknown) => {
+  const targetId = typeof id === "string" && id ? id : active.value
+  if (targetId) closeTabById(targetId)
+})
+
+// Keep only the specified tab, move others to recently closed
 emitter.on("Tabs.Close.Others", (id = active.value) => {
-  const newTabs = tabs.value.filter((tab) => tab.id === id)
-  tabs.value = newTabs
+  const keep = tabs.value.find((t) => t.id === id)
+  if (!keep) return
+  tabs.value.forEach((t) => {
+    if (t.id !== id) addToRecentlyClosed(t)
+  })
+  tabs.value = [keep]
+  active.value = keep.id
 })
 
+// Close all tabs, but keep ability to reopen from recently closed
 emitter.on("Tabs.Close.All", () => {
+  tabs.value.forEach((t) => addToRecentlyClosed(t))
   tabs.value = []
   active.value = ""
 })
 
+// Select a tab and navigate to it
 emitter.on("Tabs.Select", (idOrIndex) => {
   const id: string = idOrIndex as string
-  if (id === "next") {
-    const currentIndex = tabs.value.findIndex((tab) => tab.id === active.value)
-    const nextIndex = (currentIndex + 1) % tabs.value.length
-    active.value = tabs.value[nextIndex]?.id || ""
-  } else if (id === "previous") {
-    const currentIndex = tabs.value.findIndex((tab) => tab.id === active.value)
-    const previousIndex =
-      (currentIndex - 1 + tabs.value.length) % tabs.value.length
-    active.value = tabs.value[previousIndex]?.id || ""
-  } else {
-    active.value = id
+  const target = tabs.value.find((t) => t.id === id)
+  if (!target) {
+    console.warn(`Tab with id ${id} not found.`)
+    if (tabs.value[0]) {
+      active.value = tabs.value[0].id
+      navigateToTab(tabs.value[0])
+    }
+    return
   }
-  if (!tabs.value.some((tab) => tab.id === active.value)) {
-    console.warn(
-      `Tab with id ${active.value} not found. Resetting to first tab.`
-    )
-    active.value = tabs.value[0]?.id || ""
-  }
+  active.value = target.id
+  navigateToTab(target)
 })
 
-const dummyRecentTabs = [
-  { id: "1", name: "Tab 1", url: "/agents" },
-  { id: "2", name: "Tab 2", url: "/agents" },
-  { id: "3", name: "Tab 3", url: "/agents" },
-]
+// Reopen the most recently closed tab; focus an existing one if already open
+emitter.on("Tabs.ReopenLast", () => {
+  const last = recentlyClosed.value.shift()
+  if (!last) return
+  const reopened: Tab = {
+    id: generateId(),
+    name: last.name,
+    fullPath: last.fullPath,
+  }
+  const existing = tabs.value.find((t) => t.fullPath === reopened.fullPath)
+  if (existing) {
+    emitter.emit("Tabs.Select", existing.id)
+    return
+  }
+  tabs.value = [...tabs.value, reopened]
+  emitter.emit("Tabs.Select", reopened.id)
+})
+
+// Reopen a specific recently-closed tab entry
+emitter.on("Tabs.Reopen", (raw?: unknown) => {
+  const t = raw as Tab | undefined
+  if (!t) return
+  const reopened: Tab = { id: generateId(), name: t.name, fullPath: t.fullPath }
+  const existing = tabs.value.find((x) => x.fullPath === reopened.fullPath)
+  if (existing) {
+    emitter.emit("Tabs.Select", existing.id)
+    return
+  }
+  tabs.value = [...tabs.value, reopened]
+  emitter.emit("Tabs.Select", reopened.id)
+})
 </script>
 
 <template>
-  <div class="bg-sidebar/50 flex w-full flex-col">
+  <div class="bg-sidebar flex w-full flex-col">
     <ContextMenu>
       <ContextMenuTrigger>
         <div
@@ -182,11 +347,12 @@ const dummyRecentTabs = [
                       class="border-none p-0 focus:border-inherit focus:ring-0"
                     />
                     <ComboboxEmpty> No tabs found. </ComboboxEmpty>
-                    <ComboboxGroup heading="Open tabs">
+                    <ComboboxGroup v-if="tabs.length > 0" heading="Open tabs">
                       <ComboboxItem
                         v-for="tab in tabs"
                         :key="tab.id"
                         :value="tab"
+                        @click="emitter.emit('Tabs.Select', tab.id)"
                       >
                         <icon-lucide-workflow />
                         {{ tab.name }}
@@ -195,17 +361,45 @@ const dummyRecentTabs = [
                         </ComboboxItemIndicator>
                       </ComboboxItem>
                     </ComboboxGroup>
-                    <ComboboxGroup heading="Recently closed">
+                    <ComboboxGroup v-if="tabs.length > 0" heading="Actions">
                       <ComboboxItem
-                        v-for="tab in dummyRecentTabs"
-                        :key="tab.id"
+                        :value="'__close_all__'"
+                        :disabled="tabs.length === 0"
+                        @click.stop="emitter.emit('Tabs.Close.All')"
+                      >
+                        <icon-lucide-trash />
+                        Close all tabs
+                      </ComboboxItem>
+                    </ComboboxGroup>
+                    <ComboboxSeparator />
+                    <ComboboxGroup
+                      v-if="recentlyClosed.length > 0"
+                      heading="Recently closed"
+                    >
+                      <ComboboxItem
+                        v-for="tab in recentlyClosed"
+                        :key="tab.id + tab.fullPath"
                         :value="tab"
+                        @click="emitter.emit('Tabs.Reopen', tab)"
                       >
                         <icon-lucide-workflow />
                         {{ tab.name }}
                         <ComboboxItemIndicator>
                           <icon-lucide-check />
                         </ComboboxItemIndicator>
+                      </ComboboxItem>
+                    </ComboboxGroup>
+                    <ComboboxGroup
+                      v-if="recentlyClosed.length > 0"
+                      heading="Actions"
+                    >
+                      <ComboboxItem
+                        :value="'__clear_recently__'"
+                        :disabled="recentlyClosed.length === 0"
+                        @click.stop="clearRecentlyClosed()"
+                      >
+                        <icon-lucide-trash />
+                        Clear recently closed
                       </ComboboxItem>
                     </ComboboxGroup>
                   </ComboboxList>
@@ -214,10 +408,7 @@ const dummyRecentTabs = [
               </TooltipProvider>
             </Combobox>
           </div>
-          <nav
-            ref="el"
-            class="relative flex w-fit min-w-0 items-center justify-start gap-2"
-          >
+          <nav ref="el" class="relative contents gap-2">
             <template v-if="pending">
               <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
             </template>
@@ -232,21 +423,21 @@ const dummyRecentTabs = [
                 <HoverCard :close-delay="0">
                   <ContextMenuTrigger as-child>
                     <HoverCardTrigger as-child>
-                      <!-- :class="
-                      tab.id === active
-                        ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:bg-background min-w-32 rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-10 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0px_5px_0_currentcolor,5px_0px_0_currentcolor,10px_5px_0_currentcolor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-10 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0px_5px_0_currentcolor,-5px_0px_0_currentcolor,-10px_5px_0_currentcolor]'
-                        : 'before:bg-border text-muted-foreground after:bg-border before:absolute before:-left-1.5 before:h-2 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:h-2 after:w-0.5 after:rounded-full'
-                    " -->
                       <Button
-                        :variant="tab.id === active ? 'secondary' : 'outline'"
-                        class="group relative flex max-w-60 min-w-0 flex-1 border-0 shadow-none"
+                        :variant="tab.id === active ? 'outline' : 'ghost'"
+                        class="group relative flex w-60 min-w-0 shrink border border-transparent shadow-none"
+                        :class="
+                          tab.id === active
+                            ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:!bg-background min-w-32 rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-10 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0_5px_0_currentColor,5px_0_0_currentColor,5px_5px_0_currentColor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-10 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0_5px_0_currentColor,-5px_0_0_currentColor,-5px_5px_0_currentColor]'
+                            : 'text-muted-foreground before:bg-border after:bg-border before:absolute before:-left-1.5 before:z-10 before:h-4 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:z-10 after:h-4 after:w-0.5 after:rounded-full'
+                        "
                         as-child
-                        @click="active = tab.id"
+                        @click="emitter.emit('Tabs.Select', tab.id)"
                       >
-                        <RouterLink :to="`${tab.url}/${tab.id}`">
+                        <RouterLink :to="tab.fullPath">
                           <icon-lucide-workflow />
                           <span class="mr-auto truncate">
-                            {{ tab.name }} {{ tab.id }}
+                            {{ tab.name }}
                           </span>
                           <TooltipProvider>
                             <Tooltip>
@@ -265,27 +456,35 @@ const dummyRecentTabs = [
                               <TooltipContent>Close tab</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          <!-- <span
-                        v-if="tab.id === active"
-                        class="bg-background absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
-                      ></span> -->
+                          <span
+                            v-if="tab.id === active"
+                            class="bg-background absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
+                          ></span>
+                          <span
+                            v-if="tab.id === active"
+                            class="before:bg-sidebar after:bg-sidebar before:absolute before:inset-y-0 before:-left-1.5 before:z-20 before:w-0.5 before:rounded-full after:absolute after:inset-y-0 after:-right-1.5 after:z-20 after:w-0.5 after:rounded-full"
+                          ></span>
                         </RouterLink>
                       </Button>
                     </HoverCardTrigger>
                   </ContextMenuTrigger>
                   <ContextMenuContent class="w-56">
                     <ContextMenuGroup>
-                      <ContextMenuItem>
+                      <ContextMenuItem
+                        @click="emitter.emit('Tabs.Close', tab.id)"
+                      >
                         <icon-lucide-x />
                         Close
                         <ContextMenuShortcut>⌘W</ContextMenuShortcut>
                       </ContextMenuItem>
-                      <ContextMenuItem>
+                      <ContextMenuItem
+                        @click="emitter.emit('Tabs.Close.Others', tab.id)"
+                      >
                         <icon-lucide-circle-x />
                         Close others
                         <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
                       </ContextMenuItem>
-                      <ContextMenuItem>
+                      <ContextMenuItem @click="emitter.emit('Tabs.Close.All')">
                         <icon-lucide-square-x />
                         Close all
                         <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>
@@ -293,12 +492,12 @@ const dummyRecentTabs = [
                     </ContextMenuGroup>
                     <ContextMenuSeparator />
                     <ContextMenuGroup>
-                      <ContextMenuItem>
+                      <ContextMenuItem @click="renameTab(tab.id)">
                         <icon-lucide-square-pen />
                         Rename
                         <ContextMenuShortcut>⌘R</ContextMenuShortcut>
                       </ContextMenuItem>
-                      <ContextMenuItem>
+                      <ContextMenuItem @click="duplicateTab(tab.id)">
                         <icon-lucide-copy />
                         Duplicate
                         <ContextMenuShortcut>⌘D</ContextMenuShortcut>
@@ -306,7 +505,7 @@ const dummyRecentTabs = [
                     </ContextMenuGroup>
                     <ContextMenuSeparator />
                     <ContextMenuGroup>
-                      <ContextMenuItem>
+                      <ContextMenuItem @click="emitter.emit('Tabs.Add')">
                         <icon-lucide-plus />
                         New tab
                         <ContextMenuShortcut>⌘T</ContextMenuShortcut>
@@ -350,17 +549,23 @@ const dummyRecentTabs = [
                     <TooltipContent> Tab options </TooltipContent>
                     <DropdownMenuContent class="w-56" align="end" side="bottom">
                       <DropdownMenuGroup>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          @click="emitter.emit('Tabs.Close', active)"
+                        >
                           <icon-lucide-x />
                           Close
                           <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          @click="emitter.emit('Tabs.Close.Others', active)"
+                        >
                           <icon-lucide-circle-x />
                           Close others
                           <DropdownMenuShortcut>⌘⇧W</DropdownMenuShortcut>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          @click="emitter.emit('Tabs.Close.All')"
+                        >
                           <icon-lucide-square-x />
                           Close all
                           <DropdownMenuShortcut>⌘⇧Q</DropdownMenuShortcut>
@@ -373,7 +578,7 @@ const dummyRecentTabs = [
                           Rename
                           <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem @click="duplicateTab(active)">
                           <icon-lucide-copy />
                           Duplicate
                           <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
@@ -381,7 +586,7 @@ const dummyRecentTabs = [
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem @click="emitter.emit('Tabs.Add')">
                           <icon-lucide-plus />
                           New tab
                           <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
@@ -397,12 +602,12 @@ const dummyRecentTabs = [
       </ContextMenuTrigger>
       <ContextMenuContent class="w-56" align="end" side="bottom">
         <ContextMenuGroup>
-          <ContextMenuItem>
+          <ContextMenuItem @click="emitter.emit('Tabs.Add')">
             <icon-lucide-plus />
             New Tab
             <ContextMenuShortcut>⌘T</ContextMenuShortcut>
           </ContextMenuItem>
-          <ContextMenuItem>
+          <ContextMenuItem @click="emitter.emit('Tabs.ReopenLast')">
             <icon-lucide-history />
             Reopen last tab
             <ContextMenuShortcut>⌘⇧T</ContextMenuShortcut>
@@ -410,7 +615,7 @@ const dummyRecentTabs = [
         </ContextMenuGroup>
         <ContextMenuSeparator />
         <ContextMenuGroup>
-          <ContextMenuItem>
+          <ContextMenuItem @click="emitter.emit('Tabs.Close.All')">
             <icon-lucide-square-x />
             Close all
             <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>

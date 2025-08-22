@@ -5,6 +5,7 @@ import IconLucideCircleUser from "~icons/lucide/circle-user"
 import IconLucideXCircle from "~icons/lucide/circle-x"
 import IconCreditCard from "~icons/lucide/credit-card"
 import IconLucideHelpCircle from "~icons/lucide/help-circle"
+import IconLucideHistory from "~icons/lucide/history"
 import IconLucideKeyboard from "~icons/lucide/keyboard"
 import IconLucideLogout from "~icons/lucide/log-out"
 import IconLucideMinusSquare from "~icons/lucide/minus-square"
@@ -144,6 +145,16 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucidePlusSquare,
         tags: ["tab", "new", "add", "open"],
+        hidden: [],
+      },
+      {
+        description: ["Reopen last closed tab"],
+        keys: [[getPlatformSpecialKey(), "⇧", "t"]],
+        hotkeys: "cmd+shift+t,ctrl+shift+t",
+        event: "Tabs.ReopenLast",
+        parameters: undefined,
+        icon: IconLucideHistory,
+        tags: ["tab", "reopen", "history"],
         hidden: [],
       },
       {

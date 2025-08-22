@@ -7,7 +7,7 @@ const { onDragStart } = useDragAndDrop()
 
 <template>
   <Tabs default-value="actions">
-    <Sidebar collapsible="none" class="bg-sidebar/50">
+    <Sidebar collapsible="none">
       <SidebarHeader>
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground ml-2 text-base font-medium">

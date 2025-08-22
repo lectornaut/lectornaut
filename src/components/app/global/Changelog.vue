@@ -4,7 +4,6 @@ import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import { useDateFormat } from "@vueuse/core"
 
 let unlisten: UnlistenFn | undefined
 

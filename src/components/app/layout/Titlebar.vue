@@ -33,7 +33,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
   <ContextMenu>
     <ContextMenuTrigger as-child>
       <header
-        class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar shadow-border z-20 flex w-full shrink-0 shadow-[0px_1px]"
+        class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar shadow-border relative z-30 flex w-full shrink-0 shadow-[0px_1px]"
       >
         <div
           data-tauri-drag-region
@@ -130,7 +130,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
                     to="#right-dock"
                     :disabled="!isDocked"
                   >
-                    <AiChat class="shadow-border shadow-[-1px_0px]" />
+                    <AiChat class="shadow-border relative shadow-[-1px_0px]" />
                   </Teleport>
                   <SheetContent
                     class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"

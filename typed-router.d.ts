@@ -29,6 +29,7 @@ declare module 'vue-router/auto-routes' {
     '/exit': RouteRecordInfo<'/exit', '/exit', Record<never, never>, Record<never, never>>,
     '/explore': RouteRecordInfo<'/explore', '/explore', Record<never, never>, Record<never, never>>,
     '/home': RouteRecordInfo<'/home', '/home', Record<never, never>, Record<never, never>>,
+    '/new': RouteRecordInfo<'/new', '/new', Record<never, never>, Record<never, never>>,
     '/pricing': RouteRecordInfo<'/pricing', '/pricing', Record<never, never>, Record<never, never>>,
     '/runs': RouteRecordInfo<'/runs', '/runs', Record<never, never>, Record<never, never>>,
     '/tasks': RouteRecordInfo<'/tasks', '/tasks', Record<never, never>, Record<never, never>>,
@@ -91,6 +92,10 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/home.vue': {
       routes: '/home'
+      views: never
+    }
+    'src/pages/new.vue': {
+      routes: '/new'
       views: never
     }
     'src/pages/pricing.vue': {

@@ -471,13 +471,13 @@ const navToc = [
 
 <template>
   <Teleport defer to="#left-sidebar">
-    <Sidebar collapsible="none" class="bg-sidebar/50 w-full">
+    <Sidebar collapsible="none" class="w-full">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem v-for="item in navMain" :key="item.title">
             <SidebarMenuButton as-child :is-active="item.isActive">
               <a :href="item.url">
-                <component :is="item.icon" />
+                <Component :is="item.icon" />
                 <span>{{ item.title }}</span>
               </a>
             </SidebarMenuButton>
@@ -617,11 +617,11 @@ const navToc = [
         <SidebarMenu>
           <SidebarMenuItem v-for="item in navSecondary" :key="item.title">
             <SidebarMenuButton>
-              <component :is="item.icon" />
+              <Component :is="item.icon" />
               <span>{{ item.title }}</span>
             </SidebarMenuButton>
             <SidebarMenuBadge v-if="item.badge">
-              <component :is="item.badge" />
+              <Component :is="item.badge" />
             </SidebarMenuBadge>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -830,7 +830,7 @@ const navToc = [
     </div>
   </OverlayScrollbarsWrapper>
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="bg-sidebar/50 w-full">
+    <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
           <SidebarGroup>

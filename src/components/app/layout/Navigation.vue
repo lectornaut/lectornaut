@@ -73,6 +73,10 @@ const visibleItems = ref<Record<string, boolean>>(
 const filteredNavigation = computed(() => {
   return navigation.filter((item) => visibleItems.value[item.id])
 })
+
+defineProps<{
+  iconDisplay?: "icon" | "text"
+}>()
 </script>
 
 <template>
@@ -92,13 +96,19 @@ const filteredNavigation = computed(() => {
             <RouterLink :to="item.url" class="flex flex-col">
               <Component :is="item.icon" />
             </RouterLink>
+            <span
+              v-if="iconDisplay === 'text'"
+              class="text-secondary-foreground inline-block w-full text-center text-[8px] font-medium uppercase"
+            >
+              {{ item.title }}
+            </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <SidebarMenuItem>
               <SidebarMenuButton tooltip="Show more options">
-                <icon-lucide-grip-horizontal />
+                <icon-lucide-more-horizontal />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </DropdownMenuTrigger>

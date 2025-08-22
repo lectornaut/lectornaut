@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Carousel, type CarouselApi } from "@/components/ui/carousel"
-import { watchOnce } from "@vueuse/core"
 import AutoScroll from "embla-carousel-auto-scroll"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import IconCamera from "~icons/lucide/camera"

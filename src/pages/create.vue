@@ -76,7 +76,7 @@ const generatePoem = async () => {
 
 <template>
   <Teleport defer to="#left-sidebar">
-    <Sidebar collapsible="none" class="bg-sidebar/50 w-full"> </Sidebar>
+    <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>
   <div class="flex grow gap-2 overflow-auto overscroll-none p-2">
     <div
@@ -208,6 +208,6 @@ const generatePoem = async () => {
     </div>
   </div>
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="bg-sidebar/50 w-full"> </Sidebar>
+    <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>
 </template>

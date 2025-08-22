@@ -5,6 +5,60 @@
 @plugin "@tailwindcss/forms";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    zoom: var(--zoom-scale);
+
+    @apply selection:bg-primary;
+    @apply selection:text-primary-foreground;
+    @apply h-dvh;
+    @apply w-dvw;
+    @apply bg-linear-to-b;
+    @apply from-background;
+    @apply to-background/95;
+    @apply text-foreground;
+    @apply select-none;
+    @apply overflow-auto;
+    @apply overscroll-none;
+    @apply accent-current;
+    @apply antialiased;
+    @apply font-flex;
+    @apply text-size;
+  }
+
+  :root {
+    @apply overscroll-none;
+    @apply pl-safe-left;
+    @apply pr-safe-right;
+    @apply pt-safe-top;
+    @apply pb-safe-bottom;
+
+    --radius: 0.625rem;
+    --vis-tooltip-background-color: none;
+    --vis-tooltip-border-color: none;
+    --vis-tooltip-text-color: none;
+    --vis-tooltip-shadow-color: none;
+    --vis-tooltip-backdrop-filter: none;
+    --vis-tooltip-padding: none;
+    --vis-primary-color: var(--primary);
+    --vis-secondary-color: var(--secondary);
+    --vis-text-color: var(--foreground);
+    --vf-node-color: var(--foreground);
+    --vf-box-shadow: var(--foreground);
+    --vf-node-bg: var(--background);
+    --vf-node-text: var(--foreground);
+    --vf-handle: var(--border);
+    --vf-connection-path: var(--border);
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -38,11 +92,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-xs: calc(var(--radius) - 8px);
+  --radius-xs: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 8px);
+  --radius-xl: calc(var(--radius) + 4px);
   --spacing-safe-top: env(safe-area-inset-top);
   --spacing-safe-bottom: env(safe-area-inset-bottom);
   --spacing-safe-left: env(safe-area-inset-left);
@@ -81,60 +135,6 @@
     to {
       height: 0;
     }
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  body {
-    scroll-behavior: smooth;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    zoom: var(--zoom-scale);
-
-    @apply selection:bg-primary;
-    @apply selection:text-primary-foreground;
-    @apply h-dvh;
-    @apply w-dvw;
-    @apply bg-linear-to-b;
-    @apply from-background;
-    @apply to-background/95;
-    @apply text-foreground;
-    @apply select-none;
-    @apply overflow-auto;
-    @apply overscroll-none;
-    @apply accent-current;
-    @apply antialiased;
-    @apply font-flex;
-    @apply text-size;
-  }
-
-  :root {
-    @apply overscroll-none;
-    @apply pl-safe-left;
-    @apply pr-safe-right;
-    @apply pt-safe-top;
-    @apply pb-safe-bottom;
-
-    --radius: 1.25rem;
-    --vis-tooltip-background-color: none;
-    --vis-tooltip-border-color: none;
-    --vis-tooltip-text-color: none;
-    --vis-tooltip-shadow-color: none;
-    --vis-tooltip-backdrop-filter: none;
-    --vis-tooltip-padding: none;
-    --vis-primary-color: var(--primary);
-    --vis-secondary-color: var(--secondary);
-    --vis-text-color: var(--foreground);
-    --vf-node-color: var(--foreground);
-    --vf-box-shadow: var(--foreground);
-    --vf-node-bg: var(--background);
-    --vf-node-text: var(--foreground);
-    --vf-handle: var(--border);
-    --vf-connection-path: var(--border);
   }
 }
 

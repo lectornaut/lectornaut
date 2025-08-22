@@ -7,22 +7,22 @@ const iconDisplay = ref<"icon" | "text">("icon")
     <ContextMenuTrigger>
       <Sidebar
         collapsible="none"
-        class="shadow-border z-20 w-[calc(var(--sidebar-width-icon))] shadow-[1px_0px]"
+        class="shadow-border relative z-20 w-[calc(var(--sidebar-width-icon))] shadow-[1px_0px]"
       >
         <SidebarHeader>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton>
-                <Logo />
-              </SidebarMenuButton>
+            <SidebarMenuItem class="flex h-9 items-center justify-center p-2">
+              <Logo />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+        <Separator />
         <SidebarContent>
           <OverlayScrollbarsWrapper>
-            <Navigation />
+            <Navigation :icon-display="iconDisplay" />
           </OverlayScrollbarsWrapper>
         </SidebarContent>
+        <Separator />
         <SidebarFooter>
           <Members />
           <Separator />
