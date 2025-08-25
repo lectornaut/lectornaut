@@ -424,7 +424,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                   <ContextMenuTrigger as-child>
                     <HoverCardTrigger as-child>
                       <Button
-                        :variant="tab.id === active ? 'outline' : 'ghost'"
+                        variant="ghost"
                         class="group relative flex w-60 min-w-0 shrink border border-transparent shadow-none"
                         :class="
                           tab.id === active

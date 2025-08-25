@@ -3,7 +3,7 @@ import { Carousel, type CarouselApi } from "@/components/ui/carousel"
 import AutoScroll from "embla-carousel-auto-scroll"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import IconCamera from "~icons/lucide/camera"
-import IconGrix2x2 from "~icons/lucide/grid-2-x-2"
+import IconGrid2x2 from "~icons/lucide/grid-2-x-2"
 import IconImage from "~icons/lucide/image"
 import IconLink2 from "~icons/lucide/link-2"
 import IconSparkles from "~icons/lucide/sparkles"
@@ -158,7 +158,7 @@ const handleFileChange = (event: Event) => {
 const navItems = [
   {
     text: "Home",
-    icon: IconGrix2x2,
+    icon: IconGrid2x2,
     color: "neutral",
     scrollTo: 0,
     primary: true,

@@ -52,7 +52,7 @@ const productTour = driver({
   overlayColor: state.value === "light" ? "black" : "white",
   smoothScroll: true,
   stagePadding: 4,
-  stageRadius: 22,
+  stageRadius: 14,
   popoverClass: "driverjs-theme",
   popoverOffset: 8,
   showProgress: true,
@@ -74,7 +74,7 @@ const productTour = driver({
         title: "Apps menu",
         description:
           "You can access all the apps from the apps menu. This is useful to quickly navigate between different apps.",
-        side: "bottom",
+        side: "right",
         align: "start",
       },
     },

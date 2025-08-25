@@ -5,10 +5,7 @@ import type { DateRange } from "reka-ui"
 import Avatar from "vue-boring-avatars"
 import Blocks from "~icons/lucide/blocks"
 import Calendar from "~icons/lucide/calendar"
-import Home from "~icons/lucide/home"
-import MessageCircleQuestion from "~icons/lucide/message-circle-question"
 import Search from "~icons/lucide/search"
-import Settings2 from "~icons/lucide/settings-2"
 import Sparkles from "~icons/lucide/sparkles"
 import Trash2 from "~icons/lucide/trash-2"
 
@@ -149,12 +146,6 @@ const range = ref({
 
 const navMain = [
   {
-    title: "Home",
-    url: "#",
-    icon: Home,
-    isActive: true,
-  },
-  {
     title: "Search",
     url: "#",
     icon: Search,
@@ -174,12 +165,6 @@ const navSecondary = [
     badge: false,
   },
   {
-    title: "Settings",
-    url: "#",
-    icon: Settings2,
-    badge: false,
-  },
-  {
     title: "Templates",
     url: "#",
     icon: Blocks,
@@ -189,12 +174,6 @@ const navSecondary = [
     title: "Trash",
     url: "#",
     icon: Trash2,
-    badge: false,
-  },
-  {
-    title: "Help",
-    url: "#",
-    icon: MessageCircleQuestion,
     badge: false,
   },
 ]
@@ -475,7 +454,7 @@ const navToc = [
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem v-for="item in navMain" :key="item.title">
-            <SidebarMenuButton as-child :is-active="item.isActive">
+            <SidebarMenuButton as-child>
               <a :href="item.url">
                 <Component :is="item.icon" />
                 <span>{{ item.title }}</span>

@@ -47,32 +47,31 @@ const items = [
 </script>
 
 <template>
-  <div class="m-auto w-full max-w-5xl p-2">
-    <ul
-      class="grid w-full grid-cols-1 gap-2 rounded-2xl border border-dashed p-2 md:grid-cols-2"
+  <div
+    class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-2 p-2 md:grid-cols-2"
+  >
+    <Button
+      v-for="(item, itemIdx) in items"
+      :key="itemIdx"
+      variant="ghost"
+      class="flex h-auto flex-1 grow justify-start gap-4 p-2"
     >
-      <li v-for="(item, itemIdx) in items" :key="itemIdx" class="flow-root">
-        <div
-          class="focus-within:bg-accent hover:bg-accent transistion relative flex items-center space-x-4 rounded-xl p-2"
-        >
-          <div
-            :class="[
-              item.background,
-              'text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-md',
-            ]"
-          >
-            <Component :is="item.icon" class="size-4" />
-          </div>
-          <div class="grid">
-            <h3 class="font-medium">
-              {{ item.title }}
-            </h3>
-            <p class="text-secondary-foreground text-xs">
-              {{ item.description }}
-            </p>
-          </div>
-        </div>
-      </li>
-    </ul>
+      <div
+        :class="[
+          item.background,
+          'text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded',
+        ]"
+      >
+        <Component :is="item.icon" class="size-4" />
+      </div>
+      <div class="grid grid-cols-1 text-left">
+        <h3 class="font-medium">
+          {{ item.title }}
+        </h3>
+        <p class="text-secondary-foreground truncate text-xs">
+          {{ item.description }}
+        </p>
+      </div>
+    </Button>
   </div>
 </template>

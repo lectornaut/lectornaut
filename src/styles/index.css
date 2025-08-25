@@ -144,19 +144,21 @@
 
     .bar {
       @apply fixed;
-      @apply bottom-0;
+      @apply top-0;
       @apply left-0;
       @apply w-full;
-      @apply h-0.5;
+      @apply h-1;
       @apply z-50;
 
       background-image: linear-gradient(
-        to right,
-        #27c4f5,
-        #a307ba,
-        #fd8d32,
-        #70c050,
-        #27c4f5
+        to left,
+        var(--color-violet-500),
+        var(--color-indigo-500),
+        var(--color-blue-500),
+        var(--color-green-500),
+        var(--color-yellow-500),
+        var(--color-orange-500),
+        var(--color-red-500)
       );
     }
   }
@@ -202,7 +204,7 @@
   @apply border-border;
   @apply p-4;
   @apply shadow-lg;
-  @apply rounded-sm;
+  @apply rounded-md;
   @apply min-w-sm;
 }
 

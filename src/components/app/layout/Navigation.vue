@@ -104,11 +104,12 @@ defineProps<{
             </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
+        <Separator class="my-1" />
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <SidebarMenuItem>
               <SidebarMenuButton tooltip="Show more options">
-                <icon-lucide-more-horizontal />
+                <icon-lucide-grid-2-x-2-plus />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </DropdownMenuTrigger>
