@@ -35,31 +35,37 @@
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
           Commitment to
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >privacy</HoverCardTrigger
-            ><HoverCardContent side="top" class="px-3 py-2">
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              privacy
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="px-3 py-2">
               We don't sell your data. We don't show ads. We don't have
               investors. We are 100% bootstrapped.
-            </HoverCardContent></HoverCard
-          >,
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >longevity</HoverCardTrigger
-            ><HoverCardContent side="top" class="px-3 py-2">
+            </HoverCardContent>
+          </HoverCard>
+          ,
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              longevity
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="px-3 py-2">
               We've been around since 2017. We are a small team of passionate
               people. We are profitable. We are indie. We are here to stay.
-            </HoverCardContent></HoverCard
-          >, and
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >beauty</HoverCardTrigger
-            ><HoverCardContent side="top" class="px-3 py-2">
+            </HoverCardContent>
+          </HoverCard>
+          , and
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              beauty
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="px-3 py-2">
               We care about design. We care about user experience. We care about
               you. We are not a faceless corporation. We are committed to your
               happiness.
-            </HoverCardContent></HoverCard
-          >. Watch our backstory.
+            </HoverCardContent>
+          </HoverCard>
+          . Watch our backstory.
         </span>
       </p>
     </li>
@@ -68,10 +74,11 @@
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
           Available on the
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >Mac</HoverCardTrigger
-            ><HoverCardContent side="top" class="w-auto px-3 py-2">
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              Mac
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <icon-bi-apple class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -81,12 +88,14 @@
                   >
                 </div>
               </div>
-            </HoverCardContent></HoverCard
-          >,
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >Windows</HoverCardTrigger
-            ><HoverCardContent side="top" class="w-auto px-3 py-2">
+            </HoverCardContent>
+          </HoverCard>
+          ,
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              Windows
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <icon-logos-microsoft-icon class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -96,12 +105,14 @@
                   >
                 </div>
               </div>
-            </HoverCardContent></HoverCard
-          >,
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >Linux</HoverCardTrigger
-            ><HoverCardContent side="top" class="w-auto px-3 py-2">
+            </HoverCardContent>
+          </HoverCard>
+          ,
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              Linux
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <icon-simple-icons-flathub class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -111,12 +122,14 @@
                   >
                 </div>
               </div>
-            </HoverCardContent></HoverCard
-          >,
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >iOS</HoverCardTrigger
-            ><HoverCardContent side="top" class="w-auto px-3 py-2">
+            </HoverCardContent>
+          </HoverCard>
+          ,
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              iOS
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <icon-logos-apple-app-store class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -126,12 +139,14 @@
                   >
                 </div>
               </div>
-            </HoverCardContent></HoverCard
-          >,
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >Android</HoverCardTrigger
-            ><HoverCardContent side="top" class="w-auto px-3 py-2">
+            </HoverCardContent>
+          </HoverCard>
+          ,
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              Android
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <icon-logos-google-play-icon class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -144,10 +159,11 @@
             </HoverCardContent>
           </HoverCard>
           and
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >Web</HoverCardTrigger
-            ><HoverCardContent side="top" class="w-auto px-3 py-2">
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              Web
+            </HoverCardTrigger>
+            <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <icon-material-symbols-circle class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -157,12 +173,14 @@
                   </span>
                 </div>
               </div>
-            </HoverCardContent></HoverCard
-          >. Loved by
-          <HoverCard :open-delay="0" :close-delay="0"
-            ><HoverCardTrigger class="cursor-help underline"
-              >100K+ users</HoverCardTrigger
-            ><HoverCardContent side="top" class="w-auto p-0">
+            </HoverCardContent>
+          </HoverCard>
+          . Loved by
+          <HoverCard :open-delay="0" :close-delay="0">
+            <HoverCardTrigger class="cursor-help underline">
+              100K + users</HoverCardTrigger
+            >
+            <HoverCardContent side="top" class="w-auto p-0">
               <WallOfLove />
             </HoverCardContent>
           </HoverCard>

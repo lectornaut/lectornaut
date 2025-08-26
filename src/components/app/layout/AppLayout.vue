@@ -51,6 +51,8 @@ const source = [
     label: "Tab 3",
   },
 ]
+
+const iconDisplay = ref<"icon" | "text">("icon")
 </script>
 
 <template>
@@ -73,21 +75,14 @@ const source = [
       >
         <div id="left-sidebar"></div>
       </ResizablePanel>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <ResizableHandle
-              class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
-              @dblclick="
-                leftPanel?.splitterPanel?.isCollapsed
-                  ? leftPanel?.splitterPanel?.expand()
-                  : leftPanel?.splitterPanel?.collapse()
-              "
-            />
-          </TooltipTrigger>
-          <TooltipContent> Resize Left Panel </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <ResizableHandle
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        @dblclick="
+          leftPanel?.splitterPanel?.isCollapsed
+            ? leftPanel?.splitterPanel?.expand()
+            : leftPanel?.splitterPanel?.collapse()
+        "
+      />
       <ResizablePanel>
         <ResizablePanelGroup
           direction="vertical"
@@ -336,6 +331,16 @@ const source = [
         </div>
       </div>
     </ContextMenuTrigger>
-    <ContextMenuContent></ContextMenuContent>
+    <ContextMenuContent align="end" side="bottom">
+      <ContextMenuLabel class="text-muted-foreground text-xs">
+        Appearance
+      </ContextMenuLabel>
+      <ContextMenuRadioGroup v-model="iconDisplay">
+        <ContextMenuRadioItem value="icon"> Icons only </ContextMenuRadioItem>
+        <ContextMenuRadioItem value="text">
+          Icons and text
+        </ContextMenuRadioItem>
+      </ContextMenuRadioGroup>
+    </ContextMenuContent>
   </ContextMenu>
 </template>

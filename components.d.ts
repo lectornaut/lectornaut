@@ -280,6 +280,7 @@ declare module 'vue' {
     IconLucideHistory: typeof import('~icons/lucide/history')['default']
     IconLucideImage: typeof import('~icons/lucide/image')['default']
     IconLucideInbox: typeof import('~icons/lucide/inbox')['default']
+    IconLucideInfo: typeof import('~icons/lucide/info')['default']
     IconLucideItalic: typeof import('~icons/lucide/italic')['default']
     IconLucideKey: typeof import('~icons/lucide/key')['default']
     IconLucideKeyboard: typeof import('~icons/lucide/keyboard')['default']

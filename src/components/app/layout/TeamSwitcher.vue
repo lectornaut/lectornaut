@@ -5,7 +5,7 @@ const online = useOnline()
 
 const groups = [
   {
-    label: "Personal Account",
+    label: "Personal",
     teams: [
       {
         label: "Alicia Koch",
@@ -124,7 +124,7 @@ const selectedUsers = ref<User[]>([])
               class="border-none p-0 focus:border-inherit focus:ring-0"
             />
             <CommandList>
-              <CommandEmpty>No team found.</CommandEmpty>
+              <CommandEmpty> No teams found. </CommandEmpty>
               <CommandGroup
                 v-for="group in groups"
                 :key="group.label"

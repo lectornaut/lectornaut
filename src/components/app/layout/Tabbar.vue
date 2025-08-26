@@ -93,7 +93,6 @@ useSortable(el, tabs, {
   dragClass: "cursor-grabbing",
 })
 
-const router = useRouter()
 const route = useRoute()
 
 // Create a Tab object from the current route (generates a new id)
@@ -211,13 +210,6 @@ watch(
   { immediate: true }
 )
 
-// Navigate to a tab, flagging that the route update is a user tab selection
-function navigateToTab(tab: Tab) {
-  if (!tab.fullPath) return
-  isTabClickNavigation = true
-  router.push(tab.fullPath).catch(() => {})
-}
-
 // Open or focus tabs via events from elsewhere in the app
 emitter.on("Tabs.Add", (raw?: unknown) => {
   const tab = raw as Partial<Tab> & {
@@ -281,12 +273,10 @@ emitter.on("Tabs.Select", (idOrIndex) => {
     console.warn(`Tab with id ${id} not found.`)
     if (tabs.value[0]) {
       active.value = tabs.value[0].id
-      navigateToTab(tabs.value[0])
     }
     return
   }
   active.value = target.id
-  navigateToTab(target)
 })
 
 // Reopen the most recently closed tab; focus an existing one if already open
@@ -420,12 +410,12 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
             </template>
             <template v-else>
               <ContextMenu v-for="tab in tabs" :key="tab.id">
-                <HoverCard :close-delay="0">
+                <HoverCard :open-delay="1000" :close-delay="0">
                   <ContextMenuTrigger as-child>
-                    <HoverCardTrigger as-child>
+                    <HoverCardTrigger>
                       <Button
                         variant="ghost"
-                        class="group relative flex w-60 min-w-0 shrink border border-transparent shadow-none"
+                        class="group relative flex w-60 min-w-0 shrink border border-transparent"
                         :class="
                           tab.id === active
                             ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:!bg-background min-w-32 rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-10 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0_5px_0_currentColor,5px_0_0_currentColor,5px_5px_0_currentColor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-10 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0_5px_0_currentColor,-5px_0_0_currentColor,-5px_5px_0_currentColor]'
@@ -445,7 +435,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  class="invisible h-4 w-4 group-hover:visible"
+                                  class="invisible absolute right-2 size-5 group-hover:visible"
                                   @click.prevent="
                                     emitter.emit('Tabs.Close', tab.id)
                                   "
@@ -467,6 +457,23 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                         </RouterLink>
                       </Button>
                     </HoverCardTrigger>
+                    <HoverCardContent class="grid w-60 grid-cols-1 p-0">
+                      <div class="flex flex-col p-3">
+                        <span class="font-medium">
+                          {{ tab.name }}
+                        </span>
+                        <span class="text-secondary-foreground text-xs">
+                          {{ tab.fullPath }}
+                        </span>
+                      </div>
+                      <Separator />
+                      <div
+                        class="bg-accent/50 text-muted-foreground flex items-center gap-2 rounded-b-md p-2"
+                      >
+                        <icon-lucide-hash />
+                        <span class="truncate">{{ tab.id }}</span>
+                      </div>
+                    </HoverCardContent>
                   </ContextMenuTrigger>
                   <ContextMenuContent class="w-56">
                     <ContextMenuGroup>
@@ -505,14 +512,18 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                     </ContextMenuGroup>
                     <ContextMenuSeparator />
                     <ContextMenuGroup>
-                      <ContextMenuItem @click="emitter.emit('Tabs.Add')">
-                        <icon-lucide-plus />
-                        New tab
-                        <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+                      <ContextMenuItem
+                        as-child
+                        @click="emitter.emit('Tabs.Add')"
+                      >
+                        <RouterLink to="/new">
+                          <icon-lucide-plus />
+                          New tab
+                          <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+                        </RouterLink>
                       </ContextMenuItem>
                     </ContextMenuGroup>
                   </ContextMenuContent>
-                  <HoverCardContent class="w-56"> Content </HoverCardContent>
                 </HoverCard>
               </ContextMenu>
             </template>
@@ -527,9 +538,12 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                   <Button
                     variant="ghost"
                     size="icon"
+                    as-child
                     @click="emitter.emit('Tabs.Add')"
                   >
-                    <icon-lucide-plus />
+                    <RouterLink to="/new">
+                      <icon-lucide-plus />
+                    </RouterLink>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent> New Tab </TooltipContent>
@@ -586,10 +600,15 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <DropdownMenuItem @click="emitter.emit('Tabs.Add')">
-                          <icon-lucide-plus />
-                          New tab
-                          <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+                        <DropdownMenuItem
+                          as-child
+                          @click="emitter.emit('Tabs.Add')"
+                        >
+                          <RouterLink to="/new">
+                            <icon-lucide-plus />
+                            New tab
+                            <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+                          </RouterLink>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                     </DropdownMenuContent>
@@ -602,10 +621,12 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
       </ContextMenuTrigger>
       <ContextMenuContent class="w-56" align="end" side="bottom">
         <ContextMenuGroup>
-          <ContextMenuItem @click="emitter.emit('Tabs.Add')">
-            <icon-lucide-plus />
-            New Tab
-            <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+          <ContextMenuItem as-child @click="emitter.emit('Tabs.Add')">
+            <RouterLink to="/new">
+              <icon-lucide-plus />
+              New Tab
+              <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+            </RouterLink>
           </ContextMenuItem>
           <ContextMenuItem @click="emitter.emit('Tabs.ReopenLast')">
             <icon-lucide-history />
