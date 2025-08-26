@@ -35,7 +35,7 @@ const columns = computed(() =>
           :key="column.id"
           :model-value="column.getIsGrouped()"
           class="capitalize"
-          @update:model-value="(value) => column.toggleGrouping(!!value)"
+          @update:model-value="() => column.toggleGrouping()"
         >
           {{ column.id }}
         </DropdownMenuCheckboxItem>

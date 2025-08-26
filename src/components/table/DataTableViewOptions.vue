@@ -16,6 +16,17 @@ const columns = computed(() =>
         typeof column.accessorFn !== "undefined" && column.getCanHide()
     )
 )
+
+const pageSizeString = computed({
+  get: () => String(props.table.getState().pagination.pageSize),
+  set: (val: string) => {
+    props.table.setPageSize(Number(val))
+  },
+})
+
+function onPageSizeChange(val: string) {
+  props.table.setPageSize(Number(val))
+}
 </script>
 
 <template>
@@ -118,14 +129,13 @@ const columns = computed(() =>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuRadioGroup
-              v-model="props.table.getState().pagination.pageSize"
-              :model-value="props.table.getState().pagination.pageSize"
-              @update:model-value="props.table.setPageSize"
+              v-model="pageSizeString"
+              @update:model-value="onPageSizeChange"
             >
               <DropdownMenuRadioItem
                 v-for="pageSize in [10, 20, 30, 40, 50]"
                 :key="pageSize"
-                :value="pageSize"
+                :value="String(pageSize)"
               >
                 {{ pageSize }}
               </DropdownMenuRadioItem>

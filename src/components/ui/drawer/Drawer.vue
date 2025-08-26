@@ -3,9 +3,12 @@ import { useForwardPropsEmits } from "reka-ui"
 import type { DrawerRootEmits, DrawerRootProps } from "vaul-vue"
 import { DrawerRoot } from "vaul-vue"
 
-const props = withDefaults(defineProps<DrawerRootProps>(), {
-  shouldScaleBackground: true,
-})
+const props = withDefaults(
+  defineProps<Omit<DrawerRootProps, "fadeFromIndex">>(),
+  {
+    shouldScaleBackground: true,
+  }
+)
 
 const emits = defineEmits<DrawerRootEmits>()
 

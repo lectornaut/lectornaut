@@ -16,25 +16,51 @@ useHead({
 })
 
 const tree = [
-  [
-    "app",
-    [
-      "api",
-      ["hello", ["route.ts"]],
-      "page.tsx",
-      "layout.tsx",
-      ["blog", ["page.tsx"]],
+  {
+    name: "app",
+    children: [
+      {
+        name: "api",
+        children: [
+          {
+            name: "hello",
+            children: [{ name: "route.ts" }],
+          },
+          { name: "page.tsx" },
+          { name: "layout.tsx" },
+          {
+            name: "blog",
+            children: [{ name: "page.tsx" }],
+          },
+        ],
+      },
     ],
-  ],
-  ["components", ["ui", "button.tsx", "card.tsx"], "header.tsx", "footer.tsx"],
-  ["lib", ["util.ts"]],
-  ["public", "favicon.ico", "vercel.svg"],
-  ".eslintrc.json",
-  ".gitignore",
-  "next.config.js",
-  "tailwind.config.js",
-  "package.json",
-  "README.md",
+  },
+  {
+    name: "components",
+    children: [
+      {
+        name: "ui",
+        children: [{ name: "button.tsx" }, { name: "card.tsx" }],
+      },
+      { name: "header.tsx" },
+      { name: "footer.tsx" },
+    ],
+  },
+  {
+    name: "lib",
+    children: [{ name: "util.ts" }],
+  },
+  {
+    name: "public",
+    children: [{ name: "favicon.ico" }, { name: "vercel.svg" }],
+  },
+  { name: ".eslintrc.json" },
+  { name: ".gitignore" },
+  { name: "next.config.js" },
+  { name: "tailwind.config.js" },
+  { name: "package.json" },
+  { name: "README.md" },
 ]
 </script>
 
@@ -47,7 +73,7 @@ const tree = [
             <SidebarGroupLabel>Files</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <Tree v-for="(item, index) in tree" :key="index" :item="item" />
+                <Tree v-for="(item, index) in tree" :key="index" :node="item" />
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

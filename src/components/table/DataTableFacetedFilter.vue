@@ -80,7 +80,10 @@ const selectedValues = computed(
                 }
               "
             >
-              <Checkbox :model-value="selectedValues.has(option.value)" />
+              <Checkbox
+                :model-value="selectedValues.has(option.value)"
+                class="[&_svg]:!text-primary-foreground"
+              />
               <Component :is="option.icon" v-if="option.icon" />
               {{ option.label }}
               <kbd

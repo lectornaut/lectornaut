@@ -1,38 +1,39 @@
 <script setup lang="ts">
-const props = defineProps<{
-  item: string | string[]
-}>()
+type TreeData = {
+  name: string
+  children?: TreeData[]
+}
 
-const [name, ...items] = Array.isArray(props.item) ? props.item : [props.item]
+defineProps<{ node: TreeData }>()
 </script>
 
 <template>
-  <SidebarMenuButton v-if="!items.length">
-    <icon-lucide-file />
-    <span class="truncate">
-      {{ name }}
-    </span>
-  </SidebarMenuButton>
-  <SidebarMenuItem v-else>
+  <SidebarMenuItem v-if="node.children">
     <Collapsible class="[&[data-state=open]>button>svg:first-child]:rotate-90">
       <CollapsibleTrigger as-child>
         <SidebarMenuButton>
           <icon-lucide-chevron-right class="transition-transform" />
           <icon-lucide-folder />
           <span class="truncate">
-            {{ name }}
+            {{ node.name }}
           </span>
         </SidebarMenuButton>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <SidebarMenuSub class="mr-0 pr-0">
           <Tree
-            v-for="(subItem, index) in items"
+            v-for="(subItem, index) in node.children"
             :key="index"
-            :item="subItem"
+            :node="subItem"
           />
         </SidebarMenuSub>
       </CollapsibleContent>
     </Collapsible>
   </SidebarMenuItem>
+  <SidebarMenuButton v-else>
+    <icon-lucide-file />
+    <span class="truncate">
+      {{ node.name }}
+    </span>
+  </SidebarMenuButton>
 </template>

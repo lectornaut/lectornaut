@@ -63,18 +63,27 @@ const iconDisplay = ref<"icon" | "text">("icon")
       direction="horizontal"
       auto-save-id="app-horizontal-layout"
     >
-      <ResizablePanel
-        ref="leftPanel"
-        collapsible
-        :min-size="15"
-        :default-size="16"
-        :max-size="22"
-        :collapsed-size="0"
-        as-child
-        class="hidden lg:flex"
-      >
-        <div id="left-sidebar"></div>
-      </ResizablePanel>
+      <ContextMenu>
+        <ContextMenuTrigger as-child>
+          <ResizablePanel
+            ref="leftPanel"
+            collapsible
+            :min-size="15"
+            :default-size="16"
+            :max-size="22"
+            :collapsed-size="0"
+            as-child
+            class="hidden lg:flex"
+          >
+            <div id="left-sidebar"></div>
+          </ResizablePanel>
+        </ContextMenuTrigger>
+        <ContextMenuContent align="end" side="bottom">
+          <ContextMenuItem @click="leftPanel?.splitterPanel?.collapse()">
+            <icon-lucide-x /> Close panel
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
       <ResizableHandle
         class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
         @dblclick="
@@ -88,22 +97,38 @@ const iconDisplay = ref<"icon" | "text">("icon")
           direction="vertical"
           auto-save-id="app-vertical-layout"
         >
-          <ResizablePanel
-            ref="topPanel"
-            class="flex grow flex-col overflow-auto overscroll-none"
-            collapsible
-            :min-size="15"
-            :default-size="80"
-            :max-size="100"
-            :collapsed-size="0"
-          >
-            <Tabbar />
-            <SubNavigation />
-            <Separator />
-            <div class="flex grow flex-col overflow-auto overscroll-none">
-              <RouterView />
-            </div>
-          </ResizablePanel>
+          <ContextMenu>
+            <ContextMenuTrigger as-child>
+              <ResizablePanel
+                ref="topPanel"
+                class="flex grow flex-col overflow-auto overscroll-none"
+                collapsible
+                :min-size="15"
+                :default-size="80"
+                :max-size="100"
+                :collapsed-size="0"
+              >
+                <Tabbar />
+                <SubNavigation />
+                <Separator />
+                <div class="flex grow flex-col overflow-auto overscroll-none">
+                  <RouterView />
+                </div>
+              </ResizablePanel>
+            </ContextMenuTrigger>
+            <ContextMenuContent align="end" side="bottom">
+              <ContextMenuItem>
+                <icon-lucide-refresh-ccw /> Refresh
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem>
+                <icon-lucide-arrow-left /> Go back
+              </ContextMenuItem>
+              <ContextMenuItem>
+                <icon-lucide-arrow-right /> Go forward
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
           <ResizableHandle
             class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
             @dblclick="
@@ -112,103 +137,132 @@ const iconDisplay = ref<"icon" | "text">("icon")
                 : bottomPanel?.splitterPanel?.collapse()
             "
           />
-          <ResizablePanel
-            ref="bottomPanel"
-            collapsible
-            :min-size="15"
-            :default-size="20"
-            :max-size="100"
-            :collapsed-size="0"
-            as-child
-          >
-            <Tabs default-value="tab-1">
-              <div id="bottom-sidebar" class="bg-sidebar flex flex-1 flex-col">
-                <div class="grid shrink-0 grid-cols-3 gap-2">
-                  <div class="flex items-center justify-start">
-                    <TabsList class="bg-transparent p-0">
-                      <TabsTrigger
-                        v-for="value in source"
-                        :key="value.id"
-                        class="data-[state=active]:after:bg-primary data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:!border-transparent data-[state=active]:!bg-transparent data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-0.5 data-[state=active]:after:h-px"
-                        :value="`tab-${value.id}`"
-                      >
-                        {{ value.label }}
-                      </TabsTrigger>
-                    </TabsList>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            class="rounded-none"
-                          >
-                            <icon-lucide-plus />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent> New </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div class="flex items-center justify-center"></div>
-                  <div class="flex items-center justify-end">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            class="rounded-none"
-                            @click="
-                              topPanel?.splitterPanel?.isCollapsed
-                                ? topPanel?.splitterPanel?.expand()
-                                : topPanel?.splitterPanel?.collapse()
-                            "
-                          >
-                            <icon-lucide-minimize
-                              v-if="topPanel?.splitterPanel?.isCollapsed"
-                            />
-                            <icon-lucide-maximize v-else />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{
-                            topPanel?.splitterPanel?.isCollapsed
-                              ? "Minimize"
-                              : "Maximize"
-                          }}
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            class="rounded-none"
-                            @click="bottomPanel?.splitterPanel?.collapse()"
-                          >
-                            <icon-lucide-x />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent> Close </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-                <Separator />
-                <OverlayScrollbarsWrapper>
-                  <TabsContent
-                    v-for="(value, index) in source"
-                    :key="index"
-                    :value="`tab-${value.id}`"
-                    class="p-2"
+          <ContextMenu>
+            <ContextMenuTrigger as-child>
+              <ResizablePanel
+                ref="bottomPanel"
+                collapsible
+                :min-size="15"
+                :default-size="20"
+                :max-size="100"
+                :collapsed-size="0"
+                as-child
+              >
+                <Tabs default-value="tab-1">
+                  <div
+                    id="bottom-sidebar"
+                    class="bg-sidebar flex flex-1 flex-col"
                   >
-                    {{ value.id }}
-                  </TabsContent>
-                </OverlayScrollbarsWrapper>
-              </div>
-            </Tabs>
-          </ResizablePanel>
+                    <div class="grid shrink-0 grid-cols-3 gap-2">
+                      <div class="flex items-center justify-start">
+                        <TabsList class="bg-transparent p-0">
+                          <TabsTrigger
+                            v-for="value in source"
+                            :key="value.id"
+                            class="data-[state=active]:after:bg-primary data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:!border-transparent data-[state=active]:!bg-transparent data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-0.5 data-[state=active]:after:h-px"
+                            :value="`tab-${value.id}`"
+                          >
+                            {{ value.label }}
+                          </TabsTrigger>
+                        </TabsList>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                class="rounded-none"
+                              >
+                                <icon-lucide-plus />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent> New </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div class="flex items-center justify-center"></div>
+                      <div class="flex items-center justify-end">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                class="rounded-none"
+                                @click="
+                                  topPanel?.splitterPanel?.isCollapsed
+                                    ? topPanel?.splitterPanel?.expand()
+                                    : topPanel?.splitterPanel?.collapse()
+                                "
+                              >
+                                <icon-lucide-minimize
+                                  v-if="topPanel?.splitterPanel?.isCollapsed"
+                                />
+                                <icon-lucide-maximize v-else />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{
+                                topPanel?.splitterPanel?.isCollapsed
+                                  ? "Minimize panel"
+                                  : "Maximize panel"
+                              }}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                class="rounded-none"
+                                @click="bottomPanel?.splitterPanel?.collapse()"
+                              >
+                                <icon-lucide-x />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent> Close panel </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                    <Separator />
+                    <OverlayScrollbarsWrapper>
+                      <TabsContent
+                        v-for="(value, index) in source"
+                        :key="index"
+                        :value="`tab-${value.id}`"
+                        class="p-2"
+                      >
+                        {{ value.id }}
+                      </TabsContent>
+                    </OverlayScrollbarsWrapper>
+                  </div>
+                </Tabs>
+              </ResizablePanel>
+            </ContextMenuTrigger>
+            <ContextMenuContent align="end" side="bottom">
+              <ContextMenuItem
+                @click="
+                  topPanel?.splitterPanel?.isCollapsed
+                    ? topPanel?.splitterPanel?.expand()
+                    : topPanel?.splitterPanel?.collapse()
+                "
+              >
+                <icon-lucide-minimize
+                  v-if="topPanel?.splitterPanel?.isCollapsed"
+                />
+                <icon-lucide-maximize v-else />
+                {{
+                  topPanel?.splitterPanel?.isCollapsed
+                    ? "Collapse panel"
+                    : "Expand panel"
+                }}
+              </ContextMenuItem>
+              <ContextMenuItem @click="bottomPanel?.splitterPanel?.collapse()">
+                <icon-lucide-x /> Close panel
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         </ResizablePanelGroup>
       </ResizablePanel>
       <ResizableHandle
@@ -219,18 +273,27 @@ const iconDisplay = ref<"icon" | "text">("icon")
             : rightPanel?.splitterPanel?.collapse()
         "
       />
-      <ResizablePanel
-        ref="rightPanel"
-        collapsible
-        :min-size="15"
-        :default-size="16"
-        :max-size="22"
-        :collapsed-size="0"
-        as-child
-        class="hidden lg:flex"
-      >
-        <div id="right-sidebar"></div>
-      </ResizablePanel>
+      <ContextMenu>
+        <ContextMenuTrigger as-child>
+          <ResizablePanel
+            ref="rightPanel"
+            collapsible
+            :min-size="15"
+            :default-size="16"
+            :max-size="22"
+            :collapsed-size="0"
+            as-child
+            class="hidden lg:flex"
+          >
+            <div id="right-sidebar"></div>
+          </ResizablePanel>
+        </ContextMenuTrigger>
+        <ContextMenuContent align="end" side="bottom">
+          <ContextMenuItem @click="rightPanel?.splitterPanel?.collapse()">
+            <icon-lucide-x /> Close panel
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </ResizablePanelGroup>
     <div id="right-dock"></div>
   </main>
