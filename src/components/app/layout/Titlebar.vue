@@ -32,7 +32,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
   <ContextMenu>
     <ContextMenuTrigger as-child>
       <header
-        class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top titlebar shadow-border relative z-30 flex w-full shrink-0 shadow-[0px_1px]"
+        class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top shadow-border relative z-30 flex w-full shrink-0 shadow-[0px_1px]"
       >
         <div
           data-tauri-drag-region
@@ -136,13 +136,3 @@ const iconDisplay = ref<"icon" | "text">("icon")
     </ContextMenuContent>
   </ContextMenu>
 </template>
-
-<style scoped>
-.titlebar {
-  -webkit-app-region: drag;
-
-  button {
-    -webkit-app-region: no-drag;
-  }
-}
-</style>

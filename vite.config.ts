@@ -11,6 +11,7 @@ import AutoImport from "unplugin-auto-import/vite"
 import Unfonts from "unplugin-fonts/vite"
 import IconsResolver from "unplugin-icons/resolver"
 import Icons from "unplugin-icons/vite"
+import TurboConsole from "unplugin-turbo-console/vite"
 import Components from "unplugin-vue-components/vite"
 import { VueRouterAutoImports } from "unplugin-vue-router"
 import VueRouter from "unplugin-vue-router/vite"
@@ -223,6 +224,14 @@ export default defineConfig({
       vueTsc: true,
       overlay: false,
       enableBuild: false,
+    }),
+    TurboConsole({
+      highlight: {
+        themeDetect: true,
+      },
+      launchEditor: false,
+      passLogs: false,
+      inspector: false,
     }),
   ],
   resolve: {

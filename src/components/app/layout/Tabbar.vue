@@ -313,14 +313,14 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
 </script>
 
 <template>
-  <div class="bg-sidebar flex w-full flex-col">
-    <ContextMenu>
-      <ContextMenuTrigger>
+  <ContextMenu>
+    <div class="bg-sidebar flex w-full flex-col">
+      <ContextMenuTrigger as-child>
         <div
           data-tauri-drag-region
-          class="relative flex grow items-center gap-2 p-2 transition-all"
+          class="flex grow items-center gap-2 p-2 transition-all"
         >
-          <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center justify-start gap-2">
             <Combobox>
               <TooltipProvider>
                 <Tooltip>
@@ -398,7 +398,10 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               </TooltipProvider>
             </Combobox>
           </div>
-          <nav ref="el" class="relative contents gap-2">
+          <nav
+            ref="el"
+            class="relative flex min-w-0 items-center justify-center gap-2"
+          >
             <template v-if="pending">
               <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
             </template>
@@ -409,16 +412,24 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               <icon-lucide-file-text /> empty
             </template>
             <template v-else>
-              <ContextMenu v-for="tab in tabs" :key="tab.id">
-                <HoverCard :open-delay="1000" :close-delay="0">
-                  <ContextMenuTrigger as-child>
-                    <HoverCardTrigger>
+              <HoverCard
+                v-for="tab in tabs"
+                :key="tab.id"
+                :open-delay="1000"
+                :close-delay="0"
+              >
+                <HoverCardTrigger
+                  class="hover-trigger w-60 min-w-0 transition-all"
+                  :class="{ 'min-w-40': tab.id === active }"
+                >
+                  <ContextMenu class="border border-sky-400">
+                    <ContextMenuTrigger as-child class="context-trigger">
                       <Button
                         variant="ghost"
-                        class="group relative flex w-60 min-w-0 shrink border border-transparent"
+                        class="group relative w-[-webkit-fill-available] min-w-0 border border-transparent"
                         :class="
                           tab.id === active
-                            ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:!bg-background min-w-32 rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-10 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0_5px_0_currentColor,5px_0_0_currentColor,5px_5px_0_currentColor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-10 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0_5px_0_currentColor,-5px_0_0_currentColor,-5px_5px_0_currentColor]'
+                            ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:!bg-background rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-10 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0_5px_0_currentColor,5px_0_0_currentColor,5px_5px_0_currentColor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-10 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0_5px_0_currentColor,-5px_0_0_currentColor,-5px_5px_0_currentColor]'
                             : 'text-muted-foreground before:bg-border after:bg-border before:absolute before:-left-1.5 before:z-10 before:h-4 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:z-10 after:h-4 after:w-0.5 after:rounded-full'
                         "
                         as-child
@@ -448,7 +459,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                           </TooltipProvider>
                           <span
                             v-if="tab.id === active"
-                            class="bg-background absolute inset-x-0 -bottom-2.5 z-10 h-2.5"
+                            class="bg-background absolute inset-x-0 -bottom-3 z-10 h-3"
                           ></span>
                           <span
                             v-if="tab.id === active"
@@ -456,82 +467,81 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                           ></span>
                         </RouterLink>
                       </Button>
-                    </HoverCardTrigger>
-                    <HoverCardContent class="grid w-60 grid-cols-1 p-0">
-                      <div class="flex flex-col p-3">
-                        <span class="font-medium">
-                          {{ tab.name }}
-                        </span>
-                        <span class="text-secondary-foreground text-xs">
-                          {{ tab.fullPath }}
-                        </span>
-                      </div>
-                      <Separator />
-                      <div
-                        class="bg-accent/50 text-muted-foreground flex items-center gap-2 rounded-b-md p-2"
-                      >
-                        <icon-lucide-hash />
-                        <span class="truncate">{{ tab.id }}</span>
-                      </div>
-                    </HoverCardContent>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent class="w-56">
-                    <ContextMenuGroup>
-                      <ContextMenuItem
-                        @click="emitter.emit('Tabs.Close', tab.id)"
-                      >
-                        <icon-lucide-x />
-                        Close
-                        <ContextMenuShortcut>⌘W</ContextMenuShortcut>
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        @click="emitter.emit('Tabs.Close.Others', tab.id)"
-                      >
-                        <icon-lucide-circle-x />
-                        Close others
-                        <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
-                      </ContextMenuItem>
-                      <ContextMenuItem @click="emitter.emit('Tabs.Close.All')">
-                        <icon-lucide-square-x />
-                        Close all
-                        <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>
-                      </ContextMenuItem>
-                    </ContextMenuGroup>
-                    <ContextMenuSeparator />
-                    <ContextMenuGroup>
-                      <ContextMenuItem @click="renameTab(tab.id)">
-                        <icon-lucide-square-pen />
-                        Rename
-                        <ContextMenuShortcut>⌘R</ContextMenuShortcut>
-                      </ContextMenuItem>
-                      <ContextMenuItem @click="duplicateTab(tab.id)">
-                        <icon-lucide-copy />
-                        Duplicate
-                        <ContextMenuShortcut>⌘D</ContextMenuShortcut>
-                      </ContextMenuItem>
-                    </ContextMenuGroup>
-                    <ContextMenuSeparator />
-                    <ContextMenuGroup>
-                      <ContextMenuItem
-                        as-child
-                        @click="emitter.emit('Tabs.Add')"
-                      >
-                        <RouterLink to="/new">
-                          <icon-lucide-plus />
-                          New tab
-                          <ContextMenuShortcut>⌘T</ContextMenuShortcut>
-                        </RouterLink>
-                      </ContextMenuItem>
-                    </ContextMenuGroup>
-                  </ContextMenuContent>
-                </HoverCard>
-              </ContextMenu>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent class="w-56">
+                      <ContextMenuGroup>
+                        <ContextMenuItem
+                          @click="emitter.emit('Tabs.Close', tab.id)"
+                        >
+                          <icon-lucide-x />
+                          Close
+                          <ContextMenuShortcut>⌘W</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          @click="emitter.emit('Tabs.Close.Others', tab.id)"
+                        >
+                          <icon-lucide-circle-x />
+                          Close others
+                          <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          @click="emitter.emit('Tabs.Close.All')"
+                        >
+                          <icon-lucide-square-x />
+                          Close all
+                          <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                      <ContextMenuSeparator />
+                      <ContextMenuGroup>
+                        <ContextMenuItem @click="renameTab(tab.id)">
+                          <icon-lucide-square-pen />
+                          Rename
+                          <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem @click="duplicateTab(tab.id)">
+                          <icon-lucide-copy />
+                          Duplicate
+                          <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                      <ContextMenuSeparator />
+                      <ContextMenuGroup>
+                        <ContextMenuItem
+                          as-child
+                          @click="emitter.emit('Tabs.Add')"
+                        >
+                          <RouterLink to="/new">
+                            <icon-lucide-plus />
+                            New tab
+                            <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+                          </RouterLink>
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                </HoverCardTrigger>
+                <HoverCardContent class="grid w-60 grid-cols-1 p-0">
+                  <div class="flex flex-col p-3">
+                    <span class="font-medium">
+                      {{ tab.name }}
+                    </span>
+                    <span class="text-secondary-foreground text-xs">
+                      {{ tab.fullPath }}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div
+                    class="bg-accent/50 text-muted-foreground flex items-center gap-2 rounded-b-md p-2"
+                  >
+                    <icon-lucide-hash />
+                    <span class="truncate">{{ tab.id }}</span>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             </template>
           </nav>
-          <div
-            data-tauri-drag-region
-            class="flex grow items-center justify-between gap-2"
-          >
+          <div class="flex grow items-center justify-between gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
@@ -643,7 +653,17 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
           </ContextMenuItem>
         </ContextMenuGroup>
       </ContextMenuContent>
-    </ContextMenu>
+    </div>
     <Separator />
-  </div>
+  </ContextMenu>
 </template>
+
+<style scoped lang="scss">
+.hover-trigger {
+  @apply border border-lime-400;
+}
+
+.context-trigger {
+  @apply border border-violet-400;
+}
+</style>

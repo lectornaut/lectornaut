@@ -18,6 +18,7 @@ import { createPinia } from "pinia"
 import "unfonts.css"
 import "vue-sonner/style.css"
 import { VueFire, VueFireAppCheck, VueFireAuth } from "vuefire"
+import "~console/theme-detect"
 
 const head = createHead({
   plugins: [InferSeoMetaPlugin()],

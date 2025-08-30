@@ -1,67 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
-import IconActivity from "~icons/lucide/activity"
-import IconBadgeCheck from "~icons/lucide/badge-check"
-import IconBot from "~icons/lucide/bot"
-import IconComponent from "~icons/lucide/component"
-import IconHome from "~icons/lucide/home"
-import IconPen from "~icons/lucide/pen"
-import IconSparkle from "~icons/lucide/sparkle"
-import IconExplore from "~icons/lucide/telescope"
-
-const navigation = [
-  {
-    title: "Home",
-    url: "/home",
-    id: "home",
-    icon: IconHome,
-  },
-  {
-    title: "Write",
-    url: "/write",
-    id: "write",
-    icon: IconPen,
-  },
-  {
-    title: "Explore",
-    url: "/explore",
-    id: "explore",
-    icon: IconExplore,
-  },
-  {
-    title: "Agents",
-    url: "/agents",
-    id: "agents",
-    icon: IconBot,
-  },
-  {
-    title: "Tasks",
-    url: "/tasks",
-    id: "tasks",
-    icon: IconBadgeCheck,
-  },
-  {
-    title: "Runs",
-    url: "/runs",
-    id: "runs",
-    icon: IconActivity,
-  },
-  {
-    title: "Teams",
-    url: "/teams",
-    id: "teams",
-    icon: IconComponent,
-  },
-  {
-    title: "Create",
-    url: "/create",
-    id: "create",
-    icon: IconSparkle,
-  },
-]
+import { menu } from "@/helpers/defaults"
 
 const visibleItems = ref<Record<string, boolean>>(
-  navigation.reduce(
+  menu.reduce(
     (acc, item) => {
       acc[item.id] = true
       return acc
@@ -71,7 +12,7 @@ const visibleItems = ref<Record<string, boolean>>(
 )
 
 const filteredNavigation = computed(() => {
-  return navigation.filter((item) => visibleItems.value[item.id])
+  return menu.filter((item) => visibleItems.value[item.id])
 })
 
 defineProps<{
@@ -118,7 +59,7 @@ defineProps<{
               Show
             </DropdownMenuLabel>
             <DropdownMenuCheckboxItem
-              v-for="item in navigation"
+              v-for="item in menu"
               :key="item.id"
               v-model:model-value="visibleItems[item.id]"
             >

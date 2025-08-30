@@ -34,7 +34,7 @@ import { menu } from "@/helpers/defaults"
                         <RouterLink :to="item.url">
                           <Component
                             :is="item.icon"
-                            class="size-8 rounded-full p-2"
+                            class="text-primary-foreground size-8 rounded-full p-2"
                             :class="item.color"
                           />
                           {{ item.title }}
