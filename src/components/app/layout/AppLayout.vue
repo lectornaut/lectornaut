@@ -336,14 +336,6 @@ const iconDisplay = ref<"icon" | "text">("icon")
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="sm" class="rounded-none">
-                  <icon-lucide-layout />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Top panel </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
                 <Button
                   variant="ghost"
                   size="sm"
