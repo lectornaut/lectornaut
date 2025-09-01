@@ -1,4 +1,8 @@
 <script setup lang="ts">
+defineProps<{
+  iconDisplay?: "icon" | "text"
+}>()
+
 const isDocked = ref(false)
 </script>
 
@@ -6,8 +10,14 @@ const isDocked = ref(false)
   <NavigationMenu id="tour-tasks-notifications">
     <NavigationMenuList class="gap-2">
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="px-3">
+        <NavigationMenuTrigger
+          class="px-3"
+          :class="{ 'gap-2': iconDisplay === 'text' }"
+        >
           <icon-lucide-inbox />
+          <span v-if="iconDisplay === 'text'" class="hidden md:flex">
+            Tasks
+          </span>
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="saved">
@@ -69,8 +79,14 @@ const isDocked = ref(false)
         </NavigationMenuContent>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <NavigationMenuTrigger class="px-3">
+        <NavigationMenuTrigger
+          class="px-3"
+          :class="{ 'gap-2': iconDisplay === 'text' }"
+        >
           <icon-lucide-bell />
+          <span v-if="iconDisplay === 'text'" class="hidden md:flex">
+            Notifications
+          </span>
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="saved">

@@ -7,6 +7,10 @@ import {
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 
+defineProps<{
+  iconDisplay?: "icon" | "text"
+}>()
+
 const openCommand = ref(false)
 
 emitter.on("Dialog.Command.Open", () => {
@@ -41,10 +45,11 @@ const filteredShortcuts = computed(() => {
   <Button
     id="tour-search-bar"
     variant="ghost"
-    size="icon"
+    :size="iconDisplay === 'text' ? 'default' : 'icon'"
     @click="openCommand = true"
   >
     <icon-lucide-search />
+    <span v-if="iconDisplay === 'text'" class="hidden md:flex">Search</span>
   </Button>
   <CommandDialog v-model:open="openCommand">
     <CommandInput

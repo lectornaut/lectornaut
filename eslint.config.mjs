@@ -1,4 +1,5 @@
 import js from "@eslint/js"
+import vueI18n from "@intlify/eslint-plugin-vue-i18n"
 import tsParser from "@typescript-eslint/parser"
 import eslintConfigPrettier from "eslint-config-prettier"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
@@ -14,6 +15,7 @@ export default ts.config(
       js.configs.recommended,
       ...ts.configs.recommended,
       ...eslintPluginVue.configs["flat/recommended"],
+      ...vueI18n.configs["flat/recommended"],
       eslintPluginPrettierRecommended,
     ],
     rules: {
@@ -32,6 +34,7 @@ export default ts.config(
           ignoreRestSiblings: true,
         },
       ],
+      "@intlify/vue-i18n/no-raw-text": "off",
     },
     files: ["**/*.{ts,vue}"],
     languageOptions: {
@@ -39,6 +42,12 @@ export default ts.config(
       globals: globals.browser,
       parserOptions: {
         parser: tsParser,
+      },
+    },
+    settings: {
+      "vue-i18n": {
+        localeDir: "./src/locales/**/*.{json}",
+        messageSyntaxVersion: "^11.1.11",
       },
     },
   },

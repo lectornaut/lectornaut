@@ -8,3 +8,11 @@ export interface ITodo {
   createdAt: Timestamp
   updatedAt: Timestamp
 }
+
+export interface ITeam {
+  id: UUIDTypes
+  name: string
+  members: Array<string>
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
