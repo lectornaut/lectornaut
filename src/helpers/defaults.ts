@@ -9,6 +9,7 @@ import IconBot from "~icons/lucide/bot"
 import IconDevelopers from "~icons/lucide/box"
 import IconCareers from "~icons/lucide/briefcase"
 import IconComponent from "~icons/lucide/component"
+import IconDocument from "~icons/lucide/file-text"
 import IconAbout from "~icons/lucide/graduation-cap"
 import IconCommunity from "~icons/lucide/heart"
 import IconChangelog from "~icons/lucide/history"
@@ -131,6 +132,16 @@ export const menu = [
     id: "home",
     icon: IconHome,
     color: "bg-pink-500/75",
+  },
+  // write
+  {
+    title: "Write",
+    action: "Create a Document",
+    description: "A place to write and organize your thoughts.",
+    url: "/write",
+    id: "write",
+    icon: IconDocument,
+    color: "bg-teal-500/75",
   },
   {
     title: "Agents",

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { columns } from "@/components/table/columns"
-import teams from "@/data/teams.json"
-
 definePage({
   meta: {
     requiresUser: true,
@@ -21,7 +18,7 @@ useHead({
     <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>
   <div class="flex grow flex-col overflow-auto overscroll-none">
-    <DataTable :data="teams" :columns="columns" />
+    <CodeEditor />
   </div>
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
