@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { menu } from "@/helpers/defaults"
+import { useSortable } from "@vueuse/integrations/useSortable"
 
 const visibleItems = ref<Record<string, boolean>>(
   menu.reduce(
@@ -15,6 +16,16 @@ const filteredNavigation = computed(() => {
   return menu.filter((item) => visibleItems.value[item.id])
 })
 
+const el = ref<HTMLElement | null>(null)
+
+useSortable(el, filteredNavigation, {
+  animation: 150,
+  draggable: ".nav-item",
+  ghostClass: "cursor-grab",
+  chosenClass: "cursor-grabbing",
+  dragClass: "cursor-grabbing",
+})
+
 defineProps<{
   iconDisplay?: "icon" | "text"
 }>()
@@ -23,11 +34,11 @@ defineProps<{
 <template>
   <SidebarGroup>
     <SidebarGroupContent id="tour-primary-navigation">
-      <SidebarMenu>
+      <SidebarMenu ref="el">
         <SidebarMenuItem
           v-for="item in filteredNavigation"
-          :key="item.title"
-          class="group/nav"
+          :key="item.id"
+          class="group/nav nav-item"
         >
           <SidebarMenuButton
             class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground"

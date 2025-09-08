@@ -12,7 +12,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
         autoHide: 'scroll',
       },
     }"
-    class="size-full"
+    class="size-full overscroll-none"
   >
     <slot />
   </OverlayScrollbarsComponent>

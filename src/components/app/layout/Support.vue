@@ -4,6 +4,7 @@ import emitter from "@/modules/mitt"
 import { state } from "@/modules/theme"
 import confetti from "canvas-confetti"
 import { driver } from "driver.js"
+import "driver.js/dist/driver.css"
 
 const version = import.meta.env.VITE_APP_VERSION
 

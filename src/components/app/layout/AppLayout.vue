@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { ResizablePanel } from "@/components/ui/resizable"
 import emitter from "@/modules/mitt"
+import { state } from "@/modules/theme"
+import { useResizeObserver } from "@vueuse/core"
+import { ClipboardAddon } from "@xterm/addon-clipboard"
+import { FitAddon } from "@xterm/addon-fit"
+import { LigaturesAddon } from "@xterm/addon-ligatures"
+import { Unicode11Addon } from "@xterm/addon-unicode11"
+import { WebLinksAddon } from "@xterm/addon-web-links"
+import { Terminal } from "@xterm/xterm"
+import "@xterm/xterm/css/xterm.css"
 
 const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
 const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
@@ -37,7 +46,7 @@ setInterval(() => {
   isLoading.value = Math.random() > 0.5
 }, 2000)
 
-const source = [
+const source = ref([
   {
     id: 1,
     label: "Tab 1",
@@ -50,9 +59,128 @@ const source = [
     id: 3,
     label: "Tab 3",
   },
-]
+])
 
 const iconDisplay = ref<"icon" | "text">("icon")
+
+const activeTab = ref<string>("tab-1")
+
+const bottomSidebarEl = ref<HTMLElement | null>(null)
+const terminalEl = ref<HTMLElement | null>(null)
+
+const fitAddon = new FitAddon()
+const clipboardAddon = new ClipboardAddon()
+const ligaturesAddon = new LigaturesAddon()
+const webLinksAddon = new WebLinksAddon()
+const unicode11Addon = new Unicode11Addon()
+
+const term = new Terminal({
+  fontFamily: "var(--font-mono)",
+  convertEol: true,
+  cursorBlink: true,
+  allowProposedApi: true,
+  fontSize: 14,
+  fontWeight: "normal",
+  fontWeightBold: "bold",
+  letterSpacing: 0,
+  wordSeparator: `~!@#$%^&*()-=+[{]}\\|;:'",.<>/?`,
+  lineHeight: 1.4,
+  cursorWidth: 4,
+  cursorStyle: "underline",
+  cursorInactiveStyle: "outline",
+  tabStopWidth: 4,
+})
+
+const applyTerminalTheme = (mode: string) => {
+  const light = {
+    background: "oklch(97% 0.001 106.424)",
+    foreground: "oklch(26.8% 0.007 34.298)",
+    cursor: "oklch(26.8% 0.007 34.298)",
+    cursorAccent: "oklch(92.3% 0.003 48.717)",
+    selectionBackground: "oklch(92.3% 0.003 48.717)",
+    selectionForeground: "oklch(21.6% 0.006 56.043)",
+    selectionInactiveBackground: "oklch(92.3% 0.003 48.717)",
+  }
+  const dark = {
+    background: "oklch(14.1% 0.005 285.823)",
+    foreground: "oklch(92% 0.004 286.32)",
+    cursor: "oklch(92% 0.004 286.32)",
+    cursorAccent: "oklch(27.4% 0.006 286.033)",
+    selectionBackground: "oklch(27.4% 0.006 286.033)",
+    selectionForeground: "oklch(70.5% 0.015 286.067)",
+    selectionInactiveBackground: "oklch(27.4% 0.006 286.033)",
+  }
+  term.options.theme = mode === "light" ? light : dark
+}
+
+applyTerminalTheme(state.value)
+
+watch(
+  () => state.value,
+  (mode) => {
+    applyTerminalTheme(mode)
+  }
+)
+
+const promptPrefix = "> "
+let line = ""
+
+// Initial prompt
+term.write(promptPrefix)
+
+onMounted(async () => {
+  term.open(terminalEl.value!)
+  term.loadAddon(fitAddon)
+  fitAddon.fit()
+  term.loadAddon(clipboardAddon)
+  term.loadAddon(ligaturesAddon)
+  term.loadAddon(webLinksAddon)
+  term.loadAddon(unicode11Addon)
+  term.unicode.activeVersion = "11"
+  term.onData((e) => {
+    const code = e.charCodeAt(0)
+
+    // If the user presses Enter (code 13)
+    if (code === 13) {
+      // Process the command and print a response
+      term.write("\r\n") // Add a newline
+
+      // Clear the current line buffer and display a new prompt
+      line = ""
+      term.write(promptPrefix)
+    } else if (code === 127) {
+      // If the user presses backspace (code 127)
+      // Don't delete the prompt itself
+      if (line.length > 0) {
+        term.write("\b \b") // Erase character from the screen
+        line = line.slice(0, -1) // Remove character from your line buffer
+      }
+    } else {
+      // Add the character to your line buffer
+      line += e
+      term.write(e) // Echo the character back to the terminal
+    }
+  })
+
+  useResizeObserver(bottomSidebarEl, () => {
+    console.log("Bottom panel resized")
+    fitAddon.fit()
+  })
+})
+
+onBeforeUnmount(() => {
+  term?.dispose()
+})
+
+const newTab = () => {
+  const id = source.value.length + 1
+  source.value.push({ id, label: `Tab ${id}` })
+  activeTab.value = `tab-${id}`
+}
+
+const setActiveTab = (tab: string) => {
+  activeTab.value = tab
+}
 </script>
 
 <template>
@@ -75,7 +203,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
             as-child
             class="hidden lg:flex"
           >
-            <div id="left-sidebar"></div>
+            <div id="left-sidebar" ref="leftSidebarEl"></div>
           </ResizablePanel>
         </ContextMenuTrigger>
         <ContextMenuContent align="end" side="bottom">
@@ -148,10 +276,11 @@ const iconDisplay = ref<"icon" | "text">("icon")
                 :collapsed-size="0"
                 as-child
               >
-                <Tabs default-value="tab-1">
+                <Tabs v-model="activeTab">
                   <div
                     id="bottom-sidebar"
-                    class="bg-sidebar flex flex-1 flex-col"
+                    ref="bottomSidebarEl"
+                    class="bg-sidebar flex flex-1 flex-col overflow-auto"
                   >
                     <div class="grid shrink-0 grid-cols-3 gap-2">
                       <div class="flex items-center justify-start">
@@ -161,6 +290,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
                             :key="value.id"
                             class="data-[state=active]:after:bg-primary data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:!border-transparent data-[state=active]:!bg-transparent data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-0.5 data-[state=active]:after:h-px"
                             :value="`tab-${value.id}`"
+                            @click="setActiveTab(`tab-${value.id}`)"
                           >
                             {{ value.label }}
                           </TabsTrigger>
@@ -172,6 +302,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
                                 variant="ghost"
                                 size="icon"
                                 class="rounded-none"
+                                @click="newTab()"
                               >
                                 <icon-lucide-plus />
                               </Button>
@@ -226,16 +357,9 @@ const iconDisplay = ref<"icon" | "text">("icon")
                       </div>
                     </div>
                     <Separator />
-                    <OverlayScrollbarsWrapper>
-                      <TabsContent
-                        v-for="(value, index) in source"
-                        :key="index"
-                        :value="`tab-${value.id}`"
-                        class="p-2"
-                      >
-                        {{ value.id }}
-                      </TabsContent>
-                    </OverlayScrollbarsWrapper>
+                    <TabsContent :value="activeTab" class="size-full pt-2 pl-2">
+                      <div ref="terminalEl" class="size-full"></div>
+                    </TabsContent>
                   </div>
                 </Tabs>
               </ResizablePanel>
@@ -285,7 +409,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
             as-child
             class="hidden lg:flex"
           >
-            <div id="right-sidebar"></div>
+            <div id="right-sidebar" ref="rightSidebarEl"></div>
           </ResizablePanel>
         </ContextMenuTrigger>
         <ContextMenuContent align="end" side="bottom">

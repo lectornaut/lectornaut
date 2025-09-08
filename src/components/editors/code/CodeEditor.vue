@@ -3,14 +3,18 @@
 </template>
 
 <script setup lang="ts">
-import { state } from "@/modules/theme"
 import {
   autocompletion,
   closeBrackets,
   closeBracketsKeymap,
   completionKeymap,
 } from "@codemirror/autocomplete"
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands"
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from "@codemirror/commands"
 import { javascript } from "@codemirror/lang-javascript"
 import {
   bracketMatching,
@@ -22,7 +26,7 @@ import {
 } from "@codemirror/language"
 import { lintKeymap } from "@codemirror/lint"
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
-import { Compartment, EditorState } from "@codemirror/state"
+import { EditorState } from "@codemirror/state"
 import {
   crosshairCursor,
   drawSelection,
@@ -36,13 +40,9 @@ import {
   placeholder,
   rectangularSelection,
 } from "@codemirror/view"
-import { darkTheme, lightTheme } from "./codemirror-themes"
 
 const editorContainer = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
-const themeCompartment = new Compartment()
-
-const getTheme = () => (state.value === "light" ? lightTheme : darkTheme)
 
 onMounted(() => {
   if (editorContainer.value) {
@@ -103,23 +103,72 @@ onMounted(() => {
           ...completionKeymap,
           // Keys related to the linter system
           ...lintKeymap,
+          // Indent with tab
+          indentWithTab,
         ]),
-        // Custom themes
-        themeCompartment.of(getTheme()),
+        // Theme
+        EditorView.theme({
+          "&": {
+            backgroundColor: "var(--background)",
+            color: "var(--foreground)",
+          },
+          ".cm-scroller": {
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--size)",
+          },
+          ".cm-content": {
+            caretColor: "var(--foreground)",
+          },
+          "&.cm-focused": {
+            outline: "none",
+          },
+          ".cm-cursor, .cm-dropCursor": {
+            borderLeftColor: "var(--primary)",
+          },
+          ".cm-selectionBackground, .cm-content ::selection": {
+            backgroundColor:
+              "color-mix(in srgb, var(--primary) 24%, transparent)",
+          },
+          ".cm-gutters": {
+            backgroundColor: "var(--card)",
+            color: "var(--muted-foreground)",
+            borderRight: "1px solid var(--border)",
+          },
+          ".cm-activeLineGutter": {
+            backgroundColor:
+              "color-mix(in srgb, var(--accent) 40%, transparent)",
+            color: "var(--foreground)",
+          },
+          ".cm-activeLine": {
+            backgroundColor:
+              "color-mix(in srgb, var(--accent) 35%, transparent)",
+          },
+          ".cm-panels": {
+            backgroundColor: "var(--popover)",
+            color: "var(--popover-foreground)",
+            borderTop: "1px solid var(--border)",
+          },
+          ".cm-searchMatch": {
+            backgroundColor: "color-mix(in srgb, var(--ring) 25%, transparent)",
+            outline: "1px solid var(--ring)",
+          },
+          ".cm-tooltip": {
+            backgroundColor: "var(--popover)",
+            color: "var(--popover-foreground)",
+            border: "1px solid var(--border)",
+          },
+          ".cm-tooltip-autocomplete": {
+            "& > ul > li[aria-selected]": {
+              backgroundColor:
+                "color-mix(in srgb, var(--accent) 35%, transparent)",
+              color: "var(--foreground)",
+            },
+          },
+        }),
       ],
     })
   }
 })
-
-watch(
-  () => state.value,
-  () => {
-    if (!view) return
-    view.dispatch({
-      effects: themeCompartment.reconfigure(getTheme()),
-    })
-  }
-)
 
 onBeforeUnmount(() => {
   if (view) {
