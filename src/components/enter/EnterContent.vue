@@ -16,6 +16,8 @@ const email = ref<string>("")
 const password = ref<string>("")
 const passwordInputType = ref<"password" | "text">("password")
 
+const lastAuthProvider = useStorage<string | null>("lastAuthProvider", null)
+
 const signupViaEmailPasswordInProgress = ref(false)
 const signupViaEmailPassword = async () => {
   signupViaEmailPasswordInProgress.value = true
@@ -240,9 +242,24 @@ const authenticateApple = async () => {
                 <AlertDialogTrigger as-child>
                   <Button
                     variant="link"
-                    class="h-auto p-0 text-xs leading-1"
+                    class="relative h-auto p-0 text-xs leading-1"
                     tabindex="-1"
                   >
+                    <div
+                      v-if="lastAuthProvider === 'email-link'"
+                      class="absolute -left-6"
+                    >
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <icon-mingcute-arrow-right-up-circle-fill />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            Last used
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     Send magic link
                   </Button>
                 </AlertDialogTrigger>
@@ -375,12 +392,28 @@ const authenticateApple = async () => {
         <Button
           type="submit"
           :disabled="signinViaEmailPasswordInProgress"
+          class="relative"
           @click="signinViaEmailPassword()"
         >
           <template v-if="signinViaEmailPasswordInProgress">
             <icon-lucide-loader class="animate-spin" />
           </template>
-          <template v-else> Continue </template>
+          <template v-else>
+            Continue
+            <div
+              v-if="lastAuthProvider === 'email-password'"
+              class="absolute right-2.5"
+            >
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <icon-mingcute-arrow-right-up-circle-fill />
+                  </TooltipTrigger>
+                  <TooltipContent side="top"> Last used </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </template>
         </Button>
       </div>
     </TabsContent>
@@ -414,7 +447,7 @@ const authenticateApple = async () => {
     <div class="flex flex-col gap-2">
       <Button
         variant="secondary"
-        class="justify-start gap-3"
+        class="relative justify-start gap-3 shadow-none"
         :disabled="authenticateGoogleInProgress"
         @click="authenticateGoogle"
       >
@@ -425,10 +458,20 @@ const authenticateApple = async () => {
           <icon-mdi-google />
         </template>
         Google
+        <div v-if="lastAuthProvider === 'google'" class="absolute right-2.5">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <icon-mingcute-arrow-right-up-circle-fill />
+              </TooltipTrigger>
+              <TooltipContent side="top"> Last used </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </Button>
       <Button
         variant="secondary"
-        class="justify-start gap-3"
+        class="relative justify-start gap-3 shadow-none"
         :disabled="authenticateMicrosoftInProgress"
         @click="authenticateMicrosoft"
       >
@@ -439,10 +482,20 @@ const authenticateApple = async () => {
           <icon-mdi-microsoft />
         </template>
         Microsoft
+        <div v-if="lastAuthProvider === 'microsoft'" class="absolute right-2.5">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <icon-mingcute-arrow-right-up-circle-fill />
+              </TooltipTrigger>
+              <TooltipContent side="top"> Last used </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </Button>
       <Button
         variant="secondary"
-        class="justify-start gap-3"
+        class="relative justify-start gap-3 shadow-none"
         :disabled="authenticateAppleInProgress"
         @click="authenticateApple"
       >
@@ -453,6 +506,16 @@ const authenticateApple = async () => {
           <icon-mdi-apple />
         </template>
         Apple
+        <div v-if="lastAuthProvider === 'apple'" class="absolute right-2.5">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <icon-mingcute-arrow-right-up-circle-fill />
+              </TooltipTrigger>
+              <TooltipContent side="top"> Last used </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </Button>
     </div>
     <Alert

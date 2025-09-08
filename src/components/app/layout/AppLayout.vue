@@ -79,13 +79,12 @@ const term = new Terminal({
   convertEol: true,
   cursorBlink: true,
   allowProposedApi: true,
-  fontSize: 14,
+  fontSize: 12,
   fontWeight: "normal",
   fontWeightBold: "bold",
   letterSpacing: 0,
-  wordSeparator: `~!@#$%^&*()-=+[{]}\\|;:'",.<>/?`,
+  wordSeparator: " ",
   lineHeight: 1.4,
-  cursorWidth: 4,
   cursorStyle: "underline",
   cursorInactiveStyle: "outline",
   tabStopWidth: 4,
@@ -122,11 +121,8 @@ watch(
   }
 )
 
-const promptPrefix = "> "
+const promptPrefix = "\x1b[90m>\x1b[0m "
 let line = ""
-
-// Initial prompt
-term.write(promptPrefix)
 
 onMounted(async () => {
   term.open(terminalEl.value!)
@@ -137,6 +133,7 @@ onMounted(async () => {
   term.loadAddon(webLinksAddon)
   term.loadAddon(unicode11Addon)
   term.unicode.activeVersion = "11"
+  term.write(promptPrefix)
   term.onData((e) => {
     const code = e.charCodeAt(0)
 
@@ -357,9 +354,11 @@ const setActiveTab = (tab: string) => {
                       </div>
                     </div>
                     <Separator />
-                    <TabsContent :value="activeTab" class="size-full pt-2 pl-2">
-                      <div ref="terminalEl" class="size-full"></div>
-                    </TabsContent>
+                    <OverlayScrollbarsWrapper>
+                      <TabsContent :value="activeTab" class="size-full">
+                        <div ref="terminalEl" class="size-full"></div>
+                      </TabsContent>
+                    </OverlayScrollbarsWrapper>
                   </div>
                 </Tabs>
               </ResizablePanel>

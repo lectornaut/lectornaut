@@ -29,6 +29,11 @@ export const sendAuthenticateEmail = async (email: string) => {
   return sendSignInLinkToEmail(auth, email, actionCodeSettings)
     .then(() => {
       window.localStorage.setItem("emailForSignIn", email)
+      try {
+        window.localStorage.setItem("lastAuthProvider", "email-link")
+      } catch (e) {
+        void e
+      }
       toast.success("Authentication email sent")
     })
     .catch((error) => {
@@ -76,6 +81,11 @@ export const signUpWithEmailPassword = async (
 ) => {
   return createUserWithEmailAndPassword(auth, email, password)
     .then(async (result) => {
+      try {
+        window.localStorage.setItem("lastAuthProvider", "email-password")
+      } catch (e) {
+        void e
+      }
       finishAuthentication(result)
     })
     .catch((error) => {
@@ -91,6 +101,11 @@ export const signInWithEmailPassword = async (
 ) => {
   return signInWithEmailAndPassword(auth, email, password)
     .then(async (result) => {
+      try {
+        window.localStorage.setItem("lastAuthProvider", "email-password")
+      } catch (e) {
+        void e
+      }
       finishAuthentication(result)
     })
     .catch((error) => {
@@ -116,6 +131,11 @@ export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider()
   return signInWithPopup(auth, provider)
     .then(async (result) => {
+      try {
+        window.localStorage.setItem("lastAuthProvider", "google")
+      } catch (e) {
+        void e
+      }
       finishAuthentication(result)
     })
     .catch((error) => {
@@ -129,6 +149,11 @@ export const signInWithMicrosoft = async () => {
   const provider = new OAuthProvider("microsoft.com")
   return signInWithPopup(auth, provider)
     .then(async (result) => {
+      try {
+        window.localStorage.setItem("lastAuthProvider", "microsoft")
+      } catch (e) {
+        void e
+      }
       finishAuthentication(result)
     })
     .catch((error) => {
@@ -142,6 +167,11 @@ export const signInWithApple = async () => {
   const provider = new OAuthProvider("apple.com")
   return signInWithPopup(auth, provider)
     .then(async (result) => {
+      try {
+        window.localStorage.setItem("lastAuthProvider", "apple")
+      } catch (e) {
+        void e
+      }
       finishAuthentication(result)
     })
     .catch((error) => {
