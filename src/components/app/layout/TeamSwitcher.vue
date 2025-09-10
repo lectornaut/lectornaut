@@ -87,8 +87,8 @@ const selectedUsers = ref<User[]>([])
 <template>
   <div class="flex items-center justify-between gap-2">
     <Dialog v-model:open="showNewTeamDialog">
-      <Popover v-model:open="openTeamSwitcher">
-        <PopoverTrigger as-child>
+      <DropdownMenu v-model:open="openTeamSwitcher">
+        <DropdownMenuTrigger as-child>
           <Button
             id="tour-team-switcher"
             variant="ghost"
@@ -116,75 +116,93 @@ const selectedUsers = ref<User[]>([])
             </span>
             <icon-lucide-chevron-down />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent class="w-auto p-0" align="center">
-          <Command>
-            <CommandInput
-              placeholder="Search team..."
-              class="border-none p-0 focus:border-inherit focus:ring-0"
-            />
-            <CommandList>
-              <CommandEmpty> No teams found. </CommandEmpty>
-              <CommandGroup
-                v-for="group in groups"
-                :key="group.label"
-                :heading="group.label"
-              >
-                <CommandItem
-                  v-for="team in group.teams"
-                  :key="team.value"
-                  :value="team"
-                  class="py-2"
-                  @select="
-                    () => {
-                      selectedTeam = team
-                      openTeamSwitcher = false
-                    }
-                  "
-                >
-                  <Avatar class="size-4">
-                    <AvatarImage
-                      :src="`https://avatar.vercel.sh/${team.value}.png`"
-                      referrerpolicy="no-referrer"
-                      :alt="team.label"
-                    />
-                    <AvatarFallback>
-                      {{ getInitials(team.label) }}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>
-                    {{ team.label }}
-                  </span>
-                  <icon-lucide-check
-                    v-if="selectedTeam.value === team.value"
-                    class="ml-auto"
+        </DropdownMenuTrigger>
+        <DropdownMenuContent class="w-48" align="center">
+          <DropdownMenuGroup>
+            <DropdownMenuItem>
+              Settings
+              <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              Members
+              <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger> Switch team </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent class="w-48 p-0" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Search team..."
+                    class="border-none p-0 focus:border-inherit focus:ring-0"
                   />
-                </CommandItem>
-              </CommandGroup>
-            </CommandList>
-            <CommandSeparator />
-            <CommandList>
-              <CommandGroup>
-                <DialogTrigger as-child>
-                  <CommandItem
-                    value="create-team"
-                    class="py-2"
-                    @select="
-                      () => {
-                        showNewTeamDialog = true
-                        openTeamSwitcher = false
-                      }
-                    "
-                  >
-                    <icon-lucide-circle-plus />
-                    Create Team
-                  </CommandItem>
-                </DialogTrigger>
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                  <CommandList>
+                    <CommandEmpty> No teams found. </CommandEmpty>
+                    <CommandGroup
+                      v-for="group in groups"
+                      :key="group.label"
+                      :heading="group.label"
+                    >
+                      <CommandItem
+                        v-for="team in group.teams"
+                        :key="team.value"
+                        :value="team"
+                        class="py-2"
+                        @select="
+                          () => {
+                            selectedTeam = team
+                            openTeamSwitcher = false
+                          }
+                        "
+                      >
+                        <Avatar class="size-4">
+                          <AvatarImage
+                            :src="`https://avatar.vercel.sh/${team.value}.png`"
+                            referrerpolicy="no-referrer"
+                            :alt="team.label"
+                          />
+                          <AvatarFallback>
+                            {{ getInitials(team.label) }}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {{ team.label }}
+                        </span>
+                        <icon-lucide-check
+                          v-if="selectedTeam.value === team.value"
+                          class="ml-auto"
+                        />
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                  <CommandSeparator />
+                  <CommandList>
+                    <CommandGroup>
+                      <DialogTrigger as-child>
+                        <CommandItem
+                          value="create-team"
+                          class="py-2"
+                          @select="
+                            () => {
+                              showNewTeamDialog = true
+                              openTeamSwitcher = false
+                            }
+                          "
+                        >
+                          <icon-lucide-circle-plus />
+                          Create Team
+                        </CommandItem>
+                      </DialogTrigger>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <DialogContent class="w-sm max-w-fit">
         <DialogHeader>
           <DialogTitle>Create team</DialogTitle>
@@ -205,15 +223,19 @@ const selectedUsers = ref<User[]>([])
             </Label>
           </div>
           <div class="grid rounded-md border">
-            <Popover>
+            <DropdownMenu>
               <Command>
-                <PopoverTrigger>
+                <DropdownMenuTrigger>
                   <CommandInput
                     placeholder="Search for agents or add people by email"
                     class="border-none p-0 focus:border-inherit focus:ring-0"
                   />
-                </PopoverTrigger>
-                <PopoverContent align="center" side="bottom" class="w-xs p-0">
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="center"
+                  side="bottom"
+                  class="w-xs p-0"
+                >
                   <CommandList>
                     <CommandEmpty>No users found.</CommandEmpty>
                     <CommandGroup>
@@ -255,9 +277,9 @@ const selectedUsers = ref<User[]>([])
                       </CommandItem>
                     </CommandGroup>
                   </CommandList>
-                </PopoverContent>
+                </DropdownMenuContent>
               </Command>
-            </Popover>
+            </DropdownMenu>
             <div v-if="selectedUsers.length" class="grid gap-4 p-4">
               <div
                 v-for="person in selectedUsers"

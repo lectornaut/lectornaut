@@ -80,6 +80,7 @@ const user = useCurrentUser()
                 <DropdownMenuItem @click="emitter.emit('Dialog.Exit.Open')">
                   <icon-lucide-log-out />
                   Log out
+                  <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>

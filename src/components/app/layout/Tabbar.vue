@@ -423,7 +423,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                 class="tab-item w-60 min-w-0"
                 :class="{ 'min-w-40 transition-all': tab.id === active }"
               >
-                <HoverCard :open-delay="1000" :close-delay="0">
+                <HoverCard :open-delay="2000" :close-delay="0">
                   <HoverCardTrigger class="hover-trigger">
                     <ContextMenu>
                       <ContextMenuTrigger as-child class="context-trigger">
