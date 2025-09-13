@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ResizablePanel } from "@/components/ui/resizable"
+import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 
 const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
@@ -39,31 +40,50 @@ setInterval(() => {
 
 const source = ref([
   {
-    id: 1,
+    id: generateId(),
     label: "Tab 1",
   },
   {
-    id: 2,
+    id: generateId(),
     label: "Tab 2",
   },
   {
-    id: 3,
+    id: generateId(),
     label: "Tab 3",
   },
 ])
 
 const iconDisplay = ref<"icon" | "text">("icon")
 
-const activeTab = ref<string>("tab-1")
+const activeTab = ref<string>(source.value[0]?.id || "")
 
 const newTab = () => {
-  const id = source.value.length + 1
+  const id = generateId()
   source.value.push({ id, label: `Tab ${id}` })
-  activeTab.value = `tab-${id}`
+  activeTab.value = id
 }
 
-const setActiveTab = (tab: string) => {
-  activeTab.value = tab
+const setActiveTab = (id: string) => {
+  activeTab.value = id
+}
+
+const closeTab = (id: string) => {
+  const index = source.value.findIndex((tab) => tab.id === id)
+  if (index !== -1) {
+    source.value.splice(index, 1)
+    if (activeTab.value === id) {
+      if (source.value.length > 0) {
+        const newIndex = index === 0 ? 0 : index - 1
+        if (source.value[newIndex]) {
+          activeTab.value = `tab-${source.value[newIndex].id}`
+        } else {
+          activeTab.value = ""
+        }
+      } else {
+        activeTab.value = ""
+      }
+    }
+  }
 }
 </script>
 
@@ -165,34 +185,66 @@ const setActiveTab = (tab: string) => {
                     id="bottom-sidebar"
                     class="bg-sidebar flex flex-1 flex-col overflow-auto overscroll-none"
                   >
-                    <div class="grid shrink-0 grid-cols-3 gap-2">
-                      <div class="flex items-center justify-start">
+                    <div class="flex shrink-0">
+                      <div
+                        class="no-scrollbar flex flex-1 items-center justify-start overflow-auto"
+                      >
                         <TabsList class="bg-transparent p-0">
                           <TabsTrigger
-                            v-for="value in source"
-                            :key="value.id"
-                            class="data-[state=active]:after:bg-primary data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:!border-transparent data-[state=active]:!bg-transparent data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-0.5 data-[state=active]:after:h-px"
-                            :value="`tab-${value.id}`"
-                            @click="setActiveTab(`tab-${value.id}`)"
+                            v-for="tab in source"
+                            :key="tab.id"
+                            class="data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:!border-transparent data-[state=active]:!bg-transparent data-[state=active]:shadow-none"
+                            :class="{
+                              'after:bg-primary after:absolute after:inset-x-0 after:-bottom-px after:z-30 after:h-px':
+                                activeTab === tab.id,
+                            }"
+                            :value="tab.id"
+                            @click="setActiveTab(tab.id)"
                           >
-                            {{ value.label }}
+                            <icon-lucide-square-terminal />
+                            <span class="max-w-32 truncate">
+                              {{ tab.label }}
+                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <Button
+                                    :variant="
+                                      activeTab === tab.id
+                                        ? 'secondary'
+                                        : 'ghost'
+                                    "
+                                    size="icon"
+                                    class="size-4"
+                                    @click.stop="closeTab(tab.id)"
+                                  >
+                                    <icon-lucide-x class="!size-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent> Close tab </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </TabsTrigger>
                         </TabsList>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                class="rounded-none"
-                                @click="newTab()"
-                              >
-                                <icon-lucide-plus />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent> New </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <div
+                          class="bg-sidebar after:bg-border sticky right-0 z-30 flex h-full items-center justify-center after:absolute after:inset-x-0 after:bottom-0 after:z-20 after:h-px"
+                        >
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  class="rounded-none"
+                                  @click="newTab()"
+                                >
+                                  <icon-lucide-plus />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent> New </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </div>
                       <div class="flex items-center justify-center"></div>
                       <div class="flex items-center justify-end">
@@ -239,8 +291,9 @@ const setActiveTab = (tab: string) => {
                         </TooltipProvider>
                       </div>
                     </div>
-                    <Separator />
-                    <OverlayScrollbarsWrapper>
+                    <OverlayScrollbarsWrapper
+                      class="shadow-border z-20 shadow-[0px_-1px]"
+                    >
                       <TabsContent :value="activeTab" class="size-full pl-3">
                         <Terminal />
                       </TabsContent>

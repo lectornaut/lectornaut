@@ -88,15 +88,27 @@ onMounted(async () => {
       case "\r": // enter
         term.write("\r\n")
         if (line === "help" || line === "-h") {
-          term.writeln("Available commands:")
           term.writeln(
-            "\x1b[0m • \x1b[36mhelp\x1b[90m....\x1b[36m-h\x1b[90m........\x1b[0mShow this help menu"
-          )
-          term.writeln(
-            "\x1b[0m • \x1b[36mclear\x1b[90m...\x1b[36m-c\x1b[90m........\x1b[0mClear the terminal"
-          )
-          term.writeln(
-            "\x1b[0m • \x1b[36mecho\x1b[90m....\x1b[36m-e\x1b[90m........\x1b[0mEcho the input text"
+            [
+              "",
+              "  ╱|、",
+              " (˚ˎ 。7",
+              "  |、˜〵",
+              "  じしˍ,)ノ",
+              "",
+              "\x1b[1mLectornaut CLI\x1b[0m is a command line interface (CLI) to interact with Lectornaut.",
+              "A lightweight, open-source playload transformer and manager built with web technologies.",
+              "",
+              " Website: \x1b[34mhttps://lectornaut.com\x1b[0m",
+              " Documentation: \x1b[34mhttps://lectornaut.com/docs\x1b[0m",
+              "",
+              "Available commands:",
+              "\x1b[0m • \x1b[36mhelp\x1b[90m......\x1b[36m--help\x1b[90m......\x1b[36m-h\x1b[90m......\x1b[0mShow this help menu",
+              "\x1b[0m • \x1b[36mclear\x1b[90m.....\x1b[36m--clear\x1b[90m.....\x1b[36m-c\x1b[90m......\x1b[0mClear the terminal",
+              "\x1b[0m • \x1b[36mversion\x1b[90m...\x1b[36m--version\x1b[90m...\x1b[36m-v\x1b[90m......\x1b[0mShow version info",
+              "\x1b[0m • \x1b[36mecho\x1b[90m......\x1b[36m--echo\x1b[90m......\x1b[36m-e\x1b[90m......\x1b[0mEcho the input text",
+              "",
+            ].join("\r\n")
           )
         } else if (line.startsWith("echo ")) {
           term.writeln(line.slice(5))
@@ -104,6 +116,8 @@ onMounted(async () => {
           term.writeln(line.slice(3))
         } else if (line === "clear" || line === "-c") {
           term.clear()
+        } else if (line === "version" || line === "-v") {
+          term.writeln("\r\n\x1b[1mLectornaut CLI\x1b[0m version 0.1.0\r\n")
         } else if (line.length > 0) {
           term.writeln(`Command not found: ${line}`)
         }
