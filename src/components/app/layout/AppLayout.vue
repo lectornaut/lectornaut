@@ -38,20 +38,7 @@ setInterval(() => {
   isLoading.value = Math.random() > 0.5
 }, 2000)
 
-const source = ref([
-  {
-    id: generateId(),
-    label: "Tab 1",
-  },
-  {
-    id: generateId(),
-    label: "Tab 2",
-  },
-  {
-    id: generateId(),
-    label: "Tab 3",
-  },
-])
+const source = ref<{ id: string; label: string }[]>([])
 
 const iconDisplay = ref<"icon" | "text">("icon")
 
@@ -183,7 +170,7 @@ const closeTab = (id: string) => {
                 <Tabs v-model="activeTab">
                   <div
                     id="bottom-sidebar"
-                    class="bg-sidebar flex flex-1 flex-col overflow-auto overscroll-none"
+                    class="bg-background flex flex-1 flex-col overflow-auto overscroll-none"
                   >
                     <div class="flex shrink-0">
                       <div
@@ -201,7 +188,6 @@ const closeTab = (id: string) => {
                             :value="tab.id"
                             @click="setActiveTab(tab.id)"
                           >
-                            <icon-lucide-square-terminal />
                             <span class="max-w-32 truncate">
                               {{ tab.label }}
                             </span>
@@ -209,11 +195,7 @@ const closeTab = (id: string) => {
                               <Tooltip>
                                 <TooltipTrigger as-child>
                                   <Button
-                                    :variant="
-                                      activeTab === tab.id
-                                        ? 'secondary'
-                                        : 'ghost'
-                                    "
+                                    variant="ghost"
                                     size="icon"
                                     class="size-4"
                                     @click.stop="closeTab(tab.id)"
@@ -227,7 +209,7 @@ const closeTab = (id: string) => {
                           </TabsTrigger>
                         </TabsList>
                         <div
-                          class="bg-sidebar after:bg-border sticky right-0 z-30 flex h-full items-center justify-center after:absolute after:inset-x-0 after:bottom-0 after:z-20 after:h-px"
+                          class="bg-background after:bg-border sticky right-0 z-30 flex h-full items-center justify-center after:absolute after:inset-x-0 after:bottom-0 after:z-20 after:h-px"
                         >
                           <TooltipProvider>
                             <Tooltip>
@@ -294,9 +276,30 @@ const closeTab = (id: string) => {
                     <OverlayScrollbarsWrapper
                       class="shadow-border z-20 shadow-[0px_-1px]"
                     >
-                      <TabsContent :value="activeTab" class="size-full">
+                      <TabsContent
+                        v-for="tab in source"
+                        :key="tab.id"
+                        :value="tab.id"
+                        class="size-full"
+                      >
                         <Terminal />
                       </TabsContent>
+                      <div class="flex size-full flex-col items-center">
+                        <div
+                          v-if="source.length === 0"
+                          class="flex max-w-xs flex-col items-center justify-center gap-4 p-8 text-center"
+                        >
+                          <icon-mingcute-layer-fill
+                            class="size-16 rounded-lg border border-dashed p-4"
+                          />
+                          <h3 class="font-medium">Lectornaut CLI</h3>
+                          <p class="text-muted-foreground text-xs text-balance">
+                            No active sessions. Create a new console to get
+                            started.
+                          </p>
+                          <Button @click="newTab()"> Open Console </Button>
+                        </div>
+                      </div>
                     </OverlayScrollbarsWrapper>
                   </div>
                 </Tabs>

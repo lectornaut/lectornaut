@@ -1,20 +1,24 @@
 <script setup lang="ts">
+import { useCurrentUser } from "vuefire"
 import XTerminal from "xterminal"
 
+const user = useCurrentUser()
+
 const terminalEl = ref<HTMLElement | null>(null)
-const promptPrefix = "user@lectornaut:~ $ "
+const promptPrefix = `${user.value?.email} $ `
 const term = new XTerminal()
 const matches: string[] = []
 
 const promptUser = () => {
   term.write(promptPrefix)
   term.resume()
-  term.focus()
 }
 
 term.once("load", () => {
-  term.writeln("Welcome to Lectornaut CLI")
-  term.writeln('Type "help" to see available commands.\n')
+  term.writeln(`<strong>Welcome to Lectornaut CLI</strong>`)
+  term.writeln(
+    `<span class="text-secondary-foreground">Type "help" to see available commands.</span>\n`
+  )
   promptUser()
 })
 
@@ -24,24 +28,23 @@ const manual = `
   |、˜〵
   じしˍ,)ノ
 
-Lectornaut CLI is a command line interface (CLI) to interact with Lectornaut.
+<strong>Lectornaut CLI</strong> is a command line interface (CLI) to interact with Lectornaut.
 A lightweight, open-source playload transformer and manager built with web technologies.
 
- Website: https://lectornaut.com
- Documentation: https://lectornaut.com/docs
+ Website: <a href="https://lectornaut.com" target="_blank" rel="noopener" class="text-primary underline">https://lectornaut.com</a>
+ Documentation: <a href="https://lectornaut.com/docs" target="_blank" rel="noopener" class="text-primary underline">https://lectornaut.com/docs</a>
 
-Available commands:
- • help......--help......-h......Show this help menu
- • clear.....--clear.....-c......Clear the terminal
- • version...--version...-v......Show version info
- • echo......--echo......-e......Echo the input text
- • js........--js........-j......eval JavaScript code
-`
+<ul class="list-disc list-inside marker:text-muted-foreground"><li><span class="text-primary">help</span> - show this help menu</li><li><span class="text-primary">js</span> - eval JavaScript code</li><li><span class="text-primary">clear</span> - clear the terminal</li></ul>`
 
 const execute = (term: XTerminal, command = "") => {
+  if (!command) {
+    return Promise.resolve("")
+  }
   const args = command.split(" ")
   const cmd = args.shift()
   switch (cmd) {
+    case "help":
+      return Promise.resolve(manual)
     case "js":
       return new Promise((res, rej) => {
         try {
@@ -51,8 +54,6 @@ const execute = (term: XTerminal, command = "") => {
           rej(err)
         }
       })
-    case "help":
-      return Promise.resolve(manual)
     case "clear":
       term.clear()
       return Promise.resolve("")
@@ -68,7 +69,11 @@ onMounted(() => {
     term.pause()
     await execute(term, input.trim())
       .then((res) => res && term.writeln(res))
-      .catch((err) => err && term.writeln("Error: " + err))
+      .catch(
+        (err) =>
+          err &&
+          term.writeln(`<span class='text-destructive'>Error: ${err}</span>`)
+      )
       .finally(() => {
         promptUser()
       })
@@ -92,8 +97,8 @@ onBeforeUnmount(() => {
 
 <style lang="scss">
 :root {
-  --xt-bg: var(--sidebar);
-  --xt-fg: var(--sidebar-foreground);
+  --xt-bg: var(--background);
+  --xt-fg: var(--foreground);
   --xt-font-size: var(--text-xs);
   --xt-font-family: var(--font-mono);
   --xt-padding: 0.625rem;
