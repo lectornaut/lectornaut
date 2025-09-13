@@ -17,6 +17,7 @@ import { createPinia } from "pinia"
 import "unfonts.css"
 import "vue-sonner/style.css"
 import { VueFire, VueFireAppCheck, VueFireAuth } from "vuefire"
+import "xterminal/dist/xterminal.css"
 import "~console/theme-detect"
 
 const head = createHead({

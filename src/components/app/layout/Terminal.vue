@@ -1,156 +1,101 @@
 <script setup lang="ts">
-import { state } from "@/modules/theme"
-import { useResizeObserver } from "@vueuse/core"
-import { ClipboardAddon } from "@xterm/addon-clipboard"
-import { FitAddon } from "@xterm/addon-fit"
-import { LigaturesAddon } from "@xterm/addon-ligatures"
-import { Unicode11Addon } from "@xterm/addon-unicode11"
-import { WebLinksAddon } from "@xterm/addon-web-links"
-import { Terminal } from "@xterm/xterm"
-import "@xterm/xterm/css/xterm.css"
+import XTerminal from "xterminal"
 
 const terminalEl = ref<HTMLElement | null>(null)
+const promptPrefix = "user@lectornaut:~ $ "
+const term = new XTerminal()
+const matches: string[] = []
 
-const fitAddon = new FitAddon()
-const clipboardAddon = new ClipboardAddon()
-const ligaturesAddon = new LigaturesAddon()
-const webLinksAddon = new WebLinksAddon()
-const unicode11Addon = new Unicode11Addon()
-
-const term = new Terminal({
-  fontFamily: "var(--font-mono)",
-  convertEol: true,
-  cursorBlink: true,
-  allowProposedApi: true,
-  fontSize: 12,
-  letterSpacing: -4,
-  wordSeparator: " ",
-  lineHeight: 1.5,
-  cursorStyle: "block",
-  cursorInactiveStyle: "underline",
-})
-
-const applyTerminalTheme = (mode: string) => {
-  const light = {
-    background: "oklch(97% 0.001 106.424)",
-    foreground: "oklch(26.8% 0.007 34.298)",
-    cursor: "oklch(55.3% 0.013 58.071)",
-    cursorAccent: "oklch(92.3% 0.003 48.717)",
-    selectionBackground: "oklch(92.3% 0.003 48.717)",
-    selectionForeground: "oklch(21.6% 0.006 56.043)",
-    selectionInactiveBackground: "oklch(92.3% 0.003 48.717)",
-  }
-  const dark = {
-    background: "oklch(14.1% 0.005 285.823)",
-    foreground: "oklch(92% 0.004 286.32)",
-    cursor: "oklch(55.2% 0.016 285.938)",
-    cursorAccent: "oklch(27.4% 0.006 286.033)",
-    selectionBackground: "oklch(27.4% 0.006 286.033)",
-    selectionForeground: "oklch(70.5% 0.015 286.067)",
-    selectionInactiveBackground: "oklch(27.4% 0.006 286.033)",
-  }
-  term.options.theme = mode === "light" ? light : dark
+const promptUser = () => {
+  term.write(promptPrefix)
+  term.resume()
+  term.focus()
 }
 
-applyTerminalTheme(state.value)
+term.once("load", () => {
+  term.writeln("Welcome to Lectornaut CLI")
+  term.writeln('Type "help" to see available commands.\n')
+  promptUser()
+})
 
-watch(
-  () => state.value,
-  (mode) => {
-    applyTerminalTheme(mode)
+const manual = `
+  ╱|、
+ (˚ˎ 。7
+  |、˜〵
+  じしˍ,)ノ
+
+Lectornaut CLI is a command line interface (CLI) to interact with Lectornaut.
+A lightweight, open-source playload transformer and manager built with web technologies.
+
+ Website: https://lectornaut.com
+ Documentation: https://lectornaut.com/docs
+
+Available commands:
+ • help......--help......-h......Show this help menu
+ • clear.....--clear.....-c......Clear the terminal
+ • version...--version...-v......Show version info
+ • echo......--echo......-e......Echo the input text
+ • js........--js........-j......eval JavaScript code
+`
+
+const execute = (term: XTerminal, command = "") => {
+  const args = command.split(" ")
+  const cmd = args.shift()
+  switch (cmd) {
+    case "js":
+      return new Promise((res, rej) => {
+        try {
+          const output = eval(args.join(" "))
+          res(output)
+        } catch (err) {
+          rej(err)
+        }
+      })
+    case "help":
+      return Promise.resolve(manual)
+    case "clear":
+      term.clear()
+      return Promise.resolve("")
+    default:
+      return Promise.reject(`"${cmd}" command not found`)
   }
-)
+}
 
-const promptPrefix = "lectornaut \x1b[90m$\x1b[0m "
-let line = ""
-
-onMounted(async () => {
-  term.open(terminalEl.value!)
-  term.loadAddon(fitAddon)
-  fitAddon.fit()
-  term.loadAddon(clipboardAddon)
-  term.loadAddon(ligaturesAddon)
-  term.loadAddon(webLinksAddon)
-  term.loadAddon(unicode11Addon)
-  term.unicode.activeVersion = "11"
-  // 0. show a one-time welcome message
-  term.writeln("\r\n\x1b[1mWelcome to Lectornaut CLI\x1b[0m")
-  term.writeln('\x1b[90mType "help" to see available commands.\x1b[0m\r\n')
-  // 1. show prompt
-  term.write(promptPrefix)
-  term.onData((e) => {
-    // 1. enter = new line
-    // 2. backspace = delete character but not the prompt
-    // 3. other characters = append to line
-    // 4. help menu
-    // 5. clear terminal
-    switch (e) {
-      case "\r": // enter
-        term.write("\r\n")
-        if (line === "help" || line === "-h") {
-          term.writeln(
-            [
-              "",
-              "  ╱|、",
-              " (˚ˎ 。7",
-              "  |、˜〵",
-              "  じしˍ,)ノ",
-              "",
-              "\x1b[1mLectornaut CLI\x1b[0m is a command line interface (CLI) to interact with Lectornaut.",
-              "A lightweight, open-source playload transformer and manager built with web technologies.",
-              "",
-              " Website: \x1b[34mhttps://lectornaut.com\x1b[0m",
-              " Documentation: \x1b[34mhttps://lectornaut.com/docs\x1b[0m",
-              "",
-              "Available commands:",
-              "\x1b[0m • \x1b[36mhelp\x1b[90m......\x1b[36m--help\x1b[90m......\x1b[36m-h\x1b[90m......\x1b[0mShow this help menu",
-              "\x1b[0m • \x1b[36mclear\x1b[90m.....\x1b[36m--clear\x1b[90m.....\x1b[36m-c\x1b[90m......\x1b[0mClear the terminal",
-              "\x1b[0m • \x1b[36mversion\x1b[90m...\x1b[36m--version\x1b[90m...\x1b[36m-v\x1b[90m......\x1b[0mShow version info",
-              "\x1b[0m • \x1b[36mecho\x1b[90m......\x1b[36m--echo\x1b[90m......\x1b[36m-e\x1b[90m......\x1b[0mEcho the input text",
-              "",
-            ].join("\r\n")
-          )
-        } else if (line.startsWith("echo ")) {
-          term.writeln(line.slice(5))
-        } else if (line.startsWith("-e ")) {
-          term.writeln(line.slice(3))
-        } else if (line === "clear" || line === "-c") {
-          term.clear()
-        } else if (line === "version" || line === "-v") {
-          term.writeln("\r\n\x1b[1mLectornaut CLI\x1b[0m version 0.1.0\r\n")
-        } else if (line.length > 0) {
-          term.writeln(`Command not found: ${line}`)
-        }
-        line = ""
-        term.write(promptPrefix)
-        break
-      case "\u007F": // backspace
-        // Do not delete the prompt
-        if (line.length > 0) {
-          term.write("\b \b")
-          line = line.slice(0, -1)
-        }
-        break
-      default: // other characters
-        if (e >= String.fromCharCode(0x20) && e <= String.fromCharCode(0x7e)) {
-          term.write(e)
-          line += e
-        }
-        break
-    }
+onMounted(() => {
+  term.mount(terminalEl.value!)
+  term.emit("load")
+  term.on("data", async (input: string = "") => {
+    term.pause()
+    await execute(term, input.trim())
+      .then((res) => res && term.writeln(res))
+      .catch((err) => err && term.writeln("Error: " + err))
+      .finally(() => {
+        promptUser()
+      })
   })
-
-  useResizeObserver(terminalEl, () => {
-    console.log("Bottom panel resized")
-    fitAddon.fit()
+  term.setCompleter((input: string) => {
+    if (!matches.length) {
+      matches.push(...term.history.filter((c: string) => c.startsWith(input)))
+    }
+    return matches.pop()
   })
 })
 
 onBeforeUnmount(() => {
-  term?.dispose()
+  term.dispose()
 })
 </script>
 
 <template>
-  <div ref="terminalEl" class="size-full"></div>
+  <div ref="terminalEl" class="size-full" />
 </template>
+
+<style lang="scss">
+:root {
+  --xt-bg: var(--sidebar);
+  --xt-fg: var(--sidebar-foreground);
+  --xt-font-size: var(--text-xs);
+  --xt-font-family: var(--font-mono);
+  --xt-padding: 0.625rem;
+}
+</style>

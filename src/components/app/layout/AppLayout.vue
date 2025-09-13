@@ -294,7 +294,7 @@ const closeTab = (id: string) => {
                     <OverlayScrollbarsWrapper
                       class="shadow-border z-20 shadow-[0px_-1px]"
                     >
-                      <TabsContent :value="activeTab" class="size-full pl-3">
+                      <TabsContent :value="activeTab" class="size-full">
                         <Terminal />
                       </TabsContent>
                     </OverlayScrollbarsWrapper>

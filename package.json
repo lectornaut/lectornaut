@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.15.1",
+  "packageManager": "pnpm@10.16.0",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
@@ -93,12 +93,6 @@
     "@vueuse/core": "^13.9.0",
     "@vueuse/integrations": "^13.9.0",
     "@vueuse/motion": "^3.0.3",
-    "@xterm/addon-clipboard": "^0.1.0",
-    "@xterm/addon-fit": "^0.10.0",
-    "@xterm/addon-ligatures": "^0.9.0",
-    "@xterm/addon-unicode11": "^0.8.0",
-    "@xterm/addon-web-links": "^0.11.0",
-    "@xterm/xterm": "^5.5.0",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -132,6 +126,7 @@
     "vue-router": "^4.5.1",
     "vue-sonner": "^2.0.8",
     "vuefire": "^3.2.2",
+    "xterminal": "^2.1.12",
     "zod": "^4.1.8"
   },
   "devDependencies": {
