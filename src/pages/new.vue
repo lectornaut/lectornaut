@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// import IconBlock from "~icons/mingcute/layer-fill"
+
 definePage({
   meta: {
     requiresUser: true,
@@ -15,10 +17,24 @@ useHead({
 
 <template>
   <Teleport defer to="#left-sidebar">
-    <Sidebar collapsible="none" class="w-full"></Sidebar>
+    <Sidebar collapsible="none" class="w-full">
+      <!-- <EmptySection
+        centered
+        :icon="IconBlock"
+        title="Console"
+        description="No active terminal sessions. Create a new session to get started."
+      /> -->
+    </Sidebar>
   </Teleport>
   <EmptyTab />
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="w-full"></Sidebar>
+    <Sidebar collapsible="none" class="w-full">
+      <!-- <EmptySection
+        centered
+        :icon="IconBlock"
+        title="Console"
+        description="No active terminal sessions. Create a new session to get started."
+      /> -->
+    </Sidebar>
   </Teleport>
 </template>

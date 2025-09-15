@@ -26,6 +26,7 @@ import {
   useStorageFile,
 } from "vuefire"
 import IconActivity from "~icons/lucide/activity"
+import IconDollarSignBadge from "~icons/lucide/badge-dollar-sign"
 import IconBell from "~icons/lucide/bell"
 import IconBlocks from "~icons/lucide/blocks"
 import IconBolt from "~icons/lucide/bolt"
@@ -295,6 +296,12 @@ const navigations = [
         description: "Manage your workspace agents.",
       },
       {
+        name: "People",
+        icon: IconUsersRound,
+        id: "people",
+        description: "Manage people in your organization.",
+      },
+      {
         name: "Teams",
         icon: IconComponent,
         id: "teams",
@@ -318,6 +325,12 @@ const navigations = [
         id: "integrations",
         description: "Manage your workspace integrations.",
       },
+      {
+        name: "Logs",
+        icon: IconLogs,
+        id: "logs",
+        description: "View system and activity logs.",
+      },
     ],
   },
   {
@@ -331,22 +344,16 @@ const navigations = [
         description: "General administration settings.",
       },
       {
-        name: "People",
-        icon: IconUsersRound,
-        id: "people",
-        description: "Manage people in your organization.",
-      },
-      {
         name: "Billing",
         icon: IconCreditCard,
         id: "billing",
         description: "Manage your billing information and subscriptions.",
       },
       {
-        name: "Logs",
-        icon: IconLogs,
-        id: "logs",
-        description: "View system and activity logs.",
+        name: "Plans",
+        icon: IconDollarSignBadge,
+        id: "plans",
+        description: "View and manage your subscription plans.",
       },
     ],
   },
@@ -970,16 +977,24 @@ const navigations = [
                 <div class="flex size-full flex-col gap-6 p-6">
                   <div class="flex items-center gap-4">
                     <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">Current plan</p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        View details about your current subscription plan.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Button variant="outline"> View plan details </Button>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col gap-1">
                       <p class="leading-none font-medium">Payment methods</p>
                       <p class="text-muted-foreground flex items-center gap-2">
                         Manage your payment methods and billing information.
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">
-                      <Button variant="outline">
-                        <icon-lucide-plus />
-                        <span>Add payment method</span>
-                      </Button>
+                      <Button variant="outline"> Add payment method </Button>
                     </div>
                   </div>
                   <div class="flex items-center gap-4">
@@ -990,13 +1005,24 @@ const navigations = [
                       </p>
                     </div>
                     <div class="ml-auto flex gap-2">
-                      <Button variant="outline">
-                        <icon-lucide-file-text />
-                        <span>View billing history</span>
-                      </Button>
+                      <Button variant="outline"> View billing history </Button>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                      <p class="leading-none font-medium">Upgrade plan</p>
+                      <p class="text-muted-foreground flex items-center gap-2">
+                        Explore and upgrade to a different subscription plan.
+                      </p>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                      <Button variant="outline"> Upgrade plan </Button>
                     </div>
                   </div>
                 </div>
+              </TabsContent>
+              <TabsContent class="overflow-auto" value="plans">
+                <div class="flex size-full flex-col gap-6 p-6"></div>
               </TabsContent>
             </OverlayScrollbarsWrapper>
             <Separator />

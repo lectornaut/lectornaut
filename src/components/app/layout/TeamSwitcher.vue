@@ -111,7 +111,7 @@ const selectedUsers = ref<User[]>([])
               <icon-bx-bxs-zap />
               Offline
             </span>
-            <span v-else>
+            <span v-else class="hidden md:flex">
               {{ selectedTeam.label }}
             </span>
             <icon-lucide-chevron-down />

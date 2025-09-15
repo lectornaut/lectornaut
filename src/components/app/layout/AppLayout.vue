@@ -2,6 +2,7 @@
 import { ResizablePanel } from "@/components/ui/resizable"
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
+import IconConsole from "~icons/mingcute/layer-fill"
 
 const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
 const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
@@ -104,7 +105,7 @@ const closeTab = (id: string) => {
         </ContextMenuContent>
       </ContextMenu>
       <ResizableHandle
-        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+        class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-40 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
         @dblclick="
           leftPanel?.splitterPanel?.isCollapsed
             ? leftPanel?.splitterPanel?.expand()
@@ -149,7 +150,7 @@ const closeTab = (id: string) => {
             </ContextMenuContent>
           </ContextMenu>
           <ResizableHandle
-            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
             @dblclick="
               bottomPanel?.splitterPanel?.isCollapsed
                 ? bottomPanel?.splitterPanel?.expand()
@@ -223,7 +224,7 @@ const closeTab = (id: string) => {
                                   <icon-lucide-plus />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent> New </TooltipContent>
+                              <TooltipContent> New tab </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>
@@ -284,22 +285,14 @@ const closeTab = (id: string) => {
                       >
                         <Terminal />
                       </TabsContent>
-                      <div class="flex size-full flex-col items-center">
-                        <div
-                          v-if="source.length === 0"
-                          class="flex max-w-xs flex-col items-center justify-center gap-4 p-8 text-center"
-                        >
-                          <icon-mingcute-layer-fill
-                            class="size-16 rounded-lg border border-dashed p-4"
-                          />
-                          <h3 class="font-medium">Lectornaut CLI</h3>
-                          <p class="text-muted-foreground text-xs text-balance">
-                            No active sessions. Create a new console to get
-                            started.
-                          </p>
-                          <Button @click="newTab()"> Open Console </Button>
-                        </div>
-                      </div>
+                      <EmptySection
+                        v-if="source.length === 0"
+                        :icon="IconConsole"
+                        title="Console"
+                        description="No active terminal sessions. Create a new terminal to get started."
+                        action-text="New Terminal"
+                        @action="newTab()"
+                      />
                     </OverlayScrollbarsWrapper>
                   </div>
                 </Tabs>
@@ -385,11 +378,20 @@ const closeTab = (id: string) => {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="sm" class="rounded-none">
-                  <icon-lucide-layers />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="rounded-none"
+                  @click="
+                    bottomPanel?.splitterPanel?.isCollapsed
+                      ? bottomPanel?.splitterPanel?.expand()
+                      : bottomPanel?.splitterPanel?.collapse()
+                  "
+                >
+                  <icon-lucide-terminal />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent> Menu </TooltipContent>
+              <TooltipContent> Toggle console panel </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>

@@ -10,16 +10,15 @@ import { menu } from "@/helpers/defaults"
       v-for="(item, itemIdx) in menu"
       :key="itemIdx"
       variant="ghost"
-      class="flex h-auto flex-1 grow justify-start gap-4 p-2"
+      class="flex h-auto flex-1 grow justify-start gap-4 !p-2"
     >
-      <div
+      <Component
+        :is="item.icon"
         :class="[
           item.color,
-          'text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded',
+          'text-primary-foreground flex size-12 shrink-0 items-center justify-center rounded-md p-4',
         ]"
-      >
-        <Component :is="item.icon" class="size-4" />
-      </div>
+      />
       <div class="grid grid-cols-1 text-left">
         <h3 class="font-medium">
           {{ item.action }}

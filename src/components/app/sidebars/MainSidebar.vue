@@ -8,7 +8,7 @@ import { menu } from "@/helpers/defaults"
     <ContextMenuTrigger>
       <Sidebar
         collapsible="none"
-        class="shadow-border relative z-20 w-[calc(var(--sidebar-width-icon))] shadow-[1px_0px]"
+        class="shadow-border relative z-40 w-[calc(var(--sidebar-width-icon))] shadow-[1px_0px]"
       >
         <SidebarHeader>
           <SidebarMenu>

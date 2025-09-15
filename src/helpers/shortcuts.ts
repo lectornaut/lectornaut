@@ -36,7 +36,7 @@ export type Shortcut = {
   hotkeys: string
   event: string
   parameters: string | undefined
-  icon: FunctionalComponent<SVGAttributes> | string
+  icon: FunctionalComponent<SVGAttributes>
   tags: string[]
   hidden: ShortcutHiddenType[]
 }
