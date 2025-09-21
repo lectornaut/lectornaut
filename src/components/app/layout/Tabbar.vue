@@ -325,83 +325,25 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
           data-tauri-drag-region
           class="flex grow items-center gap-2 p-2 transition-all"
         >
-          <div class="flex items-center justify-start gap-2">
-            <Combobox>
-              <TooltipProvider>
-                <Tooltip>
-                  <ComboboxTrigger as-child>
-                    <TooltipTrigger as-child>
-                      <Button variant="ghost" size="icon">
-                        <icon-lucide-history />
-                      </Button>
-                    </TooltipTrigger>
-                  </ComboboxTrigger>
-                  <ComboboxList align="start">
-                    <ComboboxInput
-                      placeholder="Search tabs..."
-                      class="border-none p-0 focus:border-inherit focus:ring-0"
-                    />
-                    <ComboboxEmpty> No tabs found. </ComboboxEmpty>
-                    <ComboboxGroup v-if="tabs.length > 0" heading="Open tabs">
-                      <ComboboxItem
-                        v-for="tab in tabs"
-                        :key="tab.id"
-                        :value="tab"
-                        @click="emitter.emit('Tabs.Select', tab.id)"
-                      >
-                        <icon-lucide-workflow />
-                        {{ tab.name }}
-                        <ComboboxItemIndicator>
-                          <icon-lucide-check />
-                        </ComboboxItemIndicator>
-                      </ComboboxItem>
-                    </ComboboxGroup>
-                    <ComboboxGroup v-if="tabs.length > 0" heading="Actions">
-                      <ComboboxItem
-                        :value="'__close_all__'"
-                        :disabled="tabs.length === 0"
-                        @click.stop="emitter.emit('Tabs.Close.All')"
-                      >
-                        <icon-lucide-trash />
-                        Close all tabs
-                      </ComboboxItem>
-                    </ComboboxGroup>
-                    <ComboboxSeparator />
-                    <ComboboxGroup
-                      v-if="recentlyClosed.length > 0"
-                      heading="Recently closed"
-                    >
-                      <ComboboxItem
-                        v-for="tab in recentlyClosed"
-                        :key="tab.id + tab.fullPath"
-                        :value="tab"
-                        @click="emitter.emit('Tabs.Reopen', tab)"
-                      >
-                        <icon-lucide-workflow />
-                        {{ tab.name }}
-                        <ComboboxItemIndicator>
-                          <icon-lucide-check />
-                        </ComboboxItemIndicator>
-                      </ComboboxItem>
-                    </ComboboxGroup>
-                    <ComboboxGroup
-                      v-if="recentlyClosed.length > 0"
-                      heading="Actions"
-                    >
-                      <ComboboxItem
-                        :value="'__clear_recently__'"
-                        :disabled="recentlyClosed.length === 0"
-                        @click.stop="clearRecentlyClosed()"
-                      >
-                        <icon-lucide-trash />
-                        Clear recently closed
-                      </ComboboxItem>
-                    </ComboboxGroup>
-                  </ComboboxList>
-                  <TooltipContent> History </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Combobox>
+          <div class="bg-background ring-border flex rounded-md ring">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button variant="ghost" size="icon">
+                    <icon-lucide-chevron-left />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent> Go back </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button variant="ghost" size="icon">
+                    <icon-lucide-chevron-right />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent> Go forward </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <nav
             ref="el"
@@ -414,7 +356,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               <icon-lucide-alert-triangle /> error
             </template>
             <template v-else-if="tabs.length === 0">
-              <icon-lucide-file-text /> empty
+              <!-- <icon-lucide-file-text /> empty -->
             </template>
             <template v-else>
               <div
@@ -432,7 +374,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                           class="group relative w-[-webkit-fill-available] min-w-0 border border-transparent"
                           :class="
                             tab.id === active
-                              ? 'border-border bg-background before:border-border before:text-background after:border-border after:text-background hover:!bg-background rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-2.5 before:z-10 before:h-2.5 before:w-2.5 before:rounded-br-full before:border-r before:border-b before:shadow-[0_5px_0_currentColor,5px_0_0_currentColor,5px_5px_0_currentColor] after:pointer-events-none after:absolute after:-right-2.5 after:-bottom-2.5 after:z-10 after:h-2.5 after:w-2.5 after:rounded-bl-full after:border-b after:border-l after:shadow-[0_5px_0_currentColor,-5px_0_0_currentColor,-5px_5px_0_currentColor]'
+                              ? 'border-border bg-background before:border-border after:border-border hover:!bg-background before:text-background after:text-background rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-5 before:z-10 before:size-5 before:rounded-br-lg before:border-r before:border-b before:shadow-[0_5px_0_currentColor,5px_0_0_currentColor,5px_5px_0_currentColor] after:pointer-events-none after:absolute after:-right-5 after:-bottom-2.5 after:z-10 after:size-5 after:rounded-bl-lg after:border-b after:border-l after:shadow-[0_5px_0_currentColor,-5px_0_0_currentColor,-5px_5px_0_currentColor]'
                               : 'text-muted-foreground before:bg-border after:bg-border before:absolute before:-left-1.5 before:z-10 before:h-4 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:z-10 after:h-4 after:w-0.5 after:rounded-full'
                           "
                           as-child
@@ -564,6 +506,82 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               </Tooltip>
             </TooltipProvider>
             <div class="flex items-center gap-2">
+              <Combobox>
+                <TooltipProvider>
+                  <Tooltip>
+                    <ComboboxTrigger as-child>
+                      <TooltipTrigger as-child>
+                        <Button variant="ghost" size="icon">
+                          <icon-lucide-history />
+                        </Button>
+                      </TooltipTrigger>
+                    </ComboboxTrigger>
+                    <ComboboxList align="center">
+                      <ComboboxInput
+                        placeholder="Search tabs..."
+                        class="border-none p-0 focus:border-inherit focus:ring-0"
+                      />
+                      <ComboboxEmpty> No tabs found. </ComboboxEmpty>
+                      <ComboboxGroup v-if="tabs.length > 0" heading="Open tabs">
+                        <ComboboxItem
+                          v-for="tab in tabs"
+                          :key="tab.id"
+                          :value="tab"
+                          @click="emitter.emit('Tabs.Select', tab.id)"
+                        >
+                          <icon-lucide-workflow />
+                          {{ tab.name }}
+                          <ComboboxItemIndicator>
+                            <icon-lucide-check />
+                          </ComboboxItemIndicator>
+                        </ComboboxItem>
+                      </ComboboxGroup>
+                      <ComboboxGroup v-if="tabs.length > 0" heading="Actions">
+                        <ComboboxItem
+                          :value="'__close_all__'"
+                          :disabled="tabs.length === 0"
+                          @click.stop="emitter.emit('Tabs.Close.All')"
+                        >
+                          <icon-lucide-trash />
+                          Close all tabs
+                        </ComboboxItem>
+                      </ComboboxGroup>
+                      <ComboboxSeparator />
+                      <ComboboxGroup
+                        v-if="recentlyClosed.length > 0"
+                        heading="Recently closed"
+                      >
+                        <ComboboxItem
+                          v-for="tab in recentlyClosed"
+                          :key="tab.id + tab.fullPath"
+                          :value="tab"
+                          @click="emitter.emit('Tabs.Reopen', tab)"
+                        >
+                          <icon-lucide-workflow />
+                          {{ tab.name }}
+                          <ComboboxItemIndicator>
+                            <icon-lucide-check />
+                          </ComboboxItemIndicator>
+                        </ComboboxItem>
+                      </ComboboxGroup>
+                      <ComboboxGroup
+                        v-if="recentlyClosed.length > 0"
+                        heading="Actions"
+                      >
+                        <ComboboxItem
+                          :value="'__clear_recently__'"
+                          :disabled="recentlyClosed.length === 0"
+                          @click.stop="clearRecentlyClosed()"
+                        >
+                          <icon-lucide-trash />
+                          Clear recently closed
+                        </ComboboxItem>
+                      </ComboboxGroup>
+                    </ComboboxList>
+                    <TooltipContent> History </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Combobox>
               <TooltipProvider>
                 <Tooltip>
                   <DropdownMenu>

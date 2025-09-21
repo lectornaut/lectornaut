@@ -11,7 +11,7 @@ const isDocked = ref(false)
     <NavigationMenuList class="gap-2">
       <NavigationMenuItem>
         <NavigationMenuTrigger
-          class="px-3"
+          class="bg-transparent px-3"
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
           <icon-lucide-inbox />
@@ -80,7 +80,7 @@ const isDocked = ref(false)
       </NavigationMenuItem>
       <NavigationMenuItem>
         <NavigationMenuTrigger
-          class="px-3"
+          class="bg-transparent px-3"
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
           <icon-lucide-bell />

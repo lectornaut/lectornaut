@@ -53,8 +53,8 @@ const messages = [
               :class="[
                 'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
                 message.role === 'user'
-                  ? 'bg-primary text-primary-foreground ml-auto rounded-br'
-                  : 'bg-muted rounded-bl',
+                  ? 'bg-primary text-primary-foreground ml-auto rounded-br-xs'
+                  : 'bg-muted rounded-bl-xs',
               ]"
             >
               {{ message.content }}

@@ -4,6 +4,8 @@ import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import IconConsole from "~icons/mingcute/layer-fill"
 
+const router = useRouter()
+
 const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
 const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
 const topPanel = ref<InstanceType<typeof ResizablePanel>>()
@@ -136,15 +138,15 @@ const closeTab = (id: string) => {
                 </div>
               </ResizablePanel>
             </ContextMenuTrigger>
-            <ContextMenuContent align="end" side="bottom">
-              <ContextMenuItem>
+            <ContextMenuContent align="start" side="bottom">
+              <ContextMenuItem @click="router.go(0)">
                 <icon-lucide-refresh-ccw /> Refresh
               </ContextMenuItem>
               <ContextMenuSeparator />
-              <ContextMenuItem>
+              <ContextMenuItem @click="router.go(-1)">
                 <icon-lucide-arrow-left /> Go back
               </ContextMenuItem>
-              <ContextMenuItem>
+              <ContextMenuItem @click="router.go(1)">
                 <icon-lucide-arrow-right /> Go forward
               </ContextMenuItem>
             </ContextMenuContent>

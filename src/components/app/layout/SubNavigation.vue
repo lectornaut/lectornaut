@@ -2,6 +2,7 @@
 import { useRouteBreadcrumbs } from "@/helpers/breadcrumber"
 
 const breadcrumbs = useRouteBreadcrumbs()
+const router = useRouter()
 </script>
 
 <template>
@@ -9,31 +10,27 @@ const breadcrumbs = useRouteBreadcrumbs()
     <ContextMenuTrigger as-child>
       <div class="bg-background flex items-center justify-between gap-2 p-2">
         <div class="flex gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-arrow-left />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Go back </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon">
-                  <icon-lucide-arrow-right />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent> Go forward </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <Breadcrumb>
             <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbPage as-child>
+                  <BreadcrumbLink as-child>
+                    <Button variant="ghost" size="sm" class="text-xs">
+                      <icon-lucide-home />
+                    </Button>
+                  </BreadcrumbLink>
+                </BreadcrumbPage>
+              </BreadcrumbItem>
               <template v-for="(item, index) in breadcrumbs" :key="index">
                 <BreadcrumbItem>
                   <BreadcrumbPage as-child>
                     <BreadcrumbLink as-child>
-                      <Button variant="ghost" as-child>
+                      <Button
+                        variant="ghost"
+                        as-child
+                        size="sm"
+                        class="text-xs"
+                      >
                         <RouterLink :to="item.route">
                           {{ item.breadcrumb }}
                         </RouterLink>
@@ -51,11 +48,15 @@ const breadcrumbs = useRouteBreadcrumbs()
         <div class="flex gap-2"></div>
       </div>
     </ContextMenuTrigger>
-    <ContextMenuContent>
-      <ContextMenuItem> <icon-lucide-refresh-ccw /> Refresh </ContextMenuItem>
+    <ContextMenuContent align="start" side="bottom">
+      <ContextMenuItem @click="router.go(0)">
+        <icon-lucide-refresh-ccw /> Refresh
+      </ContextMenuItem>
       <ContextMenuSeparator />
-      <ContextMenuItem> <icon-lucide-arrow-left /> Go back </ContextMenuItem>
-      <ContextMenuItem>
+      <ContextMenuItem @click="router.go(-1)">
+        <icon-lucide-arrow-left /> Go back
+      </ContextMenuItem>
+      <ContextMenuItem @click="router.go(1)">
         <icon-lucide-arrow-right /> Go forward
       </ContextMenuItem>
     </ContextMenuContent>
