@@ -131,9 +131,10 @@ export const menu = [
     url: "/home",
     id: "home",
     icon: IconHome,
-    color: "bg-pink-500/75",
+    textColor: "text-pink-500",
+    bgColor: "bg-pink-500/75",
+    shortcut: "⌘H",
   },
-  // write
   {
     title: "Write",
     action: "Create a Document",
@@ -141,7 +142,9 @@ export const menu = [
     url: "/write",
     id: "write",
     icon: IconDocument,
-    color: "bg-teal-500/75",
+    textColor: "text-teal-500",
+    bgColor: "bg-teal-500/75",
+    shortcut: "⌘W",
   },
   {
     title: "Agents",
@@ -150,7 +153,9 @@ export const menu = [
     url: "/agents",
     id: "agents",
     icon: IconBot,
-    color: "bg-orange-500/75",
+    textColor: "text-orange-500",
+    bgColor: "bg-orange-500/75",
+    shortcut: "⌘A",
   },
   {
     title: "Tasks",
@@ -159,7 +164,9 @@ export const menu = [
     url: "/tasks",
     id: "tasks",
     icon: IconBadgeCheck,
-    color: "bg-green-500/75",
+    textColor: "text-green-500",
+    bgColor: "bg-green-500/75",
+    shortcut: "⌘T",
   },
   {
     title: "Runs",
@@ -168,7 +175,9 @@ export const menu = [
     url: "/runs",
     id: "runs",
     icon: IconActivity,
-    color: "bg-blue-500/75",
+    textColor: "text-blue-500",
+    bgColor: "bg-blue-500/75",
+    shortcut: "⌘R",
   },
   {
     title: "Teams",
@@ -177,7 +186,9 @@ export const menu = [
     url: "/teams",
     id: "teams",
     icon: IconComponent,
-    color: "bg-indigo-500/75",
+    textColor: "text-indigo-500",
+    bgColor: "bg-indigo-500/75",
+    shortcut: "⌘E",
   },
   {
     title: "Create",
@@ -186,7 +197,9 @@ export const menu = [
     url: "/create",
     id: "create",
     icon: IconSparkle,
-    color: "bg-purple-500/75",
+    textColor: "text-purple-500",
+    bgColor: "bg-purple-500/75",
+    shortcut: "⌘N",
   },
 ]
 

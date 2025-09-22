@@ -16,7 +16,7 @@ import { menu } from "@/helpers/defaults"
         <Component
           :is="item.icon"
           :class="[
-            item.color,
+            item.bgColor,
             'text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-md p-3',
           ]"
         />

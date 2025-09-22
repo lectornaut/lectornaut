@@ -93,7 +93,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --radius-xs: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 2px);
-  --radius: 20px;
+  --radius: 18px;
   --radius-md: calc(var(--radius) + 2px);
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 6px);

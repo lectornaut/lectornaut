@@ -13,37 +13,37 @@ import { menu } from "@/helpers/defaults"
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem class="flex h-9 items-center justify-center">
-              <Popover>
-                <PopoverTrigger as-child>
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
                   <SidebarMenuButton id="tour-apps-menu" tooltip="Menu">
                     <icon-lucide-grid-2-x-2 />
                   </SidebarMenuButton>
-                </PopoverTrigger>
-                <PopoverContent align="start" side="right" class="w-40 p-2">
-                  <div class="grid grid-cols-1 gap-2">
-                    <div
-                      v-for="(item, index) in menu"
-                      :key="index"
-                      class="group/nav"
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  side="right"
+                  class="grid w-40 grid-cols-1 gap-1 p-1"
+                >
+                  <div
+                    v-for="(item, index) in menu"
+                    :key="index"
+                    class="group/nav"
+                  >
+                    <DropdownMenuItem
+                      class="group-has-[.router-link-active]/nav:bg-accent group-has-[.router-link-active]/nav:text-accent-foreground text-secondary-foreground size-full justify-start"
+                      as-child
                     >
-                      <Button
-                        variant="ghost"
-                        class="group-has-[.router-link-active]/nav:bg-accent group-has-[.router-link-active]/nav:text-accent-foreground text-secondary-foreground size-full justify-start !p-2"
-                        as-child
-                      >
-                        <RouterLink :to="item.url">
-                          <Component
-                            :is="item.icon"
-                            class="text-primary-foreground size-8 rounded-full p-2"
-                            :class="item.color"
-                          />
-                          {{ item.title }}
-                        </RouterLink>
-                      </Button>
-                    </div>
+                      <RouterLink :to="item.url">
+                        <Component :is="item.icon" :class="item.textColor" />
+                        {{ item.title }}
+                        <DropdownMenuShortcut>
+                          {{ item.shortcut }}
+                        </DropdownMenuShortcut>
+                      </RouterLink>
+                    </DropdownMenuItem>
                   </div>
-                </PopoverContent>
-              </Popover>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
