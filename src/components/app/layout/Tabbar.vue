@@ -325,12 +325,12 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
           data-tauri-drag-region
           class="flex grow items-center gap-2 p-2 transition-all"
         >
-          <div class="bg-background ring-border flex rounded-md ring">
+          <div class="flex items-center justify-start">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="ghost" size="icon">
-                    <icon-lucide-chevron-left />
+                    <icon-lucide-arrow-left />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent> Go back </TooltipContent>
@@ -338,7 +338,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="ghost" size="icon">
-                    <icon-lucide-chevron-right />
+                    <icon-lucide-arrow-right />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent> Go forward </TooltipContent>
@@ -370,12 +370,12 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                     <ContextMenu>
                       <ContextMenuTrigger as-child class="context-trigger">
                         <Button
-                          variant="ghost"
-                          class="group relative w-[-webkit-fill-available] min-w-0 border border-transparent"
+                          :variant="tab.id === active ? 'secondary' : 'ghost'"
+                          class="group relative w-[-webkit-fill-available] min-w-0"
                           :class="
                             tab.id === active
-                              ? 'border-border bg-background before:border-border after:border-border hover:!bg-background before:text-background after:text-background rounded-b-none border-b-transparent text-inherit before:pointer-events-none before:absolute before:-bottom-2.5 before:-left-5 before:z-10 before:size-5 before:rounded-br-lg before:border-r before:border-b before:shadow-[0_5px_0_currentColor,5px_0_0_currentColor,5px_5px_0_currentColor] after:pointer-events-none after:absolute after:-right-5 after:-bottom-2.5 after:z-10 after:size-5 after:rounded-bl-lg after:border-b after:border-l after:shadow-[0_5px_0_currentColor,-5px_0_0_currentColor,-5px_5px_0_currentColor]'
-                              : 'text-muted-foreground before:bg-border after:bg-border before:absolute before:-left-1.5 before:z-10 before:h-4 before:w-0.5 before:rounded-full after:absolute after:-right-1.5 after:z-10 after:h-4 after:w-0.5 after:rounded-full'
+                              ? 'text-foreground shadow-none'
+                              : 'text-muted-foreground'
                           "
                           as-child
                           @click="emitter.emit('Tabs.Select', tab.id)"
@@ -402,10 +402,6 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                                 <TooltipContent>Close tab</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            <span
-                              v-if="tab.id === active"
-                              class="bg-background absolute inset-x-0 -bottom-3 z-10 h-3"
-                            ></span>
                             <span
                               v-if="tab.id === active"
                               class="before:bg-sidebar after:bg-sidebar before:absolute before:inset-y-0 before:-left-1.5 before:z-20 before:w-0.5 before:rounded-full after:absolute after:inset-y-0 after:-right-1.5 after:z-20 after:w-0.5 after:rounded-full"

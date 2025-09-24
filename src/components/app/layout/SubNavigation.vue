@@ -15,22 +15,20 @@ const router = useRouter()
               <BreadcrumbItem>
                 <BreadcrumbPage as-child>
                   <BreadcrumbLink as-child>
-                    <Button variant="ghost" size="sm" class="text-xs">
-                      <icon-lucide-home />
+                    <Button variant="ghost" as-child>
+                      <RouterLink to="/home">
+                        <icon-lucide-home />
+                      </RouterLink>
                     </Button>
                   </BreadcrumbLink>
                 </BreadcrumbPage>
               </BreadcrumbItem>
+              <BreadcrumbSeparator />
               <template v-for="(item, index) in breadcrumbs" :key="index">
                 <BreadcrumbItem>
                   <BreadcrumbPage as-child>
                     <BreadcrumbLink as-child>
-                      <Button
-                        variant="ghost"
-                        as-child
-                        size="sm"
-                        class="text-xs"
-                      >
+                      <Button variant="ghost" as-child>
                         <RouterLink :to="item.route">
                           {{ item.breadcrumb }}
                         </RouterLink>
