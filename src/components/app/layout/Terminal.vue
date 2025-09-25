@@ -34,7 +34,7 @@ A lightweight, open-source playload transformer and manager built with web techn
  Website: <a href="https://lectornaut.com" target="_blank" rel="noopener" class="text-primary underline">https://lectornaut.com</a>
  Documentation: <a href="https://lectornaut.com/docs" target="_blank" rel="noopener" class="text-primary underline">https://lectornaut.com/docs</a>
 
-<ul class="list-disc list-inside marker:text-muted-foreground"><li><span class="text-primary">help</span> - show this help menu</li><li><span class="text-primary">js</span> - eval JavaScript code</li><li><span class="text-primary">clear</span> - clear the terminal</li></ul>`
+<ul class="list-[square] list-inside marker:text-muted-foreground"><li><span class="text-primary">help</span> - show this help menu</li><li><span class="text-primary">js</span> - eval JavaScript code</li><li><span class="text-primary">clear</span> - clear the terminal</li></ul>`
 
 const execute = (term: XTerminal, command = "") => {
   if (!command) {

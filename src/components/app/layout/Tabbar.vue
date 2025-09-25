@@ -371,11 +371,11 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                       <ContextMenuTrigger as-child class="context-trigger">
                         <Button
                           :variant="tab.id === active ? 'secondary' : 'ghost'"
-                          class="group relative w-[-webkit-fill-available] min-w-0"
+                          class="group w-[-webkit-fill-available] min-w-0"
                           :class="
                             tab.id === active
                               ? 'text-foreground shadow-none'
-                              : 'text-muted-foreground'
+                              : 'text-secondary-foreground/50 bg-secondary/50'
                           "
                           as-child
                           @click="emitter.emit('Tabs.Select', tab.id)"
@@ -391,7 +391,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    class="invisible absolute right-2 size-5 group-hover:visible"
+                                    class="invisible size-5 group-hover:visible"
                                     @click.prevent="
                                       emitter.emit('Tabs.Close', tab.id)
                                     "
@@ -402,10 +402,6 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                                 <TooltipContent>Close tab</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            <span
-                              v-if="tab.id === active"
-                              class="before:bg-sidebar after:bg-sidebar before:absolute before:inset-y-0 before:-left-1.5 before:z-20 before:w-0.5 before:rounded-full after:absolute after:inset-y-0 after:-right-1.5 after:z-20 after:w-0.5 after:rounded-full"
-                            ></span>
                           </RouterLink>
                         </Button>
                       </ContextMenuTrigger>

@@ -30,8 +30,6 @@ const groups = [
 
 type Team = (typeof groups)[number]["teams"][number]
 
-const openTeamSwitcher = ref(false)
-const showNewTeamDialog = ref(false)
 const selectedTeam = ref<Team>(
   groups[0]?.teams[0] ?? { label: "Default Team", value: "default" }
 )
@@ -81,13 +79,19 @@ const users = ref<User[]>([
   },
 ])
 
-const selectedUsers = ref<User[]>([])
+const selectedEmails = ref<string[]>([])
+
+const selectedUserObjects = computed(() => {
+  return selectedEmails.value
+    .map((email) => users.value.find((u) => u.email === email))
+    .filter(Boolean) as User[]
+})
 </script>
 
 <template>
   <div class="flex items-center justify-between gap-2">
-    <Dialog v-model:open="showNewTeamDialog">
-      <DropdownMenu v-model:open="openTeamSwitcher">
+    <Dialog>
+      <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <Button
             id="tour-team-switcher"
@@ -132,72 +136,80 @@ const selectedUsers = ref<User[]>([])
           <DropdownMenuGroup>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger> Switch team </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent class="w-48 p-0" align="start">
-                <Command>
-                  <CommandInput
-                    placeholder="Search team..."
-                    class="border-none p-0 focus:border-inherit focus:ring-0"
-                  />
-                  <CommandList>
-                    <CommandEmpty> No teams found. </CommandEmpty>
-                    <CommandGroup
-                      v-for="group in groups"
-                      :key="group.label"
-                      :heading="group.label"
-                    >
-                      <CommandItem
-                        v-for="team in group.teams"
-                        :key="team.value"
-                        :value="team"
-                        class="py-2"
-                        @select="
-                          () => {
-                            selectedTeam = team
-                            openTeamSwitcher = false
-                          }
-                        "
-                      >
-                        <Avatar class="size-4">
-                          <AvatarImage
-                            :src="`https://avatar.vercel.sh/${team.value}.png`"
-                            referrerpolicy="no-referrer"
-                            :alt="team.label"
-                          />
-                          <AvatarFallback>
-                            {{ getInitials(team.label) }}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>
-                          {{ team.label }}
-                        </span>
-                        <icon-lucide-check
-                          v-if="selectedTeam.value === team.value"
-                          class="ml-auto"
-                        />
-                      </CommandItem>
-                    </CommandGroup>
-                  </CommandList>
-                  <CommandSeparator />
-                  <CommandList>
-                    <CommandGroup>
-                      <DialogTrigger as-child>
-                        <CommandItem
-                          value="create-team"
-                          class="py-2"
-                          @select="
-                            () => {
-                              showNewTeamDialog = true
-                              openTeamSwitcher = false
-                            }
-                          "
-                        >
-                          <icon-lucide-circle-plus />
-                          Create Team
-                        </CommandItem>
-                      </DialogTrigger>
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
+              <DropdownMenuSubContent class="w-48" align="start">
+                <DropdownMenuGroup
+                  v-for="group in groups"
+                  :key="group.label"
+                  :heading="group.label"
+                >
+                  <DropdownMenuLabel class="text-muted-foreground text-xs">
+                    {{ group.label }}
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    v-for="team in group.teams"
+                    :key="team.value"
+                    @click="selectedTeam = team"
+                  >
+                    <Avatar class="size-4">
+                      <AvatarImage
+                        :src="`https://avatar.vercel.sh/${team.value}.png`"
+                        referrerpolicy="no-referrer"
+                        :alt="team.label"
+                      />
+                      <AvatarFallback>
+                        {{ getInitials(team.label) }}
+                      </AvatarFallback>
+                    </Avatar>
+                    {{ team.label }}
+                    <icon-lucide-check
+                      v-if="selectedTeam.value === team.value"
+                      class="ml-auto"
+                    />
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DialogTrigger as-child>
+                    <DropdownMenuItem>
+                      <icon-lucide-circle-plus />
+                      Create team
+                    </DropdownMenuItem>
+                  </DialogTrigger>
+                </DropdownMenuGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <!-- switch account -->
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger> Switch account </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent class="w-48" align="start">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel class="text-muted-foreground text-xs">
+                    Accounts
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem>
+                    <Avatar class="size-4">
+                      <AvatarImage src="https://avatar.vercel.sh/1.png" />
+                      <AvatarFallback>AT</AvatarFallback>
+                    </Avatar>
+                    Alicia Koch
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Avatar class="size-4">
+                      <AvatarImage src="https://avatar.vercel.sh/2.png" />
+                      <AvatarFallback>JD</AvatarFallback>
+                    </Avatar>
+                    John Doe
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DialogTrigger as-child>
+                    <DropdownMenuItem>
+                      <icon-lucide-circle-plus />
+                      Add account
+                    </DropdownMenuItem>
+                  </DialogTrigger>
+                </DropdownMenuGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           </DropdownMenuGroup>
@@ -222,67 +234,54 @@ const selectedUsers = ref<User[]>([])
               People with access
             </Label>
           </div>
-          <div class="grid rounded-md border">
+          <div class="grid gap-2 rounded-md border p-2">
             <DropdownMenu>
-              <Command>
-                <DropdownMenuTrigger>
-                  <CommandInput
-                    placeholder="Search for agents or add people by email"
-                    class="border-none p-0 focus:border-inherit focus:ring-0"
-                  />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="center"
-                  side="bottom"
-                  class="w-xs p-0"
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" class="w-full justify-between">
+                  Select users...
+                  <icon-lucide-chevron-down />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" side="bottom" class="w-xs">
+                <DropdownMenuItem
+                  v-for="user in users"
+                  :key="user.email"
+                  @select="
+                    () => {
+                      if (!selectedEmails.includes(user.email)) {
+                        selectedEmails.push(user.email)
+                      } else {
+                        selectedEmails.splice(
+                          selectedEmails.indexOf(user.email),
+                          1
+                        )
+                      }
+                    }
+                  "
                 >
-                  <CommandList>
-                    <CommandEmpty>No users found.</CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem
-                        v-for="user in users"
-                        :key="user.email"
-                        :value="user"
-                        class="py-2"
-                        @select="
-                          () => {
-                            if (!selectedUsers.includes(user)) {
-                              selectedUsers.push(user)
-                            } else {
-                              selectedUsers.splice(
-                                selectedUsers.indexOf(user),
-                                1
-                              )
-                            }
-                          }
-                        "
-                      >
-                        <Avatar>
-                          <AvatarImage :src="user.avatar" alt="Image" />
-                          <AvatarFallback>{{ user.name[0] }}</AvatarFallback>
-                        </Avatar>
-                        <div class="ml-2">
-                          <p class="text-sm leading-none font-medium">
-                            {{ user.name }}
-                          </p>
-                          <p class="text-muted-foreground text-sm">
-                            {{ user.email }}
-                          </p>
-                        </div>
-                        <icon-lucide-circle-check-big
-                          v-if="selectedUsers.includes(user)"
-                          class="ml-auto"
-                        />
-                        <icon-lucide-circle v-else class="ml-auto" />
-                      </CommandItem>
-                    </CommandGroup>
-                  </CommandList>
-                </DropdownMenuContent>
-              </Command>
+                  <Avatar>
+                    <AvatarImage :src="user.avatar" alt="Image" />
+                    <AvatarFallback>{{ user.name[0] }}</AvatarFallback>
+                  </Avatar>
+                  <div class="ml-2">
+                    <p class="text-sm leading-none font-medium">
+                      {{ user.name }}
+                    </p>
+                    <p class="text-muted-foreground text-sm">
+                      {{ user.email }}
+                    </p>
+                  </div>
+                  <icon-lucide-circle-check-big
+                    v-if="selectedEmails.includes(user.email)"
+                    class="ml-auto"
+                  />
+                  <icon-lucide-circle v-else class="ml-auto" />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
             </DropdownMenu>
-            <div v-if="selectedUsers.length" class="grid gap-4 p-4">
+            <div v-if="selectedUserObjects.length" class="grid gap-2">
               <div
-                v-for="person in selectedUsers"
+                v-for="person in selectedUserObjects"
                 :key="person.email"
                 class="flex justify-between space-x-4"
               >
@@ -318,7 +317,7 @@ const selectedUsers = ref<User[]>([])
               </div>
             </div>
             <div
-              v-if="!selectedUsers.length"
+              v-if="!selectedUserObjects.length"
               class="text-muted-foreground flex items-center justify-center p-4 text-sm"
             >
               No users selected
@@ -326,10 +325,12 @@ const selectedUsers = ref<User[]>([])
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showNewTeamDialog = false">
-            Cancel
-          </Button>
-          <Button type="submit"> Continue </Button>
+          <DialogClose as-child>
+            <Button variant="outline"> Cancel </Button>
+          </DialogClose>
+          <DialogClose as-child>
+            <Button type="submit"> Continue </Button>
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

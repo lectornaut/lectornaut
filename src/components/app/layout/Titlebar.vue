@@ -50,7 +50,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
             data-tauri-drag-region
             class="flex grow items-center justify-center gap-2"
           >
-            <TeamSwitcher />
+            <WorkspaceSwitcher />
           </div>
           <div
             data-tauri-drag-region
