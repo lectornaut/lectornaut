@@ -177,7 +177,7 @@ const closeTab = (id: string) => {
                   >
                     <div class="flex shrink-0">
                       <div
-                        class="no-scrollbar flex flex-1 items-center justify-start overflow-auto"
+                        class="no-scrollbar flex flex-1 items-center justify-start overflow-auto overscroll-none"
                       >
                         <TabsList class="bg-transparent p-0">
                           <TabsTrigger

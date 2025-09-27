@@ -11,7 +11,7 @@ useHead({
 </script>
 
 <template>
-  <div class="relative h-dvh w-dvw overflow-hidden">
+  <div class="relative h-dvh w-dvw overflow-auto overscroll-none">
     <video playsinline autoplay muted loop class="size-full object-cover">
       <source
         src="/assets/videos/sky.mp4"

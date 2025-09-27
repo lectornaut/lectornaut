@@ -363,17 +363,17 @@ const navigations = [
 <template>
   <Dialog v-model:open="openSettings">
     <DialogContent
-      class="h-3/4 !max-h-3/4 w-3/4 !max-w-3/4 overflow-hidden p-0"
+      class="h-3/4 !max-h-3/4 w-3/4 !max-w-3/4 overflow-auto overscroll-none p-0"
     >
       <Tabs
         v-model="activeTab"
         :default-value="activeTab"
-        class="flex size-full flex-col overflow-hidden"
+        class="flex size-full flex-col overflow-auto overscroll-none"
         orientation="vertical"
       >
         <SidebarProvider
           :default-open="true"
-          class="h-full min-h-auto overflow-auto"
+          class="h-full min-h-auto overflow-auto overscroll-none"
         >
           <Sidebar collapsible="none">
             <TabsList class="contents">
@@ -414,7 +414,7 @@ const navigations = [
             </TabsList>
           </Sidebar>
           <Separator orientation="vertical" />
-          <div class="flex flex-1 flex-col overflow-hidden">
+          <div class="flex flex-1 flex-col overflow-auto overscroll-none">
             <DialogHeader class="p-6">
               <DialogTitle>
                 {{
@@ -437,7 +437,10 @@ const navigations = [
             </DialogHeader>
             <Separator />
             <OverlayScrollbarsWrapper>
-              <TabsContent class="overflow-auto" value="preferences">
+              <TabsContent
+                class="overflow-auto overscroll-none"
+                value="preferences"
+              >
                 <div class="flex size-full flex-col gap-6 p-6">
                   <div class="flex items-center gap-4">
                     <div
@@ -446,7 +449,10 @@ const navigations = [
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent class="overflow-auto" value="account">
+              <TabsContent
+                class="overflow-auto overscroll-none"
+                value="account"
+              >
                 <div class="flex size-full flex-col gap-6 p-6">
                   <div class="flex items-center gap-4">
                     <div
@@ -774,7 +780,10 @@ const navigations = [
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent class="overflow-auto" value="appearance">
+              <TabsContent
+                class="overflow-auto overscroll-none"
+                value="appearance"
+              >
                 <div class="flex size-full flex-col gap-6 p-6">
                   <div class="flex items-center gap-4">
                     <div class="flex flex-col gap-1">
@@ -932,7 +941,10 @@ const navigations = [
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent class="overflow-auto" value="notifications">
+              <TabsContent
+                class="overflow-auto overscroll-none"
+                value="notifications"
+              >
                 <div class="flex size-full flex-col gap-6 p-6">
                   <div class="flex items-center gap-4">
                     <div class="flex flex-col gap-1">
@@ -973,7 +985,10 @@ const navigations = [
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent class="overflow-auto" value="billing">
+              <TabsContent
+                class="overflow-auto overscroll-none"
+                value="billing"
+              >
                 <div class="flex size-full flex-col gap-6 p-6">
                   <div class="flex items-center gap-4">
                     <div class="flex flex-col gap-1">
@@ -1021,7 +1036,7 @@ const navigations = [
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent class="overflow-auto" value="plans">
+              <TabsContent class="overflow-auto overscroll-none" value="plans">
                 <div class="flex size-full flex-col gap-6 p-6"></div>
               </TabsContent>
             </OverlayScrollbarsWrapper>

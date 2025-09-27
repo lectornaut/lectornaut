@@ -4,7 +4,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
 </script> -->
 
 <template>
-  <div class="size-full overflow-auto overscroll-none">
+  <div class="relative size-full overflow-auto overscroll-none">
     <!-- <OverlayScrollbarsComponent
     defer
     :options="{
@@ -13,7 +13,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
         autoHide: 'scroll',
       },
     }"
-    class="size-full overscroll-none"
+    class="size-full overflow-auto overscroll-none"
   > -->
     <slot />
     <!-- </OverlayScrollbarsComponent> -->

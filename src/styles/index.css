@@ -34,6 +34,7 @@
   }
 
   :root {
+    @apply overflow-auto;
     @apply overscroll-none;
     @apply pl-safe-left;
     @apply pr-safe-right;
@@ -174,6 +175,7 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
 
+    @apply overflow-auto;
     @apply overscroll-none;
   }
 

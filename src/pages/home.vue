@@ -99,44 +99,6 @@ const presets = [
   },
 ]
 
-const recentActivity = [
-  {
-    name: "John Doe",
-    email: "john.doe@email.com",
-    avatar: "/avatars/01.png",
-    amount: "$1,999.00",
-    initials: "JD",
-  },
-  {
-    name: "Jackson Lee",
-    email: "jackson.lee@email.com",
-    avatar: "/avatars/02.png",
-    amount: "$39.00",
-    initials: "JL",
-  },
-  {
-    name: "Isabella Nguyen",
-    email: "isabella.nguyen@email.com",
-    avatar: "/avatars/03.png",
-    amount: "$299.00",
-    initials: "IN",
-  },
-  {
-    name: "William Kim",
-    email: "william.kim@email.com",
-    avatar: "/avatars/04.png",
-    amount: "$99.00",
-    initials: "WK",
-  },
-  {
-    name: "Sofia Davis",
-    email: "sofia.davis@email.com",
-    avatar: "/avatars/05.png",
-    amount: "$39.00",
-    initials: "SD",
-  },
-]
-
 const defaultRange = presets.find((preset) => preset.id === 0)!
 
 const range = ref({
@@ -765,43 +727,6 @@ const navToc = [
             <CardFooter>
               <CardDescription> +265 sales this month. </CardDescription>
             </CardFooter>
-          </Card>
-          <Card class="col-span-1 shadow-none md:col-span-2 lg:col-span-12">
-            <CardHeader>
-              <CardTitle>Recent</CardTitle>
-              <CardDescription>
-                You made 265 sales this month.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div class="space-y-8">
-                <div
-                  v-for="sale in recentActivity"
-                  :key="sale.email"
-                  class="flex items-center"
-                >
-                  <Avatar
-                    :name="sale.name"
-                    :colors="[
-                      'var(--chart-1)',
-                      'var(--chart-2)',
-                      'var(--chart-3)',
-                      'var(--chart-4)',
-                      'var(--chart-5)',
-                    ]"
-                  />
-                  <div class="ml-4 space-y-1">
-                    <p class="text-sm leading-none font-medium">
-                      {{ sale.name }}
-                    </p>
-                    <p class="text-muted-foreground text-sm">
-                      {{ sale.email }}
-                    </p>
-                  </div>
-                  <div class="ml-auto font-medium">{{ sale.amount }}</div>
-                </div>
-              </div>
-            </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="usage"> </TabsContent>
