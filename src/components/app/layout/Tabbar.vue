@@ -355,9 +355,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
             <template v-else-if="error">
               <icon-lucide-alert-triangle /> error
             </template>
-            <template v-else-if="tabs.length === 0">
-              <!-- <icon-lucide-file-text /> empty -->
-            </template>
+            <template v-else-if="tabs.length === 0"> No tabs open </template>
             <template v-else>
               <div
                 v-for="tab in tabs"
@@ -497,10 +495,10 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                 <TooltipContent> New Tab </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <div class="flex items-center gap-2">
-              <Combobox>
-                <TooltipProvider>
-                  <Tooltip>
+            <div class="flex items-center">
+              <TooltipProvider>
+                <Tooltip>
+                  <Combobox>
                     <ComboboxTrigger as-child>
                       <TooltipTrigger as-child>
                         <Button variant="ghost" size="icon">
@@ -571,20 +569,18 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                       </ComboboxGroup>
                     </ComboboxList>
                     <TooltipContent> History </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </Combobox>
-              <TooltipProvider>
+                  </Combobox>
+                </Tooltip>
                 <Tooltip>
                   <DropdownMenu>
-                    <TooltipTrigger as-child>
-                      <DropdownMenuTrigger as-child>
+                    <DropdownMenuTrigger as-child>
+                      <TooltipTrigger as-child>
                         <Button variant="ghost" size="icon">
                           <icon-lucide-chevron-down />
                         </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent> Tab options </TooltipContent>
+                      </TooltipTrigger>
+                      <TooltipContent> Tab options </TooltipContent>
+                    </DropdownMenuTrigger>
                     <DropdownMenuContent class="w-56" align="end" side="bottom">
                       <DropdownMenuGroup>
                         <DropdownMenuItem
