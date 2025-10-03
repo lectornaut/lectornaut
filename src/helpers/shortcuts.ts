@@ -17,6 +17,7 @@ import IconLucidePanelLeft from "~icons/lucide/panel-left"
 import IconLucidePanelRight from "~icons/lucide/panel-right"
 import IconLucidePlusSquare from "~icons/lucide/plus-square"
 import IconLucideSettings from "~icons/lucide/settings"
+import IconLucideSparkles from "~icons/lucide/sparkles"
 import IconLucideXSquare from "~icons/lucide/square-x"
 import IconLucideSun from "~icons/lucide/sun"
 import IconLucideTerminal from "~icons/lucide/terminal"
@@ -64,6 +65,26 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: ["commands"],
       },
       {
+        description: ["Ask AI"],
+        keys: [[getPlatformSpecialKey(), "enter"]],
+        hotkeys: "cmd+enter,ctrl+enter",
+        event: "Dialog.AiAsk.Toggle",
+        parameters: undefined,
+        icon: IconLucideSparkles,
+        tags: ["ai", "ask"],
+        hidden: [],
+      },
+      {
+        description: ["Settings"],
+        keys: [[getPlatformSpecialKey(), ","]],
+        hotkeys: "cmd+,,ctrl+,",
+        event: "Dialog.Settings.Open",
+        parameters: "preferences",
+        icon: IconLucideSettings,
+        tags: ["settings"],
+        hidden: [],
+      },
+      {
         description: ["Keyboard shortcuts"],
         keys: [[getPlatformSpecialKey(), "/"]],
         hotkeys: "cmd+/,ctrl+/",
@@ -81,16 +102,6 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: undefined,
         icon: IconLucideHelpCircle,
         tags: ["help", "support"],
-        hidden: [],
-      },
-      {
-        description: ["Settings"],
-        keys: [[getPlatformSpecialKey(), ","]],
-        hotkeys: "cmd+,,ctrl+,",
-        event: "Dialog.Settings.Open",
-        parameters: "preferences",
-        icon: IconLucideSettings,
-        tags: ["settings"],
         hidden: [],
       },
     ],

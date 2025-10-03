@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { isTauri } from "@/helpers/utilities"
+import emitter from "@/modules/mitt"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 
@@ -29,10 +30,16 @@ onBeforeUnmount(() => {
 })
 
 const isDocked = ref(false)
+
+const openAiAsk = ref(false)
+
+emitter.on("Dialog.AiAsk.Toggle", () => {
+  openAiAsk.value = !openAiAsk.value
+})
 </script>
 
 <template>
-  <Sheet>
+  <Sheet v-model:open="openAiAsk">
     <TooltipProvider>
       <Tooltip>
         <SheetTrigger as-child>
@@ -70,7 +77,7 @@ const isDocked = ref(false)
           :class="{ 'mt-13': isTauri && !isFullscreen }"
         >
           <SheetHeader>
-            <SheetTitle> Hype AI </SheetTitle>
+            <SheetTitle> Ask AI </SheetTitle>
             <SheetDescription>
               Chat with our AI assistant to get help with your tasks.
             </SheetDescription>

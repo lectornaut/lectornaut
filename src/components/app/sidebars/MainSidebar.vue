@@ -55,7 +55,7 @@ import { menu } from "@/helpers/defaults"
         </SidebarContent>
         <Separator />
         <SidebarFooter>
-          <Members />
+          <Agents />
           <Separator />
           <Support />
           <SettingsMenu />

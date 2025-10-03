@@ -35,6 +35,16 @@ const agents = [
 <template>
   <SidebarMenu id="tour-team-members">
     <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="New Agent">
+              <icon-lucide-circle-plus />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </TooltipTrigger>
+        <TooltipContent side="right"> New Agent </TooltipContent>
+      </Tooltip>
       <Tooltip v-for="agent in agents" :key="agent.id">
         <Sheet>
           <SheetTrigger as-child>
