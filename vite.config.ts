@@ -223,12 +223,12 @@ export default defineConfig({
       typescript: true,
       vueTsc: true,
       eslint: {
-        lintCommand: "eslint 'src/**/*.{js,ts,vue}'",
+        lintCommand: "eslint './src/**/*.{js,ts,vue}'",
         watchPath: "./src",
         useFlatConfig: true,
       },
       stylelint: {
-        lintCommand: "stylelint 'src/**/*.{css,scss}'",
+        lintCommand: "stylelint './src/**/*.{css,scss}'",
         watchPath: "./src",
       },
       overlay: true,

@@ -22,18 +22,17 @@
       "unplugin-turbo-console/client",
       "@intlify/unplugin-vue-i18n/messages"
     ],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "src/**/*.json",
-    "vite.config.ts"
+    "./src/**/*.ts",
+    "./src/**/*.d.ts",
+    "./src/**/*.tsx",
+    "./src/**/*.vue",
+    "./src/**/*.json",
+    "./vite.config.ts"
   ],
-  "files": ["components.d.ts", "auto-imports.d.ts", "typed-router.d.ts"]
+  "files": ["./components.d.ts", "./auto-imports.d.ts", "./typed-router.d.ts"]
 }
