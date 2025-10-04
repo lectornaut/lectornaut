@@ -222,7 +222,16 @@ export default defineConfig({
     checker({
       typescript: true,
       vueTsc: true,
-      overlay: false,
+      eslint: {
+        lintCommand: "eslint 'src/**/*.{js,ts,vue}'",
+        watchPath: "./src",
+        useFlatConfig: true,
+      },
+      stylelint: {
+        lintCommand: "stylelint 'src/**/*.{css,scss}'",
+        watchPath: "./src",
+      },
+      overlay: true,
       enableBuild: false,
     }),
     TurboConsole({
