@@ -124,7 +124,7 @@ const tasks = [
             {{ component.description }}
           </AlertDescription>
           <div
-            class="bg-background absolute top-2 right-2 z-10 hidden items-center gap-2 rounded-lg p-1 shadow-md group-hover:flex"
+            class="bg-background absolute top-2 right-2 z-10 hidden items-center gap-2 rounded-md p-1 shadow-md group-hover:flex"
           >
             <ToggleGroup type="single" variant="outline" size="sm">
               <ToggleGroupItem value="saved">

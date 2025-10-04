@@ -197,6 +197,9 @@
     @apply tracking-tight;
     @apply leading-0;
     @apply scale-90;
+    @apply ring;
+    @apply ring-inset;
+    @apply ring-secondary-foreground/10;
   }
 }
 

@@ -361,7 +361,7 @@ const closeTab = (id: string) => {
     <ContextMenuTrigger as-child>
       <div
         data-tauri-drag-region
-        class="pb-safe-bottom shadow-border relative z-20 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
+        class="pb-safe-bottom shadow-border bg-sidebar relative z-20 grid shrink-0 grid-cols-3 gap-2 shadow-[0px_-1px]"
       >
         <div class="flex items-center justify-start" data-tauri-drag-region>
           <TooltipProvider>

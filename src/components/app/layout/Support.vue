@@ -53,7 +53,7 @@ const productTour = driver({
   overlayColor: state.value === "light" ? "black" : "white",
   smoothScroll: true,
   stagePadding: 4,
-  stageRadius: 22,
+  stageRadius: 14,
   popoverClass: "driverjs-theme",
   popoverOffset: 8,
   showProgress: true,
@@ -198,7 +198,7 @@ const companySizes = [
                 <TooltipTrigger as-child>
                   <SidebarMenuButton class="data-[state=open]:bg-accent">
                     <icon-lucide-circle-help />
-                    Help & Support
+                    Help and Support
                   </SidebarMenuButton>
                 </TooltipTrigger>
                 <TooltipContent
