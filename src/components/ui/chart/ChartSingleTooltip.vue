@@ -2,7 +2,8 @@
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { omit } from "@unovis/ts"
 import { VisTooltip } from "@unovis/vue"
-import { type Component, createApp } from "vue"
+import type { Component } from "vue"
+import { createApp } from "vue"
 import { ChartTooltip } from "."
 
 const props = defineProps<{
@@ -15,64 +16,51 @@ const props = defineProps<{
 
 // Use weakmap to store reference to each datapoint for Tooltip
 const wm = new WeakMap()
-interface DataRecord {
-  [key: string]: unknown
-}
-
-function template(
-  d: DataRecord,
-  i: number,
-  elements: (HTMLElement | SVGElement)[]
-) {
+function template(d: any, i: number, elements: (HTMLElement | SVGElement)[]) {
   const valueFormatter = props.valueFormatter ?? ((tick: number) => `${tick}`)
-  if (d && typeof d === "object" && props.index in d) {
+  if (props.index in d) {
     if (wm.has(d)) {
       return wm.get(d)
     } else {
       const componentDiv = document.createElement("div")
-      const omittedData = Object.entries(
-        omit(d as Record<string, unknown>, [props.index])
-      ).map(([key, value]) => {
-        const legendReference = props.items?.find((i) => i.name === key)
-        return { ...legendReference, value: valueFormatter(Number(value)) }
-      })
+      const omittedData = Object.entries(omit(d, [props.index])).map(
+        ([key, value]) => {
+          const legendReference = props.items?.find((i) => i.name === key)
+          return { ...legendReference, value: valueFormatter(value) }
+        }
+      )
       const TooltipComponent = props.customTooltip ?? ChartTooltip
-      const app = createApp(TooltipComponent, {
+      createApp(TooltipComponent, {
         title: d[props.index],
         data: omittedData,
-      })
-      app.mount(componentDiv)
+      }).mount(componentDiv)
       wm.set(d, componentDiv.innerHTML)
-      app.unmount()
       return componentDiv.innerHTML
     }
-  } else if (d && typeof d === "object" && d.data) {
-    const data = d.data as Record<string, unknown>
+  } else {
+    const data = d.data
 
     if (wm.has(data)) {
       return wm.get(data)
     } else {
-      const style = getComputedStyle(elements[i] as HTMLElement)
+      const style = getComputedStyle(elements[i])
       const omittedData = [
         {
-          name: (data as { name?: string }).name,
-          value: valueFormatter(Number(data[props.index])),
+          name: data.name,
+          value: valueFormatter(data[props.index]),
           color: style.fill,
         },
       ]
       const componentDiv = document.createElement("div")
       const TooltipComponent = props.customTooltip ?? ChartTooltip
-      const app = createApp(TooltipComponent, {
+      createApp(TooltipComponent, {
         title: d[props.index],
         data: omittedData,
-      })
-      app.mount(componentDiv)
-      wm.set(d as object, componentDiv.innerHTML)
-      app.unmount()
+      }).mount(componentDiv)
+      wm.set(d, componentDiv.innerHTML)
       return componentDiv.innerHTML
     }
   }
-  return ""
 }
 </script>
 

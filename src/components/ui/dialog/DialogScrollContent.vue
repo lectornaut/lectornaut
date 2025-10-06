@@ -2,11 +2,10 @@
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { X } from "lucide-vue-next"
+import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 import {
   DialogClose,
   DialogContent,
-  type DialogContentEmits,
-  type DialogContentProps,
   DialogOverlay,
   DialogPortal,
   useForwardPropsEmits,
@@ -26,7 +25,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 <template>
   <DialogPortal>
     <DialogOverlay
-      class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/50"
+      class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80"
     >
       <DialogContent
         :class="

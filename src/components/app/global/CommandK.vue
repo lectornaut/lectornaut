@@ -94,11 +94,11 @@ const filteredShortcuts = computed(() => {
               </BreadcrumbList>
             </Breadcrumb>
             <CommandShortcut v-if="shortcut.keys">
-              <template v-for="keys in shortcut.keys" :key="keys.toString()">
-                <kbd v-for="key in keys" :key="key" class="shortcut-key">{{
-                  key
-                }}</kbd>
-              </template>
+              <KbdGroup v-for="keys in shortcut.keys" :key="keys.toString()">
+                <Kbd v-for="key in keys" :key="key">
+                  {{ key }}
+                </Kbd>
+              </KbdGroup>
             </CommandShortcut>
           </CommandItem>
         </CommandGroup>

@@ -3,11 +3,8 @@ import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { ChevronLeft } from "lucide-vue-next"
-import {
-  RangeCalendarPrev,
-  type RangeCalendarPrevProps,
-  useForwardProps,
-} from "reka-ui"
+import type { RangeCalendarPrevProps } from "reka-ui"
+import { RangeCalendarPrev, useForwardProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<

@@ -8,7 +8,7 @@ export interface BaseChartProps<T extends Record<string, unknown>> {
    */
   data: T[]
   /**
-   * Select the categories from your data. Used to populate the legend and toolip.
+   * Select the categories from your data. Used to populate the legend and tooltip.
    */
   categories: KeyOf<T>[]
   /**

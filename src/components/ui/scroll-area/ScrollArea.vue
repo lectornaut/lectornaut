@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
-import {
-  ScrollAreaCorner,
-  ScrollAreaRoot,
-  type ScrollAreaRootProps,
-  ScrollAreaViewport,
-} from "reka-ui"
+import type { ScrollAreaRootProps } from "reka-ui"
+import { ScrollAreaCorner, ScrollAreaRoot, ScrollAreaViewport } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import ScrollBar from "./ScrollBar.vue"
 

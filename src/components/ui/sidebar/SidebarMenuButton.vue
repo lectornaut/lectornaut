@@ -6,9 +6,8 @@ import {
 } from "@/components/ui/tooltip"
 import { reactiveOmit } from "@vueuse/core"
 import type { Component } from "vue"
-import SidebarMenuButtonChild, {
-  type SidebarMenuButtonProps,
-} from "./SidebarMenuButtonChild.vue"
+import type { SidebarMenuButtonProps } from "./SidebarMenuButtonChild.vue"
+import SidebarMenuButtonChild from "./SidebarMenuButtonChild.vue"
 import { useSidebar } from "./utils"
 
 defineOptions({
@@ -55,7 +54,7 @@ const delegatedProps = reactiveOmit(props, "tooltip")
       <template v-if="typeof tooltip === 'string'">
         {{ tooltip }}
       </template>
-      <Component :is="tooltip" v-else />
+      <component :is="tooltip" v-else />
     </TooltipContent>
   </Tooltip>
 </template>

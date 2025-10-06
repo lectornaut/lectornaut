@@ -38,7 +38,7 @@ onMounted(async () => {
       class="grid size-full grow place-items-center"
     >
       <div class="mx-auto flex flex-col justify-center">
-        <icon-lucide-loader class="animate-spin" />
+        <Spinner />
       </div>
     </div>
     <div

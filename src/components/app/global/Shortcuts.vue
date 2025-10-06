@@ -153,17 +153,16 @@ const filteredShortcuts = computed(() => {
                       </span>
                     </template>
                   </div>
-                  <span class="flex gap-8">
-                    <div
+                  <div>
+                    <KbdGroup
                       v-for="keys in shortcut.keys"
                       :key="keys.toString()"
-                      class="after:text-muted-foreground relative flex after:absolute after:top-1/2 after:-right-8 after:flex after:aspect-square after:min-h-8 after:-translate-y-1/2 after:scale-75 after:items-center after:justify-center after:rounded-full after:content-['or'] last-of-type:after:hidden"
                     >
-                      <kbd v-for="key in keys" :key="key" class="shortcut-key">
+                      <Kbd v-for="key in keys" :key="key">
                         {{ key }}
-                      </kbd>
-                    </div>
-                  </span>
+                      </Kbd>
+                    </KbdGroup>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>

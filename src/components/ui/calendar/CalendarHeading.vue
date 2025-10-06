@@ -1,11 +1,8 @@
 <script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
-import {
-  CalendarHeading,
-  type CalendarHeadingProps,
-  useForwardProps,
-} from "reka-ui"
+import type { CalendarHeadingProps } from "reka-ui"
+import { CalendarHeading, useForwardProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<
@@ -13,7 +10,7 @@ const props = defineProps<
 >()
 
 defineSlots<{
-  default: (props: { headingValue: string }) => unknown
+  default: (props: { headingValue: string }) => any
 }>()
 
 const delegatedProps = reactiveOmit(props, "class")

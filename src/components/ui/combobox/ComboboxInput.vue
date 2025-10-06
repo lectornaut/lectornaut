@@ -2,12 +2,8 @@
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { SearchIcon } from "lucide-vue-next"
-import {
-  ComboboxInput,
-  type ComboboxInputEmits,
-  type ComboboxInputProps,
-  useForwardPropsEmits,
-} from "reka-ui"
+import type { ComboboxInputEmits, ComboboxInputProps } from "reka-ui"
+import { ComboboxInput, useForwardPropsEmits } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 defineOptions({

@@ -178,29 +178,6 @@
     @apply overflow-auto;
     @apply overscroll-none;
   }
-
-  .shortcut-key {
-    @apply inline-flex;
-    @apply items-center;
-    @apply justify-center;
-    @apply h-5;
-    @apply min-w-5;
-    @apply p-1;
-    @apply shrink-0;
-    @apply rounded-sm;
-    @apply font-sans;
-    @apply align-middle;
-    @apply capitalize;
-    @apply bg-secondary;
-    @apply text-secondary-foreground;
-    @apply text-xs;
-    @apply tracking-tight;
-    @apply leading-0;
-    @apply scale-90;
-    @apply ring;
-    @apply ring-inset;
-    @apply ring-secondary-foreground/10;
-  }
 }
 
 .driver-popover.driverjs-theme {

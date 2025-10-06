@@ -372,7 +372,7 @@ const closeTab = (id: string) => {
                   size="sm"
                   class="w-[calc(var(--sidebar-width-icon))] rounded-none"
                 >
-                  <icon-lucide-loader-2 v-if="isLoading" class="animate-spin" />
+                  <Spinner v-if="isLoading" />
                   <icon-lucide-cloud-check v-else />
                 </Button>
               </TooltipTrigger>

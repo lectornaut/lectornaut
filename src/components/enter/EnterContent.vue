@@ -226,7 +226,7 @@ const authenticateApple = async () => {
           @click="signupViaEmailPassword"
         >
           <template v-if="signupViaEmailPasswordInProgress">
-            <icon-lucide-loader class="animate-spin" />
+            <Spinner />
           </template>
           <template v-else> Continue </template>
         </Button>
@@ -284,10 +284,7 @@ const authenticateApple = async () => {
                       variant="destructive"
                       @click="authenticateEmail"
                     >
-                      <icon-lucide-loader
-                        v-if="authenticateEmailInProgress"
-                        class="animate-spin"
-                      />
+                      <Spinner v-if="authenticateEmailInProgress" />
                       Send magic link
                     </Button>
                   </AlertDialogFooter>
@@ -345,10 +342,7 @@ const authenticateApple = async () => {
                       variant="destructive"
                       @click="resetPassword"
                     >
-                      <icon-lucide-loader
-                        v-if="resettingPassword"
-                        class="animate-spin"
-                      />
+                      <Spinner v-if="resettingPassword" />
                       Send reset link
                     </Button>
                   </AlertDialogFooter>
@@ -396,7 +390,7 @@ const authenticateApple = async () => {
           @click="signinViaEmailPassword()"
         >
           <template v-if="signinViaEmailPasswordInProgress">
-            <icon-lucide-loader class="animate-spin" />
+            <Spinner />
           </template>
           <template v-else>
             Continue
@@ -452,7 +446,7 @@ const authenticateApple = async () => {
         @click="authenticateGoogle"
       >
         <template v-if="authenticateGoogleInProgress">
-          <icon-lucide-loader class="animate-spin" />
+          <Spinner />
         </template>
         <template v-else>
           <icon-mdi-google />
@@ -476,7 +470,7 @@ const authenticateApple = async () => {
         @click="authenticateMicrosoft"
       >
         <template v-if="authenticateMicrosoftInProgress">
-          <icon-lucide-loader class="animate-spin" />
+          <Spinner />
         </template>
         <template v-else>
           <icon-mdi-microsoft />
@@ -500,7 +494,7 @@ const authenticateApple = async () => {
         @click="authenticateApple"
       >
         <template v-if="authenticateAppleInProgress">
-          <icon-lucide-loader class="animate-spin" />
+          <Spinner />
         </template>
         <template v-else>
           <icon-mdi-apple />

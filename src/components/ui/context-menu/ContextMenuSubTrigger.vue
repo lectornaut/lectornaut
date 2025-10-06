@@ -2,11 +2,8 @@
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { ChevronRight } from "lucide-vue-next"
-import {
-  ContextMenuSubTrigger,
-  type ContextMenuSubTriggerProps,
-  useForwardProps,
-} from "reka-ui"
+import type { ContextMenuSubTriggerProps } from "reka-ui"
+import { ContextMenuSubTrigger, useForwardProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<

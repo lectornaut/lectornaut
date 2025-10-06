@@ -343,10 +343,7 @@ const randomIndex = () => {
                   @click="toggleCamera"
                 >
                   <icon-lucide-aperture v-if="!isCameraOpen" />
-                  <icon-lucide-loader
-                    v-else-if="isCameraOpen && isLoading"
-                    class="animate-spin"
-                  />
+                  <Spinner v-else-if="isCameraOpen && isLoading" />
                   <icon-lucide-x v-else />
                 </Button>
                 <Button

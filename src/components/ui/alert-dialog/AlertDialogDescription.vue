@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
-import {
-  AlertDialogDescription,
-  type AlertDialogDescriptionProps,
-} from "reka-ui"
+import type { AlertDialogDescriptionProps } from "reka-ui"
+import { AlertDialogDescription } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<

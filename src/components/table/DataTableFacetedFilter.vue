@@ -86,12 +86,13 @@ const selectedValues = computed(
               />
               <Component :is="option.icon" v-if="option.icon" />
               {{ option.label }}
-              <kbd
-                v-if="facets?.get(option.value)"
-                class="shortcut-key ml-auto"
-              >
-                {{ facets.get(option.value) }}
-              </kbd>
+              <CommandShortcut>
+                <KbdGroup>
+                  <Kbd v-if="facets?.get(option.value)" class="ml-auto">
+                    {{ facets.get(option.value) }}
+                  </Kbd>
+                </KbdGroup>
+              </CommandShortcut>
             </CommandItem>
           </CommandGroup>
           <template v-if="selectedValues.size > 0">

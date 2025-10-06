@@ -26,7 +26,7 @@ hotkeys("enter", (event) => {
       class="bg-background/5 flex items-center gap-1.5 rounded-xl border p-1.5 shadow-xl backdrop-blur-lg"
     >
       <Button v-if="!isUserLoaded" variant="ghost" size="icon" disabled>
-        <icon-lucide-loader class="animate-spin" />
+        <Spinner />
       </Button>
       <Button v-else-if="user" as-child>
         <RouterLink to="/home"> Enter </RouterLink>

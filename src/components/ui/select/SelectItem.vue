@@ -2,10 +2,10 @@
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { Check } from "lucide-vue-next"
+import type { SelectItemProps } from "reka-ui"
 import {
   SelectItem,
   SelectItemIndicator,
-  type SelectItemProps,
   SelectItemText,
   useForwardProps,
 } from "reka-ui"

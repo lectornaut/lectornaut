@@ -279,7 +279,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
             <LanguageSwitcher />
           </div>
           <Button v-if="!isUserLoaded" variant="ghost" size="icon" disabled>
-            <icon-lucide-loader class="animate-spin" />
+            <Spinner />
           </Button>
           <Button v-else-if="user" as-child>
             <RouterLink to="/home">Open app</RouterLink>

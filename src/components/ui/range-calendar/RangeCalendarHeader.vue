@@ -1,11 +1,8 @@
 <script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
-import {
-  RangeCalendarHeader,
-  type RangeCalendarHeaderProps,
-  useForwardProps,
-} from "reka-ui"
+import type { RangeCalendarHeaderProps } from "reka-ui"
+import { RangeCalendarHeader, useForwardProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<

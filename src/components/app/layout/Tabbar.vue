@@ -326,24 +326,26 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
           class="flex grow items-center gap-2 p-2 transition-all"
         >
           <div class="flex items-center justify-start">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon">
-                    <icon-lucide-arrow-left />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent> Go back </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon">
-                    <icon-lucide-arrow-right />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent> Go forward </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <ButtonGroup>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button variant="secondary" size="icon" class="shadow-none">
+                      <icon-lucide-arrow-left />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent> Go back </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button variant="secondary" size="icon" class="shadow-none">
+                      <icon-lucide-arrow-right />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent> Go forward </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </ButtonGroup>
           </div>
           <nav
             ref="el"
@@ -355,7 +357,15 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
             <template v-else-if="error">
               <icon-lucide-alert-triangle /> error
             </template>
-            <template v-else-if="tabs.length === 0"> No tabs open </template>
+            <template v-else-if="tabs.length === 0">
+              <Button
+                variant="ghost"
+                size="icon"
+                @click="emitter.emit('Tabs.Add')"
+              >
+                <icon-lucide-bot />
+              </Button>
+            </template>
             <template v-else>
               <div
                 v-for="tab in tabs"

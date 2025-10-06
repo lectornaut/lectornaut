@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
+import type { ContextMenuContentEmits, ContextMenuContentProps } from "reka-ui"
 import {
   ContextMenuContent,
-  type ContextMenuContentEmits,
-  type ContextMenuContentProps,
   ContextMenuPortal,
   useForwardPropsEmits,
 } from "reka-ui"

@@ -14,7 +14,8 @@ import {
   VisXYContainer,
 } from "@unovis/vue"
 import { useMounted } from "@vueuse/core"
-import { type Component, computed, ref } from "vue"
+import type { Component } from "vue"
+import { computed, ref } from "vue"
 import type { BaseChartProps } from "."
 
 const props = withDefaults(
@@ -34,11 +35,6 @@ const props = withDefaults(
        * @default 0
        */
       roundedCorners?: number
-      /**
-       * Bar padding
-       * @default 0.1
-       */
-      barPadding?: number
     }
   >(),
   {
@@ -46,7 +42,6 @@ const props = withDefaults(
     margin: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
     filterOpacity: 0.2,
     roundedCorners: 0,
-    barPadding: 0.1,
     showXAxis: true,
     showYAxis: true,
     showTooltip: true,
@@ -115,7 +110,7 @@ const selectorsBar = computed(() =>
         :y="categories.map((category) => (d: Data) => d[category])"
         :color="colors"
         :rounded-corners="roundedCorners"
-        :bar-padding="barPadding"
+        :bar-padding="0.05"
         :attributes="{
           [selectorsBar]: {
             opacity: (d: Data, i: number) => {

@@ -339,8 +339,8 @@ importers:
         specifier: ^9.37.0
         version: 9.37.0
       "@iconify/json":
-        specifier: ^2.2.391
-        version: 2.2.391
+        specifier: ^2.2.392
+        version: 2.2.392
       "@intlify/eslint-plugin-vue-i18n":
         specifier: ^4.1.0
         version: 4.1.0(eslint@9.37.0(jiti@2.6.1))(jsonc-eslint-parser@2.4.0)(vue-eslint-parser@10.2.0(eslint@9.37.0(jiti@2.6.1)))(yaml-eslint-parser@1.3.0)
@@ -2550,10 +2550,10 @@ packages:
       }
     engines: { node: ">=18.18" }
 
-  "@iconify/json@2.2.391":
+  "@iconify/json@2.2.392":
     resolution:
       {
-        integrity: sha512-RQGiFsnxHvyn0bT5TZvI9XKI++Kto9kzXEBUOemNdci+r6qUVs/w7/20JcgCf3rv6fgtENHtj5Uf5S0ColSJ4A==,
+        integrity: sha512-WkkQIDpmgetgvIn1jso6XKY3S5Pf9L6QD1J2RNLeiF+jzdouyayoRm2LLxe4dmnp9i3Cbf8w7oRuaVlhwK8Xtg==,
       }
 
   "@iconify/types@2.0.0":
@@ -4253,10 +4253,10 @@ packages:
       rollup:
         optional: true
 
-  "@rollup/plugin-node-resolve@16.0.1":
+  "@rollup/plugin-node-resolve@16.0.2":
     resolution:
       {
-        integrity: sha512-tk5YCxJWIG81umIvNkSod2qK5KyQW19qcBF/B78n1bjtOON6gzKoVeSzAE8yHCZEDmqkHKkxplExA8KzdJLJpA==,
+        integrity: sha512-tCtHJ2BlhSoK4cCs25NMXfV7EALKr0jyasmqVCq3y9cBrKdmJhtsy1iTz36Xhk/O+pDJbzawxF4K6ZblqCnITQ==,
       }
     engines: { node: ">=14.0.0" }
     peerDependencies:
@@ -6621,10 +6621,10 @@ packages:
         integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==,
       }
 
-  baseline-browser-mapping@2.8.11:
+  baseline-browser-mapping@2.8.12:
     resolution:
       {
-        integrity: sha512-i+sRXGhz4+QW8aACZ3+r1GAKMt0wlFpeA8M5rOQd0HEYw9zhDrlx9Wc8uQ0IdXakjJRthzglEwfB/yqIjO6iDg==,
+        integrity: sha512-vAPMQdnyKCBtkmQA6FMCBvU9qFIppS3nzyXnEM+Lo2IAhG4Mpjv9cCxMudhgV3YdNNJv6TNqXy97dfRVL2LmaQ==,
       }
     hasBin: true
 
@@ -6813,10 +6813,10 @@ packages:
         integrity: sha512-EV/laoX7Wq2J9TQlyIXRxTJqIw4sxfXS4OYgudGxBYRuTv0q7AM6yMEpU/Vo1I94thg9U6EZ2NfZx9GJq83u7w==,
       }
 
-  caniuse-lite@1.0.30001747:
+  caniuse-lite@1.0.30001748:
     resolution:
       {
-        integrity: sha512-mzFa2DGIhuc5490Nd/G31xN1pnBnYMadtkyTjefPI7wzypqgCEpeWu9bJr0OnDsyKrW75zA9ZAt7pbQFmwLsQg==,
+        integrity: sha512-5P5UgAr0+aBmNiplks08JLw+AW/XG/SurlgZLgB1dDLfAw7EfRGxIwzPHxdSCGY/BTKDqIVyJL87cCN6s0ZR0w==,
       }
 
   canvas-confetti@1.9.3:
@@ -7744,6 +7744,13 @@ packages:
     resolution:
       {
         integrity: sha512-ecqj/sy1jcK1uWrwpR67UhYrIFQ+5WlGxth34WquCbamhFA6hkkwiu37o6J5xCHdo1oixJRfVRw+ywV+Hq/0Aw==,
+      }
+    engines: { node: ">=8" }
+
+  detect-libc@2.1.2:
+    resolution:
+      {
+        integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==,
       }
     engines: { node: ">=8" }
 
@@ -15773,10 +15780,10 @@ snapshots:
 
   "@humanwhocodes/retry@0.4.3": {}
 
-  "@iconify/json@2.2.391":
+  "@iconify/json@2.2.392":
     dependencies:
       "@iconify/types": 2.0.0
-      pathe: 1.1.2
+      pathe: 2.0.3
 
   "@iconify/types@2.0.0": {}
 
@@ -16153,7 +16160,7 @@ snapshots:
   "@mapbox/node-pre-gyp@2.0.0":
     dependencies:
       consola: 3.4.2
-      detect-libc: 2.1.1
+      detect-libc: 2.1.2
       https-proxy-agent: 7.0.6
       node-fetch: 2.7.0
       nopt: 8.1.0
@@ -16869,7 +16876,7 @@ snapshots:
     optionalDependencies:
       rollup: 2.79.2
 
-  "@rollup/plugin-node-resolve@16.0.1(rollup@4.52.4)":
+  "@rollup/plugin-node-resolve@16.0.2(rollup@4.52.4)":
     dependencies:
       "@rollup/pluginutils": 5.3.0(rollup@4.52.4)
       "@types/resolve": 1.20.2
@@ -18447,7 +18454,7 @@ snapshots:
   autoprefixer@10.4.21(postcss@8.5.6):
     dependencies:
       browserslist: 4.26.3
-      caniuse-lite: 1.0.30001747
+      caniuse-lite: 1.0.30001748
       fraction.js: 4.3.7
       normalize-range: 0.1.2
       picocolors: 1.1.1
@@ -18502,7 +18509,7 @@ snapshots:
   base64-js@1.5.1:
     optional: true
 
-  baseline-browser-mapping@2.8.11:
+  baseline-browser-mapping@2.8.12:
     optional: true
 
   binary-extensions@2.3.0: {}
@@ -18545,8 +18552,8 @@ snapshots:
 
   browserslist@4.26.3:
     dependencies:
-      baseline-browser-mapping: 2.8.11
-      caniuse-lite: 1.0.30001747
+      baseline-browser-mapping: 2.8.12
+      caniuse-lite: 1.0.30001748
       electron-to-chromium: 1.5.230
       node-releases: 2.0.23
       update-browserslist-db: 1.1.3(browserslist@4.26.3)
@@ -18641,14 +18648,14 @@ snapshots:
   caniuse-api@3.0.0:
     dependencies:
       browserslist: 4.26.3
-      caniuse-lite: 1.0.30001747
+      caniuse-lite: 1.0.30001748
       lodash.memoize: 4.1.2
       lodash.uniq: 4.5.0
     optional: true
 
   caniuse-lite@1.0.30001735: {}
 
-  caniuse-lite@1.0.30001747:
+  caniuse-lite@1.0.30001748:
     optional: true
 
   canvas-confetti@1.9.3: {}
@@ -19211,6 +19218,9 @@ snapshots:
   detect-libc@2.1.0: {}
 
   detect-libc@2.1.1: {}
+
+  detect-libc@2.1.2:
+    optional: true
 
   devalue@5.3.2:
     optional: true
@@ -20852,7 +20862,7 @@ snapshots:
       "@rollup/plugin-commonjs": 28.0.6(rollup@4.52.4)
       "@rollup/plugin-inject": 5.0.5(rollup@4.52.4)
       "@rollup/plugin-json": 6.1.0(rollup@4.52.4)
-      "@rollup/plugin-node-resolve": 16.0.1(rollup@4.52.4)
+      "@rollup/plugin-node-resolve": 16.0.2(rollup@4.52.4)
       "@rollup/plugin-replace": 6.0.2(rollup@4.52.4)
       "@rollup/plugin-terser": 0.4.4(rollup@4.52.4)
       "@vercel/nft": 0.30.2(rollup@4.52.4)
@@ -21414,7 +21424,8 @@ snapshots:
   path-type@6.0.0:
     optional: true
 
-  pathe@1.1.2: {}
+  pathe@1.1.2:
+    optional: true
 
   pathe@2.0.3: {}
 
@@ -23289,7 +23300,7 @@ snapshots:
       picomatch: 4.0.3
       strip-ansi: 7.1.2
       tiny-invariant: 1.3.3
-      tinyglobby: 0.2.14
+      tinyglobby: 0.2.15
       vite: 7.1.9(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(sass-embedded@1.93.2)(sass@1.93.2)(terser@5.43.1)(yaml@2.8.1)
       vscode-uri: 3.1.0
     optionalDependencies:

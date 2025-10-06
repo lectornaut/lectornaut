@@ -206,7 +206,9 @@ const companySizes = [
                   class="flex items-center gap-1 pr-2"
                 >
                   Help and Support
-                  <kbd class="shortcut-key">?</kbd>
+                  <KbdGroup>
+                    <Kbd>?</Kbd>
+                  </KbdGroup>
                 </TooltipContent>
               </DropdownMenuTrigger>
               <DropdownMenuContent class="w-48" align="end" side="right">

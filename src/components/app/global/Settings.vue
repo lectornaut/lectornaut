@@ -468,7 +468,7 @@ const navigations = [
                               "
                             >
                               <template v-if="uploadTask">
-                                <icon-lucide-loader class="animate-spin" />
+                                <Spinner />
                               </template>
                               <template v-else-if="uploadError">
                                 <icon-lucide-alert-triangle />
@@ -554,10 +554,7 @@ const navigations = [
                         :disabled="sendingVerificationEmail"
                         @click="sendVerificationEmail"
                       >
-                        <icon-lucide-loader
-                          v-if="sendingVerificationEmail"
-                          class="animate-spin"
-                        />
+                        <Spinner v-if="sendingVerificationEmail" />
                         <span>Verify email</span>
                       </Button>
                       <Dialog>
@@ -583,10 +580,7 @@ const navigations = [
                               :disabled="changingEmail || !newEmail"
                               @click="changeEmail"
                             >
-                              <icon-lucide-loader
-                                v-if="changingEmail"
-                                class="animate-spin"
-                              />
+                              <Spinner v-if="changingEmail" />
                               <span>Send verification email</span>
                             </Button>
                           </DialogFooter>
@@ -639,10 +633,7 @@ const navigations = [
                               :disabled="changingPassword || !newPassword"
                               @click="changePassword"
                             >
-                              <icon-lucide-loader
-                                v-if="changingPassword"
-                                class="animate-spin"
-                              />
+                              <Spinner v-if="changingPassword" />
                               <span>Change password</span>
                             </Button>
                           </DialogFooter>
@@ -720,9 +711,8 @@ const navigations = [
                           variant="secondary"
                           @click="unlinkProvider(provider.providerId)"
                         >
-                          <icon-lucide-loader
+                          <Spinner
                             v-if="unlinkingProviderMap[provider.providerId]"
-                            class="animate-spin"
                           />
                           <span> Remove </span>
                         </Button>
@@ -744,10 +734,7 @@ const navigations = [
                       <AlertDialog>
                         <AlertDialogTrigger as-child>
                           <Button variant="destructive">
-                            <icon-lucide-loader
-                              v-if="deletingAccount"
-                              class="animate-spin"
-                            />
+                            <Spinner v-if="deletingAccount" />
                             <span>Delete account</span>
                           </Button>
                         </AlertDialogTrigger>
@@ -767,10 +754,7 @@ const navigations = [
                               variant="destructive"
                               @click="deleteAccount"
                             >
-                              <icon-lucide-loader
-                                v-if="deletingAccount"
-                                class="animate-spin"
-                              />
+                              <Spinner v-if="deletingAccount" />
                               Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>

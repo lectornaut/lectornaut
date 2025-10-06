@@ -15,26 +15,22 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div
-    class="flex size-full flex-col items-center"
-    :class="{ 'justify-center': props.centered }"
-  >
-    <div
-      class="flex max-w-xs flex-col items-center justify-center gap-4 p-8 text-center"
-    >
-      <Component
-        :is="props.icon"
-        class="size-16 rounded-lg border border-dashed p-4"
-      />
-      <h3 class="font-medium">
+  <Empty>
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <Component :is="props.icon" class="size-6" />
+      </EmptyMedia>
+      <EmptyTitle class="font-medium">
         {{ props.title }}
-      </h3>
-      <p class="text-muted-foreground text-xs text-balance">
+      </EmptyTitle>
+      <EmptyDescription>
         {{ props.description }}
-      </p>
+      </EmptyDescription>
+    </EmptyHeader>
+    <EmptyContent>
       <Button v-if="props.actionText" variant="outline" @click="emit('action')">
         {{ props.actionText }}
       </Button>
-    </div>
-  </div>
+    </EmptyContent>
+  </Empty>
 </template>

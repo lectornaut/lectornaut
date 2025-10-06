@@ -2,10 +2,12 @@
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { Check } from "lucide-vue-next"
+import type {
+  ContextMenuCheckboxItemEmits,
+  ContextMenuCheckboxItemProps,
+} from "reka-ui"
 import {
   ContextMenuCheckboxItem,
-  type ContextMenuCheckboxItemEmits,
-  type ContextMenuCheckboxItemProps,
   ContextMenuItemIndicator,
   useForwardPropsEmits,
 } from "reka-ui"

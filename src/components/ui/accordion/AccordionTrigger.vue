@@ -2,11 +2,8 @@
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { ChevronDown } from "lucide-vue-next"
-import {
-  AccordionHeader,
-  AccordionTrigger,
-  type AccordionTriggerProps,
-} from "reka-ui"
+import type { AccordionTriggerProps } from "reka-ui"
+import { AccordionHeader, AccordionTrigger } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<
