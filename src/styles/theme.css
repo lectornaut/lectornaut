@@ -75,7 +75,7 @@
     --accent: var(--color-stone-200);
     --accent-foreground: var(--color-stone-900);
     --border: var(--color-stone-200);
-    --input: var(--color-stone-200);
+    --input: var(--color-stone-300);
     --sidebar: var(--color-stone-100);
     --sidebar-foreground: var(--color-stone-800);
     --sidebar-primary: var(--color-stone-900);
@@ -409,7 +409,7 @@
     --accent: var(--color-zinc-800);
     --accent-foreground: var(--color-zinc-100);
     --border: var(--color-zinc-800);
-    --input: var(--color-zinc-800);
+    --input: var(--color-zinc-700);
     --sidebar: var(--color-zinc-950);
     --sidebar-foreground: var(--color-zinc-200);
     --sidebar-primary: var(--color-zinc-100);

@@ -25,6 +25,8 @@ useHead({
         :icon="IconBlock"
         title="Console"
         description="No active terminal sessions. Create a new session to get started."
+        action-text="Ask AI"
+        @action="emitter.emit('Dialog.AiAsk.Toggle')"
       />
     </Sidebar>
   </Teleport>

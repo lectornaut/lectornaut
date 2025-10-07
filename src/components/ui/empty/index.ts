@@ -20,7 +20,7 @@ export const emptyMediaVariants = cva(
     defaultVariants: {
       variant: "default",
     },
-  },
+  }
 )
 
 export type EmptyMediaVariants = VariantProps<typeof emptyMediaVariants>

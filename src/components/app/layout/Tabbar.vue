@@ -336,6 +336,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                   </TooltipTrigger>
                   <TooltipContent> Go back </TooltipContent>
                 </Tooltip>
+                <ButtonGroupSeparator />
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Button variant="secondary" size="icon" class="shadow-none">
@@ -466,7 +467,10 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                       </ContextMenuContent>
                     </ContextMenu>
                   </HoverCardTrigger>
-                  <HoverCardContent class="grid w-60 grid-cols-1 p-0">
+                  <HoverCardContent
+                    class="grid w-60 grid-cols-1 p-0"
+                    :side-offset="12"
+                  >
                     <div class="flex flex-col p-3">
                       <span class="font-medium">
                         {{ tab.name }}
@@ -509,14 +513,15 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               <TooltipProvider>
                 <Tooltip>
                   <Combobox>
-                    <ComboboxTrigger as-child>
-                      <TooltipTrigger as-child>
+                    <TooltipTrigger as-child>
+                      <ComboboxTrigger as-child>
                         <Button variant="ghost" size="icon">
                           <icon-lucide-history />
                         </Button>
-                      </TooltipTrigger>
-                    </ComboboxTrigger>
-                    <ComboboxList align="center">
+                      </ComboboxTrigger>
+                      <TooltipContent> History </TooltipContent>
+                    </TooltipTrigger>
+                    <ComboboxList align="end">
                       <ComboboxInput
                         placeholder="Search tabs..."
                         class="border-none p-0 focus:border-inherit focus:ring-0"
@@ -578,19 +583,18 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                         </ComboboxItem>
                       </ComboboxGroup>
                     </ComboboxList>
-                    <TooltipContent> History </TooltipContent>
                   </Combobox>
                 </Tooltip>
                 <Tooltip>
                   <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                      <TooltipTrigger as-child>
+                    <TooltipTrigger as-child>
+                      <DropdownMenuTrigger as-child>
                         <Button variant="ghost" size="icon">
                           <icon-lucide-chevron-down />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent> Tab options </TooltipContent>
-                    </DropdownMenuTrigger>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent> Tab options </TooltipContent>
                     <DropdownMenuContent class="w-56" align="end" side="bottom">
                       <DropdownMenuGroup>
                         <DropdownMenuItem
