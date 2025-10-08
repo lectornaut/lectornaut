@@ -41,7 +41,9 @@ function onPageSizeChange(val: string) {
       <DropdownMenuLabel> Options </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger> Display </DropdownMenuSubTrigger>
+        <DropdownMenuItem as-child>
+          <DropdownMenuSubTrigger> Display </DropdownMenuSubTrigger>
+        </DropdownMenuItem>
         <DropdownMenuSubContent>
           <DropdownMenuLabel>Columns</DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -66,7 +68,9 @@ function onPageSizeChange(val: string) {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger> Select </DropdownMenuSubTrigger>
+        <DropdownMenuItem as-child>
+          <DropdownMenuSubTrigger> Select </DropdownMenuSubTrigger>
+        </DropdownMenuItem>
         <DropdownMenuSubContent>
           <DropdownMenuLabel> Rows </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -101,7 +105,9 @@ function onPageSizeChange(val: string) {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger> Expand </DropdownMenuSubTrigger>
+        <DropdownMenuItem as-child>
+          <DropdownMenuSubTrigger> Expand </DropdownMenuSubTrigger>
+        </DropdownMenuItem>
         <DropdownMenuSubContent>
           <DropdownMenuLabel> Rows </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -123,7 +129,9 @@ function onPageSizeChange(val: string) {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger> Pagination </DropdownMenuSubTrigger>
+        <DropdownMenuItem as-child>
+          <DropdownMenuSubTrigger> Pagination </DropdownMenuSubTrigger>
+        </DropdownMenuItem>
         <DropdownMenuSubContent>
           <DropdownMenuLabel> Page size </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -149,7 +157,9 @@ function onPageSizeChange(val: string) {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger> Navigation </DropdownMenuSubTrigger>
+        <DropdownMenuItem as-child>
+          <DropdownMenuSubTrigger> Navigation </DropdownMenuSubTrigger>
+        </DropdownMenuItem>
         <DropdownMenuSubContent>
           <DropdownMenuLabel> Go to </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -194,7 +204,9 @@ function onPageSizeChange(val: string) {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger> Filter </DropdownMenuSubTrigger>
+        <DropdownMenuItem as-child>
+          <DropdownMenuSubTrigger> Filter </DropdownMenuSubTrigger>
+        </DropdownMenuItem>
         <DropdownMenuSubContent>
           <DropdownMenuLabel> Column </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -207,7 +219,9 @@ function onPageSizeChange(val: string) {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger> Sorting </DropdownMenuSubTrigger>
+        <DropdownMenuItem as-child>
+          <DropdownMenuSubTrigger> Sorting </DropdownMenuSubTrigger>
+        </DropdownMenuItem>
         <DropdownMenuSubContent>
           <DropdownMenuLabel> Column </DropdownMenuLabel>
           <DropdownMenuSeparator />

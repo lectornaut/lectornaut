@@ -319,7 +319,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
 
 <template>
   <ContextMenu>
-    <div class="bg-sidebar flex w-full flex-col">
+    <div class="flex w-full flex-col">
       <ContextMenuTrigger as-child>
         <div
           data-tauri-drag-region

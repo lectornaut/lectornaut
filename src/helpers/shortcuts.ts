@@ -66,7 +66,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Ask AI"],
-        keys: [[getPlatformSpecialKey(), "enter"]],
+        keys: [[getPlatformSpecialKey(), "↩"]],
         hotkeys: "cmd+enter,ctrl+enter",
         event: "Dialog.AiAsk.Toggle",
         parameters: undefined,
@@ -200,7 +200,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select next tab"],
-        keys: [[getPlatformSpecialKey(), "⇧", "right"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "▶"]],
         hotkeys: "control+tab,ctrl+tab",
         event: "Tabs.Select",
         parameters: "next",
@@ -210,7 +210,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select previous tab"],
-        keys: [[getPlatformSpecialKey(), "⇧", "left"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "◀"]],
         hotkeys: "control+shift+tab,ctrl+shift+tab",
         event: "Tabs.Select",
         parameters: "previous",

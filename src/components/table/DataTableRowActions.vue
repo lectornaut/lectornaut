@@ -39,7 +39,9 @@ const task = computed(() => taskSchema.parse(props.row.original))
             </DropdownMenuItem> -->
             <DropdownMenuSeparator />
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
+              <DropdownMenuItem as-child>
+                <DropdownMenuSubTrigger> Labels </DropdownMenuSubTrigger>
+              </DropdownMenuItem>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup v-model="task.label">
                   <DropdownMenuRadioItem

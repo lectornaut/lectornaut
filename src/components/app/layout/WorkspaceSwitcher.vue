@@ -124,10 +124,12 @@ const selectedUserObjects = computed(() => {
         <DropdownMenuContent class="w-48" align="center">
           <DropdownMenuGroup>
             <DropdownMenuItem>
+              <icon-lucide-settings />
               Settings
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem>
+              <icon-lucide-users />
               Members
               <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
             </DropdownMenuItem>
@@ -135,7 +137,12 @@ const selectedUserObjects = computed(() => {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger> Switch team </DropdownMenuSubTrigger>
+              <DropdownMenuItem as-child>
+                <DropdownMenuSubTrigger>
+                  <icon-lucide-users-round />
+                  Switch team
+                </DropdownMenuSubTrigger>
+              </DropdownMenuItem>
               <DropdownMenuSubContent class="w-48" align="start">
                 <DropdownMenuGroup
                   v-for="group in groups"
@@ -178,9 +185,13 @@ const selectedUserObjects = computed(() => {
                 </DropdownMenuGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
-            <!-- switch account -->
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger> Switch account </DropdownMenuSubTrigger>
+              <DropdownMenuItem as-child>
+                <DropdownMenuSubTrigger>
+                  <icon-lucide-user-round />
+                  Switch account
+                </DropdownMenuSubTrigger>
+              </DropdownMenuItem>
               <DropdownMenuSubContent class="w-48" align="start">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">

@@ -31,9 +31,11 @@ const columns = computed(() =>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuSub v-for="column in columns" :key="column.id">
-          <DropdownMenuSubTrigger :key="column.id" class="capitalize">
-            {{ column.id }}
-          </DropdownMenuSubTrigger>
+          <DropdownMenuItem as-child>
+            <DropdownMenuSubTrigger :key="column.id" class="capitalize">
+              {{ column.id }}
+            </DropdownMenuSubTrigger>
+          </DropdownMenuItem>
           <DropdownMenuSubContent>
             <DropdownMenuLabel>Order</DropdownMenuLabel>
             <DropdownMenuSeparator />
