@@ -102,19 +102,12 @@ const filteredShortcuts = computed(() => {
       <SheetHeader class="gap-4">
         <SheetTitle>Keyboard shortcuts</SheetTitle>
         <SheetDescription>
-          <div class="relative w-full items-center">
-            <span
-              class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-2"
-            >
-              <icon-lucide-search class="text-muted-foreground" />
-            </span>
-            <Input
-              v-model="search"
-              type="text"
-              placeholder="Search shortcuts..."
-              class="pl-8 focus:border-inherit focus:ring-0"
-            />
-          </div>
+          <InputGroup>
+            <InputGroupAddon>
+              <icon-lucide-search />
+            </InputGroupAddon>
+            <InputGroupInput v-model="search" placeholder="Search..." />
+          </InputGroup>
         </SheetDescription>
       </SheetHeader>
       <Separator />

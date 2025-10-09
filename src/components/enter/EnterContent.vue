@@ -168,57 +168,59 @@ const authenticateApple = async () => {
         <div class="flex flex-col gap-4">
           <div class="grid gap-4">
             <Label for="email">Email</Label>
-            <div class="relative flex w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-mail class="text-muted-foreground" />
-              </span>
-              <Input
-                id="email"
+            <InputGroup>
+              <InputGroupAddon>
+                <icon-lucide-mail />
+              </InputGroupAddon>
+              <InputGroupInput
                 v-model="email"
+                placeholder="ada@lovelace.com"
                 type="email"
-                placeholder="Email"
-                class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
                 :disabled="signupViaEmailPasswordInProgress"
                 required
               />
-            </div>
+            </InputGroup>
           </div>
           <div class="grid gap-4">
             <Label for="password">Password</Label>
-            <div class="relative flex w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-lock-keyhole class="text-muted-foreground" />
-              </span>
-              <Input
-                id="password"
+            <InputGroup>
+              <InputGroupAddon>
+                <icon-lucide-lock />
+              </InputGroupAddon>
+              <InputGroupInput
                 v-model="password"
+                placeholder="********"
                 :type="passwordInputType"
-                placeholder="Password"
-                class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
                 :disabled="signupViaEmailPasswordInProgress"
                 required
               />
-              <span
-                class="absolute inset-y-0 end-0 right-0 flex items-center justify-center"
-              >
-                <Button
-                  variant="ghost"
-                  tabindex="-1"
-                  size="icon"
-                  @click="togglePasswordVisibility()"
-                >
-                  <icon-lucide-eye
-                    v-if="passwordInputType === 'password'"
-                    class="text-muted-foreground"
-                  />
-                  <icon-lucide-eye-off v-else class="text-muted-foreground" />
-                </Button>
-              </span>
-            </div>
+              <InputGroupAddon align="inline-end">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        variant="ghost"
+                        @click="togglePasswordVisibility()"
+                      >
+                        <icon-lucide-eye
+                          v-if="passwordInputType === 'password'"
+                          class="text-muted-foreground"
+                        />
+                        <icon-lucide-eye-off
+                          v-else
+                          class="text-muted-foreground"
+                        />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ passwordInputType === "password" ? "Show" : "Hide" }}
+                      password
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
         <Button
@@ -291,22 +293,18 @@ const authenticateApple = async () => {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-            <div class="relative flex w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-mail class="text-muted-foreground" />
-              </span>
-              <Input
-                id="email"
+            <InputGroup>
+              <InputGroupAddon>
+                <icon-lucide-mail />
+              </InputGroupAddon>
+              <InputGroupInput
                 v-model="email"
+                placeholder="ada@lovelace.com"
                 type="email"
-                placeholder="Email"
-                class="rounded-lg pl-10 focus:border-inherit focus:ring-0"
                 :disabled="signinViaEmailPasswordInProgress"
                 required
               />
-            </div>
+            </InputGroup>
           </div>
           <div class="grid gap-4">
             <div class="relative flex w-full items-center justify-between">
@@ -349,38 +347,44 @@ const authenticateApple = async () => {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-            <div class="relative flex w-full items-center">
-              <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-4"
-              >
-                <icon-lucide-lock-keyhole class="text-muted-foreground" />
-              </span>
-              <Input
-                id="password"
+            <InputGroup>
+              <InputGroupAddon>
+                <icon-lucide-lock />
+              </InputGroupAddon>
+              <InputGroupInput
                 v-model="password"
+                placeholder="********"
                 :type="passwordInputType"
-                placeholder="Password"
-                class="truncate rounded-lg px-10 focus:border-inherit focus:ring-0"
                 :disabled="signinViaEmailPasswordInProgress"
                 required
               />
-              <span
-                class="absolute inset-y-0 end-0 right-0 flex items-center justify-center"
-              >
-                <Button
-                  variant="ghost"
-                  tabindex="-1"
-                  size="icon"
-                  @click="togglePasswordVisibility()"
-                >
-                  <icon-lucide-eye
-                    v-if="passwordInputType === 'password'"
-                    class="text-muted-foreground"
-                  />
-                  <icon-lucide-eye-off v-else class="text-muted-foreground" />
-                </Button>
-              </span>
-            </div>
+              <InputGroupAddon align="inline-end">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        variant="ghost"
+                        @click="togglePasswordVisibility()"
+                      >
+                        <icon-lucide-eye
+                          v-if="passwordInputType === 'password'"
+                          class="text-muted-foreground"
+                        />
+                        <icon-lucide-eye-off
+                          v-else
+                          class="text-muted-foreground"
+                        />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ passwordInputType === "password" ? "Show" : "Hide" }}
+                      password
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
         <Button

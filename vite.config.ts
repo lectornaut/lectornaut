@@ -231,7 +231,7 @@ export default defineConfig({
         lintCommand: "stylelint './src/**/*.{css,scss}'",
         watchPath: "./src",
       },
-      overlay: true,
+      overlay: false,
       enableBuild: false,
     }),
     TurboConsole({
