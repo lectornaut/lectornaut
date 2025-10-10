@@ -8,14 +8,16 @@ const props = defineProps<{
 </script>
 
 <template>
-  <span
+  <fieldset
+    data-slot="field-set"
     :class="
       cn(
-        'text-muted-foreground flex items-center gap-2 text-sm [&_svg]:pointer-events-none [&_svg:not([class*=\'size-\'])]:size-4',
+        'flex flex-col gap-6',
+        'has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3',
         props.class
       )
     "
   >
     <slot />
-  </span>
+  </fieldset>
 </template>

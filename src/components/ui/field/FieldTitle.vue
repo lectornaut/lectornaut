@@ -8,14 +8,15 @@ const props = defineProps<{
 </script>
 
 <template>
-  <span
+  <div
+    data-slot="field-label"
     :class="
       cn(
-        'text-muted-foreground flex items-center gap-2 text-sm [&_svg]:pointer-events-none [&_svg:not([class*=\'size-\'])]:size-4',
+        'flex w-fit items-center gap-2 text-sm leading-snug font-medium group-data-[disabled=true]/field:opacity-50',
         props.class
       )
     "
   >
     <slot />
-  </span>
+  </div>
 </template>

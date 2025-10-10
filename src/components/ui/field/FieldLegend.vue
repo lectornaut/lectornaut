@@ -4,18 +4,23 @@ import type { HTMLAttributes } from "vue"
 
 const props = defineProps<{
   class?: HTMLAttributes["class"]
+  variant?: "legend" | "label"
 }>()
 </script>
 
 <template>
-  <span
+  <legend
+    data-slot="field-legend"
+    :data-variant="variant"
     :class="
       cn(
-        'text-muted-foreground flex items-center gap-2 text-sm [&_svg]:pointer-events-none [&_svg:not([class*=\'size-\'])]:size-4',
+        'mb-3 font-medium',
+        'data-[variant=legend]:text-base',
+        'data-[variant=label]:text-sm',
         props.class
       )
     "
   >
     <slot />
-  </span>
+  </legend>
 </template>

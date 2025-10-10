@@ -106,7 +106,7 @@ const filteredShortcuts = computed(() => {
             <InputGroupAddon>
               <icon-lucide-search />
             </InputGroupAddon>
-            <InputGroupInput v-model="search" placeholder="Search..." />
+            <InputGroupInput v-model="search" placeholder="Search" />
           </InputGroup>
         </SheetDescription>
       </SheetHeader>

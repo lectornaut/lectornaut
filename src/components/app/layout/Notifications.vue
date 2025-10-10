@@ -109,23 +109,19 @@ const notifications = [
 
 <template>
   <OverlayScrollbarsWrapper>
-    <div class="grid p-2">
-      <NavigationMenuLink
-        v-for="(component, index) in notifications"
-        :key="index"
-        class="group relative p-0"
-      >
-        <Alert class="border-0 bg-transparent p-3">
-          <icon-lucide-bell-dot />
-          <AlertTitle>
-            {{ component.title }}
-          </AlertTitle>
-          <AlertDescription class="text-muted-foreground text-xs text-pretty">
-            {{ component.description }}
-          </AlertDescription>
-          <div
-            class="bg-background absolute top-2 right-2 z-10 hidden items-center gap-2 rounded-lg p-1 shadow-md group-hover:flex"
-          >
+    <ItemGroup>
+      <template v-for="(component, index) in notifications" :key="index">
+        <Item>
+          <ItemMedia variant="icon">
+            <icon-lucide-bell />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{{ component.title }}</ItemTitle>
+            <ItemDescription>
+              {{ component.description }}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
             <ToggleGroup type="single" variant="outline" size="sm">
               <ToggleGroupItem value="saved">
                 <icon-lucide-bookmark />
@@ -136,9 +132,10 @@ const notifications = [
                 <!-- Done -->
               </ToggleGroupItem>
             </ToggleGroup>
-          </div>
-        </Alert>
-      </NavigationMenuLink>
-    </div>
+          </ItemActions>
+        </Item>
+        <ItemSeparator v-if="index !== notifications.length - 1" />
+      </template>
+    </ItemGroup>
   </OverlayScrollbarsWrapper>
 </template>

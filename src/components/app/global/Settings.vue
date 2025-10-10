@@ -441,7 +441,7 @@ const navigations = [
                 class="overflow-auto overscroll-none"
                 value="preferences"
               >
-                <div class="flex size-full flex-col gap-6 p-6">
+                <div class="p-6">
                   <div class="flex items-center gap-4">
                     <div
                       class="group relative flex flex-col items-center gap-2"
@@ -453,575 +453,694 @@ const navigations = [
                 class="overflow-auto overscroll-none"
                 value="account"
               >
-                <div class="flex size-full flex-col gap-6 p-6">
-                  <div class="flex items-center gap-4">
-                    <div
-                      class="group relative flex flex-col items-center gap-2"
-                    >
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <Avatar
-                              class="size-16 cursor-pointer"
-                              @click="
-                                open({ accept: 'image/*', multiple: false })
-                              "
-                            >
-                              <template v-if="uploadTask">
-                                <Spinner />
-                              </template>
-                              <template v-else-if="uploadError">
-                                <icon-lucide-alert-triangle />
-                              </template>
-                              <template v-else>
-                                <AvatarImage
-                                  :src="user?.photoURL!"
-                                  :alt="user?.displayName"
-                                  referrerpolicy="no-referrer"
-                                />
-                                <AvatarFallback>
-                                  {{ getInitials(user?.displayName as string) }}
-                                </AvatarFallback>
-                              </template>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {{
-                              uploadTask
-                                ? `${uploadProgress ? (uploadProgress * 100).toFixed(0) : 0}%`
-                                : "Upload profile picture"
-                            }}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <Button
-                              v-if="photoURL"
-                              class="border-background absolute top-0 right-0 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
-                              size="icon"
-                              @click="photoURL = ''"
-                            >
-                              <icon-lucide-x />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Remove profile picture
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <div class="grid gap-2">
-                      <Label for="name" class="text-muted-foreground">
-                        Preferred name
-                      </Label>
-                      <Input
-                        id="name"
-                        v-model="displayName"
-                        label="Name"
-                        placeholder="Your name"
-                        class="h-8 w-64 focus:border-inherit focus:ring-0"
-                      />
-                    </div>
-                  </div>
-                  <Separator />
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Email</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        {{ user?.email }}
-                        <TooltipProvider v-if="user?.emailVerified">
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Badge
-                                variant="outline"
-                                class="gap-1 px-1 font-normal"
-                              >
-                                <icon-lucide-badge-check />
-                                Verified
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              We've verified your email address.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Button
-                        v-if="!user?.emailVerified"
-                        variant="secondary"
-                        :disabled="sendingVerificationEmail"
-                        @click="sendVerificationEmail"
-                      >
-                        <Spinner v-if="sendingVerificationEmail" />
-                        <span>Verify email</span>
-                      </Button>
-                      <Dialog>
-                        <DialogTrigger>
-                          <Button variant="outline"> Change email </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle> Change email </DialogTitle>
-                            <DialogDescription>
-                              Update your email address.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div>
-                            <Input
-                              v-model="newEmail"
-                              label="New email"
-                              placeholder="New email address"
-                            />
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              :disabled="changingEmail || !newEmail"
-                              @click="changeEmail"
-                            >
-                              <Spinner v-if="changingEmail" />
-                              <span>Send verification email</span>
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Password</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Set a password to log in to your account.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Dialog>
-                        <DialogTrigger>
-                          <Button variant="outline">
-                            <span>
-                              {{
-                                passwordExists
-                                  ? "Change password"
-                                  : "Set password"
-                              }}
-                            </span>
+                <div class="p-6">
+                  <FieldGroup>
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="profile-picture">
+                            Profile picture
+                          </FieldLabel>
+                          <FieldDescription>
+                            Upload or remove your profile picture.
+                          </FieldDescription>
+                        </FieldContent>
+                        <div
+                          class="group relative flex flex-col items-center gap-2"
+                        >
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <Avatar
+                                  class="size-16 cursor-pointer"
+                                  @click="
+                                    open({ accept: 'image/*', multiple: false })
+                                  "
+                                >
+                                  <template v-if="uploadTask">
+                                    <Spinner />
+                                  </template>
+                                  <template v-else-if="uploadError">
+                                    <icon-lucide-alert-triangle />
+                                  </template>
+                                  <template v-else>
+                                    <AvatarImage
+                                      :src="user?.photoURL!"
+                                      :alt="user?.displayName"
+                                      referrerpolicy="no-referrer"
+                                    />
+                                    <AvatarFallback>
+                                      {{
+                                        getInitials(user?.displayName as string)
+                                      }}
+                                    </AvatarFallback>
+                                  </template>
+                                </Avatar>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{
+                                  uploadTask
+                                    ? `${uploadProgress ? (uploadProgress * 100).toFixed(0) : 0}%`
+                                    : "Upload profile picture"
+                                }}
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <Button
+                                  v-if="photoURL"
+                                  class="border-background absolute top-0 right-0 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                                  size="icon"
+                                  @click="photoURL = ''"
+                                >
+                                  <icon-lucide-x />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Remove profile picture
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="name">Preferred name</FieldLabel>
+                          <FieldDescription>
+                            Enter your preferred display name.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Input
+                          id="name"
+                          v-model="displayName"
+                          label="Name"
+                          placeholder="Your name"
+                          class="h-8 w-64 focus:border-inherit focus:ring-0"
+                        />
+                      </Field>
+                    </FieldSet>
+                    <FieldSeparator />
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="email">Email</FieldLabel>
+                          <FieldDescription>
+                            {{ user?.email }}
+                            <TooltipProvider v-if="user?.emailVerified">
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <Badge
+                                    variant="outline"
+                                    class="gap-1 px-1 font-normal"
+                                  >
+                                    <icon-lucide-badge-check />
+                                    Verified
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  We've verified your email address.
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </FieldDescription>
+                        </FieldContent>
+                        <div class="flex gap-2">
+                          <Button
+                            v-if="!user?.emailVerified"
+                            variant="secondary"
+                            :disabled="sendingVerificationEmail"
+                            @click="sendVerificationEmail"
+                          >
+                            <Spinner v-if="sendingVerificationEmail" />
+                            <span>Verify email</span>
                           </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>
-                              {{
-                                passwordExists
-                                  ? "Change password"
-                                  : "Set password"
-                              }}
-                            </DialogTitle>
-                            <DialogDescription>
-                              Update your password.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div>
-                            <Input
-                              v-model="newPassword"
-                              label="New password"
-                              placeholder="New password"
-                            />
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              :disabled="changingPassword || !newPassword"
-                              @click="changePassword"
-                            >
-                              <Spinner v-if="changingPassword" />
-                              <span>Change password</span>
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Identity providers</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Manage your connected accounts and sign-in methods.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Button variant="outline">
-                        <span>Connect a new account</span>
-                      </Button>
-                    </div>
-                  </div>
-                  <div
-                    v-if="user?.providerData && user.providerData.length > 0"
-                    class="flex flex-col-reverse gap-4"
-                  >
-                    <div
-                      v-for="provider in user?.providerData"
-                      :key="provider.providerId"
-                      class="flex items-center gap-4"
-                    >
-                      <div class="relative">
-                        <Avatar class="size-8">
-                          <AvatarImage
-                            :src="provider.photoURL as string"
-                            :alt="provider.displayName"
-                            referrerpolicy="no-referrer"
-                          />
-                          <AvatarFallback>
-                            {{ getInitials(provider.displayName ?? "") }}
-                          </AvatarFallback>
-                        </Avatar>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <span
-                                class="bg-background border-background absolute -right-2 -bottom-2 flex items-center justify-center rounded-full border-4"
-                              >
-                                <icon-logos-google-icon
-                                  v-if="provider.providerId === 'google.com'"
+                          <Dialog>
+                            <DialogTrigger>
+                              <Button variant="outline"> Change email </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle> Change email </DialogTitle>
+                                <DialogDescription>
+                                  Update your email address.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div>
+                                <Input
+                                  v-model="newEmail"
+                                  label="New email"
+                                  placeholder="New email address"
                                 />
-                                <icon-lucide-asterisk
-                                  v-else-if="provider.providerId === 'password'"
-                                />
+                              </div>
+                              <DialogFooter>
+                                <Button
+                                  :disabled="changingEmail || !newEmail"
+                                  @click="changeEmail"
+                                >
+                                  <Spinner v-if="changingEmail" />
+                                  <span>Send verification email</span>
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="password">Password</FieldLabel>
+                          <FieldDescription>
+                            Set a password to log in to your account.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Dialog>
+                          <DialogTrigger>
+                            <Button variant="outline">
+                              <span>
+                                {{
+                                  passwordExists
+                                    ? "Change password"
+                                    : "Set password"
+                                }}
                               </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {{ getComputedProviderName(provider.providerId) }}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div class="flex flex-col gap-1">
-                        <p class="leading-none font-medium">
-                          {{ provider.displayName }}
-                        </p>
-                        <p
-                          class="text-muted-foreground flex items-center gap-2"
-                        >
-                          {{ provider.email }}
-                        </p>
-                      </div>
-                      <div class="ml-auto flex gap-2">
-                        <Button
-                          :disabled="unlinkingProviderMap[provider.providerId]"
-                          variant="secondary"
-                          @click="unlinkProvider(provider.providerId)"
-                        >
-                          <Spinner
-                            v-if="unlinkingProviderMap[provider.providerId]"
-                          />
-                          <span> Remove </span>
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>
+                                {{
+                                  passwordExists
+                                    ? "Change password"
+                                    : "Set password"
+                                }}
+                              </DialogTitle>
+                              <DialogDescription>
+                                Update your password.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div>
+                              <Input
+                                v-model="newPassword"
+                                label="New password"
+                                placeholder="New password"
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                :disabled="changingPassword || !newPassword"
+                                @click="changePassword"
+                              >
+                                <Spinner v-if="changingPassword" />
+                                <span>Change password</span>
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </Field>
+                    </FieldSet>
+                    <FieldSeparator />
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="identity-providers">
+                            Identity providers
+                          </FieldLabel>
+                          <FieldDescription>
+                            Manage your connected accounts and sign-in methods.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Button variant="outline">
+                          <span>Connect a new account</span>
                         </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div v-else class="text-muted-foreground">
-                    No connected accounts.
-                  </div>
-                  <Separator />
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Delete account</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Permanently delete your account.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <AlertDialog>
-                        <AlertDialogTrigger as-child>
-                          <Button variant="destructive">
-                            <Spinner v-if="deletingAccount" />
-                            <span>Delete account</span>
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Delete account
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete your account?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              :disabled="deletingAccount"
-                              variant="destructive"
-                              @click="deleteAccount"
+                      </Field>
+                      <div
+                        v-if="
+                          user?.providerData && user.providerData.length > 0
+                        "
+                        class="flex flex-col-reverse gap-4"
+                      >
+                        <div
+                          v-for="provider in user?.providerData"
+                          :key="provider.providerId"
+                          class="flex items-center gap-4"
+                        >
+                          <div class="relative">
+                            <Avatar class="size-8">
+                              <AvatarImage
+                                :src="provider.photoURL as string"
+                                :alt="provider.displayName"
+                                referrerpolicy="no-referrer"
+                              />
+                              <AvatarFallback>
+                                {{ getInitials(provider.displayName ?? "") }}
+                              </AvatarFallback>
+                            </Avatar>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <span
+                                    class="bg-background border-background absolute -right-2 -bottom-2 flex items-center justify-center rounded-full border-4"
+                                  >
+                                    <icon-logos-google-icon
+                                      v-if="
+                                        provider.providerId === 'google.com'
+                                      "
+                                    />
+                                    <icon-lucide-asterisk
+                                      v-else-if="
+                                        provider.providerId === 'password'
+                                      "
+                                    />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {{
+                                    getComputedProviderName(provider.providerId)
+                                  }}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <div class="flex flex-col gap-1">
+                            <p class="leading-none font-medium">
+                              {{ provider.displayName }}
+                            </p>
+                            <p
+                              class="text-muted-foreground flex items-center gap-2"
                             >
+                              {{ provider.email }}
+                            </p>
+                          </div>
+                          <div class="ml-auto flex gap-2">
+                            <Button
+                              :disabled="
+                                unlinkingProviderMap[provider.providerId]
+                              "
+                              variant="secondary"
+                              @click="unlinkProvider(provider.providerId)"
+                            >
+                              <Spinner
+                                v-if="unlinkingProviderMap[provider.providerId]"
+                              />
+                              <span> Remove </span>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-else class="text-muted-foreground">
+                        No connected accounts.
+                      </div>
+                    </FieldSet>
+                    <FieldSeparator />
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="delete-account">
+                            Delete account
+                          </FieldLabel>
+                          <FieldDescription>
+                            Permanently delete your account.
+                          </FieldDescription>
+                        </FieldContent>
+                        <AlertDialog>
+                          <AlertDialogTrigger as-child>
+                            <Button variant="destructive">
                               <Spinner v-if="deletingAccount" />
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
+                              <span>Delete account</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete account
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete your account?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                :disabled="deletingAccount"
+                                variant="destructive"
+                                @click="deleteAccount"
+                              >
+                                <Spinner v-if="deletingAccount" />
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </Field>
+                    </FieldSet>
+                  </FieldGroup>
                 </div>
               </TabsContent>
               <TabsContent
                 class="overflow-auto overscroll-none"
                 value="appearance"
               >
-                <div class="flex size-full flex-col gap-6 p-6">
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Theme</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Customize how Lectornaut looks on your device.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Select v-model="store">
-                        <SelectTrigger class="h-9 gap-2">
-                          <SelectValue placeholder="Select a theme" />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                          <SelectItem
-                            v-for="mode in themes"
-                            :key="mode.id"
-                            :value="mode.id"
-                          >
-                            <Component :is="mode.icon" />
-                            {{ mode.name }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Accent</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Choose your preferred accent color.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Select v-model="accent">
-                        <SelectTrigger class="h-9 gap-2">
-                          <SelectValue placeholder="Select an accent color" />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                          <SelectItem
-                            v-for="color in accents"
-                            :key="color.id"
-                            :value="color.id"
-                          >
-                            <icon-mdi-circle :class="`text-${color.id}-500`" />
-                            {{ color.name }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Language</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Choose your preferred language.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Select v-model="locale">
-                        <SelectTrigger class="h-9 gap-2">
-                          <SelectValue placeholder="Select a language" />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                          <SelectItem
-                            v-for="language in languages"
-                            :key="language.id"
-                            :value="language.id"
-                          >
-                            <Component :is="language.icon" />
-                            {{ language.name }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Font</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Choose your preferred font.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Select v-model="font">
-                        <SelectTrigger class="h-9 gap-2">
-                          <SelectValue placeholder="Select a font" />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                          <SelectItem
-                            v-for="family in fonts"
-                            :key="family.id"
-                            :value="family.id"
-                          >
-                            <Component :is="family.icon" />
-                            <span :class="`font-${family.id}`">
-                              {{ family.name }}
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Text</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Adjust the text size for better readability.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Select v-model="size" class="w-40">
-                        <SelectTrigger class="h-9 gap-2">
-                          <SelectValue placeholder="Select text size" />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                          <SelectItem
-                            v-for="scale in sizes"
-                            :key="scale.id"
-                            :value="scale.id"
-                          >
-                            <Component :is="scale.icon" />
-                            <span :class="`text-${scale.id}`">
-                              {{ scale.name }}
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Zoom</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Press Ctrl/Cmd +/- to zoom in and out.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Select v-model="zoom" class="w-40">
-                        <SelectTrigger class="h-9 gap-2">
-                          <SelectValue placeholder="Select zoom level" />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                          <SelectItem
-                            v-for="level in zooms"
-                            :key="level.id"
-                            :value="level.id"
-                          >
-                            <Component :is="level.icon" />
-                            {{ level.name }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                <div class="p-6">
+                  <FieldGroup>
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="theme">Theme</FieldLabel>
+                          <FieldDescription>
+                            Customize how Lectornaut looks on your device.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Select id="theme" v-model="store">
+                          <SelectTrigger class="h-9 gap-2">
+                            <SelectValue placeholder="Select a theme" />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem
+                              v-for="mode in themes"
+                              :key="mode.id"
+                              :value="mode.id"
+                            >
+                              <Component :is="mode.icon" />
+                              {{ mode.name }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="accent">Accent</FieldLabel>
+                          <FieldDescription>
+                            Choose your preferred accent color.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Select id="accent" v-model="accent">
+                          <SelectTrigger class="h-9 gap-2">
+                            <SelectValue placeholder="Select an accent color" />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem
+                              v-for="color in accents"
+                              :key="color.id"
+                              :value="color.id"
+                            >
+                              <icon-mdi-circle
+                                :class="`text-${color.id}-500`"
+                              />
+                              {{ color.name }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="language">Language</FieldLabel>
+                          <FieldDescription>
+                            Choose your preferred language.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Select id="language" v-model="locale">
+                          <SelectTrigger class="h-9 gap-2">
+                            <SelectValue placeholder="Select a language" />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem
+                              v-for="language in languages"
+                              :key="language.id"
+                              :value="language.id"
+                            >
+                              <Component :is="language.icon" />
+                              {{ language.name }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="font">Font</FieldLabel>
+                          <FieldDescription>
+                            Choose your preferred font.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Select id="font" v-model="font">
+                          <SelectTrigger class="h-9 gap-2">
+                            <SelectValue placeholder="Select a font" />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem
+                              v-for="family in fonts"
+                              :key="family.id"
+                              :value="family.id"
+                            >
+                              <Component :is="family.icon" />
+                              <span :class="`font-${family.id}`">
+                                {{ family.name }}
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="text-size">Text</FieldLabel>
+                          <FieldDescription>
+                            Adjust the text size for better readability.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Select id="text-size" v-model="size" class="w-40">
+                          <SelectTrigger class="h-9 gap-2">
+                            <SelectValue placeholder="Select text size" />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem
+                              v-for="scale in sizes"
+                              :key="scale.id"
+                              :value="scale.id"
+                            >
+                              <Component :is="scale.icon" />
+                              <span :class="`text-${scale.id}`">
+                                {{ scale.name }}
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="zoom-level">Zoom</FieldLabel>
+                          <FieldDescription>
+                            Press Ctrl/Cmd +/- to zoom in and out.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Select id="zoom-level" v-model="zoom" class="w-40">
+                          <SelectTrigger class="h-9 gap-2">
+                            <SelectValue placeholder="Select zoom level" />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem
+                              v-for="level in zooms"
+                              :key="level.id"
+                              :value="level.id"
+                            >
+                              <Component :is="level.icon" />
+                              {{ level.name }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </FieldSet>
+                  </FieldGroup>
                 </div>
               </TabsContent>
               <TabsContent
                 class="overflow-auto overscroll-none"
                 value="notifications"
               >
-                <div class="flex size-full flex-col gap-6 p-6">
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">
-                        Email notifications
-                      </p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Manage your email notification preferences.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Switch />
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Push notifications</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Manage your push notification preferences.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Switch />
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">
-                        In-app notifications
-                      </p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Manage your in-app notification preferences.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Switch />
-                    </div>
-                  </div>
+                <div class="p-6">
+                  <FieldGroup>
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="email-notifications">
+                            Email notifications
+                          </FieldLabel>
+                          <FieldDescription>
+                            Manage your email notification preferences.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Switch id="email-notifications" />
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="push-notifications">
+                            Push notifications
+                          </FieldLabel>
+                          <FieldDescription>
+                            Manage your push notification preferences.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Switch id="push-notifications" />
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="inapp-notifications">
+                            In-app notifications
+                          </FieldLabel>
+                          <FieldDescription>
+                            Manage your in-app notification preferences.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Switch id="inapp-notifications" />
+                      </Field>
+                    </FieldSet>
+                  </FieldGroup>
                 </div>
               </TabsContent>
               <TabsContent
                 class="overflow-auto overscroll-none"
                 value="billing"
               >
-                <div class="flex size-full flex-col gap-6 p-6">
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Current plan</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        View details about your current subscription plan.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Button variant="outline"> View plan details </Button>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Payment methods</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Manage your payment methods and billing information.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Button variant="outline"> Add payment method </Button>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Billing history</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        View your billing history and invoices.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Button variant="outline"> View billing history </Button>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col gap-1">
-                      <p class="leading-none font-medium">Upgrade plan</p>
-                      <p class="text-muted-foreground flex items-center gap-2">
-                        Explore and upgrade to a different subscription plan.
-                      </p>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                      <Button variant="outline"> Upgrade plan </Button>
-                    </div>
-                  </div>
+                <div class="p-6">
+                  <FieldGroup>
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="current-plan">
+                            Current plan
+                          </FieldLabel>
+                          <FieldDescription>
+                            View details about your current subscription plan.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Button variant="outline"> View plan details </Button>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="payment-methods">
+                            Payment methods
+                          </FieldLabel>
+                          <FieldDescription>
+                            Manage your payment methods and billing information.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Button variant="outline"> Add payment method </Button>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="billing-history">
+                            Billing history
+                          </FieldLabel>
+                          <FieldDescription>
+                            View your billing history and invoices.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Button variant="outline">
+                          View billing history
+                        </Button>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="upgrade-plan">
+                            Upgrade plan
+                          </FieldLabel>
+                          <FieldDescription>
+                            Explore and upgrade to a different subscription
+                            plan.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Button variant="outline"> Upgrade plan </Button>
+                      </Field>
+                    </FieldSet>
+                  </FieldGroup>
                 </div>
               </TabsContent>
               <TabsContent class="overflow-auto overscroll-none" value="plans">
-                <div class="flex size-full flex-col gap-6 p-6"></div>
+                <div class="p-6">
+                  <FieldGroup>
+                    <FieldSet>
+                      <FieldLabel for="subscription-plan">
+                        Subscription Plan
+                      </FieldLabel>
+                      <FieldDescription>
+                        Select the subscription plan that best fits your needs.
+                      </FieldDescription>
+                      <RadioGroup
+                        default-value="personal"
+                        class="grid grid-cols-1 gap-4 md:grid-cols-2"
+                      >
+                        <FieldLabel for="personal">
+                          <Field orientation="horizontal">
+                            <FieldContent>
+                              <FieldTitle>Personal</FieldTitle>
+                              <FieldDescription>
+                                Perfect for individual users and personal
+                                projects.
+                              </FieldDescription>
+                            </FieldContent>
+                            <RadioGroupItem id="personal" value="personal" />
+                          </Field>
+                        </FieldLabel>
+                        <FieldLabel for="professional">
+                          <Field orientation="horizontal">
+                            <FieldContent>
+                              <FieldTitle>Professional</FieldTitle>
+                              <FieldDescription>
+                                Ideal for freelancers and small teams with
+                                advanced features.
+                              </FieldDescription>
+                            </FieldContent>
+                            <RadioGroupItem
+                              id="professional"
+                              value="professional"
+                            />
+                          </Field>
+                        </FieldLabel>
+                        <FieldLabel for="business">
+                          <Field orientation="horizontal">
+                            <FieldContent>
+                              <FieldTitle>Business</FieldTitle>
+                              <FieldDescription>
+                                Designed for growing businesses with
+                                collaboration tools.
+                              </FieldDescription>
+                            </FieldContent>
+                            <RadioGroupItem id="business" value="business" />
+                          </Field>
+                        </FieldLabel>
+                        <FieldLabel for="enterprise">
+                          <Field orientation="horizontal">
+                            <FieldContent>
+                              <FieldTitle>Enterprise</FieldTitle>
+                              <FieldDescription>
+                                Complete solution for large organizations with
+                                custom support.
+                              </FieldDescription>
+                            </FieldContent>
+                            <RadioGroupItem
+                              id="enterprise"
+                              value="enterprise"
+                            />
+                          </Field>
+                        </FieldLabel>
+                      </RadioGroup>
+                    </FieldSet>
+                    <FieldSeparator />
+                    <FieldSet>
+                      <FieldLabel>Subscription Term</FieldLabel>
+                      <FieldDescription>
+                        Yearly and monthly terms offer significant savings.
+                      </FieldDescription>
+                      <RadioGroup default-value="monthly">
+                        <Field orientation="horizontal">
+                          <RadioGroupItem id="plan-monthly" value="monthly" />
+                          <FieldLabel for="plan-monthly"> Monthly </FieldLabel>
+                        </Field>
+                        <Field orientation="horizontal">
+                          <RadioGroupItem id="plan-yearly" value="yearly" />
+                          <FieldLabel for="plan-yearly"> Yearly </FieldLabel>
+                        </Field>
+                      </RadioGroup>
+                    </FieldSet>
+                  </FieldGroup>
+                </div>
               </TabsContent>
             </OverlayScrollbarsWrapper>
             <Separator />

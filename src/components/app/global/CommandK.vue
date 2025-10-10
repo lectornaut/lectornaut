@@ -53,7 +53,7 @@ const filteredShortcuts = computed(() => {
   </Button>
   <CommandDialog v-model:open="openCommand">
     <CommandInput
-      placeholder="Type a command or search..."
+      placeholder="Type a command or search"
       class="border-none p-0 focus:border-inherit focus:ring-0"
     />
     <CommandList>
