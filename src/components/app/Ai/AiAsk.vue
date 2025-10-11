@@ -36,6 +36,8 @@ const openAiAsk = ref(false)
 emitter.on("Dialog.AiAsk.Toggle", () => {
   openAiAsk.value = !openAiAsk.value
 })
+
+const userInput = ref("")
 </script>
 
 <template>
@@ -86,12 +88,41 @@ emitter.on("Dialog.AiAsk.Toggle", () => {
           <AiChat />
           <Separator />
           <SheetFooter>
-            <div class="flex items-center justify-between gap-2">
-              <Input placeholder="Type a message..." />
-              <Button size="icon">
-                <icon-lucide-send-horizontal />
-              </Button>
-            </div>
+            <InputGroup>
+              <InputGroupTextarea
+                v-model="userInput"
+                placeholder="Ask, Search or Chat..."
+              />
+              <InputGroupAddon align="block-end">
+                <InputGroupButton variant="outline" size="icon-xs">
+                  <icon-lucide-plus />
+                </InputGroupButton>
+                <Select>
+                  <InputGroupButton variant="ghost" as-child>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Mode" />
+                    </SelectTrigger>
+                  </InputGroupButton>
+                  <SelectContent side="top" align="start">
+                    <SelectItem value="auto">Auto</SelectItem>
+                    <SelectItem value="agent">Agent</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                  </SelectContent>
+                </Select>
+                <InputGroupText class="ml-auto text-xs">
+                  52% used
+                </InputGroupText>
+                <!-- <Separator orientation="vertical" /> -->
+                <InputGroupButton
+                  variant="default"
+                  size="icon-xs"
+                  :disabled="userInput.trim().length === 0"
+                >
+                  <icon-lucide-arrow-up />
+                  <span class="sr-only">Send</span>
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
           </SheetFooter>
         </SheetContent>
       </Tooltip>

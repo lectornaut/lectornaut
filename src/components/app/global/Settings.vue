@@ -957,6 +957,89 @@ const navigations = [
                 <div class="p-6">
                   <FieldGroup>
                     <FieldSet>
+                      <FieldLabel>Notification Categories</FieldLabel>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="communication-notifications">
+                            Communication
+                          </FieldLabel>
+                          <FieldDescription>
+                            Notifications about messages, calls, and team
+                            communications.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Switch
+                          id="communication-notifications"
+                          :model-value="true"
+                        />
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="marketing-notifications">
+                            Marketing and Promotions
+                          </FieldLabel>
+                          <FieldDescription>
+                            Promotional emails, feature announcements, and
+                            product updates.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Switch
+                          id="marketing-notifications"
+                          :model-value="true"
+                        />
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="security-notifications">
+                            Security
+                          </FieldLabel>
+                          <FieldDescription>
+                            Account security alerts, login attempts, and privacy
+                            updates.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Switch
+                          id="security-notifications"
+                          :model-value="true"
+                          disabled
+                        />
+                      </Field>
+                    </FieldSet>
+                    <FieldSeparator />
+                    <FieldSet>
+                      <FieldLabel>Notification Frequency</FieldLabel>
+                      <FieldDescription>
+                        Choose how often you want to receive notifications.
+                      </FieldDescription>
+                      <RadioGroup default-value="immediate">
+                        <Field orientation="horizontal">
+                          <RadioGroupItem
+                            id="notify-immediate"
+                            value="immediate"
+                          />
+                          <FieldLabel for="notify-immediate">
+                            Immediately
+                          </FieldLabel>
+                        </Field>
+                        <Field orientation="horizontal">
+                          <RadioGroupItem id="notify-daily" value="daily" />
+                          <FieldLabel for="notify-daily"> Daily </FieldLabel>
+                        </Field>
+                        <Field orientation="horizontal">
+                          <RadioGroupItem id="notify-weekly" value="weekly" />
+                          <FieldLabel for="notify-weekly"> Weekly </FieldLabel>
+                        </Field>
+                        <Field orientation="horizontal">
+                          <RadioGroupItem id="notify-none" value="none" />
+                          <FieldLabel for="notify-none">
+                            No notifications
+                          </FieldLabel>
+                        </Field>
+                      </RadioGroup>
+                    </FieldSet>
+                    <FieldSeparator />
+                    <FieldSet>
+                      <FieldLabel>Notification Channels</FieldLabel>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="email-notifications">
@@ -966,7 +1049,7 @@ const navigations = [
                             Manage your email notification preferences.
                           </FieldDescription>
                         </FieldContent>
-                        <Switch id="email-notifications" />
+                        <Switch id="email-notifications" :model-value="true" />
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
@@ -977,7 +1060,7 @@ const navigations = [
                             Manage your push notification preferences.
                           </FieldDescription>
                         </FieldContent>
-                        <Switch id="push-notifications" />
+                        <Switch id="push-notifications" :model-value="true" />
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
@@ -988,7 +1071,7 @@ const navigations = [
                             Manage your in-app notification preferences.
                           </FieldDescription>
                         </FieldContent>
-                        <Switch id="inapp-notifications" />
+                        <Switch id="inapp-notifications" :model-value="true" />
                       </Field>
                     </FieldSet>
                   </FieldGroup>
@@ -1014,14 +1097,27 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="payment-methods">
-                            Payment methods
+                          <FieldLabel for="payment-method">
+                            Payment method
                           </FieldLabel>
                           <FieldDescription>
                             Manage your payment methods and billing information.
                           </FieldDescription>
                         </FieldContent>
-                        <Button variant="outline"> Add payment method </Button>
+                        <Button variant="outline"> Edit payment method </Button>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="billing-address">
+                            Billing address
+                          </FieldLabel>
+                          <FieldDescription>
+                            Manage your billing address and contact information.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Button variant="outline">
+                          Edit billing address
+                        </Button>
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
@@ -1032,9 +1128,7 @@ const navigations = [
                             View your billing history and invoices.
                           </FieldDescription>
                         </FieldContent>
-                        <Button variant="outline">
-                          View billing history
-                        </Button>
+                        <Button variant="outline"> View invoices </Button>
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
@@ -1064,7 +1158,7 @@ const navigations = [
                       </FieldDescription>
                       <RadioGroup
                         default-value="personal"
-                        class="grid grid-cols-1 gap-4 md:grid-cols-2"
+                        class="grid grid-cols-1 gap-2"
                       >
                         <FieldLabel for="personal">
                           <Field orientation="horizontal">
@@ -1128,14 +1222,16 @@ const navigations = [
                       <FieldDescription>
                         Yearly and monthly terms offer significant savings.
                       </FieldDescription>
-                      <RadioGroup default-value="monthly">
+                      <RadioGroup default-value="yearly">
+                        <Field orientation="horizontal">
+                          <RadioGroupItem id="plan-yearly" value="yearly" />
+                          <FieldLabel for="plan-yearly">
+                            Yearly (Save 20%)
+                          </FieldLabel>
+                        </Field>
                         <Field orientation="horizontal">
                           <RadioGroupItem id="plan-monthly" value="monthly" />
                           <FieldLabel for="plan-monthly"> Monthly </FieldLabel>
-                        </Field>
-                        <Field orientation="horizontal">
-                          <RadioGroupItem id="plan-yearly" value="yearly" />
-                          <FieldLabel for="plan-yearly"> Yearly </FieldLabel>
                         </Field>
                       </RadioGroup>
                     </FieldSet>

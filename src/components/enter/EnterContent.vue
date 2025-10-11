@@ -165,64 +165,98 @@ const authenticateApple = async () => {
     </TabsList> -->
     <TabsContent value="sign-up">
       <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-4">
-          <div class="grid gap-4">
-            <Label for="email">Email</Label>
-            <InputGroup>
-              <InputGroupAddon>
-                <icon-lucide-mail />
-              </InputGroupAddon>
-              <InputGroupInput
-                v-model="email"
-                placeholder="ada@lovelace.com"
-                type="email"
-                :disabled="signupViaEmailPasswordInProgress"
-                required
-              />
-            </InputGroup>
-          </div>
-          <div class="grid gap-4">
-            <Label for="password">Password</Label>
-            <InputGroup>
-              <InputGroupAddon>
-                <icon-lucide-lock />
-              </InputGroupAddon>
-              <InputGroupInput
-                v-model="password"
-                placeholder="********"
-                :type="passwordInputType"
-                :disabled="signupViaEmailPasswordInProgress"
-                required
-              />
-              <InputGroupAddon align="inline-end">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <InputGroupButton
-                        size="icon-xs"
-                        variant="ghost"
-                        @click="togglePasswordVisibility()"
-                      >
-                        <icon-lucide-eye
-                          v-if="passwordInputType === 'password'"
-                          class="text-muted-foreground"
-                        />
-                        <icon-lucide-eye-off
-                          v-else
-                          class="text-muted-foreground"
-                        />
-                      </InputGroupButton>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ passwordInputType === "password" ? "Show" : "Hide" }}
-                      password
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-        </div>
+        <InputGroup>
+          <InputGroupAddon align="block-start">
+            <InputGroupText class="text-foreground">
+              <Label for="email"> Email </Label>
+            </InputGroupText>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    variant="ghost"
+                    aria-label="Help"
+                    class="ml-auto"
+                    size="icon-xs"
+                  >
+                    <icon-lucide-info />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>We&apos;ll use this to send you notifications</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </InputGroupAddon>
+          <InputGroupAddon align="block-start">
+            <icon-lucide-mail />
+            <InputGroupInput
+              id="email"
+              v-model="email"
+              placeholder="ada@lovelace.com"
+              type="email"
+              :disabled="signupViaEmailPasswordInProgress"
+              required
+            />
+          </InputGroupAddon>
+        </InputGroup>
+        <InputGroup>
+          <InputGroupAddon align="block-start">
+            <InputGroupText class="text-foreground">
+              <Label for="password"> Password </Label>
+            </InputGroupText>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    variant="ghost"
+                    aria-label="Help"
+                    class="ml-auto"
+                    size="icon-xs"
+                  >
+                    <icon-lucide-info />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Choose a strong password to secure your account</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </InputGroupAddon>
+          <InputGroupAddon align="block-start">
+            <icon-lucide-lock />
+            <InputGroupInput
+              id="password"
+              v-model="password"
+              placeholder="********"
+              :type="passwordInputType"
+              :disabled="signupViaEmailPasswordInProgress"
+              required
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    size="icon-xs"
+                    class="ml-auto"
+                    variant="ghost"
+                    @click="togglePasswordVisibility()"
+                  >
+                    <icon-lucide-eye
+                      v-if="passwordInputType === 'password'"
+                      class="text-muted-foreground"
+                    />
+                    <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{ passwordInputType === "password" ? "Show" : "Hide" }}
+                  password
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </InputGroupAddon>
+        </InputGroup>
         <Button
           :disabled="signupViaEmailPasswordInProgress"
           @click="signupViaEmailPassword"
@@ -236,157 +270,170 @@ const authenticateApple = async () => {
     </TabsContent>
     <TabsContent value="sign-in">
       <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-4">
-          <div class="grid gap-4">
-            <div class="relative flex w-full items-center justify-between">
-              <Label for="email">Email</Label>
-              <AlertDialog>
-                <AlertDialogTrigger as-child>
+        <InputGroup>
+          <InputGroupAddon align="block-start">
+            <InputGroupText class="text-foreground">
+              <Label for="email"> Email </Label>
+            </InputGroupText>
+            <AlertDialog>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <AlertDialogTrigger as-child>
+                      <InputGroupButton
+                        variant="ghost"
+                        aria-label="Help"
+                        class="ml-auto"
+                        size="icon-xs"
+                      >
+                        <div
+                          v-if="lastAuthProvider === 'email-link'"
+                          class="absolute -left-6"
+                        >
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <icon-mingcute-arrow-right-up-circle-fill />
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                Last used
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <icon-lucide-send />
+                      </InputGroupButton>
+                    </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Send magic link to your email
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle> Send magic link </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Enter your email address to receive a magic link.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div>
+                  <Input
+                    v-model="email"
+                    label="Email"
+                    placeholder="Email address"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <Button
-                    variant="link"
-                    class="relative h-auto p-0 text-xs leading-1"
-                    tabindex="-1"
+                    :disabled="!email"
+                    variant="destructive"
+                    @click="authenticateEmail"
                   >
-                    <div
-                      v-if="lastAuthProvider === 'email-link'"
-                      class="absolute -left-6"
-                    >
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <icon-mingcute-arrow-right-up-circle-fill />
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            Last used
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <Spinner v-if="authenticateEmailInProgress" />
                     Send magic link
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle> Send magic link </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Enter your email address to receive a magic link.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div>
-                    <Input
-                      v-model="email"
-                      label="Email"
-                      placeholder="Email address"
-                    />
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <Button
-                      :disabled="!email"
-                      variant="destructive"
-                      @click="authenticateEmail"
-                    >
-                      <Spinner v-if="authenticateEmailInProgress" />
-                      Send magic link
-                    </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-            <InputGroup>
-              <InputGroupAddon>
-                <icon-lucide-mail />
-              </InputGroupAddon>
-              <InputGroupInput
-                v-model="email"
-                placeholder="ada@lovelace.com"
-                type="email"
-                :disabled="signinViaEmailPasswordInProgress"
-                required
-              />
-            </InputGroup>
-          </div>
-          <div class="grid gap-4">
-            <div class="relative flex w-full items-center justify-between">
-              <Label for="password">Password</Label>
-              <AlertDialog>
-                <AlertDialogTrigger as-child>
-                  <Button
-                    variant="link"
-                    class="h-auto p-0 text-xs leading-1"
-                    tabindex="-1"
-                  >
-                    Forgot password
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle> Forgot password </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Enter your email address to receive a password reset link.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div>
-                    <Input
-                      v-model="email"
-                      label="Email"
-                      placeholder="Email address"
-                    />
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <Button
-                      :disabled="!email"
-                      variant="destructive"
-                      @click="resetPassword"
-                    >
-                      <Spinner v-if="resettingPassword" />
-                      Send reset link
-                    </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-            <InputGroup>
-              <InputGroupAddon>
-                <icon-lucide-lock />
-              </InputGroupAddon>
-              <InputGroupInput
-                v-model="password"
-                placeholder="********"
-                :type="passwordInputType"
-                :disabled="signinViaEmailPasswordInProgress"
-                required
-              />
-              <InputGroupAddon align="inline-end">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </InputGroupAddon>
+          <InputGroupAddon align="block-start">
+            <icon-lucide-mail />
+            <InputGroupInput
+              id="email"
+              v-model="email"
+              placeholder="ada@lovelace.com"
+              type="email"
+              :disabled="signinViaEmailPasswordInProgress"
+              required
+            />
+          </InputGroupAddon>
+        </InputGroup>
+        <InputGroup>
+          <InputGroupAddon align="block-start">
+            <InputGroupText class="text-foreground">
+              <Label for="password-signin"> Password </Label>
+            </InputGroupText>
+            <AlertDialog>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <AlertDialogTrigger as-child>
                       <InputGroupButton
-                        size="icon-xs"
                         variant="ghost"
-                        @click="togglePasswordVisibility()"
+                        aria-label="Forgot password"
+                        class="ml-auto"
+                        size="icon-xs"
                       >
-                        <icon-lucide-eye
-                          v-if="passwordInputType === 'password'"
-                          class="text-muted-foreground"
-                        />
-                        <icon-lucide-eye-off
-                          v-else
-                          class="text-muted-foreground"
-                        />
+                        <icon-lucide-help-circle />
                       </InputGroupButton>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ passwordInputType === "password" ? "Show" : "Hide" }}
-                      password
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-        </div>
+                    </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent> Forgot password? </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle> Forgot password </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Enter your email address to receive a password reset link.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div>
+                  <Input
+                    v-model="email"
+                    label="Email"
+                    placeholder="Email address"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <Button
+                    :disabled="!email"
+                    variant="destructive"
+                    @click="resetPassword"
+                  >
+                    <Spinner v-if="resettingPassword" />
+                    Send reset link
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </InputGroupAddon>
+          <InputGroupAddon align="block-start">
+            <icon-lucide-lock />
+            <InputGroupInput
+              id="password-signin"
+              v-model="password"
+              placeholder="********"
+              :type="passwordInputType"
+              :disabled="signinViaEmailPasswordInProgress"
+              required
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    size="icon-xs"
+                    variant="ghost"
+                    @click="togglePasswordVisibility()"
+                  >
+                    <icon-lucide-eye
+                      v-if="passwordInputType === 'password'"
+                      class="text-muted-foreground"
+                    />
+                    <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{ passwordInputType === "password" ? "Show" : "Hide" }}
+                  password
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </InputGroupAddon>
+        </InputGroup>
         <Button
           type="submit"
           :disabled="signinViaEmailPasswordInProgress"

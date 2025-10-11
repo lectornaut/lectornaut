@@ -58,6 +58,9 @@
     --vf-node-text: var(--foreground);
     --vf-handle: var(--border);
     --vf-connection-path: var(--border);
+
+    font-synthesis: none;
+    text-rendering: optimizelegibility;
   }
 }
 
