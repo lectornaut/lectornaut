@@ -48,7 +48,7 @@ const isDocked = ref(false)
                 </TabsList>
               </div>
               <Separator />
-              <div class="flex h-80 flex-col overflow-y-auto">
+              <div class="flex h-72 flex-col overflow-y-auto">
                 <Tasks />
               </div>
               <Separator />
@@ -117,7 +117,7 @@ const isDocked = ref(false)
                 </TabsList>
               </div>
               <Separator />
-              <div class="flex h-80 flex-col overflow-y-auto">
+              <div class="flex h-72 flex-col overflow-y-auto">
                 <Notifications />
               </div>
               <Separator />
