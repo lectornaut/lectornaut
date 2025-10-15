@@ -24,7 +24,7 @@ useHead({
         centered
         :icon="IconBlock"
         title="Console"
-        description="No active terminal sessions. Create a new session to get started."
+        description="Your console will appear here when you run a project."
         action-text="Ask AI"
         @action="emitter.emit('Dialog.AiAsk.Toggle')"
       />

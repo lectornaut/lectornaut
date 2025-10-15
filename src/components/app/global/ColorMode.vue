@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { themes } from "@/helpers/defaults"
-import { state, store } from "@/modules/theme"
+import { store } from "@/modules/theme"
 </script>
 
 <template>
@@ -14,8 +14,10 @@ import { state, store } from "@/modules/theme"
               size="icon"
               class="data-[state=open]:bg-accent"
             >
-              <icon-lucide-sun v-if="state == 'light'" />
-              <icon-lucide-moon v-if="state == 'dark'" />
+              <icon-lucide-sun v-if="store == 'light'" />
+              <icon-lucide-moon v-if="store == 'dark'" />
+              <icon-lucide-palette v-if="store == 'custom'" />
+              <icon-lucide-monitor v-if="store == 'auto'" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>

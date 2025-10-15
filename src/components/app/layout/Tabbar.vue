@@ -319,7 +319,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
 
 <template>
   <ContextMenu>
-    <div class="flex w-full flex-col">
+    <div class="bg-background flex w-full flex-col">
       <ContextMenuTrigger as-child>
         <div
           data-tauri-drag-region
@@ -364,7 +364,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                 size="icon"
                 @click="emitter.emit('Tabs.Add')"
               >
-                <icon-lucide-bot />
+                <icon-lucide-smile />
               </Button>
             </template>
             <template v-else>

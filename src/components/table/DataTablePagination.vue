@@ -9,7 +9,7 @@ defineProps<DataTablePaginationProps>()
 </script>
 
 <template>
-  <div class="grid grid-cols-3 items-center gap-2 p-2">
+  <div class="bg-background grid grid-cols-3 items-center gap-2 p-2">
     <div class="flex grow items-center justify-start gap-2">
       <Button
         v-if="table.getFilteredSelectedRowModel().rows.length"

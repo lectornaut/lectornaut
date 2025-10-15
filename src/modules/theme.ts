@@ -9,7 +9,11 @@ import { setTheme } from "@tauri-apps/api/app"
 
 const initMode = () => {
   useColorMode({
+    attribute: "data-theme",
     storageKey: "theme",
+    modes: {
+      custom: "custom",
+    },
   })
 }
 
@@ -66,7 +70,11 @@ export const initTheme = () => {
 }
 
 export const { store, system, state } = useColorMode({
+  attribute: "data-theme",
   storageKey: "theme",
+  modes: {
+    custom: "custom",
+  },
 })
 
 if (isTauri.value) {
@@ -77,6 +85,9 @@ if (isTauri.value) {
         break
       case "dark":
         await setTheme("dark")
+        break
+      case "custom":
+        await setTheme(null)
         break
       case "auto":
         await setTheme(null)

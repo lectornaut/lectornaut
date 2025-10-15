@@ -18,6 +18,7 @@ import IconHelpCenter from "~icons/lucide/life-buoy"
 import IconContact from "~icons/lucide/message-circle"
 import IconSystem from "~icons/lucide/monitor"
 import IconDark from "~icons/lucide/moon"
+import IconPalette from "~icons/lucide/palette"
 import IconBlog from "~icons/lucide/scroll"
 import IconSecurity from "~icons/lucide/shield-check"
 import IconSparkle from "~icons/lucide/sparkle"
@@ -48,11 +49,6 @@ export const defaultLanguage = "en-US"
 
 export const themes = [
   {
-    id: "auto",
-    name: "Auto",
-    icon: IconSystem,
-  },
-  {
     id: "light",
     name: "Light",
     icon: IconLight,
@@ -61,6 +57,16 @@ export const themes = [
     id: "dark",
     name: "Dark",
     icon: IconDark,
+  },
+  {
+    id: "custom",
+    name: "Custom",
+    icon: IconPalette,
+  },
+  {
+    id: "auto",
+    name: "Auto",
+    icon: IconSystem,
   },
 ]
 
