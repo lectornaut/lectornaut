@@ -1,7 +1,7 @@
 import { isTauri } from "@/helpers/utilities"
 import NProgress from "nprogress"
 import { setupLayouts } from "virtual:generated-layouts"
-import { createRouter, createWebHistory } from "vue-router/auto"
+import { createRouter, createWebHistory } from "vue-router"
 import { routes } from "vue-router/auto-routes"
 import { getCurrentUser } from "vuefire"
 
@@ -9,7 +9,7 @@ NProgress.configure({ showSpinner: false })
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: setupLayouts(routes),
+  routes: setupLayouts([...routes]),
   scrollBehavior(to) {
     if (to.hash) {
       return {

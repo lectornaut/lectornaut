@@ -188,7 +188,7 @@ const authenticateApple = async () => {
               </Tooltip>
             </TooltipProvider>
           </InputGroupAddon>
-          <InputGroupAddon align="block-start">
+          <InputGroupAddon align="block-start" class="pt-0">
             <icon-lucide-mail />
             <InputGroupInput
               id="email"
@@ -223,7 +223,7 @@ const authenticateApple = async () => {
               </Tooltip>
             </TooltipProvider>
           </InputGroupAddon>
-          <InputGroupAddon align="block-start">
+          <InputGroupAddon align="block-start" class="pt-0">
             <icon-lucide-lock />
             <InputGroupInput
               id="password"
@@ -338,7 +338,7 @@ const authenticateApple = async () => {
               </AlertDialogContent>
             </AlertDialog>
           </InputGroupAddon>
-          <InputGroupAddon align="block-start">
+          <InputGroupAddon align="block-start" class="pt-0">
             <icon-lucide-mail />
             <InputGroupInput
               id="email"
@@ -401,7 +401,7 @@ const authenticateApple = async () => {
               </AlertDialogContent>
             </AlertDialog>
           </InputGroupAddon>
-          <InputGroupAddon align="block-start">
+          <InputGroupAddon align="block-start" class="pt-0">
             <icon-lucide-lock />
             <InputGroupInput
               id="password-signin"

@@ -10,7 +10,7 @@
       <img
         src="/assets/images/shadow.png"
         alt="Hero"
-        class="pointer-events-none absolute inset-0 opacity-25 invert"
+        class="pointer-events-none absolute inset-0 size-full object-cover opacity-25 invert"
       />
     </OverlayScrollbarsWrapper>
   </div>
