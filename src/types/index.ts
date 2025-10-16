@@ -16,3 +16,5 @@ export interface ITeam {
   createdAt: Timestamp
   updatedAt: Timestamp
 }
+
+export * from "./projects"
