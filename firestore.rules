@@ -19,6 +19,7 @@ service cloud.firestore {
 
     function optionalBoundedString(field, maxLength) {
       return !hasRequestField(field) ||
+        request.resource.data[field] == null ||
         (request.resource.data[field] is string &&
           request.resource.data[field].size() <= maxLength);
     }
@@ -108,7 +109,10 @@ service cloud.firestore {
       }
 
       allow get, list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create: if isSignedIn() && baseChannelValidation();
+      allow create: if isSignedIn() &&
+        baseChannelValidation() &&
+        (!hasRequestField("signingSecretHash") ||
+          request.resource.data.signingSecretHash == null);
       allow update: if isSignedIn() &&
         resource.data.ownerId == request.auth.uid &&
         baseChannelValidation() &&
