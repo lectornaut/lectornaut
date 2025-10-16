@@ -55,6 +55,7 @@ jobs:
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
+          NODE_ENV: preview
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           VITE_AUTH_DOMAIN: ${{ secrets.VITE_AUTH_DOMAIN }}
           VITE_DATABASE_URL: ${{ secrets.VITE_DATABASE_URL }}
