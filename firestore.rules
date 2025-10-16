@@ -2,14 +2,177 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth.uid != null;
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
     }
-    // Make sure the uid of the requesting user matches name of the user
-    // document. The wildcard expression {userId} makes the userId variable
-    // available in rules.
+
+    function hasRequestField(field) {
+      return request.resource.data.keys().hasAny([field]);
+    }
+
+    function requiredBoundedString(field, maxLength) {
+      return hasRequestField(field) &&
+        request.resource.data[field] is string &&
+        request.resource.data[field].size() > 0 &&
+        request.resource.data[field].size() <= maxLength;
+    }
+
+    function optionalBoundedString(field, maxLength) {
+      return !hasRequestField(field) ||
+        (request.resource.data[field] is string &&
+          request.resource.data[field].size() <= maxLength);
+    }
+
     match /users/{userId} {
-      allow create, read, update, delete: if request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow read, update, delete: if request.auth.uid == userId;
+    }
+
+    match /channels/{channelId} {
+      function channelAllowedKeys() {
+        return request.resource.data.keys().hasOnly([
+          "projectId",
+          "ownerId",
+          "name",
+          "description",
+          "kind",
+          "status",
+          "signingSecretHash",
+          "createdAt",
+          "updatedAt",
+          "stats",
+        ]);
+      }
+
+      function isNonNegativeNumber(value) {
+        return (value is int || value is float) && value >= 0;
+      }
+
+      function validChannelStats() {
+        return !hasRequestField("stats") ||
+          (
+            request.resource.data.stats is map &&
+            request.resource.data.stats.keys().hasOnly([
+              "totalLogs",
+              "totalTokens",
+              "lastLogAt",
+              "lastErrorAt",
+            ]) &&
+            (!request.resource.data.stats.keys().hasAny(["totalLogs"]) ||
+              isNonNegativeNumber(request.resource.data.stats.totalLogs)) &&
+            (!request.resource.data.stats.keys().hasAny(["totalTokens"]) ||
+              isNonNegativeNumber(request.resource.data.stats.totalTokens)) &&
+            (!request.resource.data.stats.keys().hasAny(["lastLogAt"]) ||
+              request.resource.data.stats.lastLogAt == null ||
+              request.resource.data.stats.lastLogAt is timestamp) &&
+            (!request.resource.data.stats.keys().hasAny(["lastErrorAt"]) ||
+              request.resource.data.stats.lastErrorAt == null ||
+              request.resource.data.stats.lastErrorAt is timestamp)
+          );
+      }
+
+      function validSigningSecret() {
+        return !hasRequestField("signingSecretHash") ||
+          request.resource.data.signingSecretHash == null ||
+          (
+            request.resource.data.signingSecretHash is string &&
+            request.resource.data.signingSecretHash.size() == 64
+          );
+      }
+
+      function signingSecretLocked() {
+        return (!resource.data.keys().hasAny(["signingSecretHash"]) &&
+          !hasRequestField("signingSecretHash")) ||
+          (
+            resource.data.keys().hasAny(["signingSecretHash"]) &&
+            hasRequestField("signingSecretHash") &&
+            request.resource.data.signingSecretHash == resource.data.signingSecretHash
+          );
+      }
+
+      function baseChannelValidation() {
+        return channelAllowedKeys() &&
+          requiredBoundedString("name", 120) &&
+          optionalBoundedString("description", 2000) &&
+          request.resource.data.projectId is string &&
+          request.resource.data.projectId.size() > 0 &&
+          request.resource.data.ownerId is string &&
+          request.resource.data.ownerId.size() > 0 &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.kind in ["webhook", "api", "automation"] &&
+          request.resource.data.status in ["draft", "active", "disabled", "archived"] &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.updatedAt is timestamp &&
+          validChannelStats() &&
+          validSigningSecret();
+      }
+
+      allow get, list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && baseChannelValidation();
+      allow update: if isSignedIn() &&
+        resource.data.ownerId == request.auth.uid &&
+        baseChannelValidation() &&
+        request.resource.data.projectId == resource.data.projectId &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        signingSecretLocked();
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      match /logs/{logId} {
+        function logAllowedKeys() {
+          return request.resource.data.keys().hasOnly([
+            "channelId",
+            "projectId",
+            "ownerId",
+            "severity",
+            "direction",
+            "message",
+            "input",
+            "output",
+            "createdAt",
+          ]);
+        }
+
+        function validLogStrings() {
+          return requiredBoundedString("message", 8000) &&
+            optionalBoundedString("input", 20000) &&
+            optionalBoundedString("output", 20000);
+        }
+
+        function logEnums() {
+          return request.resource.data.severity is string &&
+            request.resource.data.direction is string &&
+            request.resource.data.severity in ["debug", "info", "warn", "error", "fatal"] &&
+            request.resource.data.direction in ["incoming", "outgoing", "system"];
+        }
+
+        function channelDoc() {
+          return get(/databases/$(database)/documents/channels/$(channelId));
+        }
+
+        allow get, list: if isSignedIn() &&
+          exists(/databases/$(database)/documents/channels/$(channelId)) &&
+          channelDoc().data.ownerId == request.auth.uid;
+
+        allow create: if isSignedIn() &&
+          exists(/databases/$(database)/documents/channels/$(channelId)) &&
+          logAllowedKeys() &&
+          validLogStrings() &&
+          logEnums() &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.channelId is string &&
+          request.resource.data.channelId.size() > 0 &&
+          request.resource.data.channelId == channelId &&
+          request.resource.data.ownerId is string &&
+          request.resource.data.ownerId.size() > 0 &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.projectId is string &&
+          request.resource.data.projectId.size() > 0 &&
+          request.resource.data.projectId == channelDoc().data.projectId &&
+          channelDoc().data.ownerId == request.auth.uid;
+
+        allow update, delete: if false;
+      }
     }
   }
 }
