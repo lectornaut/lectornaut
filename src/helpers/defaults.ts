@@ -24,6 +24,7 @@ import IconSecurity from "~icons/lucide/shield-check"
 import IconSparkle from "~icons/lucide/sparkle"
 import IconLight from "~icons/lucide/sun"
 import IconCustomers from "~icons/lucide/users"
+import IconWebhook from "~icons/lucide/webhook"
 import IconFont from "~icons/mdi/format-text-variant"
 import IconMono from "~icons/ri/font-mono"
 import IconSans from "~icons/ri/font-sans"
@@ -184,6 +185,17 @@ export const menu = [
     textColor: "text-blue-500",
     bgColor: "bg-blue-500/75",
     shortcut: "⌘R",
+  },
+  {
+    title: "Projects",
+    action: "Create a Channel",
+    description: "Configure webhook channels and delivery targets.",
+    url: "/projects",
+    id: "projects",
+    icon: IconWebhook,
+    textColor: "text-sky-500",
+    bgColor: "bg-sky-500/75",
+    shortcut: "⌘P",
   },
   {
     title: "Teams",
@@ -456,6 +468,7 @@ export const footerSections = [
       { title: "Agents", href: "#" },
       { title: "Tasks", href: "#" },
       { title: "Runs", href: "#" },
+      { title: "Projects", href: "#" },
       { title: "Teams", href: "#" },
       { title: "Builder", href: "#" },
       { title: "Assistant", href: "#" },

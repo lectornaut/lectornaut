@@ -22,6 +22,8 @@ useHead({
   title: "Home",
 })
 
+const router = useRouter()
+
 const df = new DateFormatter("en-US", {
   dateStyle: "medium",
 })
@@ -139,6 +141,10 @@ const navSecondary = [
     badge: false,
   },
 ]
+
+const goToNewChannel = () => {
+  router.push({ path: "/projects", query: { new: "1" } })
+}
 
 const favorites = [
   {
@@ -578,7 +584,11 @@ const navToc = [
               <TabsTrigger value="overview"> Overview </TabsTrigger>
               <TabsTrigger value="usage"> Usage </TabsTrigger>
             </TabsList>
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center gap-2">
+              <Button variant="secondary" @click="goToNewChannel">
+                <icon-lucide-webhook class="mr-2 size-4" />
+                <span class="hidden sm:inline">New Channel</span>
+              </Button>
               <Popover>
                 <PopoverTrigger as-child>
                   <Button variant="outline">
