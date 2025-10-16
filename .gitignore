@@ -37,3 +37,8 @@ dev-dist
 
 # Environment variables
 .env
+
+# Generated artifacts (skip prettier)
+auto-imports.d.ts
+typed-router.d.ts
+pnpm-lock.yaml
