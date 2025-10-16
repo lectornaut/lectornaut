@@ -30,7 +30,10 @@ app.use(VueFire, {
   firebaseApp,
   modules: [
     VueFireAppCheck({
-      debug: process.env.NODE_ENV !== "production",
+      debug:
+        process.env.NODE_ENV !== "production"
+          ? import.meta.env.VITE_APPCHECK_DEBUG_TOKEN
+          : false,
       provider: new ReCaptchaEnterpriseProvider(
         import.meta.env.VITE_RECAPTCHA_ENTERPRISE_KEY
       ),
