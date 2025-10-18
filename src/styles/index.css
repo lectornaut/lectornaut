@@ -62,6 +62,26 @@
     font-synthesis: none;
     text-rendering: optimizelegibility;
   }
+
+  ::-webkit-scrollbar {
+    @apply size-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/25;
+  }
+
+  ::-webkit-scrollbar-track:hover {
+    @apply bg-muted/50;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted/75;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted/100;
+  }
 }
 
 @theme inline {
