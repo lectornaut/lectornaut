@@ -323,9 +323,9 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
       <ContextMenuTrigger as-child>
         <div
           data-tauri-drag-region
-          class="flex grow items-center gap-2 p-2 transition-all"
+          class="flex grow items-stretch gap-2 p-2 transition-all"
         >
-          <div class="flex items-center justify-start">
+          <div class="flex items-stretch justify-start gap-2">
             <ButtonGroup>
               <TooltipProvider>
                 <Tooltip>
@@ -350,13 +350,17 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
           </div>
           <nav
             ref="el"
-            class="relative flex min-w-0 items-center justify-center gap-2"
+            class="relative flex min-w-0 items-stretch justify-center gap-2"
           >
             <template v-if="pending">
               <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
             </template>
             <template v-else-if="error">
-              <icon-lucide-alert-triangle /> error
+              <div
+                class="text-destructive rounded-md bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed px-4"
+              >
+                <icon-lucide-alert-triangle /> {{ error }}
+              </div>
             </template>
             <template v-else-if="tabs.length === 0">
               <Button
@@ -364,7 +368,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                 size="icon"
                 @click="emitter.emit('Tabs.Add')"
               >
-                <icon-lucide-smile />
+                <icon-lucide-circle />
               </Button>
             </template>
             <template v-else>
@@ -491,7 +495,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               </div>
             </template>
           </nav>
-          <div class="flex grow items-center justify-between gap-2">
+          <div class="flex grow items-stretch justify-between gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
@@ -509,18 +513,18 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                 <TooltipContent> New Tab </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <div class="flex items-center">
+            <div class="flex items-stretch justify-center gap-2">
               <TooltipProvider>
                 <Tooltip>
                   <Combobox>
-                    <TooltipTrigger as-child>
-                      <ComboboxTrigger as-child>
-                        <Button variant="ghost" size="icon">
+                    <ComboboxTrigger as-child>
+                      <TooltipTrigger as-child>
+                        <Button variant="outline" size="icon">
                           <icon-lucide-history />
                         </Button>
-                      </ComboboxTrigger>
+                      </TooltipTrigger>
                       <TooltipContent> History </TooltipContent>
-                    </TooltipTrigger>
+                    </ComboboxTrigger>
                     <ComboboxList align="end">
                       <ComboboxInput
                         placeholder="Search tabs..."
@@ -589,7 +593,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                   <DropdownMenu>
                     <TooltipTrigger as-child>
                       <DropdownMenuTrigger as-child>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="outline" size="icon">
                           <icon-lucide-chevron-down />
                         </Button>
                       </DropdownMenuTrigger>

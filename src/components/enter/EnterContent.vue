@@ -563,7 +563,11 @@ const authenticateApple = async () => {
         </div>
       </Button>
     </div>
-    <Alert v-if="authenticateError" variant="destructive">
+    <Alert
+      v-if="authenticateError"
+      variant="destructive"
+      class="bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed"
+    >
       <icon-lucide-circle-alert />
       <AlertTitle> Message: </AlertTitle>
       <AlertDescription>

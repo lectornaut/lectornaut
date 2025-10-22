@@ -376,7 +376,9 @@ const closeTab = (id: string) => {
                   <icon-lucide-cloud-check v-else />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent> Synced to cloud </TooltipContent>
+              <TooltipContent>
+                {{ isLoading ? "Syncing..." : "Synced to cloud" }}
+              </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
