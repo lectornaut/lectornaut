@@ -45,8 +45,9 @@ defineProps<{
             :tooltip="item.title"
             as-child
           >
-            <RouterLink :to="item.url" class="flex flex-col">
+            <RouterLink :to="item.url">
               <Component :is="item.icon" />
+              {{ item.title }}
             </RouterLink>
             <span
               v-if="iconDisplay === 'text'"
@@ -62,6 +63,7 @@ defineProps<{
             <SidebarMenuItem>
               <SidebarMenuButton tooltip="Show more options">
                 <icon-lucide-grid-2-x-2-plus />
+                Edit
               </SidebarMenuButton>
             </SidebarMenuItem>
           </DropdownMenuTrigger>

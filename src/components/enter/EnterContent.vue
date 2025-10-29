@@ -25,6 +25,7 @@ const signupViaEmailPassword = async () => {
 
   await signUpWithEmailPassword(email.value, password.value)
     .then(() => {
+      lastAuthProvider.value = "email-password"
       signupViaEmailPasswordInProgress.value = true
     })
     .catch((error) => {
@@ -42,6 +43,7 @@ const signinViaEmailPassword = async () => {
 
   await signInWithEmailPassword(email.value, password.value)
     .then(() => {
+      lastAuthProvider.value = "email-password"
       signinViaEmailPasswordInProgress.value = true
     })
     .catch((error) => {
@@ -81,6 +83,7 @@ const authenticateEmail = async () => {
 
   await sendAuthenticateEmail(email.value)
     .then(() => {
+      lastAuthProvider.value = "email-link"
       authenticateEmailInProgress.value = true
     })
     .catch((error) => {
@@ -98,6 +101,7 @@ const authenticateGoogle = async () => {
 
   await signInWithGoogle()
     .then(() => {
+      lastAuthProvider.value = "google"
       authenticateGoogleInProgress.value = true
     })
     .catch((error) => {
@@ -115,6 +119,7 @@ const authenticateMicrosoft = async () => {
 
   await signInWithMicrosoft()
     .then(() => {
+      lastAuthProvider.value = "microsoft"
       authenticateMicrosoftInProgress.value = true
     })
     .catch((error) => {
@@ -132,6 +137,7 @@ const authenticateApple = async () => {
 
   await signInWithApple()
     .then(() => {
+      lastAuthProvider.value = "apple"
       authenticateAppleInProgress.value = true
     })
     .catch((error) => {
@@ -288,7 +294,7 @@ const authenticateApple = async () => {
                       >
                         <div
                           v-if="lastAuthProvider === 'email-link'"
-                          class="absolute -left-6"
+                          class="absolute -right-6"
                         >
                           <TooltipProvider>
                             <Tooltip>
@@ -492,7 +498,7 @@ const authenticateApple = async () => {
     <div class="flex flex-col gap-2">
       <Button
         variant="secondary"
-        class="relative justify-start gap-3 shadow-none"
+        class="relative justify-start"
         :disabled="authenticateGoogleInProgress"
         @click="authenticateGoogle"
       >
@@ -516,7 +522,7 @@ const authenticateApple = async () => {
       </Button>
       <Button
         variant="secondary"
-        class="relative justify-start gap-3 shadow-none"
+        class="relative justify-start"
         :disabled="authenticateMicrosoftInProgress"
         @click="authenticateMicrosoft"
       >
@@ -540,7 +546,7 @@ const authenticateApple = async () => {
       </Button>
       <Button
         variant="secondary"
-        class="relative justify-start gap-3 shadow-none"
+        class="relative justify-start"
         :disabled="authenticateAppleInProgress"
         @click="authenticateApple"
       >

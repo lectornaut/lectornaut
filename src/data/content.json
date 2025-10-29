@@ -1,0 +1,482 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "heading",
+      "attrs": {
+        "id": "6df4dcdd-e2bd-4887-ac26-b6ade1cdc665",
+        "textAlign": null,
+        "level": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Heading 1"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "id": "21de8c0b-8a84-4435-8693-991204167841",
+        "textAlign": null,
+        "level": 2
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Heading 2"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "id": "4ce1ff20-6afc-4d04-97aa-f855f4511755",
+        "textAlign": null,
+        "level": 3
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Heading 3"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "id": "28755fb6-865f-4652-9184-1ed1a367e71e",
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Lorem ipsum dolor sit amet consectetur adipisicing elit. Culpa dolores voluptas dignissimos minima quibusdam qui deleniti, harum laboriosam officiis a saepe! Esse aliquid quas rerum iusto ratione commodi optio magni."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "id": "fd1c2d2f-f03c-42e2-88e8-4159d669693f",
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "bold"
+            }
+          ],
+          "text": "Bold"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "id": "1c4388b0-65ce-4b84-9f36-45c27fe7eaf5",
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "italic"
+            }
+          ],
+          "text": "Italic"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "id": "a1b34fa3-31c0-4a90-b2db-0ec88bebcc22",
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "underline"
+            }
+          ],
+          "text": "Underline"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "id": "833b578f-baaf-4cf8-8067-181ee598af2a",
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "strike"
+            }
+          ],
+          "text": "Strike"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "id": "fa14e612-f45e-4484-9275-1fc0684d51bb",
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "code"
+            }
+          ],
+          "text": "Code"
+        }
+      ]
+    },
+    {
+      "type": "codeBlock",
+      "attrs": {
+        "language": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Code block"
+        }
+      ]
+    },
+    {
+      "type": "blockquote",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": {
+            "id": "c717d1b7-7413-40ac-a5d6-554a5d8157f7",
+            "textAlign": null
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Blockquote"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "5037ea54-b124-4a2e-a2b7-8c6cd8635f0b",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Bulleted list #1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "f87fb352-005f-4bda-a01b-b09d0555b358",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Bulleted list #2"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "358a88ee-20dd-437a-922b-265a308d9352",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Bulleted list #3"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "orderedList",
+      "attrs": {
+        "start": 1,
+        "type": null
+      },
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "b888bd0c-1009-410f-bbd0-7bd53ea5973f",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Numbered list #1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "0080910e-6269-4af8-87a5-5ac01caf5185",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Numbered list #2"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "927a2b66-23f1-48fe-8a16-af9b3f927759",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Numbered list #3"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "taskList",
+      "content": [
+        {
+          "type": "taskItem",
+          "attrs": {
+            "checked": false
+          },
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "0e1c5e74-d2a3-4d67-a548-8628b77fdb52",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Todo list #1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "taskItem",
+          "attrs": {
+            "checked": false
+          },
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "200bc3e9-993f-46d5-9d82-b5639621950b",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Todo list #2"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "taskItem",
+          "attrs": {
+            "checked": false
+          },
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "e9d477ad-ed28-439c-8e32-3a844a5f65b9",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Todo list #3"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "details",
+      "attrs": {
+        "open": false
+      },
+      "content": [
+        {
+          "type": "detailsSummary",
+          "content": [
+            {
+              "type": "text",
+              "text": "Toggle list #1"
+            }
+          ]
+        },
+        {
+          "type": "detailsContent",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "313d4828-eeaf-4ec4-8316-290c7ec2c833",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Content"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "details",
+      "attrs": {
+        "open": false
+      },
+      "content": [
+        {
+          "type": "detailsSummary",
+          "content": [
+            {
+              "type": "text",
+              "text": "Toggle list #2"
+            }
+          ]
+        },
+        {
+          "type": "detailsContent",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "61800f1b-9fe5-4023-8825-64352d8e3bea",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Content"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "details",
+      "attrs": {
+        "open": false
+      },
+      "content": [
+        {
+          "type": "detailsSummary",
+          "content": [
+            {
+              "type": "text",
+              "text": "Toggle list #3"
+            }
+          ]
+        },
+        {
+          "type": "detailsContent",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "id": "fdc844b1-f2a2-4a54-9f6e-bef22c4ef535",
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Content"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "id": "48476ef5-cd45-40ed-8e50-18410525dfd7",
+        "textAlign": null
+      }
+    }
+  ]
+}

@@ -330,7 +330,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Button variant="secondary" size="icon" class="shadow-none">
+                    <Button variant="secondary" size="icon">
                       <icon-lucide-arrow-left />
                     </Button>
                   </TooltipTrigger>
@@ -339,7 +339,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                 <ButtonGroupSeparator />
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Button variant="secondary" size="icon" class="shadow-none">
+                    <Button variant="secondary" size="icon">
                       <icon-lucide-arrow-right />
                     </Button>
                   </TooltipTrigger>
@@ -516,84 +516,10 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
             <div class="flex items-stretch justify-center gap-2">
               <TooltipProvider>
                 <Tooltip>
-                  <Combobox>
-                    <ComboboxTrigger as-child>
-                      <TooltipTrigger as-child>
-                        <Button variant="outline" size="icon">
-                          <icon-lucide-history />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent> History </TooltipContent>
-                    </ComboboxTrigger>
-                    <ComboboxList align="end">
-                      <ComboboxInput
-                        placeholder="Search tabs..."
-                        class="border-none p-0 focus:border-inherit focus:ring-0"
-                      />
-                      <ComboboxEmpty> No tabs found. </ComboboxEmpty>
-                      <ComboboxGroup v-if="tabs.length > 0" heading="Open tabs">
-                        <ComboboxItem
-                          v-for="tab in tabs"
-                          :key="tab.id"
-                          :value="tab"
-                          @click="emitter.emit('Tabs.Select', tab.id)"
-                        >
-                          <icon-lucide-workflow />
-                          {{ tab.name }}
-                          <ComboboxItemIndicator>
-                            <icon-lucide-check />
-                          </ComboboxItemIndicator>
-                        </ComboboxItem>
-                      </ComboboxGroup>
-                      <ComboboxGroup v-if="tabs.length > 0" heading="Actions">
-                        <ComboboxItem
-                          :value="'__close_all__'"
-                          :disabled="tabs.length === 0"
-                          @click.stop="emitter.emit('Tabs.Close.All')"
-                        >
-                          <icon-lucide-trash />
-                          Close all tabs
-                        </ComboboxItem>
-                      </ComboboxGroup>
-                      <ComboboxSeparator />
-                      <ComboboxGroup
-                        v-if="recentlyClosed.length > 0"
-                        heading="Recently closed"
-                      >
-                        <ComboboxItem
-                          v-for="tab in recentlyClosed"
-                          :key="tab.id + tab.fullPath"
-                          :value="tab"
-                          @click="emitter.emit('Tabs.Reopen', tab)"
-                        >
-                          <icon-lucide-workflow />
-                          {{ tab.name }}
-                          <ComboboxItemIndicator>
-                            <icon-lucide-check />
-                          </ComboboxItemIndicator>
-                        </ComboboxItem>
-                      </ComboboxGroup>
-                      <ComboboxGroup
-                        v-if="recentlyClosed.length > 0"
-                        heading="Actions"
-                      >
-                        <ComboboxItem
-                          :value="'__clear_recently__'"
-                          :disabled="recentlyClosed.length === 0"
-                          @click.stop="clearRecentlyClosed()"
-                        >
-                          <icon-lucide-trash />
-                          Clear recently closed
-                        </ComboboxItem>
-                      </ComboboxGroup>
-                    </ComboboxList>
-                  </Combobox>
-                </Tooltip>
-                <Tooltip>
                   <DropdownMenu>
                     <TooltipTrigger as-child>
                       <DropdownMenuTrigger as-child>
-                        <Button variant="outline" size="icon">
+                        <Button variant="secondary" size="icon">
                           <icon-lucide-chevron-down />
                         </Button>
                       </DropdownMenuTrigger>
@@ -635,6 +561,63 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                           Duplicate
                           <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
                         </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuGroup>
+                        <DropdownMenuSub>
+                          <DropdownMenuItem as-child>
+                            <DropdownMenuSubTrigger>
+                              <icon-lucide-workflow />
+                              Active tabs
+                            </DropdownMenuSubTrigger>
+                          </DropdownMenuItem>
+                          <DropdownMenuSubContent class="w-56">
+                            <DropdownMenuItem
+                              v-for="tab in tabs"
+                              :key="tab.id"
+                              @click="emitter.emit('Tabs.Select', tab.id)"
+                            >
+                              <icon-lucide-workflow />
+                              {{ tab.name }}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator v-if="tabs.length > 0" />
+                            <DropdownMenuItem
+                              :disabled="tabs.length === 0"
+                              @click="emitter.emit('Tabs.Close.All')"
+                            >
+                              <icon-lucide-trash />
+                              Close all tabs
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSub>
+                          <DropdownMenuItem as-child>
+                            <DropdownMenuSubTrigger>
+                              <icon-lucide-history />
+                              Recent tabs
+                            </DropdownMenuSubTrigger>
+                          </DropdownMenuItem>
+                          <DropdownMenuSubContent class="w-56">
+                            <DropdownMenuItem
+                              v-for="tab in recentlyClosed"
+                              :key="tab.id + tab.fullPath"
+                              @click="emitter.emit('Tabs.Reopen', tab)"
+                            >
+                              <icon-lucide-workflow />
+                              {{ tab.name }}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator
+                              v-if="recentlyClosed.length > 0"
+                            />
+                            <DropdownMenuItem
+                              :disabled="recentlyClosed.length === 0"
+                              @click="clearRecentlyClosed()"
+                            >
+                              <icon-lucide-trash />
+                              Clear recent tabs
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>

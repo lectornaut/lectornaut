@@ -17,6 +17,7 @@ import { menu } from "@/helpers/defaults"
                 <DropdownMenuTrigger as-child>
                   <SidebarMenuButton id="tour-apps-menu" tooltip="Menu">
                     <icon-lucide-grid-2-x-2 />
+                    Apps
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

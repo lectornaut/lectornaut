@@ -42,6 +42,7 @@ const userInput = ref("")
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="New Agent">
               <icon-lucide-circle-plus />
+              New Agent
             </SidebarMenuButton>
           </SidebarMenuItem>
         </TooltipTrigger>
@@ -50,10 +51,7 @@ const userInput = ref("")
       <Tooltip v-for="agent in agents" :key="agent.id">
         <Sheet>
           <SheetTrigger as-child>
-            <TooltipTrigger
-              class="group flex aspect-square items-center justify-center rounded-md transition"
-              as-child
-            >
+            <TooltipTrigger as-child>
               <SidebarMenuItem>
                 <SidebarMenuButton>
                   <Avatar
@@ -66,6 +64,7 @@ const userInput = ref("")
                       'var(--chart-5)',
                     ]"
                   />
+                  {{ agent.name }}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </TooltipTrigger>

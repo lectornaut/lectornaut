@@ -28,6 +28,24 @@ const groups = [
   },
 ]
 
+const accounts = [
+  {
+    username: "shadcn",
+    avatar: "https://github.com/shadcn.png",
+    email: "shadcn@vercel.com",
+  },
+  {
+    username: "maxleiter",
+    avatar: "https://github.com/maxleiter.png",
+    email: "maxleiter@vercel.com",
+  },
+  {
+    username: "evilrabbit",
+    avatar: "https://github.com/evilrabbit.png",
+    email: "evilrabbit@vercel.com",
+  },
+]
+
 type Team = (typeof groups)[number]["teams"][number]
 
 const selectedTeam = ref<Team>(
@@ -192,24 +210,29 @@ const selectedUserObjects = computed(() => {
                   Switch account
                 </DropdownMenuSubTrigger>
               </DropdownMenuItem>
-              <DropdownMenuSubContent class="w-48" align="start">
+              <DropdownMenuSubContent class="w-56" align="start">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Accounts
                   </DropdownMenuLabel>
-                  <DropdownMenuItem>
-                    <Avatar class="size-4">
-                      <AvatarImage src="https://avatar.vercel.sh/1.png" />
-                      <AvatarFallback>AT</AvatarFallback>
-                    </Avatar>
-                    Alicia Koch
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Avatar class="size-4">
-                      <AvatarImage src="https://avatar.vercel.sh/2.png" />
-                      <AvatarFallback>JD</AvatarFallback>
-                    </Avatar>
-                    John Doe
+                  <DropdownMenuItem
+                    v-for="account in accounts"
+                    :key="account.username"
+                  >
+                    <Item size="sm" class="p-0">
+                      <ItemMedia>
+                        <Avatar class="size-8">
+                          <AvatarImage :src="account.avatar" />
+                          <AvatarFallback>
+                            {{ account.username.charAt(0) }}
+                          </AvatarFallback>
+                        </Avatar>
+                      </ItemMedia>
+                      <ItemContent class="gap-0">
+                        <ItemTitle>{{ account.username }}</ItemTitle>
+                        <ItemDescription>{{ account.email }}</ItemDescription>
+                      </ItemContent>
+                    </Item>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
