@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import emitter from "@/modules/mitt"
 import { state, store } from "@/modules/theme"
 import { useRegisterSW } from "virtual:pwa-register/vue"

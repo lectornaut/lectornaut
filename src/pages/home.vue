@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { monthlyActivity } from "@/data/chart"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
@@ -570,7 +570,7 @@ const navToc = [
     </Sidebar>
   </Teleport>
   <OverlayScrollbarsWrapper>
-    <div class="flex grow flex-col overflow-auto overscroll-none">
+    <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
       <Tabs default-value="overview" class="gap-0">
         <div class="bg-background sticky top-0 z-10">
           <div class="flex items-center justify-between gap-2 p-2">

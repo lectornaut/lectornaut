@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { CollapsibleTriggerProps } from "reka-ui"
 import { CollapsibleTrigger } from "reka-ui"
 

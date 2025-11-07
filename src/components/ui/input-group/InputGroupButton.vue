@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { InputGroupButtonProps } from "."

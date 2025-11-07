@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import {
   accents,
   fonts,
@@ -363,17 +363,17 @@ const navigations = [
 <template>
   <Dialog v-model:open="openSettings">
     <DialogContent
-      class="h-3/4 !max-h-3/4 w-3/4 !max-w-3/4 overflow-auto overscroll-none p-0"
+      class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth p-0"
     >
       <Tabs
         v-model="activeTab"
         :default-value="activeTab"
-        class="flex size-full flex-col overflow-auto overscroll-none"
+        class="flex size-full flex-col overflow-auto overscroll-none scroll-smooth"
         orientation="vertical"
       >
         <SidebarProvider
           :default-open="true"
-          class="h-full min-h-auto overflow-auto overscroll-none"
+          class="h-full min-h-auto overflow-auto overscroll-none scroll-smooth"
         >
           <Sidebar collapsible="none">
             <TabsList class="contents">
@@ -414,7 +414,9 @@ const navigations = [
             </TabsList>
           </Sidebar>
           <Separator orientation="vertical" />
-          <div class="flex flex-1 flex-col overflow-auto overscroll-none">
+          <div
+            class="flex flex-1 flex-col overflow-auto overscroll-none scroll-smooth"
+          >
             <DialogHeader class="p-6">
               <DialogTitle>
                 {{
@@ -438,7 +440,7 @@ const navigations = [
             <Separator />
             <OverlayScrollbarsWrapper>
               <TabsContent
-                class="overflow-auto overscroll-none"
+                class="overflow-auto overscroll-none scroll-smooth"
                 value="preferences"
               >
                 <div class="p-6">
@@ -450,7 +452,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent
-                class="overflow-auto overscroll-none"
+                class="overflow-auto overscroll-none scroll-smooth"
                 value="account"
               >
                 <div class="p-6">
@@ -796,7 +798,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent
-                class="overflow-auto overscroll-none"
+                class="overflow-auto overscroll-none scroll-smooth"
                 value="appearance"
               >
                 <div class="p-6">
@@ -951,7 +953,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent
-                class="overflow-auto overscroll-none"
+                class="overflow-auto overscroll-none scroll-smooth"
                 value="notifications"
               >
                 <div class="p-6">
@@ -1078,7 +1080,7 @@ const navigations = [
                 </div>
               </TabsContent>
               <TabsContent
-                class="overflow-auto overscroll-none"
+                class="overflow-auto overscroll-none scroll-smooth"
                 value="billing"
               >
                 <div class="p-6">
@@ -1146,7 +1148,10 @@ const navigations = [
                   </FieldGroup>
                 </div>
               </TabsContent>
-              <TabsContent class="overflow-auto overscroll-none" value="plans">
+              <TabsContent
+                class="overflow-auto overscroll-none scroll-smooth"
+                value="plans"
+              >
                 <div class="p-6">
                   <FieldGroup>
                     <FieldSet>

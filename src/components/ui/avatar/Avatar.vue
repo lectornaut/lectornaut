@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import { AvatarRoot } from "reka-ui"
 import type { HTMLAttributes } from "vue"

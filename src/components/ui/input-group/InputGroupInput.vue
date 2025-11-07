@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "vue"

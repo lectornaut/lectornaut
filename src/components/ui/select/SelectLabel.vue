@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import type { SelectLabelProps } from "reka-ui"
 import { SelectLabel } from "reka-ui"

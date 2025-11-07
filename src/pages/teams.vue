@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 definePage({
   meta: {
     requiresUser: true,
@@ -17,7 +17,7 @@ useHead({
   <Teleport defer to="#left-sidebar">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>
-  <div class="flex grow flex-col overflow-auto overscroll-none">
+  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
     <CodeEditor />
   </div>
   <Teleport defer to="#right-sidebar">

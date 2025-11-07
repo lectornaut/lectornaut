@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 defineProps<{
@@ -6,7 +6,7 @@ defineProps<{
   data: {
     name: string
     color: string
-    value: any
+    value: unknown
   }[]
 }>()
 </script>

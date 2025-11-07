@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { CollapsibleRootEmits, CollapsibleRootProps } from "reka-ui"
 import { CollapsibleRoot, useForwardPropsEmits } from "reka-ui"
 

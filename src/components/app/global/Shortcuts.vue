@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import {
   shortcuts,
   type Shortcut,
@@ -112,7 +112,9 @@ const filteredShortcuts = computed(() => {
       </SheetHeader>
       <Separator />
       <OverlayScrollbarsWrapper>
-        <div class="flex grow flex-col overflow-auto overscroll-none">
+        <div
+          class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
+        >
           <Accordion
             collapsible
             type="multiple"

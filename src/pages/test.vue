@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { generateId } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import { useTodoStore } from "@/stores/todoStore"

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { ComboboxRootEmits, ComboboxRootProps } from "reka-ui"
 import { ComboboxRoot, useForwardPropsEmits } from "reka-ui"
 

@@ -4,7 +4,7 @@
   </button>
 </template>
 
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { Options as ConfettiOptions } from "canvas-confetti"
 import confetti from "canvas-confetti"
 import { inject } from "vue"

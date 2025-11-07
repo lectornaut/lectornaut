@@ -1,19 +1,17 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { Task } from "@/data/schema"
 import type { Column } from "@tanstack/vue-table"
 
-interface DataTableColumnHeaderProps {
+export interface DataTableColumnHeaderProps {
   column: Column<Task, unknown>
   title: string
 }
 
 defineProps<DataTableColumnHeaderProps>()
-</script>
 
-<script lang="ts">
-export default {
+defineOptions({
   inheritAttrs: false,
-}
+})
 </script>
 
 <template>

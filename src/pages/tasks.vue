@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { columns } from "@/components/table/columns"
 import tasks from "@/data/tasks.json"
 import { getLocalTimeZone, today } from "@internationalized/date"
@@ -41,7 +41,7 @@ const calendars = [
             <RangeCalendar
               :max-value="today(getLocalTimeZone())"
               initial-focus
-              class="[&_[role=gridcell]]:w-full"
+              class="**:[[role=gridcell]]:w-full"
             />
           </SidebarGroupContent>
         </SidebarGroup>
@@ -106,7 +106,7 @@ const calendars = [
       </SidebarFooter>
     </Sidebar>
   </Teleport>
-  <div class="flex grow flex-col overflow-auto overscroll-none">
+  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
     <DataTable :data="tasks" :columns="columns" />
   </div>
   <Teleport defer to="#right-sidebar">

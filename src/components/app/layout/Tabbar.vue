@@ -1,26 +1,24 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { collection, doc, setDoc } from "firebase/firestore"
+import { useRouter } from "vue-router"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
 const el = ref<HTMLElement | null>(null)
+const router = useRouter()
+const route = useRoute()
 
 type Tab = {
-  // Stable identifier for the tab (used for selection and ordering)
   id: string
-  // User-visible title shown in the tab button
   name: string
-  // Router fullPath to navigate when tab is activated
   fullPath: string
 }
 
 const db = useFirestore()
 const user = useCurrentUser()
 
-// Firestore document reference for persisting tabs per user under
-// users/{uid}/layout/tabs
 const tabsDocRef = computed(() => {
   if (!user.value?.uid) return null
   return doc(
@@ -29,78 +27,62 @@ const tabsDocRef = computed(() => {
   )
 })
 
-// Remote state binding: data (document snapshot as reactive object),
-// pending (loading), error
 const { data: tabsDocData, pending, error } = useDocument(tabsDocRef)
 
-// Local UI state for tabs and selection
 const tabs = ref<Tab[]>([])
 const active = ref("")
-// Stack of recently-closed tabs (for quick reopen)
 const recentlyClosed = ref<Tab[]>([])
 
-// Limit how many recently-closed items we keep
 const MAX_RECENT = 20
 
-// Guard for avoiding save loops when we hydrate from Firestore
-let internalUpdate = false
-// Guard to differentiate between route changes triggered by tab clicks
-// vs. other router navigations (so we don't create new tabs unnecessarily)
-let isTabClickNavigation = false
+// Guard to prevent Firestore write loops during hydration
+let isHydrating = false
 
-// Hydrate local state from Firestore and avoid triggering save until applied
+// Hydrate local state from Firestore
 watch(
   tabsDocData,
   (doc) => {
-    if (doc) {
-      internalUpdate = true
-      tabs.value = doc.tabs ?? []
-      active.value = doc.active ?? ""
-      // Load recently closed list if present
-      recentlyClosed.value = doc.recentlyClosed ?? []
-      nextTick(() => {
-        internalUpdate = false
-      })
-    }
+    if (!doc) return
+
+    isHydrating = true
+    tabs.value = doc.tabs ?? []
+    active.value = doc.active ?? ""
+    recentlyClosed.value = doc.recentlyClosed ?? []
+
+    nextTick(() => {
+      isHydrating = false
+    })
   },
-  { deep: true, immediate: true }
+  { immediate: true }
 )
 
-// Persist local changes (tabs, active) to Firestore with debounce.
-// Merge to avoid clobbering other server fields accidentally.
+// Persist local changes to Firestore with debounce
 watchDebounced(
   [tabs, active, recentlyClosed],
   ([newTabs, newActive, newRecent]) => {
-    if (internalUpdate) return
-    if (!tabsDocRef.value) return
+    if (isHydrating || !tabsDocRef.value) return
 
     setDoc(
       tabsDocRef.value,
       { tabs: newTabs, active: newActive, recentlyClosed: newRecent },
       { merge: true }
     ).catch((err) => {
-      console.error("Failed to sync tabs to Firestore", err)
+      console.error("Failed to sync tabs to Firestore:", err)
     })
   },
   { debounce: 500, deep: true }
 )
 
-// Enable drag-and-drop reordering of tabs in the nav container
+// Enable drag-and-drop reordering of tabs
 useSortable(el, tabs, {
-  // Animate sibling movements while sorting
   animation: 150,
-  // Make only our wrapper elements draggable
   draggable: ".tab-item",
-  // Use the visible trigger area as the drag handle
   handle: ".hover-trigger",
   ghostClass: "cursor-grab",
   chosenClass: "cursor-grabbing",
   dragClass: "cursor-grabbing",
 })
 
-const route = useRoute()
-
-// Create a Tab object from the current route (generates a new id)
 function buildTabFromRoute(r: typeof route): Tab {
   return {
     id: generateId(),
@@ -109,211 +91,286 @@ function buildTabFromRoute(r: typeof route): Tab {
   }
 }
 
-// Maintain a small MRU list of recently closed tabs.
-// We dedupe by comparing to the head to avoid consecutive duplicates.
 function addToRecentlyClosed(tab: Tab) {
-  const entry = { id: tab.id, name: tab.name, fullPath: tab.fullPath }
+  const entry: Tab = {
+    id: generateId(),
+    name: tab.name,
+    fullPath: tab.fullPath,
+  }
   const head = recentlyClosed.value[0]
-  if (head && head.fullPath === entry.fullPath && head.name === entry.name)
-    return
+
+  // Avoid consecutive duplicates
+  if (head?.fullPath === entry.fullPath && head?.name === entry.name) return
+
   recentlyClosed.value = [entry, ...recentlyClosed.value].slice(0, MAX_RECENT)
 }
 
-// Close a tab by id, push it to recently closed, and select a sensible neighbor
 function closeTabById(id: string) {
   const idx = tabs.value.findIndex((t) => t.id === id)
   if (idx === -1) return
+
   const closing = tabs.value[idx]
   if (!closing) return
-  addToRecentlyClosed(closing)
-  const newTabs = tabs.value.slice()
-  newTabs.splice(idx, 1)
-  tabs.value = newTabs
 
-  if (newTabs.length === 0) {
+  addToRecentlyClosed(closing)
+  tabs.value = tabs.value.filter((t) => t.id !== id)
+
+  // Handle empty tabs
+  if (tabs.value.length === 0) {
     active.value = ""
     return
   }
 
-  const stillExists = newTabs.some((t) => t.id === active.value)
-  if (!stillExists || closing.id === active.value) {
-    const nextIndex = Math.min(idx, newTabs.length - 1)
-    const nextTab = newTabs[nextIndex]!
-    emitter.emit("Tabs.Select", nextTab.id)
+  // Select next tab if we closed the active one
+  if (closing.id === active.value) {
+    const nextIndex = Math.min(idx, tabs.value.length - 1)
+    const nextTab = tabs.value[nextIndex]
+    if (nextTab) {
+      active.value = nextTab.id
+      router.push(nextTab.fullPath).catch((err) => {
+        console.error("Failed to navigate to tab:", err)
+      })
+    }
   }
 }
 
-// Make a copy of a tab and select it
 function duplicateTab(id: string) {
   const src = tabs.value.find((t) => t.id === id)
   if (!src) return
+
   const duplicate: Tab = {
     id: generateId(),
     name: src.name.endsWith(" (copy)") ? src.name : `${src.name} (copy)`,
     fullPath: src.fullPath,
   }
+
   tabs.value = [...tabs.value, duplicate]
-  emitter.emit("Tabs.Select", duplicate.id)
+  active.value = duplicate.id
+  router.push(duplicate.fullPath).catch((err) => {
+    console.error("Failed to navigate to duplicated tab:", err)
+  })
 }
 
-// Prompt-based rename of a tab title
 function renameTab(id: string) {
-  const idx = tabs.value.findIndex((t) => t.id === id)
-  if (idx === -1) return
-  const current = tabs.value[idx]
-  if (!current) return
-  const nextName = window.prompt("Rename tab", current.name)
-  if (!nextName) return
-  tabs.value[idx] = {
-    id: current.id,
-    name: nextName,
-    fullPath: current.fullPath,
-  }
+  const tab = tabs.value.find((t) => t.id === id)
+  if (!tab) return
+
+  const nextName = window.prompt("Rename tab", tab.name)
+  if (!nextName || nextName === tab.name) return
+
+  tabs.value = tabs.value.map((t) =>
+    t.id === id ? { ...t, name: nextName } : t
+  )
 }
 
-// Clear the entire recently-closed list
 function clearRecentlyClosed() {
   recentlyClosed.value = []
 }
 
-// Keep tabs in sync with route changes:
-// 1) If the change came from clicking a tab, skip creating/updating.
-// 2) If a tab already exists for the fullPath, just activate it.
-// 3) If an active tab exists, update it in-place to reflect new route meta/path.
-// 4) On first load or no active, create a new tab from the route.
+function selectNextTab(): string | undefined {
+  if (tabs.value.length === 0) return
+
+  const currentIndex = tabs.value.findIndex((t) => t.id === active.value)
+  const nextIndex =
+    currentIndex === -1 ? 0 : (currentIndex + 1) % tabs.value.length
+
+  return tabs.value[nextIndex]?.id
+}
+
+function selectPreviousTab(): string | undefined {
+  if (tabs.value.length === 0) return
+
+  const currentIndex = tabs.value.findIndex((t) => t.id === active.value)
+  const prevIndex =
+    currentIndex === -1
+      ? tabs.value.length - 1
+      : (currentIndex - 1 + tabs.value.length) % tabs.value.length
+
+  return tabs.value[prevIndex]?.id
+}
+
+function selectTabByIndex(index: number): string | undefined {
+  if (tabs.value.length === 0) return
+
+  const tabIndex = Math.max(0, Math.min(index - 1, tabs.value.length - 1))
+  return tabs.value[tabIndex]?.id
+}
+
+// Sync tabs with route changes - create new tab if path doesn't exist
 watch(
   () => route.fullPath,
-  () => {
-    if (isTabClickNavigation) {
-      isTabClickNavigation = false
-      return
-    }
+  (fullPath) => {
+    // Find existing tab for this path
+    const existing = tabs.value.find((t) => t.fullPath === fullPath)
 
-    const existing = tabs.value.find((t) => t.fullPath === route.fullPath)
     if (existing) {
+      // Just activate the existing tab
       active.value = existing.id
       return
     }
 
-    if (active.value && tabs.value.length > 0) {
-      const activeTabIndex = tabs.value.findIndex((t) => t.id === active.value)
-      if (activeTabIndex !== -1) {
-        const updatedTab = buildTabFromRoute(route)
-        updatedTab.id = active.value
-        tabs.value[activeTabIndex] = updatedTab
-        return
-      }
-    }
+    // Create new tab only if route has a name
+    if (!route.name) return
 
-    if (tabs.value.length === 0 || !active.value) {
-      if (!route.name) return
-      const newTab = buildTabFromRoute(route)
-      tabs.value = [...tabs.value, newTab]
-      active.value = newTab.id
-    }
+    const newTab = buildTabFromRoute(route)
+    tabs.value = [...tabs.value, newTab]
+    active.value = newTab.id
   },
   { immediate: true }
 )
 
-// Open or focus tabs via events from elsewhere in the app
-emitter.on("Tabs.Add", (raw?: unknown) => {
-  const tab = raw as Partial<Tab> & {
-    path?: string
-    fullPath?: string
-    url?: string
-  }
-  let newTab: Tab
-  if (tab && (tab.name || tab.fullPath || tab.path || tab.url)) {
-    const targetPath = tab.fullPath || tab.path || tab.url || route.fullPath
+// Event handlers with cleanup on unmount
+const eventHandlers = {
+  "Tabs.Add": (raw?: unknown) => {
+    const tab = raw as Partial<Tab> & { path?: string; url?: string }
+
+    const targetPath = tab?.fullPath || tab?.path || tab?.url || "/new"
     const existing = tabs.value.find((t) => t.fullPath === targetPath)
+
     if (existing) {
-      emitter.emit("Tabs.Select", existing.id)
+      active.value = existing.id
+      router.push(existing.fullPath).catch((err) => {
+        console.error("Failed to navigate to tab:", err)
+      })
       return
     }
-    newTab = {
-      id: tab.id || generateId(),
-      name: tab.name || "Tab",
+
+    const newTab: Tab = {
+      id: tab?.id || generateId(),
+      name: tab?.name || "New tab",
       fullPath: targetPath,
     }
-  } else {
-    newTab = {
+
+    tabs.value = [...tabs.value, newTab]
+    active.value = newTab.id
+    router.push(newTab.fullPath).catch((err) => {
+      console.error("Failed to navigate to new tab:", err)
+    })
+  },
+
+  "Tabs.Close": (id?: unknown) => {
+    const targetId = typeof id === "string" && id ? id : active.value
+    if (targetId) closeTabById(targetId)
+  },
+
+  "Tabs.Close.Others": (id?: unknown) => {
+    const targetId = typeof id === "string" && id ? id : active.value
+    const keep = tabs.value.find((t) => t.id === targetId)
+    if (!keep) return
+
+    tabs.value.forEach((t) => {
+      if (t.id !== targetId) addToRecentlyClosed(t)
+    })
+
+    tabs.value = [keep]
+    active.value = keep.id
+  },
+
+  "Tabs.Close.All": () => {
+    tabs.value.forEach((t) => addToRecentlyClosed(t))
+    tabs.value = []
+    active.value = ""
+  },
+
+  "Tabs.Select": (idOrIndex?: unknown) => {
+    if (tabs.value.length === 0) return
+
+    let targetId: string | undefined
+
+    if (idOrIndex === "next") {
+      targetId = selectNextTab()
+    } else if (idOrIndex === "previous") {
+      targetId = selectPreviousTab()
+    } else if (typeof idOrIndex === "number") {
+      targetId = selectTabByIndex(idOrIndex)
+    } else if (typeof idOrIndex === "string") {
+      targetId = idOrIndex
+    } else {
+      targetId = tabs.value[0]?.id
+    }
+
+    if (!targetId) return
+
+    const target = tabs.value.find((t) => t.id === targetId)
+    if (!target) {
+      console.warn(`Tab with id ${targetId} not found`)
+      return
+    }
+
+    active.value = target.id
+
+    if (route.fullPath !== target.fullPath) {
+      router.push(target.fullPath).catch((err) => {
+        console.error("Failed to navigate to tab:", err)
+      })
+    }
+  },
+
+  "Tabs.ReopenLast": () => {
+    const last = recentlyClosed.value.shift()
+    if (!last) return
+
+    const existing = tabs.value.find((t) => t.fullPath === last.fullPath)
+
+    if (existing) {
+      active.value = existing.id
+      router.push(existing.fullPath).catch((err) => {
+        console.error("Failed to navigate to tab:", err)
+      })
+      return
+    }
+
+    const reopened: Tab = {
       id: generateId(),
-      name: "New tab",
-      fullPath: "/new",
+      name: last.name,
+      fullPath: last.fullPath,
     }
-  }
-  tabs.value = [...tabs.value, newTab]
-  emitter.emit("Tabs.Select", newTab.id)
+
+    tabs.value = [...tabs.value, reopened]
+    active.value = reopened.id
+    router.push(reopened.fullPath).catch((err) => {
+      console.error("Failed to navigate to reopened tab:", err)
+    })
+  },
+
+  "Tabs.Reopen": (raw?: unknown) => {
+    const t = raw as Tab | undefined
+    if (!t) return
+
+    const existing = tabs.value.find((x) => x.fullPath === t.fullPath)
+
+    if (existing) {
+      active.value = existing.id
+      router.push(existing.fullPath).catch((err) => {
+        console.error("Failed to navigate to tab:", err)
+      })
+      return
+    }
+
+    const reopened: Tab = {
+      id: generateId(),
+      name: t.name,
+      fullPath: t.fullPath,
+    }
+
+    tabs.value = [...tabs.value, reopened]
+    active.value = reopened.id
+    router.push(reopened.fullPath).catch((err) => {
+      console.error("Failed to navigate to reopened tab:", err)
+    })
+  },
+}
+
+// Register all event handlers
+Object.entries(eventHandlers).forEach(([event, handler]) => {
+  emitter.on(event, handler)
 })
 
-// Close current or specific tab id
-emitter.on("Tabs.Close", (id?: unknown) => {
-  const targetId = typeof id === "string" && id ? id : active.value
-  if (targetId) closeTabById(targetId)
-})
-
-// Keep only the specified tab, move others to recently closed
-emitter.on("Tabs.Close.Others", (id = active.value) => {
-  const keep = tabs.value.find((t) => t.id === id)
-  if (!keep) return
-  tabs.value.forEach((t) => {
-    if (t.id !== id) addToRecentlyClosed(t)
+// Cleanup event listeners on unmount
+onUnmounted(() => {
+  Object.entries(eventHandlers).forEach(([event, handler]) => {
+    emitter.off(event, handler)
   })
-  tabs.value = [keep]
-  active.value = keep.id
-})
-
-// Close all tabs, but keep ability to reopen from recently closed
-emitter.on("Tabs.Close.All", () => {
-  tabs.value.forEach((t) => addToRecentlyClosed(t))
-  tabs.value = []
-  active.value = ""
-})
-
-// Select a tab and navigate to it
-emitter.on("Tabs.Select", (idOrIndex) => {
-  const id: string = idOrIndex as string
-  const target = tabs.value.find((t) => t.id === id)
-  if (!target) {
-    console.warn(`Tab with id ${id} not found.`)
-    if (tabs.value[0]) {
-      active.value = tabs.value[0].id
-    }
-    return
-  }
-  active.value = target.id
-})
-
-// Reopen the most recently closed tab; focus an existing one if already open
-emitter.on("Tabs.ReopenLast", () => {
-  const last = recentlyClosed.value.shift()
-  if (!last) return
-  const reopened: Tab = {
-    id: generateId(),
-    name: last.name,
-    fullPath: last.fullPath,
-  }
-  const existing = tabs.value.find((t) => t.fullPath === reopened.fullPath)
-  if (existing) {
-    emitter.emit("Tabs.Select", existing.id)
-    return
-  }
-  tabs.value = [...tabs.value, reopened]
-  emitter.emit("Tabs.Select", reopened.id)
-})
-
-// Reopen a specific recently-closed tab entry
-emitter.on("Tabs.Reopen", (raw?: unknown) => {
-  const t = raw as Tab | undefined
-  if (!t) return
-  const reopened: Tab = { id: generateId(), name: t.name, fullPath: t.fullPath }
-  const existing = tabs.value.find((x) => x.fullPath === reopened.fullPath)
-  if (existing) {
-    emitter.emit("Tabs.Select", existing.id)
-    return
-  }
-  tabs.value = [...tabs.value, reopened]
-  emitter.emit("Tabs.Select", reopened.id)
 })
 </script>
 
@@ -391,7 +448,6 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                               : 'text-secondary-foreground/50 bg-secondary/50'
                           "
                           as-child
-                          @click="emitter.emit('Tabs.Select', tab.id)"
                         >
                           <RouterLink :to="tab.fullPath">
                             <icon-lucide-workflow />
@@ -551,7 +607,7 @@ emitter.on("Tabs.Reopen", (raw?: unknown) => {
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem @click="renameTab(active)">
                           <icon-lucide-square-pen />
                           Rename
                           <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>

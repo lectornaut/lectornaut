@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu"
 import {
   companyMenu,
@@ -314,7 +314,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
                     <Separator />
                     <OverlayScrollbarsWrapper>
                       <div
-                        class="flex grow flex-col overflow-auto overscroll-none"
+                        class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
                       >
                         <Accordion collapsible type="multiple" class="px-4">
                           <AccordionItem value="products">

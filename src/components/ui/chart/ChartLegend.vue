@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { buttonVariants } from "@/components/ui/button"
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { BulletLegend } from "@unovis/ts"

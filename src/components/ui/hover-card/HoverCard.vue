@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { HoverCardRootEmits, HoverCardRootProps } from "reka-ui"
 import { HoverCardRoot, useForwardPropsEmits } from "reka-ui"
 

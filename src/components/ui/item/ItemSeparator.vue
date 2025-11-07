@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import type { SeparatorProps } from "reka-ui"

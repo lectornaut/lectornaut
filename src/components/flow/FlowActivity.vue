@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
 import AlertTriangle from "~icons/lucide/alert-triangle"

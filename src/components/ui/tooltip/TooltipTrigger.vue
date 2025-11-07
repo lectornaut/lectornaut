@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { TooltipTriggerProps } from "reka-ui"
 import { TooltipTrigger } from "reka-ui"
 

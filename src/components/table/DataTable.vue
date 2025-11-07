@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { Task } from "@/data/schema"
 import { valueUpdater } from "@/lib/utils"
 import type {
@@ -90,7 +90,7 @@ const table = useVueTable({
 <template>
   <DataTableToolbar :table="table" />
   <div
-    class="bg-card flex grow flex-col overflow-auto overscroll-none border-y"
+    class="bg-card flex grow flex-col overflow-auto overscroll-none scroll-smooth border-y"
   >
     <OverlayScrollbarsWrapper>
       <Table>

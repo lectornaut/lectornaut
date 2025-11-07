@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { cn } from "@/lib/utils"
 import { reactiveOmit, useCurrentElement } from "@vueuse/core"
 import type { ListboxItemEmits, ListboxItemProps } from "reka-ui"

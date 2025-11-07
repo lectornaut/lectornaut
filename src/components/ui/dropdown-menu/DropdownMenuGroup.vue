@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { DropdownMenuGroupProps } from "reka-ui"
 import { DropdownMenuGroup } from "reka-ui"
 

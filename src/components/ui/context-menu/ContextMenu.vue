@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { ContextMenuRootEmits, ContextMenuRootProps } from "reka-ui"
 import { ContextMenuRoot, useForwardPropsEmits } from "reka-ui"
 

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { AvatarImageProps } from "reka-ui"
 import { AvatarImage } from "reka-ui"
 

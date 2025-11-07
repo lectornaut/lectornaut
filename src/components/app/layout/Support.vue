@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { changelog } from "@/data/changelog"
 import emitter from "@/modules/mitt"
 import { state } from "@/modules/theme"
@@ -190,8 +190,8 @@ const companySizes = [
 <template>
   <SidebarMenu>
     <SidebarMenuItem id="tour-help-support">
-      <Tooltip>
-        <TooltipProvider>
+      <TooltipProvider>
+        <Tooltip>
           <Dialog>
             <DropdownMenu v-model:open="openSupport">
               <DropdownMenuTrigger as-child>
@@ -400,8 +400,8 @@ const companySizes = [
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </TooltipProvider>
-      </Tooltip>
+        </Tooltip>
+      </TooltipProvider>
     </SidebarMenuItem>
     <Shortcuts />
     <Changelog />

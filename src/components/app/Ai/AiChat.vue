@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import Avatar from "vue-boring-avatars"
 
 const messages = [

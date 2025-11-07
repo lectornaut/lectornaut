@@ -223,7 +223,7 @@ export default defineConfig({
       typescript: true,
       vueTsc: true,
       eslint: {
-        lintCommand: "eslint './src/**/*.{js,ts,vue}'",
+        lintCommand: "eslint './src/**/*.{js,ts,cjs,mjs,vue}'",
         watchPath: "./src",
         useFlatConfig: true,
       },

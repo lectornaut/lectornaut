@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { changelog } from "@/data/changelog"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
@@ -47,7 +47,9 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       </SheetHeader>
       <Separator />
       <OverlayScrollbarsWrapper>
-        <div class="flex grow flex-col overflow-auto overscroll-none">
+        <div
+          class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
+        >
           <Accordion
             collapsible
             type="multiple"

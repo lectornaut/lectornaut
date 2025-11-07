@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import useDragAndDrop from "@/composables/useDnD"
 import { Background } from "@vue-flow/background"
 import { Controls } from "@vue-flow/controls"

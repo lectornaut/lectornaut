@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { SelectValueProps } from "reka-ui"
 import { SelectValue } from "reka-ui"
 

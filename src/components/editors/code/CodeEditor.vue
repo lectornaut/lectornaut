@@ -1,8 +1,4 @@
-<template>
-  <div ref="editorContainer"></div>
-</template>
-
-<script setup lang="ts">
+<script lang="ts" setup>
 import {
   autocompletion,
   closeBrackets,
@@ -177,3 +173,7 @@ onBeforeUnmount(() => {
   }
 })
 </script>
+
+<template>
+  <div ref="editorContainer"></div>
+</template>

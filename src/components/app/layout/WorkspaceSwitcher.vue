@@ -1,5 +1,6 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { getInitials } from "@/helpers/utilities"
+import emitter from "@/modules/mitt"
 
 const online = useOnline()
 
@@ -25,24 +26,6 @@ const groups = [
         value: "monsters",
       },
     ],
-  },
-]
-
-const accounts = [
-  {
-    username: "shadcn",
-    avatar: "https://github.com/shadcn.png",
-    email: "shadcn@vercel.com",
-  },
-  {
-    username: "maxleiter",
-    avatar: "https://github.com/maxleiter.png",
-    email: "maxleiter@vercel.com",
-  },
-  {
-    username: "evilrabbit",
-    avatar: "https://github.com/evilrabbit.png",
-    email: "evilrabbit@vercel.com",
   },
 ]
 
@@ -141,12 +124,16 @@ const selectedUserObjects = computed(() => {
         </DropdownMenuTrigger>
         <DropdownMenuContent class="w-48" align="center">
           <DropdownMenuGroup>
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              @click="emitter.emit('Dialog.Settings.Open', 'general')"
+            >
               <icon-lucide-settings />
               Settings
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              @click="emitter.emit('Dialog.Settings.Open', 'people')"
+            >
               <icon-lucide-users />
               Members
               <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
@@ -198,49 +185,6 @@ const selectedUserObjects = computed(() => {
                     <DropdownMenuItem>
                       <icon-lucide-circle-plus />
                       Create team
-                    </DropdownMenuItem>
-                  </DialogTrigger>
-                </DropdownMenuGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuItem as-child>
-                <DropdownMenuSubTrigger>
-                  <icon-lucide-user-round />
-                  Switch account
-                </DropdownMenuSubTrigger>
-              </DropdownMenuItem>
-              <DropdownMenuSubContent class="w-56" align="start">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Accounts
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem
-                    v-for="account in accounts"
-                    :key="account.username"
-                  >
-                    <Item size="sm" class="p-0">
-                      <ItemMedia>
-                        <Avatar class="size-8">
-                          <AvatarImage :src="account.avatar" />
-                          <AvatarFallback>
-                            {{ account.username.charAt(0) }}
-                          </AvatarFallback>
-                        </Avatar>
-                      </ItemMedia>
-                      <ItemContent class="gap-0">
-                        <ItemTitle>{{ account.username }}</ItemTitle>
-                        <ItemDescription>{{ account.email }}</ItemDescription>
-                      </ItemContent>
-                    </Item>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DialogTrigger as-child>
-                    <DropdownMenuItem>
-                      <icon-lucide-circle-plus />
-                      Add account
                     </DropdownMenuItem>
                   </DialogTrigger>
                 </DropdownMenuGroup>

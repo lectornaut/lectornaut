@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { AccordionRootEmits, AccordionRootProps } from "reka-ui"
 import { AccordionRoot, useForwardPropsEmits } from "reka-ui"
 

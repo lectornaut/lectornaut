@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { SplitterPanelEmits, SplitterPanelProps } from "reka-ui"
 import { SplitterPanel, useForwardPropsEmits } from "reka-ui"
 

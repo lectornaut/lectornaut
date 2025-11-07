@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { ContextMenuGroupProps } from "reka-ui"
 import { ContextMenuGroup } from "reka-ui"
 

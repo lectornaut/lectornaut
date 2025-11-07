@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 definePage({
   meta: {
     layout: "agents",
@@ -36,7 +36,7 @@ const metadata = [
   <Teleport defer to="#left-sidebar">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>
-  <div class="flex grow flex-col overflow-auto overscroll-none">
+  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
     <div class="flex grow flex-col gap-2">
       <FlowApp />
     </div>

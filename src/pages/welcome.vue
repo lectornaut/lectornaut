@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 definePage({
   meta: {
     requiresUser: true,
@@ -11,7 +11,7 @@ useHead({
 </script>
 
 <template>
-  <div class="relative h-dvh w-dvw overflow-auto overscroll-none">
+  <div class="relative h-dvh w-dvw overflow-auto overscroll-none scroll-smooth">
     <video playsinline autoplay muted loop class="size-full object-cover">
       <source
         src="/assets/videos/sky.mp4"

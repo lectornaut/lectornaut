@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import { omit } from "@unovis/ts"
 import { VisCrosshair, VisTooltip } from "@unovis/vue"
@@ -8,7 +8,7 @@ import { ChartTooltip } from "."
 
 const props = withDefaults(
   defineProps<{
-    colors: string[]
+    colors?: string[]
     index: string
     items: BulletLegendItemInterface[]
     customTooltip?: Component
@@ -19,10 +19,10 @@ const props = withDefaults(
 )
 
 // Use weakmap to store reference to each datapoint for Tooltip
-const wm = new WeakMap()
-function template(d: any) {
+const wm = new WeakMap<object, string>()
+function template(d: Record<string, unknown>): string {
   if (wm.has(d)) {
-    return wm.get(d)
+    return wm.get(d)!
   } else {
     const componentDiv = document.createElement("div")
     const omittedData = Object.entries(omit(d, [props.index])).map(
@@ -33,7 +33,7 @@ function template(d: any) {
     )
     const TooltipComponent = props.customTooltip ?? ChartTooltip
     createApp(TooltipComponent, {
-      title: d[props.index].toString(),
+      title: String(d[props.index]),
       data: omittedData,
     }).mount(componentDiv)
     wm.set(d, componentDiv.innerHTML)
@@ -41,7 +41,7 @@ function template(d: any) {
   }
 }
 
-function color(d: unknown, i: number) {
+function color(_d: unknown, i: number) {
   return props.colors[i] ?? "transparent"
 }
 </script>

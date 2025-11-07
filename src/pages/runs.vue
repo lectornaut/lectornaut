@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { columns } from "@/components/table/columns"
 import runs from "@/data/runs.json"
 
@@ -81,7 +81,7 @@ const tree = [
       </SidebarContent>
     </Sidebar>
   </Teleport>
-  <div class="flex grow flex-col overflow-auto overscroll-none">
+  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
     <DataTable :data="runs" :columns="columns" />
   </div>
   <Teleport defer to="#right-sidebar">

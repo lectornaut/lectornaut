@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import emitter from "@/modules/mitt"
 import IconAiAsk from "~icons/mingcute/ai-fill"
 import IconBlock from "~icons/mingcute/layer-fill"

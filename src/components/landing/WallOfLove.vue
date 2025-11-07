@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 interface Artwork {
   id: string
   artist: string
@@ -69,7 +69,7 @@ const works: Artwork[] = [
     <div class="flex h-max flex-col gap-4 p-4">
       <div v-for="artwork in works" :key="artwork.id">
         <figure class="shrink-0">
-          <div class="overflow-auto overscroll-none rounded-md">
+          <div class="overflow-auto overscroll-none scroll-smooth rounded-md">
             <img
               :src="artwork.art"
               :alt="`Photo by ${artwork.artist}`"

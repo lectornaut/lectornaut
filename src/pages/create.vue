@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { getFunctions, httpsCallable } from "firebase/functions"
 
 definePage({
@@ -78,9 +78,9 @@ const generatePoem = async () => {
   <Teleport defer to="#left-sidebar">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>
-  <div class="flex grow gap-2 overflow-auto overscroll-none p-2">
+  <div class="flex grow gap-2 overflow-auto overscroll-none scroll-smooth p-2">
     <div
-      class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none rounded-md border"
+      class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none scroll-smooth rounded-md border"
     >
       <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">
@@ -194,7 +194,7 @@ const generatePoem = async () => {
       </OverlayScrollbarsWrapper>
     </div>
     <div
-      class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none rounded-md border"
+      class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none scroll-smooth rounded-md border"
     >
       <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">

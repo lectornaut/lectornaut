@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import hotkeys from "hotkeys-js"
 import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 

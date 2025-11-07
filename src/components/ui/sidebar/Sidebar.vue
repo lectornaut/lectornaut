@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import SheetDescription from "@/components/ui/sheet/SheetDescription.vue"
 import SheetHeader from "@/components/ui/sheet/SheetHeader.vue"

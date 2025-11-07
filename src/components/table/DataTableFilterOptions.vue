@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { priorities, statuses } from "@/data/constants"
 import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 const iconDisplay = ref<"icon" | "text">("icon")
 import { menu } from "@/helpers/defaults"
 </script>

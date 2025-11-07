@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import content from "@/data/content.json"
 import { accents, fonts, sizes } from "@/helpers/defaults"
 import type { JSONContent } from "@tiptap/core"
@@ -60,7 +60,7 @@ import { UndoRedo } from "@tiptap/extensions/undo-redo"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
 import { BubbleMenu } from "@tiptap/vue-3/menus"
 import { common, createLowlight } from "lowlight"
-const lowlight = createLowlight(common)
+
 const editable = ref(true)
 
 const json = ref<JSONContent | null>(null)
@@ -88,7 +88,7 @@ const editor = useEditor({
     }),
     ListKeymap,
     CodeBlockLowlight.configure({
-      lowlight,
+      lowlight: createLowlight(common),
     }),
     Details.configure({
       persist: true,
@@ -1022,7 +1022,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
       </div>
     </BubbleMenu>
     <DragHandle v-if="editor" :editor="editor">
-      <Button size="icon-sm" class="mr-2 size-6">
+      <Button variant="ghost" size="icon-sm" class="mr-2 size-6">
         <icon-lucide-grip-vertical />
       </Button>
     </DragHandle>

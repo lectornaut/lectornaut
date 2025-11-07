@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 const steps = [
   { name: "Create a workflow", status: "complete" },
   { name: "Add a node", status: "complete" },

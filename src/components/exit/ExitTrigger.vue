@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { logout } from "@/modules/auth"
 import emitter from "@/modules/mitt"
 

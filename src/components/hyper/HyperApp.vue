@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { Carousel, type CarouselApi } from "@/components/ui/carousel"
 import AutoScroll from "embla-carousel-auto-scroll"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"

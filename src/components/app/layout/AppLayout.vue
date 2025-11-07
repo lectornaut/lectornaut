@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
@@ -78,7 +78,7 @@ const closeTab = (id: string) => {
 </script>
 
 <template>
-  <main class="flex grow overflow-auto overscroll-none">
+  <main class="flex grow overflow-auto overscroll-none scroll-smooth">
     <MainSidebar />
     <div id="left-dock"></div>
     <ResizablePanelGroup
@@ -123,7 +123,7 @@ const closeTab = (id: string) => {
             <ContextMenuTrigger as-child>
               <ResizablePanel
                 ref="topPanel"
-                class="flex grow flex-col overflow-auto overscroll-none"
+                class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
                 collapsible
                 :min-size="15"
                 :default-size="80"
@@ -133,7 +133,9 @@ const closeTab = (id: string) => {
                 <Tabbar />
                 <SubNavigation />
                 <Separator />
-                <div class="flex grow flex-col overflow-auto overscroll-none">
+                <div
+                  class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
+                >
                   <RouterView />
                 </div>
               </ResizablePanel>
@@ -173,17 +175,17 @@ const closeTab = (id: string) => {
                 <Tabs v-model="activeTab">
                   <div
                     id="bottom-sidebar"
-                    class="bg-background flex flex-1 flex-col overflow-auto overscroll-none"
+                    class="bg-background flex flex-1 flex-col overflow-auto overscroll-none scroll-smooth"
                   >
                     <div class="flex shrink-0">
                       <div
-                        class="no-scrollbar flex flex-1 items-center justify-start overflow-auto overscroll-none"
+                        class="no-scrollbar flex flex-1 items-center justify-start overflow-auto overscroll-none scroll-smooth"
                       >
                         <TabsList class="bg-transparent p-0">
                           <TabsTrigger
                             v-for="tab in source"
                             :key="tab.id"
-                            class="data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:!border-transparent data-[state=active]:!bg-transparent data-[state=active]:shadow-none"
+                            class="data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:border-transparent! data-[state=active]:bg-transparent! data-[state=active]:shadow-none"
                             :class="{
                               'after:bg-primary after:absolute after:inset-x-0 after:-bottom-px after:z-30 after:h-px':
                                 activeTab === tab.id,
@@ -203,7 +205,7 @@ const closeTab = (id: string) => {
                                     class="size-4"
                                     @click.stop="closeTab(tab.id)"
                                   >
-                                    <icon-lucide-x class="!size-3" />
+                                    <icon-lucide-x class="size-3!" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent> Close tab </TooltipContent>
