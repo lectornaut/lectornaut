@@ -16,6 +16,15 @@ const favicon = computed(() => {
 
 useFavicon(favicon)
 
+const sonnerTheme = computed(() => {
+  if (state.value === "custom") return isDark.value ? "dark" : "light"
+  return state.value === "dark"
+    ? "dark"
+    : state.value === "light"
+      ? "light"
+      : "system"
+})
+
 useHead({
   meta: [
     {
@@ -95,5 +104,5 @@ emitter.on("Toast.Error", (message) => {
 </script>
 
 <template>
-  <Sonner offset="8px" :theme="state" />
+  <Sonner offset="8px" :theme="sonnerTheme" />
 </template>

@@ -9,7 +9,10 @@ const props = withDefaults(defineProps<DrawerRootProps>(), {
 
 const emits = defineEmits<DrawerRootEmits>()
 
-const forwarded = useForwardPropsEmits(props, emits)
+const forwarded = useForwardPropsEmits<DrawerRootProps, keyof DrawerRootEmits>(
+  props,
+  emits
+)
 </script>
 
 <template>

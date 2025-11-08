@@ -68,7 +68,7 @@ onMounted(() => {
   term.on("data", async (input: string = "") => {
     term.pause()
     await execute(term, input.trim())
-      .then((res) => res && term.writeln(res))
+      .then((res) => res && term.writeln(String(res)))
       .catch(
         (err) =>
           err &&
@@ -82,7 +82,7 @@ onMounted(() => {
     if (!matches.length) {
       matches.push(...term.history.filter((c: string) => c.startsWith(input)))
     }
-    return matches.pop()
+    return matches.pop() ?? ""
   })
 })
 
