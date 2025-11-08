@@ -460,18 +460,15 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuLabel>
                   <DropdownMenuGroup>
                     <DropdownMenuItem
-                      v-for="accent in accents"
-                      :key="accent.id"
-                      @click="editor?.chain().focus().setColor(accent.id).run()"
+                      v-for="color in accents"
+                      :key="color.id"
+                      @click="editor?.chain().focus().setColor(color.id).run()"
                     >
-                      <div
-                        class="mr-2 h-4 w-4 rounded-full"
-                        :style="{ backgroundColor: accent.id }"
-                      ></div>
-                      {{ accent.name }}
+                      <icon-mdi-circle :class="`text-${color.id}-500`" />
+                      {{ color.name }}
                       <DropdownMenuShortcut
                         v-if="
-                          editor?.isActive('textStyle', { color: accent.id })
+                          editor?.isActive('textStyle', { color: color.id })
                         "
                       >
                         <icon-lucide-check />
@@ -503,37 +500,21 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuLabel>
                   <DropdownMenuGroup>
                     <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleHighlight().run()"
-                    >
-                      <div
-                        class="mr-2 h-4 w-4 rounded-full bg-yellow-300"
-                      ></div>
-                      Default
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('highlight')"
-                      >
-                        <icon-lucide-check />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      v-for="accent in accents"
-                      :key="accent.id"
+                      v-for="color in accents"
+                      :key="color.id"
                       @click="
                         editor
                           ?.chain()
                           .focus()
-                          .toggleHighlight({ color: accent.id })
+                          .toggleHighlight({ color: color.id })
                           .run()
                       "
                     >
-                      <div
-                        class="mr-2 h-4 w-4 rounded-full opacity-50"
-                        :style="{ backgroundColor: accent.id }"
-                      ></div>
-                      {{ accent.name }}
+                      <icon-mdi-circle :class="`text-${color.id}-500`" />
+                      {{ color.name }}
                       <DropdownMenuShortcut
                         v-if="
-                          editor?.isActive('highlight', { color: accent.id })
+                          editor?.isActive('highlight', { color: color.id })
                         "
                       >
                         <icon-lucide-check />

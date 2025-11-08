@@ -17,7 +17,7 @@ const favicon = computed(() => {
 useFavicon(favicon)
 
 const sonnerTheme = computed(() => {
-  if (state.value === "custom") return isDark.value ? "dark" : "light"
+  if (state.value === "accent") return isDark.value ? "dark" : "light"
   return state.value === "dark"
     ? "dark"
     : state.value === "light"

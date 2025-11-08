@@ -727,7 +727,7 @@
     --chart-5: var(--color-stone-100);
   }
 
-  :root[data-theme="custom"] {
+  :root[data-theme="accent"] {
     color-scheme: normal;
 
     --background: var(--color-neutral-950);
@@ -753,7 +753,7 @@
     --sidebar-border: var(--color-neutral-900);
   }
 
-  :root[data-theme="custom"][data-accent="red"] {
+  :root[data-theme="accent"][data-accent="red"] {
     --background: var(--color-red-950);
     --foreground: var(--color-red-50);
     --card: var(--color-red-900);
@@ -788,7 +788,7 @@
     --chart-5: var(--color-red-100);
   }
 
-  :root[data-theme="custom"][data-accent="orange"] {
+  :root[data-theme="accent"][data-accent="orange"] {
     --background: var(--color-orange-950);
     --foreground: var(--color-orange-50);
     --card: var(--color-orange-900);
@@ -823,7 +823,7 @@
     --chart-5: var(--color-orange-100);
   }
 
-  :root[data-theme="custom"][data-accent="amber"] {
+  :root[data-theme="accent"][data-accent="amber"] {
     --background: var(--color-amber-950);
     --foreground: var(--color-amber-50);
     --card: var(--color-amber-900);
@@ -858,7 +858,7 @@
     --chart-5: var(--color-amber-100);
   }
 
-  :root[data-theme="custom"][data-accent="yellow"] {
+  :root[data-theme="accent"][data-accent="yellow"] {
     --background: var(--color-yellow-950);
     --foreground: var(--color-yellow-50);
     --card: var(--color-yellow-900);
@@ -893,7 +893,7 @@
     --chart-5: var(--color-yellow-100);
   }
 
-  :root[data-theme="custom"][data-accent="lime"] {
+  :root[data-theme="accent"][data-accent="lime"] {
     --background: var(--color-lime-950);
     --foreground: var(--color-lime-50);
     --card: var(--color-lime-900);
@@ -928,7 +928,7 @@
     --chart-5: var(--color-lime-100);
   }
 
-  :root[data-theme="custom"][data-accent="green"] {
+  :root[data-theme="accent"][data-accent="green"] {
     --background: var(--color-green-950);
     --foreground: var(--color-green-50);
     --card: var(--color-green-900);
@@ -963,7 +963,7 @@
     --chart-5: var(--color-green-100);
   }
 
-  :root[data-theme="custom"][data-accent="emerald"] {
+  :root[data-theme="accent"][data-accent="emerald"] {
     --background: var(--color-emerald-950);
     --foreground: var(--color-emerald-50);
     --card: var(--color-emerald-900);
@@ -998,7 +998,7 @@
     --chart-5: var(--color-emerald-100);
   }
 
-  :root[data-theme="custom"][data-accent="teal"] {
+  :root[data-theme="accent"][data-accent="teal"] {
     --background: var(--color-teal-950);
     --foreground: var(--color-teal-50);
     --card: var(--color-teal-900);
@@ -1033,7 +1033,7 @@
     --chart-5: var(--color-teal-100);
   }
 
-  :root[data-theme="custom"][data-accent="cyan"] {
+  :root[data-theme="accent"][data-accent="cyan"] {
     --background: var(--color-cyan-950);
     --foreground: var(--color-cyan-50);
     --card: var(--color-cyan-900);
@@ -1068,7 +1068,7 @@
     --chart-5: var(--color-cyan-100);
   }
 
-  :root[data-theme="custom"][data-accent="sky"] {
+  :root[data-theme="accent"][data-accent="sky"] {
     --background: var(--color-sky-950);
     --foreground: var(--color-sky-50);
     --card: var(--color-sky-900);
@@ -1103,7 +1103,7 @@
     --chart-5: var(--color-sky-100);
   }
 
-  :root[data-theme="custom"][data-accent="blue"] {
+  :root[data-theme="accent"][data-accent="blue"] {
     --background: var(--color-blue-950);
     --foreground: var(--color-blue-50);
     --card: var(--color-blue-900);
@@ -1138,7 +1138,7 @@
     --chart-5: var(--color-blue-100);
   }
 
-  :root[data-theme="custom"][data-accent="indigo"] {
+  :root[data-theme="accent"][data-accent="indigo"] {
     --background: var(--color-indigo-950);
     --foreground: var(--color-indigo-50);
     --card: var(--color-indigo-900);
@@ -1173,7 +1173,7 @@
     --chart-5: var(--color-indigo-100);
   }
 
-  :root[data-theme="custom"][data-accent="violet"] {
+  :root[data-theme="accent"][data-accent="violet"] {
     --background: var(--color-violet-950);
     --foreground: var(--color-violet-50);
     --card: var(--color-violet-900);
@@ -1208,7 +1208,7 @@
     --chart-5: var(--color-violet-100);
   }
 
-  :root[data-theme="custom"][data-accent="purple"] {
+  :root[data-theme="accent"][data-accent="purple"] {
     --background: var(--color-purple-950);
     --foreground: var(--color-purple-50);
     --card: var(--color-purple-900);
@@ -1243,7 +1243,7 @@
     --chart-5: var(--color-purple-100);
   }
 
-  :root[data-theme="custom"][data-accent="fuchsia"] {
+  :root[data-theme="accent"][data-accent="fuchsia"] {
     --background: var(--color-fuchsia-950);
     --foreground: var(--color-fuchsia-50);
     --card: var(--color-fuchsia-900);
@@ -1278,7 +1278,7 @@
     --chart-5: var(--color-fuchsia-100);
   }
 
-  :root[data-theme="custom"][data-accent="pink"] {
+  :root[data-theme="accent"][data-accent="pink"] {
     --background: var(--color-pink-950);
     --foreground: var(--color-pink-50);
     --card: var(--color-pink-900);
@@ -1313,7 +1313,7 @@
     --chart-5: var(--color-pink-100);
   }
 
-  :root[data-theme="custom"][data-accent="rose"] {
+  :root[data-theme="accent"][data-accent="rose"] {
     --background: var(--color-rose-950);
     --foreground: var(--color-rose-50);
     --card: var(--color-rose-900);
@@ -1348,7 +1348,7 @@
     --chart-5: var(--color-rose-100);
   }
 
-  :root[data-theme="custom"][data-accent="slate"] {
+  :root[data-theme="accent"][data-accent="slate"] {
     --background: var(--color-slate-950);
     --foreground: var(--color-slate-50);
     --card: var(--color-slate-900);
@@ -1383,7 +1383,7 @@
     --chart-5: var(--color-slate-100);
   }
 
-  :root[data-theme="custom"][data-accent="gray"] {
+  :root[data-theme="accent"][data-accent="gray"] {
     --background: var(--color-gray-950);
     --foreground: var(--color-gray-50);
     --card: var(--color-gray-900);
@@ -1418,7 +1418,7 @@
     --chart-5: var(--color-gray-100);
   }
 
-  :root[data-theme="custom"][data-accent="zinc"] {
+  :root[data-theme="accent"][data-accent="zinc"] {
     --background: var(--color-zinc-950);
     --foreground: var(--color-zinc-50);
     --card: var(--color-zinc-900);
@@ -1453,7 +1453,7 @@
     --chart-5: var(--color-zinc-100);
   }
 
-  :root[data-theme="custom"][data-accent="neutral"] {
+  :root[data-theme="accent"][data-accent="neutral"] {
     --background: var(--color-neutral-950);
     --foreground: var(--color-neutral-50);
     --card: var(--color-neutral-900);
@@ -1488,7 +1488,7 @@
     --chart-5: var(--color-neutral-100);
   }
 
-  :root[data-theme="custom"][data-accent="stone"] {
+  :root[data-theme="accent"][data-accent="stone"] {
     --background: var(--color-stone-950);
     --foreground: var(--color-stone-50);
     --card: var(--color-stone-900);

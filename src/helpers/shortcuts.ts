@@ -304,6 +304,16 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
       {
+        description: ["Theme", "Accent"],
+        keys: [],
+        hotkeys: "",
+        event: "Theme.Change",
+        parameters: "accent",
+        icon: IconLucidePalette,
+        tags: ["settings", "theme", "accent"],
+        hidden: [],
+      },
+      {
         description: ["Theme", "Auto"],
         keys: [],
         hotkeys: "",

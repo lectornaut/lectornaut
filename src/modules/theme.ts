@@ -12,7 +12,7 @@ const initMode = () => {
     attribute: "data-theme",
     storageKey: "theme",
     modes: {
-      custom: "custom",
+      accent: "accent",
     },
   })
 }
@@ -73,7 +73,7 @@ export const { store, system, state } = useColorMode({
   attribute: "data-theme",
   storageKey: "theme",
   modes: {
-    custom: "custom",
+    accent: "accent",
   },
 })
 
@@ -86,7 +86,7 @@ if (isTauri.value) {
       case "dark":
         await setTheme("dark")
         break
-      case "custom":
+      case "accent":
         await setTheme(null)
         break
       case "auto":

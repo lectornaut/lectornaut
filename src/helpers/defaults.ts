@@ -59,8 +59,8 @@ export const themes = [
     icon: IconDark,
   },
   {
-    id: "custom",
-    name: "Custom",
+    id: "accent",
+    name: "Accent",
     icon: IconPalette,
   },
   {
