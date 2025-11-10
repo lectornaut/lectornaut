@@ -572,60 +572,56 @@ const navToc = [
   <OverlayScrollbarsWrapper>
     <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
       <Tabs default-value="overview" class="gap-0">
-        <div class="bg-background sticky top-0 z-10">
-          <div class="flex items-center justify-between gap-2 p-2">
+        <Teleport defer to="#cta-dock">
+          <div class="flex items-center justify-between gap-2">
+            <Popover>
+              <PopoverTrigger as-child>
+                <Button variant="ghost" class="text-xs">
+                  {{
+                    range.start
+                      ? df.format(range.start.toDate(getLocalTimeZone()))
+                      : "Start date"
+                  }}
+                  -
+                  {{
+                    range.end
+                      ? df.format(range.end.toDate(getLocalTimeZone()))
+                      : "End date"
+                  }}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent class="grid w-full p-0">
+                <div class="p-2">
+                  <Select v-model="range">
+                    <SelectTrigger class="w-full">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem
+                        v-for="preset in presets"
+                        :key="preset.id"
+                        :value="preset.value"
+                      >
+                        {{ preset.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Separator />
+                <RangeCalendar
+                  v-model="range"
+                  :max-value="today(getLocalTimeZone())"
+                  initial-focus
+                  class="p-2"
+                />
+              </PopoverContent>
+            </Popover>
             <TabsList>
               <TabsTrigger value="overview"> Overview </TabsTrigger>
               <TabsTrigger value="usage"> Usage </TabsTrigger>
             </TabsList>
-            <div class="flex items-center space-x-2">
-              <Popover>
-                <PopoverTrigger as-child>
-                  <Button variant="outline">
-                    <icon-lucide-calendar />
-                    {{
-                      range.start
-                        ? df.format(range.start.toDate(getLocalTimeZone()))
-                        : "Start date"
-                    }}
-                    -
-                    {{
-                      range.end
-                        ? df.format(range.end.toDate(getLocalTimeZone()))
-                        : "End date"
-                    }}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent class="grid w-full p-0">
-                  <div class="p-2">
-                    <Select v-model="range">
-                      <SelectTrigger class="w-full">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          v-for="preset in presets"
-                          :key="preset.id"
-                          :value="preset.value"
-                        >
-                          {{ preset.label }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Separator />
-                  <RangeCalendar
-                    v-model="range"
-                    :max-value="today(getLocalTimeZone())"
-                    initial-focus
-                    class="p-2"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
           </div>
-          <Separator />
-        </div>
+        </Teleport>
         <TabsContent
           value="overview"
           class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-12"

@@ -43,7 +43,9 @@ const router = useRouter()
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <div class="flex gap-2"></div>
+        <div class="flex gap-2">
+          <div id="cta-dock"></div>
+        </div>
       </div>
     </ContextMenuTrigger>
     <ContextMenuContent align="start" side="bottom">

@@ -1,5 +1,5 @@
 import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
-import { googleAI } from "@genkit-ai/googleai"
+import { googleAI } from "@genkit-ai/google-genai"
 import { onCallGenkit } from "firebase-functions/https"
 import { defineSecret } from "firebase-functions/params"
 import { genkit, z } from "genkit"
@@ -20,7 +20,10 @@ const generatePoemStreamingFlow = ai.defineFlow(
     streamSchema: z.string(),
     outputSchema: z.string(),
   },
-  async (subject: string, { sendChunk }) => {
+  async (
+    subject: string,
+    { sendChunk }: { sendChunk: (chunk: string) => void }
+  ) => {
     const { stream, response } = ai.generateStream(
       `Compose a poem about ${subject}.`
     )

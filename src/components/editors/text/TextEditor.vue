@@ -61,12 +61,12 @@ import { EditorContent, useEditor } from "@tiptap/vue-3"
 import { BubbleMenu } from "@tiptap/vue-3/menus"
 import { common, createLowlight } from "lowlight"
 
-const editable = ref(true)
+const readOnly = ref(false)
 
 const json = ref<JSONContent | null>(null)
 
 const editor = useEditor({
-  editable: editable.value,
+  editable: !readOnly.value,
   content: content,
   editorProps: {
     attributes: {
@@ -217,8 +217,8 @@ const editor = useEditor({
   },
 })
 
-watch(editable, (newValue) => {
-  editor.value?.setEditable(newValue)
+watch(readOnly, (newValue) => {
+  editor.value?.setEditable(!newValue)
 })
 
 onBeforeUnmount(() => {
@@ -1007,16 +1007,20 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <icon-lucide-grip-vertical />
       </Button>
     </DragHandle>
-    <div class="text-muted-foreground sticky bottom-0 border-t p-2 text-xs">
-      {{ editor?.storage.characterCount.characters() }} characters /
-      {{ editor?.storage.characterCount.words() }} words
-      <Checkbox id="editable" v-model="editable" />
-      <Label for="editable">Editable</Label>
-      <Button size="icon" @click="copy(source)">
-        <icon-lucide-copy v-if="!copied" />
-        <icon-lucide-check v-else />
-      </Button>
-    </div>
+    <Teleport defer to="#cta-dock">
+      <div class="text-muted-foreground flex items-center gap-2 text-xs">
+        {{ editor?.storage.characterCount.characters() }} characters /
+        {{ editor?.storage.characterCount.words() }} words
+        <div class="flex items-center gap-2">
+          <Checkbox id="readOnly" v-model="readOnly" />
+          <Label for="readOnly" class="text-xs">Read-only</Label>
+        </div>
+        <Button variant="ghost" size="icon" @click="copy(source)">
+          <icon-lucide-copy v-if="!copied" />
+          <icon-lucide-check v-else />
+        </Button>
+      </div>
+    </Teleport>
   </OverlayScrollbarsWrapper>
 </template>
 

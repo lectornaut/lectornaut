@@ -16,7 +16,7 @@ import { store } from "@/modules/theme"
             >
               <icon-lucide-sun v-if="store == 'light'" />
               <icon-lucide-moon v-if="store == 'dark'" />
-              <icon-lucide-palette v-if="store == 'custom'" />
+              <icon-lucide-palette v-if="store == 'accent'" />
               <icon-lucide-monitor v-if="store == 'auto'" />
             </Button>
           </DropdownMenuTrigger>
