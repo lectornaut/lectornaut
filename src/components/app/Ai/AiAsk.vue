@@ -53,14 +53,7 @@ const userInput = ref("")
               :size="iconDisplay === 'text' ? 'default' : 'icon'"
             >
               <icon-mingcute-ai-fill />
-              <RadiantText
-                v-if="iconDisplay === 'text'"
-                class="hidden md:flex"
-                :duration="5"
-                :radiant-width="20"
-              >
-                Ask AI
-              </RadiantText>
+              <span v-if="iconDisplay === 'text'"> Ask AI </span>
             </Button>
           </TooltipTrigger>
           <TooltipContent class="px-2">

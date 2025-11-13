@@ -64,12 +64,21 @@ const modelGroups = [
 
 const subject = ref("")
 const poem = ref("")
+const isLoading = ref(false)
 
 const generatePoem = async () => {
-  const poemFlow = httpsCallable(getFunctions(), "generateFlow")
-  const response = await poemFlow.stream(subject.value)
-  for await (const chunk of response.stream) {
-    poem.value += chunk
+  isLoading.value = true
+  poem.value = ""
+  try {
+    const poemFlow = httpsCallable(getFunctions(), "generateFlow")
+    const response = await poemFlow.stream(subject.value)
+    for await (const chunk of response.stream) {
+      isLoading.value = false
+      poem.value += chunk
+    }
+  } catch (error) {
+    isLoading.value = false
+    console.error("Error generating poem:", error)
   }
 }
 </script>
@@ -160,7 +169,7 @@ const generatePoem = async () => {
               v-model="temperature"
               :max="1"
               :step="0.1"
-              class="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+              class="**:[[role=slider]]:h-4 **:[[role=slider]]:w-4"
               aria-label="Temperature"
             />
           </div>
@@ -173,7 +182,7 @@ const generatePoem = async () => {
               v-model="maxLength"
               :max="4000"
               :step="10"
-              class="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+              class="**:[[role=slider]]:h-4 **:[[role=slider]]:w-4"
               aria-label="Maximum Length"
             />
           </div>
@@ -186,7 +195,7 @@ const generatePoem = async () => {
               v-model="topP"
               :max="1"
               :step="0.1"
-              class="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+              class="**:[[role=slider]]:h-4 **:[[role=slider]]:w-4"
               aria-label="Top P"
             />
           </div>
@@ -199,9 +208,17 @@ const generatePoem = async () => {
       <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">
           <Input v-model="subject" placeholder="Subject" />
-          <Button @click="generatePoem()">Compose</Button>
+          <Button :disabled="isLoading" @click="generatePoem()">
+            <Spinner v-if="isLoading" />
+            {{ isLoading ? "Composing..." : "Compose" }}
+          </Button>
           <p class="rounded-md border p-2">
-            {{ poem ? poem : "Your poem will appear here." }}
+            <span v-if="isLoading" class="text-muted-foreground">
+              Generating poem...
+            </span>
+            <span v-else>
+              {{ poem ? poem : "Your poem will appear here." }}
+            </span>
           </p>
         </div>
       </OverlayScrollbarsWrapper>

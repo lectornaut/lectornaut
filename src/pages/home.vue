@@ -576,7 +576,7 @@ const navToc = [
           <div class="flex items-center justify-between gap-2">
             <Popover>
               <PopoverTrigger as-child>
-                <Button variant="ghost" class="text-xs">
+                <Button variant="ghost">
                   {{
                     range.start
                       ? df.format(range.start.toDate(getLocalTimeZone()))
@@ -626,72 +626,160 @@ const navToc = [
           value="overview"
           class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-12"
         >
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
-            <CardHeader
-              class="flex flex-row items-center justify-between space-y-0 pb-2"
-            >
-              <CardTitle class="text-sm font-medium"> Agents </CardTitle>
-              <icon-lucide-dollar-sign />
-            </CardHeader>
-            <CardContent>
-              <div class="text-2xl font-bold">$45,231.89</div>
-              <p class="text-muted-foreground text-xs">
-                +20.1% from last month
-              </p>
-            </CardContent>
-          </Card>
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
-            <CardHeader
-              class="flex flex-row items-center justify-between space-y-0 pb-2"
-            >
-              <CardTitle class="text-sm font-medium"> Performance </CardTitle>
-              <icon-lucide-trending-up />
-            </CardHeader>
-            <CardContent>
-              <div class="text-2xl font-bold">+2350</div>
-              <p class="text-muted-foreground text-xs">
-                +180.1% from last month
-              </p>
-            </CardContent>
-          </Card>
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
-            <CardHeader
-              class="flex flex-row items-center justify-between space-y-0 pb-2"
-            >
-              <CardTitle class="text-sm font-medium"> Tasks </CardTitle>
-              <icon-lucide-check-square />
-            </CardHeader>
-            <CardContent>
-              <div class="text-2xl font-bold">+12,234</div>
-              <p class="text-muted-foreground text-xs">+19% from last month</p>
-            </CardContent>
-          </Card>
-          <Card class="col-span-1 shadow-none md:col-span-1 lg:col-span-3">
-            <CardHeader
-              class="flex flex-row items-center justify-between space-y-0 pb-2"
-            >
-              <CardTitle class="text-sm font-medium"> Efficiency </CardTitle>
-              <icon-lucide-clock />
-            </CardHeader>
-            <CardContent>
-              <div class="text-2xl font-bold">+573</div>
-              <p class="text-muted-foreground text-xs">+201 since last hour</p>
-            </CardContent>
-          </Card>
           <Card
-            v-for="item in 3"
-            :key="item"
+            v-for="card in [
+              { title: 'Interactions', description: '+265 sales this month.' },
+              { title: 'Conversions', description: '+3.2% week over week.' },
+              { title: 'Revenue', description: '$12,340 MRR.' },
+            ]"
+            :key="card.title"
             class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
           >
             <CardHeader>
-              <CardTitle>Interactions</CardTitle>
+              <CardTitle>{{ card.title }}</CardTitle>
+              <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <BarChart
-                class="-mb-6 h-40 min-w-[-webkit-fill-available]"
+            <CardContent class="-px-4 -mb-6 overflow-clip">
+              <AreaChart
+                class="-mx-6 h-40 w-full min-w-[-webkit-fill-available]"
                 :data="monthlyActivity"
-                :categories="['name', 'total', 'predicted']"
+                :categories="['total']"
+                index="name"
+                :colors="[
+                  'var(--chart-2)',
+                  'var(--chart-4)',
+                  'var(--chart-1)',
+                  'var(--chart-5)',
+                  'var(--chart-3)',
+                ]"
+                :show-gradient="true"
+                :show-tooltip="false"
+                :show-legend="false"
+                :show-grid-line="false"
+                :show-x-axis="false"
+                :show-y-axis="false"
+              />
+            </CardContent>
+            <!-- <Separator /> -->
+            <!-- <CardFooter>
+              <CardDescription>{{ card.description }}</CardDescription>
+              <Button variant="outline" size="sm">
+                <icon-lucide-sparkles /> Ask AI
+              </Button>
+              <Button variant="outline" size="icon-sm">
+                <icon-lucide-arrow-up-right />
+              </Button>
+            </CardFooter> -->
+          </Card>
+          <Card
+            v-for="card in [
+              { title: 'Interactions', description: '+265 sales this month.' },
+              { title: 'Conversions', description: '+3.2% week over week.' },
+              { title: 'Revenue', description: '$12,340 MRR.' },
+            ]"
+            :key="card.title"
+            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
+          >
+            <CardHeader>
+              <CardTitle>{{ card.title }}</CardTitle>
+              <CardDescription>{{ card.description }}</CardDescription>
+            </CardHeader>
+            <CardContent class="-mb-6 overflow-clip">
+              <BarChart
+                class="h-40 w-full min-w-[-webkit-fill-available]"
+                :data="monthlyActivity"
+                :categories="['total', 'predicted']"
                 index="total"
+                :colors="[
+                  'var(--chart-2)',
+                  'var(--chart-4)',
+                  'var(--chart-1)',
+                  'var(--chart-5)',
+                  'var(--chart-3)',
+                ]"
+                :type="'stacked'"
+                :rounded-corners="8"
+                :show-tooltip="false"
+                :show-legend="false"
+                :show-grid-line="false"
+                :show-x-axis="false"
+                :show-y-axis="false"
+              />
+            </CardContent>
+            <!-- <Separator /> -->
+            <!-- <CardFooter>
+              <CardDescription>{{ card.description }}</CardDescription>
+              <Button variant="outline" size="sm">
+                <icon-lucide-sparkles /> Ask AI
+              </Button>
+              <Button variant="outline" size="icon-sm">
+                <icon-lucide-arrow-up-right />
+              </Button>
+            </CardFooter> -->
+          </Card>
+          <Card
+            v-for="card in [
+              { title: 'Agents', description: '+$7,231.89 increase' },
+              { title: 'Performance', description: '+15% conversion rate' },
+              { title: 'Tasks', description: '+15% from last month' },
+            ]"
+            :key="card.title"
+            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
+          >
+            <CardHeader>
+              <CardTitle>{{ card.title }}</CardTitle>
+              <CardDescription>{{ card.description }}</CardDescription>
+            </CardHeader>
+            <CardContent class="-px-4 -mb-6 overflow-clip pb-4">
+              <LineChart
+                class="-mx-6 h-32 w-full min-w-[-webkit-fill-available]"
+                :data="monthlyActivity"
+                :categories="['total']"
+                index="name"
+                :colors="[
+                  'var(--chart-2)',
+                  'var(--chart-4)',
+                  'var(--chart-1)',
+                  'var(--chart-5)',
+                  'var(--chart-3)',
+                ]"
+                :show-tooltip="false"
+                :show-legend="false"
+                :show-grid-line="false"
+                :show-x-axis="false"
+                :show-y-axis="false"
+              />
+            </CardContent>
+            <!-- <Separator /> -->
+            <!-- <CardFooter>
+              <CardDescription>{{ card.description }}</CardDescription>
+              <Button variant="outline" size="sm">
+                <icon-lucide-sparkles /> Ask AI
+              </Button>
+              <Button variant="outline" size="icon-sm">
+                <icon-lucide-arrow-up-right />
+              </Button>
+            </CardFooter> -->
+          </Card>
+          <Card
+            v-for="card in [
+              { title: 'Distribution', description: 'Category breakdown' },
+              { title: 'Completion', description: 'Progress overview' },
+              { title: 'Status', description: 'Current state' },
+            ]"
+            :key="card.title"
+            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
+          >
+            <CardHeader>
+              <CardTitle>{{ card.title }}</CardTitle>
+              <CardDescription>{{ card.description }}</CardDescription>
+            </CardHeader>
+            <CardContent class="-px-4 -mb-6 overflow-clip pb-4">
+              <DonutChart
+                class="-mx-6 h-32 w-full min-w-[-webkit-fill-available]"
+                :category="'total'"
+                :data="monthlyActivity"
+                index="name"
                 :colors="[
                   'var(--chart-1)',
                   'var(--chart-2)',
@@ -699,30 +787,21 @@ const navToc = [
                   'var(--chart-4)',
                   'var(--chart-5)',
                 ]"
-                :y-formatter="
-                  (tick: number | Date) => {
-                    if (typeof tick === 'number') {
-                      return `$ ${new Intl.NumberFormat('us').format(tick).toString()}`
-                    } else if (tick instanceof Date) {
-                      return tick.toLocaleDateString('en-US')
-                    }
-                    return ''
-                  }
-                "
-                :type="'stacked'"
-                :rounded-corners="8"
-                :bar-padding="0.5"
-                :show-x-axis="false"
-                :show-y-axis="false"
+                :type="'pie'"
                 :show-tooltip="false"
                 :show-legend="false"
-                :show-grid-line="false"
               />
             </CardContent>
-            <Separator />
-            <CardFooter>
-              <CardDescription> +265 sales this month. </CardDescription>
-            </CardFooter>
+            <!-- <Separator /> -->
+            <!-- <CardFooter>
+              <CardDescription>{{ card.description }}</CardDescription>
+              <Button variant="outline" size="sm">
+                <icon-lucide-sparkles /> Ask AI
+              </Button>
+              <Button variant="outline" size="icon-sm">
+                <icon-lucide-arrow-up-right />
+              </Button>
+            </CardFooter> -->
           </Card>
         </TabsContent>
         <TabsContent value="usage"> </TabsContent>

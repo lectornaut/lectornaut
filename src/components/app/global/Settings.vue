@@ -812,7 +812,7 @@ const navigations = [
                           </FieldDescription>
                         </FieldContent>
                         <Select id="theme" v-model="store">
-                          <SelectTrigger class="h-9 gap-2">
+                          <SelectTrigger>
                             <SelectValue placeholder="Select a theme" />
                           </SelectTrigger>
                           <SelectContent align="end">
@@ -835,7 +835,7 @@ const navigations = [
                           </FieldDescription>
                         </FieldContent>
                         <Select id="accent" v-model="accent">
-                          <SelectTrigger class="h-9 gap-2">
+                          <SelectTrigger>
                             <SelectValue placeholder="Select an accent color" />
                           </SelectTrigger>
                           <SelectContent align="end">
@@ -860,7 +860,7 @@ const navigations = [
                           </FieldDescription>
                         </FieldContent>
                         <Select id="language" v-model="locale">
-                          <SelectTrigger class="h-9 gap-2">
+                          <SelectTrigger>
                             <SelectValue placeholder="Select a language" />
                           </SelectTrigger>
                           <SelectContent align="end">
@@ -883,7 +883,7 @@ const navigations = [
                           </FieldDescription>
                         </FieldContent>
                         <Select id="font" v-model="font">
-                          <SelectTrigger class="h-9 gap-2">
+                          <SelectTrigger>
                             <SelectValue placeholder="Select a font" />
                           </SelectTrigger>
                           <SelectContent align="end">
@@ -908,7 +908,7 @@ const navigations = [
                           </FieldDescription>
                         </FieldContent>
                         <Select id="text-size" v-model="size" class="w-40">
-                          <SelectTrigger class="h-9 gap-2">
+                          <SelectTrigger>
                             <SelectValue placeholder="Select text size" />
                           </SelectTrigger>
                           <SelectContent align="end">
@@ -933,7 +933,7 @@ const navigations = [
                           </FieldDescription>
                         </FieldContent>
                         <Select id="zoom-level" v-model="zoom" class="w-40">
-                          <SelectTrigger class="h-9 gap-2">
+                          <SelectTrigger>
                             <SelectValue placeholder="Select zoom level" />
                           </SelectTrigger>
                           <SelectContent align="end">

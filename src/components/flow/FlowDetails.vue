@@ -119,7 +119,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
           </CardHeader>
           <CardContent>
             <LineChart
-              class="-mx-6 h-32 min-w-[-webkit-fill-available]"
+              class="-mx-5 h-32 min-w-[-webkit-fill-available]"
               :data="dailyActivity"
               index="day"
               :categories="['runs', 'jobs', 'errors', 'duration']"
@@ -137,11 +137,11 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                     : ''
                 }
               "
+              :show-tooltip="false"
+              :show-grid-line="false"
+              :show-legend="false"
               :show-x-axis="false"
               :show-y-axis="false"
-              :show-tooltip="false"
-              :show-legend="false"
-              :show-grid-line="false"
             />
           </CardContent>
           <CardFooter>

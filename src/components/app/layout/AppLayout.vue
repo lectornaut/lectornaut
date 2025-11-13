@@ -1,8 +1,12 @@
 <script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
+import { languages } from "@/helpers/defaults"
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import IconConsole from "~icons/mingcute/layer-fill"
+
+const { locale } = useI18n()
+watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 
 const router = useRouter()
 
@@ -406,6 +410,35 @@ const closeTab = (id: string) => {
           data-tauri-drag-region
         ></div>
         <div class="flex items-center justify-end" data-tauri-drag-region>
+          <TooltipProvider>
+            <Select id="language" v-model="locale">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="h-full! rounded-none border-0"
+                    as-child
+                  >
+                    <SelectTrigger>
+                      <icon-lucide-globe />
+                    </SelectTrigger>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent> Select Application Language </TooltipContent>
+                <SelectContent align="end">
+                  <SelectItem
+                    v-for="language in languages"
+                    :key="language.id"
+                    :value="language.id"
+                  >
+                    <Component :is="language.icon" />
+                    {{ language.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Tooltip>
+            </Select>
+          </TooltipProvider>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
