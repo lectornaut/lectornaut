@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { ButtonVariants } from "@/components/ui/button"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"

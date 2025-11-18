@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { HoverCardTriggerProps } from "reka-ui"
 import { HoverCardTrigger } from "reka-ui"
 

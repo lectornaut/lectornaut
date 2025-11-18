@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { Circle } from "lucide-vue-next"
@@ -39,7 +39,9 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center"
     >
       <DropdownMenuItemIndicator>
-        <Circle class="size-2 fill-current" />
+        <slot name="indicator-icon">
+          <Circle class="size-2 fill-current" />
+        </slot>
       </DropdownMenuItemIndicator>
     </span>
     <slot />

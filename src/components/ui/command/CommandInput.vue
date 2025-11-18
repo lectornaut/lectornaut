@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { Search } from "lucide-vue-next"
@@ -27,7 +27,7 @@ const { filterState } = useCommand()
 <template>
   <div
     data-slot="command-input-wrapper"
-    class="flex h-12 items-center gap-2 border-b px-3"
+    class="flex h-9 items-center gap-2 border-b px-3"
   >
     <Search class="size-4 shrink-0 opacity-50" />
     <ListboxFilter
@@ -37,7 +37,7 @@ const { filterState } = useCommand()
       auto-focus
       :class="
         cn(
-          'placeholder:text-muted-foreground flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
+          'placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
           props.class
         )
       "

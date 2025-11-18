@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import type { TagsInputRootEmits, TagsInputRootProps } from "reka-ui"
@@ -17,6 +17,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
 <template>
   <TagsInputRoot
+    v-slot="slotProps"
     v-bind="forwarded"
     :class="
       cn(
@@ -25,6 +26,6 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       )
     "
   >
-    <slot />
+    <slot v-bind="slotProps" />
   </TagsInputRoot>
 </template>

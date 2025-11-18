@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { ContextMenuTriggerProps } from "reka-ui"
 import { ContextMenuTrigger, useForwardProps } from "reka-ui"
 

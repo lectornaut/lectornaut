@@ -6,6 +6,10 @@ import { DrawerContent, DrawerPortal } from "vaul-vue"
 import type { HTMLAttributes } from "vue"
 import DrawerOverlay from "./DrawerOverlay.vue"
 
+defineOptions({
+  inheritAttrs: false,
+})
+
 const props = defineProps<
   DialogContentProps & { class?: HTMLAttributes["class"] }
 >()
@@ -19,7 +23,7 @@ const forwarded = useForwardPropsEmits(props, emits)
     <DrawerOverlay />
     <DrawerContent
       data-slot="drawer-content"
-      v-bind="forwarded"
+      v-bind="{ ...$attrs, ...forwarded }"
       :class="
         cn(
           'group/drawer-content bg-background fixed z-50 flex h-auto flex-col',

@@ -122,6 +122,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/start': RouteRecordInfo<
+      '/start',
+      '/start',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/tasks': RouteRecordInfo<
       '/tasks',
       '/tasks',
@@ -253,6 +260,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/runs.vue': {
       routes:
         | '/runs'
+      views:
+        | never
+    }
+    'src/pages/start.vue': {
+      routes:
+        | '/start'
       views:
         | never
     }

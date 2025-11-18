@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { TagsInputItemProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 

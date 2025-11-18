@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "vue"

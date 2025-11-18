@@ -10,8 +10,10 @@ NProgress.configure({ showSpinner: false })
 const router = createRouter({
   history: createWebHistory(),
   routes: setupLayouts([...routes]),
-  scrollBehavior(to) {
-    if (to.hash) {
+  scrollBehavior(to, _from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else if (to.hash) {
       return {
         el: to.hash,
         behavior: "smooth",

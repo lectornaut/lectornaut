@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { TooltipProviderProps } from "reka-ui"
 import { TooltipProvider } from "reka-ui"
 

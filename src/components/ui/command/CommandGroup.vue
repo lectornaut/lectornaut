@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import type { ListboxGroupProps } from "reka-ui"
@@ -42,6 +42,7 @@ onUnmounted(() => {
   >
     <ListboxGroupLabel
       v-if="heading"
+      data-slot="command-group-heading"
       class="text-muted-foreground px-2 py-1.5 text-xs font-medium"
     >
       {{ heading }}

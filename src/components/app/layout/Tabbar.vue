@@ -117,7 +117,6 @@ function onTabClick(tab: Tab) {
 function addTab(fullPath = "/new", name?: string) {
   const newTab = createTab(fullPath, name)
   tabs.value.push(newTab)
-  // Mark as switching tab so route watcher doesn't update the new tab
   onTabClick(newTab)
   router.push(fullPath)
 }
@@ -133,10 +132,10 @@ function closeTab(id: string) {
   addToHistory(closing)
   tabs.value.splice(idx, 1)
 
-  // No tabs left - navigate to /new and clear active tab
+  // No tabs left - navigate to /start and clear active tab
   if (tabs.value.length === 0) {
     activeTabId.value = ""
-    router.push("/new")
+    router.push("/start")
     return
   }
 
@@ -270,7 +269,7 @@ emitter.on("Tabs.Close.All", () => {
   tabs.value.forEach(addToHistory)
   tabs.value = []
   activeTabId.value = ""
-  router.push("/new")
+  router.push("/start")
 })
 
 emitter.on("Tabs.Select", (idOrIndex?: unknown) => {

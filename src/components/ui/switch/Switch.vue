@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import type { SwitchRootEmits, SwitchRootProps } from "reka-ui"
@@ -18,6 +18,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
 <template>
   <SwitchRoot
+    v-slot="slotProps"
     data-slot="switch"
     v-bind="forwarded"
     :class="
@@ -35,7 +36,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         )
       "
     >
-      <slot name="thumb" />
+      <slot name="thumb" v-bind="slotProps" />
     </SwitchThumb>
   </SwitchRoot>
 </template>

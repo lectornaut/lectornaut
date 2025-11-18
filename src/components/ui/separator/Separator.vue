@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import type { SeparatorProps } from "reka-ui"
@@ -18,7 +18,7 @@ const delegatedProps = reactiveOmit(props, "class")
 
 <template>
   <Separator
-    data-slot="separator-root"
+    data-slot="separator"
     v-bind="delegatedProps"
     :class="
       cn(

@@ -1,0 +1,46 @@
+<script lang="ts" setup>
+import emitter from "@/modules/mitt"
+import IconAiAsk from "~icons/mingcute/ai-fill"
+import IconBlock from "~icons/mingcute/layer-fill"
+
+definePage({
+  meta: {
+    requiresUser: true,
+    layout: "app",
+    sidebar: "Welcome",
+    breadcrumb: "Welcome",
+  },
+})
+
+useHead({
+  title: "Welcome",
+})
+</script>
+
+<template>
+  <Teleport defer to="#left-sidebar">
+    <Sidebar collapsible="none" class="w-full">
+      <EmptySection
+        centered
+        :icon="IconBlock"
+        title="Console"
+        description="Your console will appear here when you run a project."
+        action-text="Ask AI"
+        @action="emitter.emit('Dialog.AiAsk.Toggle')"
+      />
+    </Sidebar>
+  </Teleport>
+  <StartBlock />
+  <Teleport defer to="#right-sidebar">
+    <Sidebar collapsible="none" class="w-full">
+      <EmptySection
+        centered
+        :icon="IconAiAsk"
+        title="Get Instant Answers"
+        description="Get instant help and code suggestions from our AI assistant."
+        action-text="Ask AI"
+        @action="emitter.emit('Dialog.AiAsk.Toggle')"
+      />
+    </Sidebar>
+  </Teleport>
+</template>

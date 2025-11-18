@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { PopoverAnchorProps } from "reka-ui"
 import { PopoverAnchor } from "reka-ui"
 

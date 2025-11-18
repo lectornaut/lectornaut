@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { Check } from "lucide-vue-next"
@@ -38,7 +38,9 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center"
     >
       <ContextMenuItemIndicator>
-        <Check class="size-4" />
+        <slot name="indicator-icon">
+          <Check class="size-4" />
+        </slot>
       </ContextMenuItemIndicator>
     </span>
     <slot />

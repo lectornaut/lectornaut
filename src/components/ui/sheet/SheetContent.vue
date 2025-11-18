@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { X } from "lucide-vue-next"
@@ -50,7 +50,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
           props.class
         )
       "
-      v-bind="{ ...forwarded, ...$attrs }"
+      v-bind="{ ...$attrs, ...forwarded }"
     >
       <slot />
 

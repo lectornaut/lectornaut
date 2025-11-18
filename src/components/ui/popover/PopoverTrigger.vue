@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { PopoverTriggerProps } from "reka-ui"
 import { PopoverTrigger } from "reka-ui"
 

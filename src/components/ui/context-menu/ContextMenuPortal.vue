@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { ContextMenuPortalProps } from "reka-ui"
 import { ContextMenuPortal } from "reka-ui"
 

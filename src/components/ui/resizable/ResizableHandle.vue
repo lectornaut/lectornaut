@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils"
 import { reactiveOmit } from "@vueuse/core"
 import { GripVertical } from "lucide-vue-next"
@@ -36,7 +36,9 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       <div
         class="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border"
       >
-        <GripVertical class="size-2.5" />
+        <slot>
+          <GripVertical class="size-2.5" />
+        </slot>
       </div>
     </template>
   </SplitterResizeHandle>

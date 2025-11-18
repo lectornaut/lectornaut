@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "vue"

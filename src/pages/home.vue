@@ -1,6 +1,15 @@
 <script lang="ts" setup>
-import { monthlyActivity } from "@/data/chart"
+import type { ChartConfig } from "@/components/ui/chart"
+import {
+  ChartContainer,
+  ChartCrosshair,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  componentToString,
+} from "@/components/ui/chart"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
+import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue"
 import type { DateRange } from "reka-ui"
 import Avatar from "vue-boring-avatars"
 import Blocks from "~icons/lucide/blocks"
@@ -105,6 +114,28 @@ const range = ref({
   start: defaultRange.value.start,
   end: defaultRange.value.end,
 }) as Ref<DateRange>
+
+const chartData = [
+  { date: new Date("2024-01-01"), desktop: 186, mobile: 80 },
+  { date: new Date("2024-02-01"), desktop: 305, mobile: 200 },
+  { date: new Date("2024-03-01"), desktop: 237, mobile: 120 },
+  { date: new Date("2024-04-01"), desktop: 73, mobile: 190 },
+  { date: new Date("2024-05-01"), desktop: 209, mobile: 130 },
+  { date: new Date("2024-06-01"), desktop: 214, mobile: 140 },
+]
+
+type Data = (typeof chartData)[number]
+
+const chartConfig = {
+  desktop: {
+    label: "Desktop",
+    color: "var(--chart-1)",
+  },
+  mobile: {
+    label: "Mobile",
+    color: "var(--chart-3)",
+  },
+} satisfies ChartConfig
 
 const navMain = [
   {
@@ -247,7 +278,7 @@ const teams = [
         url: "#",
       },
       {
-        name: "Family Calendar & Event Planning",
+        name: "Family CalendarIcon & Event Planning",
         url: "#",
       },
     ],
@@ -639,32 +670,65 @@ const navToc = [
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent class="-px-4 -mb-6 overflow-clip">
-              <AreaChart
-                class="-mx-6 h-40 w-full min-w-[-webkit-fill-available]"
-                :data="monthlyActivity"
-                :categories="['total']"
-                index="name"
-                :colors="[
-                  'var(--chart-2)',
-                  'var(--chart-4)',
-                  'var(--chart-1)',
-                  'var(--chart-5)',
-                  'var(--chart-3)',
-                ]"
-                :show-gradient="true"
-                :show-tooltip="false"
-                :show-legend="false"
-                :show-grid-line="false"
-                :show-x-axis="false"
-                :show-y-axis="false"
-              />
+            <CardContent
+              ><ChartContainer
+                :config="chartConfig"
+                class="min-h-[200px] w-full"
+              >
+                <VisXYContainer :data="chartData">
+                  <VisGroupedBar
+                    :x="(d: Data) => d.date"
+                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                  <VisAxis
+                    type="x"
+                    :x="(d: Data) => d.date"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :grid-line="false"
+                    :tick-format="
+                      (d: number) => {
+                        const date = new Date(d)
+                        return date.toLocaleDateString('en-US', {
+                          month: 'short',
+                        })
+                      }
+                    "
+                    :tick-values="chartData.map((d) => d.date)"
+                  />
+                  <ChartTooltip />
+                  <ChartCrosshair
+                    :template="
+                      componentToString(chartConfig, ChartTooltipContent, {
+                        labelFormatter(d) {
+                          return new Date(d).toLocaleDateString('en-US', {
+                            month: 'long',
+                          })
+                        },
+                      })
+                    "
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                </VisXYContainer>
+                <ChartLegendContent />
+              </ChartContainer>
             </CardContent>
             <!-- <Separator /> -->
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-sparkles /> Ask AI
+                <icon-lucide-rocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
                 <icon-lucide-arrow-up-right />
@@ -684,33 +748,65 @@ const navToc = [
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent class="-mb-6 overflow-clip">
-              <BarChart
-                class="h-40 w-full min-w-[-webkit-fill-available]"
-                :data="monthlyActivity"
-                :categories="['total', 'predicted']"
-                index="total"
-                :colors="[
-                  'var(--chart-2)',
-                  'var(--chart-4)',
-                  'var(--chart-1)',
-                  'var(--chart-5)',
-                  'var(--chart-3)',
-                ]"
-                :type="'stacked'"
-                :rounded-corners="8"
-                :show-tooltip="false"
-                :show-legend="false"
-                :show-grid-line="false"
-                :show-x-axis="false"
-                :show-y-axis="false"
-              />
+            <CardContent
+              ><ChartContainer
+                :config="chartConfig"
+                class="min-h-[200px] w-full"
+              >
+                <VisXYContainer :data="chartData">
+                  <VisGroupedBar
+                    :x="(d: Data) => d.date"
+                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                  <VisAxis
+                    type="x"
+                    :x="(d: Data) => d.date"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :grid-line="false"
+                    :tick-format="
+                      (d: number) => {
+                        const date = new Date(d)
+                        return date.toLocaleDateString('en-US', {
+                          month: 'short',
+                        })
+                      }
+                    "
+                    :tick-values="chartData.map((d) => d.date)"
+                  />
+                  <ChartTooltip />
+                  <ChartCrosshair
+                    :template="
+                      componentToString(chartConfig, ChartTooltipContent, {
+                        labelFormatter(d) {
+                          return new Date(d).toLocaleDateString('en-US', {
+                            month: 'long',
+                          })
+                        },
+                      })
+                    "
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                </VisXYContainer>
+                <ChartLegendContent />
+              </ChartContainer>
             </CardContent>
             <!-- <Separator /> -->
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-sparkles /> Ask AI
+                <icon-lucide-rocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
                 <icon-lucide-arrow-up-right />
@@ -730,31 +826,65 @@ const navToc = [
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent class="-px-4 -mb-6 overflow-clip pb-4">
-              <LineChart
-                class="-mx-6 h-32 w-full min-w-[-webkit-fill-available]"
-                :data="monthlyActivity"
-                :categories="['total']"
-                index="name"
-                :colors="[
-                  'var(--chart-2)',
-                  'var(--chart-4)',
-                  'var(--chart-1)',
-                  'var(--chart-5)',
-                  'var(--chart-3)',
-                ]"
-                :show-tooltip="false"
-                :show-legend="false"
-                :show-grid-line="false"
-                :show-x-axis="false"
-                :show-y-axis="false"
-              />
+            <CardContent
+              ><ChartContainer
+                :config="chartConfig"
+                class="min-h-[200px] w-full"
+              >
+                <VisXYContainer :data="chartData">
+                  <VisGroupedBar
+                    :x="(d: Data) => d.date"
+                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                  <VisAxis
+                    type="x"
+                    :x="(d: Data) => d.date"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :grid-line="false"
+                    :tick-format="
+                      (d: number) => {
+                        const date = new Date(d)
+                        return date.toLocaleDateString('en-US', {
+                          month: 'short',
+                        })
+                      }
+                    "
+                    :tick-values="chartData.map((d) => d.date)"
+                  />
+                  <ChartTooltip />
+                  <ChartCrosshair
+                    :template="
+                      componentToString(chartConfig, ChartTooltipContent, {
+                        labelFormatter(d) {
+                          return new Date(d).toLocaleDateString('en-US', {
+                            month: 'long',
+                          })
+                        },
+                      })
+                    "
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                </VisXYContainer>
+                <ChartLegendContent />
+              </ChartContainer>
             </CardContent>
             <!-- <Separator /> -->
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-sparkles /> Ask AI
+                <icon-lucide-rocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
                 <icon-lucide-arrow-up-right />
@@ -774,29 +904,65 @@ const navToc = [
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent class="-px-4 -mb-6 overflow-clip pb-4">
-              <DonutChart
-                class="-mx-6 h-32 w-full min-w-[-webkit-fill-available]"
-                :category="'total'"
-                :data="monthlyActivity"
-                index="name"
-                :colors="[
-                  'var(--chart-1)',
-                  'var(--chart-2)',
-                  'var(--chart-3)',
-                  'var(--chart-4)',
-                  'var(--chart-5)',
-                ]"
-                :type="'pie'"
-                :show-tooltip="false"
-                :show-legend="false"
-              />
+            <CardContent
+              ><ChartContainer
+                :config="chartConfig"
+                class="min-h-[200px] w-full"
+              >
+                <VisXYContainer :data="chartData">
+                  <VisGroupedBar
+                    :x="(d: Data) => d.date"
+                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                  <VisAxis
+                    type="x"
+                    :x="(d: Data) => d.date"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :grid-line="false"
+                    :tick-format="
+                      (d: number) => {
+                        const date = new Date(d)
+                        return date.toLocaleDateString('en-US', {
+                          month: 'short',
+                        })
+                      }
+                    "
+                    :tick-values="chartData.map((d) => d.date)"
+                  />
+                  <ChartTooltip />
+                  <ChartCrosshair
+                    :template="
+                      componentToString(chartConfig, ChartTooltipContent, {
+                        labelFormatter(d) {
+                          return new Date(d).toLocaleDateString('en-US', {
+                            month: 'long',
+                          })
+                        },
+                      })
+                    "
+                    :color="[
+                      chartConfig.desktop.color,
+                      chartConfig.mobile.color,
+                    ]"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+                </VisXYContainer>
+                <ChartLegendContent />
+              </ChartContainer>
             </CardContent>
             <!-- <Separator /> -->
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-sparkles /> Ask AI
+                <icon-lucide-rocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
                 <icon-lucide-arrow-up-right />
