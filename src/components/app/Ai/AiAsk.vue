@@ -57,10 +57,13 @@ const userInput = ref("")
             </Button>
           </TooltipTrigger>
           <TooltipContent class="px-2">
-            <Button variant="ghost" size="sm" @click="isDocked = !isDocked">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              @click="isDocked = !isDocked"
+            >
               <icon-lucide-pin v-if="!isDocked" />
               <icon-lucide-pin-off v-else />
-              {{ isDocked ? "Unpin" : "Pin" }}
             </Button>
           </TooltipContent>
         </SheetTrigger>

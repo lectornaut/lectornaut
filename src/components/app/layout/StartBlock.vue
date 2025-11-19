@@ -8,11 +8,13 @@
     <EmptyContent>
       <ItemGroup class="grid grid-cols-1 gap-2">
         <Item variant="muted" size="sm">
-          <ItemMedia variant="icon">
+          <ItemMedia class="text-muted-foreground">
             <icon-lucide-command />
           </ItemMedia>
           <ItemContent>
-            <ItemTitle> Search and Commands </ItemTitle>
+            <ItemTitle class="text-secondary-foreground">
+              Search and Commands
+            </ItemTitle>
           </ItemContent>
           <ItemActions>
             <KbdGroup>
@@ -22,11 +24,11 @@
           </ItemActions>
         </Item>
         <Item variant="muted" size="sm">
-          <ItemMedia variant="icon">
+          <ItemMedia class="text-muted-foreground">
             <icon-lucide-rocket />
           </ItemMedia>
           <ItemContent>
-            <ItemTitle> Ask AI </ItemTitle>
+            <ItemTitle class="text-secondary-foreground"> Ask AI </ItemTitle>
           </ItemContent>
           <ItemActions>
             <KbdGroup>
@@ -36,11 +38,13 @@
           </ItemActions>
         </Item>
         <Item variant="muted" size="sm">
-          <ItemMedia variant="icon">
+          <ItemMedia class="text-muted-foreground">
             <icon-lucide-keyboard />
           </ItemMedia>
           <ItemContent>
-            <ItemTitle> Keyboard Shortcuts </ItemTitle>
+            <ItemTitle class="text-secondary-foreground">
+              Keyboard Shortcuts
+            </ItemTitle>
           </ItemContent>
           <ItemActions>
             <KbdGroup>
@@ -50,11 +54,13 @@
           </ItemActions>
         </Item>
         <Item variant="muted" size="sm">
-          <ItemMedia variant="icon">
+          <ItemMedia class="text-muted-foreground">
             <icon-lucide-help-circle />
           </ItemMedia>
           <ItemContent>
-            <ItemTitle> Help and Support </ItemTitle>
+            <ItemTitle class="text-secondary-foreground">
+              Help and Support
+            </ItemTitle>
           </ItemContent>
           <ItemActions>
             <KbdGroup>
