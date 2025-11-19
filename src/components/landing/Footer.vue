@@ -1,5 +1,17 @@
 <script lang="ts" setup>
 import { footerSections } from "@/helpers/defaults"
+import { useI18n } from "vue-i18n"
+
+const { t } = useI18n()
+
+// Create a mapping from title to kebab-case ID for i18n
+const getSectionId = (title: string) => title.toLowerCase()
+const getLinkId = (title: string) =>
+  title
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/-/g, "")
+    .replace(/^(\w)/, (match) => match.toLowerCase())
 </script>
 
 <template>
@@ -20,14 +32,16 @@ import { footerSections } from "@/helpers/defaults"
           :key="title"
           class="flex flex-col gap-4"
         >
-          <h6 class="font-semibold">{{ title }}</h6>
+          <h6 class="font-semibold">
+            {{ t("landing.footer.sections." + getSectionId(title)) }}
+          </h6>
           <ul class="flex flex-col gap-2">
             <li v-for="{ title: linkTitle, href } in links" :key="linkTitle">
               <RouterLink
                 :to="href"
                 class="text-muted-foreground hover:text-foreground"
               >
-                {{ linkTitle }}
+                {{ t("landing.footer.links." + getLinkId(linkTitle)) }}
               </RouterLink>
             </li>
           </ul>

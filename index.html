@@ -26,17 +26,28 @@
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          aria-label="Logo"
-          viewBox="0 0 32 32"
-          width="32"
-          height="32"
+          width="36"
+          height="36"
+          fill="#fff"
+          viewBox="0 0 24 24"
         >
-          <path
-            fill="white"
-            fill-rule="evenodd"
-            d="M16.075 0C7.211 0 0 7.186 0 16.05v14.335C0 31.277.723 32 1.615 32H16.1c8.837 0 16-7.163 16-16S24.912 0 16.075 0Zm8.727 19.402a3.431 3.431 0 1 0 0-6.862 3.431 3.431 0 0 0 0 6.862Zm-10.184 0a3.431 3.431 0 1 0 0-6.862 3.431 3.431 0 0 0 0 6.862Z"
-            clip-rule="evenodd"
-          />
+          <style>
+            .spinner {
+              animation: spin 1.2s cubic-bezier(0.52, 0.6, 0.25, 0.99)
+                infinite;
+            }
+            @keyframes spin {
+              0% {
+                r: 0;
+                opacity: 1;
+              }
+              100% {
+                r: 11px;
+                opacity: 0;
+              }
+            }
+          </style>
+          <circle class="spinner" cx="12" cy="12" r="0" />
         </svg>
       </div>
     </div>

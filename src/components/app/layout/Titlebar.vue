@@ -3,6 +3,8 @@ import { isTauri } from "@/helpers/utilities"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 
+const { t } = useI18n()
+
 let unlisten: UnlistenFn | undefined
 
 const isFullscreen = computedAsync(
@@ -64,12 +66,14 @@ const iconDisplay = ref<"icon" | "text">("icon")
     </ContextMenuTrigger>
     <ContextMenuContent align="end" side="bottom">
       <ContextMenuLabel class="text-muted-foreground text-xs">
-        Appearance
+        {{ t("titlebar.appearance") }}
       </ContextMenuLabel>
       <ContextMenuRadioGroup v-model="iconDisplay">
-        <ContextMenuRadioItem value="icon"> Icons only </ContextMenuRadioItem>
+        <ContextMenuRadioItem value="icon">
+          {{ t("titlebar.iconsOnly") }}
+        </ContextMenuRadioItem>
         <ContextMenuRadioItem value="text">
-          Icons and text
+          {{ t("titlebar.iconsAndText") }}
         </ContextMenuRadioItem>
       </ContextMenuRadioGroup>
     </ContextMenuContent>

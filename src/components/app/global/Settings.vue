@@ -228,17 +228,17 @@ const { files, open, reset } = useFileDialog()
 
 watch(files, uploadPicture)
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 
 const getComputedProviderName = (provider: string) => {
   switch (provider) {
     case "google.com":
-      return "Google.com"
+      return t("settings.account.identityProviders.google")
     case "password":
-      return "Password"
+      return t("settings.account.identityProviders.password")
     default:
-      return "Unknown"
+      return t("common.unknown")
   }
 }
 
@@ -248,116 +248,116 @@ const passwordExists = computed(() => {
   )
 })
 
-const navigations = [
+const navigations = computed(() => [
   {
-    title: "General",
+    title: t("settings.titles.general"),
     id: "general",
     links: [
       {
-        name: "Preferences",
+        name: t("settings.titles.preferences"),
         icon: IconSettings,
         id: "preferences",
-        description: "Manage your general settings and preferences.",
+        description: t("settings.descriptions.preferences"),
       },
       {
-        name: "Account",
+        name: t("settings.titles.account"),
         icon: IconCircleUserRound,
         id: "account",
-        description: "Manage your account settings.",
+        description: t("settings.descriptions.account"),
       },
       {
-        name: "Notifications",
+        name: t("settings.titles.notifications"),
         icon: IconBell,
         id: "notifications",
-        description: "Manage your notification preferences.",
+        description: t("settings.descriptions.notifications"),
       },
       {
-        name: "Appearance",
+        name: t("settings.titles.appearance"),
         icon: IconPalette,
         id: "appearance",
-        description: "Customize the appearance of the app.",
+        description: t("settings.descriptions.appearance"),
       },
       {
-        name: "Security",
+        name: t("settings.titles.security"),
         icon: IconLock,
         id: "security",
-        description: "Manage your security settings.",
+        description: t("settings.descriptions.security"),
       },
     ],
   },
   {
-    title: "Workspace",
+    title: t("settings.titles.workspace"),
     id: "workspace",
     links: [
       {
-        name: "Agents",
+        name: t("settings.titles.agents"),
         icon: IconBot,
         id: "agents",
-        description: "Manage your workspace agents.",
+        description: t("settings.descriptions.agents"),
       },
       {
-        name: "People",
+        name: t("settings.titles.people"),
         icon: IconUsersRound,
         id: "people",
-        description: "Manage people in your organization.",
+        description: t("settings.descriptions.people"),
       },
       {
-        name: "Teams",
+        name: t("settings.titles.teams"),
         icon: IconComponent,
         id: "teams",
-        description: "Manage your workspace teams.",
+        description: t("settings.descriptions.teams"),
       },
       {
-        name: "Runs",
+        name: t("settings.titles.runs"),
         icon: IconActivity,
         id: "runs",
-        description: "View and manage your runs.",
+        description: t("settings.descriptions.runs"),
       },
       {
-        name: "Knowledge",
+        name: t("settings.titles.knowledge"),
         icon: IconDatabase,
         id: "knowledge",
-        description: "Manage your workspace knowledge base.",
+        description: t("settings.descriptions.knowledge"),
       },
       {
-        name: "Integrations",
+        name: t("settings.titles.integrations"),
         icon: IconBlocks,
         id: "integrations",
-        description: "Manage your workspace integrations.",
+        description: t("settings.descriptions.integrations"),
       },
       {
-        name: "Logs",
+        name: t("settings.titles.logs"),
         icon: IconLogs,
         id: "logs",
-        description: "View system and activity logs.",
+        description: t("settings.descriptions.logs"),
       },
     ],
   },
   {
-    title: "Administration",
+    title: t("settings.titles.administration"),
     id: "administration",
     links: [
       {
-        name: "General",
+        name: t("settings.titles.general"),
         icon: IconBolt,
         id: "general",
-        description: "General administration settings.",
+        description: t("settings.descriptions.general"),
       },
       {
-        name: "Billing",
+        name: t("settings.titles.billing"),
         icon: IconCreditCard,
         id: "billing",
-        description: "Manage your billing information and subscriptions.",
+        description: t("settings.descriptions.billing"),
       },
       {
-        name: "Plans",
+        name: t("settings.titles.plans"),
         icon: IconDollarSignBadge,
         id: "plans",
-        description: "View and manage your subscription plans.",
+        description: t("settings.descriptions.plans"),
       },
     ],
   },
-]
+])
 </script>
 
 <template>
@@ -461,10 +461,12 @@ const navigations = [
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="profile-picture">
-                            Profile picture
+                            {{ t("settings.account.profilePicture.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            Upload or remove your profile picture.
+                            {{
+                              t("settings.account.profilePicture.description")
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <div
@@ -503,7 +505,9 @@ const navigations = [
                                 {{
                                   uploadTask
                                     ? `${uploadProgress ? (uploadProgress * 100).toFixed(0) : 0}%`
-                                    : "Upload profile picture"
+                                    : t(
+                                        "settings.account.profilePicture.upload"
+                                      )
                                 }}
                               </TooltipContent>
                             </Tooltip>
@@ -519,7 +523,9 @@ const navigations = [
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Remove profile picture
+                                {{
+                                  t("settings.account.profilePicture.remove")
+                                }}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -527,16 +533,24 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="name">Preferred name</FieldLabel>
+                          <FieldLabel for="name">{{
+                            t("settings.account.preferredName.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Enter your preferred display name.
+                            {{
+                              t("settings.account.preferredName.description")
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Input
                           id="name"
                           v-model="displayName"
-                          label="Name"
-                          placeholder="Your name"
+                          :label="
+                            t('settings.account.preferredName.inputLabel')
+                          "
+                          :placeholder="
+                            t('settings.account.preferredName.placeholder')
+                          "
                           class="h-8 w-64 focus:border-inherit focus:ring-0"
                         />
                       </Field>
@@ -545,7 +559,9 @@ const navigations = [
                     <FieldSet>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="email">Email</FieldLabel>
+                          <FieldLabel for="email">{{
+                            t("settings.account.email.label")
+                          }}</FieldLabel>
                           <FieldDescription>
                             {{ user?.email }}
                             <TooltipProvider v-if="user?.emailVerified">
@@ -556,11 +572,11 @@ const navigations = [
                                     class="gap-1 px-1 font-normal"
                                   >
                                     <icon-lucide-badge-check />
-                                    Verified
+                                    {{ t("settings.account.email.verified") }}
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  We've verified your email address.
+                                  {{ t("settings.account.email.verifiedDesc") }}
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -574,24 +590,32 @@ const navigations = [
                             @click="sendVerificationEmail"
                           >
                             <Spinner v-if="sendingVerificationEmail" />
-                            <span>Verify email</span>
+                            <span>{{
+                              t("settings.account.email.verify")
+                            }}</span>
                           </Button>
                           <Dialog>
                             <DialogTrigger>
-                              <Button variant="outline"> Change email </Button>
+                              <Button variant="outline">
+                                {{ t("settings.account.email.change") }}
+                              </Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
-                                <DialogTitle> Change email </DialogTitle>
+                                <DialogTitle>
+                                  {{ t("settings.account.email.changeTitle") }}
+                                </DialogTitle>
                                 <DialogDescription>
-                                  Update your email address.
+                                  {{ t("settings.account.email.changeDesc") }}
                                 </DialogDescription>
                               </DialogHeader>
                               <div>
                                 <Input
                                   v-model="newEmail"
-                                  label="New email"
-                                  placeholder="New email address"
+                                  :label="t('settings.account.email.newLabel')"
+                                  :placeholder="
+                                    t('settings.account.email.newPlaceholder')
+                                  "
                                 />
                               </div>
                               <DialogFooter>
@@ -600,7 +624,9 @@ const navigations = [
                                   @click="changeEmail"
                                 >
                                   <Spinner v-if="changingEmail" />
-                                  <span>Send verification email</span>
+                                  <span>{{
+                                    t("settings.account.email.sendVerification")
+                                  }}</span>
                                 </Button>
                               </DialogFooter>
                             </DialogContent>
@@ -609,9 +635,11 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="password">Password</FieldLabel>
+                          <FieldLabel for="password">{{
+                            t("settings.account.password.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Set a password to log in to your account.
+                            {{ t("settings.account.password.description") }}
                           </FieldDescription>
                         </FieldContent>
                         <Dialog>
@@ -620,8 +648,8 @@ const navigations = [
                               <span>
                                 {{
                                   passwordExists
-                                    ? "Change password"
-                                    : "Set password"
+                                    ? t("settings.account.password.change")
+                                    : t("settings.account.password.set")
                                 }}
                               </span>
                             </Button>
@@ -631,19 +659,21 @@ const navigations = [
                               <DialogTitle>
                                 {{
                                   passwordExists
-                                    ? "Change password"
-                                    : "Set password"
+                                    ? t("settings.account.password.changeTitle")
+                                    : t("settings.account.password.setTitle")
                                 }}
                               </DialogTitle>
                               <DialogDescription>
-                                Update your password.
+                                {{ t("settings.account.password.changeDesc") }}
                               </DialogDescription>
                             </DialogHeader>
                             <div>
                               <Input
                                 v-model="newPassword"
-                                label="New password"
-                                placeholder="New password"
+                                :label="t('settings.account.password.newLabel')"
+                                :placeholder="
+                                  t('settings.account.password.newPlaceholder')
+                                "
                               />
                             </div>
                             <DialogFooter>
@@ -652,7 +682,9 @@ const navigations = [
                                 @click="changePassword"
                               >
                                 <Spinner v-if="changingPassword" />
-                                <span>Change password</span>
+                                <span>{{
+                                  t("settings.account.password.change")
+                                }}</span>
                               </Button>
                             </DialogFooter>
                           </DialogContent>
@@ -663,15 +695,21 @@ const navigations = [
                     <FieldSet>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="identity-providers">
-                            Identity providers
+                          <FieldLabel>
+                            {{ t("settings.account.identityProviders.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            Manage your connected accounts and sign-in methods.
+                            {{
+                              t(
+                                "settings.account.identityProviders.description"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Button variant="outline">
-                          <span>Connect a new account</span>
+                          <span>{{
+                            t("settings.account.identityProviders.connect")
+                          }}</span>
                         </Button>
                       </Field>
                       <div
@@ -743,13 +781,13 @@ const navigations = [
                               <Spinner
                                 v-if="unlinkingProviderMap[provider.providerId]"
                               />
-                              <span> Remove </span>
+                              <span> {{ t("common.remove") }} </span>
                             </Button>
                           </div>
                         </div>
                       </div>
                       <div v-else class="text-muted-foreground">
-                        No connected accounts.
+                        {{ t("settings.account.identityProviders.noAccounts") }}
                       </div>
                     </FieldSet>
                     <FieldSeparator />
@@ -757,37 +795,45 @@ const navigations = [
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="delete-account">
-                            Delete account
+                            {{ t("settings.account.deleteAccount.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            Permanently delete your account.
+                            {{
+                              t("settings.account.deleteAccount.description")
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <AlertDialog>
                           <AlertDialogTrigger as-child>
                             <Button variant="destructive">
                               <Spinner v-if="deletingAccount" />
-                              <span>Delete account</span>
+                              <span>{{
+                                t("settings.account.deleteAccount.title")
+                              }}</span>
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>
-                                Delete account
+                                {{ t("settings.account.deleteAccount.title") }}
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete your account?
+                                {{
+                                  t("settings.account.deleteAccount.confirm")
+                                }}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogCancel>{{
+                                t("common.cancel")
+                              }}</AlertDialogCancel>
                               <AlertDialogAction
                                 :disabled="deletingAccount"
                                 variant="destructive"
                                 @click="deleteAccount"
                               >
                                 <Spinner v-if="deletingAccount" />
-                                Delete
+                                {{ t("common.delete") }}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -806,14 +852,20 @@ const navigations = [
                     <FieldSet>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="theme">Theme</FieldLabel>
+                          <FieldLabel for="theme">{{
+                            t("settings.preferences.theme.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Customize how Lectornaut looks on your device.
+                            {{ t("settings.preferences.theme.description") }}
                           </FieldDescription>
                         </FieldContent>
                         <Select id="theme" v-model="store">
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a theme" />
+                            <SelectValue
+                              :placeholder="
+                                t('settings.preferences.theme.placeholder')
+                              "
+                            />
                           </SelectTrigger>
                           <SelectContent align="end">
                             <SelectItem
@@ -829,14 +881,20 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="accent">Accent</FieldLabel>
+                          <FieldLabel for="accent">{{
+                            t("settings.preferences.accent.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Choose your preferred accent color.
+                            {{ t("settings.preferences.accent.description") }}
                           </FieldDescription>
                         </FieldContent>
                         <Select id="accent" v-model="accent">
                           <SelectTrigger>
-                            <SelectValue placeholder="Select an accent color" />
+                            <SelectValue
+                              :placeholder="
+                                t('settings.preferences.accent.placeholder')
+                              "
+                            />
                           </SelectTrigger>
                           <SelectContent align="end">
                             <SelectItem
@@ -854,14 +912,20 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="language">Language</FieldLabel>
+                          <FieldLabel for="language">{{
+                            t("settings.preferences.language.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Choose your preferred language.
+                            {{ t("settings.preferences.language.description") }}
                           </FieldDescription>
                         </FieldContent>
                         <Select id="language" v-model="locale">
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a language" />
+                            <SelectValue
+                              :placeholder="
+                                t('settings.preferences.language.placeholder')
+                              "
+                            />
                           </SelectTrigger>
                           <SelectContent align="end">
                             <SelectItem
@@ -877,14 +941,20 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="font">Font</FieldLabel>
+                          <FieldLabel for="font">{{
+                            t("settings.preferences.font.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Choose your preferred font.
+                            {{ t("settings.preferences.font.description") }}
                           </FieldDescription>
                         </FieldContent>
                         <Select id="font" v-model="font">
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a font" />
+                            <SelectValue
+                              :placeholder="
+                                t('settings.preferences.font.placeholder')
+                              "
+                            />
                           </SelectTrigger>
                           <SelectContent align="end">
                             <SelectItem
@@ -902,14 +972,20 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="text-size">Text</FieldLabel>
+                          <FieldLabel for="text-size">{{
+                            t("settings.preferences.text.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Adjust the text size for better readability.
+                            {{ t("settings.preferences.text.description") }}
                           </FieldDescription>
                         </FieldContent>
                         <Select id="text-size" v-model="size" class="w-40">
                           <SelectTrigger>
-                            <SelectValue placeholder="Select text size" />
+                            <SelectValue
+                              :placeholder="
+                                t('settings.preferences.text.placeholder')
+                              "
+                            />
                           </SelectTrigger>
                           <SelectContent align="end">
                             <SelectItem
@@ -927,14 +1003,20 @@ const navigations = [
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="zoom-level">Zoom</FieldLabel>
+                          <FieldLabel for="zoom-level">{{
+                            t("settings.preferences.zoom.label")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            Press Ctrl/Cmd +/- to zoom in and out.
+                            {{ t("settings.preferences.zoom.description") }}
                           </FieldDescription>
                         </FieldContent>
                         <Select id="zoom-level" v-model="zoom" class="w-40">
                           <SelectTrigger>
-                            <SelectValue placeholder="Select zoom level" />
+                            <SelectValue
+                              :placeholder="
+                                t('settings.preferences.zoom.placeholder')
+                              "
+                            />
                           </SelectTrigger>
                           <SelectContent align="end">
                             <SelectItem
@@ -959,15 +1041,24 @@ const navigations = [
                 <div class="p-6">
                   <FieldGroup>
                     <FieldSet>
-                      <FieldLabel>Notification Categories</FieldLabel>
+                      <FieldLabel>{{
+                        t("settings.notifications.categories.label")
+                      }}</FieldLabel>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="communication-notifications">
-                            Communication
+                            {{
+                              t(
+                                "settings.notifications.categories.communication.label"
+                              )
+                            }}
                           </FieldLabel>
                           <FieldDescription>
-                            Notifications about messages, calls, and team
-                            communications.
+                            {{
+                              t(
+                                "settings.notifications.categories.communication.description"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Switch
@@ -978,11 +1069,18 @@ const navigations = [
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="marketing-notifications">
-                            Marketing and Promotions
+                            {{
+                              t(
+                                "settings.notifications.categories.marketing.label"
+                              )
+                            }}
                           </FieldLabel>
                           <FieldDescription>
-                            Promotional emails, feature announcements, and
-                            product updates.
+                            {{
+                              t(
+                                "settings.notifications.categories.marketing.description"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Switch
@@ -993,11 +1091,18 @@ const navigations = [
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="security-notifications">
-                            Security
+                            {{
+                              t(
+                                "settings.notifications.categories.security.label"
+                              )
+                            }}
                           </FieldLabel>
                           <FieldDescription>
-                            Account security alerts, login attempts, and privacy
-                            updates.
+                            {{
+                              t(
+                                "settings.notifications.categories.security.description"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Switch
@@ -1009,9 +1114,11 @@ const navigations = [
                     </FieldSet>
                     <FieldSeparator />
                     <FieldSet>
-                      <FieldLabel>Notification Frequency</FieldLabel>
+                      <FieldLabel>{{
+                        t("settings.notifications.frequency.label")
+                      }}</FieldLabel>
                       <FieldDescription>
-                        Choose how often you want to receive notifications.
+                        {{ t("settings.notifications.frequency.description") }}
                       </FieldDescription>
                       <RadioGroup default-value="immediate">
                         <Field orientation="horizontal">
@@ -1020,35 +1127,49 @@ const navigations = [
                             value="immediate"
                           />
                           <FieldLabel for="notify-immediate">
-                            Immediately
+                            {{
+                              t("settings.notifications.frequency.immediate")
+                            }}
                           </FieldLabel>
                         </Field>
                         <Field orientation="horizontal">
                           <RadioGroupItem id="notify-daily" value="daily" />
-                          <FieldLabel for="notify-daily"> Daily </FieldLabel>
+                          <FieldLabel for="notify-daily">
+                            {{ t("settings.notifications.frequency.daily") }}
+                          </FieldLabel>
                         </Field>
                         <Field orientation="horizontal">
                           <RadioGroupItem id="notify-weekly" value="weekly" />
-                          <FieldLabel for="notify-weekly"> Weekly </FieldLabel>
+                          <FieldLabel for="notify-weekly">
+                            {{ t("settings.notifications.frequency.weekly") }}
+                          </FieldLabel>
                         </Field>
                         <Field orientation="horizontal">
                           <RadioGroupItem id="notify-none" value="none" />
                           <FieldLabel for="notify-none">
-                            No notifications
+                            {{ t("settings.notifications.frequency.none") }}
                           </FieldLabel>
                         </Field>
                       </RadioGroup>
                     </FieldSet>
                     <FieldSeparator />
                     <FieldSet>
-                      <FieldLabel>Notification Channels</FieldLabel>
+                      <FieldLabel>{{
+                        t("settings.notifications.channels.label")
+                      }}</FieldLabel>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="email-notifications">
-                            Email notifications
+                            {{
+                              t("settings.notifications.channels.email.label")
+                            }}
                           </FieldLabel>
                           <FieldDescription>
-                            Manage your email notification preferences.
+                            {{
+                              t(
+                                "settings.notifications.channels.email.description"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Switch id="email-notifications" :model-value="true" />
@@ -1056,10 +1177,16 @@ const navigations = [
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="push-notifications">
-                            Push notifications
+                            {{
+                              t("settings.notifications.channels.push.label")
+                            }}
                           </FieldLabel>
                           <FieldDescription>
-                            Manage your push notification preferences.
+                            {{
+                              t(
+                                "settings.notifications.channels.push.description"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Switch id="push-notifications" :model-value="true" />
@@ -1067,10 +1194,16 @@ const navigations = [
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="inapp-notifications">
-                            In-app notifications
+                            {{
+                              t("settings.notifications.channels.inApp.label")
+                            }}
                           </FieldLabel>
                           <FieldDescription>
-                            Manage your in-app notification preferences.
+                            {{
+                              t(
+                                "settings.notifications.channels.inApp.description"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Switch id="inapp-notifications" :model-value="true" />
@@ -1089,60 +1222,73 @@ const navigations = [
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="current-plan">
-                            Current plan
+                            {{ t("settings.billing.currentPlan.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            View details about your current subscription plan.
+                            {{ t("settings.billing.currentPlan.description") }}
                           </FieldDescription>
                         </FieldContent>
-                        <Button variant="outline"> View plan details </Button>
+                        <Button variant="outline">
+                          {{ t("settings.billing.currentPlan.button") }}
+                        </Button>
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="payment-method">
-                            Payment method
+                            {{ t("settings.billing.paymentMethod.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            Manage your payment methods and billing information.
+                            {{
+                              t("settings.billing.paymentMethod.description")
+                            }}
                           </FieldDescription>
                         </FieldContent>
-                        <Button variant="outline"> Edit payment method </Button>
+                        <Button variant="outline">
+                          {{ t("settings.billing.paymentMethod.button") }}
+                        </Button>
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="billing-address">
-                            Billing address
+                            {{ t("settings.billing.billingAddress.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            Manage your billing address and contact information.
+                            {{
+                              t("settings.billing.billingAddress.description")
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Button variant="outline">
-                          Edit billing address
+                          {{ t("settings.billing.billingAddress.button") }}
                         </Button>
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="billing-history">
-                            Billing history
+                            {{ t("settings.billing.billingHistory.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            View your billing history and invoices.
+                            {{
+                              t("settings.billing.billingHistory.description")
+                            }}
                           </FieldDescription>
                         </FieldContent>
-                        <Button variant="outline"> View invoices </Button>
+                        <Button variant="outline">
+                          {{ t("settings.billing.billingHistory.button") }}
+                        </Button>
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="upgrade-plan">
-                            Upgrade plan
+                            {{ t("settings.billing.upgradePlan.label") }}
                           </FieldLabel>
                           <FieldDescription>
-                            Explore and upgrade to a different subscription
-                            plan.
+                            {{ t("settings.billing.upgradePlan.description") }}
                           </FieldDescription>
                         </FieldContent>
-                        <Button variant="outline"> Upgrade plan </Button>
+                        <Button variant="outline">
+                          {{ t("settings.billing.upgradePlan.button") }}
+                        </Button>
                       </Field>
                     </FieldSet>
                   </FieldGroup>
@@ -1156,10 +1302,10 @@ const navigations = [
                   <FieldGroup>
                     <FieldSet>
                       <FieldLabel for="subscription-plan">
-                        Subscription Plan
+                        {{ t("settings.plans.subscriptionPlan.label") }}
                       </FieldLabel>
                       <FieldDescription>
-                        Select the subscription plan that best fits your needs.
+                        {{ t("settings.plans.subscriptionPlan.description") }}
                       </FieldDescription>
                       <RadioGroup
                         default-value="personal"
@@ -1168,10 +1314,17 @@ const navigations = [
                         <FieldLabel for="personal">
                           <Field orientation="horizontal">
                             <FieldContent>
-                              <FieldTitle>Personal</FieldTitle>
+                              <FieldTitle>{{
+                                t(
+                                  "settings.plans.subscriptionPlan.personal.title"
+                                )
+                              }}</FieldTitle>
                               <FieldDescription>
-                                Perfect for individual users and personal
-                                projects.
+                                {{
+                                  t(
+                                    "settings.plans.subscriptionPlan.personal.description"
+                                  )
+                                }}
                               </FieldDescription>
                             </FieldContent>
                             <RadioGroupItem id="personal" value="personal" />
@@ -1180,10 +1333,17 @@ const navigations = [
                         <FieldLabel for="professional">
                           <Field orientation="horizontal">
                             <FieldContent>
-                              <FieldTitle>Professional</FieldTitle>
+                              <FieldTitle>{{
+                                t(
+                                  "settings.plans.subscriptionPlan.professional.title"
+                                )
+                              }}</FieldTitle>
                               <FieldDescription>
-                                Ideal for freelancers and small teams with
-                                advanced features.
+                                {{
+                                  t(
+                                    "settings.plans.subscriptionPlan.professional.description"
+                                  )
+                                }}
                               </FieldDescription>
                             </FieldContent>
                             <RadioGroupItem
@@ -1195,10 +1355,17 @@ const navigations = [
                         <FieldLabel for="business">
                           <Field orientation="horizontal">
                             <FieldContent>
-                              <FieldTitle>Business</FieldTitle>
+                              <FieldTitle>{{
+                                t(
+                                  "settings.plans.subscriptionPlan.business.title"
+                                )
+                              }}</FieldTitle>
                               <FieldDescription>
-                                Designed for growing businesses with
-                                collaboration tools.
+                                {{
+                                  t(
+                                    "settings.plans.subscriptionPlan.business.description"
+                                  )
+                                }}
                               </FieldDescription>
                             </FieldContent>
                             <RadioGroupItem id="business" value="business" />
@@ -1207,10 +1374,17 @@ const navigations = [
                         <FieldLabel for="enterprise">
                           <Field orientation="horizontal">
                             <FieldContent>
-                              <FieldTitle>Enterprise</FieldTitle>
+                              <FieldTitle>{{
+                                t(
+                                  "settings.plans.subscriptionPlan.enterprise.title"
+                                )
+                              }}</FieldTitle>
                               <FieldDescription>
-                                Complete solution for large organizations with
-                                custom support.
+                                {{
+                                  t(
+                                    "settings.plans.subscriptionPlan.enterprise.description"
+                                  )
+                                }}
                               </FieldDescription>
                             </FieldContent>
                             <RadioGroupItem
@@ -1223,20 +1397,24 @@ const navigations = [
                     </FieldSet>
                     <FieldSeparator />
                     <FieldSet>
-                      <FieldLabel>Subscription Term</FieldLabel>
+                      <FieldLabel>{{
+                        t("settings.plans.subscriptionTerm.label")
+                      }}</FieldLabel>
                       <FieldDescription>
-                        Yearly and monthly terms offer significant savings.
+                        {{ t("settings.plans.subscriptionTerm.description") }}
                       </FieldDescription>
                       <RadioGroup default-value="yearly">
                         <Field orientation="horizontal">
                           <RadioGroupItem id="plan-yearly" value="yearly" />
                           <FieldLabel for="plan-yearly">
-                            Yearly (Save 20%)
+                            {{ t("settings.plans.subscriptionTerm.yearly") }}
                           </FieldLabel>
                         </Field>
                         <Field orientation="horizontal">
                           <RadioGroupItem id="plan-monthly" value="monthly" />
-                          <FieldLabel for="plan-monthly"> Monthly </FieldLabel>
+                          <FieldLabel for="plan-monthly">
+                            {{ t("settings.plans.subscriptionTerm.monthly") }}
+                          </FieldLabel>
                         </Field>
                       </RadioGroup>
                     </FieldSet>
@@ -1247,10 +1425,10 @@ const navigations = [
             <Separator />
             <DialogFooter class="p-6">
               <DialogClose as-child>
-                <Button variant="outline"> Cancel </Button>
+                <Button variant="outline"> {{ t("common.cancel") }} </Button>
               </DialogClose>
               <DialogClose as-child>
-                <Button> Save </Button>
+                <Button> {{ t("common.save") }} </Button>
               </DialogClose>
             </DialogFooter>
           </div>

@@ -34,6 +34,7 @@ onBeforeUnmount(() => {
 
 const user = useCurrentUser()
 const isUserLoaded = useIsCurrentUserLoaded()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -57,16 +58,16 @@ const isUserLoaded = useIsCurrentUserLoaded()
             <ContextMenuContent>
               <ContextMenuItem>
                 <icon-mingcute-ai-fill />
-                Copy icon as .SVG
+                {{ t("landing.header.copyIcon") }}
               </ContextMenuItem>
               <ContextMenuItem>
                 <icon-mingcute-signature-fill />
-                Copy wordmark as .SVG
+                {{ t("landing.header.copyWordmark") }}
               </ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem>
                 <icon-mingcute-download-fill />
-                Download brand kit as .ZIP
+                {{ t("landing.header.downloadBrandKit") }}
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -76,7 +77,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
             <NavigationMenuList class="gap-0.5">
               <NavigationMenuItem>
                 <NavigationMenuTrigger class="bg-transparent">
-                  Products
+                  {{ t("landing.menu.products") }}
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div class="grid w-lg grid-cols-2 gap-2">
@@ -105,10 +106,18 @@ const isUserLoaded = useIsCurrentUserLoaded()
                             class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
                           >
                             <span>
-                              {{ item.title }}
+                              {{
+                                t("landing.menu.items." + item.id + ".title")
+                              }}
                             </span>
                             <span class="text-muted-foreground text-xs">
-                              {{ item.description }}
+                              {{
+                                t(
+                                  "landing.menu.items." +
+                                    item.id +
+                                    ".description"
+                                )
+                              }}
                             </span>
                           </div>
                         </RouterLink>
@@ -119,7 +128,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuTrigger class="bg-transparent">
-                  Solutions
+                  {{ t("landing.menu.solutions") }}
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div class="grid w-lg grid-cols-1 gap-2">
@@ -131,7 +140,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
                       <span
                         class="text-secondary-foreground px-2 pt-2 text-xs font-semibold"
                       >
-                        {{ solution.title }}
+                        {{ t("landing.menu.solutionGroups." + solution.id) }}
                       </span>
                       <div class="grid grid-cols-2 gap-2">
                         <NavigationMenuLink
@@ -175,7 +184,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuTrigger class="bg-transparent">
-                  Resources
+                  {{ t("landing.menu.resources") }}
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div class="grid w-lg grid-cols-2 gap-2">
@@ -218,7 +227,7 @@ const isUserLoaded = useIsCurrentUserLoaded()
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuTrigger class="bg-transparent">
-                  Company
+                  {{ t("landing.menu.company") }}
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div class="grid w-lg grid-cols-3 gap-2">
@@ -265,7 +274,9 @@ const isUserLoaded = useIsCurrentUserLoaded()
                   class="bg-transparent"
                   as-child
                 >
-                  <RouterLink to="/pricing"> Pricing </RouterLink>
+                  <RouterLink to="/pricing">
+                    {{ t("landing.menu.pricing") }}
+                  </RouterLink>
                 </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
@@ -282,11 +293,15 @@ const isUserLoaded = useIsCurrentUserLoaded()
             <Spinner />
           </Button>
           <Button v-else-if="user" as-child>
-            <RouterLink to="/home">Open app</RouterLink>
+            <RouterLink to="/home">{{
+              t("landing.header.openApp")
+            }}</RouterLink>
           </Button>
           <EnterTrigger v-else>
             <Button variant="destructive" as-child>
-              <RouterLink to="/enter">Get started</RouterLink>
+              <RouterLink to="/enter">{{
+                t("landing.header.getStarted")
+              }}</RouterLink>
             </Button>
           </EnterTrigger>
           <div class="flex md:hidden">
@@ -299,16 +314,18 @@ const isUserLoaded = useIsCurrentUserLoaded()
                         <icon-lucide-menu />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent> Menu </TooltipContent>
+                    <TooltipContent>
+                      {{ t("landing.header.menu") }}
+                    </TooltipContent>
                   </SheetTrigger>
                   <SheetContent
                     class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
                     :class="{ 'mt-13': isTauri && !isFullscreen }"
                   >
                     <SheetHeader>
-                      <SheetTitle> Menu </SheetTitle>
+                      <SheetTitle> {{ t("landing.header.menu") }} </SheetTitle>
                       <SheetDescription>
-                        Access all the features and settings of Lectornaut.
+                        {{ t("landing.header.menuDescription") }}
                       </SheetDescription>
                     </SheetHeader>
                     <Separator />
@@ -318,53 +335,73 @@ const isUserLoaded = useIsCurrentUserLoaded()
                       >
                         <Accordion collapsible type="multiple" class="px-4">
                           <AccordionItem value="products">
-                            <AccordionTrigger> Products </AccordionTrigger>
+                            <AccordionTrigger>
+                              {{ t("landing.menu.products") }}
+                            </AccordionTrigger>
                             <AccordionContent>
                               <Button
                                 v-for="item in productsMenu"
                                 :key="item.id"
                               >
-                                {{ item.title }}
+                                {{
+                                  t("landing.menu.items." + item.id + ".title")
+                                }}
                               </Button>
                             </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="solutions">
-                            <AccordionTrigger> Solutions </AccordionTrigger>
+                            <AccordionTrigger>
+                              {{ t("landing.menu.solutions") }}
+                            </AccordionTrigger>
                             <AccordionContent>
                               <div v-for="menu in solutionsMenu" :key="menu.id">
                                 <Button
                                   v-for="item in menu.items"
                                   :key="item.id"
                                 >
-                                  {{ item.title }}
+                                  {{
+                                    t(
+                                      "landing.menu.items." + item.id + ".title"
+                                    )
+                                  }}
                                 </Button>
                               </div>
                             </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="resources">
-                            <AccordionTrigger> Resources </AccordionTrigger>
+                            <AccordionTrigger>
+                              {{ t("landing.menu.resources") }}
+                            </AccordionTrigger>
                             <AccordionContent>
                               <Button
                                 v-for="item in resourcesMenu"
                                 :key="item.id"
                               >
-                                {{ item.title }}
+                                {{
+                                  t("landing.menu.items." + item.id + ".title")
+                                }}
                               </Button>
                             </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="company">
-                            <AccordionTrigger> Company </AccordionTrigger>
+                            <AccordionTrigger>
+                              {{ t("landing.menu.company") }}
+                            </AccordionTrigger>
                             <AccordionContent>
                               <Button
                                 v-for="item in companyMenu"
                                 :key="item.id"
                               >
-                                {{ item.title }}
+                                {{
+                                  t("landing.menu.items." + item.id + ".title")
+                                }}
                               </Button>
                             </AccordionContent>
                           </AccordionItem>
                           <Button variant="ghost" as-child>
-                            <RouterLink to="/pricing"> Pricing </RouterLink>
+                            <RouterLink to="/pricing">
+                              {{ t("landing.menu.pricing") }}
+                            </RouterLink>
                           </Button>
                         </Accordion>
                       </div>

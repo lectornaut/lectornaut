@@ -29,15 +29,15 @@ hotkeys("enter", (event) => {
         <Spinner />
       </Button>
       <Button v-else-if="user" as-child>
-        <RouterLink to="/home"> Enter </RouterLink>
+        <RouterLink to="/home"> {{ t("landing.cta.enter") }} </RouterLink>
       </Button>
       <EnterTrigger v-else>
-        <Button> Enter </Button>
+        <Button> {{ t("landing.cta.enter") }} </Button>
       </EnterTrigger>
       <Faq />
     </div>
     <div class="mb-safe-bottom text-muted-foreground z-10 text-center">
-      {{ t("hello") }}, track expenses, set goals, and save money.
+      {{ t("hello") }}, {{ t("landing.cta.description") }}
     </div>
   </div>
 </template>

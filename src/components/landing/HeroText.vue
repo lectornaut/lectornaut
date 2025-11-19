@@ -1,3 +1,9 @@
+<script lang="ts" setup>
+import { useI18n } from "vue-i18n"
+
+const { t } = useI18n()
+</script>
+
 <template>
   <div class="flex size-full grow flex-col items-center px-8 py-4">
     <svg
@@ -17,7 +23,7 @@
         stroke-width="0"
         class="font-display fill-current leading-tight tracking-tight"
       >
-        Learn anything
+        {{ t("landing.hero.line1") }}
       </text>
     </svg>
     <svg
@@ -37,8 +43,10 @@
         stroke-width="0"
         class="font-display fill-current leading-tight tracking-tight"
       >
-        <tspan alignment-baseline="middle" class="italic">your</tspan>
-        way
+        <tspan alignment-baseline="middle" class="italic">
+          {{ t("landing.hero.line2.part1") }}
+        </tspan>
+        {{ t("landing.hero.line2.part2") }}
       </text>
     </svg>
   </div>

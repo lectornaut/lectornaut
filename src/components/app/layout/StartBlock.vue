@@ -4,6 +4,10 @@
       <EmptyMedia variant="icon">
         <Logo />
       </EmptyMedia>
+      <EmptyTitle> Welcome to Lectornaut </EmptyTitle>
+      <EmptyDescription>
+        Get started by using the commands below to explore the app.
+      </EmptyDescription>
     </EmptyHeader>
     <EmptyContent>
       <ItemGroup class="grid grid-cols-1 gap-2">
@@ -16,7 +20,7 @@
               Search and Commands
             </ItemTitle>
           </ItemContent>
-          <ItemActions>
+          <ItemActions class="pl-16">
             <KbdGroup>
               <Kbd>⌘</Kbd>
               <Kbd>K</Kbd>
@@ -30,7 +34,7 @@
           <ItemContent>
             <ItemTitle class="text-secondary-foreground"> Ask AI </ItemTitle>
           </ItemContent>
-          <ItemActions>
+          <ItemActions class="pl-16">
             <KbdGroup>
               <Kbd>⌘</Kbd>
               <Kbd>↩</Kbd>
@@ -46,7 +50,7 @@
               Keyboard Shortcuts
             </ItemTitle>
           </ItemContent>
-          <ItemActions>
+          <ItemActions class="pl-16">
             <KbdGroup>
               <Kbd>⌘</Kbd>
               <Kbd>/</Kbd>
@@ -62,7 +66,7 @@
               Help and Support
             </ItemTitle>
           </ItemContent>
-          <ItemActions>
+          <ItemActions class="pl-16">
             <KbdGroup>
               <Kbd>?</Kbd>
             </KbdGroup>

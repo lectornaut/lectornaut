@@ -300,14 +300,23 @@ const closeTab = (id: string) => {
                           >
                             <Terminal />
                           </TabsContent>
-                          <EmptySection
-                            v-if="source.length === 0"
-                            :icon="IconConsole"
-                            title="Console"
-                            description="No active terminal sessions. Create a new terminal to get started."
-                            action-text="New Terminal"
-                            @action="newTab()"
-                          />
+                          <Empty v-if="source.length === 0">
+                            <EmptyHeader>
+                              <EmptyMedia variant="icon">
+                                <IconConsole class="size-6" />
+                              </EmptyMedia>
+                              <EmptyTitle> Console </EmptyTitle>
+                              <EmptyDescription>
+                                No active terminal sessions. Create a new
+                                terminal to get started.
+                              </EmptyDescription>
+                            </EmptyHeader>
+                            <EmptyContent>
+                              <Button variant="outline" @click="newTab()">
+                                New Terminal
+                              </Button>
+                            </EmptyContent>
+                          </Empty>
                         </OverlayScrollbarsWrapper>
                       </div>
                     </Tabs>

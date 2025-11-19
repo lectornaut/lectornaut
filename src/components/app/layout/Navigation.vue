@@ -2,6 +2,8 @@
 import { menu } from "@/helpers/defaults"
 import { useSortable } from "@vueuse/integrations/useSortable"
 
+const { t } = useI18n()
+
 const visibleItems = ref<Record<string, boolean>>(
   menu.reduce(
     (acc, item) => {
@@ -42,18 +44,18 @@ defineProps<{
         >
           <SidebarMenuButton
             class="group-has-[.router-link-active]/nav:bg-sidebar-accent group-has-[.router-link-active]/nav:text-sidebar-accent-foreground"
-            :tooltip="item.title"
+            :tooltip="t('navigation.menu.' + item.id)"
             as-child
           >
             <RouterLink :to="item.url">
               <Component :is="item.icon" />
-              {{ item.title }}
+              {{ t("navigation.menu." + item.id) }}
             </RouterLink>
             <span
               v-if="iconDisplay === 'text'"
               class="text-secondary-foreground inline-block w-full text-center text-[8px] font-medium uppercase"
             >
-              {{ item.title }}
+              {{ t("navigation.menu." + item.id) }}
             </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -61,22 +63,22 @@ defineProps<{
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Show more options">
+              <SidebarMenuButton :tooltip="t('navigation.showMore')">
                 <icon-lucide-grid-2-x-2-plus />
-                Edit
+                {{ t("common.edit") }}
               </SidebarMenuButton>
             </SidebarMenuItem>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="right">
             <DropdownMenuLabel class="text-muted-foreground text-xs">
-              Show
+              {{ t("navigation.show") }}
             </DropdownMenuLabel>
             <DropdownMenuCheckboxItem
               v-for="item in menu"
               :key="item.id"
               v-model:model-value="visibleItems[item.id]"
             >
-              {{ item.title }}
+              {{ t("navigation.menu." + item.id) }}
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,3 +1,444 @@
 {
-  "hello": "Hello"
+  "hello": "Hello",
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "close": "Close",
+    "edit": "Edit",
+    "remove": "Remove",
+    "unknown": "Unknown",
+    "loading": "Loading..."
+  },
+  "settings": {
+    "titles": {
+      "general": "General",
+      "preferences": "Preferences",
+      "account": "Account",
+      "notifications": "Notifications",
+      "appearance": "Appearance",
+      "security": "Security",
+      "workspace": "Workspace",
+      "agents": "Agents",
+      "people": "People",
+      "teams": "Teams",
+      "runs": "Runs",
+      "knowledge": "Knowledge",
+      "integrations": "Integrations",
+      "logs": "Logs",
+      "administration": "Administration",
+      "billing": "Billing",
+      "plans": "Plans"
+    },
+    "descriptions": {
+      "preferences": "Manage your general settings and preferences.",
+      "account": "Manage your account settings.",
+      "notifications": "Manage your notification preferences.",
+      "appearance": "Customize the appearance of the app.",
+      "security": "Manage your security settings.",
+      "agents": "Manage your workspace agents.",
+      "people": "Manage people in your organization.",
+      "teams": "Manage your workspace teams.",
+      "runs": "View and manage your runs.",
+      "knowledge": "Manage your workspace knowledge base.",
+      "integrations": "Manage your workspace integrations.",
+      "logs": "View system and activity logs.",
+      "general": "General administration settings.",
+      "billing": "Manage your billing information and subscriptions.",
+      "plans": "View and manage your subscription plans."
+    },
+    "account": {
+      "profilePicture": {
+        "label": "Profile picture",
+        "description": "Upload or remove your profile picture.",
+        "upload": "Upload profile picture",
+        "remove": "Remove profile picture",
+        "updated": "Profile picture updated",
+        "updatedDesc": "Your profile picture has been updated successfully.",
+        "uploading": "Uploading profile picture",
+        "uploadingDesc": "Please wait while we upload your profile picture.",
+        "failed": "Failed to update profile picture",
+        "failedUpload": "Failed to upload profile picture"
+      },
+      "preferredName": {
+        "label": "Preferred name",
+        "description": "Enter your preferred display name.",
+        "inputLabel": "Name",
+        "placeholder": "Your name"
+      },
+      "email": {
+        "label": "Email",
+        "verified": "Verified",
+        "verifiedDesc": "We've verified your email address.",
+        "verify": "Verify email",
+        "change": "Change email",
+        "changeTitle": "Change email",
+        "changeDesc": "Update your email address.",
+        "newLabel": "New email",
+        "newPlaceholder": "New email address",
+        "sendVerification": "Send verification email",
+        "sent": "Verification email sent",
+        "sentDesc": "Please check your inbox for the verification email.",
+        "failed": "Failed to send verification email"
+      },
+      "password": {
+        "label": "Password",
+        "description": "Set a password to log in to your account.",
+        "change": "Change password",
+        "set": "Set password",
+        "changeTitle": "Change password",
+        "setTitle": "Set password",
+        "changeDesc": "Update your password.",
+        "newLabel": "New password",
+        "newPlaceholder": "New password",
+        "updated": "Password updated",
+        "updatedDesc": "Your password has been successfully updated.",
+        "failed": "Failed to update password"
+      },
+      "identityProviders": {
+        "label": "Identity providers",
+        "description": "Manage your connected accounts and sign-in methods.",
+        "connect": "Connect a new account",
+        "noAccounts": "No connected accounts.",
+        "unlinked": "Provider unlinked",
+        "unlinkedDesc": "The provider has been successfully unlinked.",
+        "failed": "Failed to unlink provider",
+        "google": "Google.com",
+        "password": "Password"
+      },
+      "deleteAccount": {
+        "label": "Delete account",
+        "description": "Permanently delete your account.",
+        "title": "Delete account",
+        "confirm": "Are you sure you want to delete your account?",
+        "deleted": "Account deleted",
+        "deletedDesc": "Your account has been successfully deleted.",
+        "failed": "Failed to delete account"
+      }
+    },
+    "preferences": {
+      "theme": {
+        "label": "Theme",
+        "description": "Customize how Lectornaut looks on your device.",
+        "placeholder": "Select a theme"
+      },
+      "accent": {
+        "label": "Accent",
+        "description": "Choose your preferred accent color.",
+        "placeholder": "Select an accent color"
+      },
+      "language": {
+        "label": "Language",
+        "description": "Choose your preferred language.",
+        "placeholder": "Select a language"
+      },
+      "font": {
+        "label": "Font",
+        "description": "Choose your preferred font.",
+        "placeholder": "Select a font"
+      },
+      "text": {
+        "label": "Text",
+        "description": "Adjust the text size for better readability.",
+        "placeholder": "Select text size"
+      },
+      "zoom": {
+        "label": "Zoom",
+        "description": "Press Ctrl/Cmd +/- to zoom in and out.",
+        "placeholder": "Select zoom level"
+      }
+    },
+    "notifications": {
+      "categories": {
+        "label": "Notification Categories",
+        "communication": {
+          "label": "Communication",
+          "description": "Notifications about messages, calls, and team communications."
+        },
+        "marketing": {
+          "label": "Marketing and Promotions",
+          "description": "Promotional emails, feature announcements, and product updates."
+        },
+        "security": {
+          "label": "Security",
+          "description": "Account security alerts, login attempts, and privacy updates."
+        }
+      },
+      "frequency": {
+        "label": "Notification Frequency",
+        "description": "Choose how often you want to receive notifications.",
+        "immediate": "Immediately",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "none": "No notifications"
+      },
+      "channels": {
+        "label": "Notification Channels",
+        "email": {
+          "label": "Email notifications",
+          "description": "Manage your email notification preferences."
+        },
+        "push": {
+          "label": "Push notifications",
+          "description": "Manage your push notification preferences."
+        },
+        "inApp": {
+          "label": "In-app notifications",
+          "description": "Manage your in-app notification preferences."
+        }
+      }
+    },
+    "billing": {
+      "currentPlan": {
+        "label": "Current plan",
+        "description": "View details about your current subscription plan.",
+        "button": "View plan details"
+      },
+      "paymentMethod": {
+        "label": "Payment method",
+        "description": "Manage your payment methods and billing information.",
+        "button": "Edit payment method"
+      },
+      "billingAddress": {
+        "label": "Billing address",
+        "description": "Manage your billing address and contact information.",
+        "button": "Edit billing address"
+      },
+      "billingHistory": {
+        "label": "Billing history",
+        "description": "View your billing history and invoices.",
+        "button": "View invoices"
+      },
+      "upgradePlan": {
+        "label": "Upgrade plan",
+        "description": "Explore and upgrade to a different subscription plan.",
+        "button": "Upgrade plan"
+      }
+    },
+    "plans": {
+      "subscriptionPlan": {
+        "label": "Subscription Plan",
+        "description": "Select the subscription plan that best fits your needs.",
+        "personal": {
+          "title": "Personal",
+          "description": "Perfect for individual users and personal projects."
+        },
+        "professional": {
+          "title": "Professional",
+          "description": "Ideal for freelancers and small teams with advanced features."
+        },
+        "business": {
+          "title": "Business",
+          "description": "Designed for growing businesses with collaboration tools."
+        },
+        "enterprise": {
+          "title": "Enterprise",
+          "description": "Complete solution for large organizations with custom support."
+        }
+      },
+      "subscriptionTerm": {
+        "label": "Subscription Term",
+        "description": "Yearly and monthly terms offer significant savings.",
+        "yearly": "Yearly (Save 20%)",
+        "monthly": "Monthly"
+      }
+    }
+  },
+  "navigation": {
+    "menu": {
+      "home": "Home",
+      "write": "Write",
+      "agents": "Agents",
+      "tasks": "Tasks",
+      "runs": "Runs",
+      "teams": "Teams",
+      "create": "Create"
+    },
+    "showMore": "Show more options",
+    "show": "Show"
+  },
+  "tabs": {
+    "newTab": "New tab",
+    "copy": "(copy)",
+    "goBack": "Go back",
+    "goForward": "Go forward",
+    "closeOthers": "Close others",
+    "closeAll": "Close all",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "activeTabs": "Active tabs",
+    "closeAllTabs": "Close all tabs",
+    "recentTabs": "Recent tabs",
+    "clearRecent": "Clear recent tabs",
+    "reopenLast": "Reopen last tab",
+    "options": "Tab options"
+  },
+  "titlebar": {
+    "appearance": "Appearance",
+    "iconsOnly": "Icons only",
+    "iconsAndText": "Icons and text"
+  },
+  "landing": {
+    "cta": {
+      "enter": "Enter",
+      "description": "track expenses, set goals, and save money."
+    },
+    "header": {
+      "copyIcon": "Copy icon as .SVG",
+      "copyWordmark": "Copy wordmark as .SVG",
+      "downloadBrandKit": "Download brand kit as .ZIP",
+      "openApp": "Open app",
+      "getStarted": "Get started",
+      "menu": "Menu",
+      "menuDescription": "Access all the features and settings of Lectornaut."
+    },
+    "hero": {
+      "line1": "Learn anything",
+      "line2": {
+        "part1": "your",
+        "part2": "way"
+      }
+    },
+    "menu": {
+      "products": "Products",
+      "solutions": "Solutions",
+      "resources": "Resources",
+      "company": "Company",
+      "pricing": "Pricing",
+      "solutionGroups": {
+        "personal": "For Personal",
+        "professional": "For Professional",
+        "business": "For Business",
+        "enterprise": "For Enterprise"
+      },
+      "items": {
+        "lectornaut": {
+          "title": "Lectornaut",
+          "description": "The core platform for building AI agents"
+        },
+        "lectornaut-ai": {
+          "title": "Lectornaut AI",
+          "description": "AI capabilities for your agents"
+        },
+        "lectornaut-cli": {
+          "title": "Lectornaut CLI",
+          "description": "Command line interface for Lectornaut"
+        },
+        "lectornaut-sdk": {
+          "title": "Lectornaut SDK",
+          "description": "Software Development Kit for Lectornaut"
+        },
+        "lectornaut-teams": {
+          "title": "Lectornaut Teams",
+          "description": "Collaborate with teams on Lectornaut"
+        },
+        "lectornaut-runs": {
+          "title": "Lectornaut Runs",
+          "description": "Monitor and manage runs on Lectornaut"
+        },
+        "lectornaut-agents": {
+          "title": "Lectornaut Agents",
+          "description": "Build and deploy AI agents"
+        },
+        "lectornaut-enterprise": {
+          "title": "Lectornaut Enterprise",
+          "description": "Enterprise solutions for Lectornaut"
+        },
+        "lectornaut-cloud": {
+          "title": "Lectornaut Cloud",
+          "description": "Cloud solutions for Lectornaut"
+        },
+        "download": {
+          "title": "Download",
+          "description": "Get the latest version of Lectornaut"
+        },
+        "developers": {
+          "title": "Developers",
+          "description": "Resources for developers"
+        },
+        "documentation": {
+          "title": "Documentation",
+          "description": "Guides and API references"
+        },
+        "blog": {
+          "title": "Blog",
+          "description": "Insights and updates from team"
+        },
+        "changelog": {
+          "title": "Changelog",
+          "description": "What's new in Lectornaut"
+        },
+        "customers": {
+          "title": "Customers",
+          "description": "See how others use Lectornaut"
+        },
+        "community": {
+          "title": "Community",
+          "description": "Join the Lectornaut community"
+        },
+        "security": {
+          "title": "Security",
+          "description": "Safety and security resources"
+        },
+        "help-center": {
+          "title": "Help Center",
+          "description": "Get help and support"
+        },
+        "about-us": {
+          "title": "About",
+          "description": "Meet the team"
+        },
+        "careers": {
+          "title": "Careers",
+          "description": "Join our team"
+        },
+        "contact-us": {
+          "title": "Contact",
+          "description": "Get in touch with us"
+        }
+      }
+    },
+    "footer": {
+      "sections": {
+        "features": "Features",
+        "products": "Products",
+        "solutions": "Solutions",
+        "company": "Company",
+        "resources": "Resources",
+        "legal": "Legal"
+      },
+      "links": {
+        "agents": "Agents",
+        "tasks": "Tasks",
+        "runs": "Runs",
+        "teams": "Teams",
+        "builder": "Builder",
+        "assistant": "Assistant",
+        "pricing": "Pricing",
+        "download": "Download",
+        "changelog": "Changelog",
+        "status": "Status",
+        "personal": "Personal",
+        "professional": "Professional",
+        "business": "Business",
+        "enterprise": "Enterprise",
+        "nonProfit": "Non-Profit",
+        "about": "About",
+        "careers": "Careers",
+        "contact": "Contact",
+        "customers": "Customers",
+        "community": "Community",
+        "brand": "Brand",
+        "developers": "Developers",
+        "integrations": "Integrations",
+        "documentation": "Documentation",
+        "blog": "Blog",
+        "security": "Security",
+        "helpCenter": "Help Center",
+        "terms": "Terms",
+        "privacy": "Privacy",
+        "dpa": "DPA"
+      }
+    }
+  }
 }

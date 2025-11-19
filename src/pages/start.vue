@@ -20,27 +20,49 @@ useHead({
 <template>
   <Teleport defer to="#left-sidebar">
     <Sidebar collapsible="none" class="w-full">
-      <EmptySection
-        centered
-        :icon="IconBlock"
-        title="Console"
-        description="Your console will appear here when you run a project."
-        action-text="Ask AI"
-        @action="emitter.emit('Dialog.AiAsk.Toggle')"
-      />
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <IconBlock class="size-6" />
+          </EmptyMedia>
+          <EmptyTitle> Console </EmptyTitle>
+          <EmptyDescription>
+            Your console will appear here when you run a project.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            variant="outline"
+            @click="emitter.emit('Dialog.AiAsk.Toggle')"
+          >
+            Ask AI
+          </Button>
+        </EmptyContent>
+      </Empty>
     </Sidebar>
   </Teleport>
   <StartBlock />
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full">
-      <EmptySection
-        centered
-        :icon="IconAiAsk"
-        title="Get Instant Answers"
-        description="Get instant help and code suggestions from our AI assistant."
-        action-text="Ask AI"
-        @action="emitter.emit('Dialog.AiAsk.Toggle')"
-      />
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <IconAiAsk class="size-6" />
+          </EmptyMedia>
+          <EmptyTitle> Get Instant Answers </EmptyTitle>
+          <EmptyDescription>
+            Get instant help and code suggestions from our AI assistant.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            variant="outline"
+            @click="emitter.emit('Dialog.AiAsk.Toggle')"
+          >
+            Ask AI
+          </Button>
+        </EmptyContent>
+      </Empty>
     </Sidebar>
   </Teleport>
 </template>
