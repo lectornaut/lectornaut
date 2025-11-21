@@ -1,8 +1,7 @@
 import { Timestamp } from "firebase/firestore"
-import type { UUIDTypes } from "uuid"
 
 export interface ITodo {
-  id: UUIDTypes
+  id: string
   title: string
   completed: boolean
   createdAt: Timestamp
@@ -10,7 +9,7 @@ export interface ITodo {
 }
 
 export interface ITeam {
-  id: UUIDTypes
+  id: string
   name: string
   members: Array<string>
   createdAt: Timestamp

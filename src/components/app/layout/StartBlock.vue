@@ -11,7 +11,7 @@ import {
   <Empty>
     <EmptyHeader>
       <EmptyMedia variant="icon">
-        <Logo />
+        <Logo class="h-6 w-6" />
       </EmptyMedia>
       <EmptyTitle> Welcome to Lectornaut </EmptyTitle>
       <EmptyDescription>

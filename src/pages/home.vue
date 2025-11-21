@@ -10,11 +10,15 @@ import {
 } from "@/components/ui/chart"
 import {
   IconArrowUpRight,
+  IconBlocks,
+  IconCalendar,
   IconChevronRight,
   IconLink,
   IconMoreHorizontal,
   IconMoreVertical,
   IconPlus,
+  IconSearch,
+  IconSparkles,
   IconStarOff,
   IconTrash2,
 } from "@/data/icons"
@@ -22,11 +26,6 @@ import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue"
 import type { DateRange } from "reka-ui"
 import Avatar from "vue-boring-avatars"
-import Blocks from "~icons/lucide/blocks"
-import Calendar from "~icons/lucide/calendar"
-import Search from "~icons/lucide/search"
-import Sparkles from "~icons/lucide/sparkles"
-import Trash2 from "~icons/lucide/trash-2"
 
 definePage({
   meta: {
@@ -151,12 +150,12 @@ const navMain = [
   {
     title: "Search",
     url: "#",
-    icon: Search,
+    icon: IconSearch,
   },
   {
     title: "Ask AI",
     url: "#",
-    icon: Sparkles,
+    icon: IconSparkles,
   },
 ]
 
@@ -164,19 +163,19 @@ const navSecondary = [
   {
     title: "Calendar",
     url: "#",
-    icon: Calendar,
+    icon: IconCalendar,
     badge: false,
   },
   {
     title: "Templates",
     url: "#",
-    icon: Blocks,
+    icon: IconBlocks,
     badge: false,
   },
   {
     title: "Trash",
     url: "#",
-    icon: Trash2,
+    icon: IconTrash2,
     badge: false,
   },
 ]
@@ -459,7 +458,7 @@ const navToc = [
           <SidebarMenuItem v-for="item in navMain" :key="item.title">
             <SidebarMenuButton as-child>
               <a :href="item.url">
-                <Component :is="item.icon" />
+                <component :is="item.icon" />
                 <span>{{ item.title }}</span>
               </a>
             </SidebarMenuButton>
@@ -678,89 +677,8 @@ const navToc = [
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent
-              ><ChartContainer
-                :config="chartConfig"
-                class="min-h-[200px] w-full"
-              >
-                <VisXYContainer :data="chartData">
-                  <VisGroupedBar
-                    :x="(d: Data) => d.date"
-                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-                  <VisAxis
-                    type="x"
-                    :x="(d: Data) => d.date"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :grid-line="false"
-                    :tick-format="
-                      (d: number) => {
-                        const date = new Date(d)
-                        return date.toLocaleDateString('en-US', {
-                          month: 'short',
-                        })
-                      }
-                    "
-                    :tick-values="chartData.map((d) => d.date)"
-                  />
-                  <ChartTooltip />
-                  <ChartCrosshair
-                    :template="
-                      componentToString(chartConfig, ChartTooltipContent, {
-                        labelFormatter(d) {
-                          return new Date(d).toLocaleDateString('en-US', {
-                            month: 'long',
-                          })
-                        },
-                      })
-                    "
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-                </VisXYContainer>
-                <ChartLegendContent />
-              </ChartContainer>
-            </CardContent>
-            <!-- <Separator /> -->
-            <!-- <CardFooter>
-              <CardDescription>{{ card.description }}</CardDescription>
-              <Button variant="outline" size="sm">
-                <IconRocket /> Ask AI
-              </Button>
-              <Button variant="outline" size="icon-sm">
-                <IconArrowUpRight />
-              </Button>
-            </CardFooter> -->
-          </Card>
-          <Card
-            v-for="card in [
-              { title: 'Interactions', description: '+265 sales this month.' },
-              { title: 'Conversions', description: '+3.2% week over week.' },
-              { title: 'Revenue', description: '$12,340 MRR.' },
-            ]"
-            :key="card.title"
-            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
-          >
-            <CardHeader>
-              <CardTitle>{{ card.title }}</CardTitle>
-              <CardDescription>{{ card.description }}</CardDescription>
-            </CardHeader>
-            <CardContent
-              ><ChartContainer
-                :config="chartConfig"
-                class="min-h-[200px] w-full"
-              >
+            <CardContent>
+              <ChartContainer :config="chartConfig" class="w-full">
                 <VisXYContainer :data="chartData">
                   <VisGroupedBar
                     :x="(d: Data) => d.date"
@@ -834,11 +752,8 @@ const navToc = [
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent
-              ><ChartContainer
-                :config="chartConfig"
-                class="min-h-[200px] w-full"
-              >
+            <CardContent>
+              <ChartContainer :config="chartConfig" class="w-full">
                 <VisXYContainer :data="chartData">
                   <VisGroupedBar
                     :x="(d: Data) => d.date"
@@ -912,11 +827,8 @@ const navToc = [
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
             </CardHeader>
-            <CardContent
-              ><ChartContainer
-                :config="chartConfig"
-                class="min-h-[200px] w-full"
-              >
+            <CardContent>
+              <ChartContainer :config="chartConfig" class="w-full">
                 <VisXYContainer :data="chartData">
                   <VisGroupedBar
                     :x="(d: Data) => d.date"

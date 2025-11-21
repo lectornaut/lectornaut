@@ -1,10 +1,25 @@
 <script lang="ts" setup>
 import {
+  IconActivity,
   IconAlertTriangle,
   IconAsterisk,
   IconBadgeCheck,
+  IconBadgeDollarSign,
+  IconBell,
+  IconBlocks,
+  IconBolt,
+  IconBot,
   IconCircleFilled,
+  IconCircleUserRound,
+  IconComponent,
+  IconCreditCard,
+  IconDatabase,
   IconGoogleIcon,
+  IconLock,
+  IconLogs,
+  IconPalette,
+  IconSettings,
+  IconUsersRound,
   IconX,
 } from "@/data/icons"
 import {
@@ -33,21 +48,6 @@ import {
   useFirebaseStorage,
   useStorageFile,
 } from "vuefire"
-import IconActivity from "~icons/lucide/activity"
-import IconDollarSignBadge from "~icons/lucide/badge-dollar-sign"
-import IconBell from "~icons/lucide/bell"
-import IconBlocks from "~icons/lucide/blocks"
-import IconBolt from "~icons/lucide/bolt"
-import IconBot from "~icons/lucide/bot"
-import IconCircleUserRound from "~icons/lucide/circle-user-round"
-import IconComponent from "~icons/lucide/component"
-import IconCreditCard from "~icons/lucide/credit-card"
-import IconDatabase from "~icons/lucide/database"
-import IconLock from "~icons/lucide/lock"
-import IconLogs from "~icons/lucide/logs"
-import IconPalette from "~icons/lucide/palette"
-import IconSettings from "~icons/lucide/settings"
-import IconUsersRound from "~icons/lucide/users-round"
 
 const openSettings = ref(false)
 const activeTab = ref("preferences")
@@ -359,7 +359,7 @@ const navigations = computed(() => [
       },
       {
         name: t("settings.titles.plans"),
-        icon: IconDollarSignBadge,
+        icon: IconBadgeDollarSign,
         id: "plans",
         description: t("settings.descriptions.plans"),
       },

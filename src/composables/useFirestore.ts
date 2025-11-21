@@ -4,13 +4,22 @@ import {
   CollectionReference,
   deleteDoc,
   doc,
+  type DocumentData,
+  setDoc,
   updateDoc,
 } from "firebase/firestore"
 import { toast } from "vue-sonner"
 
-export async function useAddDoc(colRef: CollectionReference, document: object) {
+export async function useAddDoc<T extends { id?: string }>(
+  colRef: CollectionReference,
+  document: T
+) {
   try {
-    await addDoc(colRef, document)
+    if (document.id) {
+      await setDoc(doc(colRef, document.id), document as DocumentData)
+    } else {
+      await addDoc(colRef, document as DocumentData)
+    }
     toast.success("Added")
   } catch (error) {
     console.error("Error in useAddDoc:", error)
@@ -18,10 +27,10 @@ export async function useAddDoc(colRef: CollectionReference, document: object) {
   }
 }
 
-export async function useDeleteDoc(
+export async function useDeleteDoc<T extends { id: string }>(
   colRef: CollectionReference,
   id: string,
-  prevDoc: object
+  prevDoc: T
 ) {
   try {
     await deleteDoc(doc(colRef, id))
@@ -30,7 +39,7 @@ export async function useDeleteDoc(
         label: "Undo",
         onClick: async () => {
           if (prevDoc) {
-            await addDoc(colRef, prevDoc)
+            await setDoc(doc(colRef, id), prevDoc as DocumentData)
             toast.success("Restored")
           }
         },
@@ -42,20 +51,20 @@ export async function useDeleteDoc(
   }
 }
 
-export async function useUpdateDoc(
+export async function useUpdateDoc<T extends { id: string }>(
   colRef: CollectionReference,
   id: string,
-  document: object,
-  prevDoc: object
+  document: Partial<T>,
+  prevDoc: T
 ) {
   try {
-    await updateDoc(doc(colRef, id), document)
+    await updateDoc(doc(colRef, id), document as DocumentData)
     toast.success("Updated", {
       action: {
         label: "Undo",
         onClick: async () => {
           if (prevDoc) {
-            await updateDoc(doc(colRef, id), prevDoc)
+            await updateDoc(doc(colRef, id), prevDoc as DocumentData)
             toast.success("Reverted")
           }
         },

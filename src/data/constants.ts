@@ -1,11 +1,13 @@
-import CircleIcon from "~icons/lucide/circle"
-import CheckCircledIcon from "~icons/lucide/circle-check"
-import QuestionMarkCircledIcon from "~icons/lucide/circle-dashed"
-import StopwatchIcon from "~icons/lucide/circle-dot"
-import ArrowUpIcon from "~icons/lucide/signal-high"
-import ArrowDownIcon from "~icons/lucide/signal-low"
-import ArrowRightIcon from "~icons/lucide/signal-medium"
-import CrossCircledIcon from "~icons/lucide/x-circle"
+import {
+  IconArrowDown,
+  IconArrowRight,
+  IconArrowUp,
+  IconCheckCircle,
+  IconCircle,
+  IconCircleDashed,
+  IconCircleDot,
+  IconXCircle,
+} from "@/data/icons"
 
 export const labels = [
   {
@@ -26,27 +28,27 @@ export const statuses = [
   {
     value: "backlog",
     label: "Backlog",
-    icon: QuestionMarkCircledIcon,
+    icon: IconCircleDashed,
   },
   {
     value: "todo",
     label: "Todo",
-    icon: CircleIcon,
+    icon: IconCircle,
   },
   {
     value: "in progress",
     label: "In Progress",
-    icon: StopwatchIcon,
+    icon: IconCircleDot,
   },
   {
     value: "done",
     label: "Done",
-    icon: CheckCircledIcon,
+    icon: IconCheckCircle,
   },
   {
     value: "canceled",
     label: "Canceled",
-    icon: CrossCircledIcon,
+    icon: IconXCircle,
   },
 ]
 
@@ -54,16 +56,16 @@ export const priorities = [
   {
     value: "low",
     label: "Low",
-    icon: ArrowDownIcon,
+    icon: IconArrowDown,
   },
   {
     value: "medium",
     label: "Medium",
-    icon: ArrowRightIcon,
+    icon: IconArrowRight,
   },
   {
     value: "high",
     label: "High",
-    icon: ArrowUpIcon,
+    icon: IconArrowUp,
   },
 ]

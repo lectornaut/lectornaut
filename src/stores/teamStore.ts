@@ -12,19 +12,19 @@ import { useCollection } from "vuefire"
 const teamRef = collection(firestore, "teams")
 
 export const useTeamStore = defineStore("teams", () => {
-  const teams = useCollection<ITeam>(teamRef)
+  const { data: teams, pending: isLoading } = useCollection<ITeam>(teamRef)
 
   const add = (team: ITeam) => {
-    useAddDoc(teamRef, team)
+    useAddDoc<ITeam>(teamRef, team)
   }
 
   const del = (id: string, prevDoc: ITeam) => {
-    useDeleteDoc(teamRef, id, prevDoc)
+    useDeleteDoc<ITeam>(teamRef, id, prevDoc)
   }
 
-  const update = (id: string, team: ITeam, prevDoc: ITeam) => {
-    useUpdateDoc(teamRef, id, team, prevDoc)
+  const update = (id: string, team: Partial<ITeam>, prevDoc: ITeam) => {
+    useUpdateDoc<ITeam>(teamRef, id, team, prevDoc)
   }
 
-  return { teams, add, del, update }
+  return { teams, isLoading, add, del, update }
 })

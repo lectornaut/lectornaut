@@ -1,65 +1,67 @@
 <script lang="ts" setup>
+import {
+  IconLogosDiscord,
+  IconLogosGoogle,
+  IconLogosLinkedin,
+  IconLogosMeta,
+  IconLogosMicrosoftWindows,
+  IconLogosNetflix,
+  IconLogosPinterest,
+  IconLogosReddit,
+  IconLogosSlack,
+  IconLogosSpotify,
+  IconLogosTwitter,
+  IconLogosZoom,
+} from "@/data/icons"
 import AutoScroll from "embla-carousel-auto-scroll"
-import DiscordIcon from "~icons/logos/discord"
-import GoogleIcon from "~icons/logos/google"
-import LinkedInIcon from "~icons/logos/linkedin"
-import MetaIcon from "~icons/logos/meta"
-import MicrosoftIcon from "~icons/logos/microsoft-windows"
-import NetflixIcon from "~icons/logos/netflix"
-import PinterestIcon from "~icons/logos/pinterest"
-import RedditIcon from "~icons/logos/reddit"
-import SlackIcon from "~icons/logos/slack"
-import SpotifyIcon from "~icons/logos/spotify"
-import TwitterIcon from "~icons/logos/twitter"
-import ZoomIcon from "~icons/logos/zoom"
 
 const users = [
   {
-    logo: GoogleIcon,
+    icon: IconLogosGoogle,
     name: "Google",
   },
   {
-    logo: MetaIcon,
+    icon: IconLogosMeta,
     name: "Meta",
   },
   {
-    logo: MicrosoftIcon,
+    icon: IconLogosMicrosoftWindows,
     name: "Microsoft",
   },
   {
-    logo: NetflixIcon,
+    icon: IconLogosNetflix,
     name: "Netflix",
   },
   {
-    logo: LinkedInIcon,
+    icon: IconLogosLinkedin,
     name: "LinkedIn",
   },
   {
-    logo: PinterestIcon,
+    icon: IconLogosPinterest,
     name: "Pinterest",
   },
   {
-    logo: RedditIcon,
+    icon: IconLogosReddit,
     name: "Reddit",
   },
   {
-    logo: DiscordIcon,
+    icon: IconLogosDiscord,
     name: "Discord",
   },
   {
-    logo: TwitterIcon,
+    icon: IconLogosTwitter,
     name: "Twitter",
   },
   {
-    logo: SlackIcon,
+    icon: IconLogosSlack,
     name: "Slack",
   },
   {
-    logo: ZoomIcon,
+    icon: IconLogosZoom,
     name: "Zoom",
   },
   {
-    logo: SpotifyIcon,
+    icon: IconLogosSpotify,
     name: "Spotify",
   },
 ]
@@ -92,7 +94,7 @@ const users = [
           class="basis-auto pl-16"
         >
           <Component
-            :is="user.logo"
+            :is="user.icon"
             class="h-5 w-auto opacity-50 contrast-0 grayscale-100 invert-100"
           />
         </CarouselItem>

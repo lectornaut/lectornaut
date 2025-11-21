@@ -1,26 +1,28 @@
+import {
+  IconBolt,
+  IconCheckSquare2,
+  IconCircleUser,
+  IconCreditCard,
+  IconHelpCircle,
+  IconHistory,
+  IconKeyboard,
+  IconLogOut,
+  IconMinusSquare,
+  IconMonitor,
+  IconMoon,
+  IconPalette,
+  IconPanelBottom,
+  IconPanelLeft,
+  IconPanelRight,
+  IconPlusSquare,
+  IconSettings,
+  IconSparkles,
+  IconSun,
+  IconTerminal,
+  IconXCircle,
+  IconXSquare,
+} from "@/data/icons"
 import type { FunctionalComponent, SVGAttributes } from "vue"
-import IconLucideBolt from "~icons/lucide/bolt"
-import IconLucideCheckSquare2 from "~icons/lucide/check-square-2"
-import IconLucideCircleUser from "~icons/lucide/circle-user"
-import IconLucideXCircle from "~icons/lucide/circle-x"
-import IconCreditCard from "~icons/lucide/credit-card"
-import IconLucideHelpCircle from "~icons/lucide/help-circle"
-import IconLucideHistory from "~icons/lucide/history"
-import IconLucideKeyboard from "~icons/lucide/keyboard"
-import IconLucideLogout from "~icons/lucide/log-out"
-import IconLucideMinusSquare from "~icons/lucide/minus-square"
-import IconLucideMonitor from "~icons/lucide/monitor"
-import IconLucideMoon from "~icons/lucide/moon"
-import IconLucidePalette from "~icons/lucide/palette"
-import IconLucidePanelBottom from "~icons/lucide/panel-bottom"
-import IconLucidePanelLeft from "~icons/lucide/panel-left"
-import IconLucidePanelRight from "~icons/lucide/panel-right"
-import IconLucidePlusSquare from "~icons/lucide/plus-square"
-import IconLucideSettings from "~icons/lucide/settings"
-import IconLucideSparkles from "~icons/lucide/sparkles"
-import IconLucideXSquare from "~icons/lucide/square-x"
-import IconLucideSun from "~icons/lucide/sun"
-import IconLucideTerminal from "~icons/lucide/terminal"
 
 const isAppleDevice = () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
 
@@ -60,7 +62,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+k,ctrl+k",
         event: "Dialog.Command.Open",
         parameters: undefined,
-        icon: IconLucideTerminal,
+        icon: IconTerminal,
         tags: ["command", "search"],
         hidden: ["commands"],
       },
@@ -70,7 +72,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+enter,ctrl+enter",
         event: "Dialog.AiAsk.Toggle",
         parameters: undefined,
-        icon: IconLucideSparkles,
+        icon: IconSparkles,
         tags: ["ai", "ask"],
         hidden: [],
       },
@@ -80,7 +82,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+,,ctrl+,",
         event: "Dialog.Settings.Open",
         parameters: "preferences",
-        icon: IconLucideSettings,
+        icon: IconSettings,
         tags: ["settings"],
         hidden: [],
       },
@@ -90,7 +92,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+/,ctrl+/",
         event: "Dialog.Shortcuts.Open",
         parameters: undefined,
-        icon: IconLucideKeyboard,
+        icon: IconKeyboard,
         tags: ["keyboard", "shortcuts", "help"],
         hidden: [],
       },
@@ -100,7 +102,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "shift+/",
         event: "Menu.Help.Toggle",
         parameters: undefined,
-        icon: IconLucideHelpCircle,
+        icon: IconHelpCircle,
         tags: ["help", "support"],
         hidden: [],
       },
@@ -117,7 +119,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+\\,ctrl+\\",
         event: "Sidebar.Left.Toggle",
         parameters: undefined,
-        icon: IconLucidePanelLeft,
+        icon: IconPanelLeft,
         tags: ["sidebar", "toggle", "layout"],
         hidden: [],
       },
@@ -127,7 +129,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+shift+\\,ctrl+shift+\\",
         event: "Sidebar.Right.Toggle",
         parameters: undefined,
-        icon: IconLucidePanelRight,
+        icon: IconPanelRight,
         tags: ["sidebar", "toggle", "layout"],
         hidden: [],
       },
@@ -137,7 +139,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+`,ctrl+`",
         event: "Panel.Bottom.Toggle",
         parameters: undefined,
-        icon: IconLucidePanelBottom,
+        icon: IconPanelBottom,
         tags: ["panel", "toggle", "layout"],
         hidden: [],
       },
@@ -154,7 +156,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+t,ctrl+t",
         event: "Tabs.Add",
         parameters: undefined,
-        icon: IconLucidePlusSquare,
+        icon: IconPlusSquare,
         tags: ["tab", "new", "add", "open"],
         hidden: [],
       },
@@ -164,7 +166,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+shift+t,ctrl+shift+t",
         event: "Tabs.ReopenLast",
         parameters: undefined,
-        icon: IconLucideHistory,
+        icon: IconHistory,
         tags: ["tab", "reopen", "history"],
         hidden: [],
       },
@@ -174,7 +176,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+w,ctrl+w",
         event: "Tabs.Close",
         parameters: undefined,
-        icon: IconLucideMinusSquare,
+        icon: IconMinusSquare,
         tags: ["tab", "close", "remove"],
         hidden: [],
       },
@@ -184,7 +186,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+shift+w,ctrl+shift+w",
         event: "Tabs.Close.Others",
         parameters: undefined,
-        icon: IconLucideXCircle,
+        icon: IconXCircle,
         tags: ["tab", "close", "remove", "others"],
         hidden: [],
       },
@@ -194,7 +196,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "cmd+shift+q,ctrl+shift+q",
         event: "Tabs.Close.All",
         parameters: undefined,
-        icon: IconLucideXSquare,
+        icon: IconXSquare,
         tags: ["tab", "close", "remove", "all"],
         hidden: [],
       },
@@ -204,7 +206,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "control+tab,ctrl+tab",
         event: "Tabs.Select",
         parameters: "next",
-        icon: IconLucideCheckSquare2,
+        icon: IconCheckSquare2,
         tags: ["tab", "next"],
         hidden: ["commands"],
       },
@@ -214,7 +216,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "control+shift+tab,ctrl+shift+tab",
         event: "Tabs.Select",
         parameters: "previous",
-        icon: IconLucideCheckSquare2,
+        icon: IconCheckSquare2,
         tags: ["tab", "previous"],
         hidden: ["commands"],
       },
@@ -225,7 +227,7 @@ export const shortcuts: ShortcutCategory[] = [
           "cmd+num_1,cmd+num_2,cmd+num_3,cmd+num_4,cmd+num_5,cmd+num_6,cmd+num_7,cmd+num_8,cmd+num_9,ctrl+num_1,ctrl+num_2,ctrl+num_3,ctrl+num_4,ctrl+num_5,ctrl+num_6,ctrl+num_7,ctrl+num_8,ctrl+num_9",
         event: "Tabs.Select",
         parameters: undefined,
-        icon: IconLucideCheckSquare2,
+        icon: IconCheckSquare2,
         tags: ["tab", "select"],
         hidden: ["commands"],
       },
@@ -242,7 +244,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "general",
-        icon: IconLucideBolt,
+        icon: IconBolt,
         tags: ["settings", "general"],
         hidden: [],
       },
@@ -252,7 +254,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "account",
-        icon: IconLucideCircleUser,
+        icon: IconCircleUser,
         tags: ["settings", "account"],
         hidden: [],
       },
@@ -262,7 +264,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "appearance",
-        icon: IconLucidePalette,
+        icon: IconPalette,
         tags: ["settings", "appearance", "theme"],
         hidden: [],
       },
@@ -289,7 +291,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Theme.Change",
         parameters: "light",
-        icon: IconLucideSun,
+        icon: IconSun,
         tags: ["settings", "theme", "light"],
         hidden: [],
       },
@@ -299,7 +301,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Theme.Change",
         parameters: "dark",
-        icon: IconLucideMoon,
+        icon: IconMoon,
         tags: ["settings", "theme", "dark"],
         hidden: [],
       },
@@ -309,7 +311,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Theme.Change",
         parameters: "accent",
-        icon: IconLucidePalette,
+        icon: IconPalette,
         tags: ["settings", "theme", "accent"],
         hidden: [],
       },
@@ -319,7 +321,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Theme.Change",
         parameters: "auto",
-        icon: IconLucideMonitor,
+        icon: IconMonitor,
         tags: ["settings", "theme", "auto"],
         hidden: [],
       },
@@ -336,7 +338,7 @@ export const shortcuts: ShortcutCategory[] = [
         hotkeys: "",
         event: "Dialog.Exit.Open",
         parameters: undefined,
-        icon: IconLucideLogout,
+        icon: IconLogOut,
         tags: ["logout", "sign out"],
         hidden: [],
       },

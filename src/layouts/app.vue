@@ -5,6 +5,7 @@ import {
   IconArrowRight,
   IconCloudCheck,
   IconGlobe,
+  IconLayerFill,
   IconMaximize,
   IconMinimize,
   IconPanelBottom,
@@ -21,7 +22,6 @@ import {
 import { languages } from "@/helpers/defaults"
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
-import IconConsole from "~icons/mingcute/layer-fill"
 
 const { locale } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
@@ -321,7 +321,9 @@ const closeTab = (id: string) => {
                           <Empty v-if="source.length === 0">
                             <EmptyHeader>
                               <EmptyMedia variant="icon">
-                                <IconConsole class="size-6" />
+                                <IconLayerFill
+                                  class="text-muted-foreground h-6 w-6"
+                                />
                               </EmptyMedia>
                               <EmptyTitle> Console </EmptyTitle>
                               <EmptyDescription>

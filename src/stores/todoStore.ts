@@ -12,19 +12,19 @@ import { useCollection } from "vuefire"
 const todoRef = collection(firestore, "todos")
 
 export const useTodoStore = defineStore("todos", () => {
-  const todos = useCollection<ITodo>(todoRef)
+  const { data: todos, pending: isLoading } = useCollection<ITodo>(todoRef)
 
   const add = (todo: ITodo) => {
-    useAddDoc(todoRef, todo)
+    useAddDoc<ITodo>(todoRef, todo)
   }
 
   const del = (id: string, prevDoc: ITodo) => {
-    useDeleteDoc(todoRef, id, prevDoc)
+    useDeleteDoc<ITodo>(todoRef, id, prevDoc)
   }
 
-  const update = (id: string, todo: ITodo, prevDoc: ITodo) => {
-    useUpdateDoc(todoRef, id, todo, prevDoc)
+  const update = (id: string, todo: Partial<ITodo>, prevDoc: ITodo) => {
+    useUpdateDoc<ITodo>(todoRef, id, todo, prevDoc)
   }
 
-  return { todos, add, del, update }
+  return { todos, isLoading, add, del, update }
 })

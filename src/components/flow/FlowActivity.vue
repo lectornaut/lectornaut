@@ -1,17 +1,19 @@
 <script lang="ts" setup>
-import { IconCalendar } from "@/data/icons"
+import {
+  IconAlertTriangle,
+  IconBan,
+  IconCalendar,
+  IconCheckCircle,
+  IconCircle,
+  IconCircleX,
+  IconClock,
+  IconHourglass,
+  IconMinusCircle,
+  IconPauseCircle,
+  IconRefreshCw,
+} from "@/data/icons"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
-import AlertTriangle from "~icons/lucide/alert-triangle"
-import Ban from "~icons/lucide/ban"
-import CheckCircle from "~icons/lucide/check-circle"
-import Circle from "~icons/lucide/circle"
-import CircleX from "~icons/lucide/circle-x"
-import Clock from "~icons/lucide/clock"
-import Hourglass from "~icons/lucide/hourglass"
-import MinusCircle from "~icons/lucide/minus-circle"
-import PauseCircle from "~icons/lucide/pause-circle"
-import RefreshCw from "~icons/lucide/refresh-cw"
 
 const timeline = [
   {
@@ -20,7 +22,7 @@ const timeline = [
     status: "success",
     date: "Sep 20",
     datetime: "2020-09-20",
-    icon: CheckCircle,
+    icon: IconCheckCircle,
     iconColor: "text-green-500",
   },
   {
@@ -29,7 +31,7 @@ const timeline = [
     status: "in progress",
     date: "Sep 22",
     datetime: "2020-09-22",
-    icon: RefreshCw,
+    icon: IconRefreshCw,
     iconColor: "text-blue-500",
   },
   {
@@ -38,7 +40,7 @@ const timeline = [
     status: "failure",
     date: "Sep 28",
     datetime: "2020-09-28",
-    icon: CircleX,
+    icon: IconCircleX,
     iconColor: "text-red-500",
   },
   {
@@ -47,7 +49,7 @@ const timeline = [
     status: "completed",
     date: "Sep 30",
     datetime: "2020-09-30",
-    icon: CheckCircle,
+    icon: IconCheckCircle,
     iconColor: "text-green-500",
   },
   {
@@ -56,7 +58,7 @@ const timeline = [
     status: "waiting",
     date: "Oct 4",
     datetime: "2020-10-04",
-    icon: Hourglass,
+    icon: IconHourglass,
     iconColor: "text-yellow-500",
   },
   {
@@ -65,7 +67,7 @@ const timeline = [
     status: "queued",
     date: "Oct 6",
     datetime: "2020-10-06",
-    icon: PauseCircle,
+    icon: IconPauseCircle,
     iconColor: "text-gray-500",
   },
   {
@@ -74,7 +76,7 @@ const timeline = [
     status: "cancelled",
     date: "Oct 10",
     datetime: "2020-10-10",
-    icon: Ban,
+    icon: IconBan,
     iconColor: "text-red-400",
   },
   {
@@ -83,7 +85,7 @@ const timeline = [
     status: "action required",
     date: "Oct 14",
     datetime: "2020-10-14",
-    icon: AlertTriangle,
+    icon: IconAlertTriangle,
     iconColor: "text-orange-500",
   },
   {
@@ -92,7 +94,7 @@ const timeline = [
     status: "timed out",
     date: "Oct 18",
     datetime: "2020-10-18",
-    icon: Clock,
+    icon: IconClock,
     iconColor: "text-purple-500",
   },
   {
@@ -101,7 +103,7 @@ const timeline = [
     status: "skipped",
     date: "Oct 22",
     datetime: "2020-10-22",
-    icon: MinusCircle,
+    icon: IconMinusCircle,
     iconColor: "text-gray-500",
   },
   {
@@ -110,7 +112,7 @@ const timeline = [
     status: "stale",
     date: "Oct 26",
     datetime: "2020-10-26",
-    icon: Circle,
+    icon: IconCircle,
     iconColor: "text-gray-400",
   },
   {
@@ -119,7 +121,7 @@ const timeline = [
     status: "neutral",
     date: "Oct 30",
     datetime: "2020-10-30",
-    icon: Circle,
+    icon: IconCircle,
     iconColor: "text-gray-300",
   },
 ]

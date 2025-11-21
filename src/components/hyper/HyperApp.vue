@@ -12,19 +12,19 @@ import {
   IconEbay,
   IconEtsy,
   IconGlobe,
+  IconGrid2X2,
   IconImage,
   IconLink2,
   IconPlus,
   IconRakuten,
   IconRefreshCw,
   IconShopify,
+  IconSparkles,
   IconUpload,
   IconX,
 } from "@/data/icons"
 import AutoScroll from "embla-carousel-auto-scroll"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
-import IconGrid2x2 from "~icons/lucide/grid-2-x-2"
-import IconSparkles from "~icons/lucide/sparkles"
 
 const carouselContainerRef = ref<typeof Carousel | null>(null)
 
@@ -176,7 +176,7 @@ const handleFileChange = (event: Event) => {
 const navItems = [
   {
     text: "Home",
-    icon: IconGrid2x2,
+    icon: IconGrid2X2,
     color: "neutral",
     scrollTo: 0,
     primary: true,

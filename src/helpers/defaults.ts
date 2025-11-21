@@ -1,36 +1,32 @@
-import IconJapan from "~icons/circle-flags/jp"
-import IconUSA from "~icons/circle-flags/us"
-import IconActivity from "~icons/lucide/activity"
-import IconDownload from "~icons/lucide/arrow-down-to-line"
-import IconProduct1 from "~icons/lucide/asterisk"
-import IconBadgeCheck from "~icons/lucide/badge-check"
-import IconDocumentation from "~icons/lucide/book-open"
-import IconBot from "~icons/lucide/bot"
-import IconDevelopers from "~icons/lucide/box"
-import IconCareers from "~icons/lucide/briefcase"
-import IconComponent from "~icons/lucide/component"
-import IconDocument from "~icons/lucide/file-text"
-import IconAbout from "~icons/lucide/graduation-cap"
-import IconCommunity from "~icons/lucide/heart"
-import IconChangelog from "~icons/lucide/history"
-import IconHome from "~icons/lucide/home"
-import IconHelpCenter from "~icons/lucide/life-buoy"
-import IconContact from "~icons/lucide/message-circle"
-import IconSystem from "~icons/lucide/monitor"
-import IconDark from "~icons/lucide/moon"
-import IconPalette from "~icons/lucide/palette"
-import IconBlog from "~icons/lucide/scroll"
-import IconSecurity from "~icons/lucide/shield-check"
-import IconSparkle from "~icons/lucide/sparkle"
-import IconLight from "~icons/lucide/sun"
-import IconCustomers from "~icons/lucide/users"
-import IconFont from "~icons/mdi/format-text-variant"
-import IconMono from "~icons/ri/font-mono"
-import IconSans from "~icons/ri/font-sans"
-import IconSerif from "~icons/ri/font-sans-serif"
-import IconZoom from "~icons/ri/search-line"
-import IconZoomIn from "~icons/ri/zoom-in-line"
-import IconZoomOut from "~icons/ri/zoom-out-line"
+import {
+  IconActivity,
+  IconArrowDownToLine,
+  IconAsterisk,
+  IconBadgeCheck,
+  IconBookOpen,
+  IconBot,
+  IconBox,
+  IconBriefcase,
+  IconComponent,
+  IconFileText,
+  IconHome,
+  IconJapan,
+  IconLifeBuoy,
+  IconLogs,
+  IconMdiFormatTextVariant,
+  IconMessageCircle,
+  IconRiFontMono,
+  IconRiFontSans,
+  IconRiFontSansSerif,
+  IconRiSearchLine,
+  IconRiZoomInLine,
+  IconRiZoomOutLine,
+  IconScroll,
+  IconShieldCheck,
+  IconSparkle,
+  IconUSA,
+  IconUsersRound,
+} from "@/data/icons"
 
 export const languages = [
   {
@@ -51,22 +47,22 @@ export const themes = [
   {
     id: "light",
     name: "Light",
-    icon: IconLight,
+    icon: IconRiFontSans,
   },
   {
     id: "dark",
     name: "Dark",
-    icon: IconDark,
+    icon: IconRiFontMono,
   },
   {
     id: "accent",
     name: "Accent",
-    icon: IconPalette,
+    icon: IconBox,
   },
   {
     id: "auto",
     name: "Auto",
-    icon: IconSystem,
+    icon: IconBookOpen,
   },
 ]
 
@@ -100,31 +96,31 @@ export const accents = [
 export const defaultAccent = "neutral"
 
 export const fonts = [
-  { id: "sans", name: "Sans", icon: IconSans },
-  { id: "serif", name: "Serif", icon: IconSerif },
-  { id: "mono", name: "Mono", icon: IconMono },
+  { id: "sans", name: "Sans", icon: IconRiFontSans },
+  { id: "serif", name: "Serif", icon: IconRiFontSansSerif },
+  { id: "mono", name: "Mono", icon: IconRiFontMono },
 ]
 
 export const defaultFont = "sans"
 
 export const sizes = [
-  { id: "xs", name: "Extra small", icon: IconFont },
-  { id: "sm", name: "Small", icon: IconFont },
-  { id: "base", name: "Normal", icon: IconFont },
-  { id: "lg", name: "Large", icon: IconFont },
-  { id: "xl", name: "Extra large", icon: IconFont },
+  { id: "xs", name: "Extra small", icon: IconMdiFormatTextVariant },
+  { id: "sm", name: "Small", icon: IconMdiFormatTextVariant },
+  { id: "base", name: "Normal", icon: IconMdiFormatTextVariant },
+  { id: "lg", name: "Large", icon: IconMdiFormatTextVariant },
+  { id: "xl", name: "Extra large", icon: IconMdiFormatTextVariant },
 ]
 
 export const defaultSize = "sm"
 
 export const zooms = [
-  { id: "50", name: "50%", icon: IconZoomOut },
-  { id: "75", name: "75%", icon: IconZoomOut },
-  { id: "100", name: "100%", icon: IconZoom },
-  { id: "125", name: "125%", icon: IconZoomIn },
-  { id: "150", name: "150%", icon: IconZoomIn },
-  { id: "175", name: "175%", icon: IconZoomIn },
-  { id: "200", name: "200%", icon: IconZoomIn },
+  { id: "50", name: "50%", icon: IconRiZoomOutLine },
+  { id: "75", name: "75%", icon: IconRiZoomOutLine },
+  { id: "100", name: "100%", icon: IconRiSearchLine },
+  { id: "125", name: "125%", icon: IconRiZoomInLine },
+  { id: "150", name: "150%", icon: IconRiZoomInLine },
+  { id: "175", name: "175%", icon: IconRiZoomInLine },
+  { id: "200", name: "200%", icon: IconRiZoomInLine },
 ]
 
 export const defaultZoom = "100"
@@ -147,7 +143,7 @@ export const menu = [
     description: "A place to write and organize your thoughts.",
     url: "/write",
     id: "write",
-    icon: IconDocument,
+    icon: IconFileText,
     textColor: "text-teal-500",
     bgColor: "bg-teal-500/75",
     shortcut: "⌘W",
@@ -215,7 +211,7 @@ export const productsMenu = [
     description: "The core platform for building AI agents",
     url: "https://lectornaut.io",
     id: "lectornaut",
-    icon: IconProduct1,
+    icon: IconAsterisk,
     style: { text: "text-sky-500/80", bg: "bg-sky-500/20", grid: "" },
   },
   {
@@ -349,7 +345,7 @@ export const resourcesMenu = [
     description: "Get the latest version of Lectornaut",
     url: "https://lectornaut.io/download",
     id: "download",
-    icon: IconDownload,
+    icon: IconArrowDownToLine,
     style: {
       text: "text-cyan-500/80",
       bg: "bg-cyan-500/20",
@@ -361,7 +357,7 @@ export const resourcesMenu = [
     description: "Resources for developers",
     url: "https://developers.lectornaut.io",
     id: "developers",
-    icon: IconDevelopers,
+    icon: IconUsersRound,
     style: { text: "text-teal-500/80", bg: "bg-teal-500/20", grid: "" },
   },
   {
@@ -369,7 +365,7 @@ export const resourcesMenu = [
     description: "Guides and API references",
     url: "https://docs.lectornaut.io",
     id: "documentation",
-    icon: IconDocumentation,
+    icon: IconFileText,
     style: { text: "text-emerald-500/80", bg: "bg-emerald-500/20", grid: "" },
   },
   {
@@ -377,7 +373,7 @@ export const resourcesMenu = [
     description: "Insights and updates from team",
     url: "https://blog.lectornaut.io",
     id: "blog",
-    icon: IconBlog,
+    icon: IconScroll,
     style: { text: "text-green-500/80", bg: "bg-green-500/20", grid: "" },
   },
   {
@@ -385,7 +381,7 @@ export const resourcesMenu = [
     description: "What's new in Lectornaut",
     url: "https://lectornaut.io/changelog",
     id: "changelog",
-    icon: IconChangelog,
+    icon: IconLogs,
     style: { text: "text-lime-500/80", bg: "bg-lime-500/20", grid: "" },
   },
   {
@@ -393,7 +389,7 @@ export const resourcesMenu = [
     description: "See how others use Lectornaut",
     url: "https://customers.lectornaut.io",
     id: "customers",
-    icon: IconCustomers,
+    icon: IconUsersRound,
     style: { text: "text-yellow-500/80", bg: "bg-yellow-500/20", grid: "" },
   },
   {
@@ -401,7 +397,7 @@ export const resourcesMenu = [
     description: "Join the Lectornaut community",
     url: "https://community.lectornaut.io",
     id: "community",
-    icon: IconCommunity,
+    icon: IconScroll,
     style: { text: "text-amber-500/80", bg: "bg-amber-500/20", grid: "" },
   },
   {
@@ -409,7 +405,7 @@ export const resourcesMenu = [
     description: "Safety and security resources",
     url: "https://security.lectornaut.io",
     id: "security",
-    icon: IconSecurity,
+    icon: IconShieldCheck,
     style: { text: "text-orange-500/80", bg: "bg-orange-500/20", grid: "" },
   },
   {
@@ -417,7 +413,7 @@ export const resourcesMenu = [
     description: "Get help and support",
     url: "https://help.lectornaut.io",
     id: "help-center",
-    icon: IconHelpCenter,
+    icon: IconLifeBuoy,
     style: { text: "text-red-500/80", bg: "bg-red-500/20", grid: "" },
   },
 ]
@@ -428,7 +424,7 @@ export const companyMenu = [
     description: "Meet the team",
     url: "https://lectornaut.io/about",
     id: "about-us",
-    icon: IconAbout,
+    icon: IconUsersRound,
     style: { text: "text-neutral-500/80", bg: "bg-neutral-500/20", grid: "" },
   },
   {
@@ -436,7 +432,7 @@ export const companyMenu = [
     description: "Join our team",
     url: "https://lectornaut.io/careers",
     id: "careers",
-    icon: IconCareers,
+    icon: IconBriefcase,
     style: { text: "text-neutral-500/80", bg: "bg-neutral-500/20", grid: "" },
   },
   {
@@ -444,7 +440,7 @@ export const companyMenu = [
     description: "Get in touch with us",
     url: "https://lectornaut.io/contact",
     id: "contact-us",
-    icon: IconContact,
+    icon: IconMessageCircle,
     style: { text: "text-neutral-500/80", bg: "bg-neutral-500/20", grid: "" },
   },
 ]

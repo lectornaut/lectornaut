@@ -1,7 +1,6 @@
 <script lang="ts" setup>
+import { IconAiFill, IconChatFill } from "@/data/icons"
 import emitter from "@/modules/mitt"
-import IconAiAsk from "~icons/mingcute/ai-fill"
-import IconBlock from "~icons/mingcute/layer-fill"
 
 definePage({
   meta: {
@@ -23,7 +22,7 @@ useHead({
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <IconBlock class="size-6" />
+            <IconChatFill class="text-muted-foreground h-6 w-6" />
           </EmptyMedia>
           <EmptyTitle> Console </EmptyTitle>
           <EmptyDescription>
@@ -47,7 +46,7 @@ useHead({
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <IconAiAsk class="size-6" />
+            <IconAiFill class="text-muted-foreground h-6 w-6" />
           </EmptyMedia>
           <EmptyTitle> Get Instant Answers </EmptyTitle>
           <EmptyDescription>

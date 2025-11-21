@@ -1,17 +1,19 @@
-import BotIcon from "~icons/lucide/bot"
-import BoxIcon from "~icons/lucide/box"
-import BracesIcon from "~icons/lucide/braces"
-import ChevronsLeftRightEllipsisIcon from "~icons/lucide/chevrons-left-right-ellipsis"
-import ClockIcon from "~icons/lucide/clock"
-import ConeIcon from "~icons/lucide/cone"
-import DatabaseIcon from "~icons/lucide/database"
-import FileIcon from "~icons/lucide/file"
-import PencilRulerIcon from "~icons/lucide/pencil-ruler"
-import PlugIcon from "~icons/lucide/plug"
-import RepeatIcon from "~icons/lucide/repeat"
-import SplitIcon from "~icons/lucide/split"
-import TriangleAlertIcon from "~icons/lucide/triangle-alert"
-import ZapIcon from "~icons/lucide/zap"
+import {
+  IconBot,
+  IconBox,
+  IconBraces,
+  IconChevronsLeftRightEllipsis,
+  IconClock,
+  IconCone,
+  IconDatabase,
+  IconFile,
+  IconPencilRuler,
+  IconPlug,
+  IconRepeat,
+  IconSplit,
+  IconTriangleAlert,
+  IconZap,
+} from "@/data/icons"
 
 export const nodes = [
   {
@@ -25,7 +27,7 @@ export const nodes = [
           {
             id: "triggers",
             name: "Triggers",
-            icon: ZapIcon,
+            icon: IconZap,
             bg: "bg-sky-500/5 hover:bg-sky-500/10 active:bg-sky-500/10 data-[state=open]:bg-sky-500/10 data-[state=open]:hover:bg-sky-500/10 data-[state=open]:active:bg-sky-500/10",
             color:
               "text-sky-500 hover:text-sky-600 active:text-sky-600 data-[state=open]:text-sky-600 data-[state=open]:hover:text-sky-600 data-[state=open]:active:text-sky-600",
@@ -46,7 +48,7 @@ export const nodes = [
           {
             id: "conditions",
             name: "Conditions",
-            icon: SplitIcon,
+            icon: IconSplit,
             bg: "bg-rose-500/5 hover:bg-rose-500/10 active:bg-rose-500/10 data-[state=open]:bg-rose-500/10 data-[state=open]:hover:bg-rose-500/10 data-[state=open]:active:bg-rose-500/10",
             color:
               "text-rose-500 hover:text-rose-600 active:text-rose-600 data-[state=open]:text-rose-600 data-[state=open]:hover:text-rose-600 data-[state=open]:active:text-rose-600",
@@ -61,7 +63,7 @@ export const nodes = [
           {
             id: "loops",
             name: "Loops",
-            icon: RepeatIcon,
+            icon: IconRepeat,
             bg: "bg-violet-500/5 hover:bg-violet-500/10 active:bg-violet-500/10 data-[state=open]:bg-violet-500/10 data-[state=open]:hover:bg-violet-500/10 data-[state=open]:active:bg-violet-500/10",
             color:
               "text-violet-500 hover:text-violet-600 active:text-violet-600 data-[state=open]:text-violet-600 data-[state=open]:hover:text-violet-600 data-[state=open]:active:text-violet-600",
@@ -83,7 +85,7 @@ export const nodes = [
           {
             id: "scheduling",
             name: "Scheduling & Timing",
-            icon: ClockIcon,
+            icon: IconClock,
             bg: "bg-cyan-500/5 hover:bg-cyan-500/10 active:bg-cyan-500/10 data-[state=open]:bg-cyan-500/10 data-[state=open]:hover:bg-cyan-500/10 data-[state=open]:active:bg-cyan-500/10",
             color:
               "text-cyan-500 hover:text-cyan-600 active:text-cyan-600 data-[state=open]:text-cyan-600 data-[state=open]:hover:text-cyan-600 data-[state=open]:active:text-cyan-600",
@@ -105,7 +107,7 @@ export const nodes = [
           {
             id: "exceptions",
             name: "Exceptions",
-            icon: TriangleAlertIcon,
+            icon: IconTriangleAlert,
             bg: "bg-yellow-500/5 hover:bg-yellow-500/10 active:bg-yellow-500/10 data-[state=open]:bg-yellow-500/10 data-[state=open]:hover:bg-yellow-500/10 data-[state=open]:active:bg-yellow-500/10",
             color:
               "text-yellow-500 hover:text-yellow-600 active:text-yellow-600 data-[state=open]:text-yellow-600 data-[state=open]:hover:text-yellow-600 data-[state=open]:active:text-yellow-600",
@@ -132,7 +134,7 @@ export const nodes = [
           {
             id: "data-ops",
             name: "Data Operations",
-            icon: BracesIcon,
+            icon: IconBraces,
             bg: "bg-emerald-500/5 hover:bg-emerald-500/10 active:bg-emerald-500/10 data-[state=open]:bg-emerald-500/10 data-[state=open]:hover:bg-emerald-500/10 data-[state=open]:active:bg-emerald-500/10",
             color:
               "text-emerald-500 hover:text-emerald-600 active:text-emerald-600 data-[state=open]:text-emerald-600 data-[state=open]:hover:text-emerald-600 data-[state=open]:active:text-emerald-600",
@@ -158,7 +160,7 @@ export const nodes = [
           {
             id: "ai-agents",
             name: "AI Agents",
-            icon: BotIcon,
+            icon: IconBot,
             bg: "bg-fuchsia-500/5 hover:bg-fuchsia-500/10 active:bg-fuchsia-500/10 data-[state=open]:bg-fuchsia-500/10 data-[state=open]:hover:bg-fuchsia-500/10 data-[state=open]:active:bg-fuchsia-500/10",
             color:
               "text-fuchsia-500 hover:text-fuchsia-600 active:text-fuchsia-600 data-[state=open]:text-fuchsia-600 data-[state=open]:hover:text-fuchsia-600 data-[state=open]:active:text-fuchsia-600",
@@ -181,7 +183,7 @@ export const nodes = [
           {
             id: "variables",
             name: "Variables & Constants",
-            icon: BoxIcon,
+            icon: IconBox,
             bg: "bg-indigo-500/5 hover:bg-indigo-500/10 active:bg-indigo-500/10 data-[state=open]:bg-indigo-500/10 data-[state=open]:hover:bg-indigo-500/10 data-[state=open]:active:bg-indigo-500/10",
             color:
               "text-indigo-500 hover:text-indigo-600 active:text-indigo-600 data-[state=open]:text-indigo-600 data-[state=open]:hover:text-indigo-600 data-[state=open]:active:text-indigo-600",
@@ -205,7 +207,7 @@ export const nodes = [
           {
             id: "automation",
             name: "Automations",
-            icon: ClockIcon,
+            icon: IconClock,
             bg: "bg-lime-500/5 hover:bg-lime-500/10 active:bg-lime-500/10 data-[state=open]:bg-lime-500/10 data-[state=open]:hover:bg-lime-500/10 data-[state=open]:active:bg-lime-500/10",
             color:
               "text-lime-500 hover:text-lime-600 active:text-lime-600 data-[state=open]:text-lime-600 data-[state=open]:hover:text-lime-600 data-[state=open]:active:text-lime-600",
@@ -220,7 +222,7 @@ export const nodes = [
           {
             id: "helpers",
             name: "Utilities",
-            icon: PencilRulerIcon,
+            icon: IconPencilRuler,
             bg: "bg-purple-500/5 hover:bg-purple-500/10 active:bg-purple-500/10 data-[state=open]:bg-purple-500/10 data-[state=open]:hover:bg-purple-500/10 data-[state=open]:active:bg-purple-500/10",
             color:
               "text-purple-500 hover:text-purple-600 active:text-purple-600 data-[state=open]:text-purple-600 data-[state=open]:hover:text-purple-600 data-[state=open]:active:text-purple-600",
@@ -246,7 +248,7 @@ export const nodes = [
           {
             id: "apis",
             name: "APIs",
-            icon: ChevronsLeftRightEllipsisIcon,
+            icon: IconChevronsLeftRightEllipsis,
             bg: "bg-teal-500/5 hover:bg-teal-500/10 active:bg-teal-500/10 data-[state=open]:bg-teal-500/10 data-[state=open]:hover:bg-teal-500/10 data-[state=open]:active:bg-teal-500/10",
             color:
               "text-teal-500 hover:text-teal-600 active:text-teal-600 data-[state=open]:text-teal-600 data-[state=open]:hover:text-teal-600 data-[state=open]:active:text-teal-600",
@@ -269,7 +271,7 @@ export const nodes = [
           {
             id: "apps",
             name: "Apps",
-            icon: ConeIcon,
+            icon: IconCone,
             bg: "bg-orange-500/5 hover:bg-orange-500/10 active:bg-orange-500/10 data-[state=open]:bg-orange-500/10 data-[state=open]:hover:bg-orange-500/10 data-[state=open]:active:bg-orange-500/10",
             color:
               "text-orange-500 hover:text-orange-600 active:text-orange-600 data-[state=open]:text-orange-600 data-[state=open]:hover:text-orange-600 data-[state=open]:active:text-orange-600",
@@ -292,7 +294,7 @@ export const nodes = [
           {
             id: "plugins",
             name: "Plugins & Extensions",
-            icon: PlugIcon,
+            icon: IconPlug,
             bg: "bg-pink-500/5 hover:bg-pink-500/10 active:bg-pink-500/10 data-[state=open]:bg-pink-500/10 data-[state=open]:hover:bg-pink-500/10 data-[state=open]:active:bg-pink-500/10",
             color:
               "text-pink-500 hover:text-pink-600 active:text-pink-600 data-[state=open]:text-pink-600 data-[state=open]:hover:text-pink-600 data-[state=open]:active:text-pink-600",
@@ -313,7 +315,7 @@ export const nodes = [
           {
             id: "databases",
             name: "Databases",
-            icon: DatabaseIcon,
+            icon: IconDatabase,
             bg: "bg-red-500/5 hover:bg-red-500/10 active:bg-red-500/10 data-[state=open]:bg-red-500/10 data-[state=open]:hover:bg-red-500/10 data-[state=open]:active:bg-red-500/10",
             color:
               "text-red-500 hover:text-red-600 active:text-red-600 data-[state=open]:text-red-600 data-[state=open]:hover:text-red-600 data-[state=open]:active:text-red-600",
@@ -327,7 +329,7 @@ export const nodes = [
           {
             id: "files",
             name: "File Operations",
-            icon: FileIcon,
+            icon: IconFile,
             bg: "bg-blue-500/5 hover:bg-blue-500/10 active:bg-blue-500/10 data-[state=open]:bg-blue-500/10 data-[state=open]:hover:bg-blue-500/10 data-[state=open]:active:bg-blue-500/10",
             color:
               "text-blue-500 hover:text-blue-600 active:text-blue-600 data-[state=open]:text-blue-600 data-[state=open]:hover:text-blue-600 data-[state=open]:active:text-blue-600",
