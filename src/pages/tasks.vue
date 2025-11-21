@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { columns } from "@/components/table/columns"
+import { IconCheck, IconChevronRight, IconPlus } from "@/data/icons"
 import tasks from "@/data/tasks.json"
 import { getLocalTimeZone, today } from "@internationalized/date"
 
@@ -61,7 +62,7 @@ const calendars = [
                 >
                   <CollapsibleTrigger>
                     {{ calendar.name }}
-                    <icon-lucide-chevron-right
+                    <IconChevronRight
                       class="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90"
                     />
                   </CollapsibleTrigger>
@@ -78,7 +79,7 @@ const calendars = [
                             :data-active="itemIndex < 2"
                             class="group/calendar-item border-sidebar-border text-sidebar-primary-foreground data-[active=true]:border-sidebar-primary data-[active=true]:bg-sidebar-primary flex aspect-square size-4 shrink-0 items-center justify-center rounded-sm border"
                           >
-                            <icon-lucide-check
+                            <IconCheck
                               class="hidden size-3 group-data-[active=true]/calendar-item:block"
                             />
                           </div>
@@ -98,7 +99,7 @@ const calendars = [
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton>
-              <icon-lucide-plus />
+              <IconPlus />
               <span>New Calendar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconCheck, IconCopy } from "@/data/icons"
 definePage({
   meta: {
     layout: "agents",
@@ -53,8 +54,8 @@ const metadata = [
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="ghost" size="icon" @click="copy(source)">
-                    <icon-lucide-copy v-if="!copied" />
-                    <icon-lucide-check v-else />
+                    <IconCopy v-if="!copied" />
+                    <IconCheck v-else />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent> Copy URL </TooltipContent>

@@ -1,4 +1,11 @@
 <script lang="ts" setup>
+import {
+  IconCirclePlus,
+  IconCircleUser,
+  IconCreditCard,
+  IconLogOut,
+  IconUserRound,
+} from "@/data/icons"
 import emitter from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
@@ -83,13 +90,13 @@ const accounts = [
                 <DropdownMenuItem
                   @click="emitter.emit('Dialog.Settings.Open', 'account')"
                 >
-                  <icon-lucide-circle-user />
+                  <IconCircleUser />
                   Account
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   @click="emitter.emit('Dialog.Settings.Open', 'billing')"
                 >
-                  <icon-lucide-credit-card />
+                  <IconCreditCard />
                   Billing
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -98,7 +105,7 @@ const accounts = [
                 <DropdownMenuSub>
                   <DropdownMenuItem as-child>
                     <DropdownMenuSubTrigger>
-                      <icon-lucide-user-round />
+                      <IconUserRound />
                       Switch account
                     </DropdownMenuSubTrigger>
                   </DropdownMenuItem>
@@ -133,7 +140,7 @@ const accounts = [
                     <DropdownMenuGroup>
                       <!-- <DialogTrigger as-child> -->
                       <DropdownMenuItem>
-                        <icon-lucide-circle-plus />
+                        <IconCirclePlus />
                         Add account
                       </DropdownMenuItem>
                       <!-- </DialogTrigger> -->
@@ -141,7 +148,7 @@ const accounts = [
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuItem @click="emitter.emit('Dialog.Exit.Open')">
-                  <icon-lucide-log-out />
+                  <IconLogOut />
                   Log out
                   <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
                 </DropdownMenuItem>

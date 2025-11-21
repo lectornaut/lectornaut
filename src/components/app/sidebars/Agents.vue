@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconArrowUp, IconCirclePlus, IconPlus } from "@/data/icons"
 import { isTauri } from "@/helpers/utilities"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
@@ -41,7 +42,7 @@ const userInput = ref("")
         <TooltipTrigger as-child>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="New Agent">
-              <icon-lucide-circle-plus />
+              <IconCirclePlus />
               New Agent
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -92,7 +93,7 @@ const userInput = ref("")
                 />
                 <InputGroupAddon align="block-end">
                   <InputGroupButton variant="outline" size="icon-xs">
-                    <icon-lucide-plus />
+                    <IconPlus />
                   </InputGroupButton>
                   <Select>
                     <InputGroupButton variant="ghost" as-child>
@@ -115,7 +116,7 @@ const userInput = ref("")
                     size="icon-xs"
                     :disabled="userInput.trim().length === 0"
                   >
-                    <icon-lucide-arrow-up />
+                    <IconArrowUp />
                     <span class="sr-only">Send</span>
                   </InputGroupButton>
                 </InputGroupAddon>

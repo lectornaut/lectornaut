@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconChevronsUpDown,
+  IconEyeOff,
+} from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Column } from "@tanstack/vue-table"
 
@@ -20,23 +26,23 @@ defineOptions({
       <DropdownMenuTrigger as-child>
         <Button variant="ghost" class="data-[state=open]:bg-accent">
           {{ title }}
-          <icon-lucide-arrow-down v-if="column.getIsSorted() === 'desc'" />
-          <icon-lucide-arrow-up v-else-if="column.getIsSorted() === 'asc'" />
-          <icon-lucide-chevrons-up-down v-else />
+          <IconArrowDown v-if="column.getIsSorted() === 'desc'" />
+          <IconArrowUp v-else-if="column.getIsSorted() === 'asc'" />
+          <IconChevronsUpDown v-else />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="bottom">
         <DropdownMenuItem @click="column.toggleSorting(false)">
-          <icon-lucide-arrow-up />
+          <IconArrowUp />
           Ascending
         </DropdownMenuItem>
         <DropdownMenuItem @click="column.toggleSorting(true)">
-          <icon-lucide-arrow-down />
+          <IconArrowDown />
           Descending
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem @click="column.toggleVisibility(false)">
-          <icon-lucide-eye-off />
+          <IconEyeOff />
           Hide
         </DropdownMenuItem>
       </DropdownMenuContent>

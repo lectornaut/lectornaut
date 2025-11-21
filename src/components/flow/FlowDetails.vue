@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { dailyActivity } from "@/data/chart"
+import { IconCircleMedium } from "@/data/icons"
 
 const stats = [
   {
@@ -94,21 +95,21 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
             <CardDescription>
               <div class="flex gap-2">
                 <span class="flex items-center gap-1">
-                  <icon-mdi-circle-medium class="text-[MediumSlateBlue]" />
+                  <IconCircleMedium class="text-[MediumSlateBlue]" />
                   <span class="text-xs text-[MediumSlateBlue]">
                     {{ Math.round(Math.random() * 100) }}
                     runs
                   </span>
                 </span>
                 <span class="flex items-center gap-1">
-                  <icon-mdi-circle-medium class="text-[MediumOrchid]" />
+                  <IconCircleMedium class="text-[MediumOrchid]" />
                   <span class="text-xs text-[MediumOrchid]">
                     {{ Math.round(Math.random() * 100) }}
                     jobs
                   </span>
                 </span>
                 <span class="flex items-center gap-1">
-                  <icon-mdi-circle-medium class="text-[Crimson]" />
+                  <IconCircleMedium class="text-[Crimson]" />
                   <span class="text-xs text-[Crimson]">
                     {{ Math.round(Math.random() * 100) }}
                     errors
@@ -290,7 +291,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                 Add a description.
               </span>
               <!-- <Button variant="secondary" size="icon">
-              <icon-lucide-pencil />
+              <IconPencil />
             </Button> -->
             </div>
           </CardContent>

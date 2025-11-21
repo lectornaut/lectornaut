@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconLanguages } from "@/data/icons"
 import { languages } from "@/helpers/defaults"
 
 const { locale } = useI18n()
@@ -16,7 +17,7 @@ watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
               size="icon"
               class="data-[state=open]:bg-accent"
             >
-              <icon-lucide-languages />
+              <IconLanguages />
               <span class="sr-only">
                 {{ languages.find((language) => language.id === locale)?.name }}
               </span>

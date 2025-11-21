@@ -1,4 +1,21 @@
 <script lang="ts" setup>
+import {
+  IconAlertTriangle,
+  IconArrowLeft,
+  IconArrowRight,
+  IconCheck,
+  IconChevronDown,
+  IconCircleX,
+  IconCopy,
+  IconHash,
+  IconHistory,
+  IconPlus,
+  IconSquarePen,
+  IconSquareX,
+  IconTrash,
+  IconWorkflow,
+  IconX,
+} from "@/data/icons"
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { useSortable } from "@vueuse/integrations/useSortable"
@@ -339,7 +356,7 @@ onUnmounted(() => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Button variant="secondary" size="icon">
-                      <icon-lucide-arrow-left />
+                      <IconArrowLeft />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent> {{ t("tabs.goBack") }} </TooltipContent>
@@ -348,7 +365,7 @@ onUnmounted(() => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Button variant="secondary" size="icon">
-                      <icon-lucide-arrow-right />
+                      <IconArrowRight />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent> {{ t("tabs.goForward") }} </TooltipContent>
@@ -368,7 +385,7 @@ onUnmounted(() => {
               <div
                 class="text-destructive rounded-md bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed px-4"
               >
-                <icon-lucide-alert-triangle /> {{ error }}
+                <IconAlertTriangle /> {{ error }}
               </div>
             </template>
             <!-- <template v-else-if="tabs.length === 0">
@@ -377,7 +394,7 @@ onUnmounted(() => {
                 size="icon"
                 @click="emitter.emit('Tabs.Add')"
               >
-                <icon-lucide-circle />
+                <IconCircle />
               </Button>
             </template> -->
             <template v-else>
@@ -389,7 +406,7 @@ onUnmounted(() => {
               >
                 <InputGroup v-if="renamingTabId === tab.id">
                   <InputGroupAddon>
-                    <icon-lucide-workflow />
+                    <IconWorkflow />
                   </InputGroupAddon>
                   <InputGroupInput
                     v-model="renamingName"
@@ -406,7 +423,7 @@ onUnmounted(() => {
                             size="icon-xs"
                             @click.prevent="saveRename"
                           >
-                            <icon-lucide-check />
+                            <IconCheck />
                           </InputGroupButton>
                         </TooltipTrigger>
                         <TooltipContent>{{ t("common.save") }}</TooltipContent>
@@ -435,7 +452,7 @@ onUnmounted(() => {
                             @click="onTabClick(tab)"
                             @dblclick="renameTab(tab.id)"
                           >
-                            <icon-lucide-workflow />
+                            <IconWorkflow />
                             <span class="mr-auto truncate">
                               {{ tab.name }}
                             </span>
@@ -448,7 +465,7 @@ onUnmounted(() => {
                                     class="invisible group-hover:visible"
                                     @click.prevent="closeTab(tab.id)"
                                   >
-                                    <icon-lucide-x />
+                                    <IconX />
                                   </InputGroupButton>
                                 </TooltipTrigger>
                                 <TooltipContent>{{
@@ -462,21 +479,21 @@ onUnmounted(() => {
                       <ContextMenuContent class="w-56">
                         <ContextMenuGroup>
                           <ContextMenuItem @click="closeTab(tab.id)">
-                            <icon-lucide-x />
+                            <IconX />
                             {{ t("common.close") }}
                             <ContextMenuShortcut>⌘W</ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem
                             @click="emitter.emit('Tabs.Close.Others', tab.id)"
                           >
-                            <icon-lucide-circle-x />
+                            <IconCircleX />
                             {{ t("tabs.closeOthers") }}
                             <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem
                             @click="emitter.emit('Tabs.Close.All')"
                           >
-                            <icon-lucide-square-x />
+                            <IconSquareX />
                             {{ t("tabs.closeAll") }}
                             <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>
                           </ContextMenuItem>
@@ -484,12 +501,12 @@ onUnmounted(() => {
                         <ContextMenuSeparator />
                         <ContextMenuGroup>
                           <ContextMenuItem @click="renameTab(tab.id)">
-                            <icon-lucide-square-pen />
+                            <IconSquarePen />
                             {{ t("tabs.rename") }}
                             <ContextMenuShortcut>⌘R</ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem @click="duplicateTab(tab.id)">
-                            <icon-lucide-copy />
+                            <IconCopy />
                             {{ t("tabs.duplicate") }}
                             <ContextMenuShortcut>⌘D</ContextMenuShortcut>
                           </ContextMenuItem>
@@ -501,7 +518,7 @@ onUnmounted(() => {
                             @click="emitter.emit('Tabs.Add')"
                           >
                             <RouterLink to="/new">
-                              <icon-lucide-plus />
+                              <IconPlus />
                               {{ t("tabs.newTab") }}
                               <ContextMenuShortcut>⌘T</ContextMenuShortcut>
                             </RouterLink>
@@ -526,7 +543,7 @@ onUnmounted(() => {
                     <div
                       class="bg-accent/50 text-muted-foreground flex items-center gap-2 rounded-b-md p-2"
                     >
-                      <icon-lucide-hash />
+                      <IconHash />
                       <span class="truncate">{{ tab.id }}</span>
                     </div>
                   </HoverCardContent>
@@ -545,7 +562,7 @@ onUnmounted(() => {
                     @click="emitter.emit('Tabs.Add')"
                   >
                     <RouterLink to="/new">
-                      <icon-lucide-plus />
+                      <IconPlus />
                     </RouterLink>
                   </Button>
                 </TooltipTrigger>
@@ -559,7 +576,7 @@ onUnmounted(() => {
                     <TooltipTrigger as-child>
                       <DropdownMenuTrigger as-child>
                         <Button variant="secondary" size="icon">
-                          <icon-lucide-chevron-down />
+                          <IconChevronDown />
                         </Button>
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
@@ -567,7 +584,7 @@ onUnmounted(() => {
                     <DropdownMenuContent class="w-56" align="end" side="bottom">
                       <DropdownMenuGroup>
                         <DropdownMenuItem @click="closeTab(activeTabId)">
-                          <icon-lucide-x />
+                          <IconX />
                           {{ t("common.close") }}
                           <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
                         </DropdownMenuItem>
@@ -576,14 +593,14 @@ onUnmounted(() => {
                             emitter.emit('Tabs.Close.Others', activeTabId)
                           "
                         >
-                          <icon-lucide-circle-x />
+                          <IconCircleX />
                           {{ t("tabs.closeOthers") }}
                           <DropdownMenuShortcut>⌘⇧W</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           @click="emitter.emit('Tabs.Close.All')"
                         >
-                          <icon-lucide-square-x />
+                          <IconSquareX />
                           {{ t("tabs.closeAll") }}
                           <DropdownMenuShortcut>⌘⇧Q</DropdownMenuShortcut>
                         </DropdownMenuItem>
@@ -591,12 +608,12 @@ onUnmounted(() => {
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
                         <DropdownMenuItem @click="renameTab(activeTabId)">
-                          <icon-lucide-square-pen />
+                          <IconSquarePen />
                           {{ t("tabs.rename") }}
                           <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem @click="duplicateTab(activeTabId)">
-                          <icon-lucide-copy />
+                          <IconCopy />
                           {{ t("tabs.duplicate") }}
                           <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
                         </DropdownMenuItem>
@@ -606,7 +623,7 @@ onUnmounted(() => {
                         <DropdownMenuSub>
                           <DropdownMenuItem as-child>
                             <DropdownMenuSubTrigger>
-                              <icon-lucide-workflow />
+                              <IconWorkflow />
                               {{ t("tabs.activeTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
@@ -616,7 +633,7 @@ onUnmounted(() => {
                               :key="tab.id"
                               @click="emitter.emit('Tabs.Select', tab.id)"
                             >
-                              <icon-lucide-workflow />
+                              <IconWorkflow />
                               {{ tab.name }}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator v-if="tabs.length > 0" />
@@ -624,7 +641,7 @@ onUnmounted(() => {
                               :disabled="tabs.length === 0"
                               @click="emitter.emit('Tabs.Close.All')"
                             >
-                              <icon-lucide-trash />
+                              <IconTrash />
                               {{ t("tabs.closeAllTabs") }}
                             </DropdownMenuItem>
                           </DropdownMenuSubContent>
@@ -632,7 +649,7 @@ onUnmounted(() => {
                         <DropdownMenuSub>
                           <DropdownMenuItem as-child>
                             <DropdownMenuSubTrigger>
-                              <icon-lucide-history />
+                              <IconHistory />
                               {{ t("tabs.recentTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
@@ -642,7 +659,7 @@ onUnmounted(() => {
                               :key="tab.id + tab.fullPath"
                               @click="emitter.emit('Tabs.Reopen', tab)"
                             >
-                              <icon-lucide-workflow />
+                              <IconWorkflow />
                               {{ tab.name }}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator
@@ -652,7 +669,7 @@ onUnmounted(() => {
                               :disabled="recentlyClosed.length === 0"
                               @click="recentlyClosed = []"
                             >
-                              <icon-lucide-trash />
+                              <IconTrash />
                               {{ t("tabs.clearRecent") }}
                             </DropdownMenuItem>
                           </DropdownMenuSubContent>
@@ -665,7 +682,7 @@ onUnmounted(() => {
                           @click="emitter.emit('Tabs.Add')"
                         >
                           <RouterLink to="/new">
-                            <icon-lucide-plus />
+                            <IconPlus />
                             {{ t("tabs.newTab") }}
                             <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
                           </RouterLink>
@@ -683,13 +700,13 @@ onUnmounted(() => {
         <ContextMenuGroup>
           <ContextMenuItem as-child @click="emitter.emit('Tabs.Add')">
             <RouterLink to="/new">
-              <icon-lucide-plus />
+              <IconPlus />
               {{ t("tabs.newTab") }}
               <ContextMenuShortcut>⌘T</ContextMenuShortcut>
             </RouterLink>
           </ContextMenuItem>
           <ContextMenuItem @click="emitter.emit('Tabs.ReopenLast')">
-            <icon-lucide-history />
+            <IconHistory />
             {{ t("tabs.reopenLast") }}
             <ContextMenuShortcut>⌘⇧T</ContextMenuShortcut>
           </ContextMenuItem>
@@ -697,7 +714,7 @@ onUnmounted(() => {
         <ContextMenuSeparator />
         <ContextMenuGroup>
           <ContextMenuItem @click="emitter.emit('Tabs.Close.All')">
-            <icon-lucide-square-x />
+            <IconSquareX />
             {{ t("tabs.closeAll") }}
             <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>
           </ContextMenuItem>

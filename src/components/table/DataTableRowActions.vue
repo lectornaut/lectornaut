@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { labels } from "@/data/constants"
+import { IconEllipsis } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import { taskSchema } from "@/data/schema"
 import type { Row } from "@tanstack/vue-table"
@@ -27,7 +28,7 @@ const task = computed(() => taskSchema.parse(props.row.original))
               size="icon"
               class="data-[state=open]:bg-accent"
             >
-              <icon-lucide-ellipsis />
+              <IconEllipsis />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

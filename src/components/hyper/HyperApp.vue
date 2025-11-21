@@ -1,11 +1,29 @@
 <script lang="ts" setup>
 import { Carousel, type CarouselApi } from "@/components/ui/carousel"
+import {
+  IconAmazon,
+  IconAperture,
+  IconArrowUp,
+  IconBrandWalmart,
+  IconCamera,
+  IconCircle,
+  IconDotsCircle,
+  IconDownload,
+  IconEbay,
+  IconEtsy,
+  IconGlobe,
+  IconImage,
+  IconLink2,
+  IconPlus,
+  IconRakuten,
+  IconRefreshCw,
+  IconShopify,
+  IconUpload,
+  IconX,
+} from "@/data/icons"
 import AutoScroll from "embla-carousel-auto-scroll"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
-import IconCamera from "~icons/lucide/camera"
 import IconGrid2x2 from "~icons/lucide/grid-2-x-2"
-import IconImage from "~icons/lucide/image"
-import IconLink2 from "~icons/lucide/link-2"
 import IconSparkles from "~icons/lucide/sparkles"
 
 const carouselContainerRef = ref<typeof Carousel | null>(null)
@@ -342,9 +360,9 @@ const randomIndex = () => {
                   size="icon"
                   @click="toggleCamera"
                 >
-                  <icon-lucide-aperture v-if="!isCameraOpen" />
+                  <IconAperture v-if="!isCameraOpen" />
                   <Spinner v-else-if="isCameraOpen && isLoading" />
-                  <icon-lucide-x v-else />
+                  <IconX v-else />
                 </Button>
                 <Button
                   v-if="isPhotoTaken"
@@ -359,7 +377,7 @@ const randomIndex = () => {
                     role="button"
                     @click="downloadImage"
                   >
-                    <icon-lucide-download />
+                    <IconDownload />
                   </a>
                 </Button>
               </div>
@@ -373,8 +391,8 @@ const randomIndex = () => {
                   class="rounded-full"
                   @click="takePhoto"
                 >
-                  <icon-lucide-circle v-if="!isPhotoTaken" class="size-8" />
-                  <icon-lucide-refresh-cw v-else />
+                  <IconCircle v-if="!isPhotoTaken" class="size-8" />
+                  <IconRefreshCw v-else />
                 </Button>
               </div>
             </div>
@@ -392,7 +410,7 @@ const randomIndex = () => {
                 v-if="!fileDataUrl"
                 class="text-muted-foreground m-auto grid grid-cols-1 gap-16"
               >
-                <icon-lucide-image class="h-8 w-auto" />
+                <IconImage class="h-8 w-auto" />
               </div>
               <div class="grid w-full">
                 <div class="relative w-full items-center">
@@ -410,7 +428,7 @@ const randomIndex = () => {
                     class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
                   >
                     <Badge class="rounded-full" variant="secondary">
-                      <icon-mdi-dots-circle />
+                      <IconDotsCircle />
                       <span>Try sample image</span>
                     </Badge>
                   </span>
@@ -425,12 +443,12 @@ const randomIndex = () => {
               class="bg-secondary relative flex aspect-square flex-col items-center justify-end gap-4 rounded-4xl p-4"
             >
               <div class="text-muted-foreground m-auto grid grid-cols-3 gap-16">
-                <icon-simple-icons-amazon class="h-8 w-auto" />
-                <icon-simple-icons-shopify class="h-8 w-auto" />
-                <icon-simple-icons-etsy class="h-8 w-auto" />
-                <icon-simple-icons-ebay class="h-8 w-auto" />
-                <icon-simple-icons-rakuten class="h-8 w-auto" />
-                <icon-tabler-brand-walmart class="h-8 w-auto" />
+                <IconAmazon class="h-8 w-auto" />
+                <IconShopify class="h-8 w-auto" />
+                <IconEtsy class="h-8 w-auto" />
+                <IconEbay class="h-8 w-auto" />
+                <IconRakuten class="h-8 w-auto" />
+                <IconBrandWalmart class="h-8 w-auto" />
               </div>
               <div class="grid w-full">
                 <div class="relative w-full items-center">
@@ -446,7 +464,7 @@ const randomIndex = () => {
                     class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
                   >
                     <Badge class="rounded-full" variant="secondary">
-                      <icon-mdi-dots-circle />
+                      <IconDotsCircle />
                       <span>Try sample link</span>
                     </Badge>
                   </span>
@@ -475,7 +493,7 @@ const randomIndex = () => {
                     <Tooltip>
                       <TooltipTrigger as-child>
                         <Badge class="rounded-full px-0.5" variant="secondary">
-                          <icon-mdi-dots-circle />
+                          <IconDotsCircle />
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent side="top">
@@ -498,7 +516,7 @@ const randomIndex = () => {
                                 size="icon"
                                 class="rounded-full"
                               >
-                                <icon-lucide-plus />
+                                <IconPlus />
                               </Button>
                             </DropdownMenuTrigger>
                           </TooltipTrigger>
@@ -513,15 +531,15 @@ const randomIndex = () => {
                             </DropdownMenuLabel>
                             <DropdownMenuGroup>
                               <DropdownMenuItem>
-                                <icon-lucide-upload />
+                                <IconUpload />
                                 <span>Upload image</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem>
-                                <icon-lucide-camera />
+                                <IconCamera />
                                 <span>Take photo</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem>
-                                <icon-lucide-globe />
+                                <IconGlobe />
                                 <span>Image URL</span>
                               </DropdownMenuItem>
                             </DropdownMenuGroup>
@@ -533,7 +551,7 @@ const randomIndex = () => {
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
                               <DropdownMenuItem>
-                                <icon-lucide-link-2 />
+                                <IconLink2 />
                                 <span>Product Link</span>
                               </DropdownMenuItem>
                             </DropdownMenuGroup>
@@ -550,7 +568,7 @@ const randomIndex = () => {
                   </span>
                   <span class="flex gap-2">
                     <Button size="icon" class="rounded-full">
-                      <icon-lucide-arrow-up />
+                      <IconArrowUp />
                     </Button>
                   </span>
                 </span>

@@ -1,5 +1,12 @@
 <script lang="ts" setup>
 import {
+  IconArrowUpRight,
+  IconBookOpen,
+  IconChevronRight,
+  IconMessageCircle,
+  IconSearch,
+} from "@/data/icons"
+import {
   shortcuts,
   type Shortcut,
   type ShortcutCategory,
@@ -104,7 +111,7 @@ const filteredShortcuts = computed(() => {
         <SheetDescription>
           <InputGroup>
             <InputGroupAddon>
-              <icon-lucide-search />
+              <IconSearch />
             </InputGroupAddon>
             <InputGroupInput v-model="search" placeholder="Search" />
           </InputGroup>
@@ -144,7 +151,7 @@ const filteredShortcuts = computed(() => {
                         {{ step }}
                       </span>
                       <span v-if="stepIndex < shortcut.description.length - 1">
-                        <icon-lucide-chevron-right />
+                        <IconChevronRight />
                       </span>
                     </template>
                   </div>
@@ -172,13 +179,13 @@ const filteredShortcuts = computed(() => {
       <Separator />
       <SheetFooter>
         <Button class="justify-start" variant="secondary">
-          <icon-lucide-message-circle />
+          <IconMessageCircle />
           Get support
         </Button>
         <Button class="justify-start" variant="secondary">
-          <icon-lucide-book-open />
+          <IconBookOpen />
           Documentation
-          <icon-lucide-arrow-up-right />
+          <IconArrowUpRight />
         </Button>
       </SheetFooter>
     </SheetContent>

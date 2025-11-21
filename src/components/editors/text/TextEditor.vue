@@ -1,5 +1,55 @@
 <script lang="ts" setup>
 import content from "@/data/content.json"
+import {
+  IconAlignCenter,
+  IconAlignJustify,
+  IconAlignLeft,
+  IconAlignRight,
+  IconArrowDown,
+  IconArrowLeft,
+  IconArrowRight,
+  IconArrowUp,
+  IconBold,
+  IconBraces,
+  IconCheck,
+  IconCircleFilled,
+  IconCode,
+  IconColumns,
+  IconCombine,
+  IconCopy,
+  IconExternalLink,
+  IconGripVertical,
+  IconHeading1,
+  IconHeading2,
+  IconHeading3,
+  IconHighlighter,
+  IconItalic,
+  IconLink,
+  IconList,
+  IconListChecks,
+  IconListCollapse,
+  IconListOrdered,
+  IconPalette,
+  IconPlus,
+  IconQuote,
+  IconRefreshCcw,
+  IconRows,
+  IconSettings,
+  IconSplit,
+  IconSplitSquareHorizontal,
+  IconSquare,
+  IconStrikethrough,
+  IconSubscript,
+  IconSuperscript,
+  IconTable,
+  IconText,
+  IconTrash,
+  IconType,
+  IconUnderline,
+  IconUnlink,
+  IconWrench,
+  IconX,
+} from "@/data/icons"
 import { accents, fonts, sizes } from "@/helpers/defaults"
 import type { JSONContent } from "@tiptap/core"
 import Blockquote from "@tiptap/extension-blockquote"
@@ -246,7 +296,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-refresh-ccw />
+                      <IconRefreshCcw />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -259,11 +309,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().setParagraph().run()"
                     >
-                      <icon-lucide-type /> Paragraph
+                      <IconType /> Paragraph
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('paragraph')"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -275,11 +325,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           .run()
                       "
                     >
-                      <icon-lucide-heading-1 /> Heading 1
+                      <IconHeading1 /> Heading 1
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('heading', { level: 1 })"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -291,11 +341,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           .run()
                       "
                     >
-                      <icon-lucide-heading-2 /> Heading 2
+                      <IconHeading2 /> Heading 2
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('heading', { level: 2 })"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -307,11 +357,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           .run()
                       "
                     >
-                      <icon-lucide-heading-3 /> Heading 3
+                      <IconHeading3 /> Heading 3
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('heading', { level: 3 })"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -320,37 +370,37 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleBulletList().run()"
                     >
-                      <icon-lucide-list /> Bulleted list
+                      <IconList /> Bulleted list
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('bulletList')"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleOrderedList().run()"
                     >
-                      <icon-lucide-list-ordered /> Numbered list
+                      <IconListOrdered /> Numbered list
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('orderedList')"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleTaskList().run()"
                     >
-                      <icon-lucide-list-checks /> To-do list
+                      <IconListChecks /> To-do list
                       <DropdownMenuShortcut v-if="editor?.isActive('taskList')">
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().setDetails().run()"
                     >
-                      <icon-lucide-list-collapse /> Toggle list
+                      <IconListCollapse /> Toggle list
                       <DropdownMenuShortcut v-if="editor?.isActive('details')">
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -359,21 +409,21 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleCodeBlock().run()"
                     >
-                      <icon-lucide-code /> Code block
+                      <IconCode /> Code block
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('codeBlock')"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleBlockquote().run()"
                     >
-                      <icon-lucide-quote /> Blockquote
+                      <IconQuote /> Blockquote
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('blockquote')"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -389,7 +439,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 :pressed="editor?.isActive('bold')"
                 @click="editor?.chain().focus().toggleBold().run()"
               >
-                <icon-lucide-bold />
+                <IconBold />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent>Bold</TooltipContent>
@@ -401,7 +451,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 :pressed="editor?.isActive('italic')"
                 @click="editor?.chain().focus().toggleItalic().run()"
               >
-                <icon-lucide-italic />
+                <IconItalic />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent>Italic</TooltipContent>
@@ -413,7 +463,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 :pressed="editor?.isActive('underline')"
                 @click="editor?.chain().focus().toggleUnderline().run()"
               >
-                <icon-lucide-underline />
+                <IconUnderline />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent>Underline</TooltipContent>
@@ -425,7 +475,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 :pressed="editor?.isActive('strike')"
                 @click="editor?.chain().focus().toggleStrike().run()"
               >
-                <icon-lucide-strikethrough />
+                <IconStrikethrough />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent>Strike</TooltipContent>
@@ -437,7 +487,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 :pressed="editor?.isActive('code')"
                 @click="editor?.chain().focus().toggleCode().run()"
               >
-                <icon-lucide-braces />
+                <IconBraces />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent>Code</TooltipContent>
@@ -449,7 +499,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-palette />
+                      <IconPalette />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -464,14 +514,14 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                       :key="color.id"
                       @click="editor?.chain().focus().setColor(color.id).run()"
                     >
-                      <icon-mdi-circle :class="`text-${color.id}-500`" />
+                      <IconCircleFilled :class="`text-${color.id}-500`" />
                       {{ color.name }}
                       <DropdownMenuShortcut
                         v-if="
                           editor?.isActive('textStyle', { color: color.id })
                         "
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -479,7 +529,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().unsetColor().run()"
                   >
-                    <icon-lucide-x /> Remove Color
+                    <IconX /> Remove Color
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -489,7 +539,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-highlighter />
+                      <IconHighlighter />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -510,14 +560,14 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           .run()
                       "
                     >
-                      <icon-mdi-circle :class="`text-${color.id}-500`" />
+                      <IconCircleFilled :class="`text-${color.id}-500`" />
                       {{ color.name }}
                       <DropdownMenuShortcut
                         v-if="
                           editor?.isActive('highlight', { color: color.id })
                         "
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -525,7 +575,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().unsetHighlight().run()"
                   >
-                    <icon-lucide-x /> Remove Highlight
+                    <IconX /> Remove Highlight
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -538,7 +588,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-type />
+                      <IconType />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -564,7 +614,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           editor?.isActive('textStyle', { fontSize: size.id })
                         "
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -572,7 +622,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().unsetFontSize().run()"
                   >
-                    <icon-lucide-x /> Remove Font Size
+                    <IconX /> Remove Font Size
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -582,7 +632,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-text />
+                      <IconText />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -610,7 +660,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           })
                         "
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -635,7 +685,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           })
                         "
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -652,7 +702,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           })
                         "
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -660,7 +710,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().unsetFontFamily().run()"
                   >
-                    <icon-lucide-x /> Remove Font Family
+                    <IconX /> Remove Font Family
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -670,7 +720,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-align-left />
+                      <IconAlignLeft />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -685,11 +735,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                         editor?.chain().focus().setTextAlign('left').run()
                       "
                     >
-                      <icon-lucide-align-left /> Left
+                      <IconAlignLeft /> Left
                       <DropdownMenuShortcut
                         v-if="editor?.isActive({ textAlign: 'left' })"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -697,11 +747,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                         editor?.chain().focus().setTextAlign('center').run()
                       "
                     >
-                      <icon-lucide-align-center /> Center
+                      <IconAlignCenter /> Center
                       <DropdownMenuShortcut
                         v-if="editor?.isActive({ textAlign: 'center' })"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -709,11 +759,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                         editor?.chain().focus().setTextAlign('right').run()
                       "
                     >
-                      <icon-lucide-align-right /> Right
+                      <IconAlignRight /> Right
                       <DropdownMenuShortcut
                         v-if="editor?.isActive({ textAlign: 'right' })"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -721,11 +771,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                         editor?.chain().focus().setTextAlign('justify').run()
                       "
                     >
-                      <icon-lucide-align-justify /> Justify
+                      <IconAlignJustify /> Justify
                       <DropdownMenuShortcut
                         v-if="editor?.isActive({ textAlign: 'justify' })"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -737,21 +787,21 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleSubscript().run()"
                     >
-                      <icon-lucide-subscript /> Subscript
+                      <IconSubscript /> Subscript
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('subscript')"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleSuperscript().run()"
                     >
-                      <icon-lucide-superscript /> Superscript
+                      <IconSuperscript /> Superscript
                       <DropdownMenuShortcut
                         v-if="editor?.isActive('superscript')"
                       >
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -759,7 +809,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().unsetTextAlign().run()"
                   >
-                    <icon-lucide-x /> Remove Alignment
+                    <IconX /> Remove Alignment
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -772,7 +822,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-table />
+                      <IconTable />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -795,12 +845,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           .run()
                       "
                     >
-                      <icon-lucide-plus /> Insert Table
+                      <IconPlus /> Insert Table
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().deleteTable().run()"
                     >
-                      <icon-lucide-trash /> Delete Table
+                      <IconTrash /> Delete Table
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -811,17 +861,17 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().addColumnBefore().run()"
                     >
-                      <icon-lucide-arrow-left /> Add Column Before
+                      <IconArrowLeft /> Add Column Before
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().addColumnAfter().run()"
                     >
-                      <icon-lucide-arrow-right /> Add Column After
+                      <IconArrowRight /> Add Column After
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().deleteColumn().run()"
                     >
-                      <icon-lucide-trash /> Delete Column
+                      <IconTrash /> Delete Column
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -832,17 +882,17 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().addRowBefore().run()"
                     >
-                      <icon-lucide-arrow-up /> Add Row Before
+                      <IconArrowUp /> Add Row Before
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().addRowAfter().run()"
                     >
-                      <icon-lucide-arrow-down /> Add Row After
+                      <IconArrowDown /> Add Row After
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().deleteRow().run()"
                     >
-                      <icon-lucide-trash /> Delete Row
+                      <IconTrash /> Delete Row
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -853,17 +903,17 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().mergeCells().run()"
                     >
-                      <icon-lucide-combine /> Merge Cells
+                      <IconCombine /> Merge Cells
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().splitCell().run()"
                     >
-                      <icon-lucide-split /> Split Cell
+                      <IconSplit /> Split Cell
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().mergeOrSplit().run()"
                     >
-                      <icon-lucide-split-square-horizontal /> Merge or Split
+                      <IconSplitSquareHorizontal /> Merge or Split
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -876,17 +926,17 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                         editor?.chain().focus().toggleHeaderColumn().run()
                       "
                     >
-                      <icon-lucide-columns /> Toggle Header Column
+                      <IconColumns /> Toggle Header Column
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleHeaderRow().run()"
                     >
-                      <icon-lucide-rows /> Toggle Header Row
+                      <IconRows /> Toggle Header Row
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().toggleHeaderCell().run()"
                     >
-                      <icon-lucide-square /> Toggle Header Cell
+                      <IconSquare /> Toggle Header Cell
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -897,12 +947,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                     <DropdownMenuItem
                       @click="editor?.chain().focus().goToNextCell().run()"
                     >
-                      <icon-lucide-arrow-right /> Go to Next Cell
+                      <IconArrowRight /> Go to Next Cell
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().goToPreviousCell().run()"
                     >
-                      <icon-lucide-arrow-left /> Go to Previous Cell
+                      <IconArrowLeft /> Go to Previous Cell
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -919,12 +969,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           .run()
                       "
                     >
-                      <icon-lucide-settings /> Set Cell Attribute
+                      <IconSettings /> Set Cell Attribute
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       @click="editor?.chain().focus().fixTables().run()"
                     >
-                      <icon-lucide-wrench /> Fix Tables
+                      <IconWrench /> Fix Tables
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
@@ -938,7 +988,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger>
                     <Button variant="ghost" size="icon">
-                      <icon-lucide-link />
+                      <IconLink />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -957,9 +1007,9 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                           .run()
                       "
                     >
-                      <icon-lucide-link /> Toggle Link
+                      <IconLink /> Toggle Link
                       <DropdownMenuShortcut v-if="editor?.isActive('link')">
-                        <icon-lucide-check />
+                        <IconCheck />
                       </DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -986,13 +1036,13 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                               .run()
                       "
                     >
-                      <icon-lucide-external-link /> Set Link
+                      <IconExternalLink /> Set Link
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       :disabled="!editor?.isActive('link')"
                       @click="editor?.chain().focus().unsetLink().run()"
                     >
-                      <icon-lucide-unlink /> Remove Link
+                      <IconUnlink /> Remove Link
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
@@ -1004,7 +1054,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
     </BubbleMenu>
     <DragHandle v-if="editor" :editor="editor">
       <Button variant="ghost" size="icon-sm" class="mr-2 size-6">
-        <icon-lucide-grip-vertical />
+        <IconGripVertical />
       </Button>
     </DragHandle>
     <Teleport defer to="#cta-dock">
@@ -1016,8 +1066,8 @@ const { copy, copied } = useClipboard({ source, legacy: true })
           <Label for="readOnly" class="text-xs">Read-only</Label>
         </div>
         <Button variant="ghost" size="icon" @click="copy(source)">
-          <icon-lucide-copy v-if="!copied" />
-          <icon-lucide-check v-else />
+          <IconCopy v-if="!copied" />
+          <IconCheck v-else />
         </Button>
       </div>
     </Teleport>

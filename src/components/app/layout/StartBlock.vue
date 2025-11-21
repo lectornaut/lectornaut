@@ -1,3 +1,12 @@
+<script lang="ts" setup>
+import {
+  IconCommand,
+  IconHelpCircle,
+  IconKeyboard,
+  IconRocket,
+} from "@/data/icons"
+</script>
+
 <template>
   <Empty>
     <EmptyHeader>
@@ -13,7 +22,7 @@
       <ItemGroup class="grid grid-cols-1 gap-2">
         <Item variant="muted" size="sm">
           <ItemMedia class="text-muted-foreground">
-            <icon-lucide-command />
+            <IconCommand />
           </ItemMedia>
           <ItemContent>
             <ItemTitle class="text-secondary-foreground">
@@ -29,7 +38,7 @@
         </Item>
         <Item variant="muted" size="sm">
           <ItemMedia class="text-muted-foreground">
-            <icon-lucide-rocket />
+            <IconRocket />
           </ItemMedia>
           <ItemContent>
             <ItemTitle class="text-secondary-foreground"> Ask AI </ItemTitle>
@@ -43,7 +52,7 @@
         </Item>
         <Item variant="muted" size="sm">
           <ItemMedia class="text-muted-foreground">
-            <icon-lucide-keyboard />
+            <IconKeyboard />
           </ItemMedia>
           <ItemContent>
             <ItemTitle class="text-secondary-foreground">
@@ -59,7 +68,7 @@
         </Item>
         <Item variant="muted" size="sm">
           <ItemMedia class="text-muted-foreground">
-            <icon-lucide-help-circle />
+            <IconHelpCircle />
           </ItemMedia>
           <ItemContent>
             <ItemTitle class="text-secondary-foreground">

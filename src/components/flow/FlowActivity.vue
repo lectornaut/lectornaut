@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconCalendar } from "@/data/icons"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
 import AlertTriangle from "~icons/lucide/alert-triangle"
@@ -220,7 +221,7 @@ const range = ref({
             <Popover>
               <PopoverTrigger as-child>
                 <Button variant="link" class="justify-start">
-                  <icon-lucide-calendar />
+                  <IconCalendar />
                   {{
                     range.start
                       ? df.format(range.start.toDate(getLocalTimeZone()))

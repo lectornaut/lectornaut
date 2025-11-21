@@ -1,4 +1,18 @@
 <script lang="ts" setup>
+import {
+  IconBriefcase,
+  IconCalculator,
+  IconCalendar,
+  IconCircleFilled,
+  IconClock,
+  IconHash,
+  IconListFilter,
+  IconPlus,
+  IconSearch,
+  IconSmile,
+  IconStar,
+  IconUserRoundPlus,
+} from "@/data/icons"
 import Autoplay from "embla-carousel-autoplay"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import Avatar from "vue-boring-avatars"
@@ -158,7 +172,7 @@ const route = useRoute()
               {{ route.meta.sidebar }}
             </span>
             <Button variant="ghost">
-              <icon-lucide-plus />
+              <IconPlus />
               <span>New</span>
             </Button>
           </div>
@@ -172,7 +186,7 @@ const route = useRoute()
               <span
                 class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
               >
-                <icon-lucide-search />
+                <IconSearch />
               </span>
               <SidebarInput class="pl-9" placeholder="Search" />
             </div>
@@ -180,7 +194,7 @@ const route = useRoute()
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="ghost" size="icon">
-                    <icon-lucide-list-filter />
+                    <IconListFilter />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent> Filter </TooltipContent>
@@ -210,17 +224,17 @@ const route = useRoute()
                     </CardHeader>
                     <CardContent class="flex flex-col gap-1">
                       <Badge variant="secondary" :class="getStatus().class">
-                        <icon-mdi-circle />
+                        <IconCircleFilled />
                         <span>
                           {{ getStatus().text }}
                         </span>
                       </Badge>
                       <Badge variant="secondary">
-                        <icon-lucide-hash />
+                        <IconHash />
                         <span> {{ Math.floor(Math.random() * 60) }} RUNS </span>
                       </Badge>
                       <Badge variant="secondary">
-                        <icon-lucide-clock />
+                        <IconClock />
                         <span>
                           {{ Math.floor(Math.random() * 60) }} HOURS
                         </span>
@@ -255,15 +269,15 @@ const route = useRoute()
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup heading="Trending Agents">
                 <CommandItem value="calendar" class="py-2">
-                  <icon-lucide-calendar />
+                  <IconCalendar />
                   <span>Calendar</span>
                 </CommandItem>
                 <CommandItem value="search" class="py-2">
-                  <icon-lucide-smile />
+                  <IconSmile />
                   <span>Search Emoji</span>
                 </CommandItem>
                 <CommandItem value="calculator" class="py-2">
-                  <icon-lucide-calculator />
+                  <IconCalculator />
                   <span>Calculator</span>
                 </CommandItem>
               </CommandGroup>
@@ -354,7 +368,7 @@ const route = useRoute()
                             <div
                               class="text-secondary-foreground flex items-center gap-1 text-xs"
                             >
-                              <icon-lucide-star /> 4.5
+                              <IconStar /> 4.5
                               <span class="text-muted-foreground">(35k)</span>
                             </div>
                           </div>
@@ -398,10 +412,10 @@ const route = useRoute()
                       </CardContent>
                       <CardFooter class="grid grid-cols-2 gap-2">
                         <Button variant="outline">
-                          <icon-lucide-briefcase /> Recruit
+                          <IconBriefcase /> Recruit
                         </Button>
                         <Button variant="secondary">
-                          <icon-lucide-user-round-plus /> Add to Team
+                          <IconUserRoundPlus /> Add to Team
                         </Button>
                       </CardFooter>
                     </Card>
@@ -449,18 +463,16 @@ const route = useRoute()
                       <div
                         class="text-secondary-foreground flex items-center gap-1 text-xs"
                       >
-                        <icon-lucide-star /> 4.5
+                        <IconStar /> 4.5
                         <span class="text-muted-foreground">(35k)</span>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardFooter class="grid grid-cols-2 gap-2">
-                  <Button variant="outline">
-                    <icon-lucide-briefcase /> Recruit
-                  </Button>
+                  <Button variant="outline"> <IconBriefcase /> Recruit </Button>
                   <Button variant="secondary">
-                    <icon-lucide-user-round-plus /> Add to Team
+                    <IconUserRoundPlus /> Add to Team
                   </Button>
                 </CardFooter>
               </Card>
@@ -503,18 +515,16 @@ const route = useRoute()
                       <div
                         class="text-secondary-foreground flex items-center gap-1 text-xs"
                       >
-                        <icon-lucide-star /> 4.5
+                        <IconStar /> 4.5
                         <span class="text-muted-foreground">(35k)</span>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardFooter class="grid grid-cols-2 gap-2">
-                  <Button variant="outline">
-                    <icon-lucide-briefcase /> Recruit
-                  </Button>
+                  <Button variant="outline"> <IconBriefcase /> Recruit </Button>
                   <Button variant="secondary">
-                    <icon-lucide-user-round-plus /> Add to Team
+                    <IconUserRoundPlus /> Add to Team
                   </Button>
                 </CardFooter>
               </Card>

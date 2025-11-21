@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconCopy, IconPenLine, IconReply, IconTrash } from "@/data/icons"
 import Avatar from "vue-boring-avatars"
 
 const messages = [
@@ -64,22 +65,22 @@ const messages = [
         <ContextMenuContent>
           <ContextMenuGroup>
             <ContextMenuItem>
-              <icon-lucide-copy />
+              <IconCopy />
               Copy
             </ContextMenuItem>
             <ContextMenuItem>
-              <icon-lucide-reply />
+              <IconReply />
               Reply
             </ContextMenuItem>
           </ContextMenuGroup>
           <ContextMenuSeparator />
           <ContextMenuGroup>
             <ContextMenuItem v-if="message.role === 'user'">
-              <icon-lucide-pen-line />
+              <IconPenLine />
               Edit
             </ContextMenuItem>
             <ContextMenuItem>
-              <icon-lucide-trash />
+              <IconTrash />
               Delete
             </ContextMenuItem>
           </ContextMenuGroup>

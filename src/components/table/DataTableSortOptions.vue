@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconArrowDown, IconArrowUp, IconArrowUpDown } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
@@ -22,7 +23,7 @@ const columns = computed(() =>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="outline">
-        <icon-lucide-arrow-up-down />
+        <IconArrowUpDown />
         Sort
       </Button>
     </DropdownMenuTrigger>
@@ -41,11 +42,11 @@ const columns = computed(() =>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem @click="column.toggleSorting(false)">
-                <icon-lucide-arrow-up />
+                <IconArrowUp />
                 Ascending
               </DropdownMenuItem>
               <DropdownMenuItem @click="column.toggleSorting(true)">
-                <icon-lucide-arrow-down />
+                <IconArrowDown />
                 Descending
               </DropdownMenuItem>
             </DropdownMenuGroup>

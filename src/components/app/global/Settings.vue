@@ -1,5 +1,13 @@
 <script lang="ts" setup>
 import {
+  IconAlertTriangle,
+  IconAsterisk,
+  IconBadgeCheck,
+  IconCircleFilled,
+  IconGoogleIcon,
+  IconX,
+} from "@/data/icons"
+import {
   accents,
   fonts,
   languages,
@@ -485,7 +493,7 @@ const navigations = computed(() => [
                                     <Spinner />
                                   </template>
                                   <template v-else-if="uploadError">
-                                    <icon-lucide-alert-triangle />
+                                    <IconAlertTriangle />
                                   </template>
                                   <template v-else>
                                     <AvatarImage
@@ -519,7 +527,7 @@ const navigations = computed(() => [
                                   size="icon"
                                   @click="photoURL = ''"
                                 >
-                                  <icon-lucide-x />
+                                  <IconX />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -571,7 +579,7 @@ const navigations = computed(() => [
                                     variant="outline"
                                     class="gap-1 px-1 font-normal"
                                   >
-                                    <icon-lucide-badge-check />
+                                    <IconBadgeCheck />
                                     {{ t("settings.account.email.verified") }}
                                   </Badge>
                                 </TooltipTrigger>
@@ -740,12 +748,12 @@ const navigations = computed(() => [
                                   <span
                                     class="bg-background border-background absolute -right-2 -bottom-2 flex items-center justify-center rounded-full border-4"
                                   >
-                                    <icon-logos-google-icon
+                                    <IconGoogleIcon
                                       v-if="
                                         provider.providerId === 'google.com'
                                       "
                                     />
-                                    <icon-lucide-asterisk
+                                    <IconAsterisk
                                       v-else-if="
                                         provider.providerId === 'password'
                                       "
@@ -902,7 +910,7 @@ const navigations = computed(() => [
                               :key="color.id"
                               :value="color.id"
                             >
-                              <icon-mdi-circle
+                              <IconCircleFilled
                                 :class="`text-${color.id}-500`"
                               />
                               {{ color.name }}

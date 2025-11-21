@@ -1,4 +1,15 @@
 <script lang="ts" setup>
+import {
+  IconBxsZap,
+  IconCheck,
+  IconChevronDown,
+  IconCircle,
+  IconCircleCheckBig,
+  IconCirclePlus,
+  IconSettings,
+  IconUsers,
+  IconUsersRound,
+} from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 
@@ -113,13 +124,13 @@ const selectedUserObjects = computed(() => {
               v-if="!online"
               class="bg-muted text-muted-foreground flex items-center gap-1 rounded-full border px-1.5 py-0.5"
             >
-              <icon-bx-bxs-zap />
+              <IconBxsZap />
               Offline
             </span>
             <span v-else class="hidden md:flex">
               {{ selectedTeam.label }}
             </span>
-            <icon-lucide-chevron-down />
+            <IconChevronDown />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent class="w-48" align="center">
@@ -127,14 +138,14 @@ const selectedUserObjects = computed(() => {
             <DropdownMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'general')"
             >
-              <icon-lucide-settings />
+              <IconSettings />
               Settings
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'people')"
             >
-              <icon-lucide-users />
+              <IconUsers />
               Members
               <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
             </DropdownMenuItem>
@@ -144,7 +155,7 @@ const selectedUserObjects = computed(() => {
             <DropdownMenuSub>
               <DropdownMenuItem as-child>
                 <DropdownMenuSubTrigger>
-                  <icon-lucide-users-round />
+                  <IconUsersRound />
                   Switch team
                 </DropdownMenuSubTrigger>
               </DropdownMenuItem>
@@ -173,7 +184,7 @@ const selectedUserObjects = computed(() => {
                       </AvatarFallback>
                     </Avatar>
                     {{ team.label }}
-                    <icon-lucide-check
+                    <IconCheck
                       v-if="selectedTeam.value === team.value"
                       class="ml-auto"
                     />
@@ -183,7 +194,7 @@ const selectedUserObjects = computed(() => {
                 <DropdownMenuGroup>
                   <DialogTrigger as-child>
                     <DropdownMenuItem>
-                      <icon-lucide-circle-plus />
+                      <IconCirclePlus />
                       Create team
                     </DropdownMenuItem>
                   </DialogTrigger>
@@ -217,7 +228,7 @@ const selectedUserObjects = computed(() => {
               <DropdownMenuTrigger as-child>
                 <Button variant="outline" class="w-full justify-between">
                   Select users...
-                  <icon-lucide-chevron-down />
+                  <IconChevronDown />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" side="bottom" class="w-xs">
@@ -249,11 +260,11 @@ const selectedUserObjects = computed(() => {
                       {{ user.email }}
                     </p>
                   </div>
-                  <icon-lucide-circle-check-big
+                  <IconCircleCheckBig
                     v-if="selectedEmails.includes(user.email)"
                     class="ml-auto"
                   />
-                  <icon-lucide-circle v-else class="ml-auto" />
+                  <IconCircle v-else class="ml-auto" />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

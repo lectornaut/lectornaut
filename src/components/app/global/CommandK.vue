@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconSearch } from "@/data/icons"
 import {
   shortcuts,
   type Shortcut,
@@ -52,7 +53,7 @@ const filteredShortcuts = computed(() => {
               variant="ghost"
               :size="iconDisplay === 'text' ? 'default' : 'icon'"
             >
-              <icon-lucide-search />
+              <IconSearch />
               <span v-if="iconDisplay === 'text'" class="hidden md:flex"
                 >Search</span
               >

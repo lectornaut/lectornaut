@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconGroup } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
@@ -22,7 +23,7 @@ const columns = computed(() =>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="outline">
-        <icon-lucide-group />
+        <IconGroup />
         Group
       </Button>
     </DropdownMenuTrigger>

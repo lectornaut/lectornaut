@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconSettings } from "@/data/icons"
 import emitter from "@/modules/mitt"
 </script>
 
@@ -11,7 +12,7 @@ import emitter from "@/modules/mitt"
             <SidebarMenuButton
               @click="emitter.emit('Dialog.Settings.Open', 'preferences')"
             >
-              <icon-lucide-settings />
+              <IconSettings />
               Settings
             </SidebarMenuButton>
           </TooltipTrigger>

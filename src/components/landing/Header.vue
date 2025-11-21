@@ -1,6 +1,12 @@
 <script lang="ts" setup>
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu"
 import {
+  IconAiFill,
+  IconDownloadFill,
+  IconMenu,
+  IconSignatureFill,
+} from "@/data/icons"
+import {
   companyMenu,
   productsMenu,
   resourcesMenu,
@@ -57,16 +63,16 @@ const { t } = useI18n()
             </ContextMenuTrigger>
             <ContextMenuContent>
               <ContextMenuItem>
-                <icon-mingcute-ai-fill />
+                <IconAiFill />
                 {{ t("landing.header.copyIcon") }}
               </ContextMenuItem>
               <ContextMenuItem>
-                <icon-mingcute-signature-fill />
+                <IconSignatureFill />
                 {{ t("landing.header.copyWordmark") }}
               </ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem>
-                <icon-mingcute-download-fill />
+                <IconDownloadFill />
                 {{ t("landing.header.downloadBrandKit") }}
               </ContextMenuItem>
             </ContextMenuContent>
@@ -311,7 +317,7 @@ const { t } = useI18n()
                   <SheetTrigger as-child>
                     <TooltipTrigger as-child>
                       <Button variant="ghost" size="icon">
-                        <icon-lucide-menu />
+                        <IconMenu />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>

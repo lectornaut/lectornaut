@@ -1,7 +1,23 @@
+<script lang="ts" setup>
+import {
+  IconApple,
+  IconAppleAppStore,
+  IconCircleSolid,
+  IconDisc,
+  IconFlathub,
+  IconGooglePlayIcon,
+  IconHeart,
+  IconLeaf,
+  IconMessageCircleMore,
+  IconMicrosoftIcon,
+  IconPencil,
+} from "@/data/icons"
+</script>
+
 <template>
   <ul class="flex flex-col gap-5">
     <li class="flex items-start gap-3">
-      <icon-lucide-disc />
+      <IconDisc />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Agents </span>
         <span class="text-muted-foreground">
@@ -11,7 +27,7 @@
       </p>
     </li>
     <li class="flex items-start gap-3">
-      <icon-lucide-pencil />
+      <IconPencil />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Create </span>
         <span class="text-muted-foreground">
@@ -21,7 +37,7 @@
       </p>
     </li>
     <li class="flex items-start gap-3">
-      <icon-lucide-message-circle-more />
+      <IconMessageCircleMore />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Communicate </span>
         <span class="text-muted-foreground">
@@ -31,7 +47,7 @@
       </p>
     </li>
     <li class="flex items-start gap-3">
-      <icon-lucide-leaf />
+      <IconLeaf />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
           Commitment to
@@ -70,7 +86,7 @@
       </p>
     </li>
     <li class="flex items-start gap-3">
-      <icon-lucide-heart />
+      <IconHeart />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
           Available on the
@@ -80,7 +96,7 @@
             </HoverCardTrigger>
             <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-bi-apple class="h-8 w-8" />
+                <IconApple class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Download on the</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -97,7 +113,7 @@
             </HoverCardTrigger>
             <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-logos-microsoft-icon class="h-8 w-8" />
+                <IconMicrosoftIcon class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Get it from</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -114,7 +130,7 @@
             </HoverCardTrigger>
             <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-simple-icons-flathub class="h-8 w-8" />
+                <IconFlathub class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Download on</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -131,7 +147,7 @@
             </HoverCardTrigger>
             <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-logos-apple-app-store class="h-8 w-8" />
+                <IconAppleAppStore class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Download on the</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -148,7 +164,7 @@
             </HoverCardTrigger>
             <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-logos-google-play-icon class="h-8 w-8" />
+                <IconGooglePlayIcon class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Get it on</p>
                   <span class="text-xl font-medium tracking-tight"
@@ -165,7 +181,7 @@
             </HoverCardTrigger>
             <HoverCardContent side="top" class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <icon-material-symbols-circle class="h-8 w-8" />
+                <IconCircleSolid class="h-8 w-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">Open</p>
                   <span class="text-xl font-medium tracking-tight">

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-const iconDisplay = ref<"icon" | "text">("icon")
+import { IconGrid2X2 } from "@/data/icons"
 import { menu } from "@/helpers/defaults"
+const iconDisplay = ref<"icon" | "text">("icon")
 </script>
 
 <template>
@@ -16,7 +17,7 @@ import { menu } from "@/helpers/defaults"
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                   <SidebarMenuButton id="tour-apps-menu" tooltip="Menu">
-                    <icon-lucide-grid-2-x-2 />
+                    <IconGrid2X2 />
                     Apps
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>

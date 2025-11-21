@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { priorities, statuses } from "@/data/constants"
+import { IconCircleX } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
@@ -32,7 +33,7 @@ const isFiltered = computed(
     variant="ghost"
     @click="props.table.resetColumnFilters()"
   >
-    <icon-lucide-circle-x />
+    <IconCircleX />
     Clear
   </Button>
 </template>

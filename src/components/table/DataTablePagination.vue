@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import {
+  IconArrowLeftToLine,
+  IconArrowRightToLine,
+  IconChevronLeft,
+  IconChevronRight,
+} from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
@@ -60,7 +66,7 @@ defineProps<DataTablePaginationProps>()
               :disabled="!table.getCanPreviousPage()"
               @click="table.setPageIndex(0)"
             >
-              <icon-lucide-arrow-left-to-line />
+              <IconArrowLeftToLine />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Go to first page</TooltipContent>
@@ -73,7 +79,7 @@ defineProps<DataTablePaginationProps>()
               :disabled="!table.getCanPreviousPage()"
               @click="table.previousPage()"
             >
-              <icon-lucide-chevron-left />
+              <IconChevronLeft />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Go to previous page</TooltipContent>
@@ -86,7 +92,7 @@ defineProps<DataTablePaginationProps>()
               :disabled="!table.getCanNextPage()"
               @click="table.nextPage()"
             >
-              <icon-lucide-chevron-right />
+              <IconChevronRight />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Go to next page</TooltipContent>
@@ -99,7 +105,7 @@ defineProps<DataTablePaginationProps>()
               :disabled="!table.getCanNextPage()"
               @click="table.setPageIndex(table.getPageCount() - 1)"
             >
-              <icon-lucide-arrow-right-to-line />
+              <IconArrowRightToLine />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Go to last page</TooltipContent>

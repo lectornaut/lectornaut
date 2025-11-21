@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconCircleHelp } from "@/data/icons"
 const accordionItems = [
   {
     value: "item-1",
@@ -23,7 +24,7 @@ const accordionItems = [
   <Drawer>
     <DrawerTrigger as-child>
       <Button variant="secondary" size="icon">
-        <icon-lucide-circle-help />
+        <IconCircleHelp />
       </Button>
     </DrawerTrigger>
     <DrawerContent class="outline-hidden">

@@ -1,5 +1,10 @@
 <script lang="ts" setup>
 import useDragAndDrop from "@/composables/useDnD"
+import {
+  IconChevronRight,
+  IconGripHorizontal,
+  IconSettings,
+} from "@/data/icons"
 import { nodes } from "@/data/nodes"
 
 const { onDragStart } = useDragAndDrop()
@@ -17,7 +22,7 @@ const { onDragStart } = useDragAndDrop()
             <Tooltip>
               <TooltipTrigger as-child>
                 <Button variant="ghost" size="icon">
-                  <icon-lucide-settings />
+                  <IconSettings />
                 </Button>
               </TooltipTrigger>
               <TooltipContent> Settings </TooltipContent>
@@ -61,7 +66,7 @@ const { onDragStart } = useDragAndDrop()
                           <span class="truncate font-medium">
                             {{ list.name }}
                           </span>
-                          <icon-lucide-chevron-right
+                          <IconChevronRight
                             class="ml-auto transition group-data-[state=open]/collapsible:rotate-90"
                           />
                         </SidebarMenuButton>
@@ -81,7 +86,7 @@ const { onDragStart } = useDragAndDrop()
                               :class="[list.bg, list.color, list.border]"
                               @dragstart="onDragStart($event, node.id)"
                             >
-                              <icon-lucide-grip-horizontal class="opacity-70" />
+                              <IconGripHorizontal class="opacity-70" />
                               <span>{{ node.name }}</span>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

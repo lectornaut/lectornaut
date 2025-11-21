@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconCircleCheck } from "@/data/icons"
 definePage({
   meta: {
     layout: "landing",
@@ -234,7 +235,7 @@ const comparisonPlans = [
                   :key="feature"
                   class="flex items-start gap-3"
                 >
-                  <icon-lucide-circle-check />
+                  <IconCircleCheck />
                   <p class="leading-loose first-line:leading-none">
                     {{ feature }}
                   </p>

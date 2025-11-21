@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconMonitor, IconMoon, IconPalette, IconSun } from "@/data/icons"
 import { themes } from "@/helpers/defaults"
 import { store } from "@/modules/theme"
 </script>
@@ -14,10 +15,10 @@ import { store } from "@/modules/theme"
               size="icon"
               class="data-[state=open]:bg-accent"
             >
-              <icon-lucide-sun v-if="store == 'light'" />
-              <icon-lucide-moon v-if="store == 'dark'" />
-              <icon-lucide-palette v-if="store == 'accent'" />
-              <icon-lucide-monitor v-if="store == 'auto'" />
+              <IconSun v-if="store == 'light'" />
+              <IconMoon v-if="store == 'dark'" />
+              <IconPalette v-if="store == 'accent'" />
+              <IconMonitor v-if="store == 'auto'" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>

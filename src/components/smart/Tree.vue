@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconChevronRight, IconFile, IconFolder } from "@/data/icons"
 type TreeData = {
   name: string
   children?: TreeData[]
@@ -12,8 +13,8 @@ defineProps<{ node: TreeData }>()
     <Collapsible class="[&[data-state=open]>button>svg:first-child]:rotate-90">
       <CollapsibleTrigger as-child>
         <SidebarMenuButton>
-          <icon-lucide-chevron-right class="transition-transform" />
-          <icon-lucide-folder />
+          <IconChevronRight class="transition-transform" />
+          <IconFolder />
           <span class="truncate">
             {{ node.name }}
           </span>
@@ -31,7 +32,7 @@ defineProps<{ node: TreeData }>()
     </Collapsible>
   </SidebarMenuItem>
   <SidebarMenuButton v-else>
-    <icon-lucide-file />
+    <IconFile />
     <span class="truncate">
       {{ node.name }}
     </span>

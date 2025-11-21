@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconChevronLeft } from "@/data/icons"
 import { authenticateEmail } from "@/modules/auth"
 
 definePage({
@@ -52,9 +53,7 @@ onMounted(async () => {
         {{ authenticateError }}
         </pre>
         <Button variant="link" class="gap-1" as-child>
-          <RouterLink to="/">
-            <icon-lucide-chevron-left /> Back to Home
-          </RouterLink>
+          <RouterLink to="/"> <IconChevronLeft /> Back to Home </RouterLink>
         </Button>
       </div>
     </div>

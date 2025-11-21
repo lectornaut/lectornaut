@@ -1,4 +1,9 @@
 <script lang="ts" setup>
+import {
+  IconArrowRightCircle,
+  IconCircleMedium,
+  IconCircleSmall,
+} from "@/data/icons"
 const steps = [
   { name: "Create a workflow", status: "complete" },
   { name: "Add a node", status: "complete" },
@@ -16,7 +21,7 @@ const steps = [
             <span>My progress</span>
             <Badge variant="secondary">
               <span> Skip </span>
-              <icon-mdi-arrow-right-circle />
+              <IconArrowRightCircle />
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -24,15 +29,15 @@ const steps = [
           <ol role="list" class="grid gap-3">
             <li v-for="step in steps" :key="step.name">
               <div class="flex items-center gap-3">
-                <icon-mdi-circle-medium
+                <IconCircleMedium
                   v-if="step.status === 'complete'"
                   class="text-green-500"
                 />
-                <icon-mdi-circle-medium
+                <IconCircleMedium
                   v-else-if="step.status === 'current'"
                   class="text-amber-500"
                 />
-                <icon-mdi-circle-small v-else class="text-muted-foreground" />
+                <IconCircleSmall v-else class="text-muted-foreground" />
                 <span
                   :class="
                     step.status === 'complete'

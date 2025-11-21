@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconHome,
+  IconRefreshCcw,
+} from "@/data/icons"
 import { useRouteBreadcrumbs } from "@/helpers/breadcrumber"
 
 const breadcrumbs = useRouteBreadcrumbs()
@@ -17,7 +23,7 @@ const router = useRouter()
                   <BreadcrumbLink as-child>
                     <Button variant="ghost" as-child>
                       <RouterLink to="/home">
-                        <icon-lucide-home />
+                        <IconHome />
                       </RouterLink>
                     </Button>
                   </BreadcrumbLink>
@@ -50,14 +56,14 @@ const router = useRouter()
     </ContextMenuTrigger>
     <ContextMenuContent align="start" side="bottom">
       <ContextMenuItem @click="router.go(0)">
-        <icon-lucide-refresh-ccw /> Refresh
+        <IconRefreshCcw /> Refresh
       </ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem @click="router.go(-1)">
-        <icon-lucide-arrow-left /> Go back
+        <IconArrowLeft /> Go back
       </ContextMenuItem>
       <ContextMenuItem @click="router.go(1)">
-        <icon-lucide-arrow-right /> Go forward
+        <IconArrowRight /> Go forward
       </ContextMenuItem>
     </ContextMenuContent>
   </ContextMenu>

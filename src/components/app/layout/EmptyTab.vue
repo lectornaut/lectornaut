@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconArrowRight } from "@/data/icons"
 import { menu } from "@/helpers/defaults"
 </script>
 
@@ -19,7 +20,7 @@ import { menu } from "@/helpers/defaults"
         </ItemContent>
         <ItemActions>
           <Button variant="outline" size="icon">
-            <icon-lucide-arrow-right />
+            <IconArrowRight />
           </Button>
         </ItemActions>
       </Item>

@@ -8,6 +8,16 @@ import {
   ChartTooltipContent,
   componentToString,
 } from "@/components/ui/chart"
+import {
+  IconArrowUpRight,
+  IconChevronRight,
+  IconLink,
+  IconMoreHorizontal,
+  IconMoreVertical,
+  IconPlus,
+  IconStarOff,
+  IconTrash2,
+} from "@/data/icons"
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue"
 import type { DateRange } from "reka-ui"
@@ -479,7 +489,7 @@ const navToc = [
                 <DropdownMenu>
                   <DropdownMenuTrigger as-child>
                     <SidebarMenuAction show-on-hover>
-                      <icon-lucide-more-vertical />
+                      <IconMoreVertical />
                       <span class="sr-only">More</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
@@ -489,23 +499,21 @@ const navToc = [
                     side="right"
                   >
                     <DropdownMenuItem>
-                      <icon-lucide-star-off class="text-muted-foreground" />
+                      <IconStarOff class="text-muted-foreground" />
                       <span>Remove from Favorites</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
-                      <icon-lucide-link class="text-muted-foreground" />
+                      <IconLink class="text-muted-foreground" />
                       <span>Copy Link</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <icon-lucide-arrow-up-right
-                        class="text-muted-foreground"
-                      />
+                      <IconArrowUpRight class="text-muted-foreground" />
                       <span>Open in New Tab</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
-                      <icon-lucide-trash-2 class="text-muted-foreground" />
+                      <IconTrash2 class="text-muted-foreground" />
                       <span>Delete</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -513,7 +521,7 @@ const navToc = [
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton class="text-sidebar-foreground">
-                  <icon-lucide-more-horizontal />
+                  <IconMoreHorizontal />
                   <span>More</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -543,11 +551,11 @@ const navToc = [
                         class="bg-sidebar-accent text-sidebar-accent-foreground left-1.5 data-[state=open]:rotate-90"
                         show-on-hover
                       >
-                        <icon-lucide-chevron-right />
+                        <IconChevronRight />
                       </SidebarMenuAction>
                     </CollapsibleTrigger>
                     <SidebarMenuAction show-on-hover>
-                      <icon-lucide-plus />
+                      <IconPlus />
                     </SidebarMenuAction>
                     <CollapsibleContent>
                       <SidebarMenuSub class="mr-0 pr-0">
@@ -575,7 +583,7 @@ const navToc = [
                 </Collapsible>
                 <SidebarMenuItem>
                   <SidebarMenuButton class="text-sidebar-foreground">
-                    <icon-lucide-more-horizontal />
+                    <IconMoreHorizontal />
                     <span>More</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -728,10 +736,10 @@ const navToc = [
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-rocket /> Ask AI
+                <IconRocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
-                <icon-lucide-arrow-up-right />
+                <IconArrowUpRight />
               </Button>
             </CardFooter> -->
           </Card>
@@ -806,10 +814,10 @@ const navToc = [
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-rocket /> Ask AI
+                <IconRocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
-                <icon-lucide-arrow-up-right />
+                <IconArrowUpRight />
               </Button>
             </CardFooter> -->
           </Card>
@@ -884,10 +892,10 @@ const navToc = [
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-rocket /> Ask AI
+                <IconRocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
-                <icon-lucide-arrow-up-right />
+                <IconArrowUpRight />
               </Button>
             </CardFooter> -->
           </Card>
@@ -962,10 +970,10 @@ const navToc = [
             <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
-                <icon-lucide-rocket /> Ask AI
+                <IconRocket /> Ask AI
               </Button>
               <Button variant="outline" size="icon-sm">
-                <icon-lucide-arrow-up-right />
+                <IconArrowUpRight />
               </Button>
             </CardFooter> -->
           </Card>

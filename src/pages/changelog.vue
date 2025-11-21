@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconArrowUpRight } from "@/data/icons"
 definePage({
   meta: {
     layout: "landing",
@@ -142,7 +143,7 @@ const entries: ChangelogEntry[] = [
             as-child
           >
             <a :href="entry.button.url" target="_blank">
-              {{ entry.button.text }} <icon-lucide-arrow-up-right />
+              {{ entry.button.text }} <IconArrowUpRight />
             </a>
           </Button>
         </div>

@@ -1,4 +1,11 @@
 <script lang="ts" setup>
+import {
+  IconAiFill,
+  IconArrowUp,
+  IconPin,
+  IconPinOff,
+  IconPlus,
+} from "@/data/icons"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import type { UnlistenFn } from "@tauri-apps/api/event"
@@ -52,7 +59,7 @@ const userInput = ref("")
               class="shadow-none"
               :size="iconDisplay === 'text' ? 'default' : 'icon'"
             >
-              <icon-mingcute-ai-fill />
+              <IconAiFill />
               <span v-if="iconDisplay === 'text'"> Ask AI </span>
             </Button>
           </TooltipTrigger>
@@ -62,8 +69,8 @@ const userInput = ref("")
               size="icon-sm"
               @click="isDocked = !isDocked"
             >
-              <icon-lucide-pin v-if="!isDocked" />
-              <icon-lucide-pin-off v-else />
+              <IconPin v-if="!isDocked" />
+              <IconPinOff v-else />
             </Button>
           </TooltipContent>
         </SheetTrigger>
@@ -91,7 +98,7 @@ const userInput = ref("")
               />
               <InputGroupAddon align="block-end">
                 <InputGroupButton variant="outline" size="icon-xs">
-                  <icon-lucide-plus />
+                  <IconPlus />
                 </InputGroupButton>
                 <Select>
                   <InputGroupButton variant="ghost" as-child>
@@ -114,7 +121,7 @@ const userInput = ref("")
                   size="icon-xs"
                   :disabled="userInput.trim().length === 0"
                 >
-                  <icon-lucide-arrow-up />
+                  <IconArrowUp />
                   <span class="sr-only">Send</span>
                 </InputGroupButton>
               </InputGroupAddon>

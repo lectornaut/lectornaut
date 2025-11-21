@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconAiFill, IconCheck } from "@/data/icons"
 definePage({
   meta: {
     layout: "landing",
@@ -46,7 +47,7 @@ useHead({
                 >
                   <ul class="flex flex-col gap-2.5">
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -54,7 +55,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -62,7 +63,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -84,7 +85,7 @@ useHead({
                   <div class="flex items-center gap-1.5 font-semibold">
                     <span>Professional</span>
                     <Badge>
-                      <icon-mingcute-ai-fill />
+                      <IconAiFill />
                       AI
                     </Badge>
                   </div>
@@ -100,7 +101,7 @@ useHead({
                 >
                   <ul class="flex flex-col gap-2.5">
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -108,7 +109,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -116,7 +117,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -148,7 +149,7 @@ useHead({
                   <div class="flex items-center gap-1.5 font-semibold">
                     <span>Business</span>
                     <Badge>
-                      <icon-mingcute-ai-fill />
+                      <IconAiFill />
                       AI
                     </Badge>
                   </div>
@@ -164,7 +165,7 @@ useHead({
                 >
                   <ul class="flex flex-col gap-2.5">
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -172,7 +173,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -180,7 +181,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -188,7 +189,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -210,7 +211,7 @@ useHead({
                   <div class="flex items-center gap-1.5 font-semibold">
                     <span>Enterprise</span>
                     <Badge>
-                      <icon-mingcute-ai-fill />
+                      <IconAiFill />
                       AI
                     </Badge>
                   </div>
@@ -223,7 +224,7 @@ useHead({
                 >
                   <ul class="flex flex-col gap-2.5">
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -231,7 +232,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -239,7 +240,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
@@ -247,7 +248,7 @@ useHead({
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
-                      <icon-lucide-check />
+                      <IconCheck />
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >

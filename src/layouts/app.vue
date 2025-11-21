@@ -1,5 +1,23 @@
 <script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconCloudCheck,
+  IconGlobe,
+  IconMaximize,
+  IconMinimize,
+  IconPanelBottom,
+  IconPanelBottomClose,
+  IconPanelLeft,
+  IconPanelLeftClose,
+  IconPanelRight,
+  IconPanelRightClose,
+  IconPlus,
+  IconRefreshCcw,
+  IconTerminal,
+  IconX,
+} from "@/data/icons"
 import { languages } from "@/helpers/defaults"
 import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
@@ -109,7 +127,7 @@ const closeTab = (id: string) => {
             </ContextMenuTrigger>
             <ContextMenuContent align="end" side="bottom">
               <ContextMenuItem @click="leftPanel?.splitterPanel?.collapse()">
-                <icon-lucide-x /> Close panel
+                <IconX /> Close panel
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -149,14 +167,14 @@ const closeTab = (id: string) => {
                 </ContextMenuTrigger>
                 <ContextMenuContent align="start" side="bottom">
                   <ContextMenuItem @click="router.go(0)">
-                    <icon-lucide-refresh-ccw /> Refresh
+                    <IconRefreshCcw /> Refresh
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem @click="router.go(-1)">
-                    <icon-lucide-arrow-left /> Go back
+                    <IconArrowLeft /> Go back
                   </ContextMenuItem>
                   <ContextMenuItem @click="router.go(1)">
-                    <icon-lucide-arrow-right /> Go forward
+                    <IconArrowRight /> Go forward
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -212,7 +230,7 @@ const closeTab = (id: string) => {
                                         class="size-4"
                                         @click.stop="closeTab(tab.id)"
                                       >
-                                        <icon-lucide-x class="size-3!" />
+                                        <IconX class="size-3!" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent> Close tab </TooltipContent>
@@ -232,7 +250,7 @@ const closeTab = (id: string) => {
                                       class="rounded-none"
                                       @click="newTab()"
                                     >
-                                      <icon-lucide-plus />
+                                      <IconPlus />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent> New tab </TooltipContent>
@@ -255,12 +273,12 @@ const closeTab = (id: string) => {
                                         : topPanel?.splitterPanel?.collapse()
                                     "
                                   >
-                                    <icon-lucide-minimize
+                                    <IconMinimize
                                       v-if="
                                         topPanel?.splitterPanel?.isCollapsed
                                       "
                                     />
-                                    <icon-lucide-maximize v-else />
+                                    <IconMaximize v-else />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -281,7 +299,7 @@ const closeTab = (id: string) => {
                                       bottomPanel?.splitterPanel?.collapse()
                                     "
                                   >
-                                    <icon-lucide-x />
+                                    <IconX />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent> Close panel </TooltipContent>
@@ -330,10 +348,8 @@ const closeTab = (id: string) => {
                         : topPanel?.splitterPanel?.collapse()
                     "
                   >
-                    <icon-lucide-minimize
-                      v-if="topPanel?.splitterPanel?.isCollapsed"
-                    />
-                    <icon-lucide-maximize v-else />
+                    <IconMinimize v-if="topPanel?.splitterPanel?.isCollapsed" />
+                    <IconMaximize v-else />
                     {{
                       topPanel?.splitterPanel?.isCollapsed
                         ? "Collapse panel"
@@ -343,7 +359,7 @@ const closeTab = (id: string) => {
                   <ContextMenuItem
                     @click="bottomPanel?.splitterPanel?.collapse()"
                   >
-                    <icon-lucide-x /> Close panel
+                    <IconX /> Close panel
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -374,7 +390,7 @@ const closeTab = (id: string) => {
             </ContextMenuTrigger>
             <ContextMenuContent align="end" side="bottom">
               <ContextMenuItem @click="rightPanel?.splitterPanel?.collapse()">
-                <icon-lucide-x /> Close panel
+                <IconX /> Close panel
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -397,7 +413,7 @@ const closeTab = (id: string) => {
                       class="w-[calc(var(--sidebar-width-icon))] rounded-none"
                     >
                       <Spinner v-if="isLoading" />
-                      <icon-lucide-cloud-check v-else />
+                      <IconCloudCheck v-else />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -416,7 +432,7 @@ const closeTab = (id: string) => {
                           : bottomPanel?.splitterPanel?.collapse()
                       "
                     >
-                      <icon-lucide-terminal />
+                      <IconTerminal />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent> Toggle console panel </TooltipContent>
@@ -439,7 +455,7 @@ const closeTab = (id: string) => {
                         as-child
                       >
                         <SelectTrigger>
-                          <icon-lucide-globe />
+                          <IconGlobe />
                         </SelectTrigger>
                       </Button>
                     </TooltipTrigger>
@@ -466,10 +482,10 @@ const closeTab = (id: string) => {
                       class="rounded-none"
                       @click="emitter.emit('Sidebar.Left.Toggle')"
                     >
-                      <icon-lucide-panel-left
+                      <IconPanelLeft
                         v-if="leftPanel?.splitterPanel?.isCollapsed"
                       />
-                      <icon-lucide-panel-left-close v-else />
+                      <IconPanelLeftClose v-else />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent> Left panel </TooltipContent>
@@ -482,10 +498,10 @@ const closeTab = (id: string) => {
                       class="rounded-none"
                       @click="emitter.emit('Panel.Bottom.Toggle')"
                     >
-                      <icon-lucide-panel-bottom
+                      <IconPanelBottom
                         v-if="bottomPanel?.splitterPanel?.isCollapsed"
                       />
-                      <icon-lucide-panel-bottom-close v-else />
+                      <IconPanelBottomClose v-else />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent> Bottom panel </TooltipContent>
@@ -498,10 +514,10 @@ const closeTab = (id: string) => {
                       class="rounded-none"
                       @click="emitter.emit('Sidebar.Right.Toggle')"
                     >
-                      <icon-lucide-panel-right
+                      <IconPanelRight
                         v-if="rightPanel?.splitterPanel?.isCollapsed"
                       />
-                      <icon-lucide-panel-right-close v-else />
+                      <IconPanelRightClose v-else />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent> Right panel </TooltipContent>

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconCirclePlus } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Column } from "@tanstack/vue-table"
 import type { Component } from "vue"
@@ -25,7 +26,7 @@ const selectedValues = computed(
   <Popover>
     <PopoverTrigger as-child>
       <Button variant="outline" class="border-dashed">
-        <icon-lucide-circle-plus />
+        <IconCirclePlus />
         {{ title }}
         <template v-if="selectedValues.size > 0">
           <Separator orientation="vertical" />

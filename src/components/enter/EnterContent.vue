@@ -1,5 +1,19 @@
 <script lang="ts" setup>
 import {
+  IconAppleFilled,
+  IconArrowRightUpCircleFill,
+  IconCircleAlert,
+  IconEye,
+  IconEyeOff,
+  IconGoogle,
+  IconHelpCircle,
+  IconInfo,
+  IconLock,
+  IconMail,
+  IconMicrosoft,
+  IconSend,
+} from "@/data/icons"
+import {
   resetEmailPassword,
   sendAuthenticateEmail,
   signInWithApple,
@@ -185,7 +199,7 @@ const authenticateApple = async () => {
                     class="ml-auto"
                     size="icon-xs"
                   >
-                    <icon-lucide-info />
+                    <IconInfo />
                   </InputGroupButton>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -195,7 +209,7 @@ const authenticateApple = async () => {
             </TooltipProvider>
           </InputGroupAddon>
           <InputGroupAddon align="block-start" class="pt-0">
-            <icon-lucide-mail />
+            <IconMail />
             <InputGroupInput
               id="email"
               v-model="email"
@@ -220,7 +234,7 @@ const authenticateApple = async () => {
                     class="ml-auto"
                     size="icon-xs"
                   >
-                    <icon-lucide-info />
+                    <IconInfo />
                   </InputGroupButton>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -230,7 +244,7 @@ const authenticateApple = async () => {
             </TooltipProvider>
           </InputGroupAddon>
           <InputGroupAddon align="block-start" class="pt-0">
-            <icon-lucide-lock />
+            <IconLock />
             <InputGroupInput
               id="password"
               v-model="password"
@@ -248,11 +262,11 @@ const authenticateApple = async () => {
                     variant="ghost"
                     @click="togglePasswordVisibility()"
                   >
-                    <icon-lucide-eye
+                    <IconEye
                       v-if="passwordInputType === 'password'"
                       class="text-muted-foreground"
                     />
-                    <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                    <IconEyeOff v-else class="text-muted-foreground" />
                   </InputGroupButton>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -299,7 +313,7 @@ const authenticateApple = async () => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger>
-                                <icon-mingcute-arrow-right-up-circle-fill />
+                                <IconArrowRightUpCircleFill />
                               </TooltipTrigger>
                               <TooltipContent side="top">
                                 Last used
@@ -307,7 +321,7 @@ const authenticateApple = async () => {
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                        <icon-lucide-send />
+                        <IconSend />
                       </InputGroupButton>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
@@ -345,7 +359,7 @@ const authenticateApple = async () => {
             </AlertDialog>
           </InputGroupAddon>
           <InputGroupAddon align="block-start" class="pt-0">
-            <icon-lucide-mail />
+            <IconMail />
             <InputGroupInput
               id="email"
               v-model="email"
@@ -372,7 +386,7 @@ const authenticateApple = async () => {
                         class="ml-auto"
                         size="icon-xs"
                       >
-                        <icon-lucide-help-circle />
+                        <IconHelpCircle />
                       </InputGroupButton>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
@@ -408,7 +422,7 @@ const authenticateApple = async () => {
             </AlertDialog>
           </InputGroupAddon>
           <InputGroupAddon align="block-start" class="pt-0">
-            <icon-lucide-lock />
+            <IconLock />
             <InputGroupInput
               id="password-signin"
               v-model="password"
@@ -425,11 +439,11 @@ const authenticateApple = async () => {
                     variant="ghost"
                     @click="togglePasswordVisibility()"
                   >
-                    <icon-lucide-eye
+                    <IconEye
                       v-if="passwordInputType === 'password'"
                       class="text-muted-foreground"
                     />
-                    <icon-lucide-eye-off v-else class="text-muted-foreground" />
+                    <IconEyeOff v-else class="text-muted-foreground" />
                   </InputGroupButton>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -458,7 +472,7 @@ const authenticateApple = async () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <icon-mingcute-arrow-right-up-circle-fill />
+                    <IconArrowRightUpCircleFill />
                   </TooltipTrigger>
                   <TooltipContent side="top"> Last used </TooltipContent>
                 </Tooltip>
@@ -506,14 +520,14 @@ const authenticateApple = async () => {
           <Spinner />
         </template>
         <template v-else>
-          <icon-mdi-google />
+          <IconGoogle />
         </template>
         Google
         <div v-if="lastAuthProvider === 'google'" class="absolute right-2.5">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <icon-mingcute-arrow-right-up-circle-fill />
+                <IconArrowRightUpCircleFill />
               </TooltipTrigger>
               <TooltipContent side="top"> Last used </TooltipContent>
             </Tooltip>
@@ -530,14 +544,14 @@ const authenticateApple = async () => {
           <Spinner />
         </template>
         <template v-else>
-          <icon-mdi-microsoft />
+          <IconMicrosoft />
         </template>
         Microsoft
         <div v-if="lastAuthProvider === 'microsoft'" class="absolute right-2.5">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <icon-mingcute-arrow-right-up-circle-fill />
+                <IconArrowRightUpCircleFill />
               </TooltipTrigger>
               <TooltipContent side="top"> Last used </TooltipContent>
             </Tooltip>
@@ -554,14 +568,14 @@ const authenticateApple = async () => {
           <Spinner />
         </template>
         <template v-else>
-          <icon-mdi-apple />
+          <IconAppleFilled />
         </template>
         Apple
         <div v-if="lastAuthProvider === 'apple'" class="absolute right-2.5">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <icon-mingcute-arrow-right-up-circle-fill />
+                <IconArrowRightUpCircleFill />
               </TooltipTrigger>
               <TooltipContent side="top"> Last used </TooltipContent>
             </Tooltip>
@@ -574,7 +588,7 @@ const authenticateApple = async () => {
       variant="destructive"
       class="bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed"
     >
-      <icon-lucide-circle-alert />
+      <IconCircleAlert />
       <AlertTitle> Message: </AlertTitle>
       <AlertDescription>
         {{ authenticateError }}

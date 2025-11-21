@@ -1,5 +1,17 @@
 <script lang="ts" setup>
 import { changelog } from "@/data/changelog"
+import {
+  IconArrowUpRight,
+  IconBadgeCheck,
+  IconBookOpen,
+  IconCalendar,
+  IconCircleDotDashed,
+  IconCircleHelp,
+  IconCirclePlay,
+  IconEllipsis,
+  IconKeyboard,
+  IconMessageCircle,
+} from "@/data/icons"
 import emitter from "@/modules/mitt"
 import { state } from "@/modules/theme"
 import confetti from "canvas-confetti"
@@ -197,7 +209,7 @@ const companySizes = [
               <DropdownMenuTrigger as-child>
                 <TooltipTrigger as-child>
                   <SidebarMenuButton class="data-[state=open]:bg-accent">
-                    <icon-lucide-circle-help />
+                    <IconCircleHelp />
                     Help and Support
                   </SidebarMenuButton>
                 </TooltipTrigger>
@@ -214,47 +226,47 @@ const companySizes = [
               <DropdownMenuContent class="w-48" align="end" side="right">
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
-                    <icon-lucide-message-circle />
+                    <IconMessageCircle />
                     Get support
                   </DropdownMenuItem>
                   <DialogTrigger as-child>
                     <DropdownMenuItem>
-                      <icon-lucide-badge-check />
+                      <IconBadgeCheck />
                       Contact sales
                     </DropdownMenuItem>
                   </DialogTrigger>
                   <DropdownMenuItem @click="productTour.drive()">
-                    <icon-lucide-circle-play />
+                    <IconCirclePlay />
                     Product tour
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <icon-lucide-book-open />
-                    Documentation <icon-lucide-arrow-up-right />
+                    <IconBookOpen />
+                    Documentation <IconArrowUpRight />
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="emitter.emit('Dialog.Shortcuts.Open')"
                   >
-                    <icon-lucide-keyboard />
+                    <IconKeyboard />
                     Shortcuts
                     <DropdownMenuShortcut>⌘ /</DropdownMenuShortcut>
                   </DropdownMenuItem>
                   <DropdownMenuSub>
                     <DropdownMenuItem as-child>
                       <DropdownMenuSubTrigger>
-                        <icon-lucide-ellipsis />
+                        <IconEllipsis />
                         More
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
                     <DropdownMenuSubContent>
                       <DropdownMenuGroup>
                         <DropdownMenuItem>
-                          Status <icon-lucide-arrow-up-right />
+                          Status <IconArrowUpRight />
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          Terms of service <icon-lucide-arrow-up-right />
+                          Terms of service <IconArrowUpRight />
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          Privacy policy <icon-lucide-arrow-up-right />
+                          Privacy policy <IconArrowUpRight />
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
@@ -278,13 +290,13 @@ const companySizes = [
                     :key="index"
                     @click="emitter.emit('Dialog.Changelog.Open', log.id)"
                   >
-                    <icon-lucide-circle-dot-dashed />
+                    <IconCircleDotDashed />
                     <span class="truncate">{{ log.title }}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="emitter.emit('Dialog.Changelog.Open')"
                   >
-                    <icon-lucide-calendar />
+                    <IconCalendar />
                     Full changelog
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

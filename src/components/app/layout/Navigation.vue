@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconGrid2X2Plus } from "@/data/icons"
 import { menu } from "@/helpers/defaults"
 import { useSortable } from "@vueuse/integrations/useSortable"
 
@@ -64,7 +65,7 @@ defineProps<{
           <DropdownMenuTrigger as-child>
             <SidebarMenuItem>
               <SidebarMenuButton :tooltip="t('navigation.showMore')">
-                <icon-lucide-grid-2-x-2-plus />
+                <IconGrid2X2Plus />
                 {{ t("common.edit") }}
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -1,4 +1,18 @@
 <script lang="ts" setup>
+import {
+  IconArrowLeftToLine,
+  IconArrowRightToLine,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsDownUp,
+  IconChevronsUpDown,
+  IconRotateCcw,
+  IconSettings2,
+  IconSquare,
+  IconSquareDashed,
+  IconSquareDashedMousePointer,
+  IconSquareMousePointer,
+} from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
@@ -33,7 +47,7 @@ function onPageSizeChange(val: string) {
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="outline">
-        <icon-lucide-settings-2 />
+        <IconSettings2 />
         View
       </Button>
     </DropdownMenuTrigger>
@@ -61,7 +75,7 @@ function onPageSizeChange(val: string) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.resetColumnVisibility()">
-              <icon-lucide-rotate-ccw />
+              <IconRotateCcw />
               Reset
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -77,28 +91,28 @@ function onPageSizeChange(val: string) {
           <DropdownMenuItem
             @click="props.table.toggleAllPageRowsSelected(true)"
           >
-            <icon-lucide-square-dashed-mouse-pointer />
+            <IconSquareDashedMousePointer />
             Select all on page
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="props.table.toggleAllPageRowsSelected(false)"
           >
-            <icon-lucide-square-dashed />
+            <IconSquareDashed />
             Clear selection on page
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.toggleAllRowsSelected(true)">
-              <icon-lucide-square-mouse-pointer />
+              <IconSquareMousePointer />
               Select all
             </DropdownMenuItem>
             <DropdownMenuItem @click="props.table.toggleAllRowsSelected(false)">
-              <icon-lucide-square />
+              <IconSquare />
               Clear selection
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem @click="props.table.resetRowSelection()">
-              <icon-lucide-rotate-ccw />
+              <IconRotateCcw />
               Reset
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -113,17 +127,17 @@ function onPageSizeChange(val: string) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.toggleAllRowsExpanded(true)">
-              <icon-lucide-chevrons-up-down />
+              <IconChevronsUpDown />
               Expand all
             </DropdownMenuItem>
             <DropdownMenuItem @click="props.table.toggleAllRowsExpanded(false)">
-              <icon-lucide-chevrons-down-up />
+              <IconChevronsDownUp />
               Collapse all
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem @click="props.table.toggleAllRowsExpanded(false)">
-            <icon-lucide-rotate-ccw />
+            <IconRotateCcw />
             Reset
           </DropdownMenuItem>
         </DropdownMenuSubContent>
@@ -151,7 +165,7 @@ function onPageSizeChange(val: string) {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem @click="props.table.setPageSize(10)">
-            <icon-lucide-rotate-ccw />
+            <IconRotateCcw />
             Reset
           </DropdownMenuItem>
         </DropdownMenuSubContent>
@@ -168,14 +182,14 @@ function onPageSizeChange(val: string) {
               :disabled="!props.table.getCanPreviousPage()"
               @click="props.table.previousPage()"
             >
-              <icon-lucide-chevron-left />
+              <IconChevronLeft />
               Previous page
             </DropdownMenuItem>
             <DropdownMenuItem
               :disabled="!props.table.getCanNextPage()"
               @click="props.table.nextPage()"
             >
-              <icon-lucide-chevron-right />
+              <IconChevronRight />
               Next page
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -185,20 +199,20 @@ function onPageSizeChange(val: string) {
               :disabled="!props.table.getCanPreviousPage()"
               @click="props.table.setPageIndex(0)"
             >
-              <icon-lucide-arrow-left-to-line />
+              <IconArrowLeftToLine />
               First page
             </DropdownMenuItem>
             <DropdownMenuItem
               :disabled="!props.table.getCanNextPage()"
               @click="props.table.setPageIndex(props.table.getPageCount() - 1)"
             >
-              <icon-lucide-arrow-right-to-line />
+              <IconArrowRightToLine />
               Last page
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem @click="props.table.setPageIndex(0)">
-            <icon-lucide-rotate-ccw />
+            <IconRotateCcw />
             Reset
           </DropdownMenuItem>
         </DropdownMenuSubContent>
@@ -212,7 +226,7 @@ function onPageSizeChange(val: string) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.resetColumnFilters()">
-              <icon-lucide-rotate-ccw />
+              <IconRotateCcw />
               Reset
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -227,7 +241,7 @@ function onPageSizeChange(val: string) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.resetSorting()">
-              <icon-lucide-rotate-ccw />
+              <IconRotateCcw />
               Reset
             </DropdownMenuItem>
           </DropdownMenuGroup>

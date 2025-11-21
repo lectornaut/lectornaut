@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconChevronRight } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import { valueUpdater } from "@/lib/utils"
 import type {
@@ -158,7 +159,7 @@ const table = useVueTable({
                       <span class="text-muted-foreground">
                         {{ row.subRows.length }}
                       </span>
-                      <icon-lucide-chevron-right
+                      <IconChevronRight
                         :class="{ 'rotate-90': row.getIsExpanded() }"
                       />
                     </Button>

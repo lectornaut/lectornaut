@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { changelog } from "@/data/changelog"
+import { IconArrowUpRight, IconBookOpen, IconMessageCircle } from "@/data/icons"
 import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import type { UnlistenFn } from "@tauri-apps/api/event"
@@ -81,13 +82,13 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       <Separator />
       <SheetFooter>
         <Button class="justify-start" variant="secondary">
-          <icon-lucide-message-circle />
+          <IconMessageCircle />
           Get support
         </Button>
         <Button class="justify-start" variant="secondary">
-          <icon-lucide-book-open />
+          <IconBookOpen />
           Documentation
-          <icon-lucide-arrow-up-right />
+          <IconArrowUpRight />
         </Button>
       </SheetFooter>
     </SheetContent>

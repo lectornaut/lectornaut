@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconBell, IconBookmark, IconCheck } from "@/data/icons"
 const notifications = [
   {
     title: "Alert Dialog",
@@ -113,7 +114,7 @@ const notifications = [
       <template v-for="(component, index) in notifications" :key="index">
         <Item>
           <ItemMedia variant="icon">
-            <icon-lucide-bell />
+            <IconBell />
           </ItemMedia>
           <ItemContent>
             <ItemTitle>{{ component.title }}</ItemTitle>
@@ -124,11 +125,11 @@ const notifications = [
           <ItemActions>
             <ToggleGroup type="single" variant="outline" size="sm">
               <ToggleGroupItem value="saved">
-                <icon-lucide-bookmark />
+                <IconBookmark />
                 <!-- Save -->
               </ToggleGroupItem>
               <ToggleGroupItem value="done">
-                <icon-lucide-check />
+                <IconCheck />
                 <!-- Done -->
               </ToggleGroupItem>
             </ToggleGroup>

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import useDragAndDrop from "@/composables/useDnD"
+import { IconMinus, IconPlus } from "@/data/icons"
 import { Background } from "@vue-flow/background"
 import { Controls } from "@vue-flow/controls"
 import "@vue-flow/controls/dist/style.css"
@@ -29,10 +30,10 @@ onConnect(addEdges)
     >
       <Controls :show-fit-view="false" :show-interactive="false">
         <template #icon-zoom-in>
-          <icon-lucide-plus />
+          <IconPlus />
         </template>
         <template #icon-zoom-out>
-          <icon-lucide-minus />
+          <IconMinus />
         </template>
       </Controls>
       <MiniMap pannable zoomable node-color="var(--primary)" />

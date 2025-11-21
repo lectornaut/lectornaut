@@ -1,4 +1,15 @@
 <script lang="ts" setup>
+import {
+  IconBell,
+  IconBookmark,
+  IconBookmarkCheck,
+  IconCheck,
+  IconCheckCheck,
+  IconInbox,
+  IconPin,
+  IconPinOff,
+  IconPlus,
+} from "@/data/icons"
 defineProps<{
   iconDisplay?: "icon" | "text"
 }>()
@@ -14,7 +25,7 @@ const isDocked = ref(false)
           class="bg-transparent px-3"
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
-          <icon-lucide-inbox />
+          <IconInbox />
           <span v-if="iconDisplay === 'text'" class="hidden md:flex">
             Tasks
           </span>
@@ -31,18 +42,18 @@ const isDocked = ref(false)
                     size="icon"
                     @click="isDocked = !isDocked"
                   >
-                    <icon-lucide-pin v-if="!isDocked" />
-                    <icon-lucide-pin-off v-else />
+                    <IconPin v-if="!isDocked" />
+                    <IconPinOff v-else />
                   </Button>
                   Tasks
                 </h3>
                 <TabsList>
                   <TabsTrigger value="saved">
-                    <icon-lucide-bookmark />
+                    <IconBookmark />
                     <!-- Saved -->
                   </TabsTrigger>
                   <TabsTrigger value="done">
-                    <icon-lucide-check />
+                    <IconCheck />
                     <!-- Done -->
                   </TabsTrigger>
                 </TabsList>
@@ -56,19 +67,19 @@ const isDocked = ref(false)
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
                 <Button variant="outline" size="sm">
-                  <icon-lucide-plus />
+                  <IconPlus />
                   New task
                 </Button>
                 <div>
                   <TabsContent value="saved">
                     <Button variant="ghost" size="sm">
-                      <icon-lucide-check-check />
+                      <IconCheckCheck />
                       Mark all as done
                     </Button>
                   </TabsContent>
                   <TabsContent value="done">
                     <Button variant="ghost" size="sm">
-                      <icon-lucide-bookmark-check />
+                      <IconBookmarkCheck />
                       Mark all as saved
                     </Button>
                   </TabsContent>
@@ -83,7 +94,7 @@ const isDocked = ref(false)
           class="bg-transparent px-3"
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
-          <icon-lucide-bell />
+          <IconBell />
           <span v-if="iconDisplay === 'text'" class="hidden md:flex">
             Notifications
           </span>
@@ -100,18 +111,18 @@ const isDocked = ref(false)
                     size="icon"
                     @click="isDocked = !isDocked"
                   >
-                    <icon-lucide-pin v-if="!isDocked" />
-                    <icon-lucide-pin-off v-else />
+                    <IconPin v-if="!isDocked" />
+                    <IconPinOff v-else />
                   </Button>
                   Notifications
                 </h3>
                 <TabsList>
                   <TabsTrigger value="saved">
-                    <icon-lucide-bookmark />
+                    <IconBookmark />
                     <!-- Saved -->
                   </TabsTrigger>
                   <TabsTrigger value="done">
-                    <icon-lucide-check />
+                    <IconCheck />
                     <!-- Done -->
                   </TabsTrigger>
                 </TabsList>
@@ -125,19 +136,19 @@ const isDocked = ref(false)
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
                 <Button variant="outline" size="sm">
-                  <icon-lucide-plus />
+                  <IconPlus />
                   New task
                 </Button>
                 <div>
                   <TabsContent value="saved">
                     <Button variant="ghost" size="sm">
-                      <icon-lucide-check-check />
+                      <IconCheckCheck />
                       Mark all as done
                     </Button>
                   </TabsContent>
                   <TabsContent value="done">
                     <Button variant="ghost" size="sm">
-                      <icon-lucide-bookmark-check />
+                      <IconBookmarkCheck />
                       Mark all as saved
                     </Button>
                   </TabsContent>
