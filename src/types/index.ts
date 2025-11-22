@@ -11,7 +11,26 @@ export interface ITodo {
 export interface ITeam {
   id: string
   name: string
-  members: Array<string>
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface IUser {
+  uid: string
+  email: string | null
+  displayName: string | null
+  currentTeamId: string | null
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface IMembership {
+  id: string // same as userId
+  userId: string
+  teamId: string
+  role: "owner" | "member"
+  user: IUser // Snapshot of user data
+  team: ITeam // Snapshot of team data
   createdAt: Timestamp
   updatedAt: Timestamp
 }

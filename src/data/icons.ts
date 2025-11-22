@@ -131,7 +131,10 @@ import IconLucideLock from "~icons/lucide/lock"
 import IconLucideLogOut from "~icons/lucide/log-out"
 import IconLucideLogs from "~icons/lucide/logs"
 import IconLucideMail from "~icons/lucide/mail"
-import IconLucideMaximize from "~icons/lucide/maximize"
+import {
+  default as IconLucideExpand,
+  default as IconLucideMaximize,
+} from "~icons/lucide/maximize"
 import IconLucideMenu from "~icons/lucide/menu"
 import IconLucideMessageCircle from "~icons/lucide/message-circle"
 import IconLucideMessageCircleMore from "~icons/lucide/message-circle-more"
@@ -335,6 +338,7 @@ export {
   IconSimpleIconsEbay as IconEbay,
   IconLucideEllipsis as IconEllipsis,
   IconSimpleIconsEtsy as IconEtsy,
+  IconLucideExpand as IconExpand,
   IconLucideExternalLink as IconExternalLink,
   IconLucideEye as IconEye,
   IconLucideEyeOff as IconEyeOff,

@@ -3,101 +3,91 @@ import {
   IconBxsZap,
   IconCheck,
   IconChevronDown,
-  IconCircle,
-  IconCircleCheckBig,
   IconCirclePlus,
   IconSettings,
   IconUsers,
   IconUsersRound,
+  IconX,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
+import { useTeamStore } from "@/stores/teamStore"
+import { storeToRefs } from "pinia"
+import { computed, ref } from "vue"
 
 const online = useOnline()
+const teamStore = useTeamStore()
+const { currentTeam, memberships, isLoading } = storeToRefs(teamStore)
 
-const groups = [
-  {
-    label: "Personal",
-    teams: [
-      {
-        label: "Alicia Koch",
-        value: "personal",
-      },
-    ],
-  },
-  {
-    label: "Teams",
-    teams: [
-      {
-        label: "Acme Inc.",
-        value: "acme-inc",
-      },
-      {
-        label: "Monsters Inc.",
-        value: "monsters",
-      },
-    ],
-  },
-]
+const newTeamName = ref("")
+const isCreating = ref(false)
+const inviteEmail = ref("")
+const pendingInvites = ref<string[]>([])
 
-type Team = (typeof groups)[number]["teams"][number]
-
-const selectedTeam = ref<Team>(
-  groups[0]?.teams[0] ?? { label: "Default Team", value: "default" }
-)
-
-type User = {
-  name: string
-  email: string
-  avatar: string
-  role: string
-}
-
-const users = ref<User[]>([
+// Group memberships for the dropdown
+const groups = computed(() => [
   {
-    name: "Tom",
-    email: "t@hey.com",
-    avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    role: "edit",
-  },
-  {
-    name: "Whitney",
-    email: "w@hey.com",
-    avatar:
-      "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    role: "view",
-  },
-  {
-    name: "Leonard",
-    email: "l@hey.com",
-    avatar:
-      "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    role: "view",
-  },
-  {
-    name: "Floyd",
-    email: "f@hey.com",
-    avatar:
-      "https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    role: "view",
-  },
-  {
-    name: "Emily",
-    email: "e@hey.com",
-    avatar:
-      "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    role: "view",
+    label: "My Teams",
+    teams: memberships.value.map((m) => ({
+      label: m.team.name,
+      value: m.team.id,
+      original: m.team,
+    })),
   },
 ])
 
-const selectedEmails = ref<string[]>([])
+const activeTeamLabel = computed(() => currentTeam.value?.name || "Select Team")
+const activeTeamValue = computed(() => currentTeam.value?.id || "")
 
-const selectedUserObjects = computed(() => {
-  return selectedEmails.value
-    .map((email) => users.value.find((u) => u.email === email))
-    .filter(Boolean) as User[]
-})
+const handleSwitchTeam = (teamId: string) => {
+  teamStore.switchTeam(teamId)
+}
+
+const addPendingInvite = () => {
+  if (!inviteEmail.value.trim()) return
+  if (!pendingInvites.value.includes(inviteEmail.value.trim())) {
+    pendingInvites.value.push(inviteEmail.value.trim())
+  }
+  inviteEmail.value = ""
+}
+
+const removePendingInvite = (email: string) => {
+  pendingInvites.value = pendingInvites.value.filter((e) => e !== email)
+}
+
+const handleCreateTeam = async () => {
+  if (!newTeamName.value.trim()) return
+  isCreating.value = true
+  try {
+    // 1. Create Team
+    await teamStore.createTeam(newTeamName.value)
+
+    // 2. Process Invites
+    if (pendingInvites.value.length > 0) {
+      // We need to wait for the team switch to propagate or ensure we are inviting to the *newly created* team.
+      // teamStore.createTeam switches the current team.
+      // However, inviteMember uses `currentTeam`.
+      // Let's assume createTeam sets currentTeam correctly before returning or we might need to pass teamId if we refactor inviteMember.
+      // Based on my implementation of createTeam, it does `currentTeam.value = newTeam` optimistically and via transaction.
+
+      // Process all invites
+      const invitePromises = pendingInvites.value.map((email) =>
+        teamStore
+          .inviteMember(email)
+          .catch((e) => console.error(`Failed to invite ${email}:`, e))
+      )
+      await Promise.all(invitePromises)
+    }
+
+    newTeamName.value = ""
+    pendingInvites.value = []
+    inviteEmail.value = ""
+  } catch (error) {
+    console.error(error)
+  } finally {
+    isCreating.value = false
+  }
+}
 </script>
 
 <template>
@@ -112,12 +102,12 @@ const selectedUserObjects = computed(() => {
           >
             <Avatar class="size-4">
               <AvatarImage
-                :src="`https://avatar.vercel.sh/${selectedTeam.value}.png`"
-                :alt="selectedTeam.label"
+                :src="`https://avatar.vercel.sh/${activeTeamValue}.png`"
+                :alt="activeTeamLabel"
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback>
-                {{ getInitials(selectedTeam.label) }}
+                {{ getInitials(activeTeamLabel) }}
               </AvatarFallback>
             </Avatar>
             <span
@@ -128,7 +118,7 @@ const selectedUserObjects = computed(() => {
               Offline
             </span>
             <span v-else class="hidden md:flex">
-              {{ selectedTeam.label }}
+              {{ activeTeamLabel }}
             </span>
             <IconChevronDown />
           </Button>
@@ -143,7 +133,7 @@ const selectedUserObjects = computed(() => {
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem
-              @click="emitter.emit('Dialog.Settings.Open', 'people')"
+              @click="emitter.emit('Dialog.Settings.Open', 'members')"
             >
               <IconUsers />
               Members
@@ -161,6 +151,13 @@ const selectedUserObjects = computed(() => {
               </DropdownMenuItem>
               <DropdownMenuSubContent class="w-48" align="start">
                 <DropdownMenuGroup
+                  v-if="isLoading"
+                  class="flex justify-center py-2"
+                >
+                  <Spinner />
+                </DropdownMenuGroup>
+                <DropdownMenuGroup
+                  v-else
                   v-for="group in groups"
                   :key="group.label"
                   :heading="group.label"
@@ -171,7 +168,7 @@ const selectedUserObjects = computed(() => {
                   <DropdownMenuItem
                     v-for="team in group.teams"
                     :key="team.value"
-                    @click="selectedTeam = team"
+                    @click="handleSwitchTeam(team.value)"
                   >
                     <Avatar class="size-4">
                       <AvatarImage
@@ -185,7 +182,7 @@ const selectedUserObjects = computed(() => {
                     </Avatar>
                     {{ team.label }}
                     <IconCheck
-                      v-if="selectedTeam.value === team.value"
+                      v-if="activeTeamValue === team.value"
                       class="ml-auto"
                     />
                   </DropdownMenuItem>
@@ -216,100 +213,48 @@ const selectedUserObjects = computed(() => {
             <Label class="text-secondary-foreground text-xs" for="name">
               Team name
             </Label>
-            <Input id="name" placeholder="Acme Inc." />
+            <Input
+              id="name"
+              v-model="newTeamName"
+              placeholder="Acme Inc."
+              @keyup.enter="handleCreateTeam"
+            />
           </div>
+
           <div class="grid gap-2">
-            <Label class="text-secondary-foreground text-xs" for="members">
-              People with access
+            <Label class="text-secondary-foreground text-xs" for="invite">
+              Invite members
             </Label>
-          </div>
-          <div class="grid gap-2 rounded-md border p-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button variant="outline" class="w-full justify-between">
-                  Select users...
-                  <IconChevronDown />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" side="bottom" class="w-xs">
-                <DropdownMenuItem
-                  v-for="user in users"
-                  :key="user.email"
-                  @select="
-                    () => {
-                      if (!selectedEmails.includes(user.email)) {
-                        selectedEmails.push(user.email)
-                      } else {
-                        selectedEmails.splice(
-                          selectedEmails.indexOf(user.email),
-                          1
-                        )
-                      }
-                    }
-                  "
-                >
-                  <Avatar>
-                    <AvatarImage :src="user.avatar" alt="Image" />
-                    <AvatarFallback>{{ user.name[0] }}</AvatarFallback>
-                  </Avatar>
-                  <div class="ml-2">
-                    <p class="text-sm leading-none font-medium">
-                      {{ user.name }}
-                    </p>
-                    <p class="text-muted-foreground text-sm">
-                      {{ user.email }}
-                    </p>
-                  </div>
-                  <IconCircleCheckBig
-                    v-if="selectedEmails.includes(user.email)"
-                    class="ml-auto"
-                  />
-                  <IconCircle v-else class="ml-auto" />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div v-if="selectedUserObjects.length" class="grid gap-2">
-              <div
-                v-for="person in selectedUserObjects"
-                :key="person.email"
-                class="flex justify-between space-x-4"
-              >
-                <div class="flex gap-3">
-                  <Avatar>
-                    <AvatarImage
-                      class="inline-block size-8 rounded-full"
-                      :src="person.avatar"
-                      :alt="person.name"
-                    />
-                    <AvatarFallback>
-                      {{ person.name[0] }}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p class="font-medium">
-                      {{ person.name }}
-                    </p>
-                    <p class="text-muted-foreground text-xs">
-                      {{ person.email }}
-                    </p>
-                  </div>
-                </div>
-                <Select v-model="person.role" class="w-24">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent align="end" side="bottom">
-                    <SelectItem value="edit"> Edit </SelectItem>
-                    <SelectItem value="view"> View </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div class="flex gap-2">
+              <Input
+                id="invite"
+                v-model="inviteEmail"
+                placeholder="email@example.com"
+                @keyup.enter="addPendingInvite"
+              />
+              <Button variant="outline" type="button" @click="addPendingInvite">
+                Add
+              </Button>
             </div>
+
+            <!-- Pending Invites List -->
             <div
-              v-if="!selectedUserObjects.length"
-              class="text-muted-foreground flex items-center justify-center p-4 text-sm"
+              v-if="pendingInvites.length > 0"
+              class="mt-2 flex flex-wrap gap-2"
             >
-              No users selected
+              <div
+                v-for="email in pendingInvites"
+                :key="email"
+                class="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-md px-2 py-1 text-xs"
+              >
+                <span>{{ email }}</span>
+                <button
+                  class="hover:text-destructive"
+                  @click="removePendingInvite(email)"
+                >
+                  <IconX class="size-3" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -318,7 +263,13 @@ const selectedUserObjects = computed(() => {
             <Button variant="outline"> Cancel </Button>
           </DialogClose>
           <DialogClose as-child>
-            <Button type="submit"> Continue </Button>
+            <Button
+              type="submit"
+              :disabled="!newTeamName.trim() || isCreating"
+              @click="handleCreateTeam"
+            >
+              {{ isCreating ? "Creating..." : "Continue" }}
+            </Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

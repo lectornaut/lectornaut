@@ -222,7 +222,7 @@ const range = ref({
             </CardTitle>
             <Popover>
               <PopoverTrigger as-child>
-                <Button variant="link" class="justify-start">
+                <Button variant="link" class="data-[state=open]:bg-accent">
                   <IconCalendar />
                   {{
                     range.start

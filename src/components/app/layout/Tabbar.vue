@@ -16,71 +16,39 @@ import {
   IconWorkflow,
   IconX,
 } from "@/data/icons"
-import { generateId } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
+import { useLayoutStore } from "@/stores/layoutStore"
 import { useSortable } from "@vueuse/integrations/useSortable"
-import { collection, doc, setDoc } from "firebase/firestore"
+import { storeToRefs } from "pinia"
 import { useRouter } from "vue-router"
-import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
 const el = ref<HTMLElement | null>(null)
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 
-type Tab = {
-  id: string
-  name: string
-  fullPath: string
-}
+const layoutStore = useLayoutStore()
+const {
+  tabs,
+  activeTabId,
+  recentlyClosed,
+  isLoading: pending,
+} = storeToRefs(layoutStore)
+const error = ref(null) // Store doesn't have error state yet
 
-const db = useFirestore()
-const user = useCurrentUser()
-
-const tabsDocRef = computed(() => {
-  if (!user.value?.uid) return null
-  return doc(
-    collection(doc(collection(db, "users"), user.value.uid), "layout"),
-    "tabs"
-  )
-})
-
-const { data: tabsDocData, pending, error } = useDocument(tabsDocRef)
-
-const tabs = ref<Tab[]>([])
-const activeTabId = ref("")
-const recentlyClosed = ref<Tab[]>([])
+const {
+  addTab,
+  closeTab,
+  closeOtherTabs,
+  closeAllTabs,
+  duplicateTab,
+  renameTab,
+  setActiveTab,
+  updateActiveTab,
+} = layoutStore
 
 const renamingTabId = ref<string | null>(null)
 const renamingName = ref("")
-
-const MAX_RECENT = 20
-
-// Hydrate from Firestore
-watch(
-  tabsDocData,
-  (doc) => {
-    if (!doc) return
-    tabs.value = doc.tabs ?? []
-    activeTabId.value = doc.active ?? ""
-    recentlyClosed.value = doc.recentlyClosed ?? []
-  },
-  { immediate: true }
-)
-
-// Persist to Firestore
-watchDebounced(
-  [tabs, activeTabId, recentlyClosed],
-  ([newTabs, newActive, newRecent]) => {
-    if (!tabsDocRef.value) return
-    setDoc(
-      tabsDocRef.value,
-      { tabs: newTabs, active: newActive, recentlyClosed: newRecent },
-      { merge: true }
-    )
-  },
-  { debounce: 500, deep: true }
-)
 
 // Enable drag-and-drop reordering
 useSortable(el, tabs, {
@@ -89,105 +57,42 @@ useSortable(el, tabs, {
   handle: ".hover-trigger",
 })
 
-// Create a new tab
-function createTab(fullPath: string, name?: string): Tab {
-  // If name is explicitly provided, use it
-  if (name) {
-    return {
-      id: generateId(),
-      name,
-      fullPath,
-    }
-  }
-
-  // Try to get name from the route that matches the fullPath
-  const matchedRoute = router.resolve(fullPath)
-  return {
-    id: generateId(),
-    name:
-      (matchedRoute.meta?.breadcrumb as string) ||
-      (matchedRoute.name as string) ||
-      t("tabs.newTab"),
-    fullPath,
-  }
-}
-
-// Add tab to history
-function addToHistory(tab: Tab) {
-  const head = recentlyClosed.value[0]
-  if (head?.fullPath === tab.fullPath && head?.name === tab.name) return
-
-  recentlyClosed.value = [
-    { id: generateId(), name: tab.name, fullPath: tab.fullPath },
-    ...recentlyClosed.value,
-  ].slice(0, MAX_RECENT)
-}
-
 // Navigate to a tab (used by event handlers and programmatic navigation)
-function navigateToTab(tab: Tab) {
-  activeTabId.value = tab.id
+function navigateToTab(tab: { id: string; fullPath: string }) {
+  setActiveTab(tab.id)
   router.push(tab.fullPath)
 }
 
 // Handle tab click - switch to the clicked tab
-function onTabClick(tab: Tab) {
-  activeTabId.value = tab.id
+function onTabClick(tab: { id: string }) {
+  setActiveTab(tab.id)
 }
 
 // Add a new tab
-function addTab(fullPath = "/new", name?: string) {
-  const newTab = createTab(fullPath, name)
-  tabs.value.push(newTab)
-  onTabClick(newTab)
-  router.push(fullPath)
+function handleAddTab(fullPath = "/new", name?: string) {
+  const newTab = addTab(fullPath, name)
+  if (newTab) navigateToTab(newTab)
 }
 
 // Close a tab
-function closeTab(id: string) {
-  const idx = tabs.value.findIndex((t) => t.id === id)
-  if (idx === -1) return
-
-  const closing = tabs.value[idx]
-  if (!closing) return
-
-  addToHistory(closing)
-  tabs.value.splice(idx, 1)
-
-  // No tabs left - navigate to /start and clear active tab
-  if (tabs.value.length === 0) {
-    activeTabId.value = ""
-    router.push("/start")
-    return
-  }
-
-  // If closed tab was active, switch to next or previous tab
-  if (closing.id === activeTabId.value) {
-    // Try to get the tab at the same index (next tab)
-    // If no next tab, get the previous one (idx - 1)
-    const nextTab = tabs.value[idx] || tabs.value[idx - 1]
-    if (nextTab) {
-      navigateToTab(nextTab)
-    }
+function handleCloseTab(id: string) {
+  const result = closeTab(id)
+  if (result?.nextPath) {
+    router.push(result.nextPath)
   }
 }
 
 // Duplicate a tab
-function duplicateTab(id: string) {
-  const src = tabs.value.find((t) => t.id === id)
-  if (!src) return
-
-  const duplicate = createTab(
-    src.fullPath,
-    src.name.endsWith(` ${t("tabs.copy")}`)
-      ? src.name
-      : `${src.name} ${t("tabs.copy")}`
-  )
-  tabs.value.push(duplicate)
-  navigateToTab(duplicate)
+function handleDuplicateTab(id: string) {
+  duplicateTab(id)
+  // Ideally navigate to new tab, but store doesn't return it yet.
+  // Workaround: find tab with activeTabId
+  const newTab = tabs.value.find((t) => t.id === activeTabId.value)
+  if (newTab) navigateToTab(newTab)
 }
 
 // Rename a tab
-function renameTab(id: string) {
+function handleRenameTab(id: string) {
   const tab = tabs.value.find((t) => t.id === id)
   if (!tab) return
 
@@ -203,11 +108,7 @@ function renameTab(id: string) {
 
 function saveRename() {
   if (!renamingTabId.value) return
-
-  const tab = tabs.value.find((t) => t.id === renamingTabId.value)
-  if (tab && renamingName.value.trim()) {
-    tab.name = renamingName.value.trim()
-  }
+  renameTab(renamingTabId.value, renamingName.value)
   cancelRename()
 }
 
@@ -237,7 +138,7 @@ function selectTab(idOrDirection: string | number) {
     )
     targetId = tabs.value[tabIdx]?.id
   } else {
-    targetId = idOrDirection
+    targetId = idOrDirection as string
   }
 
   const target = tabs.value.find((t) => t.id === targetId)
@@ -265,19 +166,22 @@ watch(
     if (activeTabId.value) {
       const activeTab = tabs.value.find((t) => t.id === activeTabId.value)
       if (activeTab) {
-        activeTab.fullPath = fullPath
-        activeTab.name =
+        updateActiveTab(
+          fullPath,
           (route.meta?.breadcrumb as string) ||
-          (route.name as string) ||
-          activeTab.name
+            (route.name as string) ||
+            activeTab.name
+        )
         return
       }
     }
 
     // No active tab or active tab not found - create a new tab
-    const newTab = createTab(fullPath)
-    tabs.value.push(newTab)
-    activeTabId.value = newTab.id
+    const newTab = addTab(
+      fullPath,
+      (route.meta?.breadcrumb as string) || (route.name as string)
+    )
+    if (newTab) navigateToTab(newTab)
   },
   { immediate: true }
 )
@@ -288,29 +192,20 @@ emitter.on("Tabs.Add", (raw?: unknown) => {
     | { fullPath?: string; path?: string; url?: string; name?: string }
     | undefined
   const path = data?.fullPath || data?.path || data?.url || "/new"
-  addTab(path, data?.name)
+  handleAddTab(path, data?.name)
 })
 
 emitter.on("Tabs.Close", (id?: unknown) => {
-  closeTab((typeof id === "string" ? id : activeTabId.value) || "")
+  handleCloseTab((typeof id === "string" ? id : activeTabId.value) || "")
 })
 
 emitter.on("Tabs.Close.Others", (id?: unknown) => {
   const keepId = typeof id === "string" ? id : activeTabId.value
-  const keep = tabs.value.find((t) => t.id === keepId)
-  if (!keep) return
-
-  tabs.value.forEach((t) => {
-    if (t.id !== keepId) addToHistory(t)
-  })
-  tabs.value = [keep]
-  activeTabId.value = keep.id
+  closeOtherTabs(keepId)
 })
 
 emitter.on("Tabs.Close.All", () => {
-  tabs.value.forEach(addToHistory)
-  tabs.value = []
-  activeTabId.value = ""
+  closeAllTabs()
   router.push("/start")
 })
 
@@ -322,12 +217,12 @@ emitter.on("Tabs.Select", (idOrIndex?: unknown) => {
 
 emitter.on("Tabs.ReopenLast", () => {
   const last = recentlyClosed.value.shift()
-  if (last) addTab(last.fullPath, last.name)
+  if (last) handleAddTab(last.fullPath, last.name)
 })
 
 emitter.on("Tabs.Reopen", (raw?: unknown) => {
-  const tab = raw as Tab | undefined
-  if (tab) addTab(tab.fullPath, tab.name)
+  const tab = raw as { fullPath: string; name: string } | undefined
+  if (tab) handleAddTab(tab.fullPath, tab.name)
 })
 
 // Cleanup
@@ -450,7 +345,7 @@ onUnmounted(() => {
                           <RouterLink
                             :to="tab.fullPath"
                             @click="onTabClick(tab)"
-                            @dblclick="renameTab(tab.id)"
+                            @dblclick="handleRenameTab(tab.id)"
                           >
                             <IconWorkflow />
                             <span class="mr-auto truncate">
@@ -463,7 +358,7 @@ onUnmounted(() => {
                                     variant="ghost"
                                     size="icon-xs"
                                     class="invisible group-hover:visible"
-                                    @click.prevent="closeTab(tab.id)"
+                                    @click.prevent="handleCloseTab(tab.id)"
                                   >
                                     <IconX />
                                   </InputGroupButton>
@@ -478,7 +373,7 @@ onUnmounted(() => {
                       </ContextMenuTrigger>
                       <ContextMenuContent class="w-56">
                         <ContextMenuGroup>
-                          <ContextMenuItem @click="closeTab(tab.id)">
+                          <ContextMenuItem @click="handleCloseTab(tab.id)">
                             <IconX />
                             {{ t("common.close") }}
                             <ContextMenuShortcut>⌘W</ContextMenuShortcut>
@@ -500,12 +395,12 @@ onUnmounted(() => {
                         </ContextMenuGroup>
                         <ContextMenuSeparator />
                         <ContextMenuGroup>
-                          <ContextMenuItem @click="renameTab(tab.id)">
+                          <ContextMenuItem @click="handleRenameTab(tab.id)">
                             <IconSquarePen />
                             {{ t("tabs.rename") }}
                             <ContextMenuShortcut>⌘R</ContextMenuShortcut>
                           </ContextMenuItem>
-                          <ContextMenuItem @click="duplicateTab(tab.id)">
+                          <ContextMenuItem @click="handleDuplicateTab(tab.id)">
                             <IconCopy />
                             {{ t("tabs.duplicate") }}
                             <ContextMenuShortcut>⌘D</ContextMenuShortcut>
@@ -583,7 +478,7 @@ onUnmounted(() => {
                     <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
                     <DropdownMenuContent class="w-56" align="end" side="bottom">
                       <DropdownMenuGroup>
-                        <DropdownMenuItem @click="closeTab(activeTabId)">
+                        <DropdownMenuItem @click="handleCloseTab(activeTabId)">
                           <IconX />
                           {{ t("common.close") }}
                           <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
@@ -607,12 +502,14 @@ onUnmounted(() => {
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <DropdownMenuItem @click="renameTab(activeTabId)">
+                        <DropdownMenuItem @click="handleRenameTab(activeTabId)">
                           <IconSquarePen />
                           {{ t("tabs.rename") }}
                           <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
                         </DropdownMenuItem>
-                        <DropdownMenuItem @click="duplicateTab(activeTabId)">
+                        <DropdownMenuItem
+                          @click="handleDuplicateTab(activeTabId)"
+                        >
                           <IconCopy />
                           {{ t("tabs.duplicate") }}
                           <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
@@ -628,6 +525,12 @@ onUnmounted(() => {
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
                           <DropdownMenuSubContent class="w-56">
+                            <DropdownMenuLabel
+                              v-if="tabs.length === 0"
+                              class="text-muted-foreground text-xs"
+                            >
+                              {{ t("tabs.activeTabsEmpty") }}
+                            </DropdownMenuLabel>
                             <DropdownMenuItem
                               v-for="tab in tabs"
                               :key="tab.id"
@@ -636,7 +539,7 @@ onUnmounted(() => {
                               <IconWorkflow />
                               {{ tab.name }}
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator v-if="tabs.length > 0" />
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               :disabled="tabs.length === 0"
                               @click="emitter.emit('Tabs.Close.All')"
@@ -650,10 +553,16 @@ onUnmounted(() => {
                           <DropdownMenuItem as-child>
                             <DropdownMenuSubTrigger>
                               <IconHistory />
-                              {{ t("tabs.recentTabs") }}
+                              {{ t("tabs.recentClosedTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
                           <DropdownMenuSubContent class="w-56">
+                            <DropdownMenuLabel
+                              v-if="recentlyClosed.length === 0"
+                              class="text-muted-foreground text-xs"
+                            >
+                              {{ t("tabs.recentlyClosedEmpty") }}
+                            </DropdownMenuLabel>
                             <DropdownMenuItem
                               v-for="tab in recentlyClosed"
                               :key="tab.id + tab.fullPath"
@@ -662,9 +571,7 @@ onUnmounted(() => {
                               <IconWorkflow />
                               {{ tab.name }}
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator
-                              v-if="recentlyClosed.length > 0"
-                            />
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               :disabled="recentlyClosed.length === 0"
                               @click="recentlyClosed = []"

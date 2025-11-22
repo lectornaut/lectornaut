@@ -22,9 +22,9 @@ const columns = computed(() =>
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="outline">
+      <Button variant="outline" class="data-[state=open]:bg-accent">
         <IconGroup />
-        Group
+        Groups
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">

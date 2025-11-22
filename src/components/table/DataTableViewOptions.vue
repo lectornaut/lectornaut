@@ -46,7 +46,7 @@ function onPageSizeChange(val: string) {
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="outline">
+      <Button variant="outline" class="data-[state=open]:bg-accent">
         <IconSettings2 />
         View
       </Button>

@@ -8,7 +8,8 @@
     "edit": "Edit",
     "remove": "Remove",
     "unknown": "Unknown",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "reset": "Reset"
   },
   "settings": {
     "titles": {
@@ -20,7 +21,7 @@
       "security": "Security",
       "workspace": "Workspace",
       "agents": "Agents",
-      "people": "People",
+      "members": "Members",
       "teams": "Teams",
       "runs": "Runs",
       "knowledge": "Knowledge",
@@ -267,8 +268,10 @@
     "rename": "Rename",
     "duplicate": "Duplicate",
     "activeTabs": "Active tabs",
+    "activeTabsEmpty": "No active tabs",
     "closeAllTabs": "Close all tabs",
-    "recentTabs": "Recent tabs",
+    "recentClosedTabs": "Recently closed tabs",
+    "recentlyClosedEmpty": "No recently closed tabs",
     "clearRecent": "Clear recent tabs",
     "reopenLast": "Reopen last tab",
     "options": "Tab options"

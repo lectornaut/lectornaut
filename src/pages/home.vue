@@ -13,12 +13,15 @@ import {
   IconBlocks,
   IconCalendar,
   IconChevronRight,
+  IconExpand,
   IconLink,
+  IconMinimize,
   IconMoreHorizontal,
   IconMoreVertical,
   IconPlus,
   IconSearch,
   IconSparkles,
+  IconStar,
   IconStarOff,
   IconTrash2,
 } from "@/data/icons"
@@ -448,6 +451,22 @@ const navToc = [
     ],
   },
 ]
+
+const dashboardData = [
+  { id: 1, title: "Interactions", description: "+265 sales this month." },
+  { id: 2, title: "Conversions", description: "+3.2% week over week." },
+  { id: 3, title: "Revenue", description: "$12,340 MRR." },
+  { id: 4, title: "Agents", description: "+$7,231.89 increase" },
+  { id: 5, title: "Performance", description: "+15% conversion rate" },
+  { id: 6, title: "Tasks", description: "+15% from last month" },
+  { id: 7, title: "Distribution", description: "Category breakdown" },
+  { id: 8, title: "Completion", description: "Progress overview" },
+  { id: 9, title: "Status", description: "Current state" },
+  { id: 10, title: "Active Users", description: "+120 new users today" },
+  { id: 11, title: "Bounce Rate", description: "-2.5% improvement" },
+  { id: 12, title: "Session Duration", description: "Average 4m 30s" },
+]
+const expandedCard = ref<number | null>(null)
 </script>
 
 <template>
@@ -487,7 +506,10 @@ const navToc = [
                 </SidebarMenuButton>
                 <DropdownMenu>
                   <DropdownMenuTrigger as-child>
-                    <SidebarMenuAction show-on-hover>
+                    <SidebarMenuAction
+                      show-on-hover
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconMoreVertical />
                       <span class="sr-only">More</span>
                     </SidebarMenuAction>
@@ -614,7 +636,8 @@ const navToc = [
           <div class="flex items-center justify-between gap-2">
             <Popover>
               <PopoverTrigger as-child>
-                <Button variant="ghost">
+                <Button variant="ghost" class="data-[state=open]:bg-accent">
+                  <IconCalendar />
                   {{
                     range.start
                       ? df.format(range.start.toDate(getLocalTimeZone()))
@@ -662,20 +685,81 @@ const navToc = [
         </Teleport>
         <TabsContent
           value="overview"
-          class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-12"
+          class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-3"
         >
           <Card
-            v-for="card in [
-              { title: 'Interactions', description: '+265 sales this month.' },
-              { title: 'Conversions', description: '+3.2% week over week.' },
-              { title: 'Revenue', description: '$12,340 MRR.' },
+            v-for="card in dashboardData"
+            :key="card.id"
+            :class="[
+              'col-span-1 shadow-none',
+              expandedCard === card.id
+                ? 'md:col-span-2 lg:col-span-3'
+                : 'md:col-span-1 lg:col-span-1',
             ]"
-            :key="card.title"
-            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
           >
-            <CardHeader>
+            <CardHeader class="relative">
               <CardTitle>{{ card.title }}</CardTitle>
               <CardDescription>{{ card.description }}</CardDescription>
+              <div class="absolute top-0 right-6 flex gap-2">
+                <ButtonGroup>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
+                          @click="
+                            expandedCard =
+                              expandedCard === card.id ? null : card.id
+                          "
+                        >
+                          <Component
+                            :is="
+                              expandedCard === card.id
+                                ? IconMinimize
+                                : IconExpand
+                            "
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {{ expandedCard === card.id ? "Collapse" : "Expand" }}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <DropdownMenu>
+                        <TooltipTrigger as-child>
+                          <DropdownMenuTrigger as-child>
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              class="data-[state=open]:bg-accent"
+                            >
+                              <IconMoreHorizontal />
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>More options</TooltipContent>
+
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <IconStar />
+                            <span>Add to Favorites</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <IconLink />
+                            <span>Copy Link</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <IconArrowUpRight />
+                            <span>Open in New Tab</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </Tooltip>
+                  </TooltipProvider>
+                </ButtonGroup>
+              </div>
             </CardHeader>
             <CardContent>
               <ChartContainer :config="chartConfig" class="w-full">
@@ -697,162 +781,10 @@ const navToc = [
                     :domain-line="false"
                     :grid-line="false"
                     :tick-format="
-                      (d: number) => {
-                        const date = new Date(d)
-                        return date.toLocaleDateString('en-US', {
+                      (d: number) =>
+                        new Date(d).toLocaleDateString('en-US', {
                           month: 'short',
                         })
-                      }
-                    "
-                    :tick-values="chartData.map((d) => d.date)"
-                  />
-                  <ChartTooltip />
-                  <ChartCrosshair
-                    :template="
-                      componentToString(chartConfig, ChartTooltipContent, {
-                        labelFormatter(d) {
-                          return new Date(d).toLocaleDateString('en-US', {
-                            month: 'long',
-                          })
-                        },
-                      })
-                    "
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-                </VisXYContainer>
-                <ChartLegendContent />
-              </ChartContainer>
-            </CardContent>
-            <!-- <Separator /> -->
-            <!-- <CardFooter>
-              <CardDescription>{{ card.description }}</CardDescription>
-              <Button variant="outline" size="sm">
-                <IconRocket /> Ask AI
-              </Button>
-              <Button variant="outline" size="icon-sm">
-                <IconArrowUpRight />
-              </Button>
-            </CardFooter> -->
-          </Card>
-          <Card
-            v-for="card in [
-              { title: 'Agents', description: '+$7,231.89 increase' },
-              { title: 'Performance', description: '+15% conversion rate' },
-              { title: 'Tasks', description: '+15% from last month' },
-            ]"
-            :key="card.title"
-            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
-          >
-            <CardHeader>
-              <CardTitle>{{ card.title }}</CardTitle>
-              <CardDescription>{{ card.description }}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer :config="chartConfig" class="w-full">
-                <VisXYContainer :data="chartData">
-                  <VisGroupedBar
-                    :x="(d: Data) => d.date"
-                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-                  <VisAxis
-                    type="x"
-                    :x="(d: Data) => d.date"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :grid-line="false"
-                    :tick-format="
-                      (d: number) => {
-                        const date = new Date(d)
-                        return date.toLocaleDateString('en-US', {
-                          month: 'short',
-                        })
-                      }
-                    "
-                    :tick-values="chartData.map((d) => d.date)"
-                  />
-                  <ChartTooltip />
-                  <ChartCrosshair
-                    :template="
-                      componentToString(chartConfig, ChartTooltipContent, {
-                        labelFormatter(d) {
-                          return new Date(d).toLocaleDateString('en-US', {
-                            month: 'long',
-                          })
-                        },
-                      })
-                    "
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-                </VisXYContainer>
-                <ChartLegendContent />
-              </ChartContainer>
-            </CardContent>
-            <!-- <Separator /> -->
-            <!-- <CardFooter>
-              <CardDescription>{{ card.description }}</CardDescription>
-              <Button variant="outline" size="sm">
-                <IconRocket /> Ask AI
-              </Button>
-              <Button variant="outline" size="icon-sm">
-                <IconArrowUpRight />
-              </Button>
-            </CardFooter> -->
-          </Card>
-          <Card
-            v-for="card in [
-              { title: 'Distribution', description: 'Category breakdown' },
-              { title: 'Completion', description: 'Progress overview' },
-              { title: 'Status', description: 'Current state' },
-            ]"
-            :key="card.title"
-            class="col-span-1 shadow-none md:col-span-2 lg:col-span-4"
-          >
-            <CardHeader>
-              <CardTitle>{{ card.title }}</CardTitle>
-              <CardDescription>{{ card.description }}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer :config="chartConfig" class="w-full">
-                <VisXYContainer :data="chartData">
-                  <VisGroupedBar
-                    :x="(d: Data) => d.date"
-                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-                  <VisAxis
-                    type="x"
-                    :x="(d: Data) => d.date"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :grid-line="false"
-                    :tick-format="
-                      (d: number) => {
-                        const date = new Date(d)
-                        return date.toLocaleDateString('en-US', {
-                          month: 'short',
-                        })
-                      }
                     "
                     :tick-values="chartData.map((d) => d.date)"
                   />

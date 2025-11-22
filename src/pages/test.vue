@@ -1,224 +1,170 @@
 <script lang="ts" setup>
-import { generateId } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
-import { useTodoStore } from "@/stores/todoStore"
-import type { ITeam, ITodo } from "@/types"
-import { Timestamp } from "firebase/firestore"
+import { storeToRefs } from "pinia"
+import { ref } from "vue"
 
-const todoStore = useTodoStore()
 const teamStore = useTeamStore()
-
-const newTodo = ref("")
-const todos = computed(() => todoStore.todos)
-const isTodosLoading = computed(() => todoStore.isLoading)
+const {
+  currentUser,
+  userProfile,
+  currentTeam,
+  memberships,
+  teamMembers,
+  isLoading,
+} = storeToRefs(teamStore)
 
 const newTeamName = ref("")
-const teamMembers = ref<string[]>([])
-const teams = computed(() => teamStore.teams)
-const isTeamsLoading = computed(() => teamStore.isLoading)
+const inviteEmail = ref("")
+const isInviting = ref(false)
+const inviteError = ref("")
+const inviteSuccess = ref(false)
 
-const isRenameDialogOpen = ref(false)
-const teamToRename = ref<ITeam | null>(null)
-const renameValue = ref("")
-
-const addTodo = () => {
-  if (newTodo.value.trim() === "") return
-  const todo: ITodo = {
-    id: generateId(),
-    title: newTodo.value,
-    completed: false,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-  }
-  todoStore.add(todo)
-  newTodo.value = ""
-}
-
-const deleteTodo = (id: string) => {
-  const prevTodo = todos.value.find((todo) => todo.id === id)
-  if (prevTodo) {
-    todoStore.del(id, prevTodo)
-  }
-}
-
-const toggleCompletion = (id: string) => {
-  const todo = todos.value.find((todo) => todo.id === id)
-  if (todo) {
-    const prevTodo = { ...todo }
-    const updates = {
-      completed: !todo.completed,
-      updatedAt: Timestamp.now(),
-    }
-    todoStore.update(id, updates, prevTodo)
-  }
-}
-
-const addTeam = () => {
-  if (newTeamName.value.trim() === "") return
-  const team: ITeam = {
-    id: generateId(),
-    name: newTeamName.value,
-    members: teamMembers.value,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-  }
-  teamStore.add(team)
+const handleCreateTeam = async () => {
+  if (!newTeamName.value.trim()) return
+  await teamStore.createTeam(newTeamName.value)
   newTeamName.value = ""
-  teamMembers.value = []
 }
 
-const deleteTeam = (id: string) => {
-  const prevTeam = teams.value.find((t) => t.id === id)
-  if (prevTeam) teamStore.del(id, prevTeam)
-}
+const handleInvite = async () => {
+  if (!inviteEmail.value.trim()) return
 
-const openRenameDialog = (team: ITeam) => {
-  teamToRename.value = team
-  renameValue.value = team.name
-  isRenameDialogOpen.value = true
-}
+  isInviting.value = true
+  inviteError.value = ""
+  inviteSuccess.value = false
 
-const handleRenameTeam = () => {
-  if (!teamToRename.value || !renameValue.value.trim()) return
-
-  if (renameValue.value.trim() !== teamToRename.value.name) {
-    const prevTeam = { ...teamToRename.value }
-    const updates = {
-      name: renameValue.value.trim(),
-      updatedAt: Timestamp.now(),
-    }
-    teamStore.update(teamToRename.value.id, updates, prevTeam)
+  try {
+    await teamStore.inviteMember(inviteEmail.value)
+    inviteSuccess.value = true
+    inviteEmail.value = ""
+  } catch (e: unknown) {
+    inviteError.value = (e as Error).message
+  } finally {
+    isInviting.value = false
   }
-  isRenameDialogOpen.value = false
 }
 
-const formatDate = (timestamp: Timestamp) => {
-  if (!timestamp) return ""
-  return timestamp.toDate().toLocaleString()
+const handleSwitchTeam = async (teamId: string) => {
+  await teamStore.switchTeam(teamId)
 }
 </script>
 
 <template>
   <div class="space-y-8 p-8">
-    <section class="space-y-4">
-      <h2 class="text-2xl font-bold">Todos</h2>
-      <div class="flex gap-2">
-        <Input
-          v-model="newTodo"
-          type="text"
-          placeholder="Add a new todo"
-          @keyup.enter="addTodo"
-        />
-        <Button @click="addTodo">Create</Button>
-      </div>
-      <div v-if="isTodosLoading" class="flex justify-center py-8">
-        <Spinner />
-      </div>
-      <ul v-else class="space-y-2">
-        <li
-          v-for="todo in todos"
-          :key="todo.id"
-          class="flex items-center justify-between rounded-lg border p-4"
-        >
-          <div>
-            <div
-              :class="{ 'text-muted-foreground line-through': todo.completed }"
-            >
-              {{ todo.title }}
-            </div>
-            <div class="text-muted-foreground text-xs">
-              Created: {{ formatDate(todo.createdAt) }}
-            </div>
+    <div v-if="isLoading" class="flex justify-center">
+      <Spinner />
+    </div>
+
+    <div v-else-if="!currentUser" class="text-center">
+      <p>Please sign in to manage teams.</p>
+      <!-- Add a temporary sign in button if needed, or assume global auth handling -->
+    </div>
+
+    <div v-else class="space-y-8">
+      <!-- User Info -->
+      <section class="rounded-lg border p-4">
+        <h2 class="mb-2 text-xl font-bold">User Profile</h2>
+        <p><strong>UID:</strong> {{ userProfile?.uid }}</p>
+        <p><strong>Email:</strong> {{ userProfile?.email }}</p>
+        <p>
+          <strong>Current Team ID:</strong>
+          {{ userProfile?.currentTeamId || "None" }}
+        </p>
+      </section>
+
+      <!-- Current Team -->
+      <section class="rounded-lg border bg-slate-50 p-4">
+        <h2 class="mb-2 text-xl font-bold">Current Team</h2>
+        <div v-if="currentTeam">
+          <h3 class="text-primary text-2xl font-bold">
+            {{ currentTeam.name }}
+          </h3>
+          <p class="text-muted-foreground text-sm">ID: {{ currentTeam.id }}</p>
+
+          <div class="mt-4">
+            <h4 class="mb-2 font-semibold">Members</h4>
+            <ul class="space-y-1">
+              <li
+                v-for="member in teamMembers"
+                :key="member.id"
+                class="flex items-center justify-between rounded border bg-white p-2"
+              >
+                <span>
+                  {{ member.user.displayName || member.user.email }}
+                  <span class="text-muted-foreground text-xs"
+                    >({{ member.role }})</span
+                  >
+                </span>
+              </li>
+            </ul>
           </div>
-          <div class="flex gap-2">
+
+          <div class="mt-4 border-t pt-4">
+            <h4 class="mb-2 font-semibold">Invite Member</h4>
+            <div class="flex gap-2">
+              <Input
+                v-model="inviteEmail"
+                placeholder="User Email"
+                @keyup.enter="handleInvite"
+              />
+              <Button :disabled="isInviting" @click="handleInvite">
+                {{ isInviting ? "Inviting..." : "Invite" }}
+              </Button>
+            </div>
+            <p v-if="inviteError" class="text-destructive mt-1 text-sm">
+              {{ inviteError }}
+            </p>
+            <p v-if="inviteSuccess" class="mt-1 text-sm text-green-600">
+              User invited successfully!
+            </p>
+          </div>
+        </div>
+        <div v-else>
+          <p>No team selected.</p>
+        </div>
+      </section>
+
+      <!-- Create Team -->
+      <section class="rounded-lg border p-4">
+        <h2 class="mb-2 text-xl font-bold">Create New Team</h2>
+        <div class="flex gap-2">
+          <Input
+            v-model="newTeamName"
+            placeholder="Team Name"
+            @keyup.enter="handleCreateTeam"
+          />
+          <Button @click="handleCreateTeam">Create</Button>
+        </div>
+      </section>
+
+      <!-- My Teams -->
+      <section class="rounded-lg border p-4">
+        <h2 class="mb-2 text-xl font-bold">My Teams</h2>
+        <ul class="space-y-2">
+          <li
+            v-for="membership in memberships"
+            :key="membership.id"
+            class="flex items-center justify-between rounded border p-3 transition hover:bg-slate-50"
+          >
+            <div>
+              <div class="font-medium">{{ membership.team.name }}</div>
+              <div class="text-muted-foreground text-xs">
+                Role: {{ membership.role }}
+              </div>
+            </div>
             <Button
+              v-if="membership.teamId !== currentTeam?.id"
               variant="outline"
               size="sm"
-              @click="toggleCompletion(todo.id)"
+              @click="handleSwitchTeam(membership.teamId)"
             >
-              {{ todo.completed ? "Undo" : "Complete" }}
+              Switch
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              @click="deleteTodo(todo.id)"
+            <span v-else class="text-sm font-medium text-green-600"
+              >Active</span
             >
-              Delete
-            </Button>
-          </div>
-        </li>
-      </ul>
-    </section>
-
-    <hr />
-
-    <section class="space-y-4">
-      <h2 class="text-2xl font-bold">Teams</h2>
-      <div class="space-y-2">
-        <Input v-model="newTeamName" type="text" placeholder="Team name" />
-        <TagsInput v-model="teamMembers">
-          <TagsInputItem v-for="item in teamMembers" :key="item" :value="item">
-            <TagsInputItemText />
-            <TagsInputItemDelete />
-          </TagsInputItem>
-
-          <TagsInputInput placeholder="Add member..." />
-        </TagsInput>
-        <Button @click="addTeam">Create Team</Button>
-      </div>
-      <div v-if="isTeamsLoading" class="flex justify-center py-8">
-        <Spinner />
-      </div>
-      <ul v-else class="space-y-2">
-        <li
-          v-for="team in teams"
-          :key="team.id"
-          class="flex items-center justify-between rounded-lg border p-4"
-        >
-          <div>
-            <div class="font-medium">{{ team.name }}</div>
-            <div class="text-muted-foreground text-sm">
-              Members: {{ team.members?.join(", ") }}
-            </div>
-            <div class="text-muted-foreground text-xs">
-              Updated: {{ formatDate(team.updatedAt) }}
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <Button variant="outline" size="sm" @click="openRenameDialog(team)">
-              Rename
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              @click="deleteTeam(team.id)"
-            >
-              Delete
-            </Button>
-          </div>
-        </li>
-      </ul>
-    </section>
-
-    <Dialog v-model:open="isRenameDialogOpen">
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Rename Team</DialogTitle>
-        </DialogHeader>
-        <div class="py-4">
-          <Input
-            v-model="renameValue"
-            placeholder="Team name"
-            @keyup.enter="handleRenameTeam"
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" @click="isRenameDialogOpen = false">
-            Cancel
-          </Button>
-          <Button @click="handleRenameTeam">Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </li>
+        </ul>
+      </section>
+    </div>
   </div>
 </template>

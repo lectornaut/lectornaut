@@ -294,8 +294,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconRefreshCcw />
                     </Button>
                   </DropdownMenuTrigger>
@@ -497,8 +501,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconPalette />
                     </Button>
                   </DropdownMenuTrigger>
@@ -537,8 +545,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconHighlighter />
                     </Button>
                   </DropdownMenuTrigger>
@@ -586,8 +598,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconType />
                     </Button>
                   </DropdownMenuTrigger>
@@ -630,8 +646,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconText />
                     </Button>
                   </DropdownMenuTrigger>
@@ -718,8 +738,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconAlignLeft />
                     </Button>
                   </DropdownMenuTrigger>
@@ -820,8 +844,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconTable />
                     </Button>
                   </DropdownMenuTrigger>
@@ -986,8 +1014,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
             <Tooltip>
               <DropdownMenu>
                 <TooltipTrigger as-child>
-                  <DropdownMenuTrigger>
-                    <Button variant="ghost" size="icon">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="data-[state=open]:bg-accent"
+                    >
                       <IconLink />
                     </Button>
                   </DropdownMenuTrigger>

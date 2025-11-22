@@ -21,6 +21,11 @@ import {
   IconSettings,
   IconUsersRound,
   IconX,
+  IconPlus,
+  IconCheck,
+  IconPencil,
+  IconLogOut,
+  IconMoreHorizontal,
 } from "@/data/icons"
 import {
   accents,
@@ -33,6 +38,7 @@ import {
 import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { accent, font, size, store, zoom } from "@/modules/theme"
+import { useTeamStore } from "@/stores/teamStore"
 import {
   deleteUser,
   sendEmailVerification,
@@ -41,6 +47,7 @@ import {
   verifyBeforeUpdateEmail,
 } from "firebase/auth"
 import { ref as storageRef } from "firebase/storage"
+import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 import {
   updateCurrentUserProfile,
@@ -48,6 +55,171 @@ import {
   useFirebaseStorage,
   useStorageFile,
 } from "vuefire"
+
+const teamStore = useTeamStore()
+const { teamMembers, memberships, currentTeam, isLoading } = storeToRefs(teamStore)
+
+// Compute current user's role in the current team
+const currentUserRole = computed(() => {
+  if (!user.value || !currentTeam.value) return null
+  const membership = teamMembers.value.find((m) => m.userId === user.value?.uid)
+  return membership?.role || null
+})
+
+const isOwner = computed(() => currentUserRole.value === "owner")
+
+const changingRoleMap = ref<Record<string, boolean>>({})
+
+const handleChangeRole = async (userId: string, newRole: string) => {
+  changingRoleMap.value[userId] = true
+  try {
+    await teamStore.changeRole(userId, newRole as "owner" | "member")
+    toast.success("Role updated successfully")
+  } catch (error) {
+    toast.error("Failed to update role", {
+      description: (error as Error).message,
+    })
+  } finally {
+    changingRoleMap.value[userId] = false
+  }
+}
+
+const canChangeRole = (member: (typeof teamMembers.value)[0]) => {
+  if (!isOwner.value) return false
+  // Don't allow changing own role if you're the last owner
+  if (member.userId === user.value?.uid) {
+    const ownerCount = teamMembers.value.filter(
+      (m) => m.role === "owner"
+    ).length
+    if (ownerCount <= 1 && member.role === "owner") return false
+  }
+  return true
+}
+
+// Invite member
+const inviteEmail = ref("")
+const invitingMember = ref(false)
+
+const handleInviteMember = async () => {
+  if (!inviteEmail.value.trim()) return
+  invitingMember.value = true
+  try {
+    await teamStore.inviteMember(inviteEmail.value)
+    toast.success("Member invited successfully")
+    inviteEmail.value = ""
+  } catch (error) {
+    toast.error("Failed to invite member", {
+      description: (error as Error).message,
+    })
+  } finally {
+    invitingMember.value = false
+  }
+}
+
+// Remove member
+const removingMemberMap = ref<Record<string, boolean>>({})
+
+const handleRemoveMember = async (userId: string) => {
+  removingMemberMap.value[userId] = true
+  try {
+    await teamStore.removeMember(userId)
+    const isCurrentUser = userId === user.value?.uid
+    toast.success(isCurrentUser ? "You have left the team" : "Member removed successfully")
+  } catch (error) {
+    toast.error("Failed to remove member", {
+      description: (error as Error).message,
+    })
+  } finally {
+    removingMemberMap.value[userId] = false
+  }
+}
+
+// Team Actions
+const creatingTeam = ref(false)
+const newTeamName = ref("")
+const isCreatingTeamDialogOpen = ref(false)
+
+const handleCreateTeam = async () => {
+  if (!newTeamName.value.trim()) return
+  creatingTeam.value = true
+  try {
+    await teamStore.createTeam(newTeamName.value)
+    toast.success("Team created successfully")
+    newTeamName.value = ""
+    isCreatingTeamDialogOpen.value = false
+  } catch (error) {
+    toast.error("Failed to create team", {
+      description: (error as Error).message,
+    })
+  } finally {
+    creatingTeam.value = false
+  }
+}
+
+const switchingTeamMap = ref<Record<string, boolean>>({})
+
+const handleSwitchTeam = async (teamId: string) => {
+  if (currentTeam.value?.id === teamId) return
+  switchingTeamMap.value[teamId] = true
+  try {
+    await teamStore.switchTeam(teamId)
+    toast.success("Switched team successfully")
+  } catch (error) {
+    toast.error("Failed to switch team", {
+      description: (error as Error).message,
+    })
+  } finally {
+    switchingTeamMap.value[teamId] = false
+  }
+}
+
+const editingTeamId = ref<string | null>(null)
+const editTeamName = ref("")
+const updatingTeamName = ref(false)
+
+const startEditingTeam = (team: { id: string; name: string }) => {
+  editingTeamId.value = team.id
+  editTeamName.value = team.name
+}
+
+const cancelEditingTeam = () => {
+  editingTeamId.value = null
+  editTeamName.value = ""
+}
+
+const handleUpdateTeamName = async () => {
+  if (!editingTeamId.value || !editTeamName.value.trim()) return
+  updatingTeamName.value = true
+  try {
+    await teamStore.updateTeamName(editingTeamId.value, editTeamName.value)
+    toast.success("Team name updated successfully")
+    editingTeamId.value = null
+    editTeamName.value = ""
+  } catch (error) {
+    toast.error("Failed to update team name", {
+      description: (error as Error).message,
+    })
+  } finally {
+    updatingTeamName.value = false
+  }
+}
+
+const exitingTeamMap = ref<Record<string, boolean>>({})
+
+const handleExitTeam = async (teamId: string) => {
+  exitingTeamMap.value[teamId] = true
+  try {
+    // removeMember handles exiting if userId matches current user
+    await teamStore.removeMember(user.value!.uid)
+    toast.success("You have left the team")
+  } catch (error) {
+    toast.error("Failed to leave team", {
+      description: (error as Error).message,
+    })
+  } finally {
+    exitingTeamMap.value[teamId] = false
+  }
+}
 
 const openSettings = ref(false)
 const activeTab = ref("preferences")
@@ -304,10 +476,10 @@ const navigations = computed(() => [
         description: t("settings.descriptions.agents"),
       },
       {
-        name: t("settings.titles.people"),
+        name: t("settings.titles.members"),
         icon: IconUsersRound,
-        id: "people",
-        description: t("settings.descriptions.people"),
+        id: "members",
+        description: t("settings.descriptions.members"),
       },
       {
         name: t("settings.titles.teams"),
@@ -1218,6 +1390,300 @@ const navigations = computed(() => [
                       </Field>
                     </FieldSet>
                   </FieldGroup>
+                </div>
+              </TabsContent>
+              <TabsContent
+                class="overflow-auto overscroll-none scroll-smooth"
+                value="members"
+              >
+                <div class="p-6">
+                  <!-- Invite Member Section -->
+                  <div v-if="isOwner" class="mb-6">
+                    <FieldGroup>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel>Invite Members</FieldLabel>
+                          <FieldDescription>
+                            Add new members to your team by email address.
+                          </FieldDescription>
+                        </FieldContent>
+                        <div class="flex gap-2">
+                          <Input
+                            v-model="inviteEmail"
+                            placeholder="email@example.com"
+                            @keyup.enter="handleInviteMember"
+                          />
+                          <Button
+                            :disabled="invitingMember || !inviteEmail.trim()"
+                            @click="handleInviteMember"
+                          >
+                            <Spinner v-if="invitingMember" />
+                            <span>Invite</span>
+                          </Button>
+                        </div>
+                      </Field>
+                    </FieldGroup>
+                  </div>
+
+                  <div class="space-y-4">
+                    <div v-if="isLoading" class="flex justify-center py-8">
+                      <Spinner />
+                    </div>
+                    <div
+                      v-else
+                      v-for="member in teamMembers"
+                      :key="member.id"
+                      class="flex items-center justify-between rounded-lg border p-4"
+                    >
+                      <div class="flex items-center gap-4">
+                        <Avatar>
+                          <AvatarImage
+                            :src="`https://avatar.vercel.sh/${member.user?.uid}.png`"
+                            :alt="
+                              member.user?.displayName ||
+                              member.user?.email ||
+                              ''
+                            "
+                          />
+                          <AvatarFallback>{{
+                            getInitials(
+                              member.user?.displayName ||
+                                member.user?.email ||
+                                "U"
+                            )
+                          }}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div class="font-medium">
+                            {{ member.user?.displayName || "User" }}
+                          </div>
+                          <div class="text-muted-foreground text-sm">
+                            {{ member.user?.email }}
+                          </div>
+                        </div>
+                      </div>
+                      <Select
+                        v-if="canChangeRole(member)"
+                        :model-value="member.role"
+                        :disabled="changingRoleMap[member.userId]"
+                        @update:model-value="
+                          (value) =>
+                            value &&
+                            handleChangeRole(member.userId, String(value))
+                        "
+                      >
+                        <SelectTrigger class="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="owner">Owner</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Badge v-else variant="secondary">{{
+                        member.role
+                      }}</Badge>
+                      <!-- Remove/Exit Button for Owners -->
+                      <AlertDialog v-if="isOwner">
+                        <AlertDialogTrigger as-child>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            :disabled="removingMemberMap[member.userId]"
+                          >
+                            <Spinner v-if="removingMemberMap[member.userId]" />
+                            <IconX v-else />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {{
+                                member.userId === user?.uid
+                                  ? "Exit Team"
+                                  : "Remove Member"
+                              }}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {{
+                                member.userId === user?.uid
+                                  ? "Are you sure you want to leave this team? You will lose access to all team resources."
+                                  : `Are you sure you want to remove ${member.user?.displayName || member.user?.email} from this team?`
+                              }}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              variant="destructive"
+                              :disabled="removingMemberMap[member.userId]"
+                              @click="handleRemoveMember(member.userId)"
+                            >
+                              <Spinner v-if="removingMemberMap[member.userId]" />
+                              {{
+                                member.userId === user?.uid ? "Exit" : "Remove"
+                              }}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                    <div
+                      v-if="teamMembers.length === 0"
+                      class="text-muted-foreground py-8 text-center"
+                    >
+                      No members found.
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent
+                class="overflow-auto overscroll-none scroll-smooth"
+                value="teams"
+              >
+                <div class="p-6">
+                  <!-- Create Team Section -->
+                  <div class="mb-6">
+                    <FieldGroup>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel>Create Team</FieldLabel>
+                          <FieldDescription>
+                            Create a new team to collaborate with others.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Dialog v-model:open="isCreatingTeamDialogOpen">
+                          <DialogTrigger as-child>
+                            <Button>
+                              <IconPlus class="mr-2 size-4" />
+                              Create Team
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Create Team</DialogTitle>
+                              <DialogDescription>
+                                Enter a name for your new team.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div class="py-4">
+                                <Input
+                                  v-model="newTeamName"
+                                  label="Team Name"
+                                  placeholder="My Awesome Team"
+                                  @keyup.enter="handleCreateTeam"
+                                />
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                :disabled="creatingTeam || !newTeamName.trim()"
+                                @click="handleCreateTeam"
+                              >
+                                <Spinner v-if="creatingTeam" />
+                                Create
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </Field>
+                    </FieldGroup>
+                  </div>
+
+                  <div class="space-y-4">
+                    <div v-if="isLoading" class="flex justify-center py-8">
+                      <Spinner />
+                    </div>
+                    <div
+                      v-else
+                      v-for="membership in memberships"
+                      :key="membership.id"
+                      class="flex items-center justify-between rounded-lg border p-4"
+                    >
+                      <div class="flex items-center gap-4">
+                        <Avatar class="rounded-lg">
+                          <AvatarImage
+                            :src="`https://avatar.vercel.sh/${membership.team?.id}.png`"
+                            :alt="membership.team?.name"
+                          />
+                          <AvatarFallback>{{
+                            getInitials(membership.team?.name)
+                          }}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div v-if="editingTeamId === membership.team?.id" class="flex items-center gap-2">
+                             <Input v-model="editTeamName" class="h-8 w-48" @keyup.enter="handleUpdateTeamName" />
+                             <Button size="icon" variant="ghost" class="size-8" @click="handleUpdateTeamName" :disabled="updatingTeamName">
+                                <IconCheck class="size-4" />
+                             </Button>
+                             <Button size="icon" variant="ghost" class="size-8" @click="cancelEditingTeam">
+                                <IconX class="size-4" />
+                             </Button>
+                          </div>
+                          <div v-else class="font-medium">
+                            {{ membership.team?.name }}
+                          </div>
+                          <div class="text-muted-foreground text-sm">
+                            ID: {{ membership.team?.id }}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="flex items-center gap-2">
+                        <Badge variant="outline" class="mr-2">{{ membership.role }}</Badge>
+                        
+                        <Button
+                          v-if="currentTeam?.id !== membership.team?.id"
+                          variant="secondary"
+                          size="sm"
+                          :disabled="switchingTeamMap[membership.team?.id]"
+                          @click="handleSwitchTeam(membership.team?.id)"
+                        >
+                          <Spinner v-if="switchingTeamMap[membership.team?.id]" />
+                          <span v-else>Select</span>
+                        </Button>
+                        <Button
+                          v-else
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          class="cursor-default opacity-100"
+                        >
+                          <IconCheck class="mr-2 size-4" />
+                          Selected
+                        </Button>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger as-child>
+                            <Button variant="ghost" size="icon">
+                              <IconMoreHorizontal class="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              v-if="membership.role === 'owner'"
+                              @click="startEditingTeam(membership.team!)"
+                            >
+                              <IconPencil class="mr-2 size-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              class="text-destructive focus:text-destructive"
+                              @click="handleExitTeam(membership.team?.id)"
+                            >
+                              <IconLogOut class="mr-2 size-4" />
+                              Exit Team
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <div
+                      v-if="memberships.length === 0"
+                      class="text-muted-foreground py-8 text-center"
+                    >
+                      No teams found.
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
               <TabsContent

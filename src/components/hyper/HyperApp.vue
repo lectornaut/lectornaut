@@ -514,7 +514,7 @@ const randomIndex = () => {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                class="rounded-full"
+                                class="data-[state=open]:bg-accent"
                               >
                                 <IconPlus />
                               </Button>
