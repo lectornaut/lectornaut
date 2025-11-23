@@ -1,6 +1,6 @@
 import { auth, firestore } from "@/modules/firebase"
 import type { IMembership, ITeam, IUser } from "@/types"
-import { onAuthStateChanged, type User } from "firebase/auth"
+import { onAuthStateChanged, updateProfile, type User } from "firebase/auth"
 import {
   collection,
   collectionGroup,
@@ -15,6 +15,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { ref, watch } from "vue"
@@ -64,6 +65,7 @@ export const useTeamStore = defineStore("teams", () => {
               uid: user.uid,
               email: user.email,
               displayName: user.displayName,
+              photoURL: user.photoURL,
               currentTeamId: null,
               createdAt: serverTimestamp() as Timestamp,
               updatedAt: serverTimestamp() as Timestamp,
@@ -337,7 +339,7 @@ export const useTeamStore = defineStore("teams", () => {
     if (!currentUser.value) return
 
     const teamRef = doc(firestore, "teams", teamId)
-    
+
     // Verify ownership (optional but recommended, though rules should handle it)
     // For now, we'll trust the UI to only show this option to owners, and Firestore rules to enforce it.
 
@@ -358,6 +360,87 @@ export const useTeamStore = defineStore("teams", () => {
     }
   }
 
+  const updateUserProfile = async (updates: Partial<IUser>) => {
+    if (!currentUser.value) return
+
+    const { photoURL, ...userUpdates } = updates
+    const userRef = doc(firestore, "users", currentUser.value.uid)
+
+    // 1. Update Auth Profile
+    if (photoURL !== undefined || userUpdates.displayName !== undefined) {
+      console.log("Updating auth profile", {
+        photoURL,
+        displayName: userUpdates.displayName,
+      })
+      try {
+        await updateProfile(currentUser.value, {
+          displayName:
+            userUpdates.displayName ||
+            currentUser.value.displayName ||
+            undefined,
+          photoURL:
+            photoURL === ""
+              ? null
+              : (photoURL ?? currentUser.value.photoURL ?? undefined),
+        })
+        console.log("Auth profile updated successfully")
+      } catch (e) {
+        console.error("Error updating auth profile", e)
+        throw e
+      }
+    }
+
+    // 2. Update User Document
+    if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
+      await updateDoc(userRef, {
+        ...userUpdates,
+        ...(photoURL !== undefined
+          ? { photoURL: photoURL === "" ? null : photoURL }
+          : {}),
+        updatedAt: serverTimestamp(),
+      })
+    }
+
+    // 3. Update All Memberships
+    // We need to find all memberships for this user and update the embedded user data
+    const membershipsQuery = query(
+      collectionGroup(firestore, "memberships"),
+      where("userId", "==", currentUser.value.uid)
+    )
+
+    const membershipDocs = await getDocs(membershipsQuery)
+    const batch = writeBatch(firestore)
+
+    membershipDocs.docs.forEach((doc) => {
+      const membershipData = doc.data() as IMembership
+      const updatedUser = {
+        ...membershipData.user,
+        ...userUpdates,
+        ...(photoURL !== undefined
+          ? { photoURL: photoURL === "" ? null : photoURL }
+          : {}),
+      }
+
+      batch.update(doc.ref, {
+        user: updatedUser,
+        updatedAt: serverTimestamp(),
+      })
+    })
+
+    await batch.commit()
+
+    // Optimistic update
+    if (userProfile.value) {
+      userProfile.value = {
+        ...userProfile.value,
+        ...userUpdates,
+        ...(photoURL !== undefined
+          ? { photoURL: photoURL === "" ? null : photoURL }
+          : {}),
+      }
+    }
+  }
+
   return {
     currentUser,
     userProfile,
@@ -371,5 +454,6 @@ export const useTeamStore = defineStore("teams", () => {
     changeRole,
     removeMember,
     updateTeamName,
+    updateUserProfile,
   }
 })

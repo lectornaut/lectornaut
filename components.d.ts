@@ -345,6 +345,7 @@ declare module 'vue' {
     TagsInputItemText: typeof import('./src/components/ui/tags-input/TagsInputItemText.vue')['default']
     Tasks: typeof import('./src/components/app/layout/Tasks.vue')['default']
     TasksNotifications: typeof import('./src/components/app/layout/TasksNotifications.vue')['default']
+    TeamDialog: typeof import('./src/components/app/teams/TeamDialog.vue')['default']
     Terminal: typeof import('./src/components/app/layout/Terminal.vue')['default']
     Textarea: typeof import('./src/components/ui/textarea/Textarea.vue')['default']
     TextEditor: typeof import('./src/components/editors/text/TextEditor.vue')['default']

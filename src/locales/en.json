@@ -38,7 +38,7 @@
       "appearance": "Customize the appearance of the app.",
       "security": "Manage your security settings.",
       "agents": "Manage your workspace agents.",
-      "people": "Manage people in your organization.",
+      "members": "Manage members in your organization.",
       "teams": "Manage your workspace teams.",
       "runs": "View and manage your runs.",
       "knowledge": "Manage your workspace knowledge base.",
