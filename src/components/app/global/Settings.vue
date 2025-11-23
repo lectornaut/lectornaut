@@ -362,6 +362,19 @@ const { files, open, reset } = useFileDialog()
 
 watch(files, uploadPicture)
 
+const handleRemoveProfilePicture = async () => {
+  try {
+    // Explicitly pass null to remove the profile picture
+    await teamStore.updateUserProfile({ photoURL: null })
+    toast.success("Profile picture removed")
+  } catch (error) {
+    console.error("Error removing profile picture:", error)
+    toast.error("Failed to remove profile picture", {
+      description: (error as Error).message,
+    })
+  }
+}
+
 const { locale, t } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 
@@ -651,7 +664,7 @@ const navigations = computed(() => [
                                   v-if="photoURL"
                                   class="border-background absolute top-0 right-0 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
                                   size="icon"
-                                  @click="photoURL = ''"
+                                  @click="handleRemoveProfilePicture"
                                 >
                                   <IconX />
                                 </Button>

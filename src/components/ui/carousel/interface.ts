@@ -1,6 +1,6 @@
 import type useEmblaCarousel from "embla-carousel-vue"
 import type { EmblaCarouselVueType } from "embla-carousel-vue"
-import type { HTMLAttributes, UnwrapRef } from "vue"
+import type { HTMLAttributes, Ref, UnwrapRef } from "vue"
 
 type CarouselApi = EmblaCarouselVueType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -21,4 +21,14 @@ export interface CarouselEmits {
 
 export interface WithClassAsProps {
   class?: HTMLAttributes["class"]
+}
+
+export interface CarouselContext {
+  carouselRef: ReturnType<typeof useEmblaCarousel>[0]
+  carouselApi: ReturnType<typeof useEmblaCarousel>[1]
+  scrollPrev: () => void
+  scrollNext: () => void
+  canScrollPrev: Ref<boolean>
+  canScrollNext: Ref<boolean>
+  orientation: "horizontal" | "vertical" | undefined
 }

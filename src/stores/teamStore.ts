@@ -1,6 +1,6 @@
 import { auth, firestore } from "@/modules/firebase"
 import type { IMembership, ITeam, IUser } from "@/types"
-import { onAuthStateChanged, updateProfile, type User } from "firebase/auth"
+import { onAuthStateChanged, type User } from "firebase/auth"
 import {
   collection,
   collectionGroup,
@@ -19,6 +19,7 @@ import {
 } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { ref, watch } from "vue"
+import { updateCurrentUserProfile } from "vuefire"
 
 export const useTeamStore = defineStore("teams", () => {
   const currentUser = ref<User | null>(null)
@@ -373,13 +374,13 @@ export const useTeamStore = defineStore("teams", () => {
         displayName: userUpdates.displayName,
       })
       try {
-        await updateProfile(currentUser.value, {
+        await updateCurrentUserProfile({
           displayName:
             userUpdates.displayName ||
             currentUser.value.displayName ||
             undefined,
           photoURL:
-            photoURL === ""
+            photoURL === "" || photoURL === null
               ? null
               : (photoURL ?? currentUser.value.photoURL ?? undefined),
         })
