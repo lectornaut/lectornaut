@@ -10,7 +10,7 @@ const { t } = useI18n()
       preserveAspectRatio="xMinYMin"
       width="100%"
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 132 16"
+      viewBox="0 0 64 16"
     >
       <text
         xmlns="http://www.w3.org/2000/svg"
@@ -30,7 +30,7 @@ const { t } = useI18n()
       preserveAspectRatio="xMinYMin"
       width="100%"
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 132 16"
+      viewBox="0 0 64 16"
     >
       <text
         xmlns="http://www.w3.org/2000/svg"
@@ -44,9 +44,8 @@ const { t } = useI18n()
         class="font-display fill-current leading-tight tracking-tight"
       >
         <tspan alignment-baseline="middle" class="italic">
-          {{ t("landing.hero.line2.part1") }}
+          {{ t("landing.hero.line2") }}
         </tspan>
-        {{ t("landing.hero.line2.part2") }}
       </text>
     </svg>
   </div>

@@ -296,11 +296,8 @@
       "menuDescription": "Access all the features and settings of Lectornaut."
     },
     "hero": {
-      "line1": "Learn anything",
-      "line2": {
-        "part1": "your",
-        "part2": "way"
-      }
+      "line1": "Learn",
+      "line2": "Anything"
     },
     "menu": {
       "products": "Products",
@@ -425,7 +422,7 @@
         "professional": "Professional",
         "business": "Business",
         "enterprise": "Enterprise",
-        "nonProfit": "Non-Profit",
+        "nonprofit": "Non-Profit",
         "about": "About",
         "careers": "Careers",
         "contact": "Contact",
@@ -437,7 +434,7 @@
         "documentation": "Documentation",
         "blog": "Blog",
         "security": "Security",
-        "helpCenter": "Help Center",
+        "helpcenter": "Help Center",
         "terms": "Terms",
         "privacy": "Privacy",
         "dpa": "DPA"

@@ -5,5 +5,9 @@ service firebase.storage {
     match /{userId}/{allPaths=**} {
       allow create, read, update, delete: if request.auth.uid == userId;
     }
+    match /teams/{teamId}/profilePhoto {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
   }
 }

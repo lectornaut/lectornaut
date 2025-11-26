@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import { IconX } from "@/data/icons"
+import { getInitials } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import type { ITeam } from "@/types"
+import { useFileDialog } from "@vueuse/core"
 import { ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
@@ -27,6 +29,34 @@ const inviteEmail = ref("")
 const inviteRole = ref<"owner" | "member">("member")
 const pendingInvites = ref<{ email: string; role: "owner" | "member" }[]>([])
 
+// Photo Upload State
+const photoFile = ref<File | null>(null)
+const photoPreview = ref<string | null>(null)
+const {
+  files,
+  open: openFileDialog,
+  reset,
+} = useFileDialog({
+  accept: "image/*",
+  multiple: false,
+})
+
+watch(files, (newFiles) => {
+  if (newFiles && newFiles.length > 0) {
+    const file = newFiles.item(0)
+    if (file) {
+      photoFile.value = file
+      photoPreview.value = URL.createObjectURL(file)
+    }
+  }
+})
+
+const removePhoto = () => {
+  photoFile.value = null
+  photoPreview.value = null
+  reset()
+}
+
 // Sync internal open state with prop
 watch(
   () => props.open,
@@ -44,11 +74,15 @@ watch(isOpen, (val) => {
       inviteEmail.value = ""
       inviteRole.value = "member"
       pendingInvites.value = []
+      photoFile.value = null
+      photoPreview.value = null
+      reset()
     }, 300)
   } else {
     // Initialize form when opened
     if (props.mode === "edit" && props.team) {
       teamName.value = props.team.name
+      photoPreview.value = props.team.photoURL || null
     }
   }
 })
@@ -76,11 +110,34 @@ const handleSubmit = async () => {
   try {
     if (props.mode === "create") {
       // 1. Create Team
-      await teamStore.createTeam(teamName.value)
+      await teamStore.createTeam(teamName.value, photoFile.value || undefined)
       toast.success("Team created successfully")
     } else if (props.mode === "edit" && props.team) {
-      // Update Team Name
-      await teamStore.updateTeamName(props.team.id, teamName.value)
+      // Update Team
+      // If photoFile is set, we upload it.
+      // If photoPreview is null but we had a photo, it means we removed it.
+      // However, my logic for removePhoto sets photoFile to null and preview to null.
+      // If I want to support removing the photo, I need to distinguish between "no change" and "remove".
+      // Current logic:
+      // - If photoFile is present -> Upload new photo
+      // - If photoFile is null AND photoPreview is null AND props.team.photoURL is present -> Remove photo
+      // - Else -> No change to photo
+
+      let filePayload: File | null | undefined = undefined
+      if (photoFile.value) {
+        filePayload = photoFile.value
+      } else if (
+        props.team.photoURL &&
+        !photoPreview.value &&
+        !photoFile.value
+      ) {
+        filePayload = null // Signal to remove photo
+      }
+
+      await teamStore.updateTeam(props.team.id, {
+        name: teamName.value,
+        photoFile: filePayload,
+      })
       toast.success("Team updated successfully")
     }
 
@@ -138,13 +195,65 @@ const handleSubmit = async () => {
             mode === "create"
               ? "Add a new team to manage products and customers."
               : mode === "edit"
-                ? "Update your team name."
+                ? "Update your team name and profile picture."
                 : "Invite new members to your team."
           }}
         </DialogDescription>
       </DialogHeader>
 
       <div class="mt-4 grid gap-4">
+        <!-- Team Profile Picture (Create/Edit Mode) -->
+        <div
+          v-if="mode === 'create' || mode === 'edit'"
+          class="flex flex-col items-center gap-2"
+        >
+          <div class="group relative">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Avatar
+                    class="size-16 cursor-pointer"
+                    @click="
+                      openFileDialog({ accept: 'image/*', multiple: false })
+                    "
+                  >
+                    <AvatarImage
+                      v-if="photoPreview"
+                      :src="photoPreview"
+                      class="object-cover"
+                    />
+                    <AvatarFallback>
+                      {{ getInitials(teamName || "T") }}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent> Upload team photo </TooltipContent>
+              </Tooltip>
+              <div
+                v-if="photoPreview"
+                class="absolute -top-1 -right-1 opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      class="size-6 rounded-full p-0"
+                      @click.stop="removePhoto"
+                    >
+                      <IconX class="size-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent> Remove team photo </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          </div>
+          <p class="text-muted-foreground text-xs">
+            {{ photoPreview ? "Click to change" : "Click to upload logo" }}
+          </p>
+        </div>
+
         <!-- Team Name (Create/Edit Mode) -->
         <div v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
           <Label class="text-secondary-foreground text-xs" for="name">

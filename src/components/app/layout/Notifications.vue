@@ -123,7 +123,7 @@ const notifications = [
             </ItemDescription>
           </ItemContent>
           <ItemActions>
-            <ToggleGroup type="single" variant="outline" size="sm">
+            <ToggleGroup type="single" variant="outline">
               <ToggleGroupItem value="saved">
                 <IconBookmark />
                 <!-- Save -->

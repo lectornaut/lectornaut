@@ -5,6 +5,7 @@ import {
   IconArrowRight,
   IconCloudCheck,
   IconGlobe,
+  IconHand,
   IconLayerFill,
   IconMaximize,
   IconMinimize,
@@ -15,6 +16,7 @@ import {
   IconPanelRight,
   IconPanelRightClose,
   IconPlus,
+  IconPointerClick,
   IconRefreshCcw,
   IconTerminal,
   IconX,
@@ -131,14 +133,43 @@ const closeTab = (id: string) => {
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
-          <ResizableHandle
-            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-40 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
-            @dblclick="
-              leftPanel?.splitterPanel?.isCollapsed
-                ? leftPanel?.splitterPanel?.expand()
-                : leftPanel?.splitterPanel?.collapse()
-            "
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <ResizableHandle
+                  class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-40 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+                  @dblclick="
+                    leftPanel?.splitterPanel?.isCollapsed
+                      ? leftPanel?.splitterPanel?.expand()
+                      : leftPanel?.splitterPanel?.collapse()
+                  "
+                />
+              </TooltipTrigger>
+              <TooltipContent side="right" class="p-1!">
+                <div class="flex flex-col gap-1">
+                  <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <span class="flex items-center gap-2">
+                      <IconHand /> Drag to resize
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <IconPointerClick /> Double click to toggle
+                    </span>
+                  </div>
+                  <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <span class="flex items-center gap-2">
+                      <Kbd>←</Kbd> Narrow
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <Kbd>→</Kbd> Widen
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <Kbd>⇧</Kbd> Large steps
+                    </span>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <ResizablePanel>
             <ResizablePanelGroup
               direction="vertical"
@@ -178,14 +209,43 @@ const closeTab = (id: string) => {
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
-              <ResizableHandle
-                class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
-                @dblclick="
-                  bottomPanel?.splitterPanel?.isCollapsed
-                    ? bottomPanel?.splitterPanel?.expand()
-                    : bottomPanel?.splitterPanel?.collapse()
-                "
-              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <ResizableHandle
+                      class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                      @dblclick="
+                        bottomPanel?.splitterPanel?.isCollapsed
+                          ? bottomPanel?.splitterPanel?.expand()
+                          : bottomPanel?.splitterPanel?.collapse()
+                      "
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" class="p-1!">
+                    <div class="flex flex-col gap-1">
+                      <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                        <span class="flex items-center gap-2">
+                          <IconHand /> Drag to resize
+                        </span>
+                        <span class="flex items-center gap-2">
+                          <IconPointerClick /> Double click to toggle
+                        </span>
+                      </div>
+                      <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                        <span class="flex items-center gap-2">
+                          <Kbd>←</Kbd> Narrow
+                        </span>
+                        <span class="flex items-center gap-2">
+                          <Kbd>→</Kbd> Widen
+                        </span>
+                        <span class="flex items-center gap-2">
+                          <Kbd>⇧</Kbd> Large steps
+                        </span>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <ContextMenu>
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
@@ -367,14 +427,43 @@ const closeTab = (id: string) => {
               </ContextMenu>
             </ResizablePanelGroup>
           </ResizablePanel>
-          <ResizableHandle
-            class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
-            @dblclick="
-              rightPanel?.splitterPanel?.isCollapsed
-                ? rightPanel?.splitterPanel?.expand()
-                : rightPanel?.splitterPanel?.collapse()
-            "
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <ResizableHandle
+                  class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
+                  @dblclick="
+                    rightPanel?.splitterPanel?.isCollapsed
+                      ? rightPanel?.splitterPanel?.expand()
+                      : rightPanel?.splitterPanel?.collapse()
+                  "
+                />
+              </TooltipTrigger>
+              <TooltipContent side="left" class="p-1!">
+                <div class="flex flex-col gap-1">
+                  <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <span class="flex items-center gap-2">
+                      <IconHand /> Drag to resize
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <IconPointerClick /> Double click to toggle
+                    </span>
+                  </div>
+                  <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <span class="flex items-center gap-2">
+                      <Kbd>←</Kbd> Narrow
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <Kbd>→</Kbd> Widen
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <Kbd>⇧</Kbd> Large steps
+                    </span>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <ContextMenu>
             <ContextMenuTrigger as-child>
               <ResizablePanel

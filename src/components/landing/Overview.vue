@@ -15,8 +15,8 @@ import {
 </script>
 
 <template>
-  <ul class="flex flex-col gap-5">
-    <li class="flex items-start gap-3">
+  <ul class="flex flex-col gap-2">
+    <li class="flex items-center gap-3">
       <IconDisc />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Agents </span>
@@ -26,7 +26,7 @@ import {
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3">
+    <li class="flex items-center gap-3">
       <IconPencil />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Create </span>
@@ -36,7 +36,7 @@ import {
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3">
+    <li class="flex items-center gap-3">
       <IconMessageCircleMore />
       <p class="leading-loose first-line:leading-none">
         <span class="font-semibold"> Communicate </span>
@@ -46,7 +46,7 @@ import {
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3">
+    <li class="flex items-center gap-3">
       <IconLeaf />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
@@ -85,7 +85,7 @@ import {
         </span>
       </p>
     </li>
-    <li class="flex items-start gap-3">
+    <li class="flex items-center gap-3">
       <IconHeart />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">

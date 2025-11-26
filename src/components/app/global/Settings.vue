@@ -24,6 +24,7 @@ import {
   IconPencil,
   IconPlus,
   IconSettings,
+  IconTrash,
   IconUsersRound,
   IconX,
 } from "@/data/icons"
@@ -39,7 +40,7 @@ import { getInitials } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import { accent, font, size, store, zoom } from "@/modules/theme"
 import { useTeamStore } from "@/stores/teamStore"
-import type { ITeam } from "@/types"
+import type { IMembership, ITeam } from "@/types"
 import {
   deleteUser,
   sendEmailVerification,
@@ -155,6 +156,33 @@ const handleExitTeam = async (teamId: string) => {
     })
   } finally {
     exitingTeamMap.value[teamId] = false
+  }
+}
+
+const isDeleteTeamDialogOpen = ref(false)
+const teamToDelete = ref<ITeam | null>(null)
+const isDeletingTeam = ref(false)
+
+const confirmDeleteTeam = (team: ITeam) => {
+  teamToDelete.value = team
+  isDeleteTeamDialogOpen.value = true
+}
+
+const handleDeleteTeam = async () => {
+  if (!teamToDelete.value) return
+  isDeletingTeam.value = true
+  try {
+    await teamStore.deleteTeam(teamToDelete.value.id)
+    toast.success("Team deleted successfully")
+    isDeleteTeamDialogOpen.value = false
+  } catch (error) {
+    console.error("Error deleting team:", error)
+    toast.error("Failed to delete team", {
+      description: (error as Error).message,
+    })
+  } finally {
+    isDeletingTeam.value = false
+    teamToDelete.value = null
   }
 }
 
@@ -361,6 +389,59 @@ const filename = ref<string>()
 const { files, open, reset } = useFileDialog()
 
 watch(files, uploadPicture)
+
+const teamIdToUpdate = ref<string | null>(null)
+const {
+  files: teamFiles,
+  open: openTeamUpload,
+  reset: resetTeamUpload,
+} = useFileDialog({
+  accept: "image/*",
+  multiple: false,
+})
+
+const handleTeamAvatarClick = (membership: IMembership) => {
+  if (membership.role !== "owner") return
+  teamIdToUpdate.value = membership.teamId
+  openTeamUpload()
+}
+
+const updatingTeamPhotoMap = ref<Record<string, boolean>>({})
+
+watch(teamFiles, async (newFiles) => {
+  if (newFiles && newFiles.length > 0 && teamIdToUpdate.value) {
+    const file = newFiles.item(0)
+    const teamId = teamIdToUpdate.value
+    if (file) {
+      updatingTeamPhotoMap.value[teamId] = true
+      try {
+        toast.info("Uploading team photo...")
+        await teamStore.updateTeam(teamId, { photoFile: file })
+        toast.success("Team photo updated")
+      } catch (e) {
+        console.error("Error updating team photo:", e)
+        toast.error("Failed to update team photo")
+      } finally {
+        updatingTeamPhotoMap.value[teamId] = false
+      }
+    }
+    resetTeamUpload()
+    teamIdToUpdate.value = null
+  }
+})
+
+const handleRemoveTeamPhoto = async (teamId: string) => {
+  updatingTeamPhotoMap.value[teamId] = true
+  try {
+    await teamStore.updateTeam(teamId, { photoFile: null })
+    toast.success("Team photo removed")
+  } catch (e) {
+    console.error("Error removing team photo:", e)
+    toast.error("Failed to remove team photo")
+  } finally {
+    updatingTeamPhotoMap.value[teamId] = false
+  }
+}
 
 const handleRemoveProfilePicture = async () => {
   try {
@@ -1559,6 +1640,33 @@ const navigations = computed(() => [
                         />
                       </Field>
                     </FieldGroup>
+
+                    <AlertDialog v-model:open="isDeleteTeamDialogOpen">
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Team</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete
+                            <span class="text-foreground font-medium">{{
+                              teamToDelete?.name
+                            }}</span
+                            >? This action cannot be undone and will permanently
+                            delete the team and all its data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            variant="destructive"
+                            :disabled="isDeletingTeam"
+                            @click.prevent="handleDeleteTeam"
+                          >
+                            <Spinner v-if="isDeletingTeam" />
+                            Delete Team
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
 
                   <div class="space-y-4">
@@ -1581,15 +1689,80 @@ const navigations = computed(() => [
                           >
                             <TableCell>
                               <div class="flex items-center gap-4">
-                                <Avatar class="rounded-lg">
-                                  <AvatarImage
-                                    :src="`https://avatar.vercel.sh/${membership.team?.id}.png`"
-                                    :alt="membership.team?.name"
-                                  />
-                                  <AvatarFallback>{{
-                                    getInitials(membership.team?.name)
-                                  }}</AvatarFallback>
-                                </Avatar>
+                                <div class="group relative">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger as-child>
+                                        <Avatar
+                                          class="rounded-lg"
+                                          :class="{
+                                            'cursor-pointer hover:opacity-80':
+                                              membership.role === 'owner',
+                                          }"
+                                          @click="
+                                            handleTeamAvatarClick(membership)
+                                          "
+                                        >
+                                          <template
+                                            v-if="
+                                              updatingTeamPhotoMap[
+                                                membership.teamId
+                                              ]
+                                            "
+                                          >
+                                            <Spinner />
+                                          </template>
+                                          <template v-else>
+                                            <AvatarImage
+                                              :src="
+                                                membership.team?.photoURL ||
+                                                `https://avatar.vercel.sh/${membership.team?.id}.png`
+                                              "
+                                              :alt="membership.team?.name"
+                                            />
+                                            <AvatarFallback>{{
+                                              getInitials(membership.team?.name)
+                                            }}</AvatarFallback>
+                                          </template>
+                                        </Avatar>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        v-if="membership.role === 'owner'"
+                                      >
+                                        {{
+                                          updatingTeamPhotoMap[
+                                            membership.teamId
+                                          ]
+                                            ? "Uploading..."
+                                            : "Upload team photo"
+                                        }}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip
+                                      v-if="
+                                        membership.role === 'owner' &&
+                                        membership.team?.photoURL
+                                      "
+                                    >
+                                      <TooltipTrigger as-child>
+                                        <Button
+                                          class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                                          size="icon"
+                                          @click.stop="
+                                            handleRemoveTeamPhoto(
+                                              membership.teamId
+                                            )
+                                          "
+                                        >
+                                          <IconX />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        Remove team photo
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
                                 <div>
                                   <div class="font-medium">
                                     {{ membership.team?.name }}
@@ -1653,6 +1826,18 @@ const navigations = computed(() => [
                                     >
                                       <IconLogOut />
                                       Exit Team
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator
+                                      v-if="membership.role === 'owner'"
+                                    />
+                                    <DropdownMenuItem
+                                      v-if="membership.role === 'owner'"
+                                      @click="
+                                        confirmDeleteTeam(membership.team!)
+                                      "
+                                    >
+                                      <IconTrash />
+                                      Delete Team
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>

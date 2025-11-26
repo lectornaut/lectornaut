@@ -31,8 +31,8 @@ const isDocked = ref(false)
           </span>
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
-          <Tabs default-value="saved">
-            <div class="w-80">
+          <Tabs default-value="inbox">
+            <div class="w-96">
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
@@ -48,18 +48,22 @@ const isDocked = ref(false)
                   Tasks
                 </h3>
                 <TabsList>
+                  <TabsTrigger value="inbox">
+                    <IconInbox />
+                    Inbox
+                  </TabsTrigger>
                   <TabsTrigger value="saved">
                     <IconBookmark />
-                    <!-- Saved -->
+                    Saved
                   </TabsTrigger>
                   <TabsTrigger value="done">
                     <IconCheck />
-                    <!-- Done -->
+                    Done
                   </TabsTrigger>
                 </TabsList>
               </div>
               <Separator />
-              <div class="flex h-72 flex-col overflow-y-auto">
+              <div class="flex h-96 flex-col overflow-y-auto">
                 <Tasks />
               </div>
               <Separator />
@@ -71,6 +75,12 @@ const isDocked = ref(false)
                   New task
                 </Button>
                 <div>
+                  <TabsContent value="inbox">
+                    <Button variant="ghost" size="sm">
+                      <IconCheckCheck />
+                      Mark all as done
+                    </Button>
+                  </TabsContent>
                   <TabsContent value="saved">
                     <Button variant="ghost" size="sm">
                       <IconCheckCheck />
@@ -100,8 +110,8 @@ const isDocked = ref(false)
           </span>
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
-          <Tabs default-value="saved">
-            <div class="w-80">
+          <Tabs default-value="inbox">
+            <div class="w-96">
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
@@ -117,18 +127,22 @@ const isDocked = ref(false)
                   Notifications
                 </h3>
                 <TabsList>
+                  <TabsTrigger value="inbox">
+                    <IconInbox />
+                    Inbox
+                  </TabsTrigger>
                   <TabsTrigger value="saved">
                     <IconBookmark />
-                    <!-- Saved -->
+                    Saved
                   </TabsTrigger>
                   <TabsTrigger value="done">
                     <IconCheck />
-                    <!-- Done -->
+                    Done
                   </TabsTrigger>
                 </TabsList>
               </div>
               <Separator />
-              <div class="flex h-72 flex-col overflow-y-auto">
+              <div class="flex h-96 flex-col overflow-y-auto">
                 <Notifications />
               </div>
               <Separator />
@@ -140,6 +154,12 @@ const isDocked = ref(false)
                   New task
                 </Button>
                 <div>
+                  <TabsContent value="inbox">
+                    <Button variant="ghost" size="sm">
+                      <IconCheckCheck />
+                      Mark all as done
+                    </Button>
+                  </TabsContent>
                   <TabsContent value="saved">
                     <Button variant="ghost" size="sm">
                       <IconCheckCheck />

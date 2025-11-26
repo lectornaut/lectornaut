@@ -102,6 +102,7 @@ import IconLucideGrid2X2Plus from "~icons/lucide/grid-2-x-2-plus"
 import IconLucideGripHorizontal from "~icons/lucide/grip-horizontal"
 import IconLucideGripVertical from "~icons/lucide/grip-vertical"
 import IconLucideGroup from "~icons/lucide/group"
+import IconLucideHand from "~icons/lucide/hand"
 import IconLucideHash from "~icons/lucide/hash"
 import IconLucideHeading1 from "~icons/lucide/heading-1"
 import IconLucideHeading2 from "~icons/lucide/heading-2"
@@ -146,6 +147,7 @@ import IconLucideMonitor from "~icons/lucide/monitor"
 import IconLucideMoon from "~icons/lucide/moon"
 import IconLucideMoreHorizontal from "~icons/lucide/more-horizontal"
 import IconLucideMoreVertical from "~icons/lucide/more-vertical"
+import IconLucidePointerClick from "~icons/lucide/mouse-pointer-click"
 import IconLucidePalette from "~icons/lucide/palette"
 import IconLucidePanelBottom from "~icons/lucide/panel-bottom"
 import IconLucidePanelBottomClose from "~icons/lucide/panel-bottom-close"
@@ -356,6 +358,7 @@ export {
   IconLucideGripHorizontal as IconGripHorizontal,
   IconLucideGripVertical as IconGripVertical,
   IconLucideGroup as IconGroup,
+  IconLucideHand as IconHand,
   IconLucideHash as IconHash,
   IconLucideHeading1 as IconHeading1,
   IconLucideHeading2 as IconHeading2,
@@ -430,6 +433,7 @@ export {
   IconLucidePlug as IconPlug,
   IconLucidePlus as IconPlus,
   IconLucidePlusSquare as IconPlusSquare,
+  IconLucidePointerClick as IconPointerClick,
   IconLucideQuote as IconQuote,
   IconSimpleIconsRakuten as IconRakuten,
   IconLucideRefreshCcw as IconRefreshCcw,

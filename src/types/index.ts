@@ -11,6 +11,7 @@ export interface ITodo {
 export interface ITeam {
   id: string
   name: string
+  photoURL?: string | null
   createdAt: Timestamp
   updatedAt: Timestamp
 }

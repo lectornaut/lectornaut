@@ -1,17 +1,17 @@
 <template>
   <div class="flex grow flex-col">
     <OverlayScrollbarsWrapper>
+      <img
+        src="/assets/images/shadow.png"
+        alt="Hero"
+        class="pointer-events-none absolute top-0 left-0 h-auto w-full opacity-25 invert"
+      />
       <Header />
       <Separator />
       <RouterView />
       <QRCode />
       <CTA />
       <Footer />
-      <img
-        src="/assets/images/shadow.png"
-        alt="Hero"
-        class="pointer-events-none absolute inset-0 size-full object-cover opacity-25 invert"
-      />
     </OverlayScrollbarsWrapper>
   </div>
 </template>

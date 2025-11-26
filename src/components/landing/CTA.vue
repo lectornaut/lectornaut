@@ -29,10 +29,16 @@ hotkeys("enter", (event) => {
         <Spinner />
       </Button>
       <Button v-else-if="user" as-child>
-        <RouterLink to="/home"> {{ t("landing.cta.enter") }} </RouterLink>
+        <RouterLink to="/home">
+          {{ t("landing.cta.enter") }}
+          <Kbd>↩</Kbd>
+        </RouterLink>
       </Button>
       <EnterTrigger v-else>
-        <Button> {{ t("landing.cta.enter") }} </Button>
+        <Button>
+          {{ t("landing.cta.enter") }}
+          <Kbd>↩</Kbd>
+        </Button>
       </EnterTrigger>
       <Faq />
     </div>

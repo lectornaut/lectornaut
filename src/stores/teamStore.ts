@@ -1,10 +1,12 @@
-import { auth, firestore } from "@/modules/firebase"
+import { auth, firestore, storage } from "@/modules/firebase"
 import type { IMembership, ITeam, IUser } from "@/types"
 import { onAuthStateChanged, type User } from "firebase/auth"
 import {
   collection,
   collectionGroup,
+  deleteDoc,
   doc,
+  FieldValue,
   getDoc,
   getDocs,
   onSnapshot,
@@ -15,11 +17,31 @@ import {
   Timestamp,
   updateDoc,
   where,
+  WriteBatch,
   writeBatch,
 } from "firebase/firestore"
+import {
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytes,
+} from "firebase/storage"
 import { defineStore } from "pinia"
 import { ref, watch } from "vue"
 import { updateCurrentUserProfile } from "vuefire"
+
+// Helper to process Firestore batch operations in chunks
+async function processInBatches<T>(
+  items: T[],
+  processFn: (item: T, batch: WriteBatch) => void
+) {
+  const BATCH_SIZE = 450
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const chunk = items.slice(i, i + BATCH_SIZE)
+    const batch = writeBatch(firestore)
+    chunk.forEach((item) => processFn(item, batch))
+    await batch.commit()
+  }
+}
 
 export const useTeamStore = defineStore("teams", () => {
   const currentUser = ref<User | null>(null)
@@ -42,6 +64,8 @@ export const useTeamStore = defineStore("teams", () => {
 
   // Watch for currentUser changes to fetch user profile
   let userUnsubscribe: (() => void) | null = null
+  let membershipsUnsubscribe: (() => void) | null = null
+  let teamMembersUnsubscribe: (() => void) | null = null
 
   watch(
     currentUser,
@@ -83,60 +107,98 @@ export const useTeamStore = defineStore("teams", () => {
 
   // Watch for userProfile changes to fetch memberships and current team
   watch(
-    userProfile,
-    async (profile) => {
-      if (profile) {
+    () => userProfile.value?.uid,
+    async (uid) => {
+      // Unsubscribe from previous memberships listener
+      if (membershipsUnsubscribe) {
+        membershipsUnsubscribe()
+        membershipsUnsubscribe = null
+      }
+
+      if (uid) {
         // Fetch all memberships for this user
         const membershipsQuery = query(
           collectionGroup(firestore, "memberships"),
-          where("userId", "==", profile.uid)
+          where("userId", "==", uid)
         )
 
-        onSnapshot(membershipsQuery, (snapshot) => {
+        membershipsUnsubscribe = onSnapshot(membershipsQuery, (snapshot) => {
           memberships.value = snapshot.docs.map(
             (doc) => doc.data() as IMembership
           )
         })
-
-        // Fetch current team if set
-        if (profile.currentTeamId) {
-          const teamRef = doc(firestore, "teams", profile.currentTeamId)
-          const teamSnap = await getDoc(teamRef)
-          if (teamSnap.exists()) {
-            currentTeam.value = teamSnap.data() as ITeam
-          }
-        } else {
-          currentTeam.value = null
-        }
+      } else {
+        memberships.value = []
       }
-    },
-    { deep: true }
+    }
+  )
+
+  // Watch for currentTeamId changes to fetch current team data
+  watch(
+    () => userProfile.value?.currentTeamId,
+    async (teamId) => {
+      if (teamId) {
+        const teamRef = doc(firestore, "teams", teamId)
+        const teamSnap = await getDoc(teamRef)
+        if (teamSnap.exists()) {
+          currentTeam.value = teamSnap.data() as ITeam
+        }
+      } else {
+        currentTeam.value = null
+      }
+    }
   )
 
   // Watch currentTeam to fetch its members
-  watch(currentTeam, async (team) => {
-    if (team) {
-      const membersRef = collection(firestore, "teams", team.id, "memberships")
-      onSnapshot(membersRef, (snapshot) => {
-        teamMembers.value = snapshot.docs.map(
-          (doc) => doc.data() as IMembership
-        )
-      })
-    } else {
-      teamMembers.value = []
-    }
-  })
+  watch(
+    () => currentTeam.value?.id,
+    async (teamId) => {
+      // Unsubscribe from previous team members listener
+      if (teamMembersUnsubscribe) {
+        teamMembersUnsubscribe()
+        teamMembersUnsubscribe = null
+      }
 
-  const createTeam = async (name: string) => {
+      if (teamId) {
+        const membersRef = collection(firestore, "teams", teamId, "memberships")
+        teamMembersUnsubscribe = onSnapshot(membersRef, (snapshot) => {
+          teamMembers.value = snapshot.docs.map(
+            (doc) => doc.data() as IMembership
+          )
+        })
+      } else {
+        teamMembers.value = []
+      }
+    }
+  )
+
+  const uploadTeamPhoto = async (teamId: string, file: File) => {
+    const fileRef = storageRef(storage, `teams/${teamId}/profilePhoto`)
+    await uploadBytes(fileRef, file)
+    return await getDownloadURL(fileRef)
+  }
+
+  const createTeam = async (name: string, photoFile?: File) => {
     if (!currentUser.value || !userProfile.value) return
 
     const teamRef = doc(collection(firestore, "teams"))
     const teamId = teamRef.id
     const timestamp = serverTimestamp()
 
+    let photoURL = null
+    if (photoFile) {
+      try {
+        photoURL = await uploadTeamPhoto(teamId, photoFile)
+      } catch (error) {
+        console.error("Error uploading team photo:", error)
+        // Continue creating team even if photo upload fails
+      }
+    }
+
     const newTeam: ITeam = {
       id: teamId,
       name,
+      photoURL,
       createdAt: timestamp as Timestamp,
       updatedAt: timestamp as Timestamp,
     }
@@ -190,174 +252,306 @@ export const useTeamStore = defineStore("teams", () => {
   const switchTeam = async (teamId: string) => {
     if (!currentUser.value) return
 
-    const userRef = doc(firestore, "users", currentUser.value.uid)
-    await updateDoc(userRef, {
-      currentTeamId: teamId,
-      updatedAt: serverTimestamp(),
-    })
+    try {
+      const userRef = doc(firestore, "users", currentUser.value.uid)
+      await updateDoc(userRef, {
+        currentTeamId: teamId,
+        updatedAt: serverTimestamp(),
+      })
 
-    // Optimistic update
-    if (userProfile.value) {
-      userProfile.value.currentTeamId = teamId
+      // Optimistic update
+      if (userProfile.value) {
+        userProfile.value.currentTeamId = teamId
+      }
+    } catch (error) {
+      console.error("Error switching team:", error)
+      throw error
     }
   }
 
   const inviteMember = async (email: string, role: string = "member") => {
     if (!currentUser.value || !currentTeam.value) return
 
-    // 1. Find user by email
-    const usersRef = collection(firestore, "users")
-    const q = query(usersRef, where("email", "==", email))
-    const querySnapshot = await getDocs(q)
+    try {
+      // 1. Find user by email
+      const usersRef = collection(firestore, "users")
+      const q = query(usersRef, where("email", "==", email))
+      const querySnapshot = await getDocs(q)
 
-    if (querySnapshot.empty) {
-      throw new Error("User not found")
+      if (querySnapshot.empty) {
+        throw new Error("User not found")
+      }
+
+      const userDoc = querySnapshot.docs[0]
+      if (!userDoc) {
+        throw new Error("User document is undefined")
+      }
+      const userData = userDoc.data() as IUser
+      const userId = userDoc.id
+
+      // 2. Check if already a member
+      const membershipRef = doc(
+        firestore,
+        "teams",
+        currentTeam.value.id,
+        "memberships",
+        userId
+      )
+      const membershipSnap = await getDoc(membershipRef)
+
+      if (membershipSnap.exists()) {
+        throw new Error("User is already a member")
+      }
+
+      // 3. Create membership
+      const timestamp = serverTimestamp()
+      const newMembership: IMembership = {
+        id: userId,
+        userId: userId,
+        teamId: currentTeam.value.id,
+        role: role as IMembership["role"],
+        user: userData,
+        team: currentTeam.value,
+        createdAt: timestamp as Timestamp,
+        updatedAt: timestamp as Timestamp,
+      }
+
+      await setDoc(membershipRef, newMembership)
+    } catch (error) {
+      console.error("Error inviting member:", error)
+      throw error
     }
-
-    const userDoc = querySnapshot.docs[0]
-    if (!userDoc) {
-      throw new Error("User document is undefined")
-    }
-    const userData = userDoc.data() as IUser
-    const userId = userDoc.id
-
-    // 2. Check if already a member
-    const membershipRef = doc(
-      firestore,
-      "teams",
-      currentTeam.value.id,
-      "memberships",
-      userId
-    )
-    const membershipSnap = await getDoc(membershipRef)
-
-    if (membershipSnap.exists()) {
-      throw new Error("User is already a member")
-    }
-
-    // 3. Create membership
-    const timestamp = serverTimestamp()
-    const newMembership: IMembership = {
-      id: userId,
-      userId: userId,
-      teamId: currentTeam.value.id,
-      role: role as IMembership["role"],
-      user: userData,
-      team: currentTeam.value,
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
-    }
-
-    await setDoc(membershipRef, newMembership)
   }
 
   const changeRole = async (userId: string, newRole: IMembership["role"]) => {
     if (!currentTeam.value) return
 
-    const membershipRef = doc(
-      firestore,
-      "teams",
-      currentTeam.value.id,
-      "memberships",
-      userId
-    )
-    const membershipSnap = await getDoc(membershipRef)
+    try {
+      const membershipRef = doc(
+        firestore,
+        "teams",
+        currentTeam.value.id,
+        "memberships",
+        userId
+      )
+      const membershipSnap = await getDoc(membershipRef)
 
-    if (!membershipSnap.exists()) {
-      throw new Error("Membership not found")
-    }
-
-    const currentMembership = membershipSnap.data() as IMembership
-
-    // Prevent changing role if this is the last owner
-    if (currentMembership.role === "owner" && newRole !== "owner") {
-      const ownerCount = teamMembers.value.filter(
-        (m) => m.role === "owner"
-      ).length
-      if (ownerCount <= 1) {
-        throw new Error("Cannot change role: Team must have at least one owner")
+      if (!membershipSnap.exists()) {
+        throw new Error("Membership not found")
       }
-    }
 
-    await updateDoc(membershipRef, {
-      role: newRole,
-      updatedAt: serverTimestamp(),
-    })
+      const currentMembership = membershipSnap.data() as IMembership
+
+      // Prevent changing role if this is the last owner
+      if (currentMembership.role === "owner" && newRole !== "owner") {
+        const ownerCount = teamMembers.value.filter(
+          (m) => m.role === "owner"
+        ).length
+        if (ownerCount <= 1) {
+          throw new Error(
+            "Cannot change role: Team must have at least one owner"
+          )
+        }
+      }
+
+      await updateDoc(membershipRef, {
+        role: newRole,
+        updatedAt: serverTimestamp(),
+      })
+    } catch (error) {
+      console.error("Error changing role:", error)
+      throw error
+    }
   }
 
   const removeMember = async (userId: string) => {
     if (!currentTeam.value) return
 
-    const membershipRef = doc(
-      firestore,
-      "teams",
-      currentTeam.value.id,
-      "memberships",
-      userId
-    )
-    const membershipSnap = await getDoc(membershipRef)
-
-    if (!membershipSnap.exists()) {
-      throw new Error("Membership not found")
-    }
-
-    const membershipToRemove = membershipSnap.data() as IMembership
-
-    // Prevent removing the last member from the team
-    if (teamMembers.value.length <= 1) {
-      throw new Error(
-        "Cannot remove the last member. Every team must have at least one member."
+    try {
+      const membershipRef = doc(
+        firestore,
+        "teams",
+        currentTeam.value.id,
+        "memberships",
+        userId
       )
-    }
+      const membershipSnap = await getDoc(membershipRef)
 
-    // Prevent removing the last owner
-    if (membershipToRemove.role === "owner") {
-      const ownerCount = teamMembers.value.filter(
-        (m) => m.role === "owner"
-      ).length
-      if (ownerCount <= 1) {
+      if (!membershipSnap.exists()) {
+        throw new Error("Membership not found")
+      }
+
+      const membershipToRemove = membershipSnap.data() as IMembership
+
+      // Prevent removing the last member from the team
+      if (teamMembers.value.length <= 1) {
         throw new Error(
-          "Cannot remove the last owner. Please assign another owner first."
+          "Cannot remove the last member. Every team must have at least one member."
         )
       }
-    }
 
-    // If removing current user, also update their currentTeamId
-    if (userId === currentUser.value?.uid) {
-      const userRef = doc(firestore, "users", userId)
-      await updateDoc(userRef, {
-        currentTeamId: null,
-        updatedAt: serverTimestamp(),
+      // Prevent removing the last owner
+      if (membershipToRemove.role === "owner") {
+        const ownerCount = teamMembers.value.filter(
+          (m) => m.role === "owner"
+        ).length
+        if (ownerCount <= 1) {
+          throw new Error(
+            "Cannot remove the last owner. Please assign another owner first."
+          )
+        }
+      }
+
+      // If removing current user, also update their currentTeamId
+      if (userId === currentUser.value?.uid) {
+        const userRef = doc(firestore, "users", userId)
+        await updateDoc(userRef, {
+          currentTeamId: null,
+          updatedAt: serverTimestamp(),
+        })
+      }
+
+      await runTransaction(firestore, async (transaction) => {
+        transaction.delete(membershipRef)
       })
+    } catch (error) {
+      console.error("Error removing member:", error)
+      throw error
     }
-
-    await runTransaction(firestore, async (transaction) => {
-      transaction.delete(membershipRef)
-    })
   }
 
-  const updateTeamName = async (teamId: string, newName: string) => {
+  const updateTeam = async (
+    teamId: string,
+    updates: { name?: string; photoFile?: File | null }
+  ) => {
     if (!currentUser.value) return
 
-    const teamRef = doc(firestore, "teams", teamId)
+    try {
+      const teamRef = doc(firestore, "teams", teamId)
+      const { name, photoFile } = updates
+      const updateData: {
+        name?: string
+        photoURL?: string | null
+        updatedAt: FieldValue
+      } = {
+        updatedAt: serverTimestamp(),
+      }
 
-    // Verify ownership (optional but recommended, though rules should handle it)
-    // For now, we'll trust the UI to only show this option to owners, and Firestore rules to enforce it.
+      if (name) updateData.name = name
 
-    await updateDoc(teamRef, {
-      name: newName,
-      updatedAt: serverTimestamp(),
-    })
+      if (photoFile !== undefined) {
+        if (photoFile === null) {
+          updateData.photoURL = null
+        } else {
+          try {
+            const photoURL = await uploadTeamPhoto(teamId, photoFile)
+            updateData.photoURL = photoURL
+          } catch (error) {
+            console.error("Error uploading team photo:", error)
+            throw error
+          }
+        }
+      }
 
-    // Optimistic update if it's the current team
-    if (currentTeam.value && currentTeam.value.id === teamId) {
-      currentTeam.value.name = newName
+      await updateDoc(teamRef, updateData)
+
+      // Update all memberships for this team to reflect the changes
+      const membershipsQuery = query(
+        collectionGroup(firestore, "memberships"),
+        where("teamId", "==", teamId)
+      )
+
+      const membershipDocs = await getDocs(membershipsQuery)
+
+      // Use chunked batch processing
+      await processInBatches(membershipDocs.docs, (doc, batch) => {
+        const membershipData = doc.data() as IMembership
+        const updatedTeam: Record<string, unknown> = {
+          ...membershipData.team,
+          ...updateData,
+        }
+        // Remove undefined values
+        Object.keys(updatedTeam).forEach(
+          (key) => updatedTeam[key] === undefined && delete updatedTeam[key]
+        )
+
+        batch.update(doc.ref, {
+          team: updatedTeam,
+          updatedAt: serverTimestamp(),
+        })
+      })
+
+      // Optimistic update if it's the current team
+      if (currentTeam.value && currentTeam.value.id === teamId) {
+        if (name) currentTeam.value.name = name
+        if (updateData.photoURL !== undefined)
+          currentTeam.value.photoURL = updateData.photoURL
+      }
+
+      // Optimistic update for memberships
+      const membership = memberships.value.find((m) => m.teamId === teamId)
+      if (membership && membership.team) {
+        if (name) membership.team.name = name
+        if (updateData.photoURL !== undefined)
+          membership.team.photoURL = updateData.photoURL
+      }
+    } catch (error) {
+      console.error("Error updating team:", error)
+      throw error
     }
+  }
 
-    // Optimistic update for memberships
-    const membership = memberships.value.find((m) => m.teamId === teamId)
-    if (membership && membership.team) {
-      membership.team.name = newName
+  const deleteTeam = async (teamId: string) => {
+    if (!currentUser.value) return
+
+    try {
+      // 1. Verify ownership (optional but good practice, though rules handle it)
+      const membership = memberships.value.find((m) => m.teamId === teamId)
+      if (!membership || membership.role !== "owner") {
+        throw new Error("Only team owners can delete the team")
+      }
+
+      // 2. Find all memberships for this team to delete them
+      const membershipsQuery = query(
+        collectionGroup(firestore, "memberships"),
+        where("teamId", "==", teamId)
+      )
+      const membershipDocs = await getDocs(membershipsQuery)
+
+      // 3. Find all users who have this team as currentTeamId to update them
+      const usersQuery = query(
+        collection(firestore, "users"),
+        where("currentTeamId", "==", teamId)
+      )
+      const userDocs = await getDocs(usersQuery)
+
+      // Delete team document
+      await deleteDoc(doc(firestore, "teams", teamId))
+
+      // Delete all memberships in batches
+      await processInBatches(membershipDocs.docs, (doc, batch) => {
+        batch.delete(doc.ref)
+      })
+
+      // Update users in batches
+      await processInBatches(userDocs.docs, (doc, batch) => {
+        batch.update(doc.ref, {
+          currentTeamId: null,
+          updatedAt: serverTimestamp(),
+        })
+      })
+
+      // Optimistic updates
+      memberships.value = memberships.value.filter((m) => m.teamId !== teamId)
+      if (currentTeam.value?.id === teamId) {
+        currentTeam.value = null
+        if (userProfile.value) {
+          userProfile.value.currentTeamId = null
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting team:", error)
+      throw error
     }
   }
 
@@ -367,78 +561,81 @@ export const useTeamStore = defineStore("teams", () => {
     const { photoURL, ...userUpdates } = updates
     const userRef = doc(firestore, "users", currentUser.value.uid)
 
-    // 1. Update Auth Profile
-    if (photoURL !== undefined || userUpdates.displayName !== undefined) {
-      console.log("Updating auth profile", {
-        photoURL,
-        displayName: userUpdates.displayName,
-      })
-      try {
-        await updateCurrentUserProfile({
-          displayName:
-            userUpdates.displayName ||
-            currentUser.value.displayName ||
-            undefined,
-          photoURL:
-            photoURL === "" || photoURL === null
-              ? null
-              : (photoURL ?? currentUser.value.photoURL ?? undefined),
+    try {
+      // 1. Update Auth Profile
+      if (photoURL !== undefined || userUpdates.displayName !== undefined) {
+        console.log("Updating auth profile", {
+          photoURL,
+          displayName: userUpdates.displayName,
         })
-        console.log("Auth profile updated successfully")
-      } catch (e) {
-        console.error("Error updating auth profile", e)
-        throw e
+        try {
+          await updateCurrentUserProfile({
+            displayName:
+              userUpdates.displayName ||
+              currentUser.value.displayName ||
+              undefined,
+            photoURL:
+              photoURL === "" || photoURL === null
+                ? null
+                : (photoURL ?? currentUser.value.photoURL ?? undefined),
+          })
+          console.log("Auth profile updated successfully")
+        } catch (e) {
+          console.error("Error updating auth profile", e)
+          throw e
+        }
       }
-    }
 
-    // 2. Update User Document
-    if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
-      await updateDoc(userRef, {
-        ...userUpdates,
-        ...(photoURL !== undefined
-          ? { photoURL: photoURL === "" ? null : photoURL }
-          : {}),
-        updatedAt: serverTimestamp(),
+      // 2. Update User Document
+      if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
+        await updateDoc(userRef, {
+          ...userUpdates,
+          ...(photoURL !== undefined
+            ? { photoURL: photoURL === "" ? null : photoURL }
+            : {}),
+          updatedAt: serverTimestamp(),
+        })
+      }
+
+      // 3. Update All Memberships
+      // We need to find all memberships for this user and update the embedded user data
+      const membershipsQuery = query(
+        collectionGroup(firestore, "memberships"),
+        where("userId", "==", currentUser.value.uid)
+      )
+
+      const membershipDocs = await getDocs(membershipsQuery)
+
+      // Use chunked batch processing
+      await processInBatches(membershipDocs.docs, (doc, batch) => {
+        const membershipData = doc.data() as IMembership
+        const updatedUser = {
+          ...membershipData.user,
+          ...userUpdates,
+          ...(photoURL !== undefined
+            ? { photoURL: photoURL === "" ? null : photoURL }
+            : {}),
+        }
+
+        batch.update(doc.ref, {
+          user: updatedUser,
+          updatedAt: serverTimestamp(),
+        })
       })
-    }
 
-    // 3. Update All Memberships
-    // We need to find all memberships for this user and update the embedded user data
-    const membershipsQuery = query(
-      collectionGroup(firestore, "memberships"),
-      where("userId", "==", currentUser.value.uid)
-    )
-
-    const membershipDocs = await getDocs(membershipsQuery)
-    const batch = writeBatch(firestore)
-
-    membershipDocs.docs.forEach((doc) => {
-      const membershipData = doc.data() as IMembership
-      const updatedUser = {
-        ...membershipData.user,
-        ...userUpdates,
-        ...(photoURL !== undefined
-          ? { photoURL: photoURL === "" ? null : photoURL }
-          : {}),
+      // Optimistic update
+      if (userProfile.value) {
+        userProfile.value = {
+          ...userProfile.value,
+          ...userUpdates,
+          ...(photoURL !== undefined
+            ? { photoURL: photoURL === "" ? null : photoURL }
+            : {}),
+        }
       }
-
-      batch.update(doc.ref, {
-        user: updatedUser,
-        updatedAt: serverTimestamp(),
-      })
-    })
-
-    await batch.commit()
-
-    // Optimistic update
-    if (userProfile.value) {
-      userProfile.value = {
-        ...userProfile.value,
-        ...userUpdates,
-        ...(photoURL !== undefined
-          ? { photoURL: photoURL === "" ? null : photoURL }
-          : {}),
-      }
+    } catch (error) {
+      console.error("Error updating user profile:", error)
+      throw error
     }
   }
 
@@ -454,7 +651,8 @@ export const useTeamStore = defineStore("teams", () => {
     inviteMember,
     changeRole,
     removeMember,
-    updateTeamName,
+    deleteTeam,
+    updateTeam,
     updateUserProfile,
   }
 })
