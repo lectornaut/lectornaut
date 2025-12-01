@@ -2,7 +2,7 @@
 import { cn } from "@/lib/utils"
 import { useId } from "reka-ui"
 import type { HTMLAttributes } from "vue"
-import { computed, defineSlots, toRefs } from "vue"
+import { computed, toRefs } from "vue"
 import type { ChartConfig } from "."
 import { provideChartContext } from "."
 import ChartStyle from "./ChartStyle.vue"

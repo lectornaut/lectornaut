@@ -13,13 +13,13 @@
     "types": [
       "node",
       "vite/client",
-      "vite-plugin-vue-layouts/client",
       "vite-plugin-pwa/vue",
-      "vite-plugin-pwa/pwa-assets",
       "unplugin-fonts/client",
       "unplugin-icons/types/vue",
       "unplugin-vue-router/client",
+      "vite-plugin-pwa/pwa-assets",
       "unplugin-turbo-console/client",
+      "vite-plugin-vue-layouts/client",
       "@intlify/unplugin-vue-i18n/messages"
     ],
     "paths": {

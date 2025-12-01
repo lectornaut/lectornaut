@@ -1,14 +1,28 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
-import { reactiveOmit } from "@vueuse/core"
+import { reactiveOmit, useVModel } from "@vueuse/core"
 import { ChevronDownIcon } from "lucide-vue-next"
+import type { AcceptableValue } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
 defineOptions({
   inheritAttrs: false,
 })
 
-const props = defineProps<{ class?: HTMLAttributes["class"] }>()
+const props = defineProps<{
+  modelValue?: AcceptableValue | AcceptableValue[]
+  class?: HTMLAttributes["class"]
+}>()
+
+const emit = defineEmits<{
+  "update:modelValue": AcceptableValue
+}>()
+
+const modelValue = useVModel(props, "modelValue", emit, {
+  passive: true,
+  defaultValue: "",
+})
+
 const delegatedProps = reactiveOmit(props, "class")
 </script>
 
@@ -18,6 +32,8 @@ const delegatedProps = reactiveOmit(props, "class")
     data-slot="native-select-wrapper"
   >
     <select
+      v-bind="{ ...$attrs, ...delegatedProps }"
+      v-model="modelValue"
       data-slot="native-select"
       :class="
         cn(
@@ -27,7 +43,6 @@ const delegatedProps = reactiveOmit(props, "class")
           props.class
         )
       "
-      v-bind="{ ...$attrs, ...delegatedProps }"
     >
       <slot />
     </select>
