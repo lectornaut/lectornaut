@@ -1,4 +1,4 @@
-import { isTauri } from "@/helpers/utilities"
+import { isTauri } from "@/composables/usePlatform"
 import NProgress from "nprogress"
 import { setupLayouts } from "virtual:generated-layouts"
 import { createRouter, createWebHistory } from "vue-router"

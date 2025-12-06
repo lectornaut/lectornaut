@@ -26,8 +26,8 @@ const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  build: {
-    sourcemap: process.env.NODE_ENV !== "production",
+  optimizeDeps: {
+    include: ["workbox-window"],
   },
   plugins: [
     VueRouter(),
@@ -248,14 +248,14 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-  //
-  // 1. prevent vite from obscuring rust errors
+  // prevent vite from obscuring rust errors
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
   server: {
-    port: 1420,
+    // make sure this port matches the devUrl port in tauri.conf.json file
+    port: 5173,
+    // Tauri expects a fixed port, fail if that port is not available
     strictPort: true,
+    // if the host Tauri is expecting is set, use it
     host: host || false,
     hmr: host
       ? {
@@ -263,11 +263,25 @@ export default defineConfig({
           host,
           port: 1421,
         }
-      : false,
+      : undefined,
+
     watch: {
-      // 3. tell vite to ignore watching `src-tauri`
+      // tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
       usePolling: true,
     },
+  },
+  // Env variables starting with the item of `envPrefix` will be exposed in tauri's source code through `import.meta.env`.
+  envPrefix: ["VITE_", "TAURI_ENV_*"],
+  build: {
+    // Tauri uses Chromium on Windows and WebKit on macOS and Linux
+    target:
+      process.env.TAURI_ENV_PLATFORM == "windows" ? "chrome105" : "safari13",
+    // don't minify for debug builds
+    minify:
+      process.env.NODE_ENV !== "production" || !!process.env.TAURI_ENV_DEBUG,
+    // produce sourcemaps for debug builds
+    sourcemap:
+      process.env.NODE_ENV !== "production" || !!process.env.TAURI_ENV_DEBUG,
   },
 })

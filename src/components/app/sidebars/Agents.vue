@@ -1,30 +1,9 @@
 <script lang="ts" setup>
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { IconArrowUp, IconCirclePlus, IconPlus } from "@/data/icons"
-import { isTauri } from "@/helpers/utilities"
-import type { UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
 import Avatar from "vue-boring-avatars"
 
-let unlisten: UnlistenFn | undefined
-
-const isFullscreen = computedAsync(
-  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
-  false
-)
-
-onMounted(async () => {
-  if (isTauri.value) {
-    unlisten = await getCurrentWindow().onResized(async () => {
-      isFullscreen.value = await getCurrentWindow().isFullscreen()
-    })
-  }
-})
-
-onBeforeUnmount(() => {
-  if (unlisten) {
-    unlisten()
-  }
-})
+const isFullscreen = useIsFullscreen()
 
 const agents = [
   { id: 1, name: "Alice" },

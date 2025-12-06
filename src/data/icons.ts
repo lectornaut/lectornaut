@@ -25,6 +25,7 @@ import IconLucideAlignJustify from "~icons/lucide/align-justify"
 import IconLucideAlignLeft from "~icons/lucide/align-left"
 import IconLucideAlignRight from "~icons/lucide/align-right"
 import IconLucideAperture from "~icons/lucide/aperture"
+import IconLucideArrowBigUp from "~icons/lucide/arrow-big-up"
 import IconLucideArrowDown from "~icons/lucide/arrow-down"
 import IconLucideArrowDownToLine from "~icons/lucide/arrow-down-to-line"
 import IconLucideArrowLeft from "~icons/lucide/arrow-left"
@@ -83,6 +84,7 @@ import IconLucideCombine from "~icons/lucide/combine"
 import IconLucideCommand from "~icons/lucide/command"
 import IconLucideComponent from "~icons/lucide/component"
 import IconLucideCone from "~icons/lucide/cone"
+import IconLucideContrast from "~icons/lucide/contrast"
 import IconLucideCopy from "~icons/lucide/copy"
 import IconLucideCreditCard from "~icons/lucide/credit-card"
 import IconLucideDatabase from "~icons/lucide/database"
@@ -200,6 +202,7 @@ import IconLucideStarOff from "~icons/lucide/star-off"
 import IconLucideStrikethrough from "~icons/lucide/strikethrough"
 import IconLucideSubscript from "~icons/lucide/subscript"
 import IconLucideSun from "~icons/lucide/sun"
+import IconLucideSunMoon from "~icons/lucide/sun-moon"
 import IconLucideSuperscript from "~icons/lucide/superscript"
 import IconLucideTable from "~icons/lucide/table"
 import IconLucideTerminal from "~icons/lucide/terminal"
@@ -263,6 +266,7 @@ export {
   IconBiApple as IconApple,
   IconLogosAppleAppStore as IconAppleAppStore,
   IconMdiApple as IconAppleFilled,
+  IconLucideArrowBigUp as IconArrowBigUp,
   IconLucideArrowDown as IconArrowDown,
   IconLucideArrowDownToLine as IconArrowDownToLine,
   IconLucideArrowLeft as IconArrowLeft,
@@ -330,6 +334,7 @@ export {
   IconLucideCommand as IconCommand,
   IconLucideComponent as IconComponent,
   IconLucideCone as IconCone,
+  IconLucideContrast as IconContrast,
   IconLucideCopy as IconCopy,
   IconLucideCreditCard as IconCreditCard,
   IconLucideDatabase as IconDatabase,
@@ -476,6 +481,7 @@ export {
   IconLucideStrikethrough as IconStrikethrough,
   IconLucideSubscript as IconSubscript,
   IconLucideSun as IconSun,
+  IconLucideSunMoon as IconSunMoon,
   IconLucideSuperscript as IconSuperscript,
   IconLucideTable as IconTable,
   IconLucideTerminal as IconTerminal,

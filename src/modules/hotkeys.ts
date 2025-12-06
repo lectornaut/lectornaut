@@ -1,9 +1,9 @@
+import { isTauri } from "@/composables/usePlatform"
 import {
   shortcuts,
   type Shortcut,
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
-import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 import hotkeys from "hotkeys-js"
 

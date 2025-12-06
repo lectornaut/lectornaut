@@ -762,7 +762,7 @@ const expandedCard = ref<number | null>(null)
               </div>
             </CardHeader>
             <CardContent>
-              <ChartContainer :config="chartConfig" class="w-full">
+              <ChartContainer :config="chartConfig" class="h-46 w-full">
                 <VisXYContainer :data="chartData">
                   <VisGroupedBar
                     :x="(d: Data) => d.date"
@@ -772,7 +772,7 @@ const expandedCard = ref<number | null>(null)
                       chartConfig.mobile.color,
                     ]"
                     bar-padding="0.1"
-                    group-padding="0"
+                    group-padding="0.25"
                   />
                   <VisAxis
                     type="x"

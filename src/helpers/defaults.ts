@@ -3,11 +3,10 @@ import {
   IconArrowDownToLine,
   IconAsterisk,
   IconBadgeCheck,
-  IconBookOpen,
   IconBot,
-  IconBox,
   IconBriefcase,
   IconComponent,
+  IconContrast,
   IconFileText,
   IconHome,
   IconJapan,
@@ -15,6 +14,7 @@ import {
   IconLogs,
   IconMdiFormatTextVariant,
   IconMessageCircle,
+  IconMoon,
   IconRiFontMono,
   IconRiFontSans,
   IconRiFontSansSerif,
@@ -24,6 +24,8 @@ import {
   IconScroll,
   IconShieldCheck,
   IconSparkle,
+  IconSun,
+  IconSunMoon,
   IconUSA,
   IconUsersRound,
 } from "@/data/icons"
@@ -47,22 +49,22 @@ export const themes = [
   {
     id: "light",
     name: "Light",
-    icon: IconRiFontSans,
+    icon: IconSun,
   },
   {
     id: "dark",
     name: "Dark",
-    icon: IconRiFontMono,
+    icon: IconMoon,
   },
   {
     id: "accent",
     name: "Accent",
-    icon: IconBox,
+    icon: IconContrast,
   },
   {
     id: "auto",
     name: "Auto",
-    icon: IconBookOpen,
+    icon: IconSunMoon,
   },
 ]
 

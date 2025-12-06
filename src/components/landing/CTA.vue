@@ -25,22 +25,34 @@ hotkeys("enter", (event) => {
     <div
       class="bg-background/5 flex items-center gap-1.5 rounded-xl border p-1.5 shadow-xl backdrop-blur-lg"
     >
-      <Button v-if="!isUserLoaded" variant="ghost" size="icon" disabled>
-        <Spinner />
-      </Button>
-      <Button v-else-if="user" as-child>
-        <RouterLink to="/home">
-          {{ t("landing.cta.enter") }}
-          <Kbd>↩</Kbd>
-        </RouterLink>
-      </Button>
-      <EnterTrigger v-else>
-        <Button>
-          {{ t("landing.cta.enter") }}
-          <Kbd>↩</Kbd>
-        </Button>
-      </EnterTrigger>
-      <Faq />
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button
+              v-if="!isUserLoaded"
+              variant="ghost"
+              size="icon-sm"
+              disabled
+            >
+              <Spinner />
+            </Button>
+            <Button v-else-if="user" as-child variant="outline" size="sm">
+              <RouterLink to="/home">
+                {{ t("landing.cta.enter") }}
+              </RouterLink>
+            </Button>
+            <EnterTrigger v-else>
+              <Button variant="outline" size="sm">
+                {{ t("landing.cta.enter") }}
+              </Button>
+            </EnterTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            Press <Kbd>↩</Kbd> to login or sign up
+          </TooltipContent>
+        </Tooltip>
+        <Faq />
+      </TooltipProvider>
     </div>
     <div class="mb-safe-bottom text-muted-foreground z-10 text-center">
       {{ t("hello") }}, {{ t("landing.cta.description") }}

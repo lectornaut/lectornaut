@@ -1,11 +1,11 @@
 <script lang="ts" setup>
+import { isTauri } from "@/composables/usePlatform"
 import { IconSearch } from "@/data/icons"
 import {
   shortcuts,
   type Shortcut,
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
-import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
 
 defineProps<{
@@ -54,9 +54,7 @@ const filteredShortcuts = computed(() => {
               :size="iconDisplay === 'text' ? 'default' : 'icon'"
             >
               <IconSearch />
-              <span v-if="iconDisplay === 'text'" class="hidden md:flex"
-                >Search</span
-              >
+              <template v-if="iconDisplay === 'text'"> Search </template>
             </Button>
           </DialogTrigger>
         </TooltipTrigger>

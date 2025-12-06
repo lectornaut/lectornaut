@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import {
+  IconChevronDown,
   IconCirclePlus,
   IconCircleUser,
   IconCreditCard,
@@ -38,8 +39,11 @@ const accounts = [
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <TooltipTrigger as-child>
-                <SidebarMenuButton class="p-0">
-                  <Avatar class="rounded-md">
+                <SidebarMenuButton
+                  size="lg"
+                  class="data-[state=open]:bg-accent"
+                >
+                  <Avatar class="aspect-square size-8 rounded-md">
                     <AvatarImage
                       :src="user?.photoURL!"
                       :alt="user?.displayName"
@@ -53,6 +57,7 @@ const accounts = [
                     }}</span>
                     <span class="truncate text-xs">{{ user?.email }}</span>
                   </div>
+                  <IconChevronDown />
                 </SidebarMenuButton>
               </TooltipTrigger>
               <TooltipContent side="right"> Account </TooltipContent>

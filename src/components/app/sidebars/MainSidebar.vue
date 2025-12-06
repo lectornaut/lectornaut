@@ -1,19 +1,29 @@
 <script lang="ts" setup>
+import { useSidebar } from "@/components/ui/sidebar"
+import { useIsFullscreen } from "@/composables/usePlatform"
 import { IconGrid2X2 } from "@/data/icons"
 import { menu } from "@/helpers/defaults"
-const iconDisplay = ref<"icon" | "text">("icon")
+
+const { open, setOpen, isMobile } = useSidebar()
+
+const iconDisplay = computed({
+  get: () => (open.value ? "text" : "icon"),
+  set: (val) => setOpen(val === "text"),
+})
+
+const isFullscreen = useIsFullscreen()
 </script>
 
 <template>
   <ContextMenu>
     <ContextMenuTrigger>
       <Sidebar
-        collapsible="none"
-        class="shadow-border relative z-40 w-[calc(var(--sidebar-width-icon))] shadow-[1px_0px]"
+        collapsible="icon"
+        class="top-13 bottom-8 h-[calc(100vh-var(--spacing-14)-var(--spacing-8))]"
       >
-        <SidebarHeader>
+        <SidebarHeader :class="{ 'mt-13': isMobile && !isFullscreen }">
           <SidebarMenu>
-            <SidebarMenuItem class="flex h-9 items-center justify-center">
+            <SidebarMenuItem class="flex h-9 items-center">
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                   <SidebarMenuButton id="tour-apps-menu" tooltip="Menu">
@@ -52,7 +62,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
         <Separator />
         <SidebarContent>
           <OverlayScrollbarsWrapper>
-            <Navigation :icon-display="iconDisplay" />
+            <Navigation />
           </OverlayScrollbarsWrapper>
         </SidebarContent>
         <Separator />
@@ -63,6 +73,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
           <SettingsMenu />
           <AccountMenu />
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent align="end" side="bottom">

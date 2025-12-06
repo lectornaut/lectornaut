@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
   IconArrowUpRight,
   IconBookOpen,
@@ -11,32 +12,10 @@ import {
   type Shortcut,
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
-import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
-import type { UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
 import Fuse from "fuse.js"
 
-let unlisten: UnlistenFn | undefined
-
-const isFullscreen = computedAsync(
-  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
-  false
-)
-
-onMounted(async () => {
-  if (isTauri.value) {
-    unlisten = await getCurrentWindow().onResized(async () => {
-      isFullscreen.value = await getCurrentWindow().isFullscreen()
-    })
-  }
-})
-
-onBeforeUnmount(() => {
-  if (unlisten) {
-    unlisten()
-  }
-})
+const isFullscreen = useIsFullscreen()
 
 const openShortcuts = ref(false)
 

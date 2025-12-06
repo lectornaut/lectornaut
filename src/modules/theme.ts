@@ -1,10 +1,10 @@
+import { isTauri } from "@/composables/usePlatform"
 import {
   defaultAccent,
   defaultFont,
   defaultSize,
   defaultZoom,
 } from "@/helpers/defaults"
-import { isTauri } from "@/helpers/utilities"
 import { setTheme } from "@tauri-apps/api/app"
 
 const initMode = () => {

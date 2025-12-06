@@ -65,7 +65,7 @@
     text-rendering: optimizelegibility;
   }
 
-  /* ::-webkit-scrollbar {
+  ::-webkit-scrollbar {
     @apply size-2;
   }
 
@@ -83,7 +83,7 @@
 
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted;
-  } */
+  }
 }
 
 @theme inline {

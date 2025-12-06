@@ -1,30 +1,9 @@
 <script lang="ts" setup>
-import { isTauri } from "@/helpers/utilities"
-import type { UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 
 const { t } = useI18n()
 
-let unlisten: UnlistenFn | undefined
-
-const isFullscreen = computedAsync(
-  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
-  false
-)
-
-onMounted(async () => {
-  if (isTauri.value) {
-    unlisten = await getCurrentWindow().onResized(async () => {
-      isFullscreen.value = await getCurrentWindow().isFullscreen()
-    })
-  }
-})
-
-onBeforeUnmount(() => {
-  if (unlisten) {
-    unlisten()
-  }
-})
+const isFullscreen = useIsFullscreen()
 
 const iconDisplay = ref<"icon" | "text">("icon")
 </script>
@@ -44,6 +23,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
             class="flex grow items-center justify-start gap-2 transition-all"
             :class="{ 'pl-20': isTauri && !isFullscreen }"
           >
+            <SidebarTrigger class="md:hidden" />
             <Logo class="size-8 p-2" />
             <Separator orientation="vertical" class="max-h-4 min-h-4" />
             <TasksNotifications :icon-display="iconDisplay" />

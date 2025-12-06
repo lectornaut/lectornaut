@@ -19,10 +19,6 @@ useSortable(el, activeNavItems, {
   chosenClass: "cursor-grabbing",
   dragClass: "cursor-grabbing",
 })
-
-defineProps<{
-  iconDisplay?: "icon" | "text"
-}>()
 </script>
 
 <template>
@@ -49,12 +45,6 @@ defineProps<{
                 <Component :is="item.icon" />
                 {{ t("navigation.menu." + item.id) }}
               </RouterLink>
-              <span
-                v-if="iconDisplay === 'text'"
-                class="text-secondary-foreground inline-block w-full text-center text-[8px] font-medium uppercase"
-              >
-                {{ t("navigation.menu." + item.id) }}
-              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </template>

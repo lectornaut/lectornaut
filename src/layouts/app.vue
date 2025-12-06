@@ -5,7 +5,6 @@ import {
   IconArrowRight,
   IconCloudCheck,
   IconGlobe,
-  IconHand,
   IconLayerFill,
   IconMaximize,
   IconMinimize,
@@ -16,7 +15,6 @@ import {
   IconPanelRight,
   IconPanelRightClose,
   IconPlus,
-  IconPointerClick,
   IconRefreshCcw,
   IconTerminal,
   IconX,
@@ -104,7 +102,7 @@ const closeTab = (id: string) => {
 <template>
   <SidebarProvider :default-open="false" class="min-h-auto">
     <SidebarInset class="bg-transparent">
-      <Titlebar />
+      <Headerbar />
       <main class="flex grow overflow-auto overscroll-none scroll-smooth">
         <MainSidebar />
         <div id="left-dock"></div>
@@ -122,7 +120,7 @@ const closeTab = (id: string) => {
                 :max-size="22"
                 :collapsed-size="0"
                 as-child
-                class="bg-sidebar hidden lg:flex"
+                class="bg-sidebar"
               >
                 <div id="left-sidebar" ref="leftSidebarEl"></div>
               </ResizablePanel>
@@ -133,18 +131,18 @@ const closeTab = (id: string) => {
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
-          <TooltipProvider>
+          <!-- <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger as-child>
-                <ResizableHandle
-                  class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-40 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
-                  @dblclick="
-                    leftPanel?.splitterPanel?.isCollapsed
-                      ? leftPanel?.splitterPanel?.expand()
-                      : leftPanel?.splitterPanel?.collapse()
-                  "
-                />
-              </TooltipTrigger>
+              <TooltipTrigger> -->
+          <ResizableHandle
+            class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+            @dblclick="
+              leftPanel?.splitterPanel?.isCollapsed
+                ? leftPanel?.splitterPanel?.expand()
+                : leftPanel?.splitterPanel?.collapse()
+            "
+          />
+          <!-- </TooltipTrigger>
               <TooltipContent side="right" class="p-1!">
                 <div class="flex flex-col gap-1">
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
@@ -157,19 +155,19 @@ const closeTab = (id: string) => {
                   </div>
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                     <span class="flex items-center gap-2">
-                      <Kbd>←</Kbd> Narrow
+                      <IconArrowRight /> Right arrow to expand
                     </span>
                     <span class="flex items-center gap-2">
-                      <Kbd>→</Kbd> Widen
+                      <IconArrowLeft /> Left arrow to collapse
                     </span>
                     <span class="flex items-center gap-2">
-                      <Kbd>⇧</Kbd> Large steps
+                      <IconArrowBigUp /> Shift for large steps
                     </span>
                   </div>
                 </div>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </TooltipProvider> -->
           <ResizablePanel>
             <ResizablePanelGroup
               direction="vertical"
@@ -209,18 +207,18 @@ const closeTab = (id: string) => {
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
-              <TooltipProvider>
+              <!-- <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger as-child>
-                    <ResizableHandle
-                      class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
-                      @dblclick="
-                        bottomPanel?.splitterPanel?.isCollapsed
-                          ? bottomPanel?.splitterPanel?.expand()
-                          : bottomPanel?.splitterPanel?.collapse()
-                      "
-                    />
-                  </TooltipTrigger>
+                  <TooltipTrigger> -->
+              <ResizableHandle
+                class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                @dblclick="
+                  bottomPanel?.splitterPanel?.isCollapsed
+                    ? bottomPanel?.splitterPanel?.expand()
+                    : bottomPanel?.splitterPanel?.collapse()
+                "
+              />
+              <!-- </TooltipTrigger>
                   <TooltipContent side="top" class="p-1!">
                     <div class="flex flex-col gap-1">
                       <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
@@ -233,19 +231,19 @@ const closeTab = (id: string) => {
                       </div>
                       <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                         <span class="flex items-center gap-2">
-                          <Kbd>←</Kbd> Narrow
+                          <IconArrowUp /> Up arrow to expand
                         </span>
                         <span class="flex items-center gap-2">
-                          <Kbd>→</Kbd> Widen
+                          <IconArrowDown /> Down arrow to collapse
                         </span>
                         <span class="flex items-center gap-2">
-                          <Kbd>⇧</Kbd> Large steps
+                          <IconArrowBigUp /> Shift for large steps
                         </span>
                       </div>
                     </div>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
+              </TooltipProvider> -->
               <ContextMenu>
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
@@ -427,18 +425,18 @@ const closeTab = (id: string) => {
               </ContextMenu>
             </ResizablePanelGroup>
           </ResizablePanel>
-          <TooltipProvider>
+          <!-- <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger as-child>
-                <ResizableHandle
-                  class="data-[state=hover]:bg-primary focus-visible:ring-primary focus-visible:bg-primary data-[state=drag]:bg-primary isolate z-30 hidden transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none lg:flex"
-                  @dblclick="
-                    rightPanel?.splitterPanel?.isCollapsed
-                      ? rightPanel?.splitterPanel?.expand()
-                      : rightPanel?.splitterPanel?.collapse()
-                  "
-                />
-              </TooltipTrigger>
+              <TooltipTrigger> -->
+          <ResizableHandle
+            class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+            @dblclick="
+              rightPanel?.splitterPanel?.isCollapsed
+                ? rightPanel?.splitterPanel?.expand()
+                : rightPanel?.splitterPanel?.collapse()
+            "
+          />
+          <!-- </TooltipTrigger>
               <TooltipContent side="left" class="p-1!">
                 <div class="flex flex-col gap-1">
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
@@ -451,19 +449,19 @@ const closeTab = (id: string) => {
                   </div>
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                     <span class="flex items-center gap-2">
-                      <Kbd>←</Kbd> Narrow
+                      <IconArrowLeft /> Left arrow to expand
                     </span>
                     <span class="flex items-center gap-2">
-                      <Kbd>→</Kbd> Widen
+                      <IconArrowRight /> Right arrow to collapse
                     </span>
                     <span class="flex items-center gap-2">
-                      <Kbd>⇧</Kbd> Large steps
+                      <IconArrowBigUp /> Shift for large steps
                     </span>
                   </div>
                 </div>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </TooltipProvider> -->
           <ContextMenu>
             <ContextMenuTrigger as-child>
               <ResizablePanel
@@ -474,7 +472,7 @@ const closeTab = (id: string) => {
                 :max-size="22"
                 :collapsed-size="0"
                 as-child
-                class="bg-sidebar hidden lg:flex"
+                class="bg-sidebar"
               >
                 <div id="right-sidebar" ref="rightSidebarEl"></div>
               </ResizablePanel>
@@ -524,9 +522,18 @@ const closeTab = (id: string) => {
                       "
                     >
                       <IconTerminal />
+                      <template v-if="iconDisplay === 'text'">
+                        Console
+                      </template>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent> Toggle console panel </TooltipContent>
+                  <TooltipContent>
+                    {{
+                      bottomPanel?.splitterPanel?.isCollapsed
+                        ? "Expand"
+                        : "Collapse"
+                    }}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -536,33 +543,36 @@ const closeTab = (id: string) => {
             ></div>
             <div class="flex items-center justify-end" data-tauri-drag-region>
               <TooltipProvider>
-                <Select id="language" v-model="locale">
-                  <Tooltip>
+                <Tooltip>
+                  <Select id="language" v-model="locale">
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
                         size="sm"
-                        class="h-full! rounded-none border-0"
+                        class="h-8! rounded-none border-0"
                         as-child
                       >
                         <SelectTrigger>
                           <IconGlobe />
+                          <template v-if="iconDisplay === 'text'">
+                            <SelectValue />
+                          </template>
                         </SelectTrigger>
                       </Button>
+                      <SelectContent align="end">
+                        <SelectItem
+                          v-for="language in languages"
+                          :key="language.id"
+                          :value="language.id"
+                        >
+                          <Component :is="language.icon" />
+                          {{ language.name }}
+                        </SelectItem>
+                      </SelectContent>
                     </TooltipTrigger>
                     <TooltipContent> Language </TooltipContent>
-                    <SelectContent align="end">
-                      <SelectItem
-                        v-for="language in languages"
-                        :key="language.id"
-                        :value="language.id"
-                      >
-                        <Component :is="language.icon" />
-                        {{ language.name }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Tooltip>
-                </Select>
+                  </Select>
+                </Tooltip>
               </TooltipProvider>
               <TooltipProvider>
                 <Tooltip>
@@ -577,9 +587,18 @@ const closeTab = (id: string) => {
                         v-if="leftPanel?.splitterPanel?.isCollapsed"
                       />
                       <IconPanelLeftClose v-else />
+                      <template v-if="iconDisplay === 'text'">
+                        Sidebar
+                      </template>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent> Left panel </TooltipContent>
+                  <TooltipContent>
+                    {{
+                      leftPanel?.splitterPanel?.isCollapsed
+                        ? "Expand"
+                        : "Collapse"
+                    }}
+                  </TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger as-child>
@@ -593,9 +612,16 @@ const closeTab = (id: string) => {
                         v-if="bottomPanel?.splitterPanel?.isCollapsed"
                       />
                       <IconPanelBottomClose v-else />
+                      <template v-if="iconDisplay === 'text'"> Panel </template>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent> Bottom panel </TooltipContent>
+                  <TooltipContent>
+                    {{
+                      bottomPanel?.splitterPanel?.isCollapsed
+                        ? "Expand"
+                        : "Collapse"
+                    }}
+                  </TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger as-child>
@@ -609,9 +635,18 @@ const closeTab = (id: string) => {
                         v-if="rightPanel?.splitterPanel?.isCollapsed"
                       />
                       <IconPanelRightClose v-else />
+                      <template v-if="iconDisplay === 'text'">
+                        Sidebar
+                      </template>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent> Right panel </TooltipContent>
+                  <TooltipContent>
+                    {{
+                      rightPanel?.splitterPanel?.isCollapsed
+                        ? "Expand"
+                        : "Collapse"
+                    }}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>

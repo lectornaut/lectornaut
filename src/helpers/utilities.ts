@@ -1,13 +1,5 @@
 import { v7 as uuidv7 } from "uuid"
 
-export const isTauri = computed(() => {
-  if ("__TAURI_INTERNALS__" in window) {
-    return true
-  } else {
-    return false
-  }
-})
-
 export const generateId = () => {
   return uuidv7()
 }

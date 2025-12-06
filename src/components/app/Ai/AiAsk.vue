@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
   IconAiFill,
   IconArrowUp,
@@ -6,35 +7,13 @@ import {
   IconPinOff,
   IconPlus,
 } from "@/data/icons"
-import { isTauri } from "@/helpers/utilities"
 import emitter from "@/modules/mitt"
-import type { UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
 
 defineProps<{
   iconDisplay?: "icon" | "text"
 }>()
 
-let unlisten: UnlistenFn | undefined
-
-const isFullscreen = computedAsync(
-  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
-  false
-)
-
-onMounted(async () => {
-  if (isTauri.value) {
-    unlisten = await getCurrentWindow().onResized(async () => {
-      isFullscreen.value = await getCurrentWindow().isFullscreen()
-    })
-  }
-})
-
-onBeforeUnmount(() => {
-  if (unlisten) {
-    unlisten()
-  }
-})
+const isFullscreen = useIsFullscreen()
 
 const isDocked = ref(false)
 
@@ -60,7 +39,7 @@ const userInput = ref("")
               :size="iconDisplay === 'text' ? 'default' : 'icon'"
             >
               <IconAiFill />
-              <span v-if="iconDisplay === 'text'"> Ask AI </span>
+              <template v-if="iconDisplay === 'text'"> Ask AI </template>
             </Button>
           </TooltipTrigger>
           <TooltipContent class="px-2">

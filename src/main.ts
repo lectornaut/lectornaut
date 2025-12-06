@@ -1,5 +1,5 @@
 import App from "@/App.vue"
-import { isTauri } from "@/helpers/utilities"
+import { isTauri } from "@/composables/usePlatform"
 import { firebaseApp } from "@/modules/firebase"
 import { initHotkeys } from "@/modules/hotkeys"
 import { i18n } from "@/modules/i18n"

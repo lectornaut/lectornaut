@@ -26,9 +26,7 @@ const isDocked = ref(false)
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
           <IconInbox />
-          <span v-if="iconDisplay === 'text'" class="hidden md:flex">
-            Tasks
-          </span>
+          <template v-if="iconDisplay === 'text'"> Tasks </template>
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="inbox">
@@ -105,9 +103,7 @@ const isDocked = ref(false)
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
           <IconBell />
-          <span v-if="iconDisplay === 'text'" class="hidden md:flex">
-            Notifications
-          </span>
+          <template v-if="iconDisplay === 'text'"> Notifications </template>
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="inbox">

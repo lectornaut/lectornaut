@@ -21,43 +21,48 @@ const accordionItems = [
 </script>
 
 <template>
-  <Drawer>
-    <DrawerTrigger as-child>
-      <Button variant="secondary" size="icon">
-        <IconCircleHelp />
-      </Button>
-    </DrawerTrigger>
-    <DrawerContent class="outline-hidden">
-      <div class="mx-auto flex w-full max-w-sm flex-col">
-        <DrawerHeader class="sr-only">
-          <DrawerTitle> Frequently Asked Questions </DrawerTitle>
-          <DrawerDescription>
-            Get answers to common questions.
-          </DrawerDescription>
-        </DrawerHeader>
-        <Accordion type="single" collapsible class="p-4">
-          <AccordionItem
-            v-for="item in accordionItems"
-            :key="item.value"
-            :value="item.value"
-          >
-            <AccordionTrigger>
-              {{ item.title }}
-            </AccordionTrigger>
-            <AccordionContent>
-              {{ item.content }}
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        <DrawerFooter class="mb-safe-bottom">
-          <Button class="w-full" as-child>
-            <RouterLink to="/enter" class="w-full"> Enter </RouterLink>
+  <Tooltip>
+    <Drawer>
+      <DrawerTrigger as-child>
+        <TooltipTrigger as-child>
+          <Button variant="ghost" size="icon-sm">
+            <IconCircleHelp />
           </Button>
-          <DrawerClose as-child>
-            <Button variant="outline"> Close </Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </div>
-    </DrawerContent>
-  </Drawer>
+        </TooltipTrigger>
+        <TooltipContent side="top"> FAQ </TooltipContent>
+      </DrawerTrigger>
+      <DrawerContent class="outline-hidden">
+        <div class="mx-auto flex w-full max-w-sm flex-col">
+          <DrawerHeader class="sr-only">
+            <DrawerTitle> Frequently Asked Questions </DrawerTitle>
+            <DrawerDescription>
+              Get answers to common questions.
+            </DrawerDescription>
+          </DrawerHeader>
+          <Accordion type="single" collapsible class="p-4">
+            <AccordionItem
+              v-for="item in accordionItems"
+              :key="item.value"
+              :value="item.value"
+            >
+              <AccordionTrigger>
+                {{ item.title }}
+              </AccordionTrigger>
+              <AccordionContent>
+                {{ item.content }}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <DrawerFooter class="mb-safe-bottom">
+            <Button class="w-full" as-child>
+              <RouterLink to="/enter" class="w-full"> Enter </RouterLink>
+            </Button>
+            <DrawerClose as-child>
+              <Button variant="outline"> Close </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  </Tooltip>
 </template>

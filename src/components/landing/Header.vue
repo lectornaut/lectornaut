@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu"
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
   IconAiFill,
   IconDownloadFill,
@@ -12,31 +13,9 @@ import {
   resourcesMenu,
   solutionsMenu,
 } from "@/helpers/defaults"
-import { isTauri } from "@/helpers/utilities"
-import type { UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 
-let unlisten: UnlistenFn | undefined
-
-const isFullscreen = computedAsync(
-  async () => (isTauri.value ? await getCurrentWindow().isFullscreen() : false),
-  false
-)
-
-onMounted(async () => {
-  if (isTauri.value) {
-    unlisten = await getCurrentWindow().onResized(async () => {
-      isFullscreen.value = await getCurrentWindow().isFullscreen()
-    })
-  }
-})
-
-onBeforeUnmount(() => {
-  if (unlisten) {
-    unlisten()
-  }
-})
+const isFullscreen = useIsFullscreen()
 
 const user = useCurrentUser()
 const isUserLoaded = useIsCurrentUserLoaded()

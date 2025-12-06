@@ -4,15 +4,18 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  sharp: ^0.34.5
+
 importers:
   .:
     dependencies:
       "@genkit-ai/firebase":
-        specifier: ^1.24.0
-        version: 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
+        specifier: ^1.25.0
+        version: 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
       "@genkit-ai/google-genai":
-        specifier: ^1.24.0
-        version: 1.24.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
+        specifier: ^1.25.0
+        version: 1.25.0(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
       "@google-cloud/functions-framework":
         specifier: ^4.0.1
         version: 4.0.1
@@ -20,15 +23,15 @@ importers:
         specifier: ^13.6.0
         version: 13.6.0
       firebase-functions:
-        specifier: ^7.0.0
-        version: 7.0.0(firebase-admin@13.6.0)
+        specifier: ^7.0.1
+        version: 7.0.1(firebase-admin@13.6.0)
       genkit:
-        specifier: ^1.24.0
-        version: 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
+        specifier: ^1.25.0
+        version: 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
     devDependencies:
       firebase-functions-test:
         specifier: ^3.4.1
-        version: 3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.0(firebase-admin@13.6.0))(jest@30.2.0(@types/node@24.10.1))
+        version: 3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.1(firebase-admin@13.6.0))(jest@30.2.0(@types/node@24.10.1))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -400,47 +403,47 @@ packages:
       }
     engines: { node: ">=20.0.0" }
 
-  "@genkit-ai/ai@1.24.0":
+  "@genkit-ai/ai@1.25.0":
     resolution:
       {
-        integrity: sha512-Rv2eZqvJA8awIfLKiZL+P1hlBPGFiBFk1r01hRk0BSp1HmpZmlzSx+MM+X2H54xMgRXBRAelzU6xUXXzN5U57Q==,
+        integrity: sha512-+ovliEGpfy6zMsW7STXEjfsBBqvarBrpsK1wRu+OcTZLK8jBGMRBJ4V5adSLDarS4iqX6ingAAvaXI/tsVmXhw==,
       }
 
-  "@genkit-ai/core@1.24.0":
+  "@genkit-ai/core@1.25.0":
     resolution:
       {
-        integrity: sha512-JGmwdcC066OpbwShXeOOwvinj9b4yA0BKfKjPrVqqbWt9hvu81I60UNNiZC5y8dx+TvEhdEPUAXRvoOup2vC0w==,
+        integrity: sha512-r6/XS+X03gllptq/6J9M7ZrV2c354CZmjsbxYu/IFBYa8Ogo5N6x6H5x7G8AsrnhqEe8mlO1KtMt776ZHv2b8Q==,
       }
 
-  "@genkit-ai/firebase@1.24.0":
+  "@genkit-ai/firebase@1.25.0":
     resolution:
       {
-        integrity: sha512-6DZ612qNV4OUsAa0L40gYx0rIzcANAjv3u9R08wGK/twdOvANJuMOUWBRTIVPA0IZL2WiHLcm6Ss+GOdZOdvpg==,
+        integrity: sha512-Z0FbnJHQs8qS0yxG++Dn3CZ7gv+YNaihGaWXoDKy02mNOkeRzHA6UPaWxSTaWkWHYdB0MyOnMGlyqxnWyqVdmg==,
       }
     peerDependencies:
       "@google-cloud/firestore": ^7.11.0
       firebase: ">=11.5.0"
       firebase-admin: ">=12.2"
-      genkit: ^1.24.0
+      genkit: ^1.25.0
     peerDependenciesMeta:
       firebase:
         optional: true
 
-  "@genkit-ai/google-cloud@1.24.0":
+  "@genkit-ai/google-cloud@1.25.0":
     resolution:
       {
-        integrity: sha512-SrNCuo7UC1c7BRRk4F6IRAM9ZSBbpLUUWgpP9xUUQ3sozVzPwWwI5Eps32WCa52ljrbhSiQQRi4sRm36glDBiA==,
+        integrity: sha512-wHCa8JSTv7MtwzXjUQ9AT5v0kCTJrz0In+ffgAYw1yt8ComAz5o7Ir+xks+sX1vJfN8ptvW0GUa6rsUaXCB3kA==,
       }
     peerDependencies:
-      genkit: ^1.24.0
+      genkit: ^1.25.0
 
-  "@genkit-ai/google-genai@1.24.0":
+  "@genkit-ai/google-genai@1.25.0":
     resolution:
       {
-        integrity: sha512-J8WfWWkyeF6Pq9t7XTZU1D/IoRzg5RUkYhXFWnEJd+Ez22DUjBQLkyxiFt3UqDQ2F2yNWYzt8Dcca03kqwZyvg==,
+        integrity: sha512-wMauwa3s5Sa7JHdrhk35O3atdf5gJv2hbnU1pGPpPPiNmBRIIoND5depgK8wjgqJmM6QlcG9xAt+YjEaf7b8gQ==,
       }
     peerDependencies:
-      genkit: ^1.24.0
+      genkit: ^1.25.0
 
   "@google-cloud/common@5.0.2":
     resolution:
@@ -552,6 +555,13 @@ packages:
     resolution:
       {
         integrity: sha512-sPxgEWtPUR3EnRJCEtbGZG2iX8LQDUls2wUS3o27jg07KqJFMq6YDeWvMo1wfpmy3rqRdS0rivpLwhqQtEyCuQ==,
+      }
+    engines: { node: ">=12.10.0" }
+
+  "@grpc/grpc-js@1.14.2":
+    resolution:
+      {
+        integrity: sha512-QzVUtEFyu05UNx2xr0fCQmStUO17uVQhGNowtxs00IgTZT6/W2PBLfUkj30s0FKJ29VtTa3ArVNIhNP6akQhqA==,
       }
     engines: { node: ">=12.10.0" }
 
@@ -764,6 +774,24 @@ packages:
       {
         integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==,
       }
+
+  "@jsep-plugin/assignment@1.3.0":
+    resolution:
+      {
+        integrity: sha512-VVgV+CXrhbMI3aSusQyclHkenWSAm95WaiKrMxRFam3JSUiIaQjoMIw2sEs/OX4XifnqeQUN4DYbJjlA8EfktQ==,
+      }
+    engines: { node: ">= 10.16.0" }
+    peerDependencies:
+      jsep: ^0.4.0||^1.0.0
+
+  "@jsep-plugin/regex@1.0.4":
+    resolution:
+      {
+        integrity: sha512-q7qL4Mgjs1vByCaTnDFcBnV9HS7GVPJX5vyVoCgZHNSC9rjwIlmbXG5sUuorR5ndfHAIlJ8pVStxvjXHbNvtUg==,
+      }
+    engines: { node: ">= 10.16.0" }
+    peerDependencies:
+      jsep: ^0.4.0||^1.0.0
 
   "@napi-rs/wasm-runtime@0.2.12":
     resolution:
@@ -2231,10 +2259,10 @@ packages:
         integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==,
       }
 
-  baseline-browser-mapping@2.8.29:
+  baseline-browser-mapping@2.9.2:
     resolution:
       {
-        integrity: sha512-sXdt2elaVnhpDNRDz+1BDx1JQoJRuNk7oVlAlbGiFkLikHCAQiccexF/9e91zVi6RCgqspl04aP+6Cnl9zRLrA==,
+        integrity: sha512-PxSsosKQjI38iXkmb3d0Y32efqyA0uW4s41u4IVBsLlWLhCiYNpH/AfNOVWRqCQBlD8TFJTz6OUWNd4DFJCnmw==,
       }
     hasBin: true
 
@@ -2244,10 +2272,10 @@ packages:
         integrity: sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ==,
       }
 
-  body-parser@1.20.3:
+  body-parser@1.20.4:
     resolution:
       {
-        integrity: sha512-7rAxByjUMqQ3/bHJy7D6OGXvx/MMc4IqBn/X0fcM1QUcAItpZrBEYhWGem+tzXH90c+G01ypMcYJBO9Y30203g==,
+        integrity: sha512-ZTgYYLMOXY9qKU/57FAo8F+HA2dGX7bqGc71txDRC1rS4frdFI5R7NhluHxH6M0YItAP0sHB4uqAOcYKxO6uGA==,
       }
     engines: { node: ">= 0.8", npm: 1.2.8000 || >= 1.4.16 }
 
@@ -2277,10 +2305,10 @@ packages:
       }
     engines: { node: ">=8" }
 
-  browserslist@4.28.0:
+  browserslist@4.28.1:
     resolution:
       {
-        integrity: sha512-tbydkR/CxfMwelN0vwdP/pLkDwyAASZ+VfWm4EOwlB6SWhx1sYnWLqo8N5j0rAzPfzfRaxt0mM/4wPU/Su84RQ==,
+        integrity: sha512-ZC5Bd0LgJXgwGqUknZY/vkUQ04r8NXnJZ3yYi4vDmSiZmC/pdSN0NbNRPxZpbtO4uAfDUAFffO8IZoM3Gj8IkA==,
       }
     engines: { node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7 }
     hasBin: true
@@ -2359,10 +2387,10 @@ packages:
       }
     engines: { node: ">=10" }
 
-  caniuse-lite@1.0.30001756:
+  caniuse-lite@1.0.30001759:
     resolution:
       {
-        integrity: sha512-4HnCNKbMLkLdhJz3TToeVWHSnfJvPaq6vu/eRP0Ahub/07n484XHhBF5AJoSGHdVrS8tKFauUQz8Bp9P7LVx7A==,
+        integrity: sha512-Pzfx9fOKoKvevQf8oCXoyNRQ5QyxJj+3O0Rqx2V5oxT61KGx8+n6hV/IUyJeifUci2clnmmKVpvtiqRzgiWjSw==,
       }
 
   chalk@4.1.2:
@@ -2512,10 +2540,10 @@ packages:
         integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==,
       }
 
-  cookie-signature@1.0.6:
+  cookie-signature@1.0.7:
     resolution:
       {
-        integrity: sha512-QADzlaHc8icV8I7vbaJXJwod9HWYp8uCqf1xa4OfNu1T7JVxQIrUgOWtHdNDtPiywmFbiS12VjotIXLrKM3orQ==,
+        integrity: sha512-NXdYc3dLr47pBkpUCHtKSwIOQXLVn8dZEuywboCOJY/osA0wFSLlSawr3KN8qXJEyX66FcONTH8EIlVuK0yyFA==,
       }
 
   cookie-signature@1.2.2:
@@ -2524,13 +2552,6 @@ packages:
         integrity: sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg==,
       }
     engines: { node: ">=6.6.0" }
-
-  cookie@0.7.1:
-    resolution:
-      {
-        integrity: sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w==,
-      }
-    engines: { node: ">= 0.6" }
 
   cookie@0.7.2:
     resolution:
@@ -2680,10 +2701,10 @@ packages:
         integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==,
       }
 
-  electron-to-chromium@1.5.257:
+  electron-to-chromium@1.5.264:
     resolution:
       {
-        integrity: sha512-VNSOB6JZan5IQNMqaurYpZC4bDPXcvKlUwVD/ztMeVD7SwOpMYGOY7dgt+4lNiIHIpvv/FdULnZKqKEy2KcuHQ==,
+        integrity: sha512-1tEf0nLgltC3iy9wtlYDlQDc5Rg9lEKVjEmIHJ21rI9OcqkvD45K1oyNIRA4rR1z3LgJ7KeGzEBojVcV6m4qjA==,
       }
 
   emittery@0.13.1:
@@ -2841,10 +2862,10 @@ packages:
       }
     engines: { node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0 }
 
-  express@4.21.2:
+  express@4.22.1:
     resolution:
       {
-        integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==,
+        integrity: sha512-F2X8g9P1X7uCPZMA3MVf9wcTqlyNp7IhH5qPCI0izhaOIYXaW9L535tGA3qmjRzpH+bZczqq7hVKxTR4NWnu+g==,
       }
     engines: { node: ">= 0.10.0" }
 
@@ -2926,10 +2947,10 @@ packages:
       }
     engines: { node: ">=8" }
 
-  finalhandler@1.3.1:
+  finalhandler@1.3.2:
     resolution:
       {
-        integrity: sha512-6BN9trH7bp3qvnrRyzsBz+g3lZxTNZTbVO2EV1CS0WIcDbawYVdYvGflME/9QP0h0pYlCDBCTjYa9nZzMDpyxQ==,
+        integrity: sha512-aA4RyPcd3badbdABGDuTXCMTtOneUCAYH/gxoYRTZlIJdF0YPWuGqiAsIrhNnnqdXGswYk6dGujem4w80UJFhg==,
       }
     engines: { node: ">= 0.8" }
 
@@ -2972,10 +2993,10 @@ packages:
       firebase-functions: ">=4.9.0"
       jest: ">=28.0.0"
 
-  firebase-functions@7.0.0:
+  firebase-functions@7.0.1:
     resolution:
       {
-        integrity: sha512-IPedw7JJ4Ok7t1Lg75RDCQkLtUhs5V1I/WzZK25iGjK9Ej7U5EWFBchiLX0uhuNlRMKixUFuiDAGj2A5ryg2bw==,
+        integrity: sha512-9hFqiCO4phVosFLMjXlqQvtKTS+g5xWHHt3qU94bIHhdFX3RvQFiRvBTFgy+e9jBcrauEqCt5pqPe9em0AgPDQ==,
       }
     engines: { node: ">=18.0.0" }
     hasBin: true
@@ -3084,10 +3105,10 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
-  genkit@1.24.0:
+  genkit@1.25.0:
     resolution:
       {
-        integrity: sha512-9BjPrLULfWdzauibKkbZcCf2LVu0mW2EW6EXHK/cTber6QdiP/guA5mXahaaDWBo+qdIKpInXAYDEzcRUmCVSA==,
+        integrity: sha512-VzmLQczcJR8Fkkhlj/i1yb6ZR0CQiysYSumZHeeZfUtMcv8RczhZkYY8CenoR0OGChXJOoBywXdnkSTpBshS1Q==,
       }
 
   gensync@1.0.0-beta.2:
@@ -3281,6 +3302,13 @@ packages:
     resolution:
       {
         integrity: sha512-FtwrG/euBzaEjYeRqOgly7G0qviiXoJWnvEH2Z1plBdXgbyjv34pHTSb9zoeHMyDy33+DWy5Wt9Wo+TURtOYSQ==,
+      }
+    engines: { node: ">= 0.8" }
+
+  http-errors@2.0.1:
+    resolution:
+      {
+        integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==,
       }
     engines: { node: ">= 0.8" }
 
@@ -3752,6 +3780,13 @@ packages:
       }
     hasBin: true
 
+  jsep@1.4.0:
+    resolution:
+      {
+        integrity: sha512-B7qPcEVE3NVkmSJbaYxvv4cHkVW7DQsZz13pUMrfS8z8Q/BuShN+gcTXrUlPiGqM2/t/EEaI030bpxMqY8gMlw==,
+      }
+    engines: { node: ">= 10.16.0" }
+
   jsesc@3.1.0:
     resolution:
       {
@@ -3790,6 +3825,14 @@ packages:
         integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==,
       }
     engines: { node: ">=6" }
+    hasBin: true
+
+  jsonpath-plus@10.3.0:
+    resolution:
+      {
+        integrity: sha512-8TNmfeTCk2Le33A3vRRwtuworG/L5RrgMvdjhKZxvyShO+mBu2fP50OWUjRLNtvw344DdDarFh9buFAZs5ujeA==,
+      }
+    engines: { node: ">=18.0.0" }
     hasBin: true
 
   jsonwebtoken@9.0.2:
@@ -4552,13 +4595,6 @@ packages:
         integrity: sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==,
       }
 
-  qs@6.13.0:
-    resolution:
-      {
-        integrity: sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==,
-      }
-    engines: { node: ">=0.6" }
-
   qs@6.14.0:
     resolution:
       {
@@ -4573,10 +4609,10 @@ packages:
       }
     engines: { node: ">= 0.6" }
 
-  raw-body@2.5.2:
+  raw-body@2.5.3:
     resolution:
       {
-        integrity: sha512-8zGqypfENjCIqGhgXToC8aB2r7YrBX+AQAfIPs/Mlk+BtPTztOvTS01NRW/3Eh60J+a48lt8qsCzirQ6loCVfA==,
+        integrity: sha512-s4VSOf6yN0rvbRZGxs8Om5CWj6seneMwK3oDb4lWDH0UPhWcxwOWw5+qk24bxq87szX1ydrwylIOp2uG1ojUpA==,
       }
     engines: { node: ">= 0.8" }
 
@@ -4723,6 +4759,13 @@ packages:
     resolution:
       {
         integrity: sha512-dW41u5VfLXu8SJh5bwRmyYUbAoSB3c9uQh6L8h/KtsFREPWpbX1lrljJo186Jc4nmci/sGUZ9a0a0J2zgfq2hw==,
+      }
+    engines: { node: ">= 0.8.0" }
+
+  send@0.19.1:
+    resolution:
+      {
+        integrity: sha512-p4rRk4f23ynFEfcD9LA0xRYngj+IyGiEYyqqOak8kaN0TvNmuxC2dcVeBn62GpCeR2CpWqyHCNScTP91QbAVFg==,
       }
     engines: { node: ">= 0.8.0" }
 
@@ -5174,10 +5217,10 @@ packages:
         integrity: sha512-bSjt9pjaEBnNiGgc9rUiHGKv5l4/TGzDmYw3RhnkJGtLhbnnA/5qJj7x3dNDCRx/PJxu774LlH8lCOlB4hEfKg==,
       }
 
-  update-browserslist-db@1.1.4:
+  update-browserslist-db@1.2.2:
     resolution:
       {
-        integrity: sha512-q0SPT4xyU84saUX+tomz1WLkxUbuaJnR1xWt17M7fJtEJigJeWUNGUqrauFXsHnqev9y9JTRGwk13tFBuKby4A==,
+        integrity: sha512-E85pfNzMQ9jpKkA7+TJAi4TJN+tBCuWh5rUcS/sv6cFi+1q9LYDwDI5dpUL0u/73EElyQ8d3TEaeW4sPedBqYA==,
       }
     hasBin: true
     peerDependencies:
@@ -5395,10 +5438,10 @@ packages:
         integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==,
       }
 
-  yaml@2.8.1:
+  yaml@2.8.2:
     resolution:
       {
-        integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==,
+        integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==,
       }
     engines: { node: ">= 14.6" }
     hasBin: true
@@ -5479,7 +5522,7 @@ snapshots:
     dependencies:
       "@babel/compat-data": 7.28.5
       "@babel/helper-validator-option": 7.27.1
-      browserslist: 4.28.0
+      browserslist: 4.28.1
       lru-cache: 5.1.1
       semver: 6.3.1
 
@@ -5697,9 +5740,9 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  "@genkit-ai/ai@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
+  "@genkit-ai/ai@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
     dependencies:
-      "@genkit-ai/core": 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
+      "@genkit-ai/core": 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
       "@opentelemetry/api": 1.9.0
       "@types/node": 20.19.25
       colorette: 2.0.20
@@ -5717,7 +5760,7 @@ snapshots:
       - genkit
       - supports-color
 
-  "@genkit-ai/core@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
+  "@genkit-ai/core@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
     dependencies:
       "@opentelemetry/api": 1.9.0
       "@opentelemetry/context-async-hooks": 1.25.1(@opentelemetry/api@1.9.0)
@@ -5730,16 +5773,16 @@ snapshots:
       ajv: 8.17.1
       ajv-formats: 3.0.1(ajv@8.17.1)
       async-mutex: 0.5.0
-      body-parser: 1.20.3
+      body-parser: 1.20.4
       cors: 2.8.5
       dotprompt: 1.1.2
-      express: 4.21.2
+      express: 4.22.1
       get-port: 5.1.1
       json-schema: 0.4.0
       zod: 3.25.76
       zod-to-json-schema: 3.25.0(zod@3.25.76)
     optionalDependencies:
-      "@genkit-ai/firebase": 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
+      "@genkit-ai/firebase": 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
     transitivePeerDependencies:
       - "@google-cloud/firestore"
       - encoding
@@ -5748,17 +5791,17 @@ snapshots:
       - genkit
       - supports-color
 
-  "@genkit-ai/firebase@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
+  "@genkit-ai/firebase@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
     dependencies:
-      "@genkit-ai/google-cloud": 1.24.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
+      "@genkit-ai/google-cloud": 1.25.0(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
       "@google-cloud/firestore": 7.11.6
       firebase-admin: 13.6.0
-      genkit: 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
+      genkit: 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
     transitivePeerDependencies:
       - encoding
       - supports-color
 
-  "@genkit-ai/google-cloud@1.24.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
+  "@genkit-ai/google-cloud@1.25.0(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
     dependencies:
       "@google-cloud/logging-winston": 6.0.1(winston@3.18.3)
       "@google-cloud/opentelemetry-cloud-monitoring-exporter": 0.19.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.25.1(@opentelemetry/api@1.9.0))(@opentelemetry/resources@1.25.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@1.25.1(@opentelemetry/api@1.9.0))
@@ -5774,7 +5817,7 @@ snapshots:
       "@opentelemetry/sdk-metrics": 1.25.1(@opentelemetry/api@1.9.0)
       "@opentelemetry/sdk-node": 0.52.1(@opentelemetry/api@1.9.0)
       "@opentelemetry/sdk-trace-base": 1.25.1(@opentelemetry/api@1.9.0)
-      genkit: 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
+      genkit: 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
       google-auth-library: 9.15.1
       node-fetch: 3.3.2
       winston: 3.18.3
@@ -5782,10 +5825,11 @@ snapshots:
       - encoding
       - supports-color
 
-  "@genkit-ai/google-genai@1.24.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
+  "@genkit-ai/google-genai@1.25.0(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))":
     dependencies:
-      genkit: 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
+      genkit: 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
       google-auth-library: 9.15.1
+      jsonpath-plus: 10.3.0
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -5879,7 +5923,7 @@ snapshots:
   "@google-cloud/opentelemetry-cloud-trace-exporter@2.4.1(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.25.1(@opentelemetry/api@1.9.0))(@opentelemetry/resources@1.25.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0))":
     dependencies:
       "@google-cloud/opentelemetry-resource-util": 2.4.0(@opentelemetry/resources@1.25.1(@opentelemetry/api@1.9.0))
-      "@grpc/grpc-js": 1.14.1
+      "@grpc/grpc-js": 1.14.2
       "@grpc/proto-loader": 0.7.15
       "@opentelemetry/api": 1.9.0
       "@opentelemetry/core": 1.25.1(@opentelemetry/api@1.9.0)
@@ -5933,6 +5977,11 @@ snapshots:
     optional: true
 
   "@grpc/grpc-js@1.14.1":
+    dependencies:
+      "@grpc/proto-loader": 0.8.0
+      "@js-sdsl/ordered-map": 4.4.2
+
+  "@grpc/grpc-js@1.14.2":
     dependencies:
       "@grpc/proto-loader": 0.8.0
       "@js-sdsl/ordered-map": 4.4.2
@@ -6170,6 +6219,14 @@ snapshots:
 
   "@js-sdsl/ordered-map@4.4.2": {}
 
+  "@jsep-plugin/assignment@1.3.0(jsep@1.4.0)":
+    dependencies:
+      jsep: 1.4.0
+
+  "@jsep-plugin/regex@1.0.4(jsep@1.4.0)":
+    dependencies:
+      jsep: 1.4.0
+
   "@napi-rs/wasm-runtime@0.2.12":
     dependencies:
       "@emnapi/core": 1.7.1
@@ -6261,7 +6318,7 @@ snapshots:
 
   "@opentelemetry/exporter-trace-otlp-grpc@0.52.1(@opentelemetry/api@1.9.0)":
     dependencies:
-      "@grpc/grpc-js": 1.14.1
+      "@grpc/grpc-js": 1.14.2
       "@opentelemetry/api": 1.9.0
       "@opentelemetry/core": 1.25.1(@opentelemetry/api@1.9.0)
       "@opentelemetry/otlp-grpc-exporter-base": 0.52.1(@opentelemetry/api@1.9.0)
@@ -6652,7 +6709,7 @@ snapshots:
 
   "@opentelemetry/otlp-grpc-exporter-base@0.52.1(@opentelemetry/api@1.9.0)":
     dependencies:
-      "@grpc/grpc-js": 1.14.1
+      "@grpc/grpc-js": 1.14.2
       "@opentelemetry/api": 1.9.0
       "@opentelemetry/core": 1.25.1(@opentelemetry/api@1.9.0)
       "@opentelemetry/otlp-exporter-base": 0.52.1(@opentelemetry/api@1.9.0)
@@ -6902,11 +6959,11 @@ snapshots:
 
   "@types/cors@2.8.19":
     dependencies:
-      "@types/node": 24.10.0
+      "@types/node": 24.10.1
 
   "@types/express-serve-static-core@4.19.7":
     dependencies:
-      "@types/node": 24.10.0
+      "@types/node": 24.10.1
       "@types/qs": 6.14.0
       "@types/range-parser": 1.2.7
       "@types/send": 1.2.1
@@ -7012,7 +7069,7 @@ snapshots:
 
   "@types/send@1.2.1":
     dependencies:
-      "@types/node": 24.10.0
+      "@types/node": 24.10.1
 
   "@types/serve-static@1.15.10":
     dependencies:
@@ -7246,22 +7303,22 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  baseline-browser-mapping@2.8.29: {}
+  baseline-browser-mapping@2.9.2: {}
 
   bignumber.js@9.3.1: {}
 
-  body-parser@1.20.3:
+  body-parser@1.20.4:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
       debug: 2.6.9
       depd: 2.0.0
       destroy: 1.2.0
-      http-errors: 2.0.0
+      http-errors: 2.0.1
       iconv-lite: 0.4.24
       on-finished: 2.4.1
-      qs: 6.13.0
-      raw-body: 2.5.2
+      qs: 6.14.0
+      raw-body: 2.5.3
       type-is: 1.6.18
       unpipe: 1.0.0
     transitivePeerDependencies:
@@ -7294,13 +7351,13 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  browserslist@4.28.0:
+  browserslist@4.28.1:
     dependencies:
-      baseline-browser-mapping: 2.8.29
-      caniuse-lite: 1.0.30001756
-      electron-to-chromium: 1.5.257
+      baseline-browser-mapping: 2.9.2
+      caniuse-lite: 1.0.30001759
+      electron-to-chromium: 1.5.264
       node-releases: 2.0.27
-      update-browserslist-db: 1.1.4(browserslist@4.28.0)
+      update-browserslist-db: 1.2.2(browserslist@4.28.1)
 
   bser@2.1.1:
     dependencies:
@@ -7342,7 +7399,7 @@ snapshots:
 
   camelcase@6.3.0: {}
 
-  caniuse-lite@1.0.30001756: {}
+  caniuse-lite@1.0.30001759: {}
 
   chalk@4.1.2:
     dependencies:
@@ -7415,11 +7472,9 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  cookie-signature@1.0.6: {}
+  cookie-signature@1.0.7: {}
 
   cookie-signature@1.2.2: {}
-
-  cookie@0.7.1: {}
 
   cookie@0.7.2: {}
 
@@ -7469,7 +7524,7 @@ snapshots:
   dotprompt@1.1.2:
     dependencies:
       handlebars: 4.7.8
-      yaml: 2.8.1
+      yaml: 2.8.2
 
   dunder-proto@1.0.1:
     dependencies:
@@ -7492,7 +7547,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-to-chromium@1.5.257: {}
+  electron-to-chromium@1.5.264: {}
 
   emittery@0.13.1: {}
 
@@ -7573,36 +7628,36 @@ snapshots:
       jest-mock: 30.2.0
       jest-util: 30.2.0
 
-  express@4.21.2:
+  express@4.22.1:
     dependencies:
       accepts: 1.3.8
       array-flatten: 1.1.1
-      body-parser: 1.20.3
+      body-parser: 1.20.4
       content-disposition: 0.5.4
       content-type: 1.0.5
-      cookie: 0.7.1
-      cookie-signature: 1.0.6
+      cookie: 0.7.2
+      cookie-signature: 1.0.7
       debug: 2.6.9
       depd: 2.0.0
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
-      finalhandler: 1.3.1
+      finalhandler: 1.3.2
       fresh: 0.5.2
-      http-errors: 2.0.0
+      http-errors: 2.0.1
       merge-descriptors: 1.0.3
       methods: 1.1.2
       on-finished: 2.4.1
       parseurl: 1.3.3
       path-to-regexp: 0.1.12
       proxy-addr: 2.0.7
-      qs: 6.13.0
+      qs: 6.14.0
       range-parser: 1.2.1
       safe-buffer: 5.2.1
-      send: 0.19.0
+      send: 0.19.1
       serve-static: 1.16.2
       setprototypeof: 1.2.0
-      statuses: 2.0.1
+      statuses: 2.0.2
       type-is: 1.6.18
       utils-merge: 1.0.1
       vary: 1.1.2
@@ -7675,14 +7730,14 @@ snapshots:
     dependencies:
       to-regex-range: 5.0.1
 
-  finalhandler@1.3.1:
+  finalhandler@1.3.2:
     dependencies:
       debug: 2.6.9
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
       parseurl: 1.3.3
-      statuses: 2.0.1
+      statuses: 2.0.2
       unpipe: 1.0.0
     transitivePeerDependencies:
       - supports-color
@@ -7725,21 +7780,21 @@ snapshots:
       - encoding
       - supports-color
 
-  firebase-functions-test@3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.0(firebase-admin@13.6.0))(jest@30.2.0(@types/node@24.10.1)):
+  firebase-functions-test@3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.1(firebase-admin@13.6.0))(jest@30.2.0(@types/node@24.10.1)):
     dependencies:
       "@types/lodash": 4.17.20
       firebase-admin: 13.6.0
-      firebase-functions: 7.0.0(firebase-admin@13.6.0)
+      firebase-functions: 7.0.1(firebase-admin@13.6.0)
       jest: 30.2.0(@types/node@24.10.1)
       lodash: 4.17.21
       ts-deepmerge: 2.0.7
 
-  firebase-functions@7.0.0(firebase-admin@13.6.0):
+  firebase-functions@7.0.1(firebase-admin@13.6.0):
     dependencies:
       "@types/cors": 2.8.19
       "@types/express": 4.17.25
       cors: 2.8.5
-      express: 4.21.2
+      express: 4.22.1
       firebase-admin: 13.6.0
       protobufjs: 7.5.4
     transitivePeerDependencies:
@@ -7806,10 +7861,10 @@ snapshots:
 
   generator-function@2.0.1: {}
 
-  genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0):
+  genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0):
     dependencies:
-      "@genkit-ai/ai": 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
-      "@genkit-ai/core": 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
+      "@genkit-ai/ai": 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
+      "@genkit-ai/core": 1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)(genkit@1.25.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
       uuid: 10.0.0
     transitivePeerDependencies:
       - "@google-cloud/firestore"
@@ -7974,6 +8029,14 @@ snapshots:
       inherits: 2.0.4
       setprototypeof: 1.2.0
       statuses: 2.0.1
+      toidentifier: 1.0.1
+
+  http-errors@2.0.1:
+    dependencies:
+      depd: 2.0.0
+      inherits: 2.0.4
+      setprototypeof: 1.2.0
+      statuses: 2.0.2
       toidentifier: 1.0.1
 
   http-parser-js@0.5.10: {}
@@ -8450,6 +8513,8 @@ snapshots:
       argparse: 1.0.10
       esprima: 4.0.1
 
+  jsep@1.4.0: {}
+
   jsesc@3.1.0: {}
 
   json-bigint@1.0.0:
@@ -8463,6 +8528,12 @@ snapshots:
   json-schema@0.4.0: {}
 
   json5@2.2.3: {}
+
+  jsonpath-plus@10.3.0:
+    dependencies:
+      "@jsep-plugin/assignment": 1.3.0(jsep@1.4.0)
+      "@jsep-plugin/regex": 1.0.4(jsep@1.4.0)
+      jsep: 1.4.0
 
   jsonwebtoken@9.0.2:
     dependencies:
@@ -8814,7 +8885,7 @@ snapshots:
       "@protobufjs/path": 1.1.2
       "@protobufjs/pool": 1.1.0
       "@protobufjs/utf8": 1.1.0
-      "@types/node": 24.10.0
+      "@types/node": 24.10.1
       long: 5.3.2
 
   proxy-addr@2.0.7:
@@ -8835,20 +8906,16 @@ snapshots:
 
   pure-rand@7.0.1: {}
 
-  qs@6.13.0:
-    dependencies:
-      side-channel: 1.1.0
-
   qs@6.14.0:
     dependencies:
       side-channel: 1.1.0
 
   range-parser@1.2.1: {}
 
-  raw-body@2.5.2:
+  raw-body@2.5.3:
     dependencies:
       bytes: 3.1.2
-      http-errors: 2.0.0
+      http-errors: 2.0.1
       iconv-lite: 0.4.24
       unpipe: 1.0.0
 
@@ -8949,6 +9016,24 @@ snapshots:
       depd: 2.0.0
       destroy: 1.2.0
       encodeurl: 1.0.2
+      escape-html: 1.0.3
+      etag: 1.8.1
+      fresh: 0.5.2
+      http-errors: 2.0.0
+      mime: 1.6.0
+      ms: 2.1.3
+      on-finished: 2.4.1
+      range-parser: 1.2.1
+      statuses: 2.0.1
+    transitivePeerDependencies:
+      - supports-color
+
+  send@0.19.1:
+    dependencies:
+      debug: 2.6.9
+      depd: 2.0.0
+      destroy: 1.2.0
+      encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
       fresh: 0.5.2
@@ -9238,9 +9323,9 @@ snapshots:
       "@unrs/resolver-binding-win32-ia32-msvc": 1.11.1
       "@unrs/resolver-binding-win32-x64-msvc": 1.11.1
 
-  update-browserslist-db@1.1.4(browserslist@4.28.0):
+  update-browserslist-db@1.2.2(browserslist@4.28.1):
     dependencies:
-      browserslist: 4.28.0
+      browserslist: 4.28.1
       escalade: 3.2.0
       picocolors: 1.1.1
 
@@ -9367,7 +9452,7 @@ snapshots:
 
   yallist@4.0.0: {}
 
-  yaml@2.8.1: {}
+  yaml@2.8.2: {}
 
   yargs-parser@21.1.1: {}
 
