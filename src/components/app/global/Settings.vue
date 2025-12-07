@@ -37,7 +37,7 @@ import {
   zooms,
 } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 import { accent, font, size, store, zoom } from "@/modules/theme"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership, ITeam } from "@/types"

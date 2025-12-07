@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { IconAiFill, IconChatFill } from "@/data/icons"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 
 definePage({
   meta: {

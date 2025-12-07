@@ -105,7 +105,7 @@
     "firebase": "^12.6.0",
     "fuse.js": "^7.1.0",
     "hotkeys-js": "4.0.0-beta.7",
-    "katex": "^0.16.25",
+    "katex": "^0.16.26",
     "lowlight": "^3.3.0",
     "lucide-vue-next": "^0.556.0",
     "mitt": "^3.0.1",
@@ -133,7 +133,7 @@
   "devDependencies": {
     "@eslint/css": "^0.14.1",
     "@eslint/js": "^9.39.1",
-    "@iconify/json": "^2.2.414",
+    "@iconify/json": "^2.2.415",
     "@intlify/eslint-plugin-vue-i18n": "^4.1.0",
     "@intlify/unplugin-vue-i18n": "^11.0.1",
     "@tailwindcss/forms": "^0.5.10",
@@ -176,7 +176,7 @@
     "vite-plugin-sitemap": "^0.8.2",
     "vite-plugin-vue-layouts": "^0.11.0",
     "vue-eslint-parser": "^10.2.0",
-    "vue-tsc": "3.1.5",
+    "vue-tsc": "3.1.7",
     "workbox-build": "^7.4.0"
   },
   "peerDependencies": {

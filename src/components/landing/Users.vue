@@ -13,7 +13,9 @@ import {
   IconLogosTwitter,
   IconLogosZoom,
 } from "@/data/icons"
-import AutoScroll from "embla-carousel-auto-scroll"
+import AutoScrollDefault from "embla-carousel-auto-scroll"
+
+const AutoScroll = AutoScrollDefault
 
 const users = [
   {

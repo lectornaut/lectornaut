@@ -1,8 +1,10 @@
 <script lang="ts" setup>
 import { columns } from "@/components/table/columns"
 import { IconCheck, IconChevronRight, IconPlus } from "@/data/icons"
-import tasks from "@/data/tasks.json"
+import _tasks from "@/data/tasks.json"
 import { getLocalTimeZone, today } from "@internationalized/date"
+
+const tasks = _tasks
 
 definePage({
   meta: {

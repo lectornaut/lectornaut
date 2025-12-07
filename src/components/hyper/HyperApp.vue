@@ -23,8 +23,10 @@ import {
   IconUpload,
   IconX,
 } from "@/data/icons"
-import AutoScroll from "embla-carousel-auto-scroll"
+import AutoScrollDefault from "embla-carousel-auto-scroll"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
+
+const AutoScroll = AutoScrollDefault
 
 const carouselContainerRef = ref<typeof Carousel | null>(null)
 

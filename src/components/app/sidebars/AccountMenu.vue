@@ -7,7 +7,7 @@ import {
   IconLogOut,
   IconUserRound,
 } from "@/data/icons"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
 const user = useCurrentUser()
@@ -49,7 +49,9 @@ const accounts = [
                       :alt="user?.displayName"
                       referrerpolicy="no-referrer"
                     />
-                    <AvatarFallback class="rounded-md"> CN </AvatarFallback>
+                    <AvatarFallback class="rounded-md">
+                      {{ user?.displayName?.charAt(0) }}
+                    </AvatarFallback>
                   </Avatar>
                   <div class="grid flex-1 text-left text-sm leading-tight">
                     <span class="truncate font-semibold">{{

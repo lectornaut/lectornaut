@@ -16,7 +16,7 @@ import {
   IconWorkflow,
   IconX,
 } from "@/data/icons"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
@@ -603,7 +603,7 @@ onUnmounted(() => {
           </div>
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent class="w-56" align="end" side="bottom">
+      <ContextMenuContent class="w-56" align="start" side="bottom">
         <ContextMenuGroup>
           <ContextMenuItem as-child @click="emitter.emit('Tabs.Add')">
             <RouterLink to="/new">

@@ -76,7 +76,7 @@ const isFullscreen = useIsFullscreen()
         <SidebarRail />
       </Sidebar>
     </ContextMenuTrigger>
-    <ContextMenuContent align="end" side="bottom">
+    <ContextMenuContent align="start" side="bottom">
       <ContextMenuLabel class="text-muted-foreground text-xs">
         Appearance
       </ContextMenuLabel>

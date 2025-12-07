@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { logout } from "@/modules/auth"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 
 const openExit = ref(false)
 

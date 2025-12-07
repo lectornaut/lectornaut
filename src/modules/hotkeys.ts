@@ -4,7 +4,7 @@ import {
   type Shortcut,
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 import hotkeys from "hotkeys-js"
 
 export const initHotkeys = () => {

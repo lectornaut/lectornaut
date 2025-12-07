@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 
 definePage({
   meta: {

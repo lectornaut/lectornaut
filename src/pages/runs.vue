@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { columns } from "@/components/table/columns"
-import runs from "@/data/runs.json"
+import _runs from "@/data/runs.json"
+
+const runs = _runs
 
 definePage({
   meta: {

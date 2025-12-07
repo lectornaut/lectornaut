@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { IconSettings } from "@/data/icons"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 </script>
 
 <template>

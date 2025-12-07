@@ -44,7 +44,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
         </div>
       </header>
     </ContextMenuTrigger>
-    <ContextMenuContent align="end" side="bottom">
+    <ContextMenuContent align="start" side="bottom">
       <ContextMenuLabel class="text-muted-foreground text-xs">
         {{ t("titlebar.appearance") }}
       </ContextMenuLabel>

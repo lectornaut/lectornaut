@@ -21,7 +21,7 @@ import {
 } from "@/data/icons"
 import { languages } from "@/helpers/defaults"
 import { generateId } from "@/helpers/utilities"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 
 const { locale } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
@@ -125,7 +125,7 @@ const closeTab = (id: string) => {
                 <div id="left-sidebar" ref="leftSidebarEl"></div>
               </ResizablePanel>
             </ContextMenuTrigger>
-            <ContextMenuContent align="end" side="bottom">
+            <ContextMenuContent align="start" side="bottom">
               <ContextMenuItem @click="leftPanel?.splitterPanel?.collapse()">
                 <IconX /> Close panel
               </ContextMenuItem>
@@ -211,7 +211,7 @@ const closeTab = (id: string) => {
                 <Tooltip>
                   <TooltipTrigger> -->
               <ResizableHandle
-                class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                 @dblclick="
                   bottomPanel?.splitterPanel?.isCollapsed
                     ? bottomPanel?.splitterPanel?.expand()
@@ -400,7 +400,7 @@ const closeTab = (id: string) => {
                     </Tabs>
                   </ResizablePanel>
                 </ContextMenuTrigger>
-                <ContextMenuContent align="end" side="bottom">
+                <ContextMenuContent align="start" side="bottom">
                   <ContextMenuItem
                     @click="
                       topPanel?.splitterPanel?.isCollapsed
@@ -477,7 +477,7 @@ const closeTab = (id: string) => {
                 <div id="right-sidebar" ref="rightSidebarEl"></div>
               </ResizablePanel>
             </ContextMenuTrigger>
-            <ContextMenuContent align="end" side="bottom">
+            <ContextMenuContent align="start" side="bottom">
               <ContextMenuItem @click="rightPanel?.splitterPanel?.collapse()">
                 <IconX /> Close panel
               </ContextMenuItem>
@@ -652,7 +652,7 @@ const closeTab = (id: string) => {
             </div>
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent align="end" side="bottom">
+        <ContextMenuContent align="start" side="bottom">
           <ContextMenuLabel class="text-muted-foreground text-xs">
             Appearance
           </ContextMenuLabel>

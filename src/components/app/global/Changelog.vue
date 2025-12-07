@@ -2,7 +2,7 @@
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { changelog } from "@/data/changelog"
 import { IconArrowUpRight, IconBookOpen, IconMessageCircle } from "@/data/icons"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 
 const isFullscreen = useIsFullscreen()
 

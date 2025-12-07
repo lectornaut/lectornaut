@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 import { state, store } from "@/modules/theme"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"

@@ -12,7 +12,7 @@ import {
   IconKeyboard,
   IconMessageCircle,
 } from "@/data/icons"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 import { state } from "@/modules/theme"
 import confetti from "canvas-confetti"
 import { driver } from "driver.js"
@@ -210,7 +210,7 @@ const companySizes = [
                 <TooltipTrigger as-child>
                   <SidebarMenuButton class="data-[state=open]:bg-accent">
                     <IconCircleHelp />
-                    Help and Support
+                    Help
                   </SidebarMenuButton>
                 </TooltipTrigger>
                 <TooltipContent

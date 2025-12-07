@@ -13,9 +13,11 @@ import {
   IconStar,
   IconUserRoundPlus,
 } from "@/data/icons"
-import Autoplay from "embla-carousel-autoplay"
+import AutoplayDefault from "embla-carousel-autoplay"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import Avatar from "vue-boring-avatars"
+
+const Autoplay = AutoplayDefault
 
 definePage({
   meta: {

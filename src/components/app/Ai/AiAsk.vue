@@ -7,7 +7,7 @@ import {
   IconPinOff,
   IconPlus,
 } from "@/data/icons"
-import emitter from "@/modules/mitt"
+import { emitter } from "@/modules/mitt"
 
 defineProps<{
   iconDisplay?: "icon" | "text"
