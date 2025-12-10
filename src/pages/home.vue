@@ -13,8 +13,8 @@ import {
   IconBlocks,
   IconCalendar,
   IconChevronRight,
-  IconExpand,
   IconLink,
+  IconMaximize,
   IconMinimize,
   IconMoreHorizontal,
   IconMoreVertical,
@@ -717,7 +717,7 @@ const expandedCard = ref<number | null>(null)
                             :is="
                               expandedCard === card.id
                                 ? IconMinimize
-                                : IconExpand
+                                : IconMaximize
                             "
                           />
                         </Button>

@@ -134,10 +134,7 @@ import IconLucideLock from "~icons/lucide/lock"
 import IconLucideLogOut from "~icons/lucide/log-out"
 import IconLucideLogs from "~icons/lucide/logs"
 import IconLucideMail from "~icons/lucide/mail"
-import {
-  default as IconLucideExpand,
-  default as IconLucideMaximize,
-} from "~icons/lucide/maximize"
+import IconLucideMaximize from "~icons/lucide/maximize"
 import IconLucideMenu from "~icons/lucide/menu"
 import IconLucideMessageCircle from "~icons/lucide/message-circle"
 import IconLucideMessageCircleMore from "~icons/lucide/message-circle-more"
@@ -161,6 +158,8 @@ import IconLucidePauseCircle from "~icons/lucide/pause-circle"
 import IconLucidePenLine from "~icons/lucide/pen-line"
 import IconLucidePencil from "~icons/lucide/pencil"
 import IconLucidePencilRuler from "~icons/lucide/pencil-ruler"
+import IconLucidePictureInPicture from "~icons/lucide/picture-in-picture"
+import IconLucidePictureInPicture2 from "~icons/lucide/picture-in-picture-2"
 import IconLucidePin from "~icons/lucide/pin"
 import IconLucidePinOff from "~icons/lucide/pin-off"
 import IconLucidePlug from "~icons/lucide/plug"
@@ -237,6 +236,7 @@ import IconMingcuteAiFill from "~icons/mingcute/ai-fill"
 import IconMingcuteArrowRightUpCircleFill from "~icons/mingcute/arrow-right-up-circle-fill"
 import IconMingcuteChat1Fill from "~icons/mingcute/chat-1-fill"
 import IconMingcuteDownloadFill from "~icons/mingcute/download-fill"
+import IconMingcuteGridFill from "~icons/mingcute/grid-fill"
 import IconMingcuteLayerFill from "~icons/mingcute/layer-fill"
 import IconMingcuteSignatureFill from "~icons/mingcute/signature-fill"
 import IconRiFontMono from "~icons/ri/font-mono"
@@ -266,6 +266,7 @@ export {
   IconBiApple as IconApple,
   IconLogosAppleAppStore as IconAppleAppStore,
   IconMdiApple as IconAppleFilled,
+  IconMingcuteGridFill as IconApps,
   IconLucideArrowBigUp as IconArrowBigUp,
   IconLucideArrowDown as IconArrowDown,
   IconLucideArrowDownToLine as IconArrowDownToLine,
@@ -345,7 +346,6 @@ export {
   IconSimpleIconsEbay as IconEbay,
   IconLucideEllipsis as IconEllipsis,
   IconSimpleIconsEtsy as IconEtsy,
-  IconLucideExpand as IconExpand,
   IconLucideExternalLink as IconExternalLink,
   IconLucideEye as IconEye,
   IconLucideEyeOff as IconEyeOff,
@@ -433,6 +433,8 @@ export {
   IconLucidePencil as IconPencil,
   IconLucidePencilRuler as IconPencilRuler,
   IconLucidePenLine as IconPenLine,
+  IconLucidePictureInPicture as IconPictureInPicture,
+  IconLucidePictureInPicture2 as IconPictureInPicture2,
   IconLucidePin as IconPin,
   IconLucidePinOff as IconPinOff,
   IconLucidePlug as IconPlug,

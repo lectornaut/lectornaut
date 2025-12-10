@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { useIsFullscreen } from "@/composables/usePlatform"
-import { IconGrid2X2 } from "@/data/icons"
+import { IconApps, IconChevronsUpDown } from "@/data/icons"
 import { menu } from "@/helpers/defaults"
 
 const { open, setOpen, isMobile } = useSidebar()
@@ -23,12 +23,25 @@ const isFullscreen = useIsFullscreen()
       >
         <SidebarHeader :class="{ 'mt-13': isMobile && !isFullscreen }">
           <SidebarMenu>
-            <SidebarMenuItem class="flex h-9 items-center">
+            <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                  <SidebarMenuButton id="tour-apps-menu" tooltip="Menu">
-                    <IconGrid2X2 />
-                    Apps
+                  <SidebarMenuButton
+                    id="tour-apps-menu"
+                    tooltip="Menu"
+                    size="lg"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <div
+                      class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md"
+                    >
+                      <IconApps />
+                    </div>
+                    <div class="grid flex-1 text-left text-sm leading-tight">
+                      <span class="truncate font-semibold"> Go to </span>
+                      <span class="truncate text-xs"> My apps </span>
+                    </div>
+                    <IconChevronsUpDown />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

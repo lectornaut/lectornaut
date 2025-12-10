@@ -8,12 +8,15 @@ import {
   IconLayerFill,
   IconMaximize,
   IconMinimize,
+  IconMinus,
   IconPanelBottom,
   IconPanelBottomClose,
   IconPanelLeft,
   IconPanelLeftClose,
   IconPanelRight,
   IconPanelRightClose,
+  IconPictureInPicture,
+  IconPictureInPicture2,
   IconPlus,
   IconRefreshCcw,
   IconTerminal,
@@ -22,6 +25,7 @@ import {
 import { languages } from "@/helpers/defaults"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
+import { UseDraggable as Draggable } from "@vueuse/components"
 
 const { locale } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
@@ -54,6 +58,34 @@ emitter.on("Panel.Bottom.Toggle", () => {
     bottomPanel.value?.splitterPanel?.expand()
   } else {
     bottomPanel.value?.splitterPanel?.collapse()
+  }
+})
+
+const document = window.document
+const innerWidth = window.innerWidth
+const innerHeight = window.innerHeight
+const draggableEl = ref<HTMLElement | null>(null)
+const draggableHandleEl = ref<HTMLElement | null>(null)
+const isPoppedOut = useLocalStorage("popout-state", false)
+const isPoppedOutMinimized = useLocalStorage("popout-minimized-state", false)
+const observedSize = useLocalStorage("popout-size", { width: 300, height: 400 })
+const observedPosition = useLocalStorage("popout-position", { x: 0.5, y: 0.5 })
+
+watch(isPoppedOut, (val) => {
+  if (val) {
+    isPoppedOutMinimized.value = false
+  }
+})
+
+useResizeObserver(draggableEl, (entries) => {
+  const entry = entries[0]
+  if (!entry) return
+  if (isPoppedOutMinimized.value) return
+
+  const target = entry.target as HTMLElement
+  observedSize.value = {
+    width: target.offsetWidth,
+    height: target.offsetHeight,
   }
 })
 
@@ -484,6 +516,100 @@ const closeTab = (id: string) => {
             </ContextMenuContent>
           </ContextMenu>
         </ResizablePanelGroup>
+        <ContextMenu v-if="isPoppedOut">
+          <ContextMenuTrigger as-child>
+            <Draggable
+              ref="draggableEl"
+              prevent-default
+              :handle="draggableHandleEl"
+              :initial-value="{
+                x: observedPosition.x * (innerWidth - observedSize.width),
+                y: observedPosition.y * (innerHeight - observedSize.height),
+              }"
+              storage-key="popout-position"
+              storage-type="local"
+              :container-element="document.body"
+              :style="
+                isPoppedOutMinimized
+                  ? {
+                      width: 'auto',
+                      height: 'auto',
+                    }
+                  : {
+                      width: `${observedSize.width}px`,
+                      height: `${observedSize.height}px`,
+                    }
+              "
+              class="bg-sidebar-accent fixed z-50 flex min-w-64 flex-col overflow-hidden rounded-md border will-change-transform"
+              :class="
+                isPoppedOutMinimized
+                  ? 'border-foreground shadow-md ring-1'
+                  : 'min-h-64 resize shadow-lg'
+              "
+            >
+              <div
+                ref="draggableHandleEl"
+                class="flex cursor-move items-center justify-between p-1.5"
+                :class="
+                  isPoppedOutMinimized ? 'bg-sidebar' : 'bg-sidebar-accent'
+                "
+              >
+                <span class="ml-1 font-medium">Popout</span>
+                <ButtonGroup>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <InputGroupButton
+                          variant="ghost"
+                          size="icon-xs"
+                          @click="isPoppedOutMinimized = !isPoppedOutMinimized"
+                        >
+                          <IconPlus v-if="isPoppedOutMinimized" />
+                          <IconMinus v-else />
+                        </InputGroupButton>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {{
+                          isPoppedOutMinimized
+                            ? "Expand sidebar"
+                            : "Minimize sidebar"
+                        }}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <InputGroupButton
+                          variant="ghost"
+                          size="icon-xs"
+                          @click="isPoppedOut = false"
+                        >
+                          <IconX />
+                        </InputGroupButton>
+                      </TooltipTrigger>
+                      <TooltipContent> Close sidebar </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </ButtonGroup>
+              </div>
+              <div
+                v-show="!isPoppedOutMinimized"
+                class="bg-background outline-sidebar-accent mx-1 mb-1 grow rounded border p-2 outline-5"
+              ></div>
+            </Draggable>
+          </ContextMenuTrigger>
+          <ContextMenuContent align="start" side="bottom">
+            <ContextMenuItem
+              @click="isPoppedOutMinimized = !isPoppedOutMinimized"
+            >
+              <IconMinus v-if="!isPoppedOutMinimized" />
+              <IconPlus v-else />
+              {{ isPoppedOutMinimized ? "Expand sidebar" : "Minimize sidebar" }}
+            </ContextMenuItem>
+            <ContextMenuItem @click="isPoppedOut = false">
+              <IconX /> Close sidebar
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
         <div id="right-dock"></div>
       </main>
       <ContextMenu>
@@ -533,6 +659,25 @@ const closeTab = (id: string) => {
                         ? "Expand"
                         : "Collapse"
                     }}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      class="rounded-none"
+                      @click="isPoppedOut = !isPoppedOut"
+                    >
+                      <IconPictureInPicture2 v-if="!isPoppedOut" />
+                      <IconPictureInPicture v-else />
+                      <template v-if="iconDisplay === 'text'">
+                        {{ isPoppedOut ? "Dock" : "Pop out" }}
+                      </template>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ isPoppedOut ? "Dock" : "Pop out" }}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
