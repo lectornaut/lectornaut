@@ -151,8 +151,8 @@ const closeTab = (id: string) => {
                 ref="leftPanel"
                 collapsible
                 :min-size="15"
-                :default-size="16"
-                :max-size="22"
+                :default-size="20"
+                :max-size="25"
                 :collapsed-size="0"
                 as-child
                 class="bg-sidebar"
@@ -503,8 +503,8 @@ const closeTab = (id: string) => {
                 ref="rightPanel"
                 collapsible
                 :min-size="15"
-                :default-size="16"
-                :max-size="22"
+                :default-size="20"
+                :max-size="25"
                 :collapsed-size="0"
                 as-child
                 class="bg-sidebar"
@@ -567,6 +567,7 @@ const closeTab = (id: string) => {
                     :class="
                       isPoppedOutMinimized ? 'bg-sidebar' : 'bg-sidebar-accent'
                     "
+                    @dblclick="isPoppedOutMinimized = !isPoppedOutMinimized"
                   >
                     <span class="ml-1 font-medium">Popout</span>
                     <ButtonGroup>
