@@ -1,10 +1,13 @@
 <script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
 import {
+  IconArrowBigUp,
+  IconArrowDown,
   IconArrowLeft,
   IconArrowRight,
+  IconArrowUp,
   IconCloudCheck,
-  IconGlobe,
+  IconHand,
   IconLayerFill,
   IconMaximize,
   IconMinimize,
@@ -18,11 +21,11 @@ import {
   IconPictureInPicture,
   IconPictureInPicture2,
   IconPlus,
+  IconPointerClick,
   IconRefreshCcw,
   IconTerminal,
   IconX,
 } from "@/data/icons"
-import { languages } from "@/helpers/defaults"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { UseDraggable as Draggable } from "@vueuse/components"
@@ -61,9 +64,9 @@ emitter.on("Panel.Bottom.Toggle", () => {
   }
 })
 
-const document = window.document
 const innerWidth = window.innerWidth
 const innerHeight = window.innerHeight
+const draggableContainer = ref<HTMLElement | null>(null)
 const draggableEl = ref<HTMLElement | null>(null)
 const draggableHandleEl = ref<HTMLElement | null>(null)
 const isPoppedOut = useLocalStorage("popout-state", false)
@@ -163,18 +166,18 @@ const closeTab = (id: string) => {
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
-          <!-- <TooltipProvider>
+          <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger> -->
-          <ResizableHandle
-            class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
-            @dblclick="
-              leftPanel?.splitterPanel?.isCollapsed
-                ? leftPanel?.splitterPanel?.expand()
-                : leftPanel?.splitterPanel?.collapse()
-            "
-          />
-          <!-- </TooltipTrigger>
+              <TooltipTrigger as-child>
+                <ResizableHandle
+                  class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                  @dblclick="
+                    leftPanel?.splitterPanel?.isCollapsed
+                      ? leftPanel?.splitterPanel?.expand()
+                      : leftPanel?.splitterPanel?.collapse()
+                  "
+                />
+              </TooltipTrigger>
               <TooltipContent side="right" class="p-1!">
                 <div class="flex flex-col gap-1">
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
@@ -199,7 +202,7 @@ const closeTab = (id: string) => {
                 </div>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider> -->
+          </TooltipProvider>
           <ResizablePanel>
             <ResizablePanelGroup
               direction="vertical"
@@ -239,18 +242,18 @@ const closeTab = (id: string) => {
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
-              <!-- <TooltipProvider>
+              <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger> -->
-              <ResizableHandle
-                class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
-                @dblclick="
-                  bottomPanel?.splitterPanel?.isCollapsed
-                    ? bottomPanel?.splitterPanel?.expand()
-                    : bottomPanel?.splitterPanel?.collapse()
-                "
-              />
-              <!-- </TooltipTrigger>
+                  <TooltipTrigger as-child>
+                    <ResizableHandle
+                      class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                      @dblclick="
+                        bottomPanel?.splitterPanel?.isCollapsed
+                          ? bottomPanel?.splitterPanel?.expand()
+                          : bottomPanel?.splitterPanel?.collapse()
+                      "
+                    />
+                  </TooltipTrigger>
                   <TooltipContent side="top" class="p-1!">
                     <div class="flex flex-col gap-1">
                       <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
@@ -275,7 +278,7 @@ const closeTab = (id: string) => {
                     </div>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider> -->
+              </TooltipProvider>
               <ContextMenu>
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
@@ -300,7 +303,7 @@ const closeTab = (id: string) => {
                               <TabsTrigger
                                 v-for="tab in source"
                                 :key="tab.id"
-                                class="data-[state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[state=active]:border-transparent! data-[state=active]:bg-transparent! data-[state=active]:shadow-none"
+                                class="data-[resize-handle-state=active]:text-foreground hover:text-accent-foreground text-muted-foreground relative h-full rounded-none text-xs uppercase data-[resize-handle-state=active]:border-transparent! data-[resize-handle-state=active]:bg-transparent! data-[resize-handle-state=active]:shadow-none"
                                 :class="{
                                   'after:bg-primary after:absolute after:inset-x-0 after:-bottom-px after:z-30 after:h-px':
                                     activeTab === tab.id,
@@ -457,18 +460,18 @@ const closeTab = (id: string) => {
               </ContextMenu>
             </ResizablePanelGroup>
           </ResizablePanel>
-          <!-- <TooltipProvider>
+          <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger> -->
-          <ResizableHandle
-            class="data-[state=hover]:bg-primary data-[state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
-            @dblclick="
-              rightPanel?.splitterPanel?.isCollapsed
-                ? rightPanel?.splitterPanel?.expand()
-                : rightPanel?.splitterPanel?.collapse()
-            "
-          />
-          <!-- </TooltipTrigger>
+              <TooltipTrigger as-child>
+                <ResizableHandle
+                  class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                  @dblclick="
+                    rightPanel?.splitterPanel?.isCollapsed
+                      ? rightPanel?.splitterPanel?.expand()
+                      : rightPanel?.splitterPanel?.collapse()
+                  "
+                />
+              </TooltipTrigger>
               <TooltipContent side="left" class="p-1!">
                 <div class="flex flex-col gap-1">
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
@@ -493,7 +496,7 @@ const closeTab = (id: string) => {
                 </div>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider> -->
+          </TooltipProvider>
           <ContextMenu>
             <ContextMenuTrigger as-child>
               <ResizablePanel
@@ -516,100 +519,117 @@ const closeTab = (id: string) => {
             </ContextMenuContent>
           </ContextMenu>
         </ResizablePanelGroup>
-        <ContextMenu v-if="isPoppedOut">
-          <ContextMenuTrigger as-child>
-            <Draggable
-              ref="draggableEl"
-              prevent-default
-              :handle="draggableHandleEl"
-              :initial-value="{
-                x: observedPosition.x * (innerWidth - observedSize.width),
-                y: observedPosition.y * (innerHeight - observedSize.height),
-              }"
-              storage-key="popout-position"
-              storage-type="local"
-              :container-element="document.body"
-              :style="
-                isPoppedOutMinimized
-                  ? {
-                      width: 'auto',
-                      height: 'auto',
-                    }
-                  : {
-                      width: `${observedSize.width}px`,
-                      height: `${observedSize.height}px`,
-                    }
-              "
-              class="bg-sidebar-accent fixed z-50 flex min-w-64 flex-col overflow-hidden rounded-md border will-change-transform"
-              :class="
-                isPoppedOutMinimized
-                  ? 'border-foreground shadow-md ring-1'
-                  : 'min-h-64 resize shadow-lg'
-              "
-            >
-              <div
-                ref="draggableHandleEl"
-                class="flex cursor-move items-center justify-between p-1.5"
-                :class="
-                  isPoppedOutMinimized ? 'bg-sidebar' : 'bg-sidebar-accent'
-                "
-              >
-                <span class="ml-1 font-medium">Popout</span>
-                <ButtonGroup>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <InputGroupButton
-                          variant="ghost"
-                          size="icon-xs"
-                          @click="isPoppedOutMinimized = !isPoppedOutMinimized"
-                        >
-                          <IconPlus v-if="isPoppedOutMinimized" />
-                          <IconMinus v-else />
-                        </InputGroupButton>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {{
-                          isPoppedOutMinimized
-                            ? "Expand sidebar"
-                            : "Minimize sidebar"
-                        }}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <InputGroupButton
-                          variant="ghost"
-                          size="icon-xs"
-                          @click="isPoppedOut = false"
-                        >
-                          <IconX />
-                        </InputGroupButton>
-                      </TooltipTrigger>
-                      <TooltipContent> Close sidebar </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </ButtonGroup>
-              </div>
-              <div
-                v-show="!isPoppedOutMinimized"
-                class="bg-background outline-sidebar-accent mx-1 mb-1 grow rounded border p-2 outline-5"
-              ></div>
-            </Draggable>
-          </ContextMenuTrigger>
-          <ContextMenuContent align="start" side="bottom">
-            <ContextMenuItem
-              @click="isPoppedOutMinimized = !isPoppedOutMinimized"
-            >
-              <IconMinus v-if="!isPoppedOutMinimized" />
-              <IconPlus v-else />
-              {{ isPoppedOutMinimized ? "Expand sidebar" : "Minimize sidebar" }}
-            </ContextMenuItem>
-            <ContextMenuItem @click="isPoppedOut = false">
-              <IconX /> Close sidebar
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
+        <Transition
+          enter-active-class="transition transform duration-200 ease-in-out"
+          leave-active-class="transition transform duration-200 ease-in-out"
+          enter-from-class="opacity-0 scale-95"
+          leave-to-class="opacity-0 scale-95"
+        >
+          <div
+            v-if="isPoppedOut"
+            ref="draggableContainer"
+            class="pointer-events-none fixed top-15 right-2 bottom-10 left-14 z-50"
+          >
+            <ContextMenu>
+              <ContextMenuTrigger as-child>
+                <Draggable
+                  ref="draggableEl"
+                  prevent-default
+                  :handle="draggableHandleEl"
+                  :initial-value="{
+                    x: observedPosition.x * (innerWidth - observedSize.width),
+                    y: observedPosition.y * (innerHeight - observedSize.height),
+                  }"
+                  storage-key="popout-position"
+                  storage-type="local"
+                  :container-element="draggableContainer"
+                  :style="
+                    isPoppedOutMinimized
+                      ? {
+                          width: 'auto',
+                          height: 'auto',
+                        }
+                      : {
+                          width: `${observedSize.width}px`,
+                          height: `${observedSize.height}px`,
+                        }
+                  "
+                  class="bg-sidebar-accent pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded-md border will-change-transform"
+                  :class="
+                    isPoppedOutMinimized
+                      ? 'border-foreground shadow-md ring-1'
+                      : 'min-h-64 resize shadow-lg'
+                  "
+                >
+                  <div
+                    ref="draggableHandleEl"
+                    class="flex cursor-move items-center justify-between p-1.5"
+                    :class="
+                      isPoppedOutMinimized ? 'bg-sidebar' : 'bg-sidebar-accent'
+                    "
+                  >
+                    <span class="ml-1 font-medium">Popout</span>
+                    <ButtonGroup>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-xs"
+                              @click="
+                                isPoppedOutMinimized = !isPoppedOutMinimized
+                              "
+                            >
+                              <IconPlus v-if="isPoppedOutMinimized" />
+                              <IconMinus v-else />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              isPoppedOutMinimized
+                                ? "Expand sidebar"
+                                : "Minimize sidebar"
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-xs"
+                              @click="isPoppedOut = false"
+                            >
+                              <IconX />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent> Close sidebar </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </ButtonGroup>
+                  </div>
+                  <div
+                    v-if="!isPoppedOutMinimized"
+                    class="bg-background outline-sidebar-accent mx-1.5 mb-1.5 grow rounded border p-2 outline-5"
+                  ></div>
+                </Draggable>
+              </ContextMenuTrigger>
+              <ContextMenuContent align="start" side="bottom">
+                <ContextMenuItem
+                  @click="isPoppedOutMinimized = !isPoppedOutMinimized"
+                >
+                  <IconMinus v-if="!isPoppedOutMinimized" />
+                  <IconPlus v-else />
+                  {{
+                    isPoppedOutMinimized ? "Expand sidebar" : "Minimize sidebar"
+                  }}
+                </ContextMenuItem>
+                <ContextMenuItem @click="isPoppedOut = false">
+                  <IconX /> Close sidebar
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
+          </div>
+        </Transition>
         <div id="right-dock"></div>
       </main>
       <ContextMenu>
@@ -661,6 +681,14 @@ const closeTab = (id: string) => {
                     }}
                   </TooltipContent>
                 </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div
+              class="flex items-center justify-center"
+              data-tauri-drag-region
+            ></div>
+            <div class="flex items-center justify-end" data-tauri-drag-region>
+              <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Button
@@ -680,46 +708,6 @@ const closeTab = (id: string) => {
                     {{ isPoppedOut ? "Dock" : "Pop out" }}
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div
-              class="flex items-center justify-center"
-              data-tauri-drag-region
-            ></div>
-            <div class="flex items-center justify-end" data-tauri-drag-region>
-              <TooltipProvider>
-                <Tooltip>
-                  <Select id="language" v-model="locale">
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        class="h-8! rounded-none border-0"
-                        as-child
-                      >
-                        <SelectTrigger>
-                          <IconGlobe />
-                          <template v-if="iconDisplay === 'text'">
-                            <SelectValue />
-                          </template>
-                        </SelectTrigger>
-                      </Button>
-                      <SelectContent align="end">
-                        <SelectItem
-                          v-for="language in languages"
-                          :key="language.id"
-                          :value="language.id"
-                        >
-                          <Component :is="language.icon" />
-                          {{ language.name }}
-                        </SelectItem>
-                      </SelectContent>
-                    </TooltipTrigger>
-                    <TooltipContent> Language </TooltipContent>
-                  </Select>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Button
