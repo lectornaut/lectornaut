@@ -246,7 +246,7 @@ const closeTab = (id: string) => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <ResizableHandle
-                      class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                      class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                       @dblclick="
                         bottomPanel?.splitterPanel?.isCollapsed
                           ? bottomPanel?.splitterPanel?.expand()
