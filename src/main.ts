@@ -49,6 +49,7 @@ app.use(i18n)
 app.use(pinia)
 
 await router.isReady()
+
 app.mount("#app")
 
 if (isTauri.value) {

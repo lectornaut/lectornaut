@@ -14,8 +14,8 @@ import {
   IconSend,
 } from "@/data/icons"
 import {
-  resetEmailPassword,
   sendAuthenticateEmail,
+  sendResetEmailPassword,
   signInWithApple,
   signInWithEmailPassword,
   signInWithGoogle,
@@ -73,7 +73,7 @@ const resetPassword = async () => {
   resettingPassword.value = true
   authenticateError.value = false
 
-  await resetEmailPassword(email.value)
+  await sendResetEmailPassword(email.value)
     .then(() => {
       resettingPassword.value = true
     })

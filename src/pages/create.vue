@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { getFunctions, httpsCallable } from "firebase/functions"
+import { functions } from "@/modules/firebase"
+import { httpsCallable } from "firebase/functions"
 
 definePage({
   meta: {
@@ -70,7 +71,7 @@ const generatePoem = async () => {
   isLoading.value = true
   poem.value = ""
   try {
-    const poemFlow = httpsCallable(getFunctions(), "generateFlow")
+    const poemFlow = httpsCallable(functions, "generateFlow")
     const response = await poemFlow.stream(subject.value)
     for await (const chunk of response.stream) {
       isLoading.value = false
