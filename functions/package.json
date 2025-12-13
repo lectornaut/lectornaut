@@ -1,5 +1,9 @@
 {
   "name": "functions",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.25.0",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
@@ -24,6 +28,5 @@
   "devDependencies": {
     "firebase-functions-test": "^3.4.1",
     "typescript": "^5.9.3"
-  },
-  "private": true
+  }
 }

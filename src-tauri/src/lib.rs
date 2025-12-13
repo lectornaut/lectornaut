@@ -1,6 +1,8 @@
 use tauri::{Emitter, Manager};
 use window_vibrancy::*;
 
+mod oauth;
+
 #[derive(Clone, serde::Serialize)]
 struct Payload {
     args: Vec<String>,
@@ -17,12 +19,16 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.emit("single-instance", Payload { args: argv, cwd })
                 .unwrap();
         }))
+        .invoke_handler(tauri::generate_handler![
+            oauth::login_oauth
+        ])
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
             {

@@ -1,6 +1,8 @@
+import { isTauri } from "@/composables/usePlatform"
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { updateUserData } from "@/queries/updateUserData"
+import { invoke } from "@tauri-apps/api/core"
 import type { FirebaseError } from "firebase/app"
 import {
   createUserWithEmailAndPassword,
@@ -11,6 +13,7 @@ import {
   OAuthProvider,
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithEmailLink,
   signInWithPopup,
@@ -116,45 +119,134 @@ export const signInWithEmailPassword = async (
 }
 
 export const signInWithGoogle = async () => {
-  const provider = new GoogleAuthProvider()
-  return signInWithPopup(auth, provider)
-    .then(async (result) => {
-      window.localStorage.setItem("lastAuthProvider", "google")
-      finishAuthentication(result)
-    })
-    .catch((error) => {
-      console.error("Error in signInWithGoogle:", error)
-      toast.error((error as FirebaseError).message)
+  if (isTauri.value) {
+    try {
+      const response = await invoke<{ id_token: string }>("login_oauth", {
+        config: {
+          auth_url: import.meta.env.VITE_GOOGLE_AUTH_URL,
+          token_url: import.meta.env.VITE_GOOGLE_TOKEN_URL,
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+          redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
+          scopes: "openid email profile",
+          extra_params: {
+            access_type: "offline",
+          },
+        },
+      })
+      const credential = GoogleAuthProvider.credential(response.id_token)
+      return signInWithCredential(auth, credential).then(async (result) => {
+        window.localStorage.setItem("lastAuthProvider", "google")
+        finishAuthentication(result)
+      })
+    } catch (error) {
+      console.error("Error in signInWithGoogle (Tauri):", error)
+      toast.error((error as Error).toString())
       throw error
-    })
+    }
+  } else {
+    const provider = new GoogleAuthProvider()
+    return signInWithPopup(auth, provider)
+      .then(async (result) => {
+        window.localStorage.setItem("lastAuthProvider", "google")
+        finishAuthentication(result)
+      })
+      .catch((error) => {
+        console.error("Error in signInWithGoogle:", error)
+        toast.error((error as FirebaseError).message)
+        throw error
+      })
+  }
 }
 
 export const signInWithMicrosoft = async () => {
-  const provider = new OAuthProvider("microsoft.com")
-  return signInWithPopup(auth, provider)
-    .then(async (result) => {
-      window.localStorage.setItem("lastAuthProvider", "microsoft")
-      finishAuthentication(result)
-    })
-    .catch((error) => {
-      console.error("Error in signInWithMicrosoft:", error)
-      toast.error((error as FirebaseError).message)
+  if (isTauri.value) {
+    try {
+      const response = await invoke<{ id_token: string; access_token: string }>(
+        "login_oauth",
+        {
+          config: {
+            auth_url: import.meta.env.VITE_MICROSOFT_AUTH_URL,
+            token_url: import.meta.env.VITE_MICROSOFT_TOKEN_URL,
+            client_id: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
+            client_secret: import.meta.env.VITE_MICROSOFT_CLIENT_SECRET,
+            redirect_uri: import.meta.env.VITE_MICROSOFT_REDIRECT_URI,
+            scopes: "openid email profile offline_access",
+            extra_params: null,
+          },
+        }
+      )
+      const provider = new OAuthProvider("microsoft.com")
+      const credential = provider.credential({
+        idToken: response.id_token,
+        accessToken: response.access_token,
+      })
+      return signInWithCredential(auth, credential).then(async (result) => {
+        window.localStorage.setItem("lastAuthProvider", "microsoft")
+        finishAuthentication(result)
+      })
+    } catch (error) {
+      console.error("Error in signInWithMicrosoft (Tauri):", error)
+      toast.error((error as Error).toString())
       throw error
-    })
+    }
+  } else {
+    const provider = new OAuthProvider("microsoft.com")
+    return signInWithPopup(auth, provider)
+      .then(async (result) => {
+        window.localStorage.setItem("lastAuthProvider", "microsoft")
+        finishAuthentication(result)
+      })
+      .catch((error) => {
+        console.error("Error in signInWithMicrosoft:", error)
+        toast.error((error as FirebaseError).message)
+        throw error
+      })
+  }
 }
 
 export const signInWithApple = async () => {
-  const provider = new OAuthProvider("apple.com")
-  return signInWithPopup(auth, provider)
-    .then(async (result) => {
-      window.localStorage.setItem("lastAuthProvider", "apple")
-      finishAuthentication(result)
-    })
-    .catch((error) => {
-      console.error("Error in signInWithApple:", error)
-      toast.error((error as FirebaseError).message)
+  if (isTauri.value) {
+    try {
+      const response = await invoke<{ id_token: string }>("login_oauth", {
+        config: {
+          auth_url: import.meta.env.VITE_APPLE_AUTH_URL,
+          token_url: import.meta.env.VITE_APPLE_TOKEN_URL,
+          client_id: import.meta.env.VITE_APPLE_CLIENT_ID,
+          client_secret: import.meta.env.VITE_APPLE_CLIENT_SECRET,
+          redirect_uri: import.meta.env.VITE_APPLE_REDIRECT_URI,
+          scopes: "name email",
+          extra_params: {
+            response_mode: "form_post",
+          },
+        },
+      })
+      const provider = new OAuthProvider("apple.com")
+      const credential = provider.credential({
+        idToken: response.id_token,
+      })
+      return signInWithCredential(auth, credential).then(async (result) => {
+        window.localStorage.setItem("lastAuthProvider", "apple")
+        finishAuthentication(result)
+      })
+    } catch (error) {
+      console.error("Error in signInWithApple (Tauri):", error)
+      toast.error((error as Error).toString())
       throw error
-    })
+    }
+  } else {
+    const provider = new OAuthProvider("apple.com")
+    return signInWithPopup(auth, provider)
+      .then(async (result) => {
+        window.localStorage.setItem("lastAuthProvider", "apple")
+        finishAuthentication(result)
+      })
+      .catch((error) => {
+        console.error("Error in signInWithApple:", error)
+        toast.error((error as FirebaseError).message)
+        throw error
+      })
+  }
 }
 
 export const logout = async () => {
