@@ -33,7 +33,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper>
+  <OverlayScrollbarsWrapper class="bg-background">
     <div
       v-if="authenticateInProgress"
       class="grid size-full grow place-items-center"
@@ -47,7 +47,7 @@ onMounted(async () => {
       class="grid size-full grow place-items-center"
     >
       <div
-        class="mx-auto flex w-full max-w-sm flex-col justify-center gap-4 p-6"
+        class="mx-auto flex w-full max-w-sm flex-col justify-center gap-8 p-4"
       >
         <pre>
         {{ authenticateError }}
@@ -59,7 +59,7 @@ onMounted(async () => {
     </div>
     <div v-else class="grid size-full grow place-items-center">
       <div
-        class="mx-auto flex w-full max-w-sm flex-col justify-center gap-4 p-6"
+        class="mx-auto flex w-full max-w-sm flex-col justify-center gap-8 p-4"
       >
         <EnterContent />
         <div class="mb-safe-bottom mt-auto flex flex-col gap-2">

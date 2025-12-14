@@ -4,6 +4,7 @@ use tauri::{command, AppHandle, Runtime};
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use tokio::time::{timeout, Duration};
 use url::Url;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,7 +43,7 @@ pub async fn login_oauth<R: Runtime>(app: AppHandle<R>, config: OAuthConfig) -> 
     // Note: We bind to the port specified in the redirect_uri to match provider expectations.
     let listener = TcpListener::bind(format!("{}:{}", host, port))
         .await
-        .map_err(|e| format!("Failed to bind to port {}: {}", port, e))?;
+        .map_err(|e| format!("Port {} is already in use. Please ensure no other instance of the app is running and try again. Error: {}", port, e))?;
 
     // 2. Construct Auth URL
     let mut url = Url::parse(&config.auth_url).map_err(|e| e.to_string())?;
@@ -66,8 +67,11 @@ pub async fn login_oauth<R: Runtime>(app: AppHandle<R>, config: OAuthConfig) -> 
         .open_url(url.as_str(), None::<String>)
         .map_err(|e| e.to_string())?;
 
-    // 4. Wait for callback
-    let (mut stream, _) = listener.accept().await.map_err(|e| e.to_string())?;
+    // 4. Wait for callback with timeout
+    let (mut stream, _) = timeout(Duration::from_secs(120), listener.accept())
+        .await
+        .map_err(|_| "Authentication timed out. Please try again.".to_string())?
+        .map_err(|e| e.to_string())?;
 
     let mut buffer = [0; 4096];
     let len = stream.read(&mut buffer).await.map_err(|e| e.to_string())?;

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import {
   IconAppleFilled,
-  IconArrowRightUpCircleFill,
   IconCircleAlert,
+  IconDisc,
   IconEye,
   IconEyeOff,
   IconGoogle,
@@ -164,137 +164,61 @@ const authenticateApple = async () => {
 </script>
 
 <template>
-  <Tabs v-model="authMode" class="gap-6">
-    <TabsContent value="sign-up">
+  <Tabs v-model="authMode" class="gap-8">
+    <TabsContent value="sign-up" tabindex="-1">
       <h2
-        class="font-display text-center text-3xl leading-tight font-semibold tracking-tight"
+        class="font-display pt-8 text-center text-4xl leading-tight font-bold tracking-tight"
       >
         Sign up
       </h2>
-    </TabsContent>
-    <TabsContent value="sign-in">
-      <h2
-        class="font-display text-center text-3xl leading-tight font-semibold tracking-tight"
-      >
-        Sign in
-      </h2>
-    </TabsContent>
-    <!-- <TabsList class="mx-auto">
-      <TabsTrigger value="sign-up"> Sign up </TabsTrigger>
-      <TabsTrigger value="sign-in"> Sign in </TabsTrigger>
-    </TabsList> -->
-    <TabsContent value="sign-up">
-      <div class="flex flex-col gap-4">
-        <InputGroup>
-          <InputGroupAddon align="block-start">
-            <InputGroupText class="text-foreground">
-              <Label for="email"> Email </Label>
-            </InputGroupText>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <InputGroupButton
-                    variant="ghost"
-                    aria-label="Help"
-                    class="ml-auto"
-                    size="icon-xs"
-                  >
-                    <IconInfo />
-                  </InputGroupButton>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>We&apos;ll use this to send you notifications</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </InputGroupAddon>
-          <InputGroupAddon align="block-start" class="pt-0">
-            <IconMail />
-            <InputGroupInput
-              id="email"
-              v-model="email"
-              placeholder="ada@lovelace.com"
-              type="email"
-              :disabled="signupViaEmailPasswordInProgress"
-              required
-            />
-          </InputGroupAddon>
-        </InputGroup>
-        <InputGroup>
-          <InputGroupAddon align="block-start">
-            <InputGroupText class="text-foreground">
-              <Label for="password"> Password </Label>
-            </InputGroupText>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <InputGroupButton
-                    variant="ghost"
-                    aria-label="Help"
-                    class="ml-auto"
-                    size="icon-xs"
-                  >
-                    <IconInfo />
-                  </InputGroupButton>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Choose a strong password to secure your account</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </InputGroupAddon>
-          <InputGroupAddon align="block-start" class="pt-0">
-            <IconLock />
-            <InputGroupInput
-              id="password"
-              v-model="password"
-              placeholder="********"
-              :type="passwordInputType"
-              :disabled="signupViaEmailPasswordInProgress"
-              required
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <InputGroupButton
-                    size="icon-xs"
-                    class="ml-auto"
-                    variant="ghost"
-                    @click="togglePasswordVisibility()"
-                  >
-                    <IconEye
-                      v-if="passwordInputType === 'password'"
-                      class="text-muted-foreground"
-                    />
-                    <IconEyeOff v-else class="text-muted-foreground" />
-                  </InputGroupButton>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{ passwordInputType === "password" ? "Show" : "Hide" }}
-                  password
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </InputGroupAddon>
-        </InputGroup>
-        <Button
-          :disabled="signupViaEmailPasswordInProgress"
-          @click="signupViaEmailPassword"
-        >
-          <template v-if="signupViaEmailPasswordInProgress">
-            <Spinner />
-          </template>
-          <template v-else> Continue </template>
+      <div class="flex items-center justify-center">
+        <span class="text-muted-foreground"> Already have an account? </span>
+        <Button variant="link" tabindex="-1" @click="authMode = 'sign-in'">
+          Sign in
         </Button>
       </div>
     </TabsContent>
-    <TabsContent value="sign-in">
-      <div class="flex flex-col gap-4">
-        <InputGroup>
-          <InputGroupAddon align="block-start">
-            <InputGroupText class="text-foreground">
-              <Label for="email"> Email </Label>
-            </InputGroupText>
+    <TabsContent value="sign-in" tabindex="-1">
+      <h2
+        class="font-display pt-8 text-center text-4xl leading-tight font-bold tracking-tight"
+      >
+        Sign in
+      </h2>
+      <div class="flex items-center justify-center">
+        <span class="text-muted-foreground"> Don't have an account? </span>
+        <Button variant="link" tabindex="-1" @click="authMode = 'sign-up'">
+          Sign up
+        </Button>
+      </div>
+    </TabsContent>
+    <!-- <TabsList class="mx-auto w-full">
+      <TabsTrigger value="sign-up"> Sign up </TabsTrigger>
+      <TabsTrigger value="sign-in"> Sign in </TabsTrigger>
+    </TabsList> -->
+    <div class="flex flex-col gap-4">
+      <InputGroup>
+        <InputGroupAddon align="block-start">
+          <Label for="email" class="text-foreground"> Email </Label>
+          <TabsContent value="sign-up" tabindex="-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    variant="ghost"
+                    size="icon-xs"
+                    class="ml-auto"
+                    tabindex="-1"
+                  >
+                    <IconInfo />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>We'll use this to send you notifications</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </TabsContent>
+          <TabsContent value="sign-in" tabindex="-1">
             <AlertDialog>
               <TooltipProvider>
                 <Tooltip>
@@ -302,25 +226,10 @@ const authenticateApple = async () => {
                     <AlertDialogTrigger as-child>
                       <InputGroupButton
                         variant="ghost"
-                        aria-label="Help"
-                        class="ml-auto"
                         size="icon-xs"
+                        class="ml-auto"
+                        tabindex="-1"
                       >
-                        <div
-                          v-if="lastAuthProvider === 'email-link'"
-                          class="absolute -right-6"
-                        >
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <IconArrowRightUpCircleFill />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                Last used
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
                         <IconSend />
                       </InputGroupButton>
                     </AlertDialogTrigger>
@@ -328,6 +237,20 @@ const authenticateApple = async () => {
                   <TooltipContent>
                     Send magic link to your email
                   </TooltipContent>
+                  <TooltipProvider v-if="lastAuthProvider === 'email-link'">
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Badge
+                          variant="destructive"
+                          tabindex="-1"
+                          class="absolute -top-3 right-3"
+                        >
+                          <IconDisc /> Recent
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top"> Last used </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </Tooltip>
               </TooltipProvider>
               <AlertDialogContent>
@@ -357,24 +280,47 @@ const authenticateApple = async () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </InputGroupAddon>
-          <InputGroupAddon align="block-start" class="pt-0">
-            <IconMail />
-            <InputGroupInput
-              id="email"
-              v-model="email"
-              placeholder="ada@lovelace.com"
-              type="email"
-              :disabled="signinViaEmailPasswordInProgress"
-              required
-            />
-          </InputGroupAddon>
-        </InputGroup>
-        <InputGroup>
-          <InputGroupAddon align="block-start">
-            <InputGroupText class="text-foreground">
-              <Label for="password-signin"> Password </Label>
-            </InputGroupText>
+          </TabsContent>
+        </InputGroupAddon>
+        <InputGroupAddon align="block-start" class="pt-0">
+          <IconMail />
+          <InputGroupInput
+            id="email"
+            v-model="email"
+            placeholder="ada@lovelace.com"
+            type="email"
+            :disabled="
+              signupViaEmailPasswordInProgress ||
+              signinViaEmailPasswordInProgress
+            "
+            required
+            class="text-foreground"
+          />
+        </InputGroupAddon>
+      </InputGroup>
+      <InputGroup>
+        <InputGroupAddon align="block-start">
+          <Label for="password" class="text-foreground"> Password </Label>
+          <TabsContent value="sign-up" tabindex="-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    variant="ghost"
+                    size="icon-xs"
+                    class="ml-auto"
+                    tabindex="-1"
+                  >
+                    <IconInfo />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Choose a strong password to secure your account</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </TabsContent>
+          <TabsContent value="sign-in" tabindex="-1">
             <AlertDialog>
               <TooltipProvider>
                 <Tooltip>
@@ -382,9 +328,9 @@ const authenticateApple = async () => {
                     <AlertDialogTrigger as-child>
                       <InputGroupButton
                         variant="ghost"
-                        aria-label="Forgot password"
-                        class="ml-auto"
                         size="icon-xs"
+                        class="ml-auto"
+                        tabindex="-1"
                       >
                         <IconHelpCircle />
                       </InputGroupButton>
@@ -420,95 +366,96 @@ const authenticateApple = async () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </InputGroupAddon>
-          <InputGroupAddon align="block-start" class="pt-0">
-            <IconLock />
-            <InputGroupInput
-              id="password-signin"
-              v-model="password"
-              placeholder="********"
-              :type="passwordInputType"
-              :disabled="signinViaEmailPasswordInProgress"
-              required
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <InputGroupButton
-                    size="icon-xs"
-                    variant="ghost"
-                    @click="togglePasswordVisibility()"
-                  >
-                    <IconEye
-                      v-if="passwordInputType === 'password'"
-                      class="text-muted-foreground"
-                    />
-                    <IconEyeOff v-else class="text-muted-foreground" />
-                  </InputGroupButton>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{ passwordInputType === "password" ? "Show" : "Hide" }}
-                  password
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </InputGroupAddon>
-        </InputGroup>
+          </TabsContent>
+        </InputGroupAddon>
+        <InputGroupAddon align="block-start" class="pt-0">
+          <IconLock />
+          <InputGroupInput
+            id="password"
+            v-model="password"
+            placeholder="********"
+            :type="passwordInputType"
+            :disabled="
+              signupViaEmailPasswordInProgress ||
+              signinViaEmailPasswordInProgress
+            "
+            required
+            class="text-foreground"
+          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <InputGroupButton
+                  variant="ghost"
+                  size="icon-xs"
+                  class="ml-auto"
+                  tabindex="-1"
+                  @click="togglePasswordVisibility()"
+                >
+                  <IconEye
+                    v-if="passwordInputType === 'password'"
+                    class="text-muted-foreground"
+                  />
+                  <IconEyeOff v-else class="text-muted-foreground" />
+                </InputGroupButton>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ passwordInputType === "password" ? "Show" : "Hide" }}
+                password
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </InputGroupAddon>
+      </InputGroup>
+      <TabsContent value="sign-up" tabindex="-1">
+        <Button
+          :disabled="signupViaEmailPasswordInProgress"
+          class="w-full"
+          @click="signupViaEmailPassword"
+        >
+          <template v-if="signupViaEmailPasswordInProgress">
+            <Spinner />
+          </template>
+          <template v-else> Continue </template>
+        </Button>
+      </TabsContent>
+      <TabsContent value="sign-in" tabindex="-1">
         <Button
           type="submit"
           :disabled="signinViaEmailPasswordInProgress"
-          class="relative"
+          class="relative w-full"
           @click="signinViaEmailPassword()"
         >
           <template v-if="signinViaEmailPasswordInProgress">
             <Spinner />
           </template>
-          <template v-else>
-            Continue
-            <div
-              v-if="lastAuthProvider === 'email-password'"
-              class="absolute right-2.5"
-            >
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <IconArrowRightUpCircleFill />
-                  </TooltipTrigger>
-                  <TooltipContent side="top"> Last used </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </template>
+          <template v-else> Continue </template>
+          <TooltipProvider v-if="lastAuthProvider === 'email-password'">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Badge
+                  variant="destructive"
+                  tabindex="-1"
+                  class="absolute -top-3 right-3"
+                >
+                  <IconDisc /> Recent
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="top"> Last used </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Button>
-      </div>
-    </TabsContent>
-    <TabsContent value="sign-up">
-      <div class="flex items-center justify-center gap-1">
-        <span class="text-muted-foreground"> Already have an account? </span>
-        <Button
-          variant="link"
-          class="h-auto p-0 leading-1"
-          tabindex="-1"
-          @click="authMode = 'sign-in'"
-        >
-          Sign in
-        </Button>
-      </div>
-    </TabsContent>
-    <TabsContent value="sign-in">
-      <div class="flex items-center justify-center gap-1">
-        <span class="text-muted-foreground"> Don't have an account? </span>
-        <Button
-          variant="link"
-          class="h-auto p-0 leading-0"
-          tabindex="-1"
-          @click="authMode = 'sign-up'"
-        >
-          Sign up
-        </Button>
-      </div>
-    </TabsContent>
-    <Separator label="Or continue with" />
+      </TabsContent>
+    </div>
+    <div class="relative">
+      <Separator />
+      <Badge
+        variant="outline"
+        class="bg-muted text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 uppercase"
+      >
+        Or continue with
+      </Badge>
+    </div>
     <div class="flex flex-col gap-2">
       <Button
         variant="secondary"
@@ -523,16 +470,20 @@ const authenticateApple = async () => {
           <IconGoogle />
         </template>
         Google
-        <div v-if="lastAuthProvider === 'google'" class="absolute right-2.5">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <IconArrowRightUpCircleFill />
-              </TooltipTrigger>
-              <TooltipContent side="top"> Last used </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        <TooltipProvider v-if="lastAuthProvider === 'google'">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Badge
+                variant="destructive"
+                tabindex="-1"
+                class="absolute -top-3 right-3"
+              >
+                <IconDisc /> Recent
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="top"> Last used </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </Button>
       <Button
         variant="secondary"
@@ -547,16 +498,20 @@ const authenticateApple = async () => {
           <IconMicrosoft />
         </template>
         Microsoft
-        <div v-if="lastAuthProvider === 'microsoft'" class="absolute right-2.5">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <IconArrowRightUpCircleFill />
-              </TooltipTrigger>
-              <TooltipContent side="top"> Last used </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        <TooltipProvider v-if="lastAuthProvider === 'microsoft'">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Badge
+                variant="destructive"
+                tabindex="-1"
+                class="absolute -top-3 right-3"
+              >
+                <IconDisc /> Recent
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="top"> Last used </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </Button>
       <Button
         variant="secondary"
@@ -571,16 +526,20 @@ const authenticateApple = async () => {
           <IconAppleFilled />
         </template>
         Apple
-        <div v-if="lastAuthProvider === 'apple'" class="absolute right-2.5">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <IconArrowRightUpCircleFill />
-              </TooltipTrigger>
-              <TooltipContent side="top"> Last used </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        <TooltipProvider v-if="lastAuthProvider === 'apple'">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Badge
+                variant="destructive"
+                tabindex="-1"
+                class="absolute -top-3 right-3"
+              >
+                <IconDisc /> Recent
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="top"> Last used </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </Button>
     </div>
     <Alert
