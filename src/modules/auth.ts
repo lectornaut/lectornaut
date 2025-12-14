@@ -1,4 +1,5 @@
 import { isTauri } from "@/composables/usePlatform"
+import { auth } from "@/modules/firebase"
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { updateUserData } from "@/queries/updateUserData"
@@ -7,7 +8,6 @@ import type { FirebaseError } from "firebase/app"
 import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
-  getAuth,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   OAuthProvider,
@@ -21,19 +21,55 @@ import {
 } from "firebase/auth"
 import { toast } from "vue-sonner"
 
-const auth = getAuth()
-
-const actionCodeSettings = {
-  url: `${window.location.origin}/enter`,
-  handleCodeInApp: true,
-}
-
+// Loopback mechanism for Tauri (no remote deep link)
 export const sendAuthenticateEmail = async (email: string) => {
+  const port = 7878
+  let magicLinkPromise: Promise<string> | null = null
+
+  if (isTauri.value) {
+    // Start listening BEFORE sending email, but don't await yet
+    magicLinkPromise = invoke<string>("listen_magic_link", { port })
+  }
+
+  const url = isTauri.value
+    ? `http://localhost:${port}/verify`
+    : `${window.location.origin}/enter?target=web`
+
+  const actionCodeSettings = {
+    url,
+    handleCodeInApp: true,
+  }
+
   return sendSignInLinkToEmail(auth, email, actionCodeSettings)
-    .then(() => {
+    .then(async () => {
       window.localStorage.setItem("emailForSignIn", email)
       window.localStorage.setItem("lastAuthProvider", "email-link")
       toast.success("Authentication email sent")
+
+      // If Tauri, wait for the link to be clicked WITHOUT blocking the return
+      if (isTauri.value && magicLinkPromise) {
+        // We do NOT await this block, so the function returns immediately related to the UI state
+        ;(async () => {
+          try {
+            const fullUrl = await magicLinkPromise
+            toast.dismiss("magic-link-wait")
+            // Process the returned URL
+            const link = new URL(fullUrl).href
+            if (isSignInWithEmailLink(auth, link)) {
+              await signInWithEmailLink(auth, email, link).then(
+                async (result) => {
+                  window.localStorage.removeItem("emailForSignIn")
+                  finishAuthentication(result)
+                }
+              )
+            }
+          } catch (error) {
+            toast.dismiss("magic-link-wait")
+            console.error("Magic link listener failed:", error)
+            toast.error("Magic link listener timed out or failed")
+          }
+        })()
+      }
     })
     .catch((error) => {
       console.error("Error in sendAuthenticateEmail:", error)

@@ -1,6 +1,7 @@
 use tauri::{Emitter, Manager};
 use window_vibrancy::*;
 
+mod magic_link;
 mod oauth;
 
 #[derive(Clone, serde::Serialize)]
@@ -27,7 +28,8 @@ pub fn run() {
                 .unwrap();
         }))
         .invoke_handler(tauri::generate_handler![
-            oauth::login_oauth
+            oauth::login_oauth,
+            magic_link::listen_magic_link
         ])
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
