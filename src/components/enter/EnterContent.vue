@@ -22,6 +22,7 @@ import {
   signInWithMicrosoft,
   signUpWithEmailPassword,
 } from "@/modules/auth"
+import { getAuthErrorMessage } from "@/utils/auth-errors"
 
 const authMode = ref<"sign-up" | "sign-in">("sign-up")
 const authenticateError = ref<string | boolean>(false)
@@ -32,135 +33,67 @@ const passwordInputType = ref<"password" | "text">("password")
 
 const lastAuthProvider = useStorage<string | null>("lastAuthProvider", null)
 
+const handleAuth = async (
+  loadingState: Ref<boolean>,
+  authFunction: () => Promise<void>,
+  providerName?: string
+) => {
+  loadingState.value = true
+  authenticateError.value = false
+
+  try {
+    await authFunction()
+    if (providerName) {
+      lastAuthProvider.value = providerName
+    }
+  } catch (error) {
+    authenticateError.value = getAuthErrorMessage(error)
+  } finally {
+    loadingState.value = false
+  }
+}
+
 const signupViaEmailPasswordInProgress = ref(false)
-const signupViaEmailPassword = async () => {
-  signupViaEmailPasswordInProgress.value = true
-  authenticateError.value = false
-
-  await signUpWithEmailPassword(email.value, password.value)
-    .then(() => {
-      lastAuthProvider.value = "email-password"
-      signupViaEmailPasswordInProgress.value = true
-    })
-    .catch((error) => {
-      authenticateError.value = String(error)
-    })
-    .finally(() => {
-      signupViaEmailPasswordInProgress.value = false
-    })
-}
-
-const signinViaEmailPasswordInProgress = ref(false)
-const signinViaEmailPassword = async () => {
-  signinViaEmailPasswordInProgress.value = true
-  authenticateError.value = false
-
-  await signInWithEmailPassword(email.value, password.value)
-    .then(() => {
-      lastAuthProvider.value = "email-password"
-      signinViaEmailPasswordInProgress.value = true
-    })
-    .catch((error) => {
-      authenticateError.value = String(error)
-    })
-    .finally(() => {
-      signinViaEmailPasswordInProgress.value = false
-    })
-}
+const signupViaEmailPassword = () =>
+  handleAuth(signupViaEmailPasswordInProgress, () =>
+    signUpWithEmailPassword(email.value, password.value)
+  )
 
 const resettingPassword = ref(false)
-const resetPassword = async () => {
-  resettingPassword.value = true
-  authenticateError.value = false
+const resetPassword = () =>
+  handleAuth(resettingPassword, () => sendResetEmailPassword(email.value))
 
-  await sendResetEmailPassword(email.value)
-    .then(() => {
-      resettingPassword.value = true
-    })
-    .catch((error) => {
-      authenticateError.value = String(error)
-    })
-    .finally(() => {
-      resettingPassword.value = false
-    })
-}
+const togglePasswordVisibility = () =>
+  (passwordInputType.value =
+    passwordInputType.value === "password" ? "text" : "password")
 
-const togglePasswordVisibility = () => {
-  passwordInputType.value =
-    passwordInputType.value === "password" ? "text" : "password"
-}
+const signinViaEmailPasswordInProgress = ref(false)
+const signinViaEmailPassword = () =>
+  handleAuth(
+    signinViaEmailPasswordInProgress,
+    () => signInWithEmailPassword(email.value, password.value),
+    "email-password"
+  )
 
 const authenticateEmailInProgress = ref(false)
-const authenticateEmail = async () => {
-  authenticateEmailInProgress.value = true
-  authenticateError.value = false
-
-  await sendAuthenticateEmail(email.value)
-    .then(() => {
-      lastAuthProvider.value = "email-link"
-      authenticateEmailInProgress.value = true
-    })
-    .catch((error) => {
-      authenticateError.value = String(error)
-    })
-    .finally(() => {
-      authenticateEmailInProgress.value = false
-    })
-}
+const authenticateEmail = () =>
+  handleAuth(
+    authenticateEmailInProgress,
+    () => sendAuthenticateEmail(email.value),
+    "email-link"
+  )
 
 const authenticateGoogleInProgress = ref(false)
-const authenticateGoogle = async () => {
-  authenticateGoogleInProgress.value = true
-  authenticateError.value = false
-
-  await signInWithGoogle()
-    .then(() => {
-      lastAuthProvider.value = "google"
-      authenticateGoogleInProgress.value = true
-    })
-    .catch((error) => {
-      authenticateError.value = String(error)
-    })
-    .finally(() => {
-      authenticateGoogleInProgress.value = false
-    })
-}
+const authenticateGoogle = () =>
+  handleAuth(authenticateGoogleInProgress, signInWithGoogle, "google")
 
 const authenticateMicrosoftInProgress = ref(false)
-const authenticateMicrosoft = async () => {
-  authenticateMicrosoftInProgress.value = true
-  authenticateError.value = false
-
-  await signInWithMicrosoft()
-    .then(() => {
-      lastAuthProvider.value = "microsoft"
-      authenticateMicrosoftInProgress.value = true
-    })
-    .catch((error) => {
-      authenticateError.value = error
-    })
-    .finally(() => {
-      authenticateMicrosoftInProgress.value = false
-    })
-}
+const authenticateMicrosoft = () =>
+  handleAuth(authenticateMicrosoftInProgress, signInWithMicrosoft, "microsoft")
 
 const authenticateAppleInProgress = ref(false)
-const authenticateApple = async () => {
-  authenticateAppleInProgress.value = true
-  authenticateError.value = false
-
-  await signInWithApple()
-    .then(() => {
-      lastAuthProvider.value = "apple"
-      authenticateAppleInProgress.value = true
-    })
-    .catch((error) => {
-      authenticateError.value = String(error)
-    })
-    .finally(() => {
-      authenticateAppleInProgress.value = false
-    })
-}
+const authenticateApple = () =>
+  handleAuth(authenticateAppleInProgress, signInWithApple, "apple")
 </script>
 
 <template>
