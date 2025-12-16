@@ -1,6 +1,6 @@
 import { getAnalytics } from "firebase/analytics"
 import { initializeApp } from "firebase/app"
-import { getAuth } from "firebase/auth"
+import { browserLocalPersistence, getAuth, setPersistence } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 import { getFunctions } from "firebase/functions"
 import { getStorage } from "firebase/storage"
@@ -20,5 +20,9 @@ export const firebaseApp = initializeApp(firebaseConfig)
 export const analytics = getAnalytics(firebaseApp)
 export const firestore = getFirestore(firebaseApp)
 export const auth = getAuth(firebaseApp)
+
+// Explicitly use LocalStorage so we can capture the session blob synchronously.
+setPersistence(auth, browserLocalPersistence)
+
 export const functions = getFunctions(firebaseApp)
 export const storage = getStorage(firebaseApp)

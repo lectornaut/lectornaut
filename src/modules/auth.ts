@@ -1,3 +1,4 @@
+import { useKeychain } from "@/composables/useKeychain"
 import { isTauri } from "@/composables/usePlatform"
 import { auth } from "@/modules/firebase"
 import { router } from "@/modules/router"
@@ -11,6 +12,7 @@ import {
   GoogleAuthProvider,
   isSignInWithEmailLink,
   OAuthProvider,
+  onIdTokenChanged,
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
   signInWithCredential,
@@ -90,14 +92,85 @@ export const sendResetEmailPassword = async (email: string) => {
     })
 }
 
+const getFirebaseKey = () => {
+  const foundKey = Object.keys(window.localStorage).find((k) =>
+    k.startsWith("firebase:authUser:")
+  )
+  if (foundKey) return foundKey
+
+  // Fallback: construct the key manually if not found (e.g. user is logged out)
+  const apiKey = import.meta.env.VITE_API_KEY
+  return `firebase:authUser:${apiKey}:[DEFAULT]`
+}
+
+/**
+ * Listens for auth state changes (token refreshes, sign-ins) and keeps the keychain updated.
+ * This ensures we capture the freshest session data whenever it changes.
+ */
+export const initKeychainListener = () => {
+  onIdTokenChanged(auth, async (user) => {
+    if (user) {
+      // User is signed in. Capture session data.
+      // Since persistence is set to LOCAL, we expect the key to be present.
+      // We might need a small delay if the write happens after the event, but usually it's close.
+      const key = getFirebaseKey()
+      if (key) {
+        const sessionDataRaw = window.localStorage.getItem(key)
+        if (sessionDataRaw) {
+          useKeychain().addAccount({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            token: "client-side",
+            sessionData: JSON.parse(sessionDataRaw),
+          })
+          console.log("[Auth] Captured session for:", user.email)
+        }
+      }
+    }
+  })
+}
+
 const finishAuthentication = async (result: UserCredential) => {
   toast.success("Logged in")
+
   if (getAdditionalUserInfo(result)?.isNewUser) {
     setDefaultUserData()
     await router.push("/welcome")
   } else {
     updateUserData()
     await router.push("/home")
+  }
+}
+
+export const switchAccount = async (targetUid: string) => {
+  const account = useKeychain().getAccount(targetUid)
+  if (!account || !account.sessionData) {
+    toast.error("Account session not found in keychain")
+    return
+  }
+
+  // Client-side session restore
+  try {
+    await auth.signOut() // Clear current in-memory state
+
+    const key = getFirebaseKey()
+    if (key) {
+      window.localStorage.setItem(key, JSON.stringify(account.sessionData))
+      // Reload to force Firebase SDK to pick up the injected persistence
+      window.location.reload()
+    } else {
+      // If no key found (shouldn't happen if we just signed out, the key usually remains or we can reconstruct it),
+      // we might need to know the apiKey and appName to reconstruct the key string.
+      // However, usually the key exists.
+      // Fallback: search for it again or error out.
+      console.error("Firebase Auth persistence key missing")
+      toast.error("Failed to switch account: Persistence key missing")
+    }
+  } catch (error) {
+    console.error("Error switching account:", error)
+    toast.error("Failed to switch account.")
   }
 }
 

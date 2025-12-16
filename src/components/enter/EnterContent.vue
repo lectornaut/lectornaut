@@ -1,4 +1,9 @@
 <script lang="ts" setup>
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useKeychain } from "@/composables/useKeychain"
 import {
   IconAppleFilled,
   IconCircleAlert,
@@ -12,6 +17,7 @@ import {
   IconMail,
   IconMicrosoft,
   IconSend,
+  IconX,
 } from "@/data/icons"
 import {
   sendAuthenticateEmail,
@@ -21,10 +27,13 @@ import {
   signInWithGoogle,
   signInWithMicrosoft,
   signUpWithEmailPassword,
+  switchAccount,
 } from "@/modules/auth"
 import { getAuthErrorMessage } from "@/utils/auth-errors"
 
 const { t } = useI18n()
+
+const { accounts, removeAccount } = useKeychain()
 
 const authMode = ref<"sign-up" | "sign-in">("sign-up")
 const authenticateError = ref<string | boolean>(false)
@@ -134,6 +143,55 @@ const authenticateApple = () =>
       <TabsTrigger value="sign-up"> Sign up </TabsTrigger>
       <TabsTrigger value="sign-in"> Sign in </TabsTrigger>
     </TabsList> -->
+    <template v-if="accounts.length > 0">
+      <div class="grid gap-2">
+        <Item
+          v-for="account in accounts"
+          :key="account.uid"
+          variant="muted"
+          size="sm"
+          @click="switchAccount(account.uid)"
+        >
+          <ItemMedia>
+            <Avatar class="size-9 rounded-md">
+              <AvatarImage
+                class="rounded-md"
+                :src="account.photoURL!"
+                :alt="account.displayName!"
+                referrerpolicy="no-referrer"
+              />
+              <AvatarFallback class="rounded-md">
+                {{ account.displayName?.charAt(0) }}
+              </AvatarFallback>
+            </Avatar>
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{{ account.displayName }}</ItemTitle>
+            <ItemDescription class="text-xs">
+              {{ account.email }}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <Button
+              variant="ghost"
+              size="icon"
+              @click="removeAccount(account.uid)"
+            >
+              <IconX />
+            </Button>
+          </ItemActions>
+        </Item>
+      </div>
+      <div class="relative">
+        <Separator />
+        <Badge
+          variant="outline"
+          class="bg-muted text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 uppercase"
+        >
+          {{ t("enter.orContinueWith") }}
+        </Badge>
+      </div>
+    </template>
     <div class="flex flex-col gap-4">
       <InputGroup>
         <InputGroupAddon align="block-start">
@@ -415,7 +473,7 @@ const authenticateApple = () =>
         {{ t("enter.orContinueWith") }}
       </Badge>
     </div>
-    <div class="flex flex-col gap-2">
+    <div class="grid gap-2">
       <Button
         variant="secondary"
         class="relative justify-start"
