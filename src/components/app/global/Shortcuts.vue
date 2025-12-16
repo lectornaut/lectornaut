@@ -15,6 +15,7 @@ import {
 import { emitter } from "@/modules/mitt"
 import Fuse from "fuse.js"
 
+const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
 
 const openShortcuts = ref(false)
@@ -86,13 +87,16 @@ const filteredShortcuts = computed(() => {
       :class="{ 'mt-13': isTauri && !isFullscreen }"
     >
       <SheetHeader class="gap-4">
-        <SheetTitle>Keyboard shortcuts</SheetTitle>
+        <SheetTitle>{{ t("components.global.shortcuts.title") }}</SheetTitle>
         <SheetDescription>
           <InputGroup>
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
-            <InputGroupInput v-model="search" placeholder="Search" />
+            <InputGroupInput
+              v-model="search"
+              :placeholder="t('components.global.shortcuts.search')"
+            />
           </InputGroup>
         </SheetDescription>
       </SheetHeader>
@@ -149,7 +153,7 @@ const filteredShortcuts = computed(() => {
             </AccordionItem>
             <div v-if="filteredShortcuts.length === 0">
               <p class="text-muted-foreground p-4 text-center">
-                No shortcuts found.
+                {{ t("components.global.shortcuts.noShortcuts") }}
               </p>
             </div>
           </Accordion>
@@ -159,11 +163,11 @@ const filteredShortcuts = computed(() => {
       <SheetFooter>
         <Button class="justify-start" variant="secondary">
           <IconMessageCircle />
-          Get support
+          {{ t("components.global.shortcuts.getSupport") }}
         </Button>
         <Button class="justify-start" variant="secondary">
           <IconBookOpen />
-          Documentation
+          {{ t("components.global.shortcuts.documentation") }}
           <IconArrowUpRight />
         </Button>
       </SheetFooter>

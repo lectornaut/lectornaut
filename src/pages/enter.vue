@@ -12,6 +12,8 @@ useHead({
   title: "Enter",
 })
 
+const { t } = useI18n()
+
 const authenticateInProgress = ref(true)
 const authenticateError = ref(false)
 
@@ -53,7 +55,9 @@ onMounted(async () => {
         {{ authenticateError }}
         </pre>
         <Button variant="link" class="gap-1" as-child>
-          <RouterLink to="/"> <IconChevronLeft /> Back to Home </RouterLink>
+          <RouterLink to="/">
+            <IconChevronLeft /> {{ t("common.backToHome") }}
+          </RouterLink>
         </Button>
       </div>
     </div>

@@ -10,7 +10,9 @@ useHead({
   title: "Changelog",
 })
 
-export type ChangelogEntry = {
+const { t } = useI18n()
+
+type ChangelogEntry = {
   version: string
   date: string
   title: string
@@ -91,10 +93,11 @@ const entries: ChangelogEntry[] = [
 <template>
   <div class="mx-auto my-32 grid max-w-6xl gap-10">
     <div class="space-y-6 text-center">
-      <h2 class="font-display text-6xl font-bold">Changelog</h2>
+      <h2 class="font-display text-6xl font-bold">
+        {{ t("pages.changelog.title") }}
+      </h2>
       <p class="text-secondary-foreground">
-        Stay up to date with the latest changes and improvements to our
-        platform.
+        {{ t("pages.changelog.subtitle") }}
       </p>
     </div>
     <div v-for="(entry, index) in entries" :key="index" class="px-8 py-4">
@@ -133,7 +136,7 @@ const entries: ChangelogEntry[] = [
           <img
             v-if="entry.image"
             :src="entry.image"
-            :alt="`${entry.version} visual`"
+            :alt="`${entry.version} ${t('pages.changelog.versionVisual')}`"
             class="mt-8 w-full rounded-lg object-cover"
           />
           <Button
@@ -143,7 +146,7 @@ const entries: ChangelogEntry[] = [
             as-child
           >
             <a :href="entry.button.url" target="_blank">
-              {{ entry.button.text }} <IconArrowUpRight />
+              {{ t("pages.changelog.readMore") }} <IconArrowUpRight />
             </a>
           </Button>
         </div>

@@ -9,14 +9,16 @@ definePage({
 useHead({
   title: "Landing",
 })
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="mx-auto my-32 grid max-w-4xl gap-32">
     <Tabs default-value="you" class="grid w-full">
       <TabsList class="mx-auto">
-        <TabsTrigger value="you"> For you </TabsTrigger>
-        <TabsTrigger value="team"> For team </TabsTrigger>
+        <TabsTrigger value="you"> {{ t("pages.home.forYou") }} </TabsTrigger>
+        <TabsTrigger value="team"> {{ t("pages.home.forTeam") }} </TabsTrigger>
       </TabsList>
       <HeroText />
       <TabsContent
@@ -36,10 +38,12 @@ useHead({
               >
                 <AlertTitle class="flex justify-between gap-2">
                   <div class="flex items-center gap-1.5 font-semibold">
-                    <span>Personal</span>
+                    <span>{{ t("pages.home.personal") }}</span>
                   </div>
                   <Badge variant="secondary">
-                    <span class="text-primary"> Free for everyone </span>
+                    <span class="text-primary">
+                      {{ t("pages.home.free") }}
+                    </span>
                   </Badge>
                 </AlertTitle>
                 <AlertDescription
@@ -51,7 +55,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Unlimited notes, upto 10MB per note.
+                        {{ t("pages.home.features.personal.notes") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -59,7 +63,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Basic AI model and features.
+                        {{ t("pages.home.features.personal.ai") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -67,7 +71,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        100MB storage.
+                        {{ t("pages.home.features.personal.storage") }}
                       </p>
                     </li>
                   </ul>
@@ -83,7 +87,7 @@ useHead({
               >
                 <AlertTitle class="flex justify-between gap-2">
                   <div class="flex items-center gap-1.5 font-semibold">
-                    <span>Professional</span>
+                    <span>{{ t("pages.home.professional") }}</span>
                     <Badge>
                       <IconAiFill />
                       AI
@@ -105,7 +109,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Unlimited notes.
+                        {{ t("pages.home.features.professional.notes") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -113,7 +117,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Smarter AI with more features.
+                        {{ t("pages.home.features.professional.ai") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -121,7 +125,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Limitless storage for images and files.
+                        {{ t("pages.home.features.professional.storage") }}
                       </p>
                     </li>
                   </ul>
@@ -147,10 +151,10 @@ useHead({
               >
                 <AlertTitle class="flex justify-between gap-2">
                   <div class="flex items-center gap-1.5 font-semibold">
-                    <span>Business</span>
+                    <span>{{ t("pages.home.business") }}</span>
                     <Badge>
                       <IconAiFill />
-                      AI
+                      {{ t("pages.home.ai") }}
                     </Badge>
                   </div>
                   <Badge variant="secondary">
@@ -169,7 +173,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Unlimited notes, upto 100MB per note.
+                        {{ t("pages.home.features.business.notes") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -177,7 +181,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Smarter AI with more features.
+                        {{ t("pages.home.features.business.ai") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -185,7 +189,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        1GB storage.
+                        {{ t("pages.home.features.business.storage") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -193,7 +197,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Team collaboration features.
+                        {{ t("pages.home.features.business.team") }}
                       </p>
                     </li>
                   </ul>
@@ -209,14 +213,16 @@ useHead({
               >
                 <AlertTitle class="flex justify-between gap-2">
                   <div class="flex items-center gap-1.5 font-semibold">
-                    <span>Enterprise</span>
+                    <span>{{ t("pages.home.enterprise") }}</span>
                     <Badge>
                       <IconAiFill />
-                      AI
+                      {{ t("pages.home.ai") }}
                     </Badge>
                   </div>
                   <Badge variant="secondary">
-                    <span class="text-primary"> Contact us </span>
+                    <span class="text-primary">
+                      {{ t("pages.home.contactUs") }}
+                    </span>
                   </Badge>
                 </AlertTitle>
                 <AlertDescription
@@ -228,7 +234,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Unlimited notes.
+                        {{ t("pages.home.features.enterprise.notes") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -236,7 +242,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Smarter AI with more features.
+                        {{ t("pages.home.features.enterprise.ai") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -244,7 +250,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Limitless storage for images and files.
+                        {{ t("pages.home.features.enterprise.storage") }}
                       </p>
                     </li>
                     <li class="flex items-start gap-2">
@@ -252,7 +258,7 @@ useHead({
                       <p
                         class="text-muted-foreground leading-loose first-line:leading-none"
                       >
-                        Team collaboration features.
+                        {{ t("pages.home.features.enterprise.team") }}
                       </p>
                     </li>
                   </ul>

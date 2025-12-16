@@ -1,5 +1,50 @@
 {
   "hello": "Hello",
+
+  "enter": {
+    "title": "Enter",
+    "subtitle": "Enter subtitle",
+    "signUp": "Sign up",
+    "signIn": "Sign in",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "continue": "Continue",
+    "orContinueWith": "Or continue with",
+    "magicLink": {
+      "send": "Send magic link",
+      "title": "Send magic link",
+      "description": "Enter your email address to receive a magic link.",
+      "recent": "Recent",
+      "lastUsed": "Last used",
+      "tooltip": "Send magic link to your email"
+    },
+    "forgotPassword": {
+      "send": "Send reset link",
+      "title": "Forgot password",
+      "description": "Enter your email address to receive a password reset link.",
+      "tooltip": "Forgot password?"
+    },
+    "placeholders": {
+      "email": "Email address",
+      "emailExample": "ada{'@'}lovelace.com",
+      "password": "********"
+    },
+    "labels": {
+      "email": "Email",
+      "password": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "tooltips": {
+      "notifications": "We'll use this to send you notifications",
+      "strongPassword": "Choose a strong password to secure your account"
+    },
+    "uhoh": "Message:",
+    "cancel": "Cancel",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "apple": "Apple"
+  },
   "common": {
     "cancel": "Cancel",
     "delete": "Delete",
@@ -9,7 +54,9 @@
     "remove": "Remove",
     "unknown": "Unknown",
     "loading": "Loading...",
-    "reset": "Reset"
+    "reset": "Reset",
+    "backToHome": "Back to Home",
+    "select": "Select"
   },
   "settings": {
     "titles": {
@@ -376,6 +423,17 @@
           "title": "Community",
           "description": "Join the Lectornaut community"
         },
+        "hyper": {
+          "title": "Hyper",
+          "description": "Hyper description"
+        },
+        "landing": {
+          "title": "Landing",
+          "subtitle": "Landing subtitle",
+          "wallOfLove": {
+            "photoBy": "Photo by"
+          }
+        },
         "security": {
           "title": "Security",
           "description": "Safety and security resources"
@@ -438,6 +496,372 @@
         "terms": "Terms",
         "privacy": "Privacy",
         "dpa": "DPA"
+      }
+    }
+  },
+  "pages": {
+    "start": {
+      "console": "Console",
+      "getInstantAnswers": "Get Instant Answers",
+      "consoleDescription": "Your console will appear here when you run a project.",
+      "getInstantAnswersDescription": "Get instant help and code suggestions from our AI assistant.",
+      "askAi": "Ask AI"
+    },
+    "create": {
+      "avatarFallback": "AG",
+      "description": "Description",
+      "prompt": "Prompt",
+      "temperature": "Temperature",
+      "maxLength": "Maximum Length",
+      "topP": "Top P",
+      "placeholders": {
+        "name": "Enter a name",
+        "description": "Enter a description",
+        "prompt": "Enter a prompt",
+        "model": "Select a model",
+        "subject": "Subject"
+      },
+      "alts": {
+        "agent": "Agent"
+      }
+    },
+    "runs": {
+      "files": "Files"
+    },
+    "changelog": {
+      "title": "Changelog",
+      "subtitle": "Stay up to date with the latest changes and improvements to our platform.",
+      "versionVisual": "visual",
+      "readMore": "Learn more"
+    },
+    "tasks": {
+      "newCalendar": "New Calendar",
+      "calendars": {
+        "myCalendars": "My Calendars",
+        "favorites": "Favorites",
+        "other": "Other"
+      },
+      "items": {
+        "personal": "Personal",
+        "work": "Work",
+        "family": "Family",
+        "holidays": "Holidays",
+        "birthdays": "Birthdays",
+        "travel": "Travel",
+        "reminders": "Reminders",
+        "deadlines": "Deadlines"
+      }
+    },
+    "agents": {
+      "copyUrl": "Copy URL",
+      "info": "Information",
+      "tabs": {
+        "details": "Details",
+        "activity": "Activity",
+        "settings": "Settings"
+      },
+      "new": "New",
+      "filter": "Filter",
+      "search": "Search",
+      "searchPlaceholder": "Search agents, functionalities, or categories...",
+      "featured": "Featured",
+      "empty": "No results found.",
+      "categories": {
+        "calendar": "Calendar",
+        "searchEmoji": "Search Emoji",
+        "calculator": "Calculator"
+      }
+    },
+    "pricing": {
+      "title": "Pricing",
+      "subtitle": "Choose the plan that fits your needs. All plans come with a 14-day personal trial. Cancel anytime.",
+      "feature": "Feature",
+      "billing": {
+        "monthly": "Monthly",
+        "annual": "Annual"
+      },
+      "plans": {
+        "personal": { "title": "Personal", "price": "Free for everyone" },
+        "professional": {
+          "title": "Professional",
+          "monthly": "$10/month",
+          "annual": "$8/month"
+        },
+        "business": {
+          "title": "Business",
+          "monthly": "$16/user/month",
+          "annual": "$14/user/month"
+        },
+        "enterprise": { "title": "Enterprise", "price": "Contact us" },
+        "cta": { "getStarted": "Get Started", "contactSales": "Contact Sales" }
+      },
+      "features": {
+        "everythingInPersonal": "Everything in Personal",
+        "everythingInProfessional": "Everything in Professional",
+        "everythingInBusiness": "Everything in Business",
+        "unlimitedConnections": "Unlimited connections",
+        "professionalFeatures": "Professional features",
+        "communitySupport": "Community support",
+        "advancedFeatures": "Advanced features",
+        "prioritySupport": "Priority support",
+        "teamManagement": "Team management",
+        "enhancedSecurity": "Enhanced security",
+        "customizableWorkflows": "Customizable workflows",
+        "analyticsAndReporting": "Analytics and reporting",
+        "dedicatedSupport": "Dedicated support",
+        "customSLAs": "Custom SLAs",
+        "dedicatedAccountManager": "Dedicated account manager",
+        "integrationSupport": "Integration support",
+        "complianceAndAudits": "Compliance and audits"
+      },
+      "comparison": {
+        "agents": {
+          "5": "5 agents",
+          "10": "10 agents",
+          "unlimited": "Unlimited agents"
+        },
+        "members": { "1": "1 member", "unlimited": "Unlimited members" },
+        "teams": {
+          "2": "2 teams",
+          "5": "5 teams",
+          "unlimited": "Unlimited teams"
+        },
+        "storage": {
+          "10mb": "10 MB/month",
+          "100mb": "100 MB/month",
+          "1gb": "1 GB/month",
+          "unlimited": "Unlimited storage"
+        },
+        "runs": {
+          "10": "10 runs/month",
+          "100": "100 runs/month",
+          "500": "500 runs/month",
+          "unlimited": "Unlimited runs"
+        },
+        "auth": {
+          "basic": "OAuth and SFA",
+          "mfa": "OAuth, SFA, and MFA",
+          "sso": "OAuth, SFA, MFA, and SSO",
+          "oidc": "OAuth, SFA, MFA, SSO, and OIDC"
+        },
+        "support": {
+          "community": "Community support",
+          "email": "Email support",
+          "priority": "Priority support",
+          "dedicated": "Dedicated support"
+        },
+        "common": { "yes": "Yes", "no": "No" },
+        "features": {
+          "agents": "Agents",
+          "members": "Members",
+          "teams": "Teams",
+          "storage": "Storage",
+          "workflows": "Workflows",
+          "authentication": "Authentication",
+          "support": "Support",
+          "integrations": "Integrations",
+          "apiAccess": "API Access",
+          "accountManager": "Account Manager",
+          "analytics": "Analytics and Reporting",
+          "auditLog": "Audit Log",
+          "scim": "SCIM Provisioning",
+          "compliance": "Compliance and Audits",
+          "uptime": "Uptime SLA"
+        }
+      }
+    },
+    "home": {
+      "forYou": "For you",
+      "forTeam": "For team",
+      "personal": "Personal",
+      "free": "Free for everyone",
+      "professional": "Professional",
+      "business": "Business",
+      "enterprise": "Enterprise",
+      "contactUs": "Contact us",
+      "ai": "AI",
+      "features": {
+        "personal": {
+          "notes": "Unlimited notes, upto 10MB per note.",
+          "ai": "Basic AI model and features.",
+          "storage": "100MB storage."
+        },
+        "professional": {
+          "notes": "Unlimited notes.",
+          "ai": "Smarter AI with more features.",
+          "storage": "Limitless storage for images and files."
+        },
+        "business": {
+          "notes": "Unlimited notes, upto 100MB per note.",
+          "ai": "Smarter AI with more features.",
+          "storage": "1GB storage.",
+          "team": "Team collaboration features."
+        },
+        "enterprise": {
+          "notes": "Unlimited notes.",
+          "ai": "Smarter AI with more features.",
+          "storage": "Limitless storage for images and files.",
+          "team": "Team collaboration features."
+        }
+      }
+    },
+    "test": {
+      "signInMessage": "Please sign in to manage teams.",
+      "userProfile": "User Profile",
+      "uid": "UID",
+      "email": "Email",
+      "currentTeamId": "Current Team ID",
+      "currentTeam": "Current Team",
+      "members": "Members",
+      "inviteMember": "Invite Member",
+      "noTeamSelected": "No team selected.",
+      "createNewTeam": "Create New Team",
+      "create": "Create",
+      "myTeams": "My Teams",
+      "active": "Active",
+      "placeholders": {
+        "userEmail": "User Email",
+        "teamName": "Team Name"
+      }
+    }
+  },
+  "components": {
+    "flow": {
+      "title": "Flow",
+      "steps": "Steps",
+      "actions": "Actions",
+      "activity": {
+        "history": "History",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "limitReached": "Limit reached",
+        "upgrade": "Upgrade",
+        "upgradeDesc": "Get unlimited access to your activity timeline by upgrading to the Pro plan.",
+        "presets": {
+          "today": "Today",
+          "last7days": "Last 7 days",
+          "last14days": "Last 14 days",
+          "last30days": "Last 30 days",
+          "last3months": "Last 3 months",
+          "last6months": "Last 6 months",
+          "lastYear": "Last 1 year"
+        }
+      },
+      "settings": {
+        "general": {
+          "title": "General",
+          "description": "Configure the general settings of the project.",
+          "projectName": "Project name",
+          "projectDesc": "Description",
+          "placeholders": {
+            "name": "Name",
+            "desc": "Description"
+          },
+          "save": "Save"
+        },
+        "team": {
+          "title": "Team",
+          "description": "Manage the team members of the project.",
+          "invite": "Invite people",
+          "emailPlaceholder": "Email",
+          "inviteButton": "Invite",
+          "peopleAccess": "People with access",
+          "generalAccess": "General access",
+          "edit": "Edit",
+          "view": "View",
+          "access": {
+            "public": {
+              "label": "Public to everyone",
+              "desc": "Anyone on the internet with the link can view."
+            },
+            "private": {
+              "label": "Private to members",
+              "desc": "Only people in your organization can view."
+            },
+            "restricted": {
+              "label": "Restricted",
+              "desc": "Only people with access can open the link."
+            }
+          }
+        },
+        "notifications": {
+          "title": "Notifications",
+          "description": "Configure the notifications of the project.",
+          "taskUpdates": {
+            "label": "Task updates",
+            "desc": "When an automation completes, fails, or encounters an error."
+          },
+          "workflow": {
+            "label": "Workflow execution",
+            "desc": "Start, pause, or completion of multi-step agent workflow."
+          },
+          "agent": {
+            "label": "Agent Insights",
+            "desc": "AI-generated suggestions, optimizations, or reports."
+          },
+          "collaboration": {
+            "label": "Collaboration Alerts",
+            "desc": "When a team member assigns a task, comments, or makes updates."
+          },
+          "security": {
+            "label": "Security & Compliance",
+            "desc": "Unauthorized access attempts, unusual activity, or system failures."
+          }
+        },
+        "danger": {
+          "title": "Danger Zone",
+          "description": "Delete the project and all its data permanently.",
+          "delete": "Delete workflow"
+        },
+        "placeholders": {
+          "name": "Name",
+          "description": "Description",
+          "email": "Email"
+        }
+      }
+    },
+    "hyper": {
+      "uploadPicture": "Upload a picture",
+      "pasteLink": "Paste your link here...",
+      "askAi": "Ask AI what you want to find..."
+    },
+    "landing": {
+      "qrCode": {
+        "alt": "QR Code",
+        "heroAlt": "Hero",
+        "title": "Get the app",
+        "description": "Scan the QR code to download the app",
+        "scan": "Scan to get the app"
+      },
+      "wallOfLove": {
+        "photoBy": "Photo by"
+      }
+    },
+    "enter": {
+      "placeholders": {
+        "email": "Email address",
+        "exampleEmail": "ada{'@'}lovelace.com",
+        "password": "********"
+      }
+    },
+    "global": {
+      "shortcuts": {
+        "title": "Keyboard shortcuts",
+        "search": "Search",
+        "noShortcuts": "No shortcuts found.",
+        "getSupport": "Get support",
+        "documentation": "Documentation"
+      },
+      "commandK": {
+        "placeholder": "Type a command or search",
+        "tooltip": "Commands",
+        "noResults": "No results found."
+      }
+    },
+    "sidebars": {
+      "agents": {
+        "searchPlaceholder": "Ask, Search or Chat...",
+        "mode": "Mode"
       }
     }
   }

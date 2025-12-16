@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+const { t } = useI18n()
+
 interface Artwork {
   id: string
   artist: string
@@ -72,12 +74,12 @@ const works: Artwork[] = [
           <div class="overflow-auto overscroll-none scroll-smooth rounded-md">
             <img
               :src="artwork.art"
-              :alt="`Photo by ${artwork.artist}`"
+              :alt="`${t('components.landing.wallOfLove.photoBy')} ${artwork.artist}`"
               class="aspect-video w-full object-cover"
             />
           </div>
           <figcaption class="text-muted-foreground pt-2">
-            Photo by
+            {{ t("components.landing.wallOfLove.photoBy") }}
             <span class="text-foreground font-semibold">
               {{ artwork.artist }}
             </span>

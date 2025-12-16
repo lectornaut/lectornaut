@@ -12,6 +12,8 @@ defineProps<{
   iconDisplay?: "icon" | "text"
 }>()
 
+const { t } = useI18n()
+
 const openCommand = ref(false)
 
 emitter.on("Dialog.Command.Open", () => {
@@ -54,12 +56,14 @@ const filteredShortcuts = computed(() => {
               :size="iconDisplay === 'text' ? 'default' : 'icon'"
             >
               <IconSearch />
-              <template v-if="iconDisplay === 'text'"> Search </template>
+              <template v-if="iconDisplay === 'text'">
+                {{ t("components.global.shortcuts.search") }}
+              </template>
             </Button>
           </DialogTrigger>
         </TooltipTrigger>
         <TooltipContent>
-          Commands
+          {{ t("components.global.commandK.tooltip") }}
           <KbdGroup>
             <Kbd>⌘</Kbd>
             <Kbd>K</Kbd>
@@ -70,12 +74,12 @@ const filteredShortcuts = computed(() => {
     <DialogContent class="bg-sidebar-accent p-1.5">
       <Command highlight-on-hover class="border">
         <CommandInput
-          placeholder="Type a command or search"
+          :placeholder="t('components.global.commandK.placeholder')"
           class="border-none p-0 focus:border-inherit focus:ring-0"
         />
         <CommandList class="group min-h-80">
           <CommandEmpty class="text-muted-foreground">
-            No results found.
+            {{ t("components.global.commandK.noResults") }}
           </CommandEmpty>
           <template
             v-for="(category, index) in filteredShortcuts"

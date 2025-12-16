@@ -171,7 +171,6 @@ const generatePoem = async () => {
               :max="1"
               :step="0.1"
               class="**:[[role=slider]]:h-4 **:[[role=slider]]:w-4"
-              aria-label="Temperature"
             />
           </div>
           <div class="grid gap-2">
@@ -184,7 +183,6 @@ const generatePoem = async () => {
               :max="4000"
               :step="10"
               class="**:[[role=slider]]:h-4 **:[[role=slider]]:w-4"
-              aria-label="Maximum Length"
             />
           </div>
           <div class="grid gap-2">
@@ -197,7 +195,6 @@ const generatePoem = async () => {
               :max="1"
               :step="0.1"
               class="**:[[role=slider]]:h-4 **:[[role=slider]]:w-4"
-              aria-label="Top P"
             />
           </div>
         </div>

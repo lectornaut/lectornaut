@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { IconCircleCheck } from "@/data/icons"
+
 definePage({
   meta: {
     layout: "landing",
@@ -10,195 +11,198 @@ useHead({
   title: "Pricing",
 })
 
-const billingDuration = [
+const { t } = useI18n()
+
+const billingDuration = computed(() => [
   {
-    title: "Monthly",
+    title: t("pages.pricing.billing.monthly"),
     value: "monthly",
   },
   {
-    title: "Annual",
+    title: t("pages.pricing.billing.annual"),
     value: "annual",
   },
-]
+])
 
 const activeBillingDuration = ref("monthly")
 
-const pricingPlans = [
+const pricingPlans = computed(() => [
   {
-    title: "Personal",
+    title: t("pages.pricing.plans.personal.title"),
     id: "personal",
-    monthlyPrice: "Free for everyone",
-    annualPrice: "Free for everyone",
+    monthlyPrice: t("pages.pricing.plans.personal.price"),
+    annualPrice: t("pages.pricing.plans.personal.price"),
     overview: [
-      "Unlimited connections",
-      "Professional features",
-      "Community support",
+      t("pages.pricing.features.unlimitedConnections"),
+      t("pages.pricing.features.professionalFeatures"),
+      t("pages.pricing.features.communitySupport"),
     ],
-    cta: "Get Started",
+    cta: t("pages.pricing.plans.cta.getStarted"),
     ctaLink: "/enter",
   },
   {
-    title: "Professional",
+    title: t("pages.pricing.plans.professional.title"),
     id: "professional",
-    monthlyPrice: "$10/month",
-    annualPrice: "$8/month",
+    monthlyPrice: t("pages.pricing.plans.professional.monthly"),
+    annualPrice: t("pages.pricing.plans.professional.annual"),
     overview: [
-      "Everything in Personal",
-      "Advanced features",
-      "Priority support",
+      t("pages.pricing.features.everythingInPersonal"),
+      t("pages.pricing.features.advancedFeatures"),
+      t("pages.pricing.features.prioritySupport"),
     ],
-    cta: "Get Started",
+    cta: t("pages.pricing.plans.cta.getStarted"),
     ctaLink: "/enter",
   },
   {
-    title: "Business",
+    title: t("pages.pricing.plans.business.title"),
     id: "business",
-    monthlyPrice: "$16/user/month",
-    annualPrice: "$14/user/month",
+    monthlyPrice: t("pages.pricing.plans.business.monthly"),
+    annualPrice: t("pages.pricing.plans.business.annual"),
     overview: [
-      "Everything in Professional",
-      "Team management",
-      "Enhanced security",
-      "Customizable workflows",
-      "Analytics and reporting",
-      "Dedicated support",
+      t("pages.pricing.features.everythingInProfessional"),
+      t("pages.pricing.features.teamManagement"),
+      t("pages.pricing.features.enhancedSecurity"),
+      t("pages.pricing.features.customizableWorkflows"),
+      t("pages.pricing.features.analyticsAndReporting"),
+      t("pages.pricing.features.dedicatedSupport"),
     ],
-    cta: "Get Started",
+    cta: t("pages.pricing.plans.cta.getStarted"),
     ctaLink: "/enter",
   },
   {
-    title: "Enterprise",
+    title: t("pages.pricing.plans.enterprise.title"),
     id: "enterprise",
-    monthlyPrice: "Contact us",
-    annualPrice: "Contact us",
+    monthlyPrice: t("pages.pricing.plans.enterprise.price"),
+    annualPrice: t("pages.pricing.plans.enterprise.price"),
     overview: [
-      "Everything in Business",
-      "Custom SLAs",
-      "Dedicated account manager",
-      "Integration support",
-      "Compliance and audits",
+      // "Everything in Business"
+      t("pages.pricing.features.customSLAs"),
+      t("pages.pricing.features.dedicatedAccountManager"),
+      t("pages.pricing.features.integrationSupport"),
+      t("pages.pricing.features.complianceAndAudits"),
     ],
-    cta: "Contact Sales",
+    cta: t("pages.pricing.plans.cta.contactSales"),
     ctaLink: "/contact",
   },
-]
+])
 
-const comparisonPlans = [
+const comparisonPlans = computed(() => [
   {
-    feature: "Agents",
-    personal: "5 agents",
-    professional: "10 agents",
-    business: "Unlimited agents",
-    enterprise: "Unlimited agents",
+    feature: t("pages.pricing.comparison.features.agents"),
+    personal: t("pages.pricing.comparison.agents.5"),
+    professional: t("pages.pricing.comparison.agents.10"),
+    business: t("pages.pricing.comparison.agents.unlimited"),
+    enterprise: t("pages.pricing.comparison.agents.unlimited"),
   },
   {
-    feature: "Members",
-    personal: "1 member",
-    professional: "1 member",
-    business: "Unlimited members",
-    enterprise: "Unlimited members",
+    feature: t("pages.pricing.comparison.features.members"),
+    personal: t("pages.pricing.comparison.members.1"),
+    professional: t("pages.pricing.comparison.members.1"),
+    business: t("pages.pricing.comparison.members.unlimited"),
+    enterprise: t("pages.pricing.comparison.members.unlimited"),
   },
   {
-    feature: "Teams",
-    personal: "2 teams",
-    professional: "5 teams",
-    business: "Unlimited teams",
-    enterprise: "Unlimited teams",
+    feature: t("pages.pricing.comparison.features.teams"),
+    personal: t("pages.pricing.comparison.teams.2"),
+    professional: t("pages.pricing.comparison.teams.5"),
+    business: t("pages.pricing.comparison.teams.unlimited"),
+    enterprise: t("pages.pricing.comparison.teams.unlimited"),
   },
   {
-    feature: "Storage",
-    personal: "10 MB/month",
-    professional: "100 MB/month",
-    business: "1 GB/month",
-    enterprise: "Unlimited storage",
+    feature: t("pages.pricing.comparison.features.storage"),
+    personal: t("pages.pricing.comparison.storage.10mb"),
+    professional: t("pages.pricing.comparison.storage.100mb"),
+    business: t("pages.pricing.comparison.storage.1gb"),
+    enterprise: t("pages.pricing.comparison.storage.unlimited"),
   },
   {
-    feature: "Workflows",
-    personal: "10 runs/month",
-    professional: "100 runs/month",
-    business: "500 runs/month",
-    enterprise: "Unlimited runs",
+    feature: t("pages.pricing.comparison.features.workflows"),
+    personal: t("pages.pricing.comparison.runs.10"),
+    professional: t("pages.pricing.comparison.runs.100"),
+    business: t("pages.pricing.comparison.runs.500"),
+    enterprise: t("pages.pricing.comparison.runs.unlimited"),
   },
   {
-    feature: "Authentication",
-    personal: "OAuth and SFA",
-    professional: "OAuth, SFA, and MFA",
-    business: "OAuth, SFA, MFA, and SSO",
-    enterprise: "OAuth, SFA, MFA, SSO, and OIDC",
+    feature: t("pages.pricing.comparison.features.authentication"),
+    personal: t("pages.pricing.comparison.auth.basic"),
+    professional: t("pages.pricing.comparison.auth.mfa"),
+    business: t("pages.pricing.comparison.auth.sso"),
+    enterprise: t("pages.pricing.comparison.auth.oidc"),
   },
   {
-    feature: "Support",
-    personal: "Community support",
-    professional: "Email support",
-    business: "Priority support",
-    enterprise: "Dedicated support",
+    feature: t("pages.pricing.comparison.features.support"),
+    personal: t("pages.pricing.comparison.support.community"),
+    professional: t("pages.pricing.comparison.support.email"),
+    business: t("pages.pricing.comparison.support.priority"),
+    enterprise: t("pages.pricing.comparison.support.dedicated"),
   },
   {
-    feature: "Integrations",
-    personal: "No",
-    professional: "Yes",
-    business: "Yes",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.integrations"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.yes"),
+    business: t("pages.pricing.comparison.common.yes"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: "API Access",
-    personal: "No",
-    professional: "Yes",
-    business: "Yes",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.apiAccess"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.yes"),
+    business: t("pages.pricing.comparison.common.yes"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: "Account Manager",
-    personal: "No",
-    professional: "No",
-    business: "Yes",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.accountManager"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.no"),
+    business: t("pages.pricing.comparison.common.yes"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: "Analytics and Reporting",
-    personal: "No",
-    professional: "No",
-    business: "Yes",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.analytics"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.no"),
+    business: t("pages.pricing.comparison.common.yes"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: "Audit Log",
-    personal: "No",
-    professional: "No",
-    business: "No",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.auditLog"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.no"),
+    business: t("pages.pricing.comparison.common.no"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: "SCIM Provisioning",
-    personal: "No",
-    professional: "No",
-    business: "No",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.scim"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.no"),
+    business: t("pages.pricing.comparison.common.no"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: "Compliance and Audits",
-    personal: "No",
-    professional: "No",
-    business: "No",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.compliance"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.no"),
+    business: t("pages.pricing.comparison.common.no"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: "Uptime SLA",
-    personal: "No",
-    professional: "No",
-    business: "No",
-    enterprise: "Yes",
+    feature: t("pages.pricing.comparison.features.uptime"),
+    personal: t("pages.pricing.comparison.common.no"),
+    professional: t("pages.pricing.comparison.common.no"),
+    business: t("pages.pricing.comparison.common.no"),
+    enterprise: t("pages.pricing.comparison.common.yes"),
   },
-]
+])
 </script>
 
 <template>
   <div class="mx-auto my-32 grid max-w-6xl gap-10">
     <div class="space-y-6 text-center">
-      <h2 class="font-display text-6xl font-bold">Pricing</h2>
+      <h2 class="font-display text-6xl font-bold">
+        {{ t("pages.pricing.title") }}
+      </h2>
       <p class="text-secondary-foreground">
-        Choose the plan that fits your needs. All plans come with a 14-day
-        personal trial. Cancel anytime.
+        {{ t("pages.pricing.subtitle") }}
       </p>
     </div>
     <div class="px-8 py-4">
@@ -257,7 +261,7 @@ const comparisonPlans = [
       <Table class="table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead> Feature </TableHead>
+            <TableHead> {{ t("pages.pricing.feature") }} </TableHead>
             <TableHead
               v-for="plan in pricingPlans"
               :key="plan.id"

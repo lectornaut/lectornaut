@@ -73,7 +73,7 @@ const { t } = useI18n()
                     >
                       <Button
                         variant="ghost"
-                        class="h-full items-start gap-0 !p-0"
+                        class="h-full items-start gap-0 p-0!"
                         :class="item.style.grid"
                         as-child
                       >
@@ -135,7 +135,7 @@ const { t } = useI18n()
                         >
                           <Button
                             variant="ghost"
-                            class="h-full items-start gap-0 !p-0"
+                            class="h-full items-start gap-0 p-0!"
                             :class="item.style.grid"
                             as-child
                           >
@@ -180,7 +180,7 @@ const { t } = useI18n()
                     >
                       <Button
                         variant="ghost"
-                        class="h-full items-start gap-0 !p-0"
+                        class="h-full items-start gap-0 p-0!"
                         :class="item.style.grid"
                         as-child
                       >
@@ -223,7 +223,7 @@ const { t } = useI18n()
                     >
                       <Button
                         variant="ghost"
-                        class="h-full items-start gap-0 !p-0"
+                        class="h-full items-start gap-0 p-0!"
                         :class="item.style.grid"
                         as-child
                       >

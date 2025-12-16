@@ -24,6 +24,8 @@ import {
 } from "@/modules/auth"
 import { getAuthErrorMessage } from "@/utils/auth-errors"
 
+const { t } = useI18n()
+
 const authMode = ref<"sign-up" | "sign-in">("sign-up")
 const authenticateError = ref<string | boolean>(false)
 
@@ -102,12 +104,14 @@ const authenticateApple = () =>
       <h2
         class="font-display pt-8 text-center text-4xl leading-tight font-bold tracking-tight"
       >
-        Sign up
+        {{ t("enter.signUp") }}
       </h2>
       <div class="flex items-center justify-center">
-        <span class="text-muted-foreground"> Already have an account? </span>
+        <span class="text-muted-foreground">
+          {{ t("enter.alreadyHaveAccount") }}
+        </span>
         <Button variant="link" tabindex="-1" @click="authMode = 'sign-in'">
-          Sign in
+          {{ t("enter.signIn") }}
         </Button>
       </div>
     </TabsContent>
@@ -115,12 +119,14 @@ const authenticateApple = () =>
       <h2
         class="font-display pt-8 text-center text-4xl leading-tight font-bold tracking-tight"
       >
-        Sign in
+        {{ t("enter.signIn") }}
       </h2>
       <div class="flex items-center justify-center">
-        <span class="text-muted-foreground"> Don't have an account? </span>
+        <span class="text-muted-foreground">
+          {{ t("enter.dontHaveAccount") }}
+        </span>
         <Button variant="link" tabindex="-1" @click="authMode = 'sign-up'">
-          Sign up
+          {{ t("enter.signUp") }}
         </Button>
       </div>
     </TabsContent>
@@ -131,7 +137,9 @@ const authenticateApple = () =>
     <div class="flex flex-col gap-4">
       <InputGroup>
         <InputGroupAddon align="block-start">
-          <Label for="email" class="text-foreground"> Email </Label>
+          <Label for="email" class="text-foreground">
+            {{ t("enter.labels.email") }}
+          </Label>
           <TabsContent value="sign-up" tabindex="-1">
             <TooltipProvider>
               <Tooltip>
@@ -146,7 +154,7 @@ const authenticateApple = () =>
                   </InputGroupButton>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>We'll use this to send you notifications</p>
+                  <p>{{ t("enter.tooltips.notifications") }}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -168,7 +176,7 @@ const authenticateApple = () =>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Send magic link to your email
+                    {{ t("enter.magicLink.tooltip") }}
                   </TooltipContent>
                   <TooltipProvider v-if="lastAuthProvider === 'email-link'">
                     <Tooltip>
@@ -178,37 +186,43 @@ const authenticateApple = () =>
                           tabindex="-1"
                           class="absolute -top-3 right-3"
                         >
-                          <IconDisc /> Recent
+                          <IconDisc /> {{ t("enter.magicLink.recent") }}
                         </Badge>
                       </TooltipTrigger>
-                      <TooltipContent side="top"> Last used </TooltipContent>
+                      <TooltipContent side="top">
+                        {{ t("enter.magicLink.lastUsed") }}
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </Tooltip>
               </TooltipProvider>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle> Send magic link </AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {{ t("enter.magicLink.title") }}
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Enter your email address to receive a magic link.
+                    {{ t("enter.magicLink.description") }}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div>
                   <Input
                     v-model="email"
-                    label="Email"
-                    placeholder="Email address"
+                    :label="t('enter.labels.email')"
+                    :placeholder="t('enter.placeholders.email')"
                   />
                 </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>
+                    {{ t("enter.cancel") }}
+                  </AlertDialogCancel>
                   <Button
                     :disabled="!email"
                     variant="destructive"
                     @click="authenticateEmail"
                   >
                     <Spinner v-if="authenticateEmailInProgress" />
-                    Send magic link
+                    {{ t("enter.magicLink.send") }}
                   </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -220,7 +234,7 @@ const authenticateApple = () =>
           <InputGroupInput
             id="email"
             v-model="email"
-            placeholder="ada@lovelace.com"
+            :placeholder="t('enter.placeholders.emailExample')"
             type="email"
             :disabled="
               signupViaEmailPasswordInProgress ||
@@ -233,7 +247,9 @@ const authenticateApple = () =>
       </InputGroup>
       <InputGroup>
         <InputGroupAddon align="block-start">
-          <Label for="password" class="text-foreground"> Password </Label>
+          <Label for="password" class="text-foreground">
+            {{ t("enter.labels.password") }}
+          </Label>
           <TabsContent value="sign-up" tabindex="-1">
             <TooltipProvider>
               <Tooltip>
@@ -248,7 +264,7 @@ const authenticateApple = () =>
                   </InputGroupButton>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Choose a strong password to secure your account</p>
+                  <p>{{ t("enter.tooltips.strongPassword") }}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -269,32 +285,36 @@ const authenticateApple = () =>
                       </InputGroupButton>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
-                  <TooltipContent> Forgot password? </TooltipContent>
+                  <TooltipContent>
+                    {{ t("enter.forgotPassword.tooltip") }}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle> Forgot password </AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {{ t("enter.forgotPassword.title") }}
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Enter your email address to receive a password reset link.
+                    {{ t("enter.forgotPassword.description") }}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div>
                   <Input
                     v-model="email"
-                    label="Email"
-                    placeholder="Email address"
+                    :label="t('enter.labels.email')"
+                    :placeholder="t('enter.placeholders.email')"
                   />
                 </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{{ t("enter.cancel") }}</AlertDialogCancel>
                   <Button
                     :disabled="!email"
                     variant="destructive"
                     @click="resetPassword"
                   >
                     <Spinner v-if="resettingPassword" />
-                    Send reset link
+                    {{ t("enter.forgotPassword.send") }}
                   </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -303,10 +323,11 @@ const authenticateApple = () =>
         </InputGroupAddon>
         <InputGroupAddon align="block-start" class="pt-0">
           <IconLock />
+
           <InputGroupInput
             id="password"
             v-model="password"
-            placeholder="********"
+            :placeholder="t('enter.placeholders.password')"
             :type="passwordInputType"
             :disabled="
               signupViaEmailPasswordInProgress ||
@@ -333,8 +354,11 @@ const authenticateApple = () =>
                 </InputGroupButton>
               </TooltipTrigger>
               <TooltipContent>
-                {{ passwordInputType === "password" ? "Show" : "Hide" }}
-                password
+                {{
+                  passwordInputType === "password"
+                    ? t("enter.labels.showPassword")
+                    : t("enter.labels.hidePassword")
+                }}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -349,7 +373,7 @@ const authenticateApple = () =>
           <template v-if="signupViaEmailPasswordInProgress">
             <Spinner />
           </template>
-          <template v-else> Continue </template>
+          <template v-else> {{ t("enter.continue") }} </template>
         </Button>
       </TabsContent>
       <TabsContent value="sign-in" tabindex="-1">
@@ -362,7 +386,7 @@ const authenticateApple = () =>
           <template v-if="signinViaEmailPasswordInProgress">
             <Spinner />
           </template>
-          <template v-else> Continue </template>
+          <template v-else> {{ t("enter.continue") }} </template>
           <TooltipProvider v-if="lastAuthProvider === 'email-password'">
             <Tooltip>
               <TooltipTrigger as-child>
@@ -371,10 +395,12 @@ const authenticateApple = () =>
                   tabindex="-1"
                   class="absolute -top-3 right-3"
                 >
-                  <IconDisc /> Recent
+                  <IconDisc /> {{ t("enter.magicLink.recent") }}
                 </Badge>
               </TooltipTrigger>
-              <TooltipContent side="top"> Last used </TooltipContent>
+              <TooltipContent side="top">
+                {{ t("enter.magicLink.lastUsed") }}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </Button>
@@ -386,7 +412,7 @@ const authenticateApple = () =>
         variant="outline"
         class="bg-muted text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 uppercase"
       >
-        Or continue with
+        {{ t("enter.orContinueWith") }}
       </Badge>
     </div>
     <div class="flex flex-col gap-2">
@@ -402,7 +428,7 @@ const authenticateApple = () =>
         <template v-else>
           <IconGoogle />
         </template>
-        Google
+        {{ t("enter.google") }}
         <TooltipProvider v-if="lastAuthProvider === 'google'">
           <Tooltip>
             <TooltipTrigger as-child>
@@ -430,7 +456,7 @@ const authenticateApple = () =>
         <template v-else>
           <IconMicrosoft />
         </template>
-        Microsoft
+        {{ t("enter.microsoft") }}
         <TooltipProvider v-if="lastAuthProvider === 'microsoft'">
           <Tooltip>
             <TooltipTrigger as-child>
@@ -458,7 +484,7 @@ const authenticateApple = () =>
         <template v-else>
           <IconAppleFilled />
         </template>
-        Apple
+        {{ t("enter.apple") }}
         <TooltipProvider v-if="lastAuthProvider === 'apple'">
           <Tooltip>
             <TooltipTrigger as-child>
@@ -481,7 +507,7 @@ const authenticateApple = () =>
       class="bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed"
     >
       <IconCircleAlert />
-      <AlertTitle> Message: </AlertTitle>
+      <AlertTitle> {{ t("enter.uhoh") }} </AlertTitle>
       <AlertDescription>
         {{ authenticateError }}
       </AlertDescription>

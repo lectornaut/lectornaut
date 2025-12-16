@@ -108,7 +108,7 @@ import { Selection } from "@tiptap/extensions/selection"
 import { TrailingNode } from "@tiptap/extensions/trailing-node"
 import { UndoRedo } from "@tiptap/extensions/undo-redo"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
-import { BubbleMenu } from "@tiptap/vue-3/menus"
+import { BubbleMenu, FloatingMenu } from "@tiptap/vue-3/menus"
 import { common, createLowlight } from "lowlight"
 
 const readOnly = ref(false)
@@ -121,7 +121,7 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "focus:outline-none size-full pl-10 pr-2 py-2 prose prose-sm max-w-none dark:prose-invert prose-stone dark:prose-zinc",
+        "focus:outline-none size-full pl-10 pr-2 py-2 prose prose-sm max-w-none prose-neutral dark:prose-invert",
     },
   },
   extensions: [
@@ -1084,6 +1084,64 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         </TooltipProvider>
       </div>
     </BubbleMenu>
+    <FloatingMenu
+      v-if="editor"
+      :editor="editor"
+      :tippy-options="{ duration: 100 }"
+    >
+      <div
+        class="bg-card flex items-center gap-1 rounded-lg border p-1 shadow-lg"
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': editor?.isActive('heading', { level: 1 }) }"
+          @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
+        >
+          <IconHeading1 />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': editor?.isActive('heading', { level: 2 }) }"
+          @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
+        >
+          <IconHeading2 />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': editor?.isActive('bulletList') }"
+          @click="editor?.chain().focus().toggleBulletList().run()"
+        >
+          <IconList />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': editor?.isActive('orderedList') }"
+          @click="editor?.chain().focus().toggleOrderedList().run()"
+        >
+          <IconListOrdered />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': editor?.isActive('taskList') }"
+          @click="editor?.chain().focus().toggleTaskList().run()"
+        >
+          <IconListChecks />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': editor?.isActive('codeBlock') }"
+          @click="editor?.chain().focus().toggleCodeBlock().run()"
+        >
+          <IconCode />
+        </Button>
+      </div>
+    </FloatingMenu>
     <DragHandle v-if="editor" :editor="editor">
       <Button variant="ghost" size="icon-sm" class="mr-2 size-6">
         <IconGripVertical />
@@ -1092,7 +1150,9 @@ const { copy, copied } = useClipboard({ source, legacy: true })
     <Teleport defer to="#cta-dock">
       <div class="text-muted-foreground flex items-center gap-2 text-xs">
         {{ editor?.storage.characterCount.characters() }} characters /
-        {{ editor?.storage.characterCount.words() }} words
+        {{ editor?.storage.characterCount.words() }} words /
+        {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
+        read
         <div class="flex items-center gap-2">
           <Checkbox id="readOnly" v-model="readOnly" />
           <Label for="readOnly" class="text-xs">Read-only</Label>

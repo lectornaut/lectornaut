@@ -2,6 +2,8 @@
 import { columns } from "@/components/table/columns"
 import _runs from "@/data/runs.json"
 
+const { t } = useI18n()
+
 const runs = _runs
 
 definePage({
@@ -72,7 +74,7 @@ const tree = [
       <SidebarContent>
         <OverlayScrollbarsWrapper>
           <SidebarGroup>
-            <SidebarGroupLabel>Files</SidebarGroupLabel>
+            <SidebarGroupLabel>{{ t("pages.runs.files") }}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <Tree v-for="(item, index) in tree" :key="index" :node="item" />

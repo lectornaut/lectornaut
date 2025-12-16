@@ -610,7 +610,7 @@ const closeTab = (id: string) => {
                   </div>
                   <div
                     v-if="!isPoppedOutMinimized"
-                    class="bg-background outline-sidebar-accent mx-1.5 mb-1.5 grow rounded border p-2 outline-5"
+                    class="bg-background mx-1.5 mb-1.5 grow rounded border p-2"
                   ></div>
                 </Draggable>
               </ContextMenuTrigger>

@@ -14,6 +14,8 @@ definePage({
 useHead({
   title: "Welcome",
 })
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -24,9 +26,9 @@ useHead({
           <EmptyMedia variant="icon">
             <IconChatFill class="text-muted-foreground h-6 w-6" />
           </EmptyMedia>
-          <EmptyTitle> Console </EmptyTitle>
+          <EmptyTitle> {{ t("pages.start.console") }} </EmptyTitle>
           <EmptyDescription>
-            Your console will appear here when you run a project.
+            {{ t("pages.start.consoleDescription") }}
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
@@ -34,7 +36,7 @@ useHead({
             variant="outline"
             @click="emitter.emit('Dialog.AiAsk.Toggle')"
           >
-            Ask AI
+            {{ t("pages.start.askAi") }}
           </Button>
         </EmptyContent>
       </Empty>
@@ -48,9 +50,9 @@ useHead({
           <EmptyMedia variant="icon">
             <IconAiFill class="text-muted-foreground h-6 w-6" />
           </EmptyMedia>
-          <EmptyTitle> Get Instant Answers </EmptyTitle>
+          <EmptyTitle> {{ t("pages.start.getInstantAnswers") }} </EmptyTitle>
           <EmptyDescription>
-            Get instant help and code suggestions from our AI assistant.
+            {{ t("pages.start.getInstantAnswersDescription") }}
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
@@ -58,7 +60,7 @@ useHead({
             variant="outline"
             @click="emitter.emit('Dialog.AiAsk.Toggle')"
           >
-            Ask AI
+            {{ t("pages.start.askAi") }}
           </Button>
         </EmptyContent>
       </Empty>

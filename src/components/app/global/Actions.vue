@@ -18,11 +18,9 @@ useFavicon(favicon)
 
 const sonnerTheme = computed(() => {
   if (state.value === "accent") return isDark.value ? "dark" : "light"
-  return state.value === "dark"
-    ? "dark"
-    : state.value === "light"
-      ? "light"
-      : "system"
+  if (state.value === "dark") return "dark"
+  if (state.value === "light") return "light"
+  return "system"
 })
 
 useHead({
@@ -38,13 +36,13 @@ useHead({
 })
 
 emitter.on("Theme.Change", (newTheme) => {
-  store.value = newTheme as "light" | "dark" | "auto"
+  store.value = newTheme as "light" | "dark" | "accent" | "auto"
 })
 
 const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW()
 
 watch(offlineReady, (value) => {
-  if (value) {
+  if (value)
     toast.info("Ready to work offline", {
       action: {
         label: "Okay",
@@ -56,11 +54,10 @@ watch(offlineReady, (value) => {
         offlineReady.value = false
       },
     })
-  }
 })
 
 watch(needRefresh, (value) => {
-  if (value) {
+  if (value)
     toast.info("Update available", {
       duration: Infinity,
       action: {
@@ -71,35 +68,13 @@ watch(needRefresh, (value) => {
         needRefresh.value = false
       },
     })
-  }
 })
-
-// useEventListener(
-//   document,
-//   "contextmenu",
-//   (e) => {
-//     e.preventDefault()
-//     return false
-//   },
-//   { capture: true }
-// )
 
 const online = useOnline()
 
 watch(online, (value) => {
-  if (value) {
-    emitter.emit("Toast.Success", "You are online")
-  } else {
-    emitter.emit("Toast.Error", "You are offline")
-  }
-})
-
-emitter.on("Toast.Success", (message) => {
-  toast.success(message as string)
-})
-
-emitter.on("Toast.Error", (message) => {
-  toast.error(message as string)
+  if (value) toast.success("You are online")
+  else toast.error("You are offline")
 })
 </script>
 

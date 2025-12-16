@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { IconCheck, IconCopy } from "@/data/icons"
+
 definePage({
   meta: {
     layout: "agents",
@@ -14,23 +15,24 @@ useHead({
   title: "Agent",
 })
 
+const { t } = useI18n()
 const source = ref(window.location.href)
 const { copy, copied } = useClipboard({ source, legacy: true })
 
-const metadata = [
+const metadata = computed(() => [
   {
     id: "details",
-    name: "Details",
+    name: t("pages.agents.tabs.details"),
   },
   {
     id: "activity",
-    name: "Activity",
+    name: t("pages.agents.tabs.activity"),
   },
   {
     id: "settings",
-    name: "Settings",
+    name: t("pages.agents.tabs.settings"),
   },
-]
+])
 </script>
 
 <template>
@@ -48,7 +50,7 @@ const metadata = [
         <SidebarHeader>
           <div class="flex items-center justify-between gap-2">
             <span class="text-foreground ml-2 text-base font-medium">
-              Information
+              {{ t("pages.agents.info") }}
             </span>
             <TooltipProvider>
               <Tooltip>
@@ -58,7 +60,9 @@ const metadata = [
                     <IconCheck v-else />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent> Copy URL </TooltipContent>
+                <TooltipContent>
+                  {{ t("pages.agents.copyUrl") }}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

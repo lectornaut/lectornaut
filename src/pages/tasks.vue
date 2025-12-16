@@ -19,20 +19,30 @@ useHead({
   title: "Tasks",
 })
 
-const calendars = [
+const { t } = useI18n()
+
+const calendars = computed(() => [
   {
-    name: "My Calendars",
-    items: ["Personal", "Work", "Family"],
+    name: t("pages.tasks.calendars.myCalendars"),
+    items: [
+      t("pages.tasks.items.personal"),
+      t("pages.tasks.items.work"),
+      t("pages.tasks.items.family"),
+    ],
   },
   {
-    name: "Favorites",
-    items: ["Holidays", "Birthdays"],
+    name: t("pages.tasks.calendars.favorites"),
+    items: [t("pages.tasks.items.holidays"), t("pages.tasks.items.birthdays")],
   },
   {
-    name: "Other",
-    items: ["Travel", "Reminders", "Deadlines"],
+    name: t("pages.tasks.calendars.other"),
+    items: [
+      t("pages.tasks.items.travel"),
+      t("pages.tasks.items.reminders"),
+      t("pages.tasks.items.deadlines"),
+    ],
   },
-]
+])
 </script>
 
 <template>
@@ -102,7 +112,7 @@ const calendars = [
           <SidebarMenuItem>
             <SidebarMenuButton>
               <IconPlus />
-              <span>New Calendar</span>
+              <span>{{ t("pages.tasks.newCalendar") }}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -1,10 +1,9 @@
-import { confirm } from "@tauri-apps/plugin-dialog"
 import { relaunch } from "@tauri-apps/plugin-process"
 import { check } from "@tauri-apps/plugin-updater"
+import { toast } from "vue-sonner"
 
 export const initUpdater = async () => {
   try {
-    console.log("Checking for updates...")
     const update = await check()
 
     if (update) {
@@ -12,39 +11,54 @@ export const initUpdater = async () => {
         `Found update: ${update.version} (released on ${update.date})\nRelease notes: ${update.body}`
       )
 
-      const userConfirmed = await confirm(
-        `A new update (${update.version}) is available.\n\nRelease Notes:\n${update.body}\n\nDo you want to download and install it now?`,
-        { title: "Update Available", kind: "info" }
-      )
+      toast.info(`v${update.version} is available`, {
+        description: "A new version is available.",
+        action: {
+          label: "Update",
+          onClick: async () => {
+            let downloaded = 0
+            let contentLength = 0
 
-      if (!userConfirmed) {
-        console.log("User canceled the update.")
-        return
-      }
+            const toastId = toast.loading("Preparing update...")
 
-      let downloaded = 0
-      let contentLength = 0
-
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            contentLength = event.data.contentLength ?? 0
-            console.log(`Started downloading: ${contentLength} bytes`)
-            break
-          case "Progress":
-            downloaded += event.data.chunkLength
-            console.log(`Downloaded: ${downloaded} / ${contentLength}`)
-            break
-          case "Finished":
-            console.log("Download finished")
-            break
-        }
+            await update.downloadAndInstall((event) => {
+              switch (event.event) {
+                case "Started":
+                  contentLength = event.data.contentLength ?? 0
+                  toast.loading("Downloading update...", {
+                    id: toastId,
+                    description: `Started downloading ${contentLength} bytes`,
+                  })
+                  break
+                case "Progress":
+                  downloaded += event.data.chunkLength
+                  if (contentLength > 0) {
+                    const percent = Math.round(
+                      (downloaded / contentLength) * 100
+                    )
+                    toast.loading(`Downloading update... ${percent}%`, {
+                      id: toastId,
+                      description: `${(downloaded / 1024 / 1024).toFixed(2)} MB / ${(contentLength / 1024 / 1024).toFixed(2)} MB`,
+                    })
+                  }
+                  break
+                case "Finished":
+                  toast.success("Update downloaded", {
+                    id: toastId,
+                    description: "Restart to apply changes",
+                    action: {
+                      label: "Restart",
+                      onClick: async () => {
+                        await relaunch()
+                      },
+                    },
+                  })
+                  break
+              }
+            })
+          },
+        },
       })
-
-      console.log("Update installed successfully. Restarting app...")
-      await relaunch()
-    } else {
-      console.log("No updates available.")
     }
   } catch (error) {
     console.error("Error checking for updates:", error)

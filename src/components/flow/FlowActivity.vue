@@ -15,6 +15,8 @@ import {
 import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
 
+const { t } = useI18n()
+
 const timeline = [
   {
     id: 1,
@@ -130,7 +132,7 @@ const df = new DateFormatter("en-US", {
   dateStyle: "medium",
 })
 
-const presets = [
+const presets = computed(() => [
   {
     id: 0,
     value: {
@@ -139,7 +141,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Today",
+    label: t("components.flow.activity.presets.today"),
   },
   {
     id: 7,
@@ -149,7 +151,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 7 days",
+    label: t("components.flow.activity.presets.last7days"),
   },
   {
     id: 14,
@@ -159,7 +161,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 14 days",
+    label: t("components.flow.activity.presets.last14days"),
   },
   {
     id: 30,
@@ -169,7 +171,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 30 days",
+    label: t("components.flow.activity.presets.last30days"),
   },
   {
     id: 90,
@@ -179,7 +181,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 3 months",
+    label: t("components.flow.activity.presets.last3months"),
   },
   {
     id: 180,
@@ -189,7 +191,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 6 months",
+    label: t("components.flow.activity.presets.last6months"),
   },
   {
     id: 365,
@@ -199,11 +201,11 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 1 year",
+    label: t("components.flow.activity.presets.lastYear"),
   },
-]
+])
 
-const defaultRange = presets.find((preset) => preset.id === 0)!
+const defaultRange = presets.value.find((preset) => preset.id === 0)!
 
 const range = ref({
   start: defaultRange.value.start,
@@ -218,7 +220,7 @@ const range = ref({
         <Card class="shadow-none">
           <CardHeader>
             <CardTitle>
-              <span> History </span>
+              <span> {{ t("components.flow.activity.history") }} </span>
             </CardTitle>
             <Popover>
               <PopoverTrigger as-child>
@@ -227,13 +229,13 @@ const range = ref({
                   {{
                     range.start
                       ? df.format(range.start.toDate(getLocalTimeZone()))
-                      : "Start date"
+                      : t("components.flow.activity.startDate")
                   }}
                   -
                   {{
                     range.end
                       ? df.format(range.end.toDate(getLocalTimeZone()))
-                      : "End date"
+                      : t("components.flow.activity.endDate")
                   }}
                 </Button>
               </PopoverTrigger>
@@ -241,7 +243,9 @@ const range = ref({
                 <div class="p-2">
                   <Select v-model="range">
                     <SelectTrigger class="w-full">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue
+                        :placeholder="t('components.flow.activity.select')"
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem
@@ -306,15 +310,16 @@ const range = ref({
           <CardFooter class="grid">
             <Card class="shadow-none">
               <CardHeader>
-                <CardTitle> Limit reached </CardTitle>
+                <CardTitle>
+                  {{ t("components.flow.activity.limitReached") }}
+                </CardTitle>
                 <CardDescription class="text-xs">
-                  Get unlimited access to your activity timeline by upgrading to
-                  the Pro plan.
+                  {{ t("components.flow.activity.upgradeDesc") }}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Button variant="destructive" class="w-full" size="sm">
-                  Upgrade
+                  {{ t("components.flow.activity.upgrade") }}
                 </Button>
               </CardContent>
             </Card>
