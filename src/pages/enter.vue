@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { IconChevronLeft } from "@/data/icons"
-import { authenticateEmail } from "@/modules/auth"
+import { authenticateEmail, authenticateOAuth } from "@/modules/auth"
 
 definePage({
   meta: {
@@ -21,7 +21,7 @@ onMounted(async () => {
   authenticateInProgress.value = true
   authenticateError.value = false
 
-  await authenticateEmail()
+  await Promise.all([authenticateEmail(), authenticateOAuth()])
     .then(() => {
       authenticateInProgress.value = true
     })
