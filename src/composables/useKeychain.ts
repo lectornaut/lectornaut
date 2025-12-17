@@ -1,12 +1,9 @@
-import { useStorage } from "@vueuse/core"
-
 export interface KeychainAccount {
   uid: string
   email: string | null
   displayName: string | null
   photoURL: string | null
-  token: string // kept for compatibility, or we can repurpose/remove. Let's keep it optional or just string.
-  sessionData: unknown
+  sessionData: Record<string, unknown>
 }
 
 const keychain = useStorage<KeychainAccount[]>("lectornaut-keychain", [])

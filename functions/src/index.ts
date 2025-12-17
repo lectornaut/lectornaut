@@ -8,6 +8,10 @@ const apiKey = defineSecret("GEMINI_API_KEY")
 
 enableFirebaseTelemetry()
 
+/**
+ * Genkit Initialization
+ * Sets up Google AI model (Gemini) for server-side generation
+ */
 const ai = genkit({
   plugins: [googleAI()],
   model: googleAI.model("gemini-2.5-flash"),

@@ -5,7 +5,11 @@ import { getFirestore } from "firebase/firestore"
 import { getFunctions } from "firebase/functions"
 import { getStorage } from "firebase/storage"
 
-const firebaseConfig = {
+/**
+ * Firebase Configuration and Initialization
+ * Exports initialized Firebase services (Auth, Firestore, Analytics, Functions, Storage)
+ */
+export const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
   authDomain: import.meta.env.VITE_AUTH_DOMAIN,
   databaseURL: import.meta.env.VITE_DATABASE_URL,

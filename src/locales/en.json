@@ -1,6 +1,5 @@
 {
   "hello": "Hello",
-
   "enter": {
     "title": "Enter",
     "subtitle": "Enter subtitle",
@@ -43,7 +42,10 @@
     "cancel": "Cancel",
     "google": "Google",
     "microsoft": "Microsoft",
-    "apple": "Apple"
+    "apple": "Apple",
+    "removeAccount": "Remove account",
+    "useAccount": "Sign in",
+    "showAllOptions": "Show all sign-in options"
   },
   "common": {
     "cancel": "Cancel",
@@ -581,7 +583,10 @@
         "annual": "Annual"
       },
       "plans": {
-        "personal": { "title": "Personal", "price": "Free for everyone" },
+        "personal": {
+          "title": "Personal",
+          "price": "Free for everyone"
+        },
         "professional": {
           "title": "Professional",
           "monthly": "$10/month",
@@ -592,8 +597,14 @@
           "monthly": "$16/user/month",
           "annual": "$14/user/month"
         },
-        "enterprise": { "title": "Enterprise", "price": "Contact us" },
-        "cta": { "getStarted": "Get Started", "contactSales": "Contact Sales" }
+        "enterprise": {
+          "title": "Enterprise",
+          "price": "Contact us"
+        },
+        "cta": {
+          "getStarted": "Get Started",
+          "contactSales": "Contact Sales"
+        }
       },
       "features": {
         "everythingInPersonal": "Everything in Personal",
@@ -620,7 +631,10 @@
           "10": "10 agents",
           "unlimited": "Unlimited agents"
         },
-        "members": { "1": "1 member", "unlimited": "Unlimited members" },
+        "members": {
+          "1": "1 member",
+          "unlimited": "Unlimited members"
+        },
         "teams": {
           "2": "2 teams",
           "5": "5 teams",
@@ -650,7 +664,10 @@
           "priority": "Priority support",
           "dedicated": "Dedicated support"
         },
-        "common": { "yes": "Yes", "no": "No" },
+        "common": {
+          "yes": "Yes",
+          "no": "No"
+        },
         "features": {
           "agents": "Agents",
           "members": "Members",
@@ -864,5 +881,14 @@
         "mode": "Mode"
       }
     }
+  },
+  "accountMenu": {
+    "noOtherAccounts": "No other accounts available",
+    "account": "Account",
+    "billing": "Billing",
+    "switchAccount": "Switch account",
+    "accounts": "Accounts",
+    "addAccount": "Add account",
+    "logout": "Log out"
   }
 }

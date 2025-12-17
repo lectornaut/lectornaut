@@ -7,6 +7,10 @@ import { getCurrentUser } from "vuefire"
 
 NProgress.configure({ showSpinner: false })
 
+/**
+ * Vue Router Configuration
+ * Sets up formatting for the router using 'createWebHistory' and 'setupLayouts'
+ */
 const router = createRouter({
   history: createWebHistory(),
   routes: setupLayouts([...routes]),
@@ -28,13 +32,19 @@ if (import.meta.hot) {
   handleHotUpdate(router)
 }
 
+/**
+ * Navigation Guard: Global Before Each
+ * Handles redirects based on authentication state and environment (Tauri vs Web)
+ */
 router.beforeEach(async (to, from) => {
+  // Redirect root to /enter in Tauri environment
   if (to.name === "/") {
     if (isTauri.value) {
       router.push("/enter")
     }
   }
 
+  // Check for routes requiring authentication
   if (to.meta.requiresUser) {
     const user = await getCurrentUser()
     if (!user) {
@@ -47,6 +57,7 @@ router.beforeEach(async (to, from) => {
     }
   }
 
+  // Check for routes restricted to guests (e.g., login page)
   if (to.meta.requiresGuest) {
     const user = await getCurrentUser()
     if (user) {

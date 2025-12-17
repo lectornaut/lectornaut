@@ -26,6 +26,10 @@ import type { FunctionalComponent, SVGAttributes } from "vue"
 
 const isAppleDevice = () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
 
+/**
+ * Returns the platform-specific modifier key
+ * @returns '⌘' for macOS, 'Ctrl' for others
+ */
 export const getPlatformSpecialKey = (): string =>
   isAppleDevice() ? "⌘" : "Ctrl"
 
@@ -51,6 +55,10 @@ export type ShortcutCategory = {
   hidden: ShortcutHiddenType[]
 }
 
+/**
+ * Application Shortcuts Configuration
+ * Defines all keyboard shortcuts, their events, descriptions, and visibility rules
+ */
 export const shortcuts: ShortcutCategory[] = [
   {
     title: "General",

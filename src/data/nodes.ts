@@ -15,6 +15,10 @@ import {
   IconZap,
 } from "@/data/icons"
 
+/**
+ * Node Definitions
+ * Defines the structure of draggable nodes available in the flow editor
+ */
 export const nodes = [
   {
     id: "actions",

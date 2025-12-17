@@ -9,6 +9,10 @@ import {
   IconXCircle,
 } from "@/data/icons"
 
+/**
+ * Static Data Constants
+ * Defines labels, statuses, and priorities used in the application
+ */
 export const labels = [
   {
     value: "bug",

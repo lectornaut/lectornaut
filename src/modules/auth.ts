@@ -23,7 +23,13 @@ import {
 } from "firebase/auth"
 import { toast } from "vue-sonner"
 
-// Loopback mechanism for Tauri (no remote deep link)
+export const emailForSignIn = useStorage("emailForSignIn", "")
+export const lastAuthProvider = useStorage("lastAuthProvider", "")
+
+/**
+ * Loopback mechanism for Tauri (no remote deep link)
+ * Starts a local server to listen for the magic link callback
+ */
 export const sendAuthenticateEmail = async (email: string) => {
   const port = 7878
   let magicLinkPromise: Promise<string> | null = null
@@ -44,8 +50,8 @@ export const sendAuthenticateEmail = async (email: string) => {
 
   return sendSignInLinkToEmail(auth, email, actionCodeSettings)
     .then(async () => {
-      window.localStorage.setItem("emailForSignIn", email)
-      window.localStorage.setItem("lastAuthProvider", "email-link")
+      emailForSignIn.value = email
+      lastAuthProvider.value = "email-link"
       toast.success("Authentication email sent")
 
       // If Tauri, wait for the link to be clicked WITHOUT blocking the return
@@ -60,7 +66,7 @@ export const sendAuthenticateEmail = async (email: string) => {
             if (isSignInWithEmailLink(auth, link)) {
               await signInWithEmailLink(auth, email, link).then(
                 async (result) => {
-                  window.localStorage.removeItem("emailForSignIn")
+                  emailForSignIn.value = null
                   finishAuthentication(result)
                 }
               )
@@ -80,6 +86,10 @@ export const sendAuthenticateEmail = async (email: string) => {
     })
 }
 
+/**
+ * Sends a password reset email to the user
+ * @param email - The email address to send the reset link to
+ */
 export const sendResetEmailPassword = async (email: string) => {
   return sendPasswordResetEmail(auth, email)
     .then(() => {
@@ -92,6 +102,10 @@ export const sendResetEmailPassword = async (email: string) => {
     })
 }
 
+/**
+ * Helper to retrieve the Firebase Auth persistence key from LocalStorage
+ * Used to manually manage session data for account switching
+ */
 const getFirebaseKey = () => {
   const foundKey = Object.keys(window.localStorage).find((k) =>
     k.startsWith("firebase:authUser:")
@@ -110,9 +124,6 @@ const getFirebaseKey = () => {
 export const initKeychainListener = () => {
   onIdTokenChanged(auth, async (user) => {
     if (user) {
-      // User is signed in. Capture session data.
-      // Since persistence is set to LOCAL, we expect the key to be present.
-      // We might need a small delay if the write happens after the event, but usually it's close.
       const key = getFirebaseKey()
       if (key) {
         const sessionDataRaw = window.localStorage.getItem(key)
@@ -122,10 +133,8 @@ export const initKeychainListener = () => {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            token: "client-side",
             sessionData: JSON.parse(sessionDataRaw),
           })
-          console.log("[Auth] Captured session for:", user.email)
         }
       }
     }
@@ -144,6 +153,10 @@ const finishAuthentication = async (result: UserCredential) => {
   }
 }
 
+/**
+ * Switches the current session to another account stored in the keychain
+ * @param targetUid - The UID of the account to switch to
+ */
 export const switchAccount = async (targetUid: string) => {
   const account = useKeychain().getAccount(targetUid)
   if (!account || !account.sessionData) {
@@ -174,16 +187,21 @@ export const switchAccount = async (targetUid: string) => {
   }
 }
 
+/**
+ * Completes the email link sign-in process
+ * Checks if the current URL is a sign-in link and then signs the user in
+ */
 export const authenticateEmail = async () => {
   if (isSignInWithEmailLink(auth, window.location.href)) {
-    let email = window.localStorage.getItem("emailForSignIn")
+    let email = emailForSignIn.value
     if (!email) {
-      email = window.prompt("Please provide your email for confirmation")
+      email = window.prompt("Please provide your email for confirmation") || ""
     }
+
     if (email) {
       return signInWithEmailLink(auth, email, window.location.href)
         .then(async (result) => {
-          window.localStorage.removeItem("emailForSignIn")
+          emailForSignIn.value = null
           finishAuthentication(result)
         })
         .catch((error) => {
@@ -195,13 +213,18 @@ export const authenticateEmail = async () => {
   }
 }
 
+/**
+ * Signs up a new user with email and password
+ * @param email - User's email
+ * @param password - User's password
+ */
 export const signUpWithEmailPassword = async (
   email: string,
   password: string
 ) => {
   return createUserWithEmailAndPassword(auth, email, password)
     .then(async (result) => {
-      window.localStorage.setItem("lastAuthProvider", "email-password")
+      lastAuthProvider.value = "email-password"
       finishAuthentication(result)
     })
     .catch((error) => {
@@ -211,13 +234,18 @@ export const signUpWithEmailPassword = async (
     })
 }
 
+/**
+ * Signs in a user with email and password
+ * @param email - User's email
+ * @param password - User's password
+ */
 export const signInWithEmailPassword = async (
   email: string,
   password: string
 ) => {
   return signInWithEmailAndPassword(auth, email, password)
     .then(async (result) => {
-      window.localStorage.setItem("lastAuthProvider", "email-password")
+      lastAuthProvider.value = "email-password"
       finishAuthentication(result)
     })
     .catch((error) => {
@@ -227,6 +255,10 @@ export const signInWithEmailPassword = async (
     })
 }
 
+/**
+ * Initiates the Google Sign-In flow
+ * Handles both Tauri (via local server loopback) and Web (via popup) environments
+ */
 export const signInWithGoogle = async () => {
   if (isTauri.value) {
     try {
@@ -245,7 +277,7 @@ export const signInWithGoogle = async () => {
       })
       const credential = GoogleAuthProvider.credential(response.id_token)
       return signInWithCredential(auth, credential).then(async (result) => {
-        window.localStorage.setItem("lastAuthProvider", "google")
+        lastAuthProvider.value = "google"
         finishAuthentication(result)
       })
     } catch (error) {
@@ -257,7 +289,7 @@ export const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider()
     return signInWithPopup(auth, provider)
       .then(async (result) => {
-        window.localStorage.setItem("lastAuthProvider", "google")
+        lastAuthProvider.value = "google"
         finishAuthentication(result)
       })
       .catch((error) => {
@@ -268,6 +300,10 @@ export const signInWithGoogle = async () => {
   }
 }
 
+/**
+ * Initiates the Microsoft Sign-In flow
+ * Handles both Tauri (via local server loopback) and Web (via popup) environments
+ */
 export const signInWithMicrosoft = async () => {
   if (isTauri.value) {
     try {
@@ -291,7 +327,7 @@ export const signInWithMicrosoft = async () => {
         accessToken: response.access_token,
       })
       return signInWithCredential(auth, credential).then(async (result) => {
-        window.localStorage.setItem("lastAuthProvider", "microsoft")
+        lastAuthProvider.value = "microsoft"
         finishAuthentication(result)
       })
     } catch (error) {
@@ -303,7 +339,7 @@ export const signInWithMicrosoft = async () => {
     const provider = new OAuthProvider("microsoft.com")
     return signInWithPopup(auth, provider)
       .then(async (result) => {
-        window.localStorage.setItem("lastAuthProvider", "microsoft")
+        lastAuthProvider.value = "microsoft"
         finishAuthentication(result)
       })
       .catch((error) => {
@@ -314,6 +350,10 @@ export const signInWithMicrosoft = async () => {
   }
 }
 
+/**
+ * Initiates the Apple Sign-In flow
+ * Handles both Tauri (via local server loopback) and Web (via popup) environments
+ */
 export const signInWithApple = async () => {
   if (isTauri.value) {
     try {
@@ -335,7 +375,7 @@ export const signInWithApple = async () => {
         idToken: response.id_token,
       })
       return signInWithCredential(auth, credential).then(async (result) => {
-        window.localStorage.setItem("lastAuthProvider", "apple")
+        lastAuthProvider.value = "apple"
         finishAuthentication(result)
       })
     } catch (error) {
@@ -347,7 +387,7 @@ export const signInWithApple = async () => {
     const provider = new OAuthProvider("apple.com")
     return signInWithPopup(auth, provider)
       .then(async (result) => {
-        window.localStorage.setItem("lastAuthProvider", "apple")
+        lastAuthProvider.value = "apple"
         finishAuthentication(result)
       })
       .catch((error) => {
@@ -358,12 +398,15 @@ export const signInWithApple = async () => {
   }
 }
 
+/**
+ * Logs out the current user and redirects to the home page
+ */
 export const logout = async () => {
   return auth
     .signOut()
     .then(async () => {
       toast.success("Logged out")
-      await router.push("/")
+      await router.push("/enter")
     })
     .catch((error) => {
       console.error("Error in logout:", error)

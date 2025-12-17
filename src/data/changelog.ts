@@ -5,6 +5,10 @@ interface ChangelogEntry {
   date: string
 }
 
+/**
+ * Application Changelog
+ * static list of version history and release notes
+ */
 export const changelog: ChangelogEntry[] = [
   {
     id: "2.9.0",

@@ -25,6 +25,10 @@ import Layouts from "vite-plugin-vue-layouts"
 const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
+/**
+ * Vite Configuration
+ * Configures Vue, PWA, Auto-imports, and other plugins for the build process
+ */
 export default defineConfig({
   optimizeDeps: {
     include: ["workbox-window"],

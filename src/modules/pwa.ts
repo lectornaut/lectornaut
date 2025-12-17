@@ -2,10 +2,15 @@ import { useRegisterSW } from "virtual:pwa-register/vue"
 
 const intervalMS = 60 * 60 * 1000
 
+/**
+ * Initializes the Progressive Web App (PWA) Service Worker
+ * Registers the SW and sets up periodic checks for new content
+ */
 export const initPwa = () => {
   useRegisterSW({
     onRegisteredSW(swUrl, r) {
       if (r) {
+        // Check for updates periodically
         setInterval(async () => {
           if (!(!r.installing && navigator)) return
 

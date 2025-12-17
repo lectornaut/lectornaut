@@ -7,6 +7,10 @@ import {
 import { emitter } from "@/modules/mitt"
 import hotkeys from "hotkeys-js"
 
+/**
+ * Initializes global hotkeys
+ * Filters shortcuts based on platform (Web/Desktop) and registers them using hotkeys-js
+ */
 export const initHotkeys = () => {
   const isWeb = !isTauri.value
   const isDesktop = isTauri.value

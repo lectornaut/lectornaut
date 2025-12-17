@@ -2,6 +2,10 @@ import { relaunch } from "@tauri-apps/plugin-process"
 import { check } from "@tauri-apps/plugin-updater"
 import { toast } from "vue-sonner"
 
+/**
+ * Initializes the Tauri updater
+ * Checks for updates, notifies the user, and handles the download/install process
+ */
 export const initUpdater = async () => {
   try {
     const update = await check()

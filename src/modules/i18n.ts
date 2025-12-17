@@ -4,6 +4,10 @@ import { createI18n } from "vue-i18n"
 
 const locale = useStorage("locale", defaultLanguage)
 
+/**
+ * Internationalization Configuration
+ * Sets up Vue I18n with default language and lazy-loaded messages
+ */
 export const i18n = createI18n({
   legacy: false,
   locale: locale.value,

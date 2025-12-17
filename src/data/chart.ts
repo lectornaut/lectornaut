@@ -1,3 +1,7 @@
+/**
+ * Mock Data Generators for Charts
+ * These immediate-invoked functions return random data for visualization demos
+ */
 export const dailyActivity = (() => {
   const days = 30
   const randInt = (min: number, max: number) =>
@@ -11,6 +15,9 @@ export const dailyActivity = (() => {
   }))
 })()
 
+/**
+ * Generates mock monthly activity data
+ */
 export const monthlyActivity = (() => {
   const months = [
     "Jan",
@@ -35,6 +42,9 @@ export const monthlyActivity = (() => {
   }))
 })()
 
+/**
+ * Generates mock yearly activity data
+ */
 export const yearlyActivity = (() => {
   const startYear = 1970
   const endYear = 2021

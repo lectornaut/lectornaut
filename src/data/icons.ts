@@ -253,6 +253,11 @@ import IconSimpleIconsRakuten from "~icons/simple-icons/rakuten"
 import IconSimpleIconsShopify from "~icons/simple-icons/shopify"
 import IconTablerBrandWalmart from "~icons/tabler/brand-walmart"
 
+/**
+ * Icon Exports
+ * Aggregates and re-exports icons from various icon sets (Lucide, MDI, etc.)
+ * Used to provide a single source of truth for icons in the app
+ */
 export {
   IconLucideActivity as IconActivity,
   IconMingcuteAiFill as IconAiFill,

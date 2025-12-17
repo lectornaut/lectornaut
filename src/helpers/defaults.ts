@@ -30,6 +30,10 @@ import {
   IconUsersRound,
 } from "@/data/icons"
 
+/**
+ * Default Data and Configurations
+ * Contains static lists for UI dropdowns and settings (languages, themes, accents, menus, etc.)
+ */
 export const languages = [
   {
     id: "en-US",

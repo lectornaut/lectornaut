@@ -6,6 +6,10 @@ export interface BreadcrumbItem {
   isCurrent: boolean
 }
 
+/**
+ * Composable for generating breadcrumbs based on the current route
+ * Parses route segments and resolves their metadata to build the breadcrumb trail
+ */
 export const useRouteBreadcrumbs = () => {
   const router = useRouter()
   const route = useRoute()
