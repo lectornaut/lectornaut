@@ -5,14 +5,12 @@
     </DialogTrigger>
     <DialogContent class="w-sm max-w-fit">
       <DialogHeader class="sr-only">
-        <DialogTitle>Enter Template</DialogTitle>
+        <DialogTitle>Enter</DialogTitle>
         <DialogDescription>
           Create an account or sign in to continue.
         </DialogDescription>
       </DialogHeader>
-      <div class="mx-auto flex w-full flex-col">
-        <EnterContent />
-      </div>
+      <EnterContent />
       <DialogFooter>
         <EnterFooter />
       </DialogFooter>

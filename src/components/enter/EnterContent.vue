@@ -9,6 +9,7 @@ import {
   IconArrowRight,
   IconChevronRight,
   IconCircleAlert,
+  IconCircleUser,
   IconDisc,
   IconEye,
   IconEyeOff,
@@ -154,7 +155,7 @@ watch(accounts, (newAccounts) => {
       <TabsTrigger value="sign-up"> Sign up </TabsTrigger>
       <TabsTrigger value="sign-in"> Sign in </TabsTrigger>
     </TabsList> -->
-      <template v-if="accounts.length > 0">
+      <template v-if="accounts.length > 0 && !isShowAllOptionsOpen">
         <div class="grid gap-2">
           <Item
             v-for="account in accounts"
@@ -213,29 +214,6 @@ watch(accounts, (newAccounts) => {
               </TooltipProvider>
             </ItemActions>
           </Item>
-        </div>
-        <div class="relative">
-          <Separator
-            class="invisible"
-            :class="{ visible: isShowAllOptionsOpen }"
-          />
-          <CollapsibleTrigger
-            as-child
-            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-          >
-            <Badge
-              variant="outline"
-              :class="{ 'bg-accent': isShowAllOptionsOpen }"
-            >
-              {{ t("enter.showAllOptions") }}
-              <IconChevronRight
-                class="transition-transform"
-                :class="{
-                  'rotate-90': isShowAllOptionsOpen,
-                }"
-              />
-            </Badge>
-          </CollapsibleTrigger>
         </div>
       </template>
       <CollapsibleContent class="grid gap-8">
@@ -609,6 +587,18 @@ watch(accounts, (newAccounts) => {
           </Button>
         </div>
       </CollapsibleContent>
+      <CollapsibleTrigger v-if="accounts.length > 0" as-child class="mx-auto">
+        <Badge variant="outline">
+          <IconCircleUser v-if="isShowAllOptionsOpen" />
+          <IconLock v-else />
+          {{
+            isShowAllOptionsOpen
+              ? t("enter.showAllAccounts")
+              : t("enter.showAllAuthOptions")
+          }}
+          <IconChevronRight />
+        </Badge>
+      </CollapsibleTrigger>
       <Alert
         v-if="authenticateError"
         variant="destructive"

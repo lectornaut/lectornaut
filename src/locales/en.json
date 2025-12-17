@@ -44,8 +44,9 @@
     "microsoft": "Microsoft",
     "apple": "Apple",
     "removeAccount": "Remove account",
-    "useAccount": "Sign in",
-    "showAllOptions": "Show all sign-in options"
+    "useAccount": "Use this account",
+    "showAllAuthOptions": "Show all sign-in options",
+    "showAllAccounts": "Show all accounts"
   },
   "common": {
     "cancel": "Cancel",

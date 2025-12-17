@@ -66,7 +66,7 @@ onMounted(async () => {
         class="mx-auto flex w-full max-w-sm flex-col justify-center gap-8 p-4"
       >
         <EnterContent />
-        <div class="mb-safe-bottom mt-auto flex flex-col gap-2">
+        <div class="mb-safe-bottom mx-auto">
           <EnterFooter />
         </div>
       </div>
