@@ -569,15 +569,24 @@ export const useTeamStore = defineStore("teams", () => {
           displayName: userUpdates.displayName,
         })
         try {
+          // Determine the photoURL value for auth profile update
+          // Firebase Auth requires empty string "" to clear photoURL, not null
+          let authPhotoURL: string | null | undefined
+          if (photoURL === "" || photoURL === null) {
+            // To remove profile picture, pass empty string to Firebase Auth
+            authPhotoURL = ""
+          } else if (photoURL !== undefined) {
+            authPhotoURL = photoURL
+          } else {
+            authPhotoURL = currentUser.value.photoURL ?? undefined
+          }
+
           await updateCurrentUserProfile({
             displayName:
               userUpdates.displayName ||
               currentUser.value.displayName ||
               undefined,
-            photoURL:
-              photoURL === "" || photoURL === null
-                ? null
-                : (photoURL ?? currentUser.value.photoURL ?? undefined),
+            photoURL: authPhotoURL,
           })
           console.log("Auth profile updated successfully")
         } catch (e) {

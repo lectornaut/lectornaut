@@ -223,7 +223,7 @@ const handleSubmit = async () => {
                       class="object-cover"
                     />
                     <AvatarFallback>
-                      {{ getInitials(teamName || "T") }}
+                      {{ getInitials(teamName) }}
                     </AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>

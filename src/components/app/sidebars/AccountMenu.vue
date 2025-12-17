@@ -10,6 +10,7 @@ import {
   IconTrash,
   IconUserRound,
 } from "@/data/icons"
+import { getInitials } from "@/helpers/utilities"
 import { logout, switchAccount } from "@/modules/auth"
 import { emitter } from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
@@ -49,7 +50,7 @@ const handleSwitchAccount = async (uid: string) => {
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback class="rounded-md">
-                {{ user?.displayName?.charAt(0) }}
+                {{ getInitials(user?.displayName!) }}
               </AvatarFallback>
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
@@ -67,8 +68,8 @@ const handleSwitchAccount = async (uid: string) => {
           side="right"
           :side-offset="4"
         >
-          <DropdownMenuLabel as-child>
-            <Item size="sm" class="p-0.5">
+          <DropdownMenuLabel>
+            <Item size="sm" class="group w-full gap-2 p-0">
               <ItemMedia>
                 <Avatar class="rounded-md">
                   <AvatarImage
@@ -78,7 +79,7 @@ const handleSwitchAccount = async (uid: string) => {
                     referrerpolicy="no-referrer"
                   />
                   <AvatarFallback class="rounded-md">
-                    {{ user?.displayName?.charAt(0) }}
+                    {{ getInitials(user?.displayName!) }}
                   </AvatarFallback>
                 </Avatar>
               </ItemMedia>
@@ -116,7 +117,7 @@ const handleSwitchAccount = async (uid: string) => {
                   {{ t("accountMenu.switchAccount") }}
                 </DropdownMenuSubTrigger>
               </DropdownMenuItem>
-              <DropdownMenuSubContent class="w-72">
+              <DropdownMenuSubContent class="w-64">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     {{ t("accountMenu.accounts") }}
@@ -136,34 +137,50 @@ const handleSwitchAccount = async (uid: string) => {
                             referrerpolicy="no-referrer"
                           />
                           <AvatarFallback class="rounded-md">
-                            {{ account.displayName?.charAt(0) }}
+                            {{ getInitials(user?.displayName!) }}
                           </AvatarFallback>
                         </Avatar>
                       </ItemMedia>
                       <ItemContent class="gap-0.5 truncate">
-                        <ItemTitle>
+                        <ItemTitle class="truncate">
                           {{ account.displayName }}
                         </ItemTitle>
-                        <ItemDescription class="text-xs">
+                        <ItemDescription class="truncate text-xs">
                           {{ account.email }}
                         </ItemDescription>
                       </ItemContent>
                       <ItemActions>
-                        <Button
-                          variant="secondary"
-                          size="icon-sm"
-                          class="hidden rounded-full group-hover:inline-flex"
-                          @click.stop="removeAccount(account.uid)"
-                        >
-                          <IconTrash />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          class="rounded-full"
-                        >
-                          <IconArrowRight />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="secondary"
+                                size="icon-sm"
+                                class="invisible transition group-hover:visible"
+                                @click.stop="removeAccount(account.uid)"
+                              >
+                                <IconTrash />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{ t("enter.removeAccount") }}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                class="rounded-full"
+                              >
+                                <IconArrowRight />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{ t("enter.useAccount") }}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </ItemActions>
                     </Item>
                   </DropdownMenuItem>

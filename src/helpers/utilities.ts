@@ -25,7 +25,7 @@ export const generateRandomString = () => {
  */
 export const getInitials = (name: string) => {
   if (!name) {
-    return "UNNAMED USER"
+    return ""
   }
   return name
     .match(/(^\S\S?|\s\S)?/g)

@@ -27,6 +27,7 @@ const userInput = ref("")
         <SidebarMenuItem>
           <SidebarMenuButton :tooltip="agent.name">
             <Avatar
+              variant="beam"
               :name="`Agent ${agent.id}`"
               :colors="[
                 'var(--chart-1)',

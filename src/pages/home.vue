@@ -493,6 +493,7 @@ const expandedCard = ref<number | null>(null)
               <SidebarMenuItem v-for="item in favorites" :key="item.name">
                 <SidebarMenuButton>
                   <Avatar
+                    variant="beam"
                     :name="item.name"
                     :colors="[
                       'var(--chart-1)',

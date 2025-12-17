@@ -345,6 +345,7 @@ const route = useRoute()
                         <div class="flex flex-col gap-2">
                           <CardTitle class="flex items-center gap-3 text-base">
                             <Avatar
+                              variant="beam"
                               :name="`Agent ${index + 1}`"
                               :colors="[
                                 'var(--chart-1)',

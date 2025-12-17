@@ -704,7 +704,7 @@ const navigations = computed(() => [
                             <Tooltip>
                               <TooltipTrigger as-child>
                                 <Avatar
-                                  class="size-16 cursor-pointer"
+                                  class="flex size-11 cursor-pointer items-center justify-center rounded-md"
                                   @click="
                                     open({ accept: 'image/*', multiple: false })
                                   "
@@ -717,14 +717,13 @@ const navigations = computed(() => [
                                   </template>
                                   <template v-else>
                                     <AvatarImage
+                                      class="rounded-md"
                                       :src="user?.photoURL!"
                                       :alt="user?.displayName"
                                       referrerpolicy="no-referrer"
                                     />
-                                    <AvatarFallback>
-                                      {{
-                                        getInitials(user?.displayName as string)
-                                      }}
+                                    <AvatarFallback class="rounded-md">
+                                      {{ getInitials(user?.displayName!) }}
                                     </AvatarFallback>
                                   </template>
                                 </Avatar>
@@ -743,8 +742,9 @@ const navigations = computed(() => [
                               <TooltipTrigger as-child>
                                 <Button
                                   v-if="photoURL"
-                                  class="border-background absolute top-0 right-0 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
-                                  size="icon"
+                                  variant="secondary"
+                                  class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                                  size="icon-sm"
                                   @click="handleRemoveProfilePicture"
                                 >
                                   <IconX />
@@ -954,14 +954,15 @@ const navigations = computed(() => [
                           class="flex items-center gap-4"
                         >
                           <div class="relative">
-                            <Avatar class="size-8">
+                            <Avatar class="rounded-md">
                               <AvatarImage
+                                class="rounded-md"
                                 :src="provider.photoURL as string"
                                 :alt="provider.displayName"
                                 referrerpolicy="no-referrer"
                               />
-                              <AvatarFallback>
-                                {{ getInitials(provider.displayName ?? "") }}
+                              <AvatarFallback class="rounded-md">
+                                {{ getInitials(provider.displayName!) }}
                               </AvatarFallback>
                             </Avatar>
                             <TooltipProvider>
@@ -982,7 +983,7 @@ const navigations = computed(() => [
                                     />
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent>
+                                <TooltipContent side="right">
                                   {{
                                     getComputedProviderName(provider.providerId)
                                   }}
@@ -1468,7 +1469,6 @@ const navigations = computed(() => [
                       </Field>
                     </FieldGroup>
                   </div>
-
                   <div class="space-y-4">
                     <div v-if="isLoading" class="flex justify-center py-8">
                       <Spinner />
@@ -1489,26 +1489,19 @@ const navigations = computed(() => [
                           >
                             <TableCell>
                               <div class="flex items-center gap-4">
-                                <Avatar>
+                                <Avatar class="rounded-md">
                                   <AvatarImage
-                                    :src="
-                                      member.user?.photoURL ||
-                                      `https://avatar.vercel.sh/${member.user?.uid}.png`
-                                    "
+                                    class="rounded-md"
+                                    :src="member.user?.photoURL!"
                                     :alt="
                                       member.user?.displayName ||
-                                      member.user?.email ||
-                                      ''
+                                      member.user?.email
                                     "
                                     referrerpolicy="no-referrer"
                                   />
-                                  <AvatarFallback>{{
-                                    getInitials(
-                                      member.user?.displayName ||
-                                        member.user?.email ||
-                                        "U"
-                                    )
-                                  }}</AvatarFallback>
+                                  <AvatarFallback class="rounded-md">
+                                    {{ getInitials(member.user?.displayName!) }}
+                                  </AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <div class="font-medium">
@@ -1640,7 +1633,6 @@ const navigations = computed(() => [
                         />
                       </Field>
                     </FieldGroup>
-
                     <AlertDialog v-model:open="isDeleteTeamDialogOpen">
                       <AlertDialogContent>
                         <AlertDialogHeader>
@@ -1668,7 +1660,6 @@ const navigations = computed(() => [
                       </AlertDialogContent>
                     </AlertDialog>
                   </div>
-
                   <div class="space-y-4">
                     <div v-if="isLoading" class="flex justify-center py-8">
                       <Spinner />
@@ -1694,7 +1685,7 @@ const navigations = computed(() => [
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <Avatar
-                                          class="rounded-lg"
+                                          class="flex items-center justify-center rounded-md"
                                           :class="{
                                             'cursor-pointer hover:opacity-80':
                                               membership.role === 'owner',
@@ -1714,15 +1705,17 @@ const navigations = computed(() => [
                                           </template>
                                           <template v-else>
                                             <AvatarImage
-                                              :src="
-                                                membership.team?.photoURL ||
-                                                `https://avatar.vercel.sh/${membership.team?.id}.png`
-                                              "
+                                              class="rounded-md"
+                                              :src="membership.team?.photoURL!"
                                               :alt="membership.team?.name"
                                             />
-                                            <AvatarFallback>{{
-                                              getInitials(membership.team?.name)
-                                            }}</AvatarFallback>
+                                            <AvatarFallback class="rounded-md">
+                                              {{
+                                                getInitials(
+                                                  membership.team?.name
+                                                )
+                                              }}
+                                            </AvatarFallback>
                                           </template>
                                         </Avatar>
                                       </TooltipTrigger>
@@ -1746,8 +1739,9 @@ const navigations = computed(() => [
                                     >
                                       <TooltipTrigger as-child>
                                         <Button
+                                          variant="secondary"
                                           class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
-                                          size="icon"
+                                          size="icon-sm"
                                           @click.stop="
                                             handleRemoveTeamPhoto(
                                               membership.teamId

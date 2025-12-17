@@ -53,10 +53,7 @@ const handleSwitchTeam = (teamId: string) => {
           >
             <Avatar class="size-4">
               <AvatarImage
-                :src="
-                  currentTeam?.photoURL ||
-                  `https://avatar.vercel.sh/${activeTeamValue}.png`
-                "
+                :src="currentTeam?.photoURL!"
                 :alt="activeTeamLabel"
                 referrerpolicy="no-referrer"
               />
@@ -126,10 +123,7 @@ const handleSwitchTeam = (teamId: string) => {
                   >
                     <Avatar class="size-4">
                       <AvatarImage
-                        :src="
-                          team.original.photoURL ||
-                          `https://avatar.vercel.sh/${team.value}.png`
-                        "
+                        :src="team.original.photoURL!"
                         referrerpolicy="no-referrer"
                         :alt="team.label"
                       />

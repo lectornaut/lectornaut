@@ -22,6 +22,7 @@ import {
   IconSend,
   IconTrash,
 } from "@/data/icons"
+import { getInitials } from "@/helpers/utilities"
 import {
   sendAuthenticateEmail,
   sendResetEmailPassword,
@@ -38,7 +39,7 @@ const { t } = useI18n()
 
 const { accounts, removeAccount } = useKeychain()
 
-const authMode = ref<"sign-up" | "sign-in">("sign-up")
+const authMode = ref<"sign-up" | "sign-in">("sign-in")
 const authenticateError = ref<string | boolean>(false)
 
 const email = ref<string>("")
@@ -174,13 +175,13 @@ watch(accounts, (newAccounts) => {
                   referrerpolicy="no-referrer"
                 />
                 <AvatarFallback class="rounded-md">
-                  {{ account.displayName?.charAt(0) }}
+                  {{ getInitials(account.displayName!) }}
                 </AvatarFallback>
               </Avatar>
             </ItemMedia>
             <ItemContent class="gap-0.5 truncate">
-              <ItemTitle>{{ account.displayName }}</ItemTitle>
-              <ItemDescription class="text-xs">
+              <ItemTitle class="truncate">{{ account.displayName }}</ItemTitle>
+              <ItemDescription class="truncate text-xs">
                 {{ account.email }}
               </ItemDescription>
             </ItemContent>
@@ -191,7 +192,7 @@ watch(accounts, (newAccounts) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      class="hidden group-hover:inline-flex"
+                      class="invisible transition group-hover:visible"
                       @click.stop="removeAccount(account.uid)"
                     >
                       <IconTrash />

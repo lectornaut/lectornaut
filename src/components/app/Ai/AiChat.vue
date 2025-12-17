@@ -40,6 +40,7 @@ const messages = [
             }"
           >
             <Avatar
+              variant="beam"
               :name="`Agent ${index + 1}`"
               :colors="[
                 'var(--chart-1)',
