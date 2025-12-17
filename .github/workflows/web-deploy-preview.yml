@@ -24,6 +24,8 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: preview
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT_LECTORNAUT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LECTORNAUT }}
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           VITE_AUTH_DOMAIN: ${{ secrets.VITE_AUTH_DOMAIN }}
           VITE_DATABASE_URL: ${{ secrets.VITE_DATABASE_URL }}

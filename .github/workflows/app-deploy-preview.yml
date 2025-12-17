@@ -56,6 +56,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           NODE_ENV: preview
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
