@@ -11,10 +11,10 @@ watch(user, async (currentUser, previousUser) => {
     return await router.push("/")
   }
   if (currentUser && route.meta.requiresGuest) {
-    console.log("redirecting to /home", router)
-    return await router.push(
+    const redirect =
       typeof route.query?.redirect === "string" ? route.query.redirect : "/home"
-    )
+    console.log(`redirecting to ${redirect}`, router)
+    return await router.push(redirect)
   }
 })
 </script>

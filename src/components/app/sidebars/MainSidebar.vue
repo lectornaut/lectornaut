@@ -1,10 +1,22 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
-import { useIsFullscreen } from "@/composables/usePlatform"
-import { IconApps, IconChevronsUpDown } from "@/data/icons"
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { IconApps, IconChevronsUpDown, IconGift } from "@/data/icons"
 import { menu } from "@/helpers/defaults"
+import { collection, doc } from "firebase/firestore"
+import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
 const { open, setOpen, isMobile } = useSidebar()
+
+const db = useFirestore()
+const user = useCurrentUser()
+
+const userDocRef = computed(() => {
+  if (!user.value?.uid) return null
+  return doc(collection(db, "users"), user.value.uid)
+})
+
+const { data: userData } = useDocument(userDocRef)
 
 const iconDisplay = computed({
   get: () => (open.value ? "text" : "icon"),
@@ -21,7 +33,9 @@ const isFullscreen = useIsFullscreen()
         collapsible="icon"
         class="top-13 bottom-8 h-[calc(100vh-var(--spacing-14)-var(--spacing-8))]"
       >
-        <SidebarHeader :class="{ 'mt-13': isMobile && !isFullscreen }">
+        <SidebarHeader
+          :class="{ 'mt-13': isTauri && isMobile && !isFullscreen }"
+        >
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
@@ -78,6 +92,25 @@ const isFullscreen = useIsFullscreen()
             <Navigation />
           </OverlayScrollbarsWrapper>
         </SidebarContent>
+        <SidebarFooter v-if="userData?.onboarding">
+          <SidebarMenu id="tour-onboarding">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Complete your onboarding"
+                class="bg-primary text-primary-foreground hover:bg-destructive hover:text-destructive-foreground active:bg-destructive active:text-destructive-foreground"
+                as-child
+              >
+                <RouterLink to="/welcome">
+                  <IconGift />
+                  <span class="truncate"> Complete onboarding </span>
+                  <SidebarMenuBadge>
+                    <Badge variant="destructive" size="sm"> New </Badge>
+                  </SidebarMenuBadge>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
         <Separator />
         <SidebarFooter>
           <Agents />

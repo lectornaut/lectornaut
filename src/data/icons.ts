@@ -97,6 +97,7 @@ import IconLucideEyeOff from "~icons/lucide/eye-off"
 import IconLucideFile from "~icons/lucide/file"
 import IconLucideFileText from "~icons/lucide/file-text"
 import IconLucideFolder from "~icons/lucide/folder"
+import IconLucideGift from "~icons/lucide/gift"
 import IconLucideGlobe from "~icons/lucide/globe"
 import IconLucideGraduationCap from "~icons/lucide/graduation-cap"
 import IconLucideGrid2X2 from "~icons/lucide/grid-2-x-2"
@@ -358,6 +359,7 @@ export {
   IconLucideFileText as IconFileText,
   IconSimpleIconsFlathub as IconFlathub,
   IconLucideFolder as IconFolder,
+  IconLucideGift as IconGift,
   IconLucideGlobe as IconGlobe,
   IconMdiGoogle as IconGoogle,
   IconLogosGoogleIcon as IconGoogleIcon,

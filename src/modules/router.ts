@@ -62,7 +62,8 @@ router.beforeEach(async (to, from) => {
     const user = await getCurrentUser()
     if (user) {
       return {
-        path: "/home",
+        path:
+          typeof to.query.redirect === "string" ? to.query.redirect : "/home",
       }
     }
   }

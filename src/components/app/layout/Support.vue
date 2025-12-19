@@ -9,11 +9,13 @@ import {
   IconCircleHelp,
   IconCirclePlay,
   IconEllipsis,
+  IconGift,
   IconKeyboard,
   IconMessageCircle,
 } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { state } from "@/modules/theme"
+import { updateUserData } from "@/queries/updateUserData"
 import confetti from "canvas-confetti"
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
@@ -197,6 +199,13 @@ const companySizes = [
   { value: "300-1999", label: "300-1,999 employees" },
   { value: "2000+", label: "2,000+ employees" },
 ]
+
+const router = useRouter()
+
+const startOnboarding = () => {
+  updateUserData({ onboarding: true })
+  router.push("/welcome")
+}
 </script>
 
 <template>
@@ -238,6 +247,10 @@ const companySizes = [
                   <DropdownMenuItem @click="productTour.drive()">
                     <IconCirclePlay />
                     Product tour
+                  </DropdownMenuItem>
+                  <DropdownMenuItem @click="startOnboarding">
+                    <IconGift />
+                    Welcome
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <IconBookOpen />

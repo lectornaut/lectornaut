@@ -1,7 +1,13 @@
-import { Timestamp, collection, doc, setDoc } from "firebase/firestore"
+import {
+  type DocumentData,
+  Timestamp,
+  collection,
+  doc,
+  setDoc,
+} from "firebase/firestore"
 import { useCurrentUser, useFirestore } from "vuefire"
 
-export const updateUserData = () => {
+export const updateUserData = (data?: Partial<DocumentData>) => {
   const db = useFirestore()
   const user = useCurrentUser()
 
@@ -12,6 +18,7 @@ export const updateUserData = () => {
       email: user.value?.email,
       updatedAt: Timestamp.now(),
       uid: user.value?.uid,
+      ...data,
     },
     {
       merge: true,
