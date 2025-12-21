@@ -30,13 +30,13 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           run_install: true
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: "pnpm"
       - name: Install Rust (stable)
@@ -87,7 +87,7 @@ jobs:
           VITE_APPLE_TOKEN_URL: ${{ secrets.VITE_APPLE_TOKEN_URL}}
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI}}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: artifact-${{ matrix.identifier }}
           path: |
