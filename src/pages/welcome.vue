@@ -1,11 +1,12 @@
 <script lang="ts" setup>
 import {
   IconAperture,
-  IconArrowLeft,
   IconArrowRight,
   IconBlocks,
   IconBox,
   IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@/data/icons"
 import { updateUserData } from "@/queries/updateUserData"
 
@@ -63,17 +64,20 @@ const handleNextStep = () => {
 <template>
   <div data-tauri-drag-region class="relative h-dvh w-dvw overscroll-none">
     <img src="/assets/images/sky.png" class="size-full object-cover" />
-    <!-- <img
+    <img
       src="/assets/images/bg-clear.png"
       class="fixed bottom-0 z-20 w-full overflow-visible object-cover"
-    /> -->
-    <div class="absolute inset-0 z-30 flex items-center justify-center p-13">
+    />
+    <div
+      class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-8 p-8"
+    >
+      <Logo class="text-primary-foreground size-8" />
       <div
-        class="bg-background/25 flex size-full max-w-2xl flex-col space-y-8 rounded-md p-8 text-center backdrop-blur-lg"
+        class="bg-background/25 flex size-full max-w-2xl flex-col gap-2 rounded-md p-2 text-center shadow-2xl backdrop-blur-lg"
       >
         <Stepper
           v-model="currentStep"
-          class="bg-background/25 rounded-md p-4 backdrop-blur-lg"
+          class="bg-background hidden rounded-md p-4 md:flex"
         >
           <StepperItem
             v-for="step in steps"
@@ -84,7 +88,7 @@ const handleNextStep = () => {
           >
             <StepperTrigger class="w-full">
               <StepperIndicator
-                class="bg-background/25 group-data-[state=active]:bg-secondary group-data-[state=active]:text-secondary-foreground"
+                class="bg-muted group-data-[state=active]:bg-accent group-data-[state=active]:text-accent-foreground"
               >
                 <template v-if="step.icon">
                   <Component :is="step.icon" />
@@ -98,12 +102,12 @@ const handleNextStep = () => {
             </StepperTrigger>
             <StepperSeparator
               v-if="step.step < steps.length"
-              class="bg-background/25 group-data-[state=completed]:bg-accent absolute top-5 right-[calc(-50%+10px)] left-[calc(50%+20px)] block h-1 shrink-0 rounded-full"
+              class="bg-secondary/75 group-data-[state=completed]:bg-accent absolute top-5 right-[calc(-50%+10px)] left-[calc(50%+20px)] z-40 block h-1 shrink-0 rounded-full"
             />
           </StepperItem>
         </Stepper>
         <div
-          class="bg-background/25 flex flex-1 flex-col items-center justify-center gap-4 rounded-md p-4 backdrop-blur-lg"
+          class="bg-background flex flex-1 flex-col items-center justify-center gap-4 rounded-md p-4"
         >
           <template v-if="currentStep === 1">
             <h2 class="text-xl font-semibold">Account Details</h2>
@@ -136,26 +140,44 @@ const handleNextStep = () => {
             </p>
           </template>
         </div>
-        <div class="flex w-full justify-between">
+        <div class="flex items-center gap-2 rounded-md backdrop-blur-lg">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             :disabled="currentStep === 1"
             @click="currentStep = currentStep - 1"
           >
-            <IconArrowLeft />
+            <IconChevronLeft />
           </Button>
+          <Stepper v-model="currentStep" class="flex flex-1 gap-2">
+            <StepperItem
+              v-for="step in steps"
+              :key="step.step"
+              :step="step.step"
+              class="flex-1"
+            >
+              <StepperTrigger
+                class="w-full flex-col items-start gap-2"
+                as-child
+              >
+                <StepperIndicator
+                  class="bg-border group-data-[state=active]:bg-primary-foreground h-1 w-full"
+                >
+                  <span class="sr-only">{{ step }}</span>
+                </StepperIndicator>
+              </StepperTrigger>
+            </StepperItem>
+          </Stepper>
           <Button
             v-if="currentStep <= steps.length"
-            variant="outline"
+            variant="ghost"
+            size="icon"
             :disabled="currentStep > steps.length"
             @click="handleNextStep"
           >
-            Next
-            <IconArrowRight />
+            <IconChevronRight />
           </Button>
-          <Button v-else variant="secondary" @click="completeOnboarding">
-            Open App
+          <Button v-else size="icon" @click="completeOnboarding">
             <IconArrowRight />
           </Button>
         </div>

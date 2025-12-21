@@ -77,7 +77,9 @@ import IconLucideCircleUser from "~icons/lucide/circle-user"
 import IconLucideCircleUserRound from "~icons/lucide/circle-user-round"
 import IconLucideCircleX from "~icons/lucide/circle-x"
 import IconLucideClock from "~icons/lucide/clock"
+import IconLucideCloudAlert from "~icons/lucide/cloud-alert"
 import IconLucideCloudCheck from "~icons/lucide/cloud-check"
+import IconLucideCloudSync from "~icons/lucide/cloud-sync"
 import IconLucideCode from "~icons/lucide/code"
 import IconLucideColumns from "~icons/lucide/columns"
 import IconLucideCombine from "~icons/lucide/combine"
@@ -334,7 +336,9 @@ export {
   IconLucideCircleUserRound as IconCircleUserRound,
   IconLucideCircleX as IconCircleX,
   IconLucideClock as IconClock,
+  IconLucideCloudAlert as IconCloudAlert,
   IconLucideCloudCheck as IconCloudCheck,
+  IconLucideCloudSync as IconCloudSync,
   IconLucideCode as IconCode,
   IconLucideColumns as IconColumns,
   IconLucideCombine as IconCombine,

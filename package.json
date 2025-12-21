@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.26.0",
+  "packageManager": "pnpm@10.26.1",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
@@ -124,7 +124,7 @@
     "vee-validate": "^4.15.1",
     "vue": "^3.5.26",
     "vue-boring-avatars": "^1.4.0",
-    "vue-i18n": "^11.2.2",
+    "vue-i18n": "^11.2.7",
     "vue-router": "^4.6.4",
     "vue-sonner": "^2.0.9",
     "vuefire": "^3.2.2",
@@ -135,7 +135,7 @@
   "devDependencies": {
     "@eslint/css": "^0.14.1",
     "@eslint/js": "^9.39.2",
-    "@iconify/json": "^2.2.419",
+    "@iconify/json": "^2.2.420",
     "@intlify/eslint-plugin-vue-i18n": "^4.1.0",
     "@intlify/unplugin-vue-i18n": "^11.0.3",
     "@tailwindcss/forms": "^0.5.11",
@@ -177,7 +177,7 @@
     "vite-plugin-sitemap": "^0.8.2",
     "vite-plugin-vue-layouts": "^0.11.0",
     "vue-eslint-parser": "^10.2.0",
-    "vue-tsc": "3.1.8",
+    "vue-tsc": "3.2.0",
     "workbox-build": "^7.4.0"
   },
   "peerDependencies": {

@@ -134,6 +134,7 @@ watch(accounts, (newAccounts) => {
           </span>
           <Button variant="link" tabindex="-1" @click="authMode = 'sign-in'">
             {{ t("enter.signIn") }}
+            <IconChevronRight />
           </Button>
         </div>
       </TabsContent>
@@ -149,6 +150,7 @@ watch(accounts, (newAccounts) => {
           </span>
           <Button variant="link" tabindex="-1" @click="authMode = 'sign-up'">
             {{ t("enter.signUp") }}
+            <IconChevronRight />
           </Button>
         </div>
       </TabsContent>
@@ -163,7 +165,7 @@ watch(accounts, (newAccounts) => {
             :key="account.uid"
             variant="muted"
             size="sm"
-            class="group hover:bg-accent"
+            class="group hover:bg-accent w-full"
             @click="switchAccount(account.uid)"
           >
             <ItemMedia>

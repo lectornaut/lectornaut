@@ -1,4 +1,8 @@
-use tauri::{Emitter, Manager};
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager,
+};
 use window_vibrancy::*;
 
 mod magic_link;
@@ -37,6 +41,79 @@ pub fn run() {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 app.deep_link().register_all()?;
             }
+
+            let show_i = MenuItem::with_id(app, "show", "Show app", true, None::<&str>)?;
+            let settings_i = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "Quit Lectornaut", true, None::<&str>)?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &show_i,
+                    &settings_i,
+                    &PredefinedMenuItem::separator(app)?,
+                    &quit_i,
+                ],
+            )?;
+
+            let (pixmap_data, width, height) = {
+                let (width, height) = (32, 32);
+                let mut pixmap = tiny_skia::Pixmap::new(width, height).unwrap();
+                let mut paint = tiny_skia::Paint::default();
+                paint.set_color_rgba8(0, 0, 0, 255); // Black for template
+                paint.anti_alias = true;
+
+                let circle = tiny_skia::PathBuilder::from_circle(16.0, 16.0, 8.0).unwrap();
+                pixmap.fill_path(
+                    &circle,
+                    &paint,
+                    tiny_skia::FillRule::Winding,
+                    tiny_skia::Transform::identity(),
+                    None,
+                );
+
+                (pixmap.data().to_vec(), width, height)
+            };
+
+            let tray_icon = tauri::image::Image::new(&pixmap_data, width, height);            
+
+            let tray = TrayIconBuilder::with_id("main")
+                .icon(tray_icon)
+                .icon_as_template(true)
+                .menu(&menu)
+                .show_menu_on_left_click(true)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                        app.emit("tray-action", "show").unwrap();
+                    }
+                    _ => {
+                        println!("menu item {:?} not handled", event.id);
+                        app.emit("tray-action", event.id.as_ref()).unwrap();
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            app.manage(tray);
 
             let window = app.get_webview_window("main").unwrap();
 

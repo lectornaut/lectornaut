@@ -16,7 +16,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # https://crates.io/crates/tauri/versions
-tauri = { version = "2", features = ["macos-private-api", "devtools"] }
+tauri = { version = "2", features = ["macos-private-api", "devtools", "tray-icon", "image-png"] }
 # https://crates.io/crates/serde/versions
 serde = { version = "1", features = ["derive"] }
 # https://crates.io/crates/serde_json/versions
@@ -52,3 +52,5 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 url = "2.5"
 # Async runtime utilities (if needed explicitly, though Tauri provides the runtime)
 tokio = { version = "1", features = ["full"] }
+# Rendering for Tray Icon
+tiny-skia = "0.11"

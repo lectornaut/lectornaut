@@ -83,11 +83,11 @@ const handleSwitchAccount = async (uid: string) => {
                   </AvatarFallback>
                 </Avatar>
               </ItemMedia>
-              <ItemContent class="gap-0.5">
-                <ItemTitle>
+              <ItemContent class="gap-0.5 truncate">
+                <ItemTitle class="truncate">
                   {{ user?.displayName }}
                 </ItemTitle>
-                <ItemDescription class="text-xs">
+                <ItemDescription class="truncate text-xs">
                   {{ user?.email }}
                 </ItemDescription>
               </ItemContent>

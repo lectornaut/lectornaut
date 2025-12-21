@@ -250,7 +250,7 @@ const startOnboarding = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem @click="startOnboarding">
                     <IconGift />
-                    Welcome
+                    Onboarding tour
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <IconBookOpen />

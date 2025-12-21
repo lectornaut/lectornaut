@@ -6,7 +6,9 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconArrowUp,
+  IconCloudAlert,
   IconCloudCheck,
+  IconCloudSync,
   IconHand,
   IconLayerFill,
   IconMaximize,
@@ -30,6 +32,8 @@ import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { UseDraggable as Draggable } from "@vueuse/components"
 
+import { listen } from "@tauri-apps/api/event"
+
 const { locale } = useI18n()
 watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 
@@ -39,6 +43,15 @@ const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
 const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
 const topPanel = ref<InstanceType<typeof ResizablePanel>>()
 const bottomPanel = ref<InstanceType<typeof ResizablePanel>>()
+
+onMounted(async () => {
+  await listen("tray-action", (event) => {
+    console.log("Tray action received:", event.payload)
+    if (event.payload === "settings") {
+      emitter.emit("Dialog.Settings.Open", "preferences")
+    }
+  })
+})
 
 emitter.on("Sidebar.Left.Toggle", () => {
   if (leftPanel.value?.splitterPanel?.isCollapsed) {
@@ -74,6 +87,8 @@ const isPoppedOutMinimized = useLocalStorage("popout-minimized-state", false)
 const observedSize = useLocalStorage("popout-size", { width: 300, height: 400 })
 const observedPosition = useLocalStorage("popout-position", { x: 0.5, y: 0.5 })
 
+const isOnline = useOnline()
+
 watch(isPoppedOut, (val) => {
   if (val) {
     isPoppedOutMinimized.value = false
@@ -92,10 +107,10 @@ useResizeObserver(draggableEl, (entries) => {
   }
 })
 
-const isLoading = ref(false)
+const isSyncing = ref(false)
 
 setInterval(() => {
-  isLoading.value = Math.random() > 0.5
+  isSyncing.value = Math.random() > 0.5
 }, 2000)
 
 const source = ref<{ id: string; label: string }[]>([])
@@ -644,16 +659,19 @@ const closeTab = (id: string) => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Button
-                      variant="destructive"
+                      variant="ghost"
                       size="sm"
                       class="w-[calc(var(--sidebar-width-icon))] rounded-none"
                     >
-                      <Spinner v-if="isLoading" />
+                      <IconCloudAlert v-if="!isOnline" />
+                      <IconCloudSync v-else-if="isSyncing" />
                       <IconCloudCheck v-else />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {{ isLoading ? "Syncing..." : "Synced to cloud" }}
+                    <template v-if="!isOnline"> You are offline </template>
+                    <template v-else-if="isSyncing"> Syncing... </template>
+                    <template v-else> Synced to cloud </template>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
