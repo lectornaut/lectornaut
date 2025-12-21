@@ -127,6 +127,13 @@ pub fn run() {
 
             Ok(())
         })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                window.hide().unwrap();
+            }
+            _ => {}
+        })
         .run(ctx)
         .expect("error while running tauri application");
 }
