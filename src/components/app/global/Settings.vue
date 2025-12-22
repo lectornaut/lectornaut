@@ -28,17 +28,10 @@ import {
   IconUsersRound,
   IconX,
 } from "@/data/icons"
-import {
-  accents,
-  fonts,
-  languages,
-  sizes,
-  themes,
-  zooms,
-} from "@/helpers/defaults"
+import { accents, fonts, languages, sizes, themes } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
-import { accent, font, size, store, zoom } from "@/modules/theme"
+import { accent, font, size, store } from "@/modules/theme"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership, ITeam } from "@/types"
 import {
@@ -1228,35 +1221,6 @@ const navigations = computed(() => [
                               <span :class="`text-${scale.id}`">
                                 {{ scale.name }}
                               </span>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                      <Field orientation="horizontal">
-                        <FieldContent>
-                          <FieldLabel for="zoom-level">{{
-                            t("settings.preferences.zoom.label")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{ t("settings.preferences.zoom.description") }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <Select id="zoom-level" v-model="zoom" class="w-40">
-                          <SelectTrigger>
-                            <SelectValue
-                              :placeholder="
-                                t('settings.preferences.zoom.placeholder')
-                              "
-                            />
-                          </SelectTrigger>
-                          <SelectContent align="end">
-                            <SelectItem
-                              v-for="level in zooms"
-                              :key="level.id"
-                              :value="level.id"
-                            >
-                              <Component :is="level.icon" />
-                              {{ level.name }}
                             </SelectItem>
                           </SelectContent>
                         </Select>

@@ -14,6 +14,22 @@ struct Payload {
     cwd: String,
 }
 
+fn create_tray_menu<R: tauri::Runtime>(
+    handle: &tauri::AppHandle<R>,
+    show_app_item: bool,
+) -> tauri::Result<tauri::menu::Menu<R>> {
+    let settings_i = MenuItem::with_id(handle, "settings", "Settings", true, None::<&str>)?;
+    let quit_i = MenuItem::with_id(handle, "quit", "Quit Lectornaut", true, None::<&str>)?;
+    let separator = PredefinedMenuItem::separator(handle)?;
+
+    if show_app_item {
+        let show_i = MenuItem::with_id(handle, "show", "Show app", true, None::<&str>)?;
+        Menu::with_items(handle, &[&show_i, &settings_i, &separator, &quit_i])
+    } else {
+        Menu::with_items(handle, &[&settings_i, &separator, &quit_i])
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let ctx = tauri::generate_context!();
@@ -42,22 +58,11 @@ pub fn run() {
                 app.deep_link().register_all()?;
             }
 
-            let show_i = MenuItem::with_id(app, "show", "Show app", true, None::<&str>)?;
-            let settings_i = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "Quit Lectornaut", true, None::<&str>)?;
-            let menu = Menu::with_items(
-                app,
-                &[
-                    &show_i,
-                    &settings_i,
-                    &PredefinedMenuItem::separator(app)?,
-                    &quit_i,
-                ],
-            )?;
+            let menu = create_tray_menu(app.handle(), false)?;
 
             let (pixmap_data, width, height) = {
-                let (width, height) = (32, 32);
-                let mut pixmap = tiny_skia::Pixmap::new(width, height).unwrap();
+                let (w, h) = (32, 32);
+                let mut pixmap = tiny_skia::Pixmap::new(w, h).unwrap();
                 let mut paint = tiny_skia::Paint::default();
                 paint.set_color_rgba8(0, 0, 0, 255); // Black for template
                 paint.anti_alias = true;
@@ -71,12 +76,12 @@ pub fn run() {
                     None,
                 );
 
-                (pixmap.data().to_vec(), width, height)
+                (pixmap.data().to_vec(), w, h)
             };
 
-            let tray_icon = tauri::image::Image::new(&pixmap_data, width, height);            
+            let tray_icon = tauri::image::Image::new(&pixmap_data, width, height);
 
-            let tray = TrayIconBuilder::with_id("main")
+            let _tray = TrayIconBuilder::with_id("main")
                 .icon(tray_icon)
                 .icon_as_template(true)
                 .menu(&menu)
@@ -89,6 +94,9 @@ pub fn run() {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
+                        }
+                        if let Some(tray) = app.tray_by_id("main") {
+                            let _ = create_tray_menu(app, false).map(|m| tray.set_menu(Some(m)));
                         }
                         app.emit("tray-action", "show").unwrap();
                     }
@@ -109,11 +117,10 @@ pub fn run() {
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
+                        let _ = create_tray_menu(app, false).map(|m| tray.set_menu(Some(m)));
                     }
                 })
                 .build(app)?;
-
-            app.manage(tray);
 
             let window = app.get_webview_window("main").unwrap();
 
@@ -131,6 +138,10 @@ pub fn run() {
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
                 window.hide().unwrap();
+                if let Some(tray) = window.app_handle().tray_by_id("main") {
+                    let _ = create_tray_menu(window.app_handle(), true)
+                        .map(|m| tray.set_menu(Some(m)));
+                }
             }
             _ => {}
         })

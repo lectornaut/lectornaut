@@ -8,6 +8,9 @@ import {
   IconComponent,
   IconContrast,
   IconFileText,
+  IconFontMono,
+  IconFontSans,
+  IconFontSansSerif,
   IconHome,
   IconJapan,
   IconLifeBuoy,
@@ -15,12 +18,6 @@ import {
   IconMdiFormatTextVariant,
   IconMessageCircle,
   IconMoon,
-  IconRiFontMono,
-  IconRiFontSans,
-  IconRiFontSansSerif,
-  IconRiSearchLine,
-  IconRiZoomInLine,
-  IconRiZoomOutLine,
   IconScroll,
   IconShieldCheck,
   IconSparkle,
@@ -102,9 +99,9 @@ export const accents = [
 export const defaultAccent = "neutral"
 
 export const fonts = [
-  { id: "sans", name: "Sans", icon: IconRiFontSans },
-  { id: "serif", name: "Serif", icon: IconRiFontSansSerif },
-  { id: "mono", name: "Mono", icon: IconRiFontMono },
+  { id: "sans", name: "Sans", icon: IconFontSans },
+  { id: "serif", name: "Serif", icon: IconFontSansSerif },
+  { id: "mono", name: "Mono", icon: IconFontMono },
 ]
 
 export const defaultFont = "sans"
@@ -118,18 +115,6 @@ export const sizes = [
 ]
 
 export const defaultSize = "sm"
-
-export const zooms = [
-  { id: "50", name: "50%", icon: IconRiZoomOutLine },
-  { id: "75", name: "75%", icon: IconRiZoomOutLine },
-  { id: "100", name: "100%", icon: IconRiSearchLine },
-  { id: "125", name: "125%", icon: IconRiZoomInLine },
-  { id: "150", name: "150%", icon: IconRiZoomInLine },
-  { id: "175", name: "175%", icon: IconRiZoomInLine },
-  { id: "200", name: "200%", icon: IconRiZoomInLine },
-]
-
-export const defaultZoom = "100"
 
 export const menu = [
   {
