@@ -7,7 +7,8 @@
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",
     "devUrl": "http://localhost:5173",
-    "frontendDist": "../dist"
+    "frontendDist": "../dist",
+    "removeUnusedCommands": true
   },
   "app": {
     "windows": [
@@ -37,7 +38,9 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
-    "category": "DeveloperTool",
+    "category": "Office",
+    "copyright": "Copyright © 2025 Lectornaut",
+    "license": "MIT",
     "fileAssociations": [
       {
         "description": "Open in Lectornaut",

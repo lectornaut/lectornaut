@@ -66,7 +66,7 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Commands"],
-        keys: [[getPlatformSpecialKey(), "k"]],
+        keys: [[getPlatformSpecialKey(), "K"]],
         hotkeys: "cmd+k,ctrl+k",
         event: "Dialog.Command.Open",
         parameters: undefined,
@@ -160,7 +160,7 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Open new tab"],
-        keys: [[getPlatformSpecialKey(), "t"]],
+        keys: [[getPlatformSpecialKey(), "T"]],
         hotkeys: "cmd+t,ctrl+t",
         event: "Tabs.Add",
         parameters: undefined,
@@ -170,7 +170,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Reopen last closed tab"],
-        keys: [[getPlatformSpecialKey(), "⇧", "t"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "T"]],
         hotkeys: "cmd+shift+t,ctrl+shift+t",
         event: "Tabs.ReopenLast",
         parameters: undefined,
@@ -180,7 +180,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close current tab"],
-        keys: [[getPlatformSpecialKey(), "w"]],
+        keys: [[getPlatformSpecialKey(), "W"]],
         hotkeys: "cmd+w,ctrl+w",
         event: "Tabs.Close",
         parameters: undefined,
@@ -190,7 +190,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close other tabs"],
-        keys: [[getPlatformSpecialKey(), "⇧", "w"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "W"]],
         hotkeys: "cmd+shift+w,ctrl+shift+w",
         event: "Tabs.Close.Others",
         parameters: undefined,
@@ -200,7 +200,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close all tabs"],
-        keys: [[getPlatformSpecialKey(), "⇧", "q"]],
+        keys: [[getPlatformSpecialKey(), "⇧", "Q"]],
         hotkeys: "cmd+shift+q,ctrl+shift+q",
         event: "Tabs.Close.All",
         parameters: undefined,
@@ -230,7 +230,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select Nth tab"],
-        keys: [[getPlatformSpecialKey(), "1, 2, 3...n"]],
+        keys: [[getPlatformSpecialKey(), "1, 2, 3...N"]],
         hotkeys:
           "cmd+num_1,cmd+num_2,cmd+num_3,cmd+num_4,cmd+num_5,cmd+num_6,cmd+num_7,cmd+num_8,cmd+num_9,ctrl+num_1,ctrl+num_2,ctrl+num_3,ctrl+num_4,ctrl+num_5,ctrl+num_6,ctrl+num_7,ctrl+num_8,ctrl+num_9",
         event: "Tabs.Select",
@@ -342,8 +342,8 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Logout"],
-        keys: [],
-        hotkeys: "",
+        keys: [[getPlatformSpecialKey(), "⇧", "L"]],
+        hotkeys: "cmd+shift+l,ctrl+shift+l",
         event: "Dialog.Exit.Open",
         parameters: undefined,
         icon: IconLogOut,
@@ -351,6 +351,6 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
     ],
-    hidden: ["shortcuts"],
+    hidden: [],
   },
 ]

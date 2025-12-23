@@ -200,7 +200,7 @@ const handleSwitchAccount = async (uid: string) => {
             <DropdownMenuItem @click="emitter.emit('Dialog.Exit.Open')">
               <IconLogOut />
               {{ t("accountMenu.logout") }}
-              <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+              <DropdownMenuShortcut>⇧⌘L</DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

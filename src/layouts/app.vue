@@ -155,7 +155,7 @@ const closeTab = (id: string) => {
       <Headerbar />
       <main class="flex grow overflow-auto overscroll-none scroll-smooth">
         <MainSidebar />
-        <div id="left-dock"></div>
+        <div id="left-dock" class="flex max-w-80 shrink-0"></div>
         <ResizablePanelGroup
           direction="horizontal"
           auto-save-id="app-horizontal-layout"
@@ -646,7 +646,7 @@ const closeTab = (id: string) => {
             </ContextMenu>
           </div>
         </Transition>
-        <div id="right-dock"></div>
+        <div id="right-dock" class="flex max-w-80 shrink-0"></div>
       </main>
       <ContextMenu>
         <ContextMenuTrigger as-child>
