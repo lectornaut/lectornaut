@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import {
-  IconAlertTriangle,
   IconArrowLeft,
   IconArrowRight,
   IconCheck,
@@ -31,10 +30,10 @@ const layoutStore = useLayoutStore()
 const {
   tabs,
   activeTabId,
+  activeTab,
   recentlyClosed,
   isLoading: pending,
 } = storeToRefs(layoutStore)
-const error = ref(null) // Store doesn't have error state yet
 
 const {
   addTab,
@@ -45,6 +44,8 @@ const {
   renameTab,
   setActiveTab,
   updateActiveTab,
+  clearRecentlyClosed,
+  reopenLastClosed,
 } = layoutStore
 
 const renamingTabId = ref<string | null>(null)
@@ -56,6 +57,9 @@ useSortable(el, tabs, {
   draggable: ".tab-item",
   handle: ".hover-trigger",
 })
+
+const isSyncing = ref(false)
+const hasHydrated = ref(false)
 
 // Navigate to a tab (used by event handlers and programmatic navigation)
 function navigateToTab(tab: { id: string; fullPath: string }) {
@@ -74,16 +78,18 @@ function handleAddTab(fullPath = "/new", name?: string) {
   if (newTab) navigateToTab(newTab)
 }
 
-// Close a tab
-function handleCloseTab(id: string) {
+// Close a tab with null safety
+function handleCloseTab(id: string | undefined) {
+  if (!id) return
   const result = closeTab(id)
   if (result?.nextPath) {
     router.push(result.nextPath)
   }
 }
 
-// Duplicate a tab
-function handleDuplicateTab(id: string) {
+// Duplicate a tab with null safety
+function handleDuplicateTab(id: string | undefined) {
+  if (!id) return
   duplicateTab(id)
   // Ideally navigate to new tab, but store doesn't return it yet.
   // Workaround: find tab with activeTabId
@@ -91,8 +97,9 @@ function handleDuplicateTab(id: string) {
   if (newTab) navigateToTab(newTab)
 }
 
-// Rename a tab
-function handleRenameTab(id: string) {
+// Rename a tab with null safety
+function handleRenameTab(id: string | undefined) {
+  if (!id) return
   const tab = tabs.value.find((t) => t.id === id)
   if (!tab) return
 
@@ -145,14 +152,23 @@ function selectTab(idOrDirection: string | number) {
   if (target) navigateToTab(target)
 }
 
-// Sync route changes with tabs
+// Sync route changes with tabs (Route -> Store)
 watch(
-  () => route.fullPath,
-  (fullPath) => {
-    if (!route.name) return
+  [() => route.fullPath, pending],
+  ([fullPath, isPending]) => {
+    if (isPending) return
 
-    // If no tabs and no active tab, don't create a tab (empty state)
-    if (tabs.value.length === 0 && !activeTabId.value) return
+    // If we just hydrated, skip this first run if a store path exists
+    // to let the Sync watcher below handle the initial navigation.
+    if (!hasHydrated.value) {
+      hasHydrated.value = true
+      if (activeTab.value?.fullPath && activeTab.value.fullPath !== fullPath) {
+        return
+      }
+    }
+
+    if (isSyncing.value) return
+    if (!route.name) return
 
     // Check if the route change is because we clicked on an existing tab
     const clickedTab = tabs.value.find(
@@ -186,54 +202,120 @@ watch(
   { immediate: true }
 )
 
-// Event handlers
-emitter.on("Tabs.Add", (raw?: unknown) => {
+// Sync active tab changes from other sessions with local route (Store -> Route)
+watch(
+  [activeTabId, () => activeTab.value?.fullPath, pending],
+  async ([newId, newPath, isPending]) => {
+    if (isPending) return
+    if (isSyncing.value) return // Prevent re-entry during active sync
+
+    // Ensure we have current path to compare against
+    const currentPath = route.fullPath
+
+    // If no active tab exists (e.g. all tabs closed in another session)
+    if (!newId || !newPath) {
+      if (tabs.value.length === 0 && currentPath !== "/start") {
+        isSyncing.value = true
+        try {
+          await router.push("/start")
+        } finally {
+          // Use setTimeout to ensure router has fully settled
+          setTimeout(() => {
+            isSyncing.value = false
+          }, 0)
+        }
+      }
+      return
+    }
+
+    // If the local route doesn't match the active tab's route, navigate
+    if (currentPath !== newPath) {
+      isSyncing.value = true
+      try {
+        await router.push(newPath)
+      } finally {
+        // Use setTimeout to ensure router has fully settled
+        setTimeout(() => {
+          isSyncing.value = false
+        }, 0)
+      }
+    }
+  }
+)
+
+// Event handlers - store references for cleanup
+function onTabsAdd(raw?: unknown) {
   const data = raw as
     | { fullPath?: string; path?: string; url?: string; name?: string }
     | undefined
   const path = data?.fullPath || data?.path || data?.url || "/new"
   handleAddTab(path, data?.name)
-})
+}
 
-emitter.on("Tabs.Close", (id?: unknown) => {
-  handleCloseTab((typeof id === "string" ? id : activeTabId.value) || "")
-})
+function onTabsClose(id?: unknown) {
+  handleCloseTab((typeof id === "string" ? id : activeTabId.value) || undefined)
+}
 
-emitter.on("Tabs.Close.Others", (id?: unknown) => {
+function onTabsCloseOthers(id?: unknown) {
   const keepId = typeof id === "string" ? id : activeTabId.value
-  closeOtherTabs(keepId)
-})
+  if (keepId) closeOtherTabs(keepId)
+}
 
-emitter.on("Tabs.Close.All", () => {
+function onTabsCloseAll() {
   closeAllTabs()
   router.push("/start")
-})
+}
 
-emitter.on("Tabs.Select", (idOrIndex?: unknown) => {
+function onTabsSelect(idOrIndex?: unknown) {
   if (typeof idOrIndex === "string" || typeof idOrIndex === "number") {
     selectTab(idOrIndex)
   }
-})
+}
 
-emitter.on("Tabs.ReopenLast", () => {
-  const last = recentlyClosed.value.shift()
+function onTabsReopenLast() {
+  const last = reopenLastClosed()
   if (last) handleAddTab(last.fullPath, last.name)
-})
+}
 
-emitter.on("Tabs.Reopen", (raw?: unknown) => {
+function onTabsReopen(raw?: unknown) {
   const tab = raw as { fullPath: string; name: string } | undefined
   if (tab) handleAddTab(tab.fullPath, tab.name)
-})
+}
 
-// Cleanup
+function onTabsDuplicate(id?: unknown) {
+  handleDuplicateTab(
+    (typeof id === "string" ? id : activeTabId.value) || undefined
+  )
+}
+
+function onTabsRename(id?: unknown) {
+  handleRenameTab(
+    (typeof id === "string" ? id : activeTabId.value) || undefined
+  )
+}
+
+// Register event listeners
+emitter.on("Tabs.Add", onTabsAdd)
+emitter.on("Tabs.Close", onTabsClose)
+emitter.on("Tabs.Close.Others", onTabsCloseOthers)
+emitter.on("Tabs.Close.All", onTabsCloseAll)
+emitter.on("Tabs.Select", onTabsSelect)
+emitter.on("Tabs.ReopenLast", onTabsReopenLast)
+emitter.on("Tabs.Reopen", onTabsReopen)
+emitter.on("Tabs.Duplicate", onTabsDuplicate)
+emitter.on("Tabs.Rename", onTabsRename)
+
+// Cleanup event listeners on unmount to prevent memory leaks
 onUnmounted(() => {
-  emitter.off("Tabs.Add")
-  emitter.off("Tabs.Close")
-  emitter.off("Tabs.Close.Others")
-  emitter.off("Tabs.Close.All")
-  emitter.off("Tabs.Select")
-  emitter.off("Tabs.ReopenLast")
-  emitter.off("Tabs.Reopen")
+  emitter.off("Tabs.Add", onTabsAdd)
+  emitter.off("Tabs.Close", onTabsClose)
+  emitter.off("Tabs.Close.Others", onTabsCloseOthers)
+  emitter.off("Tabs.Close.All", onTabsCloseAll)
+  emitter.off("Tabs.Select", onTabsSelect)
+  emitter.off("Tabs.ReopenLast", onTabsReopenLast)
+  emitter.off("Tabs.Reopen", onTabsReopen)
+  emitter.off("Tabs.Duplicate", onTabsDuplicate)
+  emitter.off("Tabs.Rename", onTabsRename)
 })
 </script>
 
@@ -275,13 +357,6 @@ onUnmounted(() => {
           >
             <template v-if="pending">
               <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
-            </template>
-            <template v-else-if="error">
-              <div
-                class="text-destructive rounded-md bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed px-4"
-              >
-                <IconAlertTriangle /> {{ error }}
-              </div>
             </template>
             <!-- <template v-else-if="tabs.length === 0">
               <Button
@@ -390,7 +465,7 @@ onUnmounted(() => {
                           >
                             <IconSquareX />
                             {{ t("tabs.closeAll") }}
-                            <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>
+                            <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
                           </ContextMenuItem>
                         </ContextMenuGroup>
                         <ContextMenuSeparator />
@@ -398,7 +473,7 @@ onUnmounted(() => {
                           <ContextMenuItem @click="handleRenameTab(tab.id)">
                             <IconSquarePen />
                             {{ t("tabs.rename") }}
-                            <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+                            <ContextMenuShortcut>F2</ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem @click="handleDuplicateTab(tab.id)">
                             <IconCopy />
@@ -497,7 +572,7 @@ onUnmounted(() => {
                         >
                           <IconSquareX />
                           {{ t("tabs.closeAll") }}
-                          <DropdownMenuShortcut>⌘⇧Q</DropdownMenuShortcut>
+                          <DropdownMenuShortcut>⌘⌥W</DropdownMenuShortcut>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
@@ -505,7 +580,7 @@ onUnmounted(() => {
                         <DropdownMenuItem @click="handleRenameTab(activeTabId)">
                           <IconSquarePen />
                           {{ t("tabs.rename") }}
-                          <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
+                          <DropdownMenuShortcut>F2</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           @click="handleDuplicateTab(activeTabId)"
@@ -574,7 +649,7 @@ onUnmounted(() => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               :disabled="recentlyClosed.length === 0"
-                              @click="recentlyClosed = []"
+                              @click="clearRecentlyClosed"
                             >
                               <IconTrash />
                               {{ t("tabs.clearRecent") }}
@@ -623,7 +698,7 @@ onUnmounted(() => {
           <ContextMenuItem @click="emitter.emit('Tabs.Close.All')">
             <IconSquareX />
             {{ t("tabs.closeAll") }}
-            <ContextMenuShortcut>⌘⇧Q</ContextMenuShortcut>
+            <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
           </ContextMenuItem>
         </ContextMenuGroup>
       </ContextMenuContent>

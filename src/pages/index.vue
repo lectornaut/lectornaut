@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { IconAiFill, IconCheck } from "@/data/icons"
+
 definePage({
   meta: {
     layout: "landing",

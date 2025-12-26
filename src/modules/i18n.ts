@@ -1,8 +1,8 @@
 import { defaultLanguage } from "@/helpers/defaults"
+import { useLayoutStore } from "@/stores/layoutStore"
 import messages from "@intlify/unplugin-vue-i18n/messages"
+import { storeToRefs } from "pinia"
 import { createI18n } from "vue-i18n"
-
-const locale = useStorage("locale", defaultLanguage)
 
 /**
  * Internationalization Configuration
@@ -10,7 +10,31 @@ const locale = useStorage("locale", defaultLanguage)
  */
 export const i18n = createI18n({
   legacy: false,
-  locale: locale.value,
+  locale: defaultLanguage,
   fallbackLocale: defaultLanguage,
   messages,
 })
+
+export const initLanguage = () => {
+  const layoutStore = useLayoutStore()
+  const { themeSettings } = storeToRefs(layoutStore)
+
+  watch(
+    () => themeSettings.value.language,
+    (newLang) => {
+      if (typeof newLang === "string" && i18n.global.locale.value !== newLang) {
+        i18n.global.locale.value = newLang
+      }
+    },
+    { immediate: true }
+  )
+
+  watch(i18n.global.locale, (newLang) => {
+    if (
+      typeof newLang === "string" &&
+      themeSettings.value.language !== newLang
+    ) {
+      themeSettings.value.language = newLang
+    }
+  })
+}

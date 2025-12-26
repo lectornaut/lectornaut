@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { IconGrid2X2Plus, IconRotateCcw } from "@/data/icons"
-import { menu } from "@/helpers/defaults"
+import { defaultMenu } from "@/helpers/defaults"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
@@ -63,7 +63,7 @@ useSortable(el, activeNavItems, {
               {{ t("navigation.show") }}
             </DropdownMenuLabel>
             <DropdownMenuCheckboxItem
-              v-for="item in menu"
+              v-for="item in defaultMenu"
               :key="item.id"
               :model-value="activeNavItems.some((i) => i.id === item.id)"
               @update:model-value="

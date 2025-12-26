@@ -3,8 +3,6 @@ import { IconX } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import type { ITeam } from "@/types"
-import { useFileDialog } from "@vueuse/core"
-import { ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 const props = defineProps<{
@@ -52,6 +50,22 @@ watch(files, (newFiles) => {
 })
 
 const removePhoto = () => {
+  if (photoPreview.value && photoPreview.value.startsWith("blob:")) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
+  photoFile.value = null
+  photoPreview.value = null
+  reset()
+}
+
+const resetForm = () => {
+  if (photoPreview.value && photoPreview.value.startsWith("blob:")) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
+  teamName.value = ""
+  inviteEmail.value = ""
+  inviteRole.value = "member"
+  pendingInvites.value = []
   photoFile.value = null
   photoPreview.value = null
   reset()
@@ -68,16 +82,7 @@ watch(
 watch(isOpen, (val) => {
   emit("update:open", val)
   if (!val) {
-    // Reset form when closed
-    setTimeout(() => {
-      teamName.value = ""
-      inviteEmail.value = ""
-      inviteRole.value = "member"
-      pendingInvites.value = []
-      photoFile.value = null
-      photoPreview.value = null
-      reset()
-    }, 300)
+    resetForm()
   } else {
     // Initialize form when opened
     if (props.mode === "edit" && props.team) {

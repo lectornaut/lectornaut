@@ -30,12 +30,8 @@ import {
 } from "@/data/icons"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
-import { UseDraggable as Draggable } from "@vueuse/components"
-
 import { listen } from "@tauri-apps/api/event"
-
-const { locale } = useI18n()
-watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
+import { UseDraggable as Draggable } from "@vueuse/components"
 
 const router = useRouter()
 

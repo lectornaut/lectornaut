@@ -3,7 +3,6 @@ import { IconLanguages } from "@/data/icons"
 import { languages } from "@/helpers/defaults"
 
 const { locale } = useI18n()
-watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 </script>
 
 <template>

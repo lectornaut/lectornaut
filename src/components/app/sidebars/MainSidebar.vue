@@ -2,7 +2,7 @@
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { IconApps, IconChevronsUpDown, IconGift } from "@/data/icons"
-import { menu } from "@/helpers/defaults"
+import { defaultMenu } from "@/helpers/defaults"
 import { collection, doc } from "firebase/firestore"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
@@ -64,7 +64,7 @@ const isFullscreen = useIsFullscreen()
                   class="grid w-40 grid-cols-1 gap-1 p-1"
                 >
                   <div
-                    v-for="(item, index) in menu"
+                    v-for="(item, index) in defaultMenu"
                     :key="index"
                     class="group/nav"
                   >

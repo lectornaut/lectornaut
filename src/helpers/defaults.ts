@@ -116,7 +116,7 @@ export const sizes = [
 
 export const defaultSize = "sm"
 
-export const menu = [
+export const defaultMenu = [
   {
     title: "Home",
     action: "Create a List",

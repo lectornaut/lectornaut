@@ -18,12 +18,12 @@ export const initHotkeys = () => {
   const filterShortcut = (shortcut: Shortcut) =>
     (isWeb ? !shortcut.hidden.includes("web") : true) &&
     (isDesktop ? !shortcut.hidden.includes("desktop") : true) &&
-    !shortcut.hidden.includes("shortcuts")
+    !shortcut.hidden.includes("hotkeys")
 
   const filterCategory = (category: ShortcutCategory) =>
     (isWeb ? !category.hidden.includes("web") : true) &&
     (isDesktop ? !category.hidden.includes("desktop") : true) &&
-    !category.hidden.includes("shortcuts")
+    !category.hidden.includes("hotkeys")
 
   shortcuts.filter(filterCategory).forEach((category) => {
     category.shortcuts.filter(filterShortcut).forEach((shortcut) => {

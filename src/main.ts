@@ -3,7 +3,7 @@ import { isTauri } from "@/composables/usePlatform"
 import { initKeychainListener } from "@/modules/auth"
 import { firebaseApp } from "@/modules/firebase"
 import { initHotkeys } from "@/modules/hotkeys"
-import { i18n } from "@/modules/i18n"
+import { i18n, initLanguage } from "@/modules/i18n"
 import { initPwa } from "@/modules/pwa"
 import { router } from "@/modules/router"
 import { initTheme } from "@/modules/theme"
@@ -58,6 +58,7 @@ if (isTauri.value) {
 }
 
 initTheme()
+initLanguage()
 initHotkeys()
 initPwa()
 initKeychainListener()

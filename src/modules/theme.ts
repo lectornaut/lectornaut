@@ -1,77 +1,106 @@
 import { isTauri } from "@/composables/usePlatform"
-import { defaultAccent, defaultFont, defaultSize } from "@/helpers/defaults"
+import { useLayoutStore } from "@/stores/layoutStore"
 import { setTheme } from "@tauri-apps/api/app"
-
-/**
- * Initializes the color mode (light/dark/auto)
- */
-const initMode = () => {
-  useColorMode({
-    attribute: "data-theme",
-    storageKey: "theme",
-    modes: {
-      accent: "accent",
-    },
-  })
-}
-
-export const accent = useStorage("accent", defaultAccent)
-
-watch(accent, (value) => {
-  document.documentElement.setAttribute("data-accent", value)
-})
-
-/**
- * Initializes the accent color and syncs it with the document root
- */
-const initAccent = () => {
-  useStorage("accent", defaultAccent)
-  document.documentElement.setAttribute("data-accent", accent.value)
-}
-
-export const font = useStorage("font", defaultFont)
-
-watch(font, (value) => {
-  document.documentElement.setAttribute("data-font", value)
-})
-
-/**
- * Initializes the font preference and syncs it with the document root
- */
-const initFont = () => {
-  useStorage("font", defaultFont)
-  document.documentElement.setAttribute("data-font", font.value)
-}
-
-export const size = useStorage("size", defaultSize)
-
-watch(size, (value) => {
-  document.documentElement.setAttribute("data-size", value)
-})
-
-/**
- * Initializes the text size preference and syncs it with the document root
- */
-const initSize = () => {
-  useStorage("size", defaultSize)
-  document.documentElement.setAttribute("data-size", size.value)
-}
-
-/**
- * Master initialization function for all theme-related settings
- */
-export const initTheme = () => {
-  initMode()
-  initAccent()
-  initFont()
-  initSize()
-}
+import { storeToRefs } from "pinia"
 
 export const { store, system, state } = useColorMode({
   attribute: "data-theme",
   storageKey: "theme",
   modes: {
     accent: "accent",
+  },
+})
+
+// Initialize theme sync
+export const initTheme = () => {
+  const layoutStore = useLayoutStore()
+  const { themeSettings } = storeToRefs(layoutStore)
+
+  // Sync Mode
+  watch(
+    () => themeSettings.value.mode,
+    (val) => {
+      if (val && val !== store.value) {
+        store.value = val
+      }
+    },
+    { immediate: true }
+  )
+
+  watch(store, (val) => {
+    if (val && val !== themeSettings.value.mode) {
+      themeSettings.value.mode = val
+    }
+  })
+
+  // Sync Accent
+  watch(
+    () => themeSettings.value.accent,
+    (val) => {
+      document.documentElement.setAttribute("data-accent", val)
+    },
+    { immediate: true }
+  )
+
+  // Sync Font
+  watch(
+    () => themeSettings.value.font,
+    (val) => {
+      document.documentElement.setAttribute("data-font", val)
+    },
+    { immediate: true }
+  )
+
+  // Sync Size
+  watch(
+    () => themeSettings.value.size,
+    (val) => {
+      document.documentElement.setAttribute("data-size", val)
+    },
+    { immediate: true }
+  )
+}
+
+// Export writables that proxy to the store
+// We need to use a getter/setter approach or just export the store refs directly if possible,
+// but to maintain API compatibility with usages like `v-model="accent"`, using a computed wrapper is best.
+
+// Helper to create a writable computed for store refs that might be accessed before store init?
+// Actually, `initTheme` is called likely in App setup.
+// But `accent`, `font`, `size` are imported in Settings.vue.
+// If we export them as computed properties accessing the store, we need to ensure pinia is active.
+// It is active in components.
+
+export const accent = computed({
+  get: () => {
+    const s = useLayoutStore()
+    return s.themeSettings.accent
+  },
+  set: (val: string) => {
+    const s = useLayoutStore()
+    s.themeSettings.accent = val
+  },
+})
+
+export const font = computed({
+  get: () => {
+    const s = useLayoutStore()
+    return s.themeSettings.font
+  },
+  set: (val: string) => {
+    const s = useLayoutStore()
+    s.themeSettings.font = val
+  },
+})
+
+export const size = computed({
+  get: () => {
+    const s = useLayoutStore()
+    return s.themeSettings.size
+  },
+  set: (val: string) => {
+    const s = useLayoutStore()
+    s.themeSettings.size = val
   },
 })
 

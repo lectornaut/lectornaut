@@ -151,14 +151,14 @@ export const initKeychainListener = () => {
     if (user) {
       const key = getFirebaseKey()
       if (key) {
-        const sessionDataRaw = window.localStorage.getItem(key)
-        if (sessionDataRaw) {
+        const sessionData = useStorage(key, null)
+        if (sessionData.value) {
           useKeychain().addAccount({
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            sessionData: JSON.parse(sessionDataRaw),
+            sessionData: sessionData.value as Record<string, unknown>,
           })
         }
       }
@@ -197,7 +197,8 @@ export const switchAccount = async (targetUid: string) => {
 
     const key = getFirebaseKey()
     if (key) {
-      window.localStorage.setItem(key, JSON.stringify(account.sessionData))
+      const sessionData = useStorage<Record<string, unknown> | null>(key, null)
+      sessionData.value = account.sessionData
       // Reload to force Firebase SDK to pick up the injected persistence
       window.location.reload()
     } else {

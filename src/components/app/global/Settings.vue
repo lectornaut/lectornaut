@@ -450,7 +450,6 @@ const handleRemoveProfilePicture = async () => {
 }
 
 const { locale, t } = useI18n()
-watch(locale, (newLocale) => localStorage.setItem("locale", newLocale))
 
 const getComputedProviderName = (provider: string) => {
   switch (provider) {

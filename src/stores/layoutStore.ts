@@ -1,14 +1,26 @@
-import { menu } from "@/helpers/defaults"
+import {
+  defaultAccent,
+  defaultFont,
+  defaultLanguage,
+  defaultMenu,
+  defaultSize,
+} from "@/helpers/defaults"
 import { generateId } from "@/helpers/utilities"
+import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc, setDoc } from "firebase/firestore"
 import { defineStore } from "pinia"
+import { computed, reactive, ref, watch } from "vue"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
-type Tab = {
+export type Tab = {
   id: string
   name: string
   fullPath: string
 }
+
+export type NavItem = (typeof defaultMenu)[number]
+
+export type ThemeMode = "light" | "dark" | "accent" | "auto"
 
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
@@ -16,10 +28,33 @@ export const useLayoutStore = defineStore("layout", () => {
 
   // --- State ---
 
+  // Pre-load from localStorage to avoid flash
+  const mode = useStorage<ThemeMode>("theme", "auto")
+  const accent = useStorage("accent", defaultAccent)
+  const font = useStorage("font", defaultFont)
+  const size = useStorage("size", defaultSize)
+  const language = useStorage("language", defaultLanguage)
+
   const tabs = ref<Tab[]>([])
   const activeTabId = ref("")
   const recentlyClosed = ref<Tab[]>([])
-  const activeNavItems = ref<typeof menu>([])
+  const activeNavItems = ref<NavItem[]>([])
+  const isHydrated = ref(false)
+
+  // Theme State - use storage refs directly to avoid double-wrapping
+  const themeSettings = reactive({
+    mode,
+    accent,
+    font,
+    size,
+    language,
+  })
+
+  // --- Computed ---
+
+  const activeTab = computed(() =>
+    tabs.value.find((t) => t.id === activeTabId.value)
+  )
 
   // --- Firestore Refs ---
 
@@ -39,13 +74,26 @@ export const useLayoutStore = defineStore("layout", () => {
     )
   })
 
+  const themeDocRef = computed(() => {
+    if (!user.value?.uid) return null
+    return doc(
+      collection(doc(collection(db, "users"), user.value.uid), "layout"),
+      "theme"
+    )
+  })
+
   // --- Hydration (VueFire) ---
 
   const { data: tabsDocData, pending: tabsPending } = useDocument(tabsDocRef)
   const { data: navDocData, pending: navPending } =
     useDocument(navigationDocRef)
+  const { data: themeDocData, pending: themePending } = useDocument(themeDocRef)
 
-  const isLoading = computed(() => tabsPending.value || navPending.value)
+  const isLoading = computed(
+    () =>
+      (tabsPending.value || navPending.value || themePending.value) &&
+      !isHydrated.value
+  )
 
   // Watch Tabs Data
   watch(
@@ -64,7 +112,9 @@ export const useLayoutStore = defineStore("layout", () => {
     navDocData,
     (doc) => {
       if (!doc) {
-        activeNavItems.value = [...menu]
+        if (!navPending.value) {
+          activeNavItems.value = [...defaultMenu]
+        }
         return
       }
 
@@ -72,24 +122,24 @@ export const useLayoutStore = defineStore("layout", () => {
       const savedOrder: string[] = doc.order || []
 
       const visibleIds = new Set<string>()
-      for (const item of menu) {
+      for (const item of defaultMenu) {
         if (savedVisibility[item.id] !== false) {
           visibleIds.add(item.id)
         }
       }
 
-      const newActiveItems: typeof menu = []
+      const newActiveItems: NavItem[] = []
       const processedIds = new Set<string>()
 
       for (const id of savedOrder) {
-        const item = menu.find((i) => i.id === id)
+        const item = defaultMenu.find((i) => i.id === id)
         if (item && visibleIds.has(id)) {
           newActiveItems.push(item)
           processedIds.add(id)
         }
       }
 
-      for (const item of menu) {
+      for (const item of defaultMenu) {
         if (visibleIds.has(item.id) && !processedIds.has(item.id)) {
           newActiveItems.push(item)
         }
@@ -100,18 +150,59 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
+  // Sync Firestore theme data back to localStorage (optional: override localStorage with server values if needed)
+  watch(
+    themeDocData,
+    (doc) => {
+      if (!doc) return
+      // Only sync if values differ (avoids unnecessary localStorage writes)
+      // Use 'in' operator to check for key existence rather than truthy value
+      if ("mode" in doc && doc.mode !== mode.value) mode.value = doc.mode
+      if ("accent" in doc && doc.accent !== accent.value)
+        accent.value = doc.accent
+      if ("font" in doc && doc.font !== font.value) font.value = doc.font
+      if ("size" in doc && doc.size !== size.value) size.value = doc.size
+      if ("language" in doc && doc.language !== language.value)
+        language.value = doc.language
+    },
+    { immediate: true }
+  )
+
+  // Set isHydrated when all critical documents are loaded or failed to load
+  watch(
+    [tabsPending, navPending, themePending],
+    ([tp, np, thp]) => {
+      if (!tp && !np && !thp) {
+        isHydrated.value = true
+      }
+    },
+    { immediate: true }
+  )
+
   // --- Persistence ---
+
+  // Helper to safely persist to Firestore with error handling
+  async function safeSetDoc(
+    docRef: ReturnType<typeof doc> | null,
+    data: Record<string, unknown>
+  ): Promise<void> {
+    if (!docRef) return
+    try {
+      await setDoc(docRef, data, { merge: true })
+    } catch (error) {
+      console.error("[layoutStore] Failed to persist to Firestore:", error)
+    }
+  }
 
   // Persist Tabs
   watchDebounced(
     [tabs, activeTabId, recentlyClosed],
     ([newTabs, newActive, newRecent]) => {
-      if (!tabsDocRef.value) return
-      setDoc(
-        tabsDocRef.value,
-        { tabs: newTabs, active: newActive, recentlyClosed: newRecent },
-        { merge: true }
-      )
+      safeSetDoc(tabsDocRef.value, {
+        tabs: newTabs,
+        active: newActive,
+        recentlyClosed: newRecent,
+      })
     },
     { debounce: 500, deep: true }
   )
@@ -126,13 +217,28 @@ export const useLayoutStore = defineStore("layout", () => {
       const order = newItems.map((item) => item.id)
       const activeIds = new Set(order)
 
-      for (const item of menu) {
+      for (const item of defaultMenu) {
         visibleItems[item.id] = activeIds.has(item.id)
       }
 
-      setDoc(navigationDocRef.value, { visibleItems, order }, { merge: true })
+      safeSetDoc(navigationDocRef.value, { visibleItems, order })
     },
     { debounce: 500, deep: true }
+  )
+
+  // Persist Theme
+  watchDebounced(
+    [mode, accent, font, size, language],
+    ([m, a, f, s, l]) => {
+      safeSetDoc(themeDocRef.value, {
+        mode: m,
+        accent: a,
+        font: f,
+        size: s,
+        language: l,
+      })
+    },
+    { debounce: 500 }
   )
 
   // --- Actions: Tabs ---
@@ -171,37 +277,67 @@ export const useLayoutStore = defineStore("layout", () => {
     if (!closing) return null
 
     addToHistory(closing)
-    tabs.value.splice(idx, 1)
 
-    if (tabs.value.length === 0) {
-      activeTabId.value = ""
-      return { nextPath: "/start" }
-    }
+    // Prepare new state
+    const newTabs = [...tabs.value]
+    newTabs.splice(idx, 1)
 
-    if (closing.id === activeTabId.value) {
-      const nextTab = tabs.value[idx] || tabs.value[idx - 1]
+    let nextPath: string | null = null
+    let nextId = activeTabId.value
+
+    if (newTabs.length === 0) {
+      nextId = ""
+      nextPath = "/start"
+    } else if (closing.id === activeTabId.value) {
+      const nextTab = newTabs[idx] || newTabs[idx - 1]
       if (nextTab) {
-        activeTabId.value = nextTab.id
-        return { nextPath: nextTab.fullPath }
+        nextId = nextTab.id
+        nextPath = nextTab.fullPath
       }
     }
-    return null
+
+    // Apply updates atomically-ish
+    tabs.value = newTabs
+    activeTabId.value = nextId
+
+    // Persist immediately for critical action
+    safeSetDoc(tabsDocRef.value, {
+      tabs: newTabs,
+      active: nextId,
+      recentlyClosed: recentlyClosed.value,
+    })
+
+    return nextPath ? { nextPath } : null
   }
 
   function closeOtherTabs(keepId: string) {
     const keep = tabs.value.find((t) => t.id === keepId)
     if (!keep) return
-    tabs.value.forEach((t) => {
-      if (t.id !== keepId) addToHistory(t)
-    })
+    // Collect tabs to close first to avoid modifying array while iterating
+    const tabsToClose = tabs.value.filter((t) => t.id !== keepId)
+    tabsToClose.forEach(addToHistory)
     tabs.value = [keep]
     activeTabId.value = keep.id
   }
 
   function closeAllTabs() {
-    tabs.value.forEach(addToHistory)
+    // Copy array before iterating to avoid modification issues
+    const tabsToClose = [...tabs.value]
+    tabsToClose.forEach(addToHistory)
     tabs.value = []
     activeTabId.value = ""
+  }
+
+  function clearRecentlyClosed() {
+    recentlyClosed.value = []
+  }
+
+  function reopenLastClosed(): Tab | null {
+    if (recentlyClosed.value.length === 0) return null
+    const [last, ...rest] = recentlyClosed.value
+    if (!last) return null
+    recentlyClosed.value = rest
+    return last
   }
 
   function duplicateTab(id: string) {
@@ -239,7 +375,7 @@ export const useLayoutStore = defineStore("layout", () => {
 
   function toggleNavItem(itemId: string, checked: boolean) {
     if (checked) {
-      const item = menu.find((i) => i.id === itemId)
+      const item = defaultMenu.find((i) => i.id === itemId)
       if (item && !activeNavItems.value.some((i) => i.id === itemId)) {
         activeNavItems.value.push(item)
       }
@@ -251,21 +387,24 @@ export const useLayoutStore = defineStore("layout", () => {
     }
   }
 
-  function setNavItems(items: typeof menu) {
+  function setNavItems(items: NavItem[]) {
     activeNavItems.value = items
   }
 
   function resetNavItems() {
-    activeNavItems.value = [...menu]
+    activeNavItems.value = [...defaultMenu]
   }
 
   return {
     // State
     tabs,
     activeTabId,
+    activeTab,
     recentlyClosed,
     activeNavItems,
+    themeSettings,
     isLoading,
+    isHydrated,
 
     // Actions
     addTab,
@@ -280,5 +419,7 @@ export const useLayoutStore = defineStore("layout", () => {
     setNavItems,
     resetNavItems,
     addToHistory,
+    clearRecentlyClosed,
+    reopenLastClosed,
   }
 })

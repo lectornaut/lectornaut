@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import { IconArrowRight } from "@/data/icons"
-import { menu } from "@/helpers/defaults"
+import { defaultMenu } from "@/helpers/defaults"
 </script>
 
 <template>
   <OverlayScrollbarsWrapper>
     <ItemGroup class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2">
       <Item
-        v-for="(item, itemIdx) in menu"
+        v-for="(item, itemIdx) in defaultMenu"
         :key="itemIdx"
         size="sm"
         variant="muted"

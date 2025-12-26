@@ -32,8 +32,8 @@ importers:
         specifier: ^6.5.3
         version: 6.5.3
       "@codemirror/view":
-        specifier: ^6.39.5
-        version: 6.39.5
+        specifier: ^6.39.7
+        version: 6.39.7
       "@fontsource-variable/geist":
         specifier: ^5.2.8
         version: 5.2.8
@@ -197,8 +197,8 @@ importers:
         specifier: ^8.50.1
         version: 8.50.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       "@unhead/vue":
-        specifier: 2.0.19
-        version: 2.0.19(vue@3.5.26(typescript@5.9.3))
+        specifier: 2.1.1
+        version: 2.1.1(vue@3.5.26(typescript@5.9.3))
       "@unovis/ts":
         specifier: 1.6.2
         version: 1.6.2
@@ -296,8 +296,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3))
       reka-ui:
-        specifier: 2.6.1
-        version: 2.6.1(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3))
+        specifier: 2.7.0
+        version: 2.7.0(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3))
       sortablejs:
         specifier: ^1.15.6
         version: 1.15.6
@@ -309,7 +309,7 @@ importers:
         version: 13.0.0
       vaul-vue:
         specifier: ^0.4.1
-        version: 0.4.1(reka-ui@2.6.1(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3)))(vue@3.5.26(typescript@5.9.3))
+        version: 0.4.1(reka-ui@2.7.0(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3)))(vue@3.5.26(typescript@5.9.3))
       vee-validate:
         specifier: ^4.15.1
         version: 4.15.1(vue@3.5.26(typescript@5.9.3))
@@ -348,8 +348,8 @@ importers:
         specifier: ^9.39.2
         version: 9.39.2
       "@iconify/json":
-        specifier: ^2.2.420
-        version: 2.2.420
+        specifier: ^2.2.421
+        version: 2.2.421
       "@intlify/eslint-plugin-vue-i18n":
         specifier: ^4.1.0
         version: 4.1.0(eslint@9.39.2(jiti@2.6.1))(jsonc-eslint-parser@2.4.2)(vue-eslint-parser@10.2.0(eslint@9.39.2(jiti@2.6.1)))(yaml-eslint-parser@1.3.2)
@@ -369,8 +369,8 @@ importers:
         specifier: ^0.2.3
         version: 0.2.3
       "@unhead/addons":
-        specifier: 2.0.19
-        version: 2.0.19(rollup@2.79.2)
+        specifier: 2.1.1
+        version: 2.1.1(rollup@2.79.2)(unhead@2.1.1)
       "@vite-pwa/assets-generator":
         specifier: ^1.0.2
         version: 1.0.2
@@ -1327,10 +1327,10 @@ packages:
         integrity: sha512-MerMzJzlXogk2fxWFU1nKp36bY5orBG59HnPiz0G9nLRebWa0zXuv2siH6PLIHBvv5TH8CkQRqjBs0MlxCZu+A==,
       }
 
-  "@codemirror/view@6.39.5":
+  "@codemirror/view@6.39.7":
     resolution:
       {
-        integrity: sha512-A2MwwJB5vC0UeOKHTsB0ZX19DH3/0KMaPgz45r0wd+SRwjk8x3KvYVQ/lYHRdZXxE59H0eUea1ANPqIPxX7QTw==,
+        integrity: sha512-3Vif9hnNHJnl2YgOtkR/wzGzhYcQ8gy3LGdUhkLUU8xSBbgsTxrE8he/CMTpeINm5TgxLe2FmzvF6IYQL/BSAg==,
       }
 
   "@csstools/css-parser-algorithms@3.0.5":
@@ -2217,10 +2217,10 @@ packages:
       }
     engines: { node: ">=18.18" }
 
-  "@iconify/json@2.2.420":
+  "@iconify/json@2.2.421":
     resolution:
       {
-        integrity: sha512-3dgvkB8eiUA/PkGHaRB+x17MS1u22V2O1YtFpdpdFpbXp/fAdloOMbxeMXXgNlcGgjk7x4hUIeDunic/diHYqg==,
+        integrity: sha512-jc0BOjmdVz4DxfYlvJWEBl8FIdOtgRCDZkyOEDFlHqCnfw6Yyr41fDaiECU/FSzkqjwNuKu5H10N7bLN+JPQGA==,
       }
 
   "@iconify/types@2.0.0":
@@ -3499,10 +3499,10 @@ packages:
       }
     engines: { node: ">=12" }
 
-  "@tanstack/virtual-core@3.13.12":
+  "@tanstack/virtual-core@3.13.13":
     resolution:
       {
-        integrity: sha512-1YBOJfRHV4sXUmWsFSf5rQor4Ss82G8dQWLRbnk3GA4jeP8hQt1hxXh0tmflpC0dz3VgEv/1+qwPyLeWkQuPFA==,
+        integrity: sha512-uQFoSdKKf5S8k51W5t7b2qpfkyIbdHMzAn+AMQvHPxKUPeo1SsGaA4JRISQT87jm28b7z8OEqPcg1IOZagQHcA==,
       }
 
   "@tanstack/vue-table@8.21.3":
@@ -3514,10 +3514,10 @@ packages:
     peerDependencies:
       vue: ">=3.2"
 
-  "@tanstack/vue-virtual@3.13.12":
+  "@tanstack/vue-virtual@3.13.13":
     resolution:
       {
-        integrity: sha512-vhF7kEU9EXWXh+HdAwKJ2m3xaOnTTmgcdXcF2pim8g4GvI7eRrk2YRuV5nUlZnd/NbCIX4/Ja2OZu5EjJL06Ww==,
+        integrity: sha512-Cf2xIEE8nWAfsX0N5nihkPYMeQRT+pHt4NEkuP8rNCn6lVnLDiV8rC8IeIxbKmQC0yPnj4SIBLwXYVf86xxKTQ==,
       }
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
@@ -4578,16 +4578,18 @@ packages:
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
 
-  "@unhead/addons@2.0.19":
+  "@unhead/addons@2.1.1":
     resolution:
       {
-        integrity: sha512-GkyyScEvar+8LTJqQPJ0QBZC1b7Frj8zMu+SJmyd5WuD6Wv9byhM+hLGfDNQpQ9G9HfT7ZnBKZs88e5BMnovuw==,
+        integrity: sha512-YAGGeL8+vBe9X2yYePPV8AO7kZDdzHmFjf6LhXmajycmWbG8CMUPTlzDxWm6Nqf3u7arSA4dKiXqWVqCziHJEQ==,
       }
+    peerDependencies:
+      unhead: 2.1.1
 
-  "@unhead/vue@2.0.19":
+  "@unhead/vue@2.1.1":
     resolution:
       {
-        integrity: sha512-7BYjHfOaoZ9+ARJkT10Q2TjnTUqDXmMpfakIAsD/hXiuff1oqWg1xeXT5+MomhNcC15HbiABpbbBmITLSHxdKg==,
+        integrity: sha512-WYa8ORhfv7lWDSoNpkMKhbW1Dbsux/3HqMcVkZS3xZ2/c/VrcChLj+IMadpCd1WNR0srITfRJhBYZ1i9hON5Qw==,
       }
     peerDependencies:
       vue: ">=3.5.18"
@@ -7548,10 +7550,10 @@ packages:
       }
     engines: { node: ">= 0.8.0" }
 
-  lib0@0.2.115:
+  lib0@0.2.116:
     resolution:
       {
-        integrity: sha512-noaW4yNp6hCjOgDnWWxW0vGXE3kZQI5Kqiwz+jIWXavI9J9WyfJ9zjsbQlQlgjIbHBrvlA/x3TSIXBUJj+0L6g==,
+        integrity: sha512-4zsosjzmt33rx5XjmFVYUAeLNh+BTeDTiwGdLt4muxiir2btsc60Nal0EvkvDRizg+pnlK1q+BtYi7M+d4eStw==,
       }
     engines: { node: ">=16" }
     hasBin: true
@@ -8769,10 +8771,10 @@ packages:
       }
     hasBin: true
 
-  reka-ui@2.6.1:
+  reka-ui@2.7.0:
     resolution:
       {
-        integrity: sha512-XK7cJDQoNuGXfCNzBBo/81Yg/OgjPwvbabnlzXG2VsdSgNsT6iIkuPBPr+C0Shs+3bb0x0lbPvgQAhMSCKm5Ww==,
+        integrity: sha512-m+XmxQN2xtFzBP3OAdIafKq7C8OETo2fqfxcIIxYmNN2Ch3r5oAf6yEYCIJg5tL/yJU2mHqF70dCCekUkrAnXA==,
       }
     peerDependencies:
       vue: ">= 3.2.0"
@@ -9838,10 +9840,10 @@ packages:
         integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==,
       }
 
-  unhead@2.0.19:
+  unhead@2.1.1:
     resolution:
       {
-        integrity: sha512-gEEjkV11Aj+rBnY6wnRfsFtF2RxKOLaPN4i+Gx3UhBxnszvV6ApSNZbGk7WKyy/lErQ6ekPN63qdFL7sa1leow==,
+        integrity: sha512-NOt8n2KybAOxSLfNXegAVai4SGU8bPKqWnqCzNAvnRH2i8mW+0bbFjN/L75LBgCSTiOjJSpANe5w2V34Grr7Cw==,
       }
 
   unicode-canonical-property-names-ecmascript@2.0.1:
@@ -11375,14 +11377,14 @@ snapshots:
     dependencies:
       "@codemirror/language": 6.12.1
       "@codemirror/state": 6.5.3
-      "@codemirror/view": 6.39.5
+      "@codemirror/view": 6.39.7
       "@lezer/common": 1.4.0
 
   "@codemirror/commands@6.10.1":
     dependencies:
       "@codemirror/language": 6.12.1
       "@codemirror/state": 6.5.3
-      "@codemirror/view": 6.39.5
+      "@codemirror/view": 6.39.7
       "@lezer/common": 1.4.0
 
   "@codemirror/lang-javascript@6.2.4":
@@ -11391,14 +11393,14 @@ snapshots:
       "@codemirror/language": 6.12.1
       "@codemirror/lint": 6.9.2
       "@codemirror/state": 6.5.3
-      "@codemirror/view": 6.39.5
+      "@codemirror/view": 6.39.7
       "@lezer/common": 1.4.0
       "@lezer/javascript": 1.5.4
 
   "@codemirror/language@6.12.1":
     dependencies:
       "@codemirror/state": 6.5.3
-      "@codemirror/view": 6.39.5
+      "@codemirror/view": 6.39.7
       "@lezer/common": 1.5.0
       "@lezer/highlight": 1.2.3
       "@lezer/lr": 1.4.5
@@ -11407,20 +11409,20 @@ snapshots:
   "@codemirror/lint@6.9.2":
     dependencies:
       "@codemirror/state": 6.5.3
-      "@codemirror/view": 6.39.5
+      "@codemirror/view": 6.39.7
       crelt: 1.0.6
 
   "@codemirror/search@6.5.11":
     dependencies:
       "@codemirror/state": 6.5.3
-      "@codemirror/view": 6.39.5
+      "@codemirror/view": 6.39.7
       crelt: 1.0.6
 
   "@codemirror/state@6.5.3":
     dependencies:
       "@marijn/find-cluster-break": 1.0.2
 
-  "@codemirror/view@6.39.5":
+  "@codemirror/view@6.39.7":
     dependencies:
       "@codemirror/state": 6.5.3
       crelt: 1.0.6
@@ -12024,7 +12026,7 @@ snapshots:
 
   "@humanwhocodes/retry@0.4.3": {}
 
-  "@iconify/json@2.2.420":
+  "@iconify/json@2.2.421":
     dependencies:
       "@iconify/types": 2.0.0
       pathe: 2.0.3
@@ -12709,16 +12711,16 @@ snapshots:
 
   "@tanstack/table-core@8.21.3": {}
 
-  "@tanstack/virtual-core@3.13.12": {}
+  "@tanstack/virtual-core@3.13.13": {}
 
   "@tanstack/vue-table@8.21.3(vue@3.5.26(typescript@5.9.3))":
     dependencies:
       "@tanstack/table-core": 8.21.3
       vue: 3.5.26(typescript@5.9.3)
 
-  "@tanstack/vue-virtual@3.13.12(vue@3.5.26(typescript@5.9.3))":
+  "@tanstack/vue-virtual@3.13.13(vue@3.5.26(typescript@5.9.3))":
     dependencies:
-      "@tanstack/virtual-core": 3.13.12
+      "@tanstack/virtual-core": 3.13.13
       vue: 3.5.26(typescript@5.9.3)
 
   "@tauri-apps/api@2.9.1": {}
@@ -13027,7 +13029,7 @@ snapshots:
 
   "@tiptap/y-tiptap@3.0.1(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.4)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27)":
     dependencies:
-      lib0: 0.2.115
+      lib0: 0.2.116
       prosemirror-model: 1.25.4
       prosemirror-state: 1.4.4
       prosemirror-view: 1.41.4
@@ -13391,22 +13393,23 @@ snapshots:
       "@typescript-eslint/types": 8.50.1
       eslint-visitor-keys: 4.2.1
 
-  "@unhead/addons@2.0.19(rollup@2.79.2)":
+  "@unhead/addons@2.1.1(rollup@2.79.2)(unhead@2.1.1)":
     dependencies:
       "@rollup/pluginutils": 5.3.0(rollup@2.79.2)
       estree-walker: 3.0.3
       magic-string: 0.30.21
       mlly: 1.8.0
       ufo: 1.6.1
+      unhead: 2.1.1
       unplugin: 2.3.11
       unplugin-ast: 0.15.4
     transitivePeerDependencies:
       - rollup
 
-  "@unhead/vue@2.0.19(vue@3.5.26(typescript@5.9.3))":
+  "@unhead/vue@2.1.1(vue@3.5.26(typescript@5.9.3))":
     dependencies:
       hookable: 5.5.3
-      unhead: 2.0.19
+      unhead: 2.1.1
       vue: 3.5.26(typescript@5.9.3)
 
   "@unovis/dagre-layout@0.8.8-2":
@@ -14011,7 +14014,7 @@ snapshots:
       "@codemirror/lint": 6.9.2
       "@codemirror/search": 6.5.11
       "@codemirror/state": 6.5.3
-      "@codemirror/view": 6.39.5
+      "@codemirror/view": 6.39.7
 
   color-convert@2.0.1:
     dependencies:
@@ -15300,7 +15303,7 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
-  lib0@0.2.115:
+  lib0@0.2.116:
     dependencies:
       isomorphic.js: 0.2.5
 
@@ -16010,13 +16013,13 @@ snapshots:
     dependencies:
       jsesc: 3.1.0
 
-  reka-ui@2.6.1(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3)):
+  reka-ui@2.7.0(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3)):
     dependencies:
       "@floating-ui/dom": 1.7.4
       "@floating-ui/vue": 1.1.9(vue@3.5.26(typescript@5.9.3))
       "@internationalized/date": 3.10.1
       "@internationalized/number": 3.6.5
-      "@tanstack/vue-virtual": 3.13.12(vue@3.5.26(typescript@5.9.3))
+      "@tanstack/vue-virtual": 3.13.13(vue@3.5.26(typescript@5.9.3))
       "@vueuse/core": 12.8.2(typescript@5.9.3)
       "@vueuse/shared": 12.8.2(typescript@5.9.3)
       aria-hidden: 1.2.6
@@ -16759,7 +16762,7 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  unhead@2.0.19:
+  unhead@2.1.1:
     dependencies:
       hookable: 5.5.3
 
@@ -16943,10 +16946,10 @@ snapshots:
   varint@6.0.0:
     optional: true
 
-  vaul-vue@0.4.1(reka-ui@2.6.1(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3)))(vue@3.5.26(typescript@5.9.3)):
+  vaul-vue@0.4.1(reka-ui@2.7.0(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3)))(vue@3.5.26(typescript@5.9.3)):
     dependencies:
       "@vueuse/core": 10.11.1(vue@3.5.26(typescript@5.9.3))
-      reka-ui: 2.6.1(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3))
+      reka-ui: 2.7.0(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3))
       vue: 3.5.26(typescript@5.9.3)
     transitivePeerDependencies:
       - "@vue/composition-api"
@@ -17310,7 +17313,7 @@ snapshots:
 
   y-protocols@1.0.6(yjs@13.6.27):
     dependencies:
-      lib0: 0.2.115
+      lib0: 0.2.116
       yjs: 13.6.27
 
   y18n@5.0.8: {}
@@ -17342,7 +17345,7 @@ snapshots:
 
   yjs@13.6.27:
     dependencies:
-      lib0: 0.2.115
+      lib0: 0.2.116
 
   yocto-queue@0.1.0: {}
 

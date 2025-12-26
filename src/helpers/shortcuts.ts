@@ -2,6 +2,7 @@ import {
   IconBolt,
   IconCheckSquare2,
   IconCircleUser,
+  IconCopy,
   IconCreditCard,
   IconHelpCircle,
   IconHistory,
@@ -17,6 +18,7 @@ import {
   IconPlusSquare,
   IconSettings,
   IconSparkles,
+  IconSquarePen,
   IconSun,
   IconTerminal,
   IconXCircle,
@@ -33,16 +35,33 @@ const isAppleDevice = () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
 export const getPlatformSpecialKey = (): string =>
   isAppleDevice() ? "⌘" : "Ctrl"
 
-// const getPlatformAlternateKey = () => (isAppleDevice() ? "⌥" : "Alt")
+/**
+ * Returns the platform-specific alternate key
+ * @returns '⌥' for macOS, 'Alt' for others
+ */
+export const getPlatformAlternateKey = (): string =>
+  isAppleDevice() ? "⌥" : "Alt"
 
-type ShortcutHiddenType = "web" | "desktop" | "shortcuts" | "commands"
+/**
+ * Returns the platform-specific control key
+ * @returns '⌃' for macOS, 'Ctrl' for others
+ */
+export const getPlatformControlKey = (): string =>
+  isAppleDevice() ? "⌃" : "Ctrl"
+
+type ShortcutHiddenType =
+  | "hotkeys"
+  | "web"
+  | "desktop"
+  | "shortcuts"
+  | "commands"
 
 export type Shortcut = {
   description: string[]
   keys: string[][]
   hotkeys: string
   event: string
-  parameters: string | undefined
+  parameters: string | number | undefined
   icon: FunctionalComponent<SVGAttributes>
   tags: string[]
   hidden: ShortcutHiddenType[]
@@ -143,8 +162,8 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Panel", "Bottom"],
-        keys: [[getPlatformSpecialKey(), "`"]],
-        hotkeys: "cmd+`,ctrl+`",
+        keys: [[getPlatformSpecialKey(), "J"]],
+        hotkeys: "cmd+j,ctrl+j",
         event: "Panel.Bottom.Toggle",
         parameters: undefined,
         icon: IconPanelBottom,
@@ -200,8 +219,8 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close all tabs"],
-        keys: [[getPlatformSpecialKey(), "⇧", "Q"]],
-        hotkeys: "cmd+shift+q,ctrl+shift+q",
+        keys: [[getPlatformSpecialKey(), getPlatformAlternateKey(), "W"]],
+        hotkeys: "cmd+alt+w,ctrl+alt+w",
         event: "Tabs.Close.All",
         parameters: undefined,
         icon: IconXSquare,
@@ -209,9 +228,29 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
       {
+        description: ["Duplicate tab"],
+        keys: [[getPlatformSpecialKey(), "D"]],
+        hotkeys: "cmd+d,ctrl+d",
+        event: "Tabs.Duplicate",
+        parameters: undefined,
+        icon: IconCopy,
+        tags: ["tab", "duplicate", "copy"],
+        hidden: [],
+      },
+      {
+        description: ["Rename tab"],
+        keys: [["F2"]],
+        hotkeys: "f2",
+        event: "Tabs.Rename",
+        parameters: undefined,
+        icon: IconSquarePen,
+        tags: ["tab", "rename", "edit"],
+        hidden: [],
+      },
+      {
         description: ["Select next tab"],
-        keys: [[getPlatformSpecialKey(), "⇧", "▶"]],
-        hotkeys: "control+tab,ctrl+tab",
+        keys: [[getPlatformAlternateKey(), "]"]],
+        hotkeys: "alt+],option+]",
         event: "Tabs.Select",
         parameters: "next",
         icon: IconCheckSquare2,
@@ -220,8 +259,8 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select previous tab"],
-        keys: [[getPlatformSpecialKey(), "⇧", "◀"]],
-        hotkeys: "control+shift+tab,ctrl+shift+tab",
+        keys: [[getPlatformAlternateKey(), "["]],
+        hotkeys: "alt+[,option+[",
         event: "Tabs.Select",
         parameters: "previous",
         icon: IconCheckSquare2,
@@ -230,14 +269,103 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select Nth tab"],
-        keys: [[getPlatformSpecialKey(), "1, 2, 3...N"]],
-        hotkeys:
-          "cmd+num_1,cmd+num_2,cmd+num_3,cmd+num_4,cmd+num_5,cmd+num_6,cmd+num_7,cmd+num_8,cmd+num_9,ctrl+num_1,ctrl+num_2,ctrl+num_3,ctrl+num_4,ctrl+num_5,ctrl+num_6,ctrl+num_7,ctrl+num_8,ctrl+num_9",
+        keys: [[getPlatformSpecialKey(), "1, 2, 3, ..., N"]],
+        hotkeys: "",
         event: "Tabs.Select",
         parameters: undefined,
         icon: IconCheckSquare2,
         tags: ["tab", "select"],
-        hidden: ["commands"],
+        hidden: ["hotkeys", "commands"],
+      },
+      {
+        description: ["Select tab 1"],
+        keys: [[getPlatformSpecialKey(), "1"]],
+        hotkeys: "cmd+1,ctrl+1",
+        event: "Tabs.Select",
+        parameters: 1,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 2"],
+        keys: [[getPlatformSpecialKey(), "2"]],
+        hotkeys: "cmd+2,ctrl+2",
+        event: "Tabs.Select",
+        parameters: 2,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 3"],
+        keys: [[getPlatformSpecialKey(), "3"]],
+        hotkeys: "cmd+3,ctrl+3",
+        event: "Tabs.Select",
+        parameters: 3,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 4"],
+        keys: [[getPlatformSpecialKey(), "4"]],
+        hotkeys: "cmd+4,ctrl+4",
+        event: "Tabs.Select",
+        parameters: 4,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 5"],
+        keys: [[getPlatformSpecialKey(), "5"]],
+        hotkeys: "cmd+5,ctrl+5",
+        event: "Tabs.Select",
+        parameters: 5,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 6"],
+        keys: [[getPlatformSpecialKey(), "6"]],
+        hotkeys: "cmd+6,ctrl+6",
+        event: "Tabs.Select",
+        parameters: 6,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 7"],
+        keys: [[getPlatformSpecialKey(), "7"]],
+        hotkeys: "cmd+7,ctrl+7",
+        event: "Tabs.Select",
+        parameters: 7,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 8"],
+        keys: [[getPlatformSpecialKey(), "8"]],
+        hotkeys: "cmd+8,ctrl+8",
+        event: "Tabs.Select",
+        parameters: 8,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
+      },
+      {
+        description: ["Select tab 9"],
+        keys: [[getPlatformSpecialKey(), "9"]],
+        hotkeys: "cmd+9,ctrl+9",
+        event: "Tabs.Select",
+        parameters: 9,
+        icon: IconCheckSquare2,
+        tags: ["tab", "select"],
+        hidden: ["commands", "shortcuts"],
       },
     ],
     hidden: ["web"],
@@ -287,7 +415,7 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
     ],
-    hidden: ["shortcuts"],
+    hidden: ["hotkeys", "shortcuts"],
   },
   {
     title: "Appearance",
@@ -334,7 +462,7 @@ export const shortcuts: ShortcutCategory[] = [
         hidden: [],
       },
     ],
-    hidden: ["shortcuts"],
+    hidden: ["hotkeys", "shortcuts"],
   },
   {
     title: "Account",
@@ -342,8 +470,8 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Logout"],
-        keys: [[getPlatformSpecialKey(), "⇧", "L"]],
-        hotkeys: "cmd+shift+l,ctrl+shift+l",
+        keys: [[getPlatformSpecialKey(), "⇧", "O"]],
+        hotkeys: "cmd+shift+o,ctrl+shift+o",
         event: "Dialog.Exit.Open",
         parameters: undefined,
         icon: IconLogOut,
