@@ -128,22 +128,28 @@ function cancelRename() {
 function selectTab(idOrDirection: string | number) {
   if (tabs.value.length === 0) return
 
-  let targetId: string | undefined
+  let targetId: string
 
   if (idOrDirection === "next") {
     const idx = tabs.value.findIndex((t) => t.id === activeTabId.value)
     const nextIdx = (idx + 1) % tabs.value.length
-    targetId = tabs.value[nextIdx]?.id
+    const nextTab = tabs.value[nextIdx]
+    if (!nextTab) return
+    targetId = nextTab.id
   } else if (idOrDirection === "previous") {
     const idx = tabs.value.findIndex((t) => t.id === activeTabId.value)
     const prevIdx = (idx - 1 + tabs.value.length) % tabs.value.length
-    targetId = tabs.value[prevIdx]?.id
+    const prevTab = tabs.value[prevIdx]
+    if (!prevTab) return
+    targetId = prevTab.id
   } else if (typeof idOrDirection === "number") {
     const tabIdx = Math.max(
       0,
       Math.min(idOrDirection - 1, tabs.value.length - 1)
     )
-    targetId = tabs.value[tabIdx]?.id
+    const tab = tabs.value[tabIdx]
+    if (!tab) return
+    targetId = tab.id
   } else {
     targetId = idOrDirection as string
   }

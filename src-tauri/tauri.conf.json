@@ -38,7 +38,7 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
-    "category": "Office",
+    "category": "Business",
     "copyright": "Copyright © 2025 Lectornaut",
     "license": "MIT",
     "fileAssociations": [

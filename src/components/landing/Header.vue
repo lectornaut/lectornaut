@@ -318,20 +318,57 @@ const { t } = useI18n()
                       <div
                         class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
                       >
-                        <Accordion collapsible type="multiple" class="px-4">
+                        <Accordion collapsible type="multiple" class="p-4">
                           <AccordionItem value="products">
                             <AccordionTrigger>
                               {{ t("landing.menu.products") }}
                             </AccordionTrigger>
                             <AccordionContent>
-                              <Button
-                                v-for="item in productsMenu"
-                                :key="item.id"
-                              >
-                                {{
-                                  t("landing.menu.items." + item.id + ".title")
-                                }}
-                              </Button>
+                              <div class="flex flex-col gap-2 p-2">
+                                <Item
+                                  v-for="item in productsMenu"
+                                  :key="item.id"
+                                  class="p-2"
+                                  as-child
+                                >
+                                  <RouterLink :to="item.url">
+                                    <ItemMedia>
+                                      <div
+                                        class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                        :class="item.style.bg"
+                                      >
+                                        <Component
+                                          :is="item.icon"
+                                          class="size-5"
+                                          :class="item.style.text"
+                                        />
+                                      </div>
+                                    </ItemMedia>
+                                    <ItemContent>
+                                      <ItemTitle>
+                                        {{
+                                          t(
+                                            "landing.menu.items." +
+                                              item.id +
+                                              ".title"
+                                          )
+                                        }}
+                                      </ItemTitle>
+                                      <ItemDescription
+                                        class="line-clamp-2 text-xs"
+                                      >
+                                        {{
+                                          t(
+                                            "landing.menu.items." +
+                                              item.id +
+                                              ".description"
+                                          )
+                                        }}
+                                      </ItemDescription>
+                                    </ItemContent>
+                                  </RouterLink>
+                                </Item>
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="solutions">
@@ -339,17 +376,54 @@ const { t } = useI18n()
                               {{ t("landing.menu.solutions") }}
                             </AccordionTrigger>
                             <AccordionContent>
-                              <div v-for="menu in solutionsMenu" :key="menu.id">
-                                <Button
-                                  v-for="item in menu.items"
-                                  :key="item.id"
+                              <div class="flex flex-col gap-4">
+                                <div
+                                  v-for="group in solutionsMenu"
+                                  :key="group.id"
+                                  class="flex flex-col gap-2 p-2"
                                 >
-                                  {{
-                                    t(
-                                      "landing.menu.items." + item.id + ".title"
-                                    )
-                                  }}
-                                </Button>
+                                  <span
+                                    class="text-muted-foreground px-2 text-xs font-medium tracking-wider uppercase"
+                                  >
+                                    {{
+                                      t(
+                                        "landing.menu.solutionGroups." +
+                                          group.id
+                                      )
+                                    }}
+                                  </span>
+                                  <Item
+                                    v-for="item in group.items"
+                                    :key="item.id"
+                                    class="p-2"
+                                    as-child
+                                  >
+                                    <RouterLink :to="item.url">
+                                      <ItemMedia>
+                                        <div
+                                          class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                          :class="item.style.bg"
+                                        >
+                                          <Component
+                                            :is="item.icon"
+                                            class="size-5"
+                                            :class="item.style.text"
+                                          />
+                                        </div>
+                                      </ItemMedia>
+                                      <ItemContent>
+                                        <ItemTitle>
+                                          {{ item.title }}
+                                        </ItemTitle>
+                                        <ItemDescription
+                                          class="line-clamp-2 text-xs"
+                                        >
+                                          {{ item.description }}
+                                        </ItemDescription>
+                                      </ItemContent>
+                                    </RouterLink>
+                                  </Item>
+                                </div>
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -358,14 +432,39 @@ const { t } = useI18n()
                               {{ t("landing.menu.resources") }}
                             </AccordionTrigger>
                             <AccordionContent>
-                              <Button
-                                v-for="item in resourcesMenu"
-                                :key="item.id"
-                              >
-                                {{
-                                  t("landing.menu.items." + item.id + ".title")
-                                }}
-                              </Button>
+                              <div class="flex flex-col gap-2 p-2">
+                                <Item
+                                  v-for="item in resourcesMenu"
+                                  :key="item.id"
+                                  class="p-2"
+                                  as-child
+                                >
+                                  <RouterLink :to="item.url">
+                                    <ItemMedia>
+                                      <div
+                                        class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                        :class="item.style.bg"
+                                      >
+                                        <Component
+                                          :is="item.icon"
+                                          class="size-5"
+                                          :class="item.style.text"
+                                        />
+                                      </div>
+                                    </ItemMedia>
+                                    <ItemContent>
+                                      <ItemTitle>
+                                        {{ item.title }}
+                                      </ItemTitle>
+                                      <ItemDescription
+                                        class="line-clamp-2 text-xs"
+                                      >
+                                        {{ item.description }}
+                                      </ItemDescription>
+                                    </ItemContent>
+                                  </RouterLink>
+                                </Item>
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="company">
@@ -373,21 +472,48 @@ const { t } = useI18n()
                               {{ t("landing.menu.company") }}
                             </AccordionTrigger>
                             <AccordionContent>
-                              <Button
-                                v-for="item in companyMenu"
-                                :key="item.id"
-                              >
-                                {{
-                                  t("landing.menu.items." + item.id + ".title")
-                                }}
-                              </Button>
+                              <div class="flex flex-col gap-2 p-2">
+                                <Item
+                                  v-for="item in companyMenu"
+                                  :key="item.id"
+                                  class="p-2"
+                                  as-child
+                                >
+                                  <RouterLink :to="item.url">
+                                    <ItemMedia>
+                                      <div
+                                        class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                        :class="item.style.bg"
+                                      >
+                                        <Component
+                                          :is="item.icon"
+                                          class="size-5"
+                                          :class="item.style.text"
+                                        />
+                                      </div>
+                                    </ItemMedia>
+                                    <ItemContent>
+                                      <ItemTitle>
+                                        {{ item.title }}
+                                      </ItemTitle>
+                                      <ItemDescription
+                                        class="line-clamp-2 text-xs"
+                                      >
+                                        {{ item.description }}
+                                      </ItemDescription>
+                                    </ItemContent>
+                                  </RouterLink>
+                                </Item>
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
-                          <Button variant="ghost" as-child>
+                          <Item as-child>
                             <RouterLink to="/pricing">
-                              {{ t("landing.menu.pricing") }}
+                              <ItemTitle>
+                                {{ t("landing.menu.pricing") }}
+                              </ItemTitle>
                             </RouterLink>
-                          </Button>
+                          </Item>
                         </Accordion>
                       </div>
                     </OverlayScrollbarsWrapper>
