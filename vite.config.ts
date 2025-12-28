@@ -4,6 +4,7 @@ import UnheadVite from "@unhead/addons/vite"
 import { unheadVueComposablesImports } from "@unhead/vue"
 import Vue from "@vitejs/plugin-vue"
 import MotionResolver from "motion-v/resolver"
+import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 import RekaResolver from "reka-ui/resolver"
@@ -23,6 +24,9 @@ import Sitemap from "vite-plugin-sitemap"
 import Layouts from "vite-plugin-vue-layouts"
 
 const host = process.env.TAURI_DEV_HOST
+const file = fileURLToPath(new URL("package.json", import.meta.url))
+const json = readFileSync(file, "utf8")
+const pkg = JSON.parse(json)
 
 // https://vitejs.dev/config/
 /**
@@ -30,6 +34,9 @@ const host = process.env.TAURI_DEV_HOST
  * Configures Vue, PWA, Auto-imports, and other plugins for the build process
  */
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   optimizeDeps: {
     include: ["workbox-window"],
   },
@@ -263,10 +270,10 @@ export default defineConfig({
     host: host || false,
     hmr: host
       ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
+        protocol: "ws",
+        host,
+        port: 1421,
+      }
       : undefined,
 
     watch: {
