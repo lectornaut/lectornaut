@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconApps, IconChevronsUpDown, IconGift } from "@/data/icons"
+import { IconApps, IconBell, IconChevronsUpDown, IconGift } from "@/data/icons"
 import { defaultMenu } from "@/helpers/defaults"
 import { collection, doc } from "firebase/firestore"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
@@ -97,14 +97,16 @@ const isFullscreen = useIsFullscreen()
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Complete your onboarding"
-                class="bg-primary text-primary-foreground hover:bg-destructive hover:text-destructive-foreground active:bg-destructive active:text-destructive-foreground"
+                class="bg-primary text-destructive-foreground hover:bg-destructive hover:text-destructive-foreground active:bg-destructive active:text-destructive-foreground"
                 as-child
               >
                 <RouterLink to="/welcome">
                   <IconGift />
                   <span class="truncate"> Complete onboarding </span>
                   <SidebarMenuBadge>
-                    <Badge variant="destructive" size="sm"> New </Badge>
+                    <Badge variant="destructive" size="sm">
+                      <IconBell />
+                    </Badge>
                   </SidebarMenuBadge>
                 </RouterLink>
               </SidebarMenuButton>
