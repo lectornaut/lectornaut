@@ -130,18 +130,25 @@ function selectTab(idOrDirection: string | number) {
 
   let targetId: string
 
-  if (idOrDirection === "next") {
-    const idx = tabs.value.findIndex((t) => t.id === activeTabId.value)
-    const nextIdx = (idx + 1) % tabs.value.length
-    const nextTab = tabs.value[nextIdx]
-    if (!nextTab) return
-    targetId = nextTab.id
-  } else if (idOrDirection === "previous") {
-    const idx = tabs.value.findIndex((t) => t.id === activeTabId.value)
-    const prevIdx = (idx - 1 + tabs.value.length) % tabs.value.length
-    const prevTab = tabs.value[prevIdx]
-    if (!prevTab) return
-    targetId = prevTab.id
+  if (idOrDirection === "next" || idOrDirection === "previous") {
+    // Visual order cycling
+    const currentIndex = tabs.value.findIndex((t) => t.id === activeTabId.value)
+    // If no active tab or not found, start at 0
+    const start = currentIndex === -1 ? 0 : currentIndex
+
+    let nextIndex = 0
+    if (idOrDirection === "next") {
+      nextIndex = (start + 1) % tabs.value.length
+    } else {
+      nextIndex = (start - 1 + tabs.value.length) % tabs.value.length
+    }
+
+    const target = tabs.value[nextIndex]
+    if (target) {
+      targetId = target.id
+    } else {
+      return
+    }
   } else if (typeof idOrDirection === "number") {
     const tabIdx = Math.max(
       0,
@@ -338,7 +345,11 @@ onUnmounted(() => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Button variant="secondary" size="icon">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      @click="router.go(-1)"
+                    >
                       <IconArrowLeft />
                     </Button>
                   </TooltipTrigger>
@@ -347,7 +358,11 @@ onUnmounted(() => {
                 <ButtonGroupSeparator />
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Button variant="secondary" size="icon">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      @click="router.go(1)"
+                    >
                       <IconArrowRight />
                     </Button>
                   </TooltipTrigger>
@@ -460,6 +475,7 @@ onUnmounted(() => {
                             <ContextMenuShortcut>⌘W</ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem
+                            :disabled="tabs.length <= 1"
                             @click="emitter.emit('Tabs.Close.Others', tab.id)"
                           >
                             <IconCircleX />
@@ -467,6 +483,7 @@ onUnmounted(() => {
                             <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem
+                            :disabled="tabs.length === 0"
                             @click="emitter.emit('Tabs.Close.All')"
                           >
                             <IconSquareX />
@@ -559,12 +576,16 @@ onUnmounted(() => {
                     <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
                     <DropdownMenuContent class="w-56" align="end" side="bottom">
                       <DropdownMenuGroup>
-                        <DropdownMenuItem @click="handleCloseTab(activeTabId)">
+                        <DropdownMenuItem
+                          :disabled="!activeTabId"
+                          @click="handleCloseTab(activeTabId)"
+                        >
                           <IconX />
                           {{ t("common.close") }}
                           <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          :disabled="tabs.length <= 1 || !activeTabId"
                           @click="
                             emitter.emit('Tabs.Close.Others', activeTabId)
                           "
@@ -574,6 +595,7 @@ onUnmounted(() => {
                           <DropdownMenuShortcut>⌘⇧W</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          :disabled="tabs.length === 0"
                           @click="emitter.emit('Tabs.Close.All')"
                         >
                           <IconSquareX />
@@ -583,12 +605,16 @@ onUnmounted(() => {
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <DropdownMenuItem @click="handleRenameTab(activeTabId)">
+                        <DropdownMenuItem
+                          :disabled="!activeTabId"
+                          @click="handleRenameTab(activeTabId)"
+                        >
                           <IconSquarePen />
                           {{ t("tabs.rename") }}
                           <DropdownMenuShortcut>F2</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          :disabled="!activeTabId"
                           @click="handleDuplicateTab(activeTabId)"
                         >
                           <IconCopy />
@@ -693,7 +719,10 @@ onUnmounted(() => {
               <ContextMenuShortcut>⌘T</ContextMenuShortcut>
             </RouterLink>
           </ContextMenuItem>
-          <ContextMenuItem @click="emitter.emit('Tabs.ReopenLast')">
+          <ContextMenuItem
+            :disabled="recentlyClosed.length === 0"
+            @click="emitter.emit('Tabs.ReopenLast')"
+          >
             <IconHistory />
             {{ t("tabs.reopenLast") }}
             <ContextMenuShortcut>⌘⇧T</ContextMenuShortcut>
@@ -701,7 +730,10 @@ onUnmounted(() => {
         </ContextMenuGroup>
         <ContextMenuSeparator />
         <ContextMenuGroup>
-          <ContextMenuItem @click="emitter.emit('Tabs.Close.All')">
+          <ContextMenuItem
+            :disabled="tabs.length === 0"
+            @click="emitter.emit('Tabs.Close.All')"
+          >
             <IconSquareX />
             {{ t("tabs.closeAll") }}
             <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>

@@ -264,7 +264,11 @@ export const useLayoutStore = defineStore("layout", () => {
     const head = recentlyClosed.value[0]
     if (head?.fullPath === tab.fullPath && head?.name === tab.name) return
     recentlyClosed.value = [
-      { id: generateId(), name: tab.name, fullPath: tab.fullPath },
+      {
+        id: generateId(),
+        name: tab.name,
+        fullPath: tab.fullPath,
+      },
       ...recentlyClosed.value,
     ].slice(0, 20)
   }
