@@ -5,7 +5,7 @@ import {
   defaultMenu,
   defaultSize,
 } from "@/helpers/defaults"
-import { generateId } from "@/helpers/utilities"
+import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc, setDoc } from "firebase/firestore"
 import { defineStore } from "pinia"
@@ -345,11 +345,12 @@ export const useLayoutStore = defineStore("layout", () => {
   }
 
   function duplicateTab(id: string) {
-    const src = tabs.value.find((t) => t.id === id)
-    if (!src) return
+    const tab = tabs.value.find((t) => t.id === id)
+    if (!tab) return
+    if (isDefaultRoute(tab)) return
     const duplicate = createTab(
-      src.fullPath,
-      src.name.endsWith(" (Copy)") ? src.name : `${src.name} (Copy)`
+      tab.fullPath,
+      tab.name.endsWith(" (Copy)") ? tab.name : `${tab.name} (Copy)`
     )
     tabs.value.push(duplicate)
     activeTabId.value = duplicate.id
@@ -357,7 +358,11 @@ export const useLayoutStore = defineStore("layout", () => {
 
   function renameTab(id: string, newName: string) {
     const tab = tabs.value.find((t) => t.id === id)
-    if (tab && newName.trim()) {
+    if (!tab) return
+
+    if (isDefaultRoute(tab)) return
+
+    if (newName.trim()) {
       tab.name = newName.trim()
     }
   }

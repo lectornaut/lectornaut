@@ -31,6 +31,9 @@ import {
  * Default Data and Configurations
  * Contains static lists for UI dropdowns and settings (languages, themes, accents, menus, etc.)
  */
+
+export const defaultRoutes = ["/new", "/start", "/welcome"]
+
 export const languages = [
   {
     id: "en-US",

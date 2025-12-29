@@ -99,6 +99,7 @@ import IconLucideEyeOff from "~icons/lucide/eye-off"
 import IconLucideFile from "~icons/lucide/file"
 import IconLucideFileText from "~icons/lucide/file-text"
 import IconLucideFolder from "~icons/lucide/folder"
+import IconLucideGalleryHorizontalEnd from "~icons/lucide/gallery-horizontal-end"
 import IconLucideGift from "~icons/lucide/gift"
 import IconLucideGlobe from "~icons/lucide/globe"
 import IconLucideGraduationCap from "~icons/lucide/graduation-cap"
@@ -124,6 +125,7 @@ import IconLucideInfo from "~icons/lucide/info"
 import IconLucideItalic from "~icons/lucide/italic"
 import IconLucideKeyboard from "~icons/lucide/keyboard"
 import IconLucideLanguages from "~icons/lucide/languages"
+import IconLucideLayers from "~icons/lucide/layers"
 import IconLucideLeaf from "~icons/lucide/leaf"
 import IconLucideLifeBuoy from "~icons/lucide/life-buoy"
 import IconLucideLink from "~icons/lucide/link"
@@ -366,6 +368,7 @@ export {
   IconRiFontMono as IconFontMono,
   IconRiFontSans as IconFontSans,
   IconRiFontSansSerif as IconFontSansSerif,
+  IconLucideGalleryHorizontalEnd as IconGalleryHorizontalEnd,
   IconLucideGift as IconGift,
   IconLucideGlobe as IconGlobe,
   IconMdiGoogle as IconGoogle,
@@ -396,6 +399,7 @@ export {
   IconLucideKeyboard as IconKeyboard,
   IconLucideLanguages as IconLanguages,
   IconMingcuteLayerFill as IconLayerFill,
+  IconLucideLayers as IconLayers,
   IconLucideLeaf as IconLeaf,
   IconLucideLifeBuoy as IconLifeBuoy,
   IconLucideLink as IconLink,

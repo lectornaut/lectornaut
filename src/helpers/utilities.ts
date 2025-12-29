@@ -1,3 +1,4 @@
+import { defaultRoutes } from "@/helpers/defaults"
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid"
 
 /**
@@ -34,4 +35,13 @@ export const getInitials = (name: string) => {
     .match(/(^\S|\S$)?/g)
     ?.join("")
     .toLocaleUpperCase()
+}
+
+/**
+ * Checks if a tab is a default route (restricted from modification)
+ * @param tab - The tab object containing fullPath
+ * @returns True if the tab is a default route, false otherwise
+ */
+export const isDefaultRoute = (tab: { fullPath: string }) => {
+  return defaultRoutes.some((route) => tab.fullPath.startsWith(route))
 }

@@ -6,15 +6,18 @@ import {
   IconChevronDown,
   IconCircleX,
   IconCopy,
+  IconGalleryHorizontalEnd,
   IconHash,
   IconHistory,
+  IconLayers,
+  IconPenLine,
   IconPlus,
   IconSquarePen,
   IconSquareX,
   IconTrash,
-  IconWorkflow,
   IconX,
 } from "@/data/icons"
+import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useSortable } from "@vueuse/integrations/useSortable"
@@ -102,6 +105,8 @@ function handleRenameTab(id: string | undefined) {
   if (!id) return
   const tab = tabs.value.find((t) => t.id === id)
   if (!tab) return
+
+  if (isDefaultRoute(tab)) return
 
   renamingTabId.value = id
   renamingName.value = tab.name
@@ -328,6 +333,7 @@ onUnmounted(() => {
   emitter.off("Tabs.ReopenLast", onTabsReopenLast)
   emitter.off("Tabs.Reopen", onTabsReopen)
   emitter.off("Tabs.Duplicate", onTabsDuplicate)
+  emitter.off("Tabs.Duplicate", onTabsDuplicate)
   emitter.off("Tabs.Rename", onTabsRename)
 })
 </script>
@@ -397,7 +403,7 @@ onUnmounted(() => {
               >
                 <InputGroup v-if="renamingTabId === tab.id">
                   <InputGroupAddon>
-                    <IconWorkflow />
+                    <IconPenLine />
                   </InputGroupAddon>
                   <InputGroupInput
                     v-model="renamingName"
@@ -441,9 +447,13 @@ onUnmounted(() => {
                           <RouterLink
                             :to="tab.fullPath"
                             @click="onTabClick(tab)"
-                            @dblclick="handleRenameTab(tab.id)"
+                            @dblclick="
+                              !isDefaultRoute(tab)
+                                ? handleRenameTab(tab.id)
+                                : null
+                            "
                           >
-                            <IconWorkflow />
+                            <IconLayers />
                             <span class="mr-auto truncate">
                               {{ tab.name }}
                             </span>
@@ -469,43 +479,6 @@ onUnmounted(() => {
                       </ContextMenuTrigger>
                       <ContextMenuContent class="w-56">
                         <ContextMenuGroup>
-                          <ContextMenuItem @click="handleCloseTab(tab.id)">
-                            <IconX />
-                            {{ t("common.close") }}
-                            <ContextMenuShortcut>⌘W</ContextMenuShortcut>
-                          </ContextMenuItem>
-                          <ContextMenuItem
-                            :disabled="tabs.length <= 1"
-                            @click="emitter.emit('Tabs.Close.Others', tab.id)"
-                          >
-                            <IconCircleX />
-                            {{ t("tabs.closeOthers") }}
-                            <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
-                          </ContextMenuItem>
-                          <ContextMenuItem
-                            :disabled="tabs.length === 0"
-                            @click="emitter.emit('Tabs.Close.All')"
-                          >
-                            <IconSquareX />
-                            {{ t("tabs.closeAll") }}
-                            <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
-                          </ContextMenuItem>
-                        </ContextMenuGroup>
-                        <ContextMenuSeparator />
-                        <ContextMenuGroup>
-                          <ContextMenuItem @click="handleRenameTab(tab.id)">
-                            <IconSquarePen />
-                            {{ t("tabs.rename") }}
-                            <ContextMenuShortcut>F2</ContextMenuShortcut>
-                          </ContextMenuItem>
-                          <ContextMenuItem @click="handleDuplicateTab(tab.id)">
-                            <IconCopy />
-                            {{ t("tabs.duplicate") }}
-                            <ContextMenuShortcut>⌘D</ContextMenuShortcut>
-                          </ContextMenuItem>
-                        </ContextMenuGroup>
-                        <ContextMenuSeparator />
-                        <ContextMenuGroup>
                           <ContextMenuItem
                             as-child
                             @click="emitter.emit('Tabs.Add')"
@@ -515,6 +488,49 @@ onUnmounted(() => {
                               {{ t("tabs.newTab") }}
                               <ContextMenuShortcut>⌘T</ContextMenuShortcut>
                             </RouterLink>
+                          </ContextMenuItem>
+                        </ContextMenuGroup>
+                        <ContextMenuSeparator />
+                        <ContextMenuGroup>
+                          <ContextMenuItem @click="handleCloseTab(tab.id)">
+                            <IconX />
+                            {{ t("common.close") }}
+                            <ContextMenuShortcut>⌘W</ContextMenuShortcut>
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            :disabled="tabs.length === 0"
+                            @click="emitter.emit('Tabs.Close.All')"
+                          >
+                            <IconCircleX />
+                            {{ t("tabs.closeAll") }}
+                            <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            :disabled="tabs.length <= 1"
+                            @click="emitter.emit('Tabs.Close.Others', tab.id)"
+                          >
+                            <IconSquareX />
+                            {{ t("tabs.closeOthers") }}
+                            <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
+                          </ContextMenuItem>
+                        </ContextMenuGroup>
+                        <ContextMenuSeparator />
+                        <ContextMenuGroup>
+                          <ContextMenuItem
+                            :disabled="isDefaultRoute(tab)"
+                            @click="handleRenameTab(tab.id)"
+                          >
+                            <IconSquarePen />
+                            {{ t("tabs.rename") }}
+                            <ContextMenuShortcut>F2</ContextMenuShortcut>
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            :disabled="isDefaultRoute(tab)"
+                            @click="handleDuplicateTab(tab.id)"
+                          >
+                            <IconCopy />
+                            {{ t("tabs.duplicate") }}
+                            <ContextMenuShortcut>⌘D</ContextMenuShortcut>
                           </ContextMenuItem>
                         </ContextMenuGroup>
                       </ContextMenuContent>
@@ -577,6 +593,19 @@ onUnmounted(() => {
                     <DropdownMenuContent class="w-56" align="end" side="bottom">
                       <DropdownMenuGroup>
                         <DropdownMenuItem
+                          as-child
+                          @click="emitter.emit('Tabs.Add')"
+                        >
+                          <RouterLink to="/new">
+                            <IconPlus />
+                            {{ t("tabs.newTab") }}
+                            <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+                          </RouterLink>
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
                           :disabled="!activeTabId"
                           @click="handleCloseTab(activeTabId)"
                         >
@@ -585,28 +614,28 @@ onUnmounted(() => {
                           <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          :disabled="tabs.length === 0"
+                          @click="emitter.emit('Tabs.Close.All')"
+                        >
+                          <IconCircleX />
+                          {{ t("tabs.closeAll") }}
+                          <DropdownMenuShortcut>⌘⌥W</DropdownMenuShortcut>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           :disabled="tabs.length <= 1 || !activeTabId"
                           @click="
                             emitter.emit('Tabs.Close.Others', activeTabId)
                           "
                         >
-                          <IconCircleX />
+                          <IconSquareX />
                           {{ t("tabs.closeOthers") }}
                           <DropdownMenuShortcut>⌘⇧W</DropdownMenuShortcut>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          :disabled="tabs.length === 0"
-                          @click="emitter.emit('Tabs.Close.All')"
-                        >
-                          <IconSquareX />
-                          {{ t("tabs.closeAll") }}
-                          <DropdownMenuShortcut>⌘⌥W</DropdownMenuShortcut>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
                         <DropdownMenuItem
-                          :disabled="!activeTabId"
+                          :disabled="!activeTabId || isDefaultRoute(activeTab!)"
                           @click="handleRenameTab(activeTabId)"
                         >
                           <IconSquarePen />
@@ -614,7 +643,7 @@ onUnmounted(() => {
                           <DropdownMenuShortcut>F2</DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          :disabled="!activeTabId"
+                          :disabled="!activeTabId || isDefaultRoute(activeTab!)"
                           @click="handleDuplicateTab(activeTabId)"
                         >
                           <IconCopy />
@@ -627,7 +656,7 @@ onUnmounted(() => {
                         <DropdownMenuSub>
                           <DropdownMenuItem as-child>
                             <DropdownMenuSubTrigger>
-                              <IconWorkflow />
+                              <IconGalleryHorizontalEnd />
                               {{ t("tabs.activeTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
@@ -643,7 +672,7 @@ onUnmounted(() => {
                               :key="tab.id"
                               @click="emitter.emit('Tabs.Select', tab.id)"
                             >
-                              <IconWorkflow />
+                              <IconLayers />
                               {{ tab.name }}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -675,7 +704,7 @@ onUnmounted(() => {
                               :key="tab.id + tab.fullPath"
                               @click="emitter.emit('Tabs.Reopen', tab)"
                             >
-                              <IconWorkflow />
+                              <IconLayers />
                               {{ tab.name }}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -688,19 +717,6 @@ onUnmounted(() => {
                             </DropdownMenuItem>
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
-                      </DropdownMenuGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
-                          as-child
-                          @click="emitter.emit('Tabs.Add')"
-                        >
-                          <RouterLink to="/new">
-                            <IconPlus />
-                            {{ t("tabs.newTab") }}
-                            <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
-                          </RouterLink>
-                        </DropdownMenuItem>
                       </DropdownMenuGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -719,6 +735,9 @@ onUnmounted(() => {
               <ContextMenuShortcut>⌘T</ContextMenuShortcut>
             </RouterLink>
           </ContextMenuItem>
+        </ContextMenuGroup>
+        <ContextMenuSeparator />
+        <ContextMenuGroup>
           <ContextMenuItem
             :disabled="recentlyClosed.length === 0"
             @click="emitter.emit('Tabs.ReopenLast')"
@@ -726,17 +745,6 @@ onUnmounted(() => {
             <IconHistory />
             {{ t("tabs.reopenLast") }}
             <ContextMenuShortcut>⌘⇧T</ContextMenuShortcut>
-          </ContextMenuItem>
-        </ContextMenuGroup>
-        <ContextMenuSeparator />
-        <ContextMenuGroup>
-          <ContextMenuItem
-            :disabled="tabs.length === 0"
-            @click="emitter.emit('Tabs.Close.All')"
-          >
-            <IconSquareX />
-            {{ t("tabs.closeAll") }}
-            <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
           </ContextMenuItem>
         </ContextMenuGroup>
       </ContextMenuContent>
