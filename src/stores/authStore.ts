@@ -2,31 +2,32 @@
  * Auth Store - Authentication and User Profile Management
  *
  * Handles:
- * - Firebase authentication state
+ * - Firebase authentication state (via VueFire)
  * - User profile CRUD with optimistic updates
  * - Auth state listeners
+ *
+ * Uses VueFire composables for reactive Firestore bindings
  */
 
-import { auth, firestore, storage } from "@/modules/firebase"
+import { firestore, storage } from "@/modules/firebase"
 import type { IUser } from "@/types"
 import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
 } from "@/utils/optimistic"
-import { onAuthStateChanged, type User } from "firebase/auth"
+import type { User } from "firebase/auth"
 import {
   collectionGroup,
   doc,
   getDocs,
-  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
-  type Timestamp,
   updateDoc,
   where,
   writeBatch,
+  type Timestamp,
 } from "firebase/firestore"
 import {
   getDownloadURL,
@@ -34,8 +35,15 @@ import {
   uploadBytes,
 } from "firebase/storage"
 import { defineStore } from "pinia"
-import { computed, ref, shallowRef, watch } from "vue"
-import { updateCurrentUserProfile } from "vuefire"
+import {
+  computed,
+  ref,
+  shallowRef,
+  watch,
+  type ComputedRef,
+  type Ref,
+} from "vue"
+import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
 
 // Constants
 const BATCH_SIZE = 450
@@ -73,22 +81,62 @@ async function updateMemberships(
 
 export const useAuthStore = defineStore("auth", () => {
   // ============================================================================
-  // State
+  // VueFire Reactive Bindings
   // ============================================================================
 
-  const currentUser = ref<User | null>(null)
-  const userProfile = ref<IUser | null>(null)
-  const isLoading = ref(true)
+  // Auth state from VueFire - automatically syncs with Firebase Auth
+  // Type assertion to break VueFire internal type chain
+  const currentUser = useCurrentUser() as Ref<User | null>
+
+  // Computed document reference - null when not authenticated
+  const userDocRef = computed(() =>
+    currentUser.value ? getUserRef(currentUser.value.uid) : null
+  )
+
+  // VueFire reactive document binding for user profile
+  // Use intermediate variables with type assertions to isolate VueFire types
+  const _vuefireUserDoc = useDocument<IUser>(userDocRef)
+  const firestoreUserProfile: ComputedRef<IUser | null | undefined> = computed(
+    () => _vuefireUserDoc.data.value
+  )
+  const isFirestoreLoading: ComputedRef<boolean> = computed(
+    () => _vuefireUserDoc.pending.value
+  )
+
+  // ============================================================================
+  // State (for optimistic updates)
+  // ============================================================================
+
+  // Local user profile that can be optimistically updated
+  // Falls back to Firestore data when no pending operations
+  const optimisticUserProfile = ref<IUser | null>(null)
 
   // Pending operation tracking
   const pendingUserIds = shallowRef(createPendingSet())
 
-  // Subscription cleanup function
-  let userUnsubscribe: (() => void) | null = null
-
   // ============================================================================
   // Computed
   // ============================================================================
+
+  // Merged user profile: optimistic updates take precedence when pending
+  const userProfile = computed({
+    get: () => {
+      if (
+        currentUser.value &&
+        pendingUserIds.value.has(currentUser.value.uid)
+      ) {
+        return optimisticUserProfile.value
+      }
+      return firestoreUserProfile.value ?? optimisticUserProfile.value
+    },
+    set: (value) => {
+      optimisticUserProfile.value = value
+    },
+  })
+
+  const isLoading = computed(
+    () => isFirestoreLoading.value && !optimisticUserProfile.value
+  )
 
   const isUserPending = computed(
     () => (id: string) => pendingUserIds.value.has(id)
@@ -99,61 +147,46 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = computed(() => !!currentUser.value)
 
   // ============================================================================
-  // Auth Listener
+  // Auto-create User Profile
   // ============================================================================
 
-  onAuthStateChanged(auth, (user) => {
-    currentUser.value = user
-    if (!user) {
-      cleanup()
-      isLoading.value = false
-    }
-  })
-
-  // ============================================================================
-  // User Profile Snapshot Listener
-  // ============================================================================
-
+  // Watch for new users and create their profile if it doesn't exist
   watch(
-    currentUser,
-    async (user) => {
-      if (userUnsubscribe) {
-        userUnsubscribe()
-        userUnsubscribe = null
+    [currentUser, firestoreUserProfile, isFirestoreLoading],
+    async ([user, profile, loading]) => {
+      if (!user || loading) return
+
+      // User exists but no profile - create one
+      if (!profile) {
+        const userRef = getUserRef(user.uid)
+        const newUser: IUser = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          currentTeamId: null,
+          createdAt: serverTimestamp() as Timestamp,
+          updatedAt: serverTimestamp() as Timestamp,
+        }
+        await setDoc(userRef, newUser)
+        // Set optimistic profile immediately
+        optimisticUserProfile.value = newUser
       }
+    },
+    { immediate: true }
+  )
 
-      if (!user) return
-
-      isLoading.value = true
-      const userRef = getUserRef(user.uid)
-
-      userUnsubscribe = onSnapshot(userRef, async (userSnap) => {
-        // Skip snapshot update if user has pending operations
-        if (pendingUserIds.value.has(user.uid)) {
-          isLoading.value = false
-          return
-        }
-
-        if (userSnap.exists()) {
-          userProfile.value = userSnap.data() as IUser
-          if (!userProfile.value.currentTeamId) {
-            isLoading.value = false
-          }
-        } else {
-          const newUser: IUser = {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            currentTeamId: null,
-            createdAt: serverTimestamp() as Timestamp,
-            updatedAt: serverTimestamp() as Timestamp,
-          }
-          await setDoc(userRef, newUser)
-          userProfile.value = newUser
-          isLoading.value = false
-        }
-      })
+  // Sync optimistic profile with Firestore data when not pending
+  watch(
+    firestoreUserProfile,
+    (profile) => {
+      if (
+        profile &&
+        currentUser.value &&
+        !pendingUserIds.value.has(currentUser.value.uid)
+      ) {
+        optimisticUserProfile.value = profile
+      }
     },
     { immediate: true }
   )
@@ -163,12 +196,16 @@ export const useAuthStore = defineStore("auth", () => {
   // ============================================================================
 
   function cleanup() {
-    userProfile.value = null
-    if (userUnsubscribe) {
-      userUnsubscribe()
-      userUnsubscribe = null
-    }
+    optimisticUserProfile.value = null
+    // VueFire handles subscription cleanup automatically
   }
+
+  // Watch for logout to cleanup
+  watch(currentUser, (user) => {
+    if (!user) {
+      cleanup()
+    }
+  })
 
   // ============================================================================
   // Actions
@@ -188,11 +225,14 @@ export const useAuthStore = defineStore("auth", () => {
       currentUser.value.uid,
       // Apply optimistic update
       () => {
-        userProfile.value = { ...userProfile.value!, currentTeamId: teamId }
+        optimisticUserProfile.value = {
+          ...userProfile.value!,
+          currentTeamId: teamId,
+        }
       },
       // Rollback on error
       () => {
-        userProfile.value = previousUserProfile
+        optimisticUserProfile.value = previousUserProfile
       },
       // Firestore operation
       async () => {
@@ -225,7 +265,7 @@ export const useAuthStore = defineStore("auth", () => {
       currentUser.value.uid,
       // Apply optimistic update
       () => {
-        userProfile.value = {
+        optimisticUserProfile.value = {
           ...userProfile.value!,
           ...userUpdates,
           ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
@@ -233,7 +273,7 @@ export const useAuthStore = defineStore("auth", () => {
       },
       // Rollback on error
       () => {
-        userProfile.value = previousUserProfile
+        optimisticUserProfile.value = previousUserProfile
       },
       // Firestore operation
       async () => {
@@ -299,13 +339,6 @@ export const useAuthStore = defineStore("auth", () => {
     return await getDownloadURL(fileRef)
   }
 
-  /**
-   * Mark loading as complete (used by other stores after team loads)
-   */
-  function setLoadingComplete() {
-    isLoading.value = false
-  }
-
   return {
     // State
     currentUser,
@@ -324,7 +357,6 @@ export const useAuthStore = defineStore("auth", () => {
     setCurrentTeamId,
     updateUserProfile,
     uploadProfilePhoto,
-    setLoadingComplete,
 
     // Lifecycle
     cleanup,

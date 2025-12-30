@@ -6,6 +6,8 @@
  * - Team members (members of the current team)
  * - Role management (owner, admin, member)
  * - Invite/remove members
+ *
+ * Uses VueFire composables for reactive Firestore bindings
  */
 
 import { firestore } from "@/modules/firebase"
@@ -22,17 +24,17 @@ import {
   doc,
   getDoc,
   getDocs,
-  onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
   setDoc,
-  type Timestamp,
   updateDoc,
   where,
+  type Timestamp,
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, ref, shallowRef, watch } from "vue"
+import { computed, ref, shallowRef, watch, type ComputedRef } from "vue"
+import { useCollection } from "vuefire"
 
 // Helper to get document references
 const getMembershipRef = (teamId: string, userId: string) =>
@@ -66,24 +68,143 @@ export const useMembershipStore = defineStore("memberships", () => {
   const { currentUser, userProfile, pendingUserIds } = storeToRefs(authStore)
 
   // ============================================================================
-  // State
+  // VueFire Reactive Bindings
   // ============================================================================
 
-  /** All memberships for the current user (teams they belong to) */
-  const memberships = ref<IMembership[]>([])
+  // Query for user's memberships - null when not authenticated
+  const membershipsQueryRef = computed(() =>
+    currentUser.value
+      ? query(
+          collectionGroup(firestore, "memberships"),
+          where("userId", "==", currentUser.value.uid)
+        )
+      : null
+  )
 
-  /** Members of the currently selected team */
-  const teamMembers = ref<IMembership[]>([])
+  // VueFire reactive collection binding for memberships
+  // Use intermediate variables with type assertions to isolate VueFire types
+  const _vuefireMemberships = useCollection<IMembership>(membershipsQueryRef)
+  const firestoreMemberships: ComputedRef<IMembership[]> = computed(
+    () => _vuefireMemberships.data.value ?? []
+  )
 
-  /** Currently selected team ID (synced from userProfile) */
+  // Query for team members - null when no team selected
   const currentTeamId = computed(() => userProfile.value?.currentTeamId ?? null)
+
+  const teamMembersQueryRef = computed(() =>
+    currentTeamId.value
+      ? collection(firestore, "teams", currentTeamId.value, "memberships")
+      : null
+  )
+
+  // VueFire reactive collection binding for team members
+  const _vuefireTeamMembers = useCollection<IMembership>(teamMembersQueryRef)
+  const firestoreTeamMembers: ComputedRef<IMembership[]> = computed(
+    () => _vuefireTeamMembers.data.value ?? []
+  )
+
+  // ============================================================================
+  // State (for optimistic updates)
+  // ============================================================================
+
+  /** Local memberships that can be optimistically updated */
+  const optimisticMemberships = ref<IMembership[]>([])
+
+  /** Local team members that can be optimistically updated */
+  const optimisticTeamMembers = ref<IMembership[]>([])
 
   // Pending operation tracking
   const pendingMembershipIds = shallowRef(createPendingSet())
 
-  // Subscription cleanup functions
-  let membershipsUnsubscribe: (() => void) | null = null
-  let teamMembersUnsubscribe: (() => void) | null = null
+  // ============================================================================
+  // Computed - Merged State
+  // ============================================================================
+
+  /** All memberships for the current user (teams they belong to) */
+  const memberships = computed({
+    get: () => {
+      const pending = pendingMembershipIds.value
+      if (pending.size === 0) {
+        return firestoreMemberships.value
+      }
+
+      // Merge Firestore data with optimistic updates
+      const result: IMembership[] = []
+      const firestoreData = firestoreMemberships.value
+
+      // Add Firestore memberships, replacing with optimistic if pending
+      firestoreData.forEach((m) => {
+        const key = `${m.teamId}-${m.userId}`
+        if (pending.has(key)) {
+          const optimistic = optimisticMemberships.value.find(
+            (om) => om.teamId === m.teamId && om.userId === m.userId
+          )
+          if (optimistic) {
+            result.push(optimistic)
+            return
+          }
+        }
+        result.push(m)
+      })
+
+      // Add any optimistically added memberships not yet in Firestore
+      optimisticMemberships.value.forEach((m) => {
+        const key = `${m.teamId}-${m.userId}`
+        if (
+          pending.has(key) &&
+          !result.some((r) => r.teamId === m.teamId && r.userId === m.userId)
+        ) {
+          result.push(m)
+        }
+      })
+
+      return result
+    },
+    set: (value) => {
+      optimisticMemberships.value = value
+    },
+  })
+
+  /** Members of the currently selected team */
+  const teamMembers = computed({
+    get: () => {
+      const pending = pendingMembershipIds.value
+      if (pending.size === 0) {
+        return firestoreTeamMembers.value
+      }
+
+      // Merge Firestore data with optimistic updates
+      const result: IMembership[] = []
+      const firestoreData = firestoreTeamMembers.value
+
+      firestoreData.forEach((m) => {
+        const key = `${m.teamId}-${m.userId}`
+        if (pending.has(key)) {
+          const optimistic = optimisticTeamMembers.value.find(
+            (om) => om.userId === m.userId
+          )
+          if (optimistic) {
+            result.push(optimistic)
+            return
+          }
+        }
+        result.push(m)
+      })
+
+      // Add optimistically added members
+      optimisticTeamMembers.value.forEach((m) => {
+        const key = `${m.teamId}-${m.userId}`
+        if (pending.has(key) && !result.some((r) => r.userId === m.userId)) {
+          result.push(m)
+        }
+      })
+
+      return result
+    },
+    set: (value) => {
+      optimisticTeamMembers.value = value
+    },
+  })
 
   // ============================================================================
   // Computed
@@ -118,135 +239,47 @@ export const useMembershipStore = defineStore("memberships", () => {
   const ownerCount = computed(() => getOwnerCount(teamMembers.value))
 
   // ============================================================================
-  // Snapshot Listeners
+  // Sync Optimistic State with Firestore
   // ============================================================================
 
-  // Watch for userProfile changes to fetch memberships
+  // Sync optimistic memberships with Firestore data when not pending
   watch(
-    () => userProfile.value?.uid,
-    (uid) => {
-      if (membershipsUnsubscribe) {
-        membershipsUnsubscribe()
-        membershipsUnsubscribe = null
+    firestoreMemberships,
+    (data) => {
+      if (data && pendingMembershipIds.value.size === 0) {
+        optimisticMemberships.value = [...data]
       }
-
-      if (!uid) {
-        memberships.value = []
-        return
-      }
-
-      const membershipsQuery = query(
-        collectionGroup(firestore, "memberships"),
-        where("userId", "==", uid)
-      )
-
-      membershipsUnsubscribe = onSnapshot(membershipsQuery, (snapshot) => {
-        // Build new memberships, preserving optimistic updates
-        const newMemberships: IMembership[] = []
-        const pendingSet = pendingMembershipIds.value
-
-        snapshot.docs.forEach((docSnap) => {
-          const data = docSnap.data() as IMembership
-          const membershipKey = `${data.teamId}-${data.userId}`
-
-          // If this membership has a pending operation, keep the optimistic version
-          if (pendingSet.has(membershipKey)) {
-            const optimistic = memberships.value.find(
-              (m) => m.teamId === data.teamId && m.userId === data.userId
-            )
-            if (optimistic) {
-              newMemberships.push(optimistic)
-              return
-            }
-          }
-
-          newMemberships.push(data)
-        })
-
-        // Preserve any optimistically added memberships not in Firestore yet
-        memberships.value.forEach((m) => {
-          const membershipKey = `${m.teamId}-${m.userId}`
-          if (
-            pendingSet.has(membershipKey) &&
-            !newMemberships.some(
-              (nm) => nm.teamId === m.teamId && nm.userId === m.userId
-            )
-          ) {
-            newMemberships.push(m)
-          }
-        })
-
-        memberships.value = newMemberships
-      })
-    }
+    },
+    { immediate: true }
   )
 
-  // Watch currentTeamId to fetch its members
-  watch(currentTeamId, (teamId) => {
-    if (teamMembersUnsubscribe) {
-      teamMembersUnsubscribe()
-      teamMembersUnsubscribe = null
-    }
-
-    if (!teamId) {
-      teamMembers.value = []
-      return
-    }
-
-    const membersRef = collection(firestore, "teams", teamId, "memberships")
-    teamMembersUnsubscribe = onSnapshot(membersRef, (snapshot) => {
-      // Build new team members, preserving optimistic updates
-      const newMembers: IMembership[] = []
-      const pendingSet = pendingMembershipIds.value
-
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data() as IMembership
-        const membershipKey = `${data.teamId}-${data.userId}`
-
-        if (pendingSet.has(membershipKey)) {
-          const optimistic = teamMembers.value.find(
-            (m) => m.teamId === data.teamId && m.userId === data.userId
-          )
-          if (optimistic) {
-            newMembers.push(optimistic)
-            return
-          }
-        }
-
-        newMembers.push(data)
-      })
-
-      // Preserve optimistically added members
-      teamMembers.value.forEach((m) => {
-        const membershipKey = `${m.teamId}-${m.userId}`
-        if (
-          pendingSet.has(membershipKey) &&
-          !newMembers.some((nm) => nm.userId === m.userId)
-        ) {
-          newMembers.push(m)
-        }
-      })
-
-      teamMembers.value = newMembers
-    })
-  })
+  // Sync optimistic team members with Firestore data when not pending
+  watch(
+    firestoreTeamMembers,
+    (data) => {
+      if (data && pendingMembershipIds.value.size === 0) {
+        optimisticTeamMembers.value = [...data]
+      }
+    },
+    { immediate: true }
+  )
 
   // ============================================================================
   // Cleanup
   // ============================================================================
 
   function cleanup() {
-    memberships.value = []
-    teamMembers.value = []
-    if (membershipsUnsubscribe) {
-      membershipsUnsubscribe()
-      membershipsUnsubscribe = null
-    }
-    if (teamMembersUnsubscribe) {
-      teamMembersUnsubscribe()
-      teamMembersUnsubscribe = null
-    }
+    optimisticMemberships.value = []
+    optimisticTeamMembers.value = []
+    // VueFire handles subscription cleanup automatically
   }
+
+  // Watch for logout to cleanup
+  watch(currentUser, (user) => {
+    if (!user) {
+      cleanup()
+    }
+  })
 
   // ============================================================================
   // Actions
@@ -256,8 +289,8 @@ export const useMembershipStore = defineStore("memberships", () => {
    * Add a membership optimistically (used by teamStore when creating teams)
    */
   function addMembershipOptimistic(membership: IMembership) {
-    memberships.value = [...memberships.value, membership]
-    teamMembers.value = [membership]
+    optimisticMemberships.value = [...memberships.value, membership]
+    optimisticTeamMembers.value = [membership]
   }
 
   /**
@@ -267,7 +300,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamId: string,
     teamUpdates: Partial<ITeam>
   ) {
-    memberships.value = memberships.value.map((m) => {
+    optimisticMemberships.value = memberships.value.map((m) => {
       if (m.teamId === teamId && m.team) {
         return {
           ...m,
@@ -282,21 +315,23 @@ export const useMembershipStore = defineStore("memberships", () => {
    * Remove memberships for a team (used by teamStore when deleting teams)
    */
   function removeMembershipsForTeam(teamId: string) {
-    memberships.value = memberships.value.filter((m) => m.teamId !== teamId)
+    optimisticMemberships.value = memberships.value.filter(
+      (m) => m.teamId !== teamId
+    )
   }
 
   /**
    * Rollback memberships state
    */
   function rollbackMemberships(previousMemberships: IMembership[]) {
-    memberships.value = previousMemberships
+    optimisticMemberships.value = previousMemberships
   }
 
   /**
    * Rollback team members state
    */
   function rollbackTeamMembers(previousTeamMembers: IMembership[]) {
-    teamMembers.value = previousTeamMembers
+    optimisticTeamMembers.value = previousTeamMembers
   }
 
   /**
@@ -353,11 +388,11 @@ export const useMembershipStore = defineStore("memberships", () => {
       membershipKey,
       // Apply optimistic update
       () => {
-        teamMembers.value = [...teamMembers.value, newMembership]
+        optimisticTeamMembers.value = [...teamMembers.value, newMembership]
       },
       // Rollback on error
       () => {
-        teamMembers.value = previousTeamMembers
+        optimisticTeamMembers.value = previousTeamMembers
       },
       // Firestore operation
       async () => {
@@ -398,13 +433,13 @@ export const useMembershipStore = defineStore("memberships", () => {
       membershipKey,
       // Apply optimistic update
       () => {
-        teamMembers.value = teamMembers.value.map((m) =>
+        optimisticTeamMembers.value = teamMembers.value.map((m) =>
           m.userId === userId ? { ...m, role: newRole } : m
         )
       },
       // Rollback on error
       () => {
-        teamMembers.value = previousTeamMembers
+        optimisticTeamMembers.value = previousTeamMembers
       },
       // Firestore operation
       async () => {
@@ -444,10 +479,12 @@ export const useMembershipStore = defineStore("memberships", () => {
       membershipKey,
       // Apply optimistic update
       () => {
-        teamMembers.value = teamMembers.value.filter((m) => m.userId !== userId)
+        optimisticTeamMembers.value = teamMembers.value.filter(
+          (m) => m.userId !== userId
+        )
         if (isRemovingSelf) {
           pendingUserIds.value.add(userId)
-          memberships.value = memberships.value.filter(
+          optimisticMemberships.value = memberships.value.filter(
             (m) => m.teamId !== teamId
           )
           if (userProfile.value) {
@@ -457,8 +494,8 @@ export const useMembershipStore = defineStore("memberships", () => {
       },
       // Rollback on error
       () => {
-        teamMembers.value = previousTeamMembers
-        memberships.value = previousMemberships
+        optimisticTeamMembers.value = previousTeamMembers
+        optimisticMemberships.value = previousMemberships
         if (isRemovingSelf && previousUserProfile?.currentTeamId) {
           // Restore user's current team through authStore
           authStore.setCurrentTeamId(previousUserProfile.currentTeamId)

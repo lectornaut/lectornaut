@@ -9,6 +9,8 @@
  * Dependencies:
  * - authStore: User authentication and profile
  * - membershipStore: Team memberships and members
+ *
+ * Uses VueFire composables for reactive Firestore bindings
  */
 
 import { firestore, storage } from "@/modules/firebase"
@@ -26,7 +28,6 @@ import {
   deleteDoc,
   doc,
   type FieldValue,
-  getDoc,
   getDocs,
   query,
   runTransaction,
@@ -42,7 +43,8 @@ import {
   uploadBytes,
 } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, ref, shallowRef, watch } from "vue"
+import { computed, type ComputedRef, ref, shallowRef, watch } from "vue"
+import { useDocument } from "vuefire"
 
 // Constants
 const BATCH_SIZE = 450
@@ -99,11 +101,32 @@ export const useTeamStore = defineStore("teams", () => {
     storeToRefs(membershipStore)
 
   // ============================================================================
-  // State
+  // VueFire Reactive Bindings
   // ============================================================================
 
-  const currentTeam = ref<ITeam | null>(null)
-  const isLoading = ref(true)
+  // Computed document reference - null when no team selected
+  const teamDocRef = computed(() =>
+    userProfile.value?.currentTeamId
+      ? getTeamRef(userProfile.value.currentTeamId)
+      : null
+  )
+
+  // VueFire reactive document binding for current team
+  // Use intermediate variables with type assertions to isolate VueFire types
+  const _vuefireTeamDoc = useDocument<ITeam>(teamDocRef)
+  const firestoreCurrentTeam: ComputedRef<ITeam | null | undefined> = computed(
+    () => _vuefireTeamDoc.data.value
+  )
+  const isFirestoreLoading: ComputedRef<boolean> = computed(
+    () => _vuefireTeamDoc.pending.value
+  )
+
+  // ============================================================================
+  // State (for optimistic updates)
+  // ============================================================================
+
+  // Local team that can be optimistically updated
+  const optimisticCurrentTeam = ref<ITeam | null>(null)
 
   // Pending operation tracking
   const pendingTeamIds = shallowRef(createPendingSet())
@@ -111,6 +134,24 @@ export const useTeamStore = defineStore("teams", () => {
   // ============================================================================
   // Computed
   // ============================================================================
+
+  // Merged current team: optimistic updates take precedence when pending
+  const currentTeam = computed({
+    get: () => {
+      const teamId = userProfile.value?.currentTeamId
+      if (teamId && pendingTeamIds.value.has(teamId)) {
+        return optimisticCurrentTeam.value
+      }
+      return firestoreCurrentTeam.value ?? optimisticCurrentTeam.value
+    },
+    set: (value) => {
+      optimisticCurrentTeam.value = value
+    },
+  })
+
+  const isLoading = computed(
+    () => isFirestoreLoading.value && !optimisticCurrentTeam.value
+  )
 
   const isTeamPending = computed(
     () => (id: string) => pendingTeamIds.value.has(id)
@@ -124,22 +165,32 @@ export const useTeamStore = defineStore("teams", () => {
   )
 
   // ============================================================================
-  // Team Data Fetching
+  // Sync Optimistic State with Firestore
   // ============================================================================
 
-  // Watch for currentTeamId changes to fetch current team data
+  // Sync optimistic team with Firestore data when not pending
+  watch(
+    firestoreCurrentTeam,
+    (team) => {
+      const teamId = userProfile.value?.currentTeamId
+      if (team && teamId && !pendingTeamIds.value.has(teamId)) {
+        optimisticCurrentTeam.value = team
+      }
+    },
+    { immediate: true }
+  )
+
+  // Also try to get team from cached memberships for faster initial load
   watch(
     () => userProfile.value?.currentTeamId,
-    async (teamId) => {
+    (teamId) => {
       if (!teamId) {
-        currentTeam.value = null
-        isLoading.value = false
+        optimisticCurrentTeam.value = null
         return
       }
 
-      // Skip if team has pending operations
-      if (pendingTeamIds.value.has(teamId)) {
-        isLoading.value = false
+      // Skip if team has pending operations or already have data
+      if (pendingTeamIds.value.has(teamId) || firestoreCurrentTeam.value) {
         return
       }
 
@@ -148,22 +199,10 @@ export const useTeamStore = defineStore("teams", () => {
         (m) => m.teamId === teamId
       )
       if (cachedMembership?.team) {
-        currentTeam.value = cachedMembership.team
-        isLoading.value = false
+        optimisticCurrentTeam.value = cachedMembership.team
       }
-
-      // Fetch fresh team data
-      const teamSnap = await getDoc(getTeamRef(teamId))
-      if (teamSnap.exists()) {
-        // Only update if no pending operation
-        if (!pendingTeamIds.value.has(teamId)) {
-          currentTeam.value = teamSnap.data() as ITeam
-        }
-      } else if (!cachedMembership?.team) {
-        currentTeam.value = null
-      }
-      isLoading.value = false
-    }
+    },
+    { immediate: true }
   )
 
   // ============================================================================
@@ -171,7 +210,7 @@ export const useTeamStore = defineStore("teams", () => {
   // ============================================================================
 
   function cleanup() {
-    currentTeam.value = null
+    optimisticCurrentTeam.value = null
     authStore.cleanup()
     membershipStore.cleanup()
   }
@@ -228,14 +267,14 @@ export const useTeamStore = defineStore("teams", () => {
         membershipStore.markPending(membershipKey)
 
         // Update user profile through authStore (optimistically)
-        userProfile.value = { ...userProfile.value!, currentTeamId: teamId }
-        currentTeam.value = newTeam
+        authStore.setCurrentTeamId(teamId)
+        optimisticCurrentTeam.value = newTeam
         membershipStore.addMembershipOptimistic(newMembership)
       },
       // Rollback on error
       () => {
-        userProfile.value = previousUserProfile
-        currentTeam.value = previousCurrentTeam
+        authStore.setCurrentTeamId(previousUserProfile?.currentTeamId ?? null)
+        optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
         membershipStore.rollbackTeamMembers(previousTeamMembers)
       },
@@ -268,7 +307,6 @@ export const useTeamStore = defineStore("teams", () => {
     if (!currentUser.value || !userProfile.value) return
 
     // Clone previous state for rollback
-    const previousUserProfile = cloneState(userProfile.value)
     const previousCurrentTeam = cloneState(currentTeam.value)
 
     const cachedMembership = memberships.value.find((m) => m.teamId === teamId)
@@ -279,14 +317,16 @@ export const useTeamStore = defineStore("teams", () => {
       // Apply optimistic update
       () => {
         if (cachedMembership?.team) {
-          currentTeam.value = cloneState(cachedMembership.team)
+          optimisticCurrentTeam.value = cloneState(cachedMembership.team)
         }
-        userProfile.value = { ...userProfile.value!, currentTeamId: teamId }
+        authStore.setCurrentTeamId(teamId)
       },
       // Rollback on error
       () => {
-        userProfile.value = previousUserProfile
-        currentTeam.value = previousCurrentTeam
+        authStore.setCurrentTeamId(
+          userProfile.value?.currentTeamId ?? previousCurrentTeam?.id ?? null
+        )
+        optimisticCurrentTeam.value = previousCurrentTeam
       },
       // Firestore operation
       async () => {
@@ -333,7 +373,7 @@ export const useTeamStore = defineStore("teams", () => {
       // Apply optimistic update
       () => {
         if (currentTeam.value?.id === teamId) {
-          currentTeam.value = {
+          optimisticCurrentTeam.value = {
             ...currentTeam.value,
             ...(name ? { name } : {}),
             ...(updateData.photoURL !== undefined
@@ -351,7 +391,7 @@ export const useTeamStore = defineStore("teams", () => {
       },
       // Rollback on error
       () => {
-        currentTeam.value = previousCurrentTeam
+        optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
       },
       // Firestore operation
@@ -403,17 +443,15 @@ export const useTeamStore = defineStore("teams", () => {
       () => {
         membershipStore.removeMembershipsForTeam(teamId)
         if (currentTeam.value?.id === teamId) {
-          currentTeam.value = null
-          if (userProfile.value) {
-            userProfile.value = { ...userProfile.value, currentTeamId: null }
-          }
+          optimisticCurrentTeam.value = null
+          authStore.setCurrentTeamId(null)
         }
       },
       // Rollback on error
       () => {
         membershipStore.rollbackMemberships(previousMemberships)
-        currentTeam.value = previousCurrentTeam
-        userProfile.value = previousUserProfile
+        optimisticCurrentTeam.value = previousCurrentTeam
+        authStore.setCurrentTeamId(previousUserProfile?.currentTeamId ?? null)
       },
       // Firestore operation
       async () => {

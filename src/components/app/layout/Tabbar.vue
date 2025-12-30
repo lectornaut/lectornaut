@@ -486,7 +486,7 @@ onUnmounted(() => {
                                     variant="ghost"
                                     size="icon-xs"
                                     class="invisible group-hover:visible"
-                                    @click.prevent="handleCloseTab(tab.id)"
+                                    @click.stop.prevent="handleCloseTab(tab.id)"
                                   >
                                     <IconX />
                                   </InputGroupButton>
