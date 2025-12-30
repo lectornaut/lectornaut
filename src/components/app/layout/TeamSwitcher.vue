@@ -36,7 +36,7 @@ const groups = computed(() => [
 const activeTeamLabel = computed(() => currentTeam.value?.name || "Select Team")
 const activeTeamValue = computed(() => currentTeam.value?.id || "")
 
-const handleSwitchTeam = (teamId: string) => {
+const switchTeam = (teamId: string) => {
   teamStore.switchTeam(teamId)
 }
 </script>
@@ -119,7 +119,7 @@ const handleSwitchTeam = (teamId: string) => {
                   <DropdownMenuItem
                     v-for="team in group.teams"
                     :key="team.value"
-                    @click="handleSwitchTeam(team.value)"
+                    @click="switchTeam(team.value)"
                   >
                     <Avatar class="size-4">
                       <AvatarImage

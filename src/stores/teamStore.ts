@@ -139,7 +139,11 @@ export const useTeamStore = defineStore("teams", () => {
   const currentTeam = computed({
     get: () => {
       const teamId = userProfile.value?.currentTeamId
-      if (teamId && pendingTeamIds.value.has(teamId)) {
+      // Return null if no team is selected
+      if (!teamId) {
+        return null
+      }
+      if (pendingTeamIds.value.has(teamId)) {
         return optimisticCurrentTeam.value
       }
       return firestoreCurrentTeam.value ?? optimisticCurrentTeam.value
@@ -514,6 +518,13 @@ export const useTeamStore = defineStore("teams", () => {
     switchTeam,
     updateTeam,
     deleteTeam,
+
+    // Helpers
+    clearCurrentTeam: () => {
+      optimisticCurrentTeam.value = null
+      membershipStore.clearTeamMembers()
+      authStore.setCurrentTeamId(null)
+    },
 
     // Lifecycle
     cleanup,

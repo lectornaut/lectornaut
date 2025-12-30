@@ -50,7 +50,7 @@ const handleInvite = async () => {
   }
 }
 
-const handleSwitchTeam = async (teamId: string) => {
+const switchTeam = async (teamId: string) => {
   await teamStore.switchTeam(teamId)
 }
 </script>
@@ -162,7 +162,7 @@ const handleSwitchTeam = async (teamId: string) => {
               v-if="membership.teamId !== currentTeam?.id"
               variant="outline"
               size="sm"
-              @click="handleSwitchTeam(membership.teamId)"
+              @click="switchTeam(membership.teamId)"
             >
               Switch
             </Button>

@@ -158,11 +158,11 @@ const {
   isLoading,
   isOwner,
   canChangeRole,
-  changeRole: handleChangeRole,
-  removeMember: handleRemoveMember,
-  switchTeam: handleSwitchTeam,
-  exitTeam: handleExitTeam,
-  deleteTeam: doDeleteTeam,
+  changeRole,
+  removeMember,
+  switchTeam,
+  exitTeam,
+  deleteTeam,
   updateTeamPhoto,
   removeTeamPhoto,
   isRoleLoading,
@@ -177,6 +177,8 @@ const isEditingTeamDialogOpen = ref(false)
 const teamToEdit = ref<ITeam | undefined>(undefined)
 const isDeleteTeamDialogOpen = ref(false)
 const teamToDelete = ref<ITeam | null>(null)
+const isExitTeamDialogOpen = ref(false)
+const teamToExit = ref<ITeam | null>(null)
 
 const startEditingTeam = (team: ITeam) => {
   teamToEdit.value = team
@@ -188,13 +190,28 @@ const confirmDeleteTeam = (team: ITeam) => {
   isDeleteTeamDialogOpen.value = true
 }
 
+const confirmExitTeam = (team: ITeam) => {
+  teamToExit.value = team
+  isExitTeamDialogOpen.value = true
+}
+
 const handleDeleteTeam = async () => {
   if (!teamToDelete.value) return
   try {
-    await doDeleteTeam(teamToDelete.value.id)
+    await deleteTeam(teamToDelete.value.id)
     isDeleteTeamDialogOpen.value = false
   } finally {
     teamToDelete.value = null
+  }
+}
+
+const handleExitTeam = async () => {
+  if (!teamToExit.value) return
+  try {
+    await exitTeam(teamToExit.value.id)
+    isExitTeamDialogOpen.value = false
+  } finally {
+    teamToExit.value = null
   }
 }
 
@@ -1672,7 +1689,7 @@ const navigations = computed(() => [
                                 @update:model-value="
                                   (value) => {
                                     if (value && typeof value === 'string') {
-                                      handleChangeRole(
+                                      changeRole(
                                         member.userId,
                                         value as 'owner' | 'member'
                                       )
@@ -1727,7 +1744,7 @@ const navigations = computed(() => [
                                     <AlertDialogAction
                                       variant="destructive"
                                       :disabled="isMemberLoading(member.userId)"
-                                      @click="handleRemoveMember(member.userId)"
+                                      @click="removeMember(member.userId)"
                                     >
                                       <Spinner
                                         v-if="isMemberLoading(member.userId)"
@@ -1812,6 +1829,40 @@ const navigations = computed(() => [
                               "
                             />
                             Delete Team
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <AlertDialog v-model:open="isExitTeamDialogOpen">
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Exit Team</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to leave
+                            <span class="text-foreground font-medium">{{
+                              teamToExit?.name
+                            }}</span
+                            >? You will lose access to all team resources and
+                            need to be re-invited to rejoin.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            variant="destructive"
+                            :disabled="
+                              teamToExit &&
+                              isTeamLoading(`exit-${teamToExit.id}`)
+                            "
+                            @click.prevent="handleExitTeam"
+                          >
+                            <Spinner
+                              v-if="
+                                teamToExit &&
+                                isTeamLoading(`exit-${teamToExit.id}`)
+                              "
+                            />
+                            Exit Team
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -1934,7 +1985,7 @@ const navigations = computed(() => [
                                   variant="secondary"
                                   size="sm"
                                   :disabled="isTeamLoading(membership.team?.id)"
-                                  @click="handleSwitchTeam(membership.team?.id)"
+                                  @click="switchTeam(membership.team?.id)"
                                 >
                                   <Spinner
                                     v-if="isTeamLoading(membership.team?.id)"
@@ -1955,7 +2006,7 @@ const navigations = computed(() => [
                                 <DropdownMenu>
                                   <DropdownMenuTrigger as-child>
                                     <Button variant="ghost" size="icon">
-                                      <IconMoreHorizontal class="size-4" />
+                                      <IconMoreHorizontal />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -1969,9 +2020,7 @@ const navigations = computed(() => [
                                       Rename
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      @click="
-                                        handleExitTeam(membership.team?.id)
-                                      "
+                                      @click="confirmExitTeam(membership.team!)"
                                     >
                                       <IconLogOut />
                                       Exit Team

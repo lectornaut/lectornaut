@@ -168,6 +168,11 @@ export const useMembershipStore = defineStore("memberships", () => {
   /** Members of the currently selected team */
   const teamMembers = computed({
     get: () => {
+      // Return empty array if no team is selected
+      if (!currentTeamId.value) {
+        return []
+      }
+
       const pending = pendingMembershipIds.value
       if (pending.size === 0) {
         return firestoreTeamMembers.value
@@ -318,6 +323,13 @@ export const useMembershipStore = defineStore("memberships", () => {
     optimisticMemberships.value = memberships.value.filter(
       (m) => m.teamId !== teamId
     )
+  }
+
+  /**
+   * Clear team members (used when deleting/exiting the current team)
+   */
+  function clearTeamMembers() {
+    optimisticTeamMembers.value = []
   }
 
   /**
@@ -590,6 +602,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     addMembershipOptimistic,
     updateTeamInMemberships,
     removeMembershipsForTeam,
+    clearTeamMembers,
     rollbackMemberships,
     rollbackTeamMembers,
     markPending,

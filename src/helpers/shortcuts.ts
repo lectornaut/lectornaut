@@ -470,8 +470,8 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Logout"],
-        keys: [[getPlatformSpecialKey(), "⇧", "O"]],
-        hotkeys: "cmd+shift+o,ctrl+shift+o",
+        keys: [[getPlatformSpecialKey(), "⇧", "L"]],
+        hotkeys: "cmd+shift+l,ctrl+shift+l",
         event: "Dialog.Exit.Open",
         parameters: undefined,
         icon: IconLogOut,
