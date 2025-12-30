@@ -1,5 +1,10 @@
 import { auth, firestore } from "@/modules/firebase"
 import {
+  normalizeUsername,
+  RESERVED_USERNAMES,
+  validateUsername,
+} from "@/utils/username"
+import {
   doc,
   getDoc,
   runTransaction,
@@ -11,11 +16,23 @@ import {
  * @param username The username to check.
  * @returns Promise<boolean> True if available, false otherwise.
  */
-export const checkUsernameAvailability = async (username: string) => {
-  if (!username || username.length < 3) return false
-  const usernameDoc = await getDoc(
-    doc(firestore, "usernames", username.toLowerCase())
-  )
+export const checkUsernameAvailability = async (
+  username: string
+): Promise<boolean> => {
+  // Validate the username first
+  const validation = validateUsername(username)
+  if (!validation.valid || !validation.normalized) {
+    return false
+  }
+
+  const normalized = validation.normalized
+
+  // Check if it's a reserved username
+  if (RESERVED_USERNAMES.has(normalized)) {
+    return false
+  }
+
+  const usernameDoc = await getDoc(doc(firestore, "usernames", normalized))
   return !usernameDoc.exists()
 }
 
@@ -24,15 +41,26 @@ export const checkUsernameAvailability = async (username: string) => {
  * @param username The new username to claim.
  * @returns Promise<void>
  */
-export const claimUsername = async (username: string) => {
+export const claimUsername = async (username: string): Promise<void> => {
   const user = auth.currentUser
   if (!user) throw new Error("User not authenticated")
 
-  const normalizedUsername = username.toLowerCase()
+  // Validate and normalize the username
+  const validation = validateUsername(username)
+  if (!validation.valid || !validation.normalized) {
+    throw new Error(validation.error || "Invalid username")
+  }
+
+  const normalized = validation.normalized
+
+  // Check reserved usernames
+  if (RESERVED_USERNAMES.has(normalized)) {
+    throw new Error("This username is reserved")
+  }
 
   await runTransaction(firestore, async (transaction) => {
     const userDocRef = doc(firestore, "users", user.uid)
-    const usernameDocRef = doc(firestore, "usernames", normalizedUsername)
+    const usernameDocRef = doc(firestore, "usernames", normalized)
 
     const userDoc = await transaction.get(userDocRef)
     const usernameDoc = await transaction.get(usernameDocRef)
@@ -41,26 +69,28 @@ export const claimUsername = async (username: string) => {
       throw new Error("Username already taken")
     }
 
-    const oldUsername = userDoc.data()?.username
+    const oldUsername = userDoc.exists() ? userDoc.data()?.username : null
+    const oldNormalized = oldUsername ? normalizeUsername(oldUsername) : null
 
     // 1. Create entry in usernames collection
     transaction.set(usernameDocRef, {
       uid: user.uid,
+      createdAt: serverTimestamp(),
     })
 
-    // 2. Update user document
-    transaction.update(userDocRef, {
-      username: normalizedUsername,
-      updatedAt: serverTimestamp(),
-    })
+    // 2. Update user document (use set with merge to handle case where doc doesn't exist)
+    transaction.set(
+      userDocRef,
+      {
+        username: normalized,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    )
 
     // 3. If user had an old username, delete it
-    if (oldUsername && oldUsername !== normalizedUsername) {
-      const oldUsernameDocRef = doc(
-        firestore,
-        "usernames",
-        oldUsername.toLowerCase()
-      )
+    if (oldNormalized && oldNormalized !== normalized) {
+      const oldUsernameDocRef = doc(firestore, "usernames", oldNormalized)
       transaction.delete(oldUsernameDocRef)
     }
   })
@@ -86,10 +116,13 @@ export const getUserByUsername = async (
   username: string
 ): Promise<UserFetchResult> => {
   try {
-    const normalizedUsername = username.toLowerCase()
-    const usernameDoc = await getDoc(
-      doc(firestore, "usernames", normalizedUsername)
-    )
+    const normalized = normalizeUsername(username)
+
+    if (!normalized) {
+      return { status: "not_found" }
+    }
+
+    const usernameDoc = await getDoc(doc(firestore, "usernames", normalized))
 
     if (!usernameDoc.exists()) {
       return { status: "not_found" }

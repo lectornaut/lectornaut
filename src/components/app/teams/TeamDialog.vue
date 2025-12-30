@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { IconX } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
+import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type { ITeam } from "@/types"
 import { toast } from "vue-sonner"
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const teamStore = useTeamStore()
+const membershipStore = useMembershipStore()
 
 const isOpen = ref(props.open || false)
 const isLoading = ref(false)
@@ -148,10 +150,15 @@ const handleSubmit = async () => {
 
     // 2. Process Invites (for create and invite modes)
     if (props.mode !== "edit" && pendingInvites.value.length > 0) {
+      const currentTeam = teamStore.currentTeam
+      if (!currentTeam) throw new Error("No current team")
+
       const invitePromises = pendingInvites.value.map((invite) =>
-        teamStore
-          .inviteMember(invite.email, invite.role)
-          .catch((e) => console.error(`Failed to invite ${invite.email}:`, e))
+        membershipStore
+          .inviteMember(currentTeam.id, currentTeam, invite.email, invite.role)
+          .catch((e: Error) =>
+            console.error(`Failed to invite ${invite.email}:`, e)
+          )
       )
       await Promise.all(invitePromises)
       if (props.mode === "invite") {

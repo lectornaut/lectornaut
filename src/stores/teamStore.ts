@@ -1,6 +1,25 @@
-import { auth, firestore, storage } from "@/modules/firebase"
-import type { IMembership, ITeam, IUser } from "@/types"
-import { onAuthStateChanged, type User } from "firebase/auth"
+/**
+ * Team Store - Team CRUD Operations
+ *
+ * Handles:
+ * - Team creation, update, deletion
+ * - Current team selection and switching
+ * - Team photo management
+ *
+ * Dependencies:
+ * - authStore: User authentication and profile
+ * - membershipStore: Team memberships and members
+ */
+
+import { firestore, storage } from "@/modules/firebase"
+import { useAuthStore } from "@/stores/authStore"
+import { useMembershipStore } from "@/stores/membershipStore"
+import type { ITeam } from "@/types"
+import {
+  cloneState,
+  createPendingSet,
+  withOptimisticUpdate,
+} from "@/utils/optimistic"
 import {
   collection,
   collectionGroup,
@@ -9,15 +28,12 @@ import {
   type FieldValue,
   getDoc,
   getDocs,
-  onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
-  setDoc,
   type Timestamp,
   updateDoc,
   where,
-  type WriteBatch,
   writeBatch,
 } from "firebase/firestore"
 import {
@@ -25,52 +41,30 @@ import {
   ref as storageRef,
   uploadBytes,
 } from "firebase/storage"
-import { defineStore } from "pinia"
-import { ref, watch } from "vue"
-import { updateCurrentUserProfile } from "vuefire"
+import { defineStore, storeToRefs } from "pinia"
+import { computed, ref, shallowRef, watch } from "vue"
 
 // Constants
 const BATCH_SIZE = 450
 
+// Helper to get document references
+const getTeamRef = (teamId: string) => doc(firestore, "teams", teamId)
+
+const getMembershipRef = (teamId: string, userId: string) =>
+  doc(firestore, "teams", teamId, "memberships", userId)
+
+const getUserRef = (userId: string) => doc(firestore, "users", userId)
+
 // Helper to process Firestore batch operations in chunks
 async function processInBatches<T>(
   items: T[],
-  processFn: (item: T, batch: WriteBatch) => void
+  processFn: (item: T, batch: ReturnType<typeof writeBatch>) => void
 ) {
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const chunk = items.slice(i, i + BATCH_SIZE)
     const batch = writeBatch(firestore)
     chunk.forEach((item) => processFn(item, batch))
     await batch.commit()
-  }
-}
-
-// Helper to get document references
-const getMembershipRef = (teamId: string, userId: string) =>
-  doc(firestore, "teams", teamId, "memberships", userId)
-
-const getTeamRef = (teamId: string) => doc(firestore, "teams", teamId)
-
-const getUserRef = (userId: string) => doc(firestore, "users", userId)
-
-// Helper to check ownership count
-const getOwnerCount = (members: IMembership[]) =>
-  members.filter((m) => m.role === "owner").length
-
-// Helper to validate member can be removed
-function validateMemberRemoval(
-  membershipData: IMembership,
-  teamMembers: IMembership[]
-) {
-  if (teamMembers.length <= 1) {
-    throw new Error(
-      "Cannot remove the last member. Every team must have at least one member."
-    )
-  }
-  if (membershipData.role === "owner" && getOwnerCount(teamMembers) <= 1) {
-    throw new Error(
-      "Cannot remove the last owner. Please assign another owner first."
-    )
   }
 }
 
@@ -84,11 +78,11 @@ async function uploadTeamPhoto(teamId: string, file: File): Promise<string> {
 // Helper to update all memberships with new data
 async function updateMemberships(
   queryRef: ReturnType<typeof query>,
-  updateFn: (membershipData: IMembership) => Record<string, unknown>
+  updateFn: (membershipData: Record<string, unknown>) => Record<string, unknown>
 ) {
   const membershipDocs = await getDocs(queryRef)
   await processInBatches(membershipDocs.docs, (docSnap, batch) => {
-    const membershipData = docSnap.data() as IMembership
+    const membershipData = docSnap.data() as Record<string, unknown>
     batch.update(docSnap.ref, {
       ...updateFn(membershipData),
       updatedAt: serverTimestamp(),
@@ -97,111 +91,54 @@ async function updateMemberships(
 }
 
 export const useTeamStore = defineStore("teams", () => {
+  const authStore = useAuthStore()
+  const membershipStore = useMembershipStore()
+
+  const { currentUser, userProfile, pendingUserIds } = storeToRefs(authStore)
+  const { memberships, teamMembers, pendingMembershipIds } =
+    storeToRefs(membershipStore)
+
+  // ============================================================================
   // State
-  const currentUser = ref<User | null>(null)
-  const userProfile = ref<IUser | null>(null)
+  // ============================================================================
+
   const currentTeam = ref<ITeam | null>(null)
-  const memberships = ref<IMembership[]>([])
-  const teamMembers = ref<IMembership[]>([])
   const isLoading = ref(true)
 
-  // Subscription cleanup functions
-  let userUnsubscribe: (() => void) | null = null
-  let membershipsUnsubscribe: (() => void) | null = null
-  let teamMembersUnsubscribe: (() => void) | null = null
+  // Pending operation tracking
+  const pendingTeamIds = shallowRef(createPendingSet())
 
-  // Cleanup helper
-  function cleanup() {
-    userProfile.value = null
-    currentTeam.value = null
-    memberships.value = []
-    teamMembers.value = []
-  }
+  // ============================================================================
+  // Computed
+  // ============================================================================
 
-  // Initialize Auth Listener
-  onAuthStateChanged(auth, (user) => {
-    currentUser.value = user
-    if (!user) {
-      cleanup()
-      isLoading.value = false
-    }
-  })
-
-  // Watch for currentUser changes to fetch user profile
-  watch(
-    currentUser,
-    async (user) => {
-      if (userUnsubscribe) {
-        userUnsubscribe()
-        userUnsubscribe = null
-      }
-
-      if (!user) return
-
-      isLoading.value = true
-      const userRef = getUserRef(user.uid)
-
-      userUnsubscribe = onSnapshot(userRef, async (userSnap) => {
-        if (userSnap.exists()) {
-          userProfile.value = userSnap.data() as IUser
-          // Only stop loading here if user has no team
-          // Otherwise, the team watcher will handle stopping the loading state
-          if (!userProfile.value.currentTeamId) {
-            isLoading.value = false
-          }
-        } else {
-          const newUser: IUser = {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            currentTeamId: null,
-            createdAt: serverTimestamp() as Timestamp,
-            updatedAt: serverTimestamp() as Timestamp,
-          }
-          await setDoc(userRef, newUser)
-          userProfile.value = newUser
-          isLoading.value = false
-        }
-      })
-    },
-    { immediate: true }
+  const isTeamPending = computed(
+    () => (id: string) => pendingTeamIds.value.has(id)
   )
 
-  // Watch for userProfile changes to fetch memberships
-  watch(
-    () => userProfile.value?.uid,
-    (uid) => {
-      if (membershipsUnsubscribe) {
-        membershipsUnsubscribe()
-        membershipsUnsubscribe = null
-      }
-
-      if (!uid) {
-        memberships.value = []
-        return
-      }
-
-      const membershipsQuery = query(
-        collectionGroup(firestore, "memberships"),
-        where("userId", "==", uid)
-      )
-
-      membershipsUnsubscribe = onSnapshot(membershipsQuery, (snapshot) => {
-        memberships.value = snapshot.docs.map(
-          (doc) => doc.data() as IMembership
-        )
-      })
-    }
+  const hasAnyPendingOperation = computed(
+    () =>
+      pendingTeamIds.value.size > 0 ||
+      pendingUserIds.value.size > 0 ||
+      pendingMembershipIds.value.size > 0
   )
+
+  // ============================================================================
+  // Team Data Fetching
+  // ============================================================================
 
   // Watch for currentTeamId changes to fetch current team data
   watch(
     () => userProfile.value?.currentTeamId,
     async (teamId) => {
-      // If no team ID, clear and stop loading
       if (!teamId) {
         currentTeam.value = null
+        isLoading.value = false
+        return
+      }
+
+      // Skip if team has pending operations
+      if (pendingTeamIds.value.has(teamId)) {
         isLoading.value = false
         return
       }
@@ -218,45 +155,46 @@ export const useTeamStore = defineStore("teams", () => {
       // Fetch fresh team data
       const teamSnap = await getDoc(getTeamRef(teamId))
       if (teamSnap.exists()) {
-        currentTeam.value = teamSnap.data() as ITeam
+        // Only update if no pending operation
+        if (!pendingTeamIds.value.has(teamId)) {
+          currentTeam.value = teamSnap.data() as ITeam
+        }
       } else if (!cachedMembership?.team) {
-        // Only clear if we didn't have cached data
         currentTeam.value = null
       }
       isLoading.value = false
     }
   )
 
-  // Watch currentTeam to fetch its members
-  watch(
-    () => currentTeam.value?.id,
-    (teamId) => {
-      if (teamMembersUnsubscribe) {
-        teamMembersUnsubscribe()
-        teamMembersUnsubscribe = null
-      }
+  // ============================================================================
+  // Cleanup
+  // ============================================================================
 
-      if (!teamId) {
-        teamMembers.value = []
-        return
-      }
+  function cleanup() {
+    currentTeam.value = null
+    authStore.cleanup()
+    membershipStore.cleanup()
+  }
 
-      const membersRef = collection(firestore, "teams", teamId, "memberships")
-      teamMembersUnsubscribe = onSnapshot(membersRef, (snapshot) => {
-        teamMembers.value = snapshot.docs.map(
-          (doc) => doc.data() as IMembership
-        )
-      })
-    }
-  )
-
+  // ============================================================================
   // Actions
-  async function createTeam(name: string, photoFile?: File) {
+  // ============================================================================
+
+  /**
+   * Create a new team with optimistic update
+   */
+  async function createTeam(name: string, photoFile?: File): Promise<void> {
     if (!currentUser.value || !userProfile.value) return
 
     const teamRef = doc(collection(firestore, "teams"))
     const teamId = teamRef.id
     const timestamp = serverTimestamp()
+
+    // Clone previous state for rollback
+    const previousUserProfile = cloneState(userProfile.value)
+    const previousCurrentTeam = cloneState(currentTeam.value)
+    const previousMemberships = cloneState(memberships.value)
+    const previousTeamMembers = cloneState(teamMembers.value)
 
     let photoURL: string | null = null
     if (photoFile) {
@@ -275,155 +213,98 @@ export const useTeamStore = defineStore("teams", () => {
       updatedAt: timestamp as Timestamp,
     }
 
-    const newMembership: IMembership = {
-      id: currentUser.value.uid,
-      userId: currentUser.value.uid,
+    const newMembership = await membershipStore.createOwnerMembership(
       teamId,
-      role: "owner",
-      user: userProfile.value,
-      team: newTeam,
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
-    }
-
-    await runTransaction(firestore, async (transaction) => {
-      transaction.set(teamRef, newTeam)
-      transaction.set(
-        getMembershipRef(teamId, currentUser.value!.uid),
-        newMembership
-      )
-      transaction.update(getUserRef(currentUser.value!.uid), {
-        currentTeamId: teamId,
-        updatedAt: serverTimestamp(),
-      })
-    })
-
-    // Optimistic update
-    userProfile.value = { ...userProfile.value, currentTeamId: teamId } as IUser
-    currentTeam.value = newTeam
-  }
-
-  async function switchTeam(teamId: string) {
-    if (!currentUser.value) return
-
-    // Optimistic update: immediately set team from cached membership
-    const cachedMembership = memberships.value.find((m) => m.teamId === teamId)
-    if (cachedMembership?.team) {
-      currentTeam.value = cachedMembership.team
-    }
-
-    // Optimistic update for userProfile
-    if (userProfile.value) {
-      userProfile.value.currentTeamId = teamId
-    }
-
-    // Persist to Firestore (non-blocking for UI)
-    await updateDoc(getUserRef(currentUser.value.uid), {
-      currentTeamId: teamId,
-      updatedAt: serverTimestamp(),
-    })
-  }
-
-  async function inviteMember(
-    email: string,
-    role: IMembership["role"] = "member"
-  ) {
-    if (!currentUser.value || !currentTeam.value) return
-
-    // Find user by email
-    const usersQuery = query(
-      collection(firestore, "users"),
-      where("email", "==", email)
+      newTeam
     )
-    const querySnapshot = await getDocs(usersQuery)
+    const membershipKey = `${teamId}-${currentUser.value.uid}`
 
-    if (querySnapshot.empty) {
-      throw new Error("User not found")
-    }
+    await withOptimisticUpdate(
+      pendingTeamIds.value,
+      teamId,
+      // Apply optimistic updates
+      () => {
+        pendingUserIds.value.add(currentUser.value!.uid)
+        membershipStore.markPending(membershipKey)
 
-    const userDoc = querySnapshot.docs[0]!
-    const userData = userDoc.data() as IUser
-    const userId = userDoc.id
-
-    // Check if already a member
-    const membershipRef = getMembershipRef(currentTeam.value.id, userId)
-    const membershipSnap = await getDoc(membershipRef)
-
-    if (membershipSnap.exists()) {
-      throw new Error("User is already a member")
-    }
-
-    // Create membership
-    const timestamp = serverTimestamp()
-    const newMembership: IMembership = {
-      id: userId,
-      userId,
-      teamId: currentTeam.value.id,
-      role,
-      user: userData,
-      team: currentTeam.value,
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
-    }
-
-    await setDoc(membershipRef, newMembership)
-  }
-
-  async function changeRole(userId: string, newRole: IMembership["role"]) {
-    if (!currentTeam.value) return
-
-    const membershipRef = getMembershipRef(currentTeam.value.id, userId)
-    const membershipSnap = await getDoc(membershipRef)
-
-    if (!membershipSnap.exists()) {
-      throw new Error("Membership not found")
-    }
-
-    const currentMembership = membershipSnap.data() as IMembership
-
-    // Prevent changing role if this is the last owner
-    if (currentMembership.role === "owner" && newRole !== "owner") {
-      if (getOwnerCount(teamMembers.value) <= 1) {
-        throw new Error("Cannot change role: Team must have at least one owner")
+        // Update user profile through authStore (optimistically)
+        userProfile.value = { ...userProfile.value!, currentTeamId: teamId }
+        currentTeam.value = newTeam
+        membershipStore.addMembershipOptimistic(newMembership)
+      },
+      // Rollback on error
+      () => {
+        userProfile.value = previousUserProfile
+        currentTeam.value = previousCurrentTeam
+        membershipStore.rollbackMemberships(previousMemberships)
+        membershipStore.rollbackTeamMembers(previousTeamMembers)
+      },
+      // Firestore operation
+      async () => {
+        try {
+          await runTransaction(firestore, async (transaction) => {
+            transaction.set(teamRef, newTeam)
+            transaction.set(
+              getMembershipRef(teamId, currentUser.value!.uid),
+              newMembership
+            )
+            transaction.update(getUserRef(currentUser.value!.uid), {
+              currentTeamId: teamId,
+              updatedAt: serverTimestamp(),
+            })
+          })
+        } finally {
+          pendingUserIds.value.delete(currentUser.value!.uid)
+          membershipStore.clearPending(membershipKey)
+        }
       }
-    }
-
-    await updateDoc(membershipRef, {
-      role: newRole,
-      updatedAt: serverTimestamp(),
-    })
+    )
   }
 
-  async function removeMember(userId: string) {
-    if (!currentTeam.value) return
+  /**
+   * Switch to a different team with optimistic update
+   */
+  async function switchTeam(teamId: string): Promise<void> {
+    if (!currentUser.value || !userProfile.value) return
 
-    const membershipRef = getMembershipRef(currentTeam.value.id, userId)
-    const membershipSnap = await getDoc(membershipRef)
+    // Clone previous state for rollback
+    const previousUserProfile = cloneState(userProfile.value)
+    const previousCurrentTeam = cloneState(currentTeam.value)
 
-    if (!membershipSnap.exists()) {
-      throw new Error("Membership not found")
-    }
+    const cachedMembership = memberships.value.find((m) => m.teamId === teamId)
 
-    const membershipData = membershipSnap.data() as IMembership
-    validateMemberRemoval(membershipData, teamMembers.value)
-
-    // If removing current user, also update their currentTeamId
-    if (userId === currentUser.value?.uid) {
-      await updateDoc(getUserRef(userId), {
-        currentTeamId: null,
-        updatedAt: serverTimestamp(),
-      })
-    }
-
-    await runTransaction(firestore, async (transaction) => {
-      transaction.delete(membershipRef)
-    })
+    await withOptimisticUpdate(
+      pendingUserIds.value,
+      currentUser.value.uid,
+      // Apply optimistic update
+      () => {
+        if (cachedMembership?.team) {
+          currentTeam.value = cloneState(cachedMembership.team)
+        }
+        userProfile.value = { ...userProfile.value!, currentTeamId: teamId }
+      },
+      // Rollback on error
+      () => {
+        userProfile.value = previousUserProfile
+        currentTeam.value = previousCurrentTeam
+      },
+      // Firestore operation
+      async () => {
+        await updateDoc(getUserRef(currentUser.value!.uid), {
+          currentTeamId: teamId,
+          updatedAt: serverTimestamp(),
+        })
+      }
+    )
   }
 
+  /**
+   * Update team details with optimistic update
+   */
   async function updateTeam(
     teamId: string,
     updates: { name?: string; photoFile?: File | null }
-  ) {
+  ): Promise<void> {
     if (!currentUser.value) return
 
     const { name, photoFile } = updates
@@ -442,41 +323,67 @@ export const useTeamStore = defineStore("teams", () => {
         photoFile === null ? null : await uploadTeamPhoto(teamId, photoFile)
     }
 
-    await updateDoc(getTeamRef(teamId), updateData)
+    // Clone previous state for rollback
+    const previousCurrentTeam = cloneState(currentTeam.value)
+    const previousMemberships = cloneState(memberships.value)
 
-    // Update all memberships for this team
-    const membershipsQuery = query(
-      collectionGroup(firestore, "memberships"),
-      where("teamId", "==", teamId)
-    )
+    await withOptimisticUpdate(
+      pendingTeamIds.value,
+      teamId,
+      // Apply optimistic update
+      () => {
+        if (currentTeam.value?.id === teamId) {
+          currentTeam.value = {
+            ...currentTeam.value,
+            ...(name ? { name } : {}),
+            ...(updateData.photoURL !== undefined
+              ? { photoURL: updateData.photoURL }
+              : {}),
+          }
+        }
 
-    await updateMemberships(membershipsQuery, (membershipData) => {
-      const updatedTeam: Record<string, unknown> = {
-        ...membershipData.team,
-        ...updateData,
+        membershipStore.updateTeamInMemberships(teamId, {
+          ...(name ? { name } : {}),
+          ...(updateData.photoURL !== undefined
+            ? { photoURL: updateData.photoURL }
+            : {}),
+        })
+      },
+      // Rollback on error
+      () => {
+        currentTeam.value = previousCurrentTeam
+        membershipStore.rollbackMemberships(previousMemberships)
+      },
+      // Firestore operation
+      async () => {
+        await updateDoc(getTeamRef(teamId), updateData)
+
+        // Update all memberships for this team
+        const membershipsQuery = query(
+          collectionGroup(firestore, "memberships"),
+          where("teamId", "==", teamId)
+        )
+
+        await updateMemberships(membershipsQuery, (membershipData) => {
+          const existingTeam =
+            (membershipData.team as Record<string, unknown>) || {}
+          const updatedTeam: Record<string, unknown> = {
+            ...existingTeam,
+            ...updateData,
+          }
+          Object.keys(updatedTeam).forEach(
+            (key) => updatedTeam[key] === undefined && delete updatedTeam[key]
+          )
+          return { team: updatedTeam }
+        })
       }
-      Object.keys(updatedTeam).forEach(
-        (key) => updatedTeam[key] === undefined && delete updatedTeam[key]
-      )
-      return { team: updatedTeam }
-    })
-
-    // Optimistic updates
-    if (currentTeam.value?.id === teamId) {
-      if (name) currentTeam.value.name = name
-      if (updateData.photoURL !== undefined)
-        currentTeam.value.photoURL = updateData.photoURL
-    }
-
-    const membership = memberships.value.find((m) => m.teamId === teamId)
-    if (membership?.team) {
-      if (name) membership.team.name = name
-      if (updateData.photoURL !== undefined)
-        membership.team.photoURL = updateData.photoURL
-    }
+    )
   }
 
-  async function deleteTeam(teamId: string) {
+  /**
+   * Delete a team with optimistic update
+   */
+  async function deleteTeam(teamId: string): Promise<void> {
     if (!currentUser.value) return
 
     const membership = memberships.value.find((m) => m.teamId === teamId)
@@ -484,103 +391,64 @@ export const useTeamStore = defineStore("teams", () => {
       throw new Error("Only team owners can delete the team")
     }
 
-    // Find all memberships and users to update
-    const membershipsQuery = query(
-      collectionGroup(firestore, "memberships"),
-      where("teamId", "==", teamId)
-    )
-    const usersQuery = query(
-      collection(firestore, "users"),
-      where("currentTeamId", "==", teamId)
-    )
+    // Clone previous state for rollback
+    const previousMemberships = cloneState(memberships.value)
+    const previousCurrentTeam = cloneState(currentTeam.value)
+    const previousUserProfile = cloneState(userProfile.value)
 
-    const [membershipDocs, userDocs] = await Promise.all([
-      getDocs(membershipsQuery),
-      getDocs(usersQuery),
-    ])
-
-    // Delete team document
-    await deleteDoc(getTeamRef(teamId))
-
-    // Delete all memberships and update users in batches
-    await Promise.all([
-      processInBatches(membershipDocs.docs, (docSnap, batch) =>
-        batch.delete(docSnap.ref)
-      ),
-      processInBatches(userDocs.docs, (docSnap, batch) =>
-        batch.update(docSnap.ref, {
-          currentTeamId: null,
-          updatedAt: serverTimestamp(),
-        })
-      ),
-    ])
-
-    // Optimistic updates
-    memberships.value = memberships.value.filter((m) => m.teamId !== teamId)
-    if (currentTeam.value?.id === teamId) {
-      currentTeam.value = null
-      if (userProfile.value) {
-        userProfile.value.currentTeamId = null
-      }
-    }
-  }
-
-  async function updateUserProfile(updates: Partial<IUser>) {
-    if (!currentUser.value) return
-
-    const { photoURL, ...userUpdates } = updates
-    const userRef = getUserRef(currentUser.value.uid)
-
-    // Normalize photoURL - convert empty string or null to null for Firestore
-    const normalizedPhotoURL =
-      photoURL === "" || photoURL === null ? null : photoURL
-
-    // Update Auth Profile if needed
-    if (photoURL !== undefined || userUpdates.displayName !== undefined) {
-      // Firebase Auth requires empty string "" to clear photoURL, not null
-      const authPhotoURL =
-        photoURL === "" || photoURL === null
-          ? ""
-          : (photoURL ?? currentUser.value.photoURL ?? undefined)
-
-      await updateCurrentUserProfile({
-        displayName:
-          userUpdates.displayName || currentUser.value.displayName || undefined,
-        photoURL: authPhotoURL,
-      })
-    }
-
-    // Update User Document
-    if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
-      await updateDoc(userRef, {
-        ...userUpdates,
-        ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
-        updatedAt: serverTimestamp(),
-      })
-    }
-
-    // Update all memberships with new user data
-    const membershipsQuery = query(
-      collectionGroup(firestore, "memberships"),
-      where("userId", "==", currentUser.value.uid)
-    )
-
-    await updateMemberships(membershipsQuery, (membershipData) => ({
-      user: {
-        ...membershipData.user,
-        ...userUpdates,
-        ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
+    await withOptimisticUpdate(
+      pendingTeamIds.value,
+      teamId,
+      // Apply optimistic update
+      () => {
+        membershipStore.removeMembershipsForTeam(teamId)
+        if (currentTeam.value?.id === teamId) {
+          currentTeam.value = null
+          if (userProfile.value) {
+            userProfile.value = { ...userProfile.value, currentTeamId: null }
+          }
+        }
       },
-    }))
+      // Rollback on error
+      () => {
+        membershipStore.rollbackMemberships(previousMemberships)
+        currentTeam.value = previousCurrentTeam
+        userProfile.value = previousUserProfile
+      },
+      // Firestore operation
+      async () => {
+        // Find all memberships and users to update
+        const membershipsQuery = query(
+          collectionGroup(firestore, "memberships"),
+          where("teamId", "==", teamId)
+        )
+        const usersQuery = query(
+          collection(firestore, "users"),
+          where("currentTeamId", "==", teamId)
+        )
 
-    // Optimistic update
-    if (userProfile.value) {
-      userProfile.value = {
-        ...userProfile.value,
-        ...userUpdates,
-        ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
+        const [membershipDocs, userDocs] = await Promise.all([
+          getDocs(membershipsQuery),
+          getDocs(usersQuery),
+        ])
+
+        // Delete team document
+        await deleteDoc(getTeamRef(teamId))
+
+        // Delete all memberships and update users in batches
+        await Promise.all([
+          processInBatches(membershipDocs.docs, (docSnap, batch) =>
+            batch.delete(docSnap.ref)
+          ),
+          processInBatches(userDocs.docs, (docSnap, batch) =>
+            batch.update(docSnap.ref, {
+              currentTeamId: null,
+              updatedAt: serverTimestamp(),
+            })
+          ),
+        ])
       }
-    }
+    )
   }
 
   return {
@@ -591,14 +459,25 @@ export const useTeamStore = defineStore("teams", () => {
     memberships,
     teamMembers,
     isLoading,
-    // Actions
+
+    // Pending state
+    pendingTeamIds,
+    pendingUserIds,
+    pendingMembershipIds,
+
+    // Computed
+    isTeamPending,
+    isUserPending: authStore.isUserPending,
+    isMembershipPending: membershipStore.isMembershipPending,
+    hasAnyPendingOperation,
+
+    // Team Actions
     createTeam,
     switchTeam,
-    inviteMember,
-    changeRole,
-    removeMember,
-    deleteTeam,
     updateTeam,
-    updateUserProfile,
+    deleteTeam,
+
+    // Lifecycle
+    cleanup,
   }
 })

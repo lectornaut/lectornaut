@@ -1,9 +1,11 @@
 <script lang="ts" setup>
+import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import { storeToRefs } from "pinia"
 import { ref } from "vue"
 
 const teamStore = useTeamStore()
+const membershipStore = useMembershipStore()
 const {
   currentUser,
   userProfile,
@@ -33,7 +35,12 @@ const handleInvite = async () => {
   inviteSuccess.value = false
 
   try {
-    await teamStore.inviteMember(inviteEmail.value)
+    if (!currentTeam.value) throw new Error("No current team")
+    await membershipStore.inviteMember(
+      currentTeam.value.id,
+      currentTeam.value,
+      inviteEmail.value
+    )
     inviteSuccess.value = true
     inviteEmail.value = ""
   } catch (e: unknown) {

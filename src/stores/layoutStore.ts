@@ -1,3 +1,13 @@
+/**
+ * Layout Store with Optimistic Firestore Updates
+ *
+ * Manages tabs, navigation, and theme settings with:
+ * - Instant UI updates via optimistic state changes
+ * - Automatic rollback on Firestore errors
+ * - pendingIds tracking to prevent snapshot overwrites
+ * - Debounced persistence to Firestore
+ */
+
 import {
   defaultAccent,
   defaultFont,
@@ -6,10 +16,12 @@ import {
   defaultSize,
 } from "@/helpers/defaults"
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
+import { useTeamStore } from "@/stores/teamStore"
+import { cloneState, createPendingSet } from "@/utils/optimistic"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc, setDoc } from "firebase/firestore"
-import { defineStore } from "pinia"
-import { computed, reactive, ref, watch } from "vue"
+import { defineStore, storeToRefs } from "pinia"
+import { computed, reactive, ref, shallowRef, watch } from "vue"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
 export type Tab = {
@@ -25,8 +37,12 @@ export type ThemeMode = "light" | "dark" | "accent" | "auto"
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
   const user = useCurrentUser()
+  const teamStore = useTeamStore()
+  const { currentTeam } = storeToRefs(teamStore)
 
-  // --- State ---
+  // ============================================================================
+  // State
+  // ============================================================================
 
   // Pre-load from localStorage to avoid flash
   const mode = useStorage<ThemeMode>("theme", "auto")
@@ -41,6 +57,11 @@ export const useLayoutStore = defineStore("layout", () => {
   const activeNavItems = ref<NavItem[]>([])
   const isHydrated = ref(false)
 
+  // Pending operation tracking
+  const pendingTabIds = shallowRef(createPendingSet())
+  const pendingNavigation = shallowRef(false)
+  const pendingTheme = shallowRef(false)
+
   // Theme State - use storage refs directly to avoid double-wrapping
   const themeSettings = reactive({
     mode,
@@ -50,18 +71,39 @@ export const useLayoutStore = defineStore("layout", () => {
     language,
   })
 
-  // --- Computed ---
+  // ============================================================================
+  // Computed
+  // ============================================================================
 
   const activeTab = computed(() =>
     tabs.value.find((t) => t.id === activeTabId.value)
   )
 
-  // --- Firestore Refs ---
+  /** Check if a specific tab has a pending operation */
+  const isTabPending = computed(
+    () => (id: string) => pendingTabIds.value.has(id)
+  )
+
+  /** Check if any tab operation is pending */
+  const hasAnyTabPending = computed(() => pendingTabIds.value.size > 0)
+
+  // ============================================================================
+  // Firestore Refs
+  // ============================================================================
 
   const tabsDocRef = computed(() => {
-    if (!user.value?.uid) return null
+    if (!user.value?.uid || !currentTeam.value?.id) return null
     return doc(
-      collection(doc(collection(db, "users"), user.value.uid), "layout"),
+      collection(
+        doc(
+          collection(
+            doc(collection(db, "teams"), currentTeam.value.id),
+            "memberships"
+          ),
+          user.value.uid
+        ),
+        "layout"
+      ),
       "tabs"
     )
   })
@@ -82,7 +124,9 @@ export const useLayoutStore = defineStore("layout", () => {
     )
   })
 
-  // --- Hydration (VueFire) ---
+  // ============================================================================
+  // Hydration (VueFire) with Optimistic Protection
+  // ============================================================================
 
   const { data: tabsDocData, pending: tabsPending } = useDocument(tabsDocRef)
   const { data: navDocData, pending: navPending } =
@@ -95,11 +139,24 @@ export const useLayoutStore = defineStore("layout", () => {
       !isHydrated.value
   )
 
-  // Watch Tabs Data
+  // Watch Tabs Data - protected against optimistic overwrites
   watch(
     tabsDocData,
     (doc) => {
-      if (!doc) return
+      // Skip if any tab operations are pending
+      if (pendingTabIds.value.size > 0) return
+
+      // Skip if the document ref is null (user/team not loaded yet)
+      // We only want to reset tabs when we have a valid ref but the doc doesn't exist
+      if (!tabsDocRef.value) return
+
+      if (!doc) {
+        // Reset tabs when switching to a team with no saved tabs
+        tabs.value = []
+        activeTabId.value = ""
+        recentlyClosed.value = []
+        return
+      }
       tabs.value = doc.tabs ?? []
       activeTabId.value = doc.active ?? ""
       recentlyClosed.value = doc.recentlyClosed ?? []
@@ -107,10 +164,26 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
-  // Watch Navigation Data
+  // Reset tabs when team changes (tabsDocRef will update automatically)
+  watch(
+    () => currentTeam.value?.id,
+    (newTeamId, oldTeamId) => {
+      if (newTeamId !== oldTeamId && oldTeamId !== undefined) {
+        // Clear local state while waiting for new team's tabs to load
+        tabs.value = []
+        activeTabId.value = ""
+        recentlyClosed.value = []
+      }
+    }
+  )
+
+  // Watch Navigation Data - protected against optimistic overwrites
   watch(
     navDocData,
     (doc) => {
+      // Skip if navigation operation is pending
+      if (pendingNavigation.value) return
+
       if (!doc) {
         if (!navPending.value) {
           activeNavItems.value = [...defaultMenu]
@@ -150,10 +223,13 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
-  // Sync Firestore theme data back to localStorage (optional: override localStorage with server values if needed)
+  // Sync Firestore theme data back to localStorage - protected against optimistic overwrites
   watch(
     themeDocData,
     (doc) => {
+      // Skip if theme operation is pending
+      if (pendingTheme.value) return
+
       if (!doc) return
       // Only sync if values differ (avoids unnecessary localStorage writes)
       // Use 'in' operator to check for key existence rather than truthy value
@@ -169,9 +245,16 @@ export const useLayoutStore = defineStore("layout", () => {
   )
 
   // Set isHydrated when all critical documents are loaded or failed to load
+  // Only set hydrated when we have valid refs (user/team loaded) AND documents are no longer pending
   watch(
-    [tabsPending, navPending, themePending],
-    ([tp, np, thp]) => {
+    [tabsPending, navPending, themePending, tabsDocRef],
+    ([tp, np, thp, tabsRef]) => {
+      // Don't mark as hydrated if we don't have a valid tabs doc ref yet
+      // (meaning user or team hasn't loaded)
+      if (!tabsRef) {
+        isHydrated.value = false
+        return
+      }
       if (!tp && !np && !thp) {
         isHydrated.value = true
       }
@@ -179,69 +262,109 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
-  // --- Persistence ---
+  // ============================================================================
+  // Persistence Helpers
+  // ============================================================================
 
-  // Helper to safely persist to Firestore with error handling
+  /**
+   * Safely persist to Firestore with error handling and rollback support
+   * @returns true if successful, false if failed
+   */
   async function safeSetDoc(
     docRef: ReturnType<typeof doc> | null,
     data: Record<string, unknown>
-  ): Promise<void> {
-    if (!docRef) return
+  ): Promise<boolean> {
+    if (!docRef) return false
     try {
       await setDoc(docRef, data, { merge: true })
+      return true
     } catch (error) {
       console.error("[layoutStore] Failed to persist to Firestore:", error)
+      return false
     }
   }
 
-  // Persist Tabs
+  /**
+   * Persist tabs with optimistic update protection
+   */
+  async function persistTabs(): Promise<boolean> {
+    return safeSetDoc(tabsDocRef.value, {
+      tabs: tabs.value,
+      active: activeTabId.value,
+      recentlyClosed: recentlyClosed.value,
+    })
+  }
+
+  /**
+   * Persist navigation with optimistic update protection
+   */
+  async function persistNavigation(): Promise<boolean> {
+    if (!navigationDocRef.value) return false
+
+    const visibleItems: Record<string, boolean> = {}
+    const order = activeNavItems.value.map((item) => item.id)
+    const activeIds = new Set(order)
+
+    for (const item of defaultMenu) {
+      visibleItems[item.id] = activeIds.has(item.id)
+    }
+
+    return safeSetDoc(navigationDocRef.value, { visibleItems, order })
+  }
+
+  /**
+   * Persist theme with optimistic update protection
+   */
+  async function persistTheme(): Promise<boolean> {
+    return safeSetDoc(themeDocRef.value, {
+      mode: mode.value,
+      accent: accent.value,
+      font: font.value,
+      size: size.value,
+      language: language.value,
+    })
+  }
+
+  // ============================================================================
+  // Debounced Persistence Watchers
+  // ============================================================================
+
+  // Persist Tabs (debounced)
   watchDebounced(
     [tabs, activeTabId, recentlyClosed],
-    ([newTabs, newActive, newRecent]) => {
-      safeSetDoc(tabsDocRef.value, {
-        tabs: newTabs,
-        active: newActive,
-        recentlyClosed: newRecent,
-      })
+    () => {
+      // Skip persistence during pending operations (will be handled by the action)
+      if (pendingTabIds.value.size > 0) return
+      persistTabs()
     },
     { debounce: 500, deep: true }
   )
 
-  // Persist Navigation
+  // Persist Navigation (debounced)
   watchDebounced(
     activeNavItems,
-    (newItems) => {
-      if (!navigationDocRef.value) return
-
-      const visibleItems: Record<string, boolean> = {}
-      const order = newItems.map((item) => item.id)
-      const activeIds = new Set(order)
-
-      for (const item of defaultMenu) {
-        visibleItems[item.id] = activeIds.has(item.id)
-      }
-
-      safeSetDoc(navigationDocRef.value, { visibleItems, order })
+    () => {
+      // Skip persistence during pending operations
+      if (pendingNavigation.value) return
+      persistNavigation()
     },
     { debounce: 500, deep: true }
   )
 
-  // Persist Theme
+  // Persist Theme (debounced)
   watchDebounced(
     [mode, accent, font, size, language],
-    ([m, a, f, s, l]) => {
-      safeSetDoc(themeDocRef.value, {
-        mode: m,
-        accent: a,
-        font: f,
-        size: s,
-        language: l,
-      })
+    () => {
+      // Skip persistence during pending operations
+      if (pendingTheme.value) return
+      persistTheme()
     },
     { debounce: 500 }
   )
 
-  // --- Actions: Tabs ---
+  // ============================================================================
+  // Actions: Tabs (with Optimistic Updates)
+  // ============================================================================
 
   function createTab(fullPath: string, name?: string): Tab {
     if (name) {
@@ -253,11 +376,40 @@ export const useLayoutStore = defineStore("layout", () => {
     return { id: generateId(), name: "New Tab", fullPath }
   }
 
-  function addTab(fullPath = "/new", name = "New Tab") {
+  /**
+   * Add a new tab with optimistic update
+   */
+  async function addTab(fullPath = "/new", name = "New Tab"): Promise<Tab> {
     const newTab = createTab(fullPath, name)
-    tabs.value.push(newTab)
-    activeTabId.value = newTab.id
-    return newTab
+
+    // Clone previous state for rollback
+    const previousTabs = cloneState(tabs.value)
+    const previousActiveTabId = activeTabId.value
+
+    // Mark as pending
+    pendingTabIds.value.add(newTab.id)
+
+    try {
+      // Apply optimistic update
+      tabs.value = [...tabs.value, newTab]
+      activeTabId.value = newTab.id
+
+      // Persist immediately for critical action
+      const success = await persistTabs()
+      if (!success) {
+        throw new Error("Failed to persist tab")
+      }
+
+      return newTab
+    } catch (error) {
+      // Rollback on error
+      tabs.value = previousTabs
+      activeTabId.value = previousActiveTabId
+      console.error("[layoutStore] addTab failed:", error)
+      throw error
+    } finally {
+      pendingTabIds.value.delete(newTab.id)
+    }
   }
 
   function addToHistory(tab: Tab) {
@@ -273,69 +425,159 @@ export const useLayoutStore = defineStore("layout", () => {
     ].slice(0, 20)
   }
 
-  function closeTab(id: string) {
+  /**
+   * Close a tab with optimistic update
+   */
+  async function closeTab(id: string): Promise<{ nextPath: string } | null> {
     const idx = tabs.value.findIndex((t) => t.id === id)
     if (idx === -1) return null
 
     const closing = tabs.value[idx]
     if (!closing) return null
 
-    addToHistory(closing)
+    // Clone previous state for rollback
+    const previousTabs = cloneState(tabs.value)
+    const previousActiveTabId = activeTabId.value
+    const previousRecentlyClosed = cloneState(recentlyClosed.value)
 
-    // Prepare new state
-    const newTabs = [...tabs.value]
-    newTabs.splice(idx, 1)
+    // Mark as pending
+    pendingTabIds.value.add(id)
 
-    let nextPath: string | null = null
-    let nextId = activeTabId.value
+    try {
+      // Add to history
+      addToHistory(closing)
 
-    if (newTabs.length === 0) {
-      nextId = ""
-      nextPath = "/start"
-    } else if (closing.id === activeTabId.value) {
-      const nextTab = newTabs[idx] || newTabs[idx - 1]
-      if (nextTab) {
-        nextId = nextTab.id
-        nextPath = nextTab.fullPath
+      // Prepare new state
+      const newTabs = [...tabs.value]
+      newTabs.splice(idx, 1)
+
+      let nextPath: string | null = null
+      let nextId = activeTabId.value
+
+      if (newTabs.length === 0) {
+        nextId = ""
+        nextPath = "/start"
+      } else if (closing.id === activeTabId.value) {
+        const nextTab = newTabs[idx] || newTabs[idx - 1]
+        if (nextTab) {
+          nextId = nextTab.id
+          nextPath = nextTab.fullPath
+        }
       }
+
+      // Apply optimistic updates
+      tabs.value = newTabs
+      activeTabId.value = nextId
+
+      // Persist immediately for critical action
+      const success = await persistTabs()
+      if (!success) {
+        throw new Error("Failed to persist tab close")
+      }
+
+      return nextPath ? { nextPath } : null
+    } catch (error) {
+      // Rollback on error
+      tabs.value = previousTabs
+      activeTabId.value = previousActiveTabId
+      recentlyClosed.value = previousRecentlyClosed
+      console.error("[layoutStore] closeTab failed:", error)
+      throw error
+    } finally {
+      pendingTabIds.value.delete(id)
     }
-
-    // Apply updates atomically-ish
-    tabs.value = newTabs
-    activeTabId.value = nextId
-
-    // Persist immediately for critical action
-    safeSetDoc(tabsDocRef.value, {
-      tabs: newTabs,
-      active: nextId,
-      recentlyClosed: recentlyClosed.value,
-    })
-
-    return nextPath ? { nextPath } : null
   }
 
-  function closeOtherTabs(keepId: string) {
+  /**
+   * Close all tabs except one with optimistic update
+   */
+  async function closeOtherTabs(keepId: string): Promise<void> {
     const keep = tabs.value.find((t) => t.id === keepId)
     if (!keep) return
-    // Collect tabs to close first to avoid modifying array while iterating
+
+    // Clone previous state for rollback
+    const previousTabs = cloneState(tabs.value)
+    const previousActiveTabId = activeTabId.value
+    const previousRecentlyClosed = cloneState(recentlyClosed.value)
+
+    // Mark all tabs as pending
     const tabsToClose = tabs.value.filter((t) => t.id !== keepId)
-    tabsToClose.forEach(addToHistory)
-    tabs.value = [keep]
-    activeTabId.value = keep.id
+    tabsToClose.forEach((t) => pendingTabIds.value.add(t.id))
+    pendingTabIds.value.add(keepId)
+
+    try {
+      // Add tabs to history
+      tabsToClose.forEach(addToHistory)
+
+      // Apply optimistic update
+      tabs.value = [keep]
+      activeTabId.value = keep.id
+
+      // Persist
+      const success = await persistTabs()
+      if (!success) {
+        throw new Error("Failed to persist closeOtherTabs")
+      }
+    } catch (error) {
+      // Rollback on error
+      tabs.value = previousTabs
+      activeTabId.value = previousActiveTabId
+      recentlyClosed.value = previousRecentlyClosed
+      console.error("[layoutStore] closeOtherTabs failed:", error)
+      throw error
+    } finally {
+      tabsToClose.forEach((t) => pendingTabIds.value.delete(t.id))
+      pendingTabIds.value.delete(keepId)
+    }
   }
 
-  function closeAllTabs() {
-    // Copy array before iterating to avoid modification issues
+  /**
+   * Close all tabs with optimistic update
+   */
+  async function closeAllTabs(): Promise<void> {
+    if (tabs.value.length === 0) return
+
+    // Clone previous state for rollback
+    const previousTabs = cloneState(tabs.value)
+    const previousActiveTabId = activeTabId.value
+    const previousRecentlyClosed = cloneState(recentlyClosed.value)
+
+    // Mark all tabs as pending
     const tabsToClose = [...tabs.value]
-    tabsToClose.forEach(addToHistory)
-    tabs.value = []
-    activeTabId.value = ""
+    tabsToClose.forEach((t) => pendingTabIds.value.add(t.id))
+
+    try {
+      // Add tabs to history
+      tabsToClose.forEach(addToHistory)
+
+      // Apply optimistic update
+      tabs.value = []
+      activeTabId.value = ""
+
+      // Persist
+      const success = await persistTabs()
+      if (!success) {
+        throw new Error("Failed to persist closeAllTabs")
+      }
+    } catch (error) {
+      // Rollback on error
+      tabs.value = previousTabs
+      activeTabId.value = previousActiveTabId
+      recentlyClosed.value = previousRecentlyClosed
+      console.error("[layoutStore] closeAllTabs failed:", error)
+      throw error
+    } finally {
+      tabsToClose.forEach((t) => pendingTabIds.value.delete(t.id))
+    }
   }
 
   function clearRecentlyClosed() {
     recentlyClosed.value = []
   }
 
+  /**
+   * Reopen the last closed tab
+   */
   function reopenLastClosed(): Tab | null {
     if (recentlyClosed.value.length === 0) return null
     const [last, ...rest] = recentlyClosed.value
@@ -344,26 +586,80 @@ export const useLayoutStore = defineStore("layout", () => {
     return last
   }
 
-  function duplicateTab(id: string) {
+  /**
+   * Duplicate a tab with optimistic update
+   */
+  async function duplicateTab(id: string): Promise<void> {
     const tab = tabs.value.find((t) => t.id === id)
     if (!tab) return
     if (isDefaultRoute(tab)) return
+
     const duplicate = createTab(
       tab.fullPath,
       tab.name.endsWith(" (Copy)") ? tab.name : `${tab.name} (Copy)`
     )
-    tabs.value.push(duplicate)
-    activeTabId.value = duplicate.id
+
+    // Clone previous state for rollback
+    const previousTabs = cloneState(tabs.value)
+    const previousActiveTabId = activeTabId.value
+
+    // Mark as pending
+    pendingTabIds.value.add(duplicate.id)
+
+    try {
+      // Apply optimistic update
+      tabs.value = [...tabs.value, duplicate]
+      activeTabId.value = duplicate.id
+
+      // Persist
+      const success = await persistTabs()
+      if (!success) {
+        throw new Error("Failed to persist duplicateTab")
+      }
+    } catch (error) {
+      // Rollback on error
+      tabs.value = previousTabs
+      activeTabId.value = previousActiveTabId
+      console.error("[layoutStore] duplicateTab failed:", error)
+      throw error
+    } finally {
+      pendingTabIds.value.delete(duplicate.id)
+    }
   }
 
-  function renameTab(id: string, newName: string) {
+  /**
+   * Rename a tab with optimistic update
+   */
+  async function renameTab(id: string, newName: string): Promise<void> {
     const tab = tabs.value.find((t) => t.id === id)
     if (!tab) return
-
     if (isDefaultRoute(tab)) return
+    if (!newName.trim()) return
 
-    if (newName.trim()) {
-      tab.name = newName.trim()
+    // Clone previous state for rollback
+    const previousTabs = cloneState(tabs.value)
+
+    // Mark as pending
+    pendingTabIds.value.add(id)
+
+    try {
+      // Apply optimistic update
+      tabs.value = tabs.value.map((t) =>
+        t.id === id ? { ...t, name: newName.trim() } : t
+      )
+
+      // Persist
+      const success = await persistTabs()
+      if (!success) {
+        throw new Error("Failed to persist renameTab")
+      }
+    } catch (error) {
+      // Rollback on error
+      tabs.value = previousTabs
+      console.error("[layoutStore] renameTab failed:", error)
+      throw error
+    } finally {
+      pendingTabIds.value.delete(id)
     }
   }
 
@@ -373,35 +669,117 @@ export const useLayoutStore = defineStore("layout", () => {
 
   function updateActiveTab(fullPath: string, name?: string) {
     if (!activeTabId.value) return
-    const activeTab = tabs.value.find((t) => t.id === activeTabId.value)
-    if (activeTab) {
-      activeTab.fullPath = fullPath
-      if (name) activeTab.name = name
+    const activeTabIndex = tabs.value.findIndex(
+      (t) => t.id === activeTabId.value
+    )
+    if (activeTabIndex !== -1) {
+      tabs.value = tabs.value.map((t, i) =>
+        i === activeTabIndex ? { ...t, fullPath, ...(name ? { name } : {}) } : t
+      )
     }
   }
 
-  // --- Actions: Navigation ---
+  // ============================================================================
+  // Actions: Navigation (with Optimistic Updates)
+  // ============================================================================
 
-  function toggleNavItem(itemId: string, checked: boolean) {
-    if (checked) {
-      const item = defaultMenu.find((i) => i.id === itemId)
-      if (item && !activeNavItems.value.some((i) => i.id === itemId)) {
-        activeNavItems.value.push(item)
+  /**
+   * Toggle a navigation item's visibility with optimistic update
+   */
+  async function toggleNavItem(
+    itemId: string,
+    checked: boolean
+  ): Promise<void> {
+    // Clone previous state for rollback
+    const previousNavItems = cloneState(activeNavItems.value)
+
+    // Mark as pending
+    pendingNavigation.value = true
+
+    try {
+      // Apply optimistic update
+      if (checked) {
+        const item = defaultMenu.find((i) => i.id === itemId)
+        if (item && !activeNavItems.value.some((i) => i.id === itemId)) {
+          activeNavItems.value = [...activeNavItems.value, item]
+        }
+      } else {
+        activeNavItems.value = activeNavItems.value.filter(
+          (i) => i.id !== itemId
+        )
       }
-    } else {
-      const idx = activeNavItems.value.findIndex((i) => i.id === itemId)
-      if (idx !== -1) {
-        activeNavItems.value.splice(idx, 1)
+
+      // Persist
+      const success = await persistNavigation()
+      if (!success) {
+        throw new Error("Failed to persist toggleNavItem")
       }
+    } catch (error) {
+      // Rollback on error
+      activeNavItems.value = previousNavItems
+      console.error("[layoutStore] toggleNavItem failed:", error)
+      throw error
+    } finally {
+      pendingNavigation.value = false
     }
   }
 
-  function setNavItems(items: NavItem[]) {
-    activeNavItems.value = items
+  /**
+   * Set navigation items with optimistic update
+   */
+  async function setNavItems(items: NavItem[]): Promise<void> {
+    // Clone previous state for rollback
+    const previousNavItems = cloneState(activeNavItems.value)
+
+    // Mark as pending
+    pendingNavigation.value = true
+
+    try {
+      // Apply optimistic update
+      activeNavItems.value = cloneState(items)
+
+      // Persist
+      const success = await persistNavigation()
+      if (!success) {
+        throw new Error("Failed to persist setNavItems")
+      }
+    } catch (error) {
+      // Rollback on error
+      activeNavItems.value = previousNavItems
+      console.error("[layoutStore] setNavItems failed:", error)
+      throw error
+    } finally {
+      pendingNavigation.value = false
+    }
   }
 
-  function resetNavItems() {
-    activeNavItems.value = [...defaultMenu]
+  /**
+   * Reset navigation items to defaults with optimistic update
+   */
+  async function resetNavItems(): Promise<void> {
+    // Clone previous state for rollback
+    const previousNavItems = cloneState(activeNavItems.value)
+
+    // Mark as pending
+    pendingNavigation.value = true
+
+    try {
+      // Apply optimistic update
+      activeNavItems.value = [...defaultMenu]
+
+      // Persist
+      const success = await persistNavigation()
+      if (!success) {
+        throw new Error("Failed to persist resetNavItems")
+      }
+    } catch (error) {
+      // Rollback on error
+      activeNavItems.value = previousNavItems
+      console.error("[layoutStore] resetNavItems failed:", error)
+      throw error
+    } finally {
+      pendingNavigation.value = false
+    }
   }
 
   return {
@@ -414,6 +792,13 @@ export const useLayoutStore = defineStore("layout", () => {
     themeSettings,
     isLoading,
     isHydrated,
+
+    // Pending state
+    pendingTabIds,
+    pendingNavigation,
+    pendingTheme,
+    isTabPending,
+    hasAnyTabPending,
 
     // Actions
     addTab,

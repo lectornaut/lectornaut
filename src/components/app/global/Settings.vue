@@ -35,8 +35,14 @@ import { emitter } from "@/modules/mitt"
 import { accent, font, size, store } from "@/modules/theme"
 import { updateUserData } from "@/queries/updateUserData"
 import { checkUsernameAvailability, claimUsername } from "@/queries/username"
-import { useTeamStore } from "@/stores/teamStore"
+import { useAuthStore } from "@/stores/authStore"
 import type { IMembership, ITeam } from "@/types"
+import {
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  usernamesMatch,
+  validateUsername,
+} from "@/utils/username"
 import {
   deleteUser,
   sendEmailVerification,
@@ -71,56 +77,6 @@ const usernameAvailable = ref<boolean | null>(null)
 const isUpdatingUsername = ref(false)
 const usernameError = ref<string | null>(null)
 
-// Username validation constants
-const USERNAME_MIN_LENGTH = 3
-const USERNAME_MAX_LENGTH = 30
-const USERNAME_REGEX = /^[a-zA-Z0-9_-]+$/
-
-const validateUsername = (
-  username: string
-): { valid: boolean; error: string | null } => {
-  const trimmed = username.trim()
-
-  if (!trimmed) {
-    return { valid: false, error: null }
-  }
-
-  if (trimmed !== username) {
-    return {
-      valid: false,
-      error: "Username cannot have leading or trailing spaces",
-    }
-  }
-
-  if (trimmed.includes(" ")) {
-    return { valid: false, error: "Username cannot contain spaces" }
-  }
-
-  if (trimmed.length < USERNAME_MIN_LENGTH) {
-    return {
-      valid: false,
-      error: `Username must be at least ${USERNAME_MIN_LENGTH} characters`,
-    }
-  }
-
-  if (trimmed.length > USERNAME_MAX_LENGTH) {
-    return {
-      valid: false,
-      error: `Username must be at most ${USERNAME_MAX_LENGTH} characters`,
-    }
-  }
-
-  if (!USERNAME_REGEX.test(trimmed)) {
-    return {
-      valid: false,
-      error:
-        "Username can only contain letters, numbers, underscores, and hyphens",
-    }
-  }
-
-  return { valid: true, error: null }
-}
-
 // Check if user has a valid username set
 const hasUsername = computed(() => {
   const username = userData.value?.username
@@ -138,7 +94,8 @@ const checkUsername = async () => {
   // Trim the username on check
   localUsername.value = localUsername.value.trim()
 
-  if (localUsername.value === userData.value?.username) {
+  // Use case-insensitive comparison to check if username changed
+  if (usernamesMatch(localUsername.value, userData.value?.username)) {
     usernameAvailable.value = null
     usernameError.value = null
     return
@@ -206,7 +163,7 @@ const toggleIsPublic = async (value: boolean) => {
   }
 }
 
-const teamStore = useTeamStore()
+const authStore = useAuthStore()
 
 // Use simplified team actions composable
 const {
@@ -278,7 +235,7 @@ const updateDisplayName = async () => {
   if (localDisplayName.value === user.value?.displayName) return
 
   try {
-    await teamStore.updateUserProfile({ displayName: localDisplayName.value })
+    await authStore.updateUserProfile({ displayName: localDisplayName.value })
     toast.success("Profile updated", {
       description: "Your preferred name has been updated successfully.",
     })
@@ -292,7 +249,7 @@ const updateDisplayName = async () => {
 const photoURL = computed({
   get: () => user.value?.photoURL ?? "",
   set: (value: string) => {
-    teamStore.updateUserProfile({ photoURL: value })
+    authStore.updateUserProfile({ photoURL: value })
   },
 })
 
@@ -493,7 +450,7 @@ const handleRemoveTeamPhoto = async (teamId: string) => {
 const handleRemoveProfilePicture = async () => {
   try {
     // Explicitly pass null to remove the profile picture
-    await teamStore.updateUserProfile({ photoURL: null })
+    await authStore.updateUserProfile({ photoURL: null })
     toast.success("Profile picture removed")
   } catch (error) {
     console.error("Error removing profile picture:", error)

@@ -36,6 +36,7 @@ const {
   activeTab,
   recentlyClosed,
   isLoading: pending,
+  isHydrated,
 } = storeToRefs(layoutStore)
 
 const {
@@ -62,7 +63,7 @@ useSortable(el, tabs, {
 })
 
 const isSyncing = ref(false)
-const hasHydrated = ref(false)
+const hasInitialized = ref(false)
 
 // Navigate to a tab (used by event handlers and programmatic navigation)
 function navigateToTab(tab: { id: string; fullPath: string }) {
@@ -76,24 +77,24 @@ function onTabClick(tab: { id: string }) {
 }
 
 // Add a new tab
-function handleAddTab(fullPath = "/new", name?: string) {
-  const newTab = addTab(fullPath, name)
+async function handleAddTab(fullPath = "/new", name?: string) {
+  const newTab = await addTab(fullPath, name)
   if (newTab) navigateToTab(newTab)
 }
 
 // Close a tab with null safety
-function handleCloseTab(id: string | undefined) {
+async function handleCloseTab(id: string | undefined) {
   if (!id) return
-  const result = closeTab(id)
+  const result = await closeTab(id)
   if (result?.nextPath) {
     router.push(result.nextPath)
   }
 }
 
 // Duplicate a tab with null safety
-function handleDuplicateTab(id: string | undefined) {
+async function handleDuplicateTab(id: string | undefined) {
   if (!id) return
-  duplicateTab(id)
+  await duplicateTab(id)
   // Ideally navigate to new tab, but store doesn't return it yet.
   // Workaround: find tab with activeTabId
   const newTab = tabs.value.find((t) => t.id === activeTabId.value)
@@ -172,15 +173,24 @@ function selectTab(idOrDirection: string | number) {
 
 // Sync route changes with tabs (Route -> Store)
 watch(
-  [() => route.fullPath, pending],
-  ([fullPath, isPending]) => {
-    if (isPending) return
+  [() => route.fullPath, pending, isHydrated],
+  async ([fullPath, isPending, hydrated]) => {
+    // Wait for hydration to complete before processing route changes
+    if (isPending || !hydrated) return
 
-    // If we just hydrated, skip this first run if a store path exists
-    // to let the Sync watcher below handle the initial navigation.
-    if (!hasHydrated.value) {
-      hasHydrated.value = true
-      if (activeTab.value?.fullPath && activeTab.value.fullPath !== fullPath) {
+    // On first run after hydration, let the Store -> Route watcher handle
+    // navigation if there's already an active tab (even with a different path).
+    // This prevents creating duplicate tabs when the page is reloaded.
+    if (!hasInitialized.value) {
+      hasInitialized.value = true
+      // If there are tabs loaded from Firestore, trust them and let the
+      // Store -> Route watcher handle navigation to the active tab
+      if (tabs.value.length > 0) {
+        return
+      }
+      // If there's an active tab set (even if tabs array is being populated),
+      // let the Store -> Route watcher handle it
+      if (activeTabId.value) {
         return
       }
     }
@@ -196,26 +206,37 @@ watch(
     // If we clicked on a tab, don't update anything - tab is already active
     if (clickedTab) return
 
-    // If we have an active tab, update it with the new route (normal navigation)
+    // Check if any existing tab already has this route
+    const existingTab = tabs.value.find((t) => t.fullPath === fullPath)
+    if (existingTab) {
+      // Switch to the existing tab instead of creating/updating
+      setActiveTab(existingTab.id)
+      return
+    }
+
+    // If we have an active tab that is a default route (e.g., /new, /start),
+    // update it with the new route (this is the expected behavior for placeholder tabs)
     if (activeTabId.value) {
-      const activeTab = tabs.value.find((t) => t.id === activeTabId.value)
-      if (activeTab) {
+      const currentActiveTab = tabs.value.find(
+        (t) => t.id === activeTabId.value
+      )
+      if (currentActiveTab && isDefaultRoute(currentActiveTab)) {
         updateActiveTab(
           fullPath,
           (route.meta?.breadcrumb as string) ||
             (route.name as string) ||
-            activeTab.name
+            currentActiveTab.name
         )
         return
       }
     }
 
-    // No active tab or active tab not found - create a new tab
-    const newTab = addTab(
+    // Active tab is not a default route - create a new tab for the new route
+    const newTab = await addTab(
       fullPath,
       (route.meta?.breadcrumb as string) || (route.name as string)
     )
-    if (newTab) navigateToTab(newTab)
+    if (newTab) setActiveTab(newTab.id)
   },
   { immediate: true }
 )
@@ -276,11 +297,13 @@ function onTabsClose(id?: unknown) {
 
 function onTabsCloseOthers(id?: unknown) {
   const keepId = typeof id === "string" ? id : activeTabId.value
-  if (keepId) closeOtherTabs(keepId)
+  if (keepId) {
+    closeOtherTabs(keepId)
+  }
 }
 
-function onTabsCloseAll() {
-  closeAllTabs()
+async function onTabsCloseAll() {
+  await closeAllTabs()
   router.push("/start")
 }
 
@@ -332,7 +355,6 @@ onUnmounted(() => {
   emitter.off("Tabs.Select", onTabsSelect)
   emitter.off("Tabs.ReopenLast", onTabsReopenLast)
   emitter.off("Tabs.Reopen", onTabsReopen)
-  emitter.off("Tabs.Duplicate", onTabsDuplicate)
   emitter.off("Tabs.Duplicate", onTabsDuplicate)
   emitter.off("Tabs.Rename", onTabsRename)
 })

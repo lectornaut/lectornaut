@@ -1,3 +1,4 @@
+import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership } from "@/types"
 import { storeToRefs } from "pinia"
@@ -33,6 +34,7 @@ function useLoadingState<T extends string = string>() {
  */
 export function useTeamActions() {
   const teamStore = useTeamStore()
+  const membershipStore = useMembershipStore()
   const user = useCurrentUser()
   const {
     teamMembers,
@@ -89,8 +91,9 @@ export function useTeamActions() {
   // Change member role
   const changeRole = async (userId: string, newRole: IMembership["role"]) => {
     return roleLoading.withLoading(userId, async () => {
+      if (!currentTeam.value) return
       try {
-        await teamStore.changeRole(userId, newRole)
+        await membershipStore.changeRole(currentTeam.value.id, userId, newRole)
         toast.success("Role updated successfully")
       } catch (error) {
         toast.error("Failed to update role", {
@@ -104,8 +107,9 @@ export function useTeamActions() {
   // Remove member from team
   const removeMember = async (userId: string) => {
     return memberLoading.withLoading(userId, async () => {
+      if (!currentTeam.value) return
       try {
-        await teamStore.removeMember(userId)
+        await membershipStore.removeMember(currentTeam.value.id, userId)
         const isCurrentUser = userId === user.value?.uid
         toast.success(
           isCurrentUser
@@ -141,7 +145,7 @@ export function useTeamActions() {
   const exitTeam = async (teamId: string) => {
     return teamLoading.withLoading(`exit-${teamId}`, async () => {
       try {
-        await teamStore.removeMember(user.value!.uid)
+        await membershipStore.removeMember(teamId, user.value!.uid)
         toast.success("You have left the team")
       } catch (error) {
         toast.error("Failed to leave team", {
@@ -237,8 +241,14 @@ export function useTeamActions() {
     role: IMembership["role"] = "member"
   ) => {
     return memberLoading.withLoading(`invite-${email}`, async () => {
+      if (!currentTeam.value) return
       try {
-        await teamStore.inviteMember(email, role)
+        await membershipStore.inviteMember(
+          currentTeam.value.id,
+          currentTeam.value,
+          email,
+          role
+        )
         toast.success("Member invited successfully")
       } catch (error) {
         toast.error("Failed to invite member", {
