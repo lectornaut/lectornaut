@@ -117,6 +117,16 @@
         "inputLabel": "Name",
         "placeholder": "Your name"
       },
+      "publicProfile": {
+        "label": "Public profile",
+        "description": "Allow others to view your profile.",
+        "requiresUsername": "Set a username to enable public profile"
+      },
+      "username": {
+        "label": "Username",
+        "description": "Set a unique username for your public profile.",
+        "placeholder": "your-username"
+      },
       "email": {
         "label": "Email",
         "verified": "Verified",
@@ -303,7 +313,8 @@
       "tasks": "Tasks",
       "runs": "Runs",
       "teams": "Teams",
-      "create": "Create"
+      "create": "Create",
+      "profile": "Profile"
     },
     "showMore": "Show more options",
     "show": "Show"

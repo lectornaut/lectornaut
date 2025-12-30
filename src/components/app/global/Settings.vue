@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconActivity,
   IconAlertTriangle,
@@ -32,6 +33,8 @@ import { accents, fonts, languages, sizes, themes } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { accent, font, size, store } from "@/modules/theme"
+import { updateUserData } from "@/queries/updateUserData"
+import { checkUsernameAvailability, claimUsername } from "@/queries/username"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership, ITeam } from "@/types"
 import {
@@ -41,120 +44,202 @@ import {
   updatePassword,
   verifyBeforeUpdateEmail,
 } from "firebase/auth"
+import { collection, doc } from "firebase/firestore"
 import { ref as storageRef } from "firebase/storage"
-import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
-import { useCurrentUser, useFirebaseStorage, useStorageFile } from "vuefire"
+import {
+  useCurrentUser,
+  useDocument,
+  useFirebaseStorage,
+  useFirestore,
+  useStorageFile,
+} from "vuefire"
 
-const teamStore = useTeamStore()
-const { teamMembers, memberships, currentTeam, isLoading } =
-  storeToRefs(teamStore)
+const db = useFirestore()
+const user = useCurrentUser()
 
-// Compute current user's role in the current team
-const currentUserRole = computed(() => {
-  if (!user.value || !currentTeam.value) return null
-  const membership = teamMembers.value.find((m) => m.userId === user.value?.uid)
-  return membership?.role || null
+const userDocRef = computed(() => {
+  if (!user.value?.uid) return null
+  return doc(collection(db, "users"), user.value.uid)
 })
 
-const isOwner = computed(() => currentUserRole.value === "owner")
+const { data: userData } = useDocument(userDocRef)
 
-const changingRoleMap = ref<Record<string, boolean>>({})
+const localUsername = ref(userData.value?.username ?? "")
+const isCheckingUsername = ref(false)
+const usernameAvailable = ref<boolean | null>(null)
+const isUpdatingUsername = ref(false)
+const usernameError = ref<string | null>(null)
 
-const handleChangeRole = async (userId: string, newRole: string) => {
-  changingRoleMap.value[userId] = true
+// Username validation constants
+const USERNAME_MIN_LENGTH = 3
+const USERNAME_MAX_LENGTH = 30
+const USERNAME_REGEX = /^[a-zA-Z0-9_-]+$/
+
+const validateUsername = (
+  username: string
+): { valid: boolean; error: string | null } => {
+  const trimmed = username.trim()
+
+  if (!trimmed) {
+    return { valid: false, error: null }
+  }
+
+  if (trimmed !== username) {
+    return {
+      valid: false,
+      error: "Username cannot have leading or trailing spaces",
+    }
+  }
+
+  if (trimmed.includes(" ")) {
+    return { valid: false, error: "Username cannot contain spaces" }
+  }
+
+  if (trimmed.length < USERNAME_MIN_LENGTH) {
+    return {
+      valid: false,
+      error: `Username must be at least ${USERNAME_MIN_LENGTH} characters`,
+    }
+  }
+
+  if (trimmed.length > USERNAME_MAX_LENGTH) {
+    return {
+      valid: false,
+      error: `Username must be at most ${USERNAME_MAX_LENGTH} characters`,
+    }
+  }
+
+  if (!USERNAME_REGEX.test(trimmed)) {
+    return {
+      valid: false,
+      error:
+        "Username can only contain letters, numbers, underscores, and hyphens",
+    }
+  }
+
+  return { valid: true, error: null }
+}
+
+// Check if user has a valid username set
+const hasUsername = computed(() => {
+  const username = userData.value?.username
+  return username && username.trim().length >= USERNAME_MIN_LENGTH
+})
+
+watch(
+  () => userData.value?.username,
+  (newVal) => {
+    if (newVal) localUsername.value = newVal
+  }
+)
+
+const checkUsername = async () => {
+  // Trim the username on check
+  localUsername.value = localUsername.value.trim()
+
+  if (localUsername.value === userData.value?.username) {
+    usernameAvailable.value = null
+    usernameError.value = null
+    return
+  }
+
+  const validation = validateUsername(localUsername.value)
+  if (!validation.valid) {
+    usernameAvailable.value = false
+    usernameError.value = validation.error
+    return
+  }
+
+  usernameError.value = null
+  isCheckingUsername.value = true
+  usernameAvailable.value = await checkUsernameAvailability(localUsername.value)
+  if (!usernameAvailable.value) {
+    usernameError.value = "Username is already taken"
+  }
+  isCheckingUsername.value = false
+}
+
+const debouncedCheckUsername = useDebounceFn(checkUsername, 500)
+
+const updateUsername = async () => {
+  if (!usernameAvailable.value) return
+  isUpdatingUsername.value = true
   try {
-    await teamStore.changeRole(userId, newRole as "owner" | "member")
-    toast.success("Role updated successfully")
+    await claimUsername(localUsername.value)
+    toast.success("Username updated")
   } catch (error) {
-    toast.error("Failed to update role", {
+    toast.error("Failed to update username", {
       description: (error as Error).message,
     })
   } finally {
-    changingRoleMap.value[userId] = false
+    isUpdatingUsername.value = false
   }
 }
 
-const canChangeRole = (member: (typeof teamMembers.value)[0]) => {
-  if (!isOwner.value) return false
-  // Don't allow changing own role if you're the last owner
-  if (member.userId === user.value?.uid) {
-    const ownerCount = teamMembers.value.filter(
-      (m) => m.role === "owner"
-    ).length
-    if (ownerCount <= 1 && member.role === "owner") return false
+const isPublic = computed(() => userData.value?.isPublic ?? false)
+
+// Disable public profile if username is removed
+watch(hasUsername, (hasUser) => {
+  if (!hasUser && isPublic.value) {
+    updateUserData({ isPublic: false }).catch(console.error)
   }
-  return true
-}
+})
 
-// Remove member
-const removingMemberMap = ref<Record<string, boolean>>({})
+const toggleIsPublic = async (value: boolean) => {
+  // Only allow enabling public profile if username is set
+  if (value && !hasUsername.value) {
+    toast.error("Cannot enable public profile", {
+      description:
+        "Please set a username first before making your profile public.",
+    })
+    return
+  }
 
-const handleRemoveMember = async (userId: string) => {
-  removingMemberMap.value[userId] = true
   try {
-    await teamStore.removeMember(userId)
-    const isCurrentUser = userId === user.value?.uid
-    toast.success(
-      isCurrentUser ? "You have left the team" : "Member removed successfully"
-    )
+    await updateUserData({ isPublic: value })
+    toast.success("Profile visibility updated")
   } catch (error) {
-    toast.error("Failed to remove member", {
+    toast.error("Failed to update profile visibility", {
       description: (error as Error).message,
     })
-  } finally {
-    removingMemberMap.value[userId] = false
   }
 }
 
-// Team Actions
+const teamStore = useTeamStore()
+
+// Use simplified team actions composable
+const {
+  currentTeam,
+  teamMembers,
+  memberships,
+  isLoading,
+  isOwner,
+  canChangeRole,
+  changeRole: handleChangeRole,
+  removeMember: handleRemoveMember,
+  switchTeam: handleSwitchTeam,
+  exitTeam: handleExitTeam,
+  deleteTeam: doDeleteTeam,
+  updateTeamPhoto,
+  removeTeamPhoto,
+  isRoleLoading,
+  isMemberLoading,
+  isTeamLoading,
+} = useTeamActions()
+
+// Team Dialog States
 const isCreatingTeamDialogOpen = ref(false)
 const isInvitingMemberDialogOpen = ref(false)
 const isEditingTeamDialogOpen = ref(false)
 const teamToEdit = ref<ITeam | undefined>(undefined)
+const isDeleteTeamDialogOpen = ref(false)
+const teamToDelete = ref<ITeam | null>(null)
 
 const startEditingTeam = (team: ITeam) => {
   teamToEdit.value = team
   isEditingTeamDialogOpen.value = true
 }
-
-const switchingTeamMap = ref<Record<string, boolean>>({})
-
-const handleSwitchTeam = async (teamId: string) => {
-  if (currentTeam.value?.id === teamId) return
-  switchingTeamMap.value[teamId] = true
-  try {
-    await teamStore.switchTeam(teamId)
-    toast.success("Switched team successfully")
-  } catch (error) {
-    toast.error("Failed to switch team", {
-      description: (error as Error).message,
-    })
-  } finally {
-    switchingTeamMap.value[teamId] = false
-  }
-}
-
-const exitingTeamMap = ref<Record<string, boolean>>({})
-
-const handleExitTeam = async (teamId: string) => {
-  exitingTeamMap.value[teamId] = true
-  try {
-    // removeMember handles exiting if userId matches current user
-    await teamStore.removeMember(user.value!.uid)
-    toast.success("You have left the team")
-  } catch (error) {
-    toast.error("Failed to leave team", {
-      description: (error as Error).message,
-    })
-  } finally {
-    exitingTeamMap.value[teamId] = false
-  }
-}
-
-const isDeleteTeamDialogOpen = ref(false)
-const teamToDelete = ref<ITeam | null>(null)
-const isDeletingTeam = ref(false)
 
 const confirmDeleteTeam = (team: ITeam) => {
   teamToDelete.value = team
@@ -163,18 +248,10 @@ const confirmDeleteTeam = (team: ITeam) => {
 
 const handleDeleteTeam = async () => {
   if (!teamToDelete.value) return
-  isDeletingTeam.value = true
   try {
-    await teamStore.deleteTeam(teamToDelete.value.id)
-    toast.success("Team deleted successfully")
+    await doDeleteTeam(teamToDelete.value.id)
     isDeleteTeamDialogOpen.value = false
-  } catch (error) {
-    console.error("Error deleting team:", error)
-    toast.error("Failed to delete team", {
-      description: (error as Error).message,
-    })
   } finally {
-    isDeletingTeam.value = false
     teamToDelete.value = null
   }
 }
@@ -187,8 +264,6 @@ emitter.on("Dialog.Settings.Open", (event) => {
   activeTab.value = selected
   openSettings.value = !openSettings.value
 })
-
-const user = useCurrentUser()
 
 const localDisplayName = ref(user.value?.displayName ?? "")
 
@@ -399,24 +474,12 @@ const handleTeamAvatarClick = (membership: IMembership) => {
   openTeamUpload()
 }
 
-const updatingTeamPhotoMap = ref<Record<string, boolean>>({})
-
 watch(teamFiles, async (newFiles) => {
   if (newFiles && newFiles.length > 0 && teamIdToUpdate.value) {
     const file = newFiles.item(0)
     const teamId = teamIdToUpdate.value
     if (file) {
-      updatingTeamPhotoMap.value[teamId] = true
-      try {
-        toast.info("Uploading team photo...")
-        await teamStore.updateTeam(teamId, { photoFile: file })
-        toast.success("Team photo updated")
-      } catch (e) {
-        console.error("Error updating team photo:", e)
-        toast.error("Failed to update team photo")
-      } finally {
-        updatingTeamPhotoMap.value[teamId] = false
-      }
+      await updateTeamPhoto(teamId, file)
     }
     resetTeamUpload()
     teamIdToUpdate.value = null
@@ -424,16 +487,7 @@ watch(teamFiles, async (newFiles) => {
 })
 
 const handleRemoveTeamPhoto = async (teamId: string) => {
-  updatingTeamPhotoMap.value[teamId] = true
-  try {
-    await teamStore.updateTeam(teamId, { photoFile: null })
-    toast.success("Team photo removed")
-  } catch (e) {
-    console.error("Error removing team photo:", e)
-    toast.error("Failed to remove team photo")
-  } finally {
-    updatingTeamPhotoMap.value[teamId] = false
-  }
+  await removeTeamPhoto(teamId)
 }
 
 const handleRemoveProfilePicture = async () => {
@@ -775,6 +829,125 @@ const navigations = computed(() => [
                           @blur="updateDisplayName"
                           @keydown.enter="updateDisplayName"
                         />
+                      </Field>
+                    </FieldSet>
+                    <FieldSeparator />
+                    <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="is-public">
+                            {{ t("settings.account.publicProfile.label") }}
+                          </FieldLabel>
+                          <FieldDescription>
+                            {{
+                              t("settings.account.publicProfile.description")
+                            }}
+                            <span
+                              v-if="!hasUsername"
+                              class="mt-1 block text-xs text-amber-500"
+                            >
+                              {{
+                                t(
+                                  "settings.account.publicProfile.requiresUsername"
+                                )
+                              }}
+                            </span>
+                          </FieldDescription>
+                        </FieldContent>
+                        <TooltipProvider v-if="!hasUsername">
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <span class="inline-block">
+                                <Switch
+                                  id="is-public"
+                                  :model-value="isPublic"
+                                  :disabled="!hasUsername"
+                                  @update:model-value="toggleIsPublic"
+                                />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{
+                                t(
+                                  "settings.account.publicProfile.requiresUsername"
+                                )
+                              }}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Switch
+                          v-else
+                          id="is-public"
+                          :model-value="isPublic"
+                          @update:model-value="toggleIsPublic"
+                        />
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="username">
+                            {{ t("settings.account.username.label") }}
+                          </FieldLabel>
+                          <FieldDescription>
+                            {{ t("settings.account.username.description") }}
+                          </FieldDescription>
+                        </FieldContent>
+                        <div class="flex flex-col gap-1">
+                          <div class="flex items-center gap-2">
+                            <div class="relative">
+                              <Input
+                                id="username"
+                                v-model="localUsername"
+                                :placeholder="
+                                  t('settings.account.username.placeholder')
+                                "
+                                :maxlength="USERNAME_MAX_LENGTH"
+                                class="h-8 w-64 pr-8 focus:border-inherit focus:ring-0"
+                                @input="debouncedCheckUsername"
+                                @keydown.enter="updateUsername"
+                              />
+                              <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+                              >
+                                <Spinner
+                                  v-if="isCheckingUsername"
+                                  class="size-4"
+                                />
+                                <IconCheck
+                                  v-else-if="usernameAvailable === true"
+                                  class="size-4 text-green-500"
+                                />
+                                <IconX
+                                  v-else-if="usernameAvailable === false"
+                                  class="size-4 text-red-500"
+                                />
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              :disabled="
+                                !usernameAvailable || isUpdatingUsername
+                              "
+                              @click="updateUsername"
+                            >
+                              <Spinner v-if="isUpdatingUsername" />
+                              {{ t("common.save") }}
+                            </Button>
+                          </div>
+                          <p v-if="usernameError" class="text-xs text-red-500">
+                            {{ usernameError }}
+                          </p>
+                          <p
+                            v-else-if="
+                              localUsername &&
+                              localUsername !== userData?.username
+                            "
+                            class="text-muted-foreground text-xs"
+                          >
+                            {{ USERNAME_MIN_LENGTH }}-{{ USERNAME_MAX_LENGTH }}
+                            characters, letters, numbers, underscores, and
+                            hyphens only
+                          </p>
+                        </div>
                       </Field>
                     </FieldSet>
                     <FieldSeparator />
@@ -1481,15 +1654,17 @@ const navigations = computed(() => [
                                 :model-value="member.role"
                                 :disabled="
                                   !canChangeRole(member) ||
-                                  changingRoleMap[member.userId]
+                                  isRoleLoading(member.userId)
                                 "
                                 @update:model-value="
-                                  (value) =>
-                                    value &&
-                                    handleChangeRole(
-                                      member.userId,
-                                      String(value)
-                                    )
+                                  (value) => {
+                                    if (value && typeof value === 'string') {
+                                      handleChangeRole(
+                                        member.userId,
+                                        value as 'owner' | 'member'
+                                      )
+                                    }
+                                  }
                                 "
                               >
                                 <SelectTrigger class="w-32">
@@ -1507,10 +1682,10 @@ const navigations = computed(() => [
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    :disabled="removingMemberMap[member.userId]"
+                                    :disabled="isMemberLoading(member.userId)"
                                   >
                                     <Spinner
-                                      v-if="removingMemberMap[member.userId]"
+                                      v-if="isMemberLoading(member.userId)"
                                     />
                                     <IconX v-else />
                                   </Button>
@@ -1538,13 +1713,11 @@ const navigations = computed(() => [
                                     >
                                     <AlertDialogAction
                                       variant="destructive"
-                                      :disabled="
-                                        removingMemberMap[member.userId]
-                                      "
+                                      :disabled="isMemberLoading(member.userId)"
                                       @click="handleRemoveMember(member.userId)"
                                     >
                                       <Spinner
-                                        v-if="removingMemberMap[member.userId]"
+                                        v-if="isMemberLoading(member.userId)"
                                       />
                                       {{
                                         member.userId === user?.uid
@@ -1613,10 +1786,18 @@ const navigations = computed(() => [
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             variant="destructive"
-                            :disabled="isDeletingTeam"
+                            :disabled="
+                              teamToDelete &&
+                              isTeamLoading(`delete-${teamToDelete.id}`)
+                            "
                             @click.prevent="handleDeleteTeam"
                           >
-                            <Spinner v-if="isDeletingTeam" />
+                            <Spinner
+                              v-if="
+                                teamToDelete &&
+                                isTeamLoading(`delete-${teamToDelete.id}`)
+                              "
+                            />
                             Delete Team
                           </AlertDialogAction>
                         </AlertDialogFooter>
@@ -1659,9 +1840,9 @@ const navigations = computed(() => [
                                         >
                                           <template
                                             v-if="
-                                              updatingTeamPhotoMap[
-                                                membership.teamId
-                                              ]
+                                              isTeamLoading(
+                                                `photo-${membership.teamId}`
+                                              )
                                             "
                                           >
                                             <Spinner />
@@ -1686,9 +1867,9 @@ const navigations = computed(() => [
                                         v-if="membership.role === 'owner'"
                                       >
                                         {{
-                                          updatingTeamPhotoMap[
-                                            membership.teamId
-                                          ]
+                                          isTeamLoading(
+                                            `photo-${membership.teamId}`
+                                          )
                                             ? "Uploading..."
                                             : "Upload team photo"
                                         }}
@@ -1739,13 +1920,11 @@ const navigations = computed(() => [
                                   v-if="currentTeam?.id !== membership.team?.id"
                                   variant="secondary"
                                   size="sm"
-                                  :disabled="
-                                    switchingTeamMap[membership.team?.id]
-                                  "
+                                  :disabled="isTeamLoading(membership.team?.id)"
                                   @click="handleSwitchTeam(membership.team?.id)"
                                 >
                                   <Spinner
-                                    v-if="switchingTeamMap[membership.team?.id]"
+                                    v-if="isTeamLoading(membership.team?.id)"
                                   />
                                   <span v-else>Select</span>
                                 </Button>

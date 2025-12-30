@@ -31,6 +31,13 @@ declare module "vue-router/auto-routes" {
       { path: ParamValue<false> },
       never
     >
+    "/[username]": RouteRecordInfo<
+      "/[username]",
+      "/:username",
+      { username: ParamValue<true> },
+      { username: ParamValue<false> },
+      never
+    >
     "/agents": RouteRecordInfo<
       "/agents",
       "/agents",
@@ -108,6 +115,13 @@ declare module "vue-router/auto-routes" {
       Record<never, never>,
       never
     >
+    "/profile": RouteRecordInfo<
+      "/profile",
+      "/profile",
+      Record<never, never>,
+      Record<never, never>,
+      never
+    >
     "/runs": RouteRecordInfo<
       "/runs",
       "/runs",
@@ -178,6 +192,10 @@ declare module "vue-router/auto-routes" {
       routes: "/[...path]"
       views: never
     }
+    "src/pages/[username].vue": {
+      routes: "/[username]"
+      views: never
+    }
     "src/pages/agents.vue": {
       routes: "/agents" | "/agents/" | "/agents/[id]"
       views: "default"
@@ -220,6 +238,10 @@ declare module "vue-router/auto-routes" {
     }
     "src/pages/pricing.vue": {
       routes: "/pricing"
+      views: never
+    }
+    "src/pages/profile.vue": {
+      routes: "/profile"
       views: never
     }
     "src/pages/runs.vue": {

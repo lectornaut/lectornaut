@@ -8,12 +8,15 @@ export const setDefaultUserData = () => {
   setDoc(
     doc(collection(db, "users"), user.value?.uid),
     {
-      displayName: user.value?.displayName,
-      email: user.value?.email,
-      createdAt: Timestamp.now(),
-      accounts: [user.value?.email],
       uid: user.value?.uid,
+      email: user.value?.email,
+      displayName: user.value?.displayName,
+      photoURL: user.value?.photoURL,
+      username: null,
+      isPublic: false,
       onboarding: true,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
     },
     {
       merge: true,

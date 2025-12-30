@@ -24,15 +24,9 @@ import {
   IconSun,
   IconSunMoon,
   IconUSA,
+  IconUserRound,
   IconUsersRound,
 } from "@/data/icons"
-
-/**
- * Default Data and Configurations
- * Contains static lists for UI dropdowns and settings (languages, themes, accents, menus, etc.)
- */
-
-export const defaultRoutes = ["/new", "/start", "/welcome"]
 
 export const languages = [
   {
@@ -119,6 +113,8 @@ export const sizes = [
 
 export const defaultSize = "sm"
 
+export const defaultRoutes = ["/new", "/start", "/welcome", "/profile"]
+
 export const defaultMenu = [
   {
     title: "Home",
@@ -196,6 +192,17 @@ export const defaultMenu = [
     textColor: "text-purple-500",
     bgColor: "bg-purple-500/75",
     shortcut: "⌘N",
+  },
+  {
+    title: "Profile",
+    action: "View Profile",
+    description: "Manage your personal information and settings.",
+    url: "/profile",
+    id: "profile",
+    icon: IconUserRound,
+    textColor: "text-rose-500",
+    bgColor: "bg-rose-500/75",
+    shortcut: "⌘P",
   },
 ]
 

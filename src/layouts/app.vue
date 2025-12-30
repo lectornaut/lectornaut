@@ -30,8 +30,13 @@ import {
 } from "@/data/icons"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
+import { useTeamStore } from "@/stores/teamStore"
 import { listen } from "@tauri-apps/api/event"
 import { UseDraggable as Draggable } from "@vueuse/components"
+import { storeToRefs } from "pinia"
+
+const teamStore = useTeamStore()
+const { currentTeam, isLoading } = storeToRefs(teamStore)
 
 const router = useRouter()
 
@@ -146,7 +151,19 @@ const closeTab = (id: string) => {
 </script>
 
 <template>
-  <SidebarProvider :default-open="false" class="min-h-auto">
+  <div
+    v-if="isLoading"
+    class="bg-secondary flex size-full flex-1 items-center justify-center"
+  >
+    <Spinner />
+  </div>
+  <div
+    v-else-if="!currentTeam"
+    class="bg-secondary flex size-full flex-1 items-center justify-center"
+  >
+    <TeamSelector />
+  </div>
+  <SidebarProvider v-else :default-open="false" class="min-h-auto">
     <SidebarInset class="bg-transparent">
       <Headerbar />
       <main class="flex grow overflow-auto overscroll-none scroll-smooth">

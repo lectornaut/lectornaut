@@ -95,6 +95,12 @@ const handleSwitchAccount = async (uid: string) => {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
+            <DropdownMenuItem as-child>
+              <RouterLink to="/profile">
+                <IconUserRound />
+                View Profile
+              </RouterLink>
+            </DropdownMenuItem>
             <DropdownMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'account')"
             >
