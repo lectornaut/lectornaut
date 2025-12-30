@@ -183,10 +183,5 @@
   },
   "peerDependencies": {
     "workbox-build": "^7.4.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "sharp": "^0.34.5"
-    }
   }
 }
