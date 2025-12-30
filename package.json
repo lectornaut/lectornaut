@@ -28,7 +28,7 @@
     "@codemirror/lint": "^6.9.2",
     "@codemirror/search": "^6.5.11",
     "@codemirror/state": "^6.5.3",
-    "@codemirror/view": "^6.39.7",
+    "@codemirror/view": "^6.39.8",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@fontsource-variable/playfair-display": "^5.2.8",

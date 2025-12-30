@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { IconSettings } from "@/data/icons"
+import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { doc } from "firebase/firestore"
@@ -24,39 +24,60 @@ const userDocRef = computed(() =>
   user.value ? doc(db, "users", user.value.uid) : null
 )
 const { data: userData } = useDocument(userDocRef)
+const isPublic = computed(() => userData.value?.isPublic ?? false)
+const username = computed(() => userData.value?.username ?? "")
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl space-y-8 p-6">
-    <div class="flex items-center gap-6">
-      <Avatar class="border-accent size-24 rounded-full border-4 shadow-xl">
-        <AvatarImage :src="user?.photoURL!" :alt="user?.displayName!" />
-        <AvatarFallback class="text-2xl">{{
-          getInitials(user?.displayName!)
-        }}</AvatarFallback>
+  <div class="flex flex-col items-center justify-center p-2">
+    <div
+      class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed"
+    ></div>
+    <div class="bg-background mx-auto -mt-10 rounded-lg border p-1">
+      <Avatar class="size-20 rounded-md">
+        <AvatarImage
+          class="size-20 rounded-md"
+          :src="user?.photoURL!"
+          :alt="user?.displayName"
+          referrerpolicy="no-referrer"
+        />
+        <AvatarFallback class="size-20 rounded-md">
+          {{ getInitials(user?.displayName!) }}
+        </AvatarFallback>
       </Avatar>
-      <div class="space-y-1">
-        <h1 class="text-3xl font-bold tracking-tight">
-          {{ user?.displayName }}
-        </h1>
-        <p class="text-muted-foreground flex items-center gap-2">
-          <span v-if="userData?.username" class="text-primary font-mono text-lg"
-            >@{{ userData.username }}</span
-          >
-          <span v-else class="text-sm italic">No username set</span>
-        </p>
-        <p class="text-muted-foreground text-sm">{{ user?.email }}</p>
-      </div>
     </div>
-    <Separator />
-    <div class="flex justify-end">
-      <Button
-        variant="secondary"
+  </div>
+  <div
+    class="mx-auto flex max-w-2xl flex-col items-center justify-center gap-2 p-4"
+  >
+    <h1 class="text-2xl font-bold tracking-tight">
+      {{ user?.displayName }}
+    </h1>
+    <!-- <Badge variant="secondary" as-child> -->
+    <a
+      v-if="username"
+      :href="`/${username}`"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <IconAtSign />
+      {{ username }}
+    </a>
+    <span v-else> No username set </span>
+    <!-- </Badge> -->
+    <div class="flex items-center gap-2">
+      <Badge variant="secondary">
+        <IconGlobe v-if="isPublic" />
+        <IconLock v-else />
+        {{ isPublic ? "Public" : "Private" }}
+      </Badge>
+      <Badge
+        variant="outline"
         @click="emitter.emit('Dialog.Settings.Open', 'account')"
       >
-        <IconSettings class="mr-2 size-4" />
-        Account Settings
-      </Button>
+        <IconSettings />
+        Settings
+      </Badge>
     </div>
   </div>
 </template>

@@ -124,12 +124,6 @@ useHead({
           <p class="text-primary font-mono text-xl">@{{ user.username }}</p>
         </div>
       </div>
-      <div class="flex justify-center pt-8">
-        <p class="text-muted-foreground text-xs">
-          Member since
-          {{ new Date(user.createdAt?.seconds * 1000).toLocaleDateString() }}
-        </p>
-      </div>
     </div>
   </div>
 </template>

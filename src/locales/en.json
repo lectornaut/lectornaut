@@ -115,7 +115,8 @@
         "label": "Preferred name",
         "description": "Enter your preferred display name.",
         "inputLabel": "Name",
-        "placeholder": "Your name"
+        "placeholder": "Name",
+        "editPrompt": "This will be your name throughout the app"
       },
       "publicProfile": {
         "label": "Public profile",
@@ -125,7 +126,10 @@
       "username": {
         "label": "Username",
         "description": "Set a unique username for your public profile.",
-        "placeholder": "your-username"
+        "placeholder": "username",
+        "available": "Available",
+        "checkPrompt": "Provide your unique username",
+        "checking": "Checking availability"
       },
       "email": {
         "label": "Email",

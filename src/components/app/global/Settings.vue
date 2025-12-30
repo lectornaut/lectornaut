@@ -4,6 +4,7 @@ import {
   IconActivity,
   IconAlertTriangle,
   IconAsterisk,
+  IconAtSign,
   IconBadgeCheck,
   IconBadgeDollarSign,
   IconBell,
@@ -74,7 +75,6 @@ const { data: userData } = useDocument(userDocRef)
 const localUsername = ref(userData.value?.username ?? "")
 const isCheckingUsername = ref(false)
 const usernameAvailable = ref<boolean | null>(null)
-const isUpdatingUsername = ref(false)
 const usernameError = ref<string | null>(null)
 
 // Check if user has a valid username set
@@ -118,21 +118,6 @@ const checkUsername = async () => {
 }
 
 const debouncedCheckUsername = useDebounceFn(checkUsername, 500)
-
-const updateUsername = async () => {
-  if (!usernameAvailable.value) return
-  isUpdatingUsername.value = true
-  try {
-    await claimUsername(localUsername.value)
-    toast.success("Username updated")
-  } catch (error) {
-    toast.error("Failed to update username", {
-      description: (error as Error).message,
-    })
-  } finally {
-    isUpdatingUsername.value = false
-  }
-}
 
 const isPublic = computed(() => userData.value?.isPublic ?? false)
 
@@ -231,19 +216,73 @@ watch(
   }
 )
 
-const updateDisplayName = async () => {
-  if (localDisplayName.value === user.value?.displayName) return
+// Track if there are pending changes
+const hasPendingChanges = computed(() => {
+  const displayNameChanged =
+    localDisplayName.value !== (user.value?.displayName ?? "")
+  const usernameChanged = !usernamesMatch(
+    localUsername.value,
+    userData.value?.username ?? ""
+  )
+  return displayNameChanged || usernameChanged
+})
+
+// Unified save function for footer save button
+const isSaving = ref(false)
+const saveAllChanges = async () => {
+  isSaving.value = true
+  const errors: string[] = []
+  let changesMade = false
 
   try {
-    await authStore.updateUserProfile({ displayName: localDisplayName.value })
-    toast.success("Profile updated", {
-      description: "Your preferred name has been updated successfully.",
-    })
-  } catch (error) {
-    toast.error("Failed to update profile", {
-      description: (error as Error).message,
-    })
+    // Save display name if changed
+    if (localDisplayName.value !== (user.value?.displayName ?? "")) {
+      changesMade = true
+      try {
+        await authStore.updateUserProfile({
+          displayName: localDisplayName.value,
+        })
+      } catch (error) {
+        errors.push(`Display name: ${(error as Error).message}`)
+      }
+    }
+
+    // Save username if changed and available
+    if (!usernamesMatch(localUsername.value, userData.value?.username ?? "")) {
+      if (usernameAvailable.value) {
+        changesMade = true
+        try {
+          await claimUsername(localUsername.value)
+        } catch (error) {
+          errors.push(`Username: ${(error as Error).message}`)
+        }
+      } else if (usernameError.value) {
+        errors.push(`Username: ${usernameError.value}`)
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.error("Some changes could not be saved", {
+        description: errors.join(", "),
+      })
+    } else {
+      toast.success("Settings saved", {
+        description: changesMade
+          ? "Your changes have been saved successfully."
+          : "No changes to save.",
+      })
+    }
+  } finally {
+    isSaving.value = false
   }
+}
+
+// Discard all unsaved changes
+const discardChanges = () => {
+  localDisplayName.value = user.value?.displayName ?? ""
+  localUsername.value = userData.value?.username ?? ""
+  usernameAvailable.value = null
+  usernameError.value = null
 }
 
 const photoURL = computed({
@@ -773,23 +812,107 @@ const navigations = computed(() => [
                             }}
                           </FieldDescription>
                         </FieldContent>
-                        <Input
-                          id="name"
-                          v-model="localDisplayName"
-                          :label="
-                            t('settings.account.preferredName.inputLabel')
-                          "
-                          :placeholder="
-                            t('settings.account.preferredName.placeholder')
-                          "
-                          class="h-8 w-64 focus:border-inherit focus:ring-0"
-                          @blur="updateDisplayName"
-                          @keydown.enter="updateDisplayName"
-                        />
+                        <div class="flex">
+                          <InputGroup>
+                            <InputGroupInput
+                              id="name"
+                              v-model="localDisplayName"
+                              :label="
+                                t('settings.account.preferredName.inputLabel')
+                              "
+                              :placeholder="
+                                t('settings.account.preferredName.placeholder')
+                              "
+                            />
+                            <InputGroupAddon align="inline-end">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger as-child>
+                                    <IconPencil />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{
+                                      t(
+                                        "settings.account.preferredName.editPrompt"
+                                      )
+                                    }}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </InputGroupAddon>
+                          </InputGroup>
+                        </div>
                       </Field>
                     </FieldSet>
                     <FieldSeparator />
                     <FieldSet>
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldLabel for="username">
+                            {{ t("settings.account.username.label") }}
+                          </FieldLabel>
+                          <FieldDescription>
+                            {{ t("settings.account.username.description") }}
+                          </FieldDescription>
+                        </FieldContent>
+                        <div class="flex">
+                          <InputGroup>
+                            <InputGroupInput
+                              id="username"
+                              v-model="localUsername"
+                              :placeholder="
+                                t('settings.account.username.placeholder')
+                              "
+                              :maxlength="USERNAME_MAX_LENGTH"
+                              @input="debouncedCheckUsername"
+                            />
+                            <InputGroupAddon align="inline-end">
+                              <TooltipProvider>
+                                <Tooltip v-if="isCheckingUsername">
+                                  <TooltipTrigger as-child>
+                                    <Spinner class="size-4" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{
+                                      t("settings.account.username.checking")
+                                    }}
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip v-else-if="usernameAvailable === true">
+                                  <TooltipTrigger as-child>
+                                    <IconCheck class="text-green-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{
+                                      t("settings.account.username.available")
+                                    }}
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip
+                                  v-else-if="usernameAvailable === false"
+                                >
+                                  <TooltipTrigger as-child>
+                                    <IconX class="text-red-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{ usernameError }}
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip v-else>
+                                  <TooltipTrigger as-child>
+                                    <IconAtSign />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{
+                                      t("settings.account.username.checkPrompt")
+                                    }}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </InputGroupAddon>
+                          </InputGroup>
+                        </div>
+                      </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="is-public">
@@ -838,73 +961,6 @@ const navigations = computed(() => [
                           :model-value="isPublic"
                           @update:model-value="toggleIsPublic"
                         />
-                      </Field>
-                      <Field orientation="horizontal">
-                        <FieldContent>
-                          <FieldLabel for="username">
-                            {{ t("settings.account.username.label") }}
-                          </FieldLabel>
-                          <FieldDescription>
-                            {{ t("settings.account.username.description") }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <div class="flex flex-col gap-1">
-                          <div class="flex items-center gap-2">
-                            <div class="relative">
-                              <Input
-                                id="username"
-                                v-model="localUsername"
-                                :placeholder="
-                                  t('settings.account.username.placeholder')
-                                "
-                                :maxlength="USERNAME_MAX_LENGTH"
-                                class="h-8 w-64 pr-8 focus:border-inherit focus:ring-0"
-                                @input="debouncedCheckUsername"
-                                @keydown.enter="updateUsername"
-                              />
-                              <div
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
-                              >
-                                <Spinner
-                                  v-if="isCheckingUsername"
-                                  class="size-4"
-                                />
-                                <IconCheck
-                                  v-else-if="usernameAvailable === true"
-                                  class="size-4 text-green-500"
-                                />
-                                <IconX
-                                  v-else-if="usernameAvailable === false"
-                                  class="size-4 text-red-500"
-                                />
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              :disabled="
-                                !usernameAvailable || isUpdatingUsername
-                              "
-                              @click="updateUsername"
-                            >
-                              <Spinner v-if="isUpdatingUsername" />
-                              {{ t("common.save") }}
-                            </Button>
-                          </div>
-                          <p v-if="usernameError" class="text-xs text-red-500">
-                            {{ usernameError }}
-                          </p>
-                          <p
-                            v-else-if="
-                              localUsername &&
-                              localUsername !== userData?.username
-                            "
-                            class="text-muted-foreground text-xs"
-                          >
-                            {{ USERNAME_MIN_LENGTH }}-{{ USERNAME_MAX_LENGTH }}
-                            characters, letters, numbers, underscores, and
-                            hyphens only
-                          </p>
-                        </div>
                       </Field>
                     </FieldSet>
                     <FieldSeparator />
@@ -2169,11 +2225,17 @@ const navigations = computed(() => [
             <Separator />
             <DialogFooter class="p-6">
               <DialogClose as-child>
-                <Button variant="outline"> {{ t("common.cancel") }} </Button>
+                <Button variant="outline" @click="discardChanges">
+                  {{ t("common.cancel") }}
+                </Button>
               </DialogClose>
-              <DialogClose as-child>
-                <Button> {{ t("common.save") }} </Button>
-              </DialogClose>
+              <Button
+                :disabled="isSaving || !hasPendingChanges"
+                @click="saveAllChanges"
+              >
+                <Spinner v-if="isSaving" />
+                {{ t("common.save") }}
+              </Button>
             </DialogFooter>
           </div>
         </SidebarProvider>

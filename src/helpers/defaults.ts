@@ -113,8 +113,6 @@ export const sizes = [
 
 export const defaultSize = "sm"
 
-export const defaultRoutes = ["/new", "/start", "/welcome", "/profile"]
-
 export const defaultMenu = [
   {
     title: "Home",
@@ -204,6 +202,13 @@ export const defaultMenu = [
     bgColor: "bg-rose-500/75",
     shortcut: "⌘P",
   },
+]
+
+export const defaultRoutes = [
+  "/new",
+  "/start",
+  "/welcome",
+  ...defaultMenu.map((item) => item.url),
 ]
 
 export const productsMenu = [
