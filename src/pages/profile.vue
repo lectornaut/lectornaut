@@ -33,15 +33,15 @@ const username = computed(() => userData.value?.username ?? "")
     <div
       class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed"
     ></div>
-    <div class="bg-background mx-auto -mt-10 rounded-lg border p-1">
-      <Avatar class="size-20 rounded-md">
+    <div class="bg-background mx-auto -mt-10 rounded-full border p-1">
+      <Avatar class="size-20 rounded-full">
         <AvatarImage
-          class="size-20 rounded-md"
+          class="size-20 rounded-full"
           :src="user?.photoURL!"
           :alt="user?.displayName"
           referrerpolicy="no-referrer"
         />
-        <AvatarFallback class="size-20 rounded-md">
+        <AvatarFallback class="size-20 rounded-full">
           {{ getInitials(user?.displayName!) }}
         </AvatarFallback>
       </Avatar>
@@ -59,6 +59,7 @@ const username = computed(() => userData.value?.username ?? "")
       :href="`/${username}`"
       target="_blank"
       rel="noopener noreferrer"
+      class="text-muted-foreground"
     >
       <IconAtSign />
       {{ username }}

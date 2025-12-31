@@ -137,8 +137,8 @@ export const getUserByUsername = async (
     }
 
     const data = userDoc.data()
-    // Check if profile is public or if viewer is the owner
-    if (!data.isPublic && auth.currentUser?.uid !== uid) {
+    // Only show public profiles - private profiles should use /profile page
+    if (!data.isPublic) {
       return { status: "private", displayName: data.displayName }
     }
 

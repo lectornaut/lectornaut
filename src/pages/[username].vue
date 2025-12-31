@@ -1,24 +1,40 @@
 <script lang="ts" setup>
-import { IconChevronLeft, IconLock } from "@/data/icons"
+import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { getUserByUsername, type UserFetchResult } from "@/queries/username"
 import type { DocumentData } from "firebase/firestore"
+import { doc } from "firebase/firestore"
 import { useRoute, useRouter } from "vue-router"
-import { useIsCurrentUserLoaded } from "vuefire"
+import {
+  useCurrentUser,
+  useDocument,
+  useFirestore,
+  useIsCurrentUserLoaded,
+} from "vuefire"
 
 const route = useRoute()
 const router = useRouter()
 const isAuthLoaded = useIsCurrentUserLoaded()
+
+const currentUser = useCurrentUser()
+const db = useFirestore()
+const currentUserRef = computed(() =>
+  currentUser.value ? doc(db, "users", currentUser.value.uid) : null
+)
+const { data: currentUserData } = useDocument(currentUserRef)
 
 const username = computed(() => {
   const name = (route.params as { username?: string }).username || ""
   return name && name.startsWith("@") ? name.slice(1) : name
 })
 
+const isCurrentUser = computed(
+  () => currentUserData.value?.username === username.value
+)
+
 const loading = ref(true)
 const user = ref<DocumentData | null>(null)
 const isPrivate = ref(false)
-const privateDisplayName = ref<string | undefined>(undefined)
 const error = ref<string | null>(null)
 const hasFetched = ref(false)
 
@@ -38,7 +54,6 @@ const fetchUserProfile = async () => {
         break
       case "private":
         isPrivate.value = true
-        privateDisplayName.value = result.displayName
         break
       case "not_found":
         // Redirect to 404 page - let [...path].vue handle it
@@ -74,76 +89,73 @@ useHead({
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl p-6">
-    <div
-      v-if="loading"
-      class="flex min-h-[50vh] flex-col items-center justify-center space-y-4"
-    >
-      <Spinner class="size-8" />
-      <p class="text-muted-foreground animate-pulse">Fetching profile...</p>
-    </div>
-    <div
-      v-else-if="isPrivate"
-      class="flex min-h-[50vh] flex-col items-center justify-center space-y-6 text-center"
-    >
-      <div
-        class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded-full"
-      >
-        <IconLock class="size-10" />
+  <div class="container mx-auto">
+    <!-- Loading State -->
+    <template v-if="loading">
+      <div class="flex flex-col items-center justify-center p-2">
+        <Spinner />
       </div>
-      <div class="space-y-2">
-        <h2 class="text-primary text-2xl font-bold italic">@{{ username }}</h2>
-        <p class="text-muted-foreground mx-auto max-w-xs">
-          This profile is private
-        </p>
-      </div>
-      <Button variant="outline" as-child>
-        <RouterLink to="/">
-          <IconChevronLeft class="mr-2 size-4" />
-          Back to Home
-        </RouterLink>
-      </Button>
-    </div>
-    <div
-      v-else-if="error"
-      class="flex min-h-[50vh] flex-col items-center justify-center space-y-6 text-center"
-    >
-      <div
-        class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded-full"
-      >
-        <IconLock class="size-10" />
-      </div>
-      <div class="space-y-2">
-        <h2 class="text-primary text-2xl font-bold italic">@{{ username }}</h2>
-        <p class="text-muted-foreground mx-auto max-w-xs">
-          {{ error }}
-        </p>
-      </div>
-      <Button variant="outline" as-child>
-        <RouterLink to="/">
-          <IconChevronLeft class="mr-2 size-4" />
-          Back to Home
-        </RouterLink>
-      </Button>
-    </div>
-    <div
-      v-else-if="user"
-      class="animate-in fade-in slide-in-from-bottom-4 space-y-8 duration-500"
-    >
-      <div class="flex flex-col items-center space-y-4 text-center">
-        <Avatar class="border-accent size-32 rounded-full border-4 shadow-2xl">
-          <AvatarImage :src="user.photoURL" :alt="user.displayName" />
-          <AvatarFallback class="text-3xl font-bold">{{
-            getInitials(user.displayName)
-          }}</AvatarFallback>
-        </Avatar>
-        <div class="space-y-1">
-          <h1 class="text-4xl font-bold tracking-tight">
-            {{ user.displayName }}
-          </h1>
-          <p class="text-primary font-mono text-xl">@{{ user.username }}</p>
+    </template>
+
+    <!-- Shared profile header -->
+    <template v-else>
+      <div class="flex flex-col items-center justify-center p-2">
+        <div
+          class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed"
+        ></div>
+        <div class="bg-background mx-auto -mt-10 rounded-full border p-1">
+          <div v-if="user">
+            <Avatar class="size-20 rounded-full">
+              <AvatarImage
+                class="size-20 rounded-full"
+                :src="user.photoURL"
+                :alt="user.displayName"
+                referrerpolicy="no-referrer"
+              />
+              <AvatarFallback class="size-20 rounded-full">
+                {{ getInitials(user.displayName) }}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          <div
+            v-else
+            class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded-full"
+          >
+            <IconLock />
+          </div>
         </div>
       </div>
-    </div>
+
+      <div
+        class="mx-auto flex max-w-2xl flex-col items-center justify-center gap-2 p-4"
+      >
+        <h1 class="text-2xl font-bold tracking-tight">
+          {{ user ? user.displayName : isPrivate ? "Private User" : username }}
+        </h1>
+
+        <span v-if="!error" class="text-muted-foreground">
+          <IconAtSign />
+          {{ username }}
+        </span>
+
+        <div v-if="!error" class="flex items-center gap-2">
+          <Badge variant="secondary">
+            <IconGlobe v-if="user?.isPublic" />
+            <IconLock v-else />
+            {{ user?.isPublic ? "Public" : "Private" }}
+          </Badge>
+
+          <Badge
+            v-if="isCurrentUser"
+            variant="outline"
+            @click="router.push('/profile')"
+          >
+            <IconSettings />
+            Settings
+          </Badge>
+        </div>
+        <p v-if="error" class="text-muted-foreground text-sm">{{ error }}</p>
+      </div>
+    </template>
   </div>
 </template>
