@@ -129,7 +129,7 @@
     "vue-sonner": "^2.0.9",
     "vuefire": "^3.2.2",
     "workbox-window": "^7.4.0",
-    "xterminal": "^2.1.13",
+    "xterminal": "^2.1.15",
     "zod": "4.2.1"
   },
   "devDependencies": {

@@ -64,6 +64,7 @@ useSortable(el, tabs, {
 
 const isSyncing = ref(false)
 const hasInitialized = ref(false)
+const previousRoutePath = ref<string | null>(null)
 
 // Navigate to a tab (used by event handlers and programmatic navigation)
 function navigateToTab(tab: { id: string; fullPath: string }) {
@@ -175,68 +176,73 @@ function selectTab(idOrDirection: string | number) {
 watch(
   [() => route.fullPath, pending, isHydrated],
   async ([fullPath, isPending, hydrated]) => {
-    // Wait for hydration to complete before processing route changes
     if (isPending || !hydrated) return
 
-    // On first run after hydration, let the Store -> Route watcher handle
-    // navigation if there's already an active tab (even with a different path).
-    // This prevents creating duplicate tabs when the page is reloaded.
+    // Check if coming from a non-tabs route (landing pages: /, /pricing, /changelog)
+    const comingFromNonTabsRoute =
+      previousRoutePath.value !== null &&
+      !tabs.value.some((t) => t.fullPath === previousRoutePath.value)
+
+    previousRoutePath.value = fullPath
+
+    // Handle first run after hydration
     if (!hasInitialized.value) {
       hasInitialized.value = true
-      // If there are tabs loaded from Firestore, trust them and let the
-      // Store -> Route watcher handle navigation to the active tab
+
+      const existingTab = tabs.value.find((t) => t.fullPath === fullPath)
+      if (existingTab) {
+        setActiveTab(existingTab.id)
+        return
+      }
+
       if (tabs.value.length > 0) {
+        const activeTabMatchesRoute =
+          activeTabId.value &&
+          tabs.value.find(
+            (t) => t.id === activeTabId.value && t.fullPath === fullPath
+          )
+        if (activeTabMatchesRoute) return
+
+        const newTab = await addTab(
+          fullPath,
+          (route.meta?.breadcrumb as string) || (route.name as string)
+        )
+        if (newTab) setActiveTab(newTab.id)
         return
       }
-      // If there's an active tab set (even if tabs array is being populated),
-      // let the Store -> Route watcher handle it
-      if (activeTabId.value) {
-        return
-      }
+
+      if (activeTabId.value) return
     }
 
     if (isSyncing.value) return
     if (!route.name) return
 
-    // Check if the route change is because we clicked on an existing tab
+    // If clicked on an existing tab, it's already active
     const clickedTab = tabs.value.find(
       (t) => t.id === activeTabId.value && t.fullPath === fullPath
     )
-
-    // If we clicked on a tab, don't update anything - tab is already active
     if (clickedTab) return
 
-    // Check if any existing tab already has this route
+    // Switch to existing tab if route matches
     const existingTab = tabs.value.find((t) => t.fullPath === fullPath)
     if (existingTab) {
-      // Switch to the existing tab instead of creating/updating
       setActiveTab(existingTab.id)
       return
     }
 
-    // If we have an active tab that is a default route (e.g., /new, /start),
-    // update it with the new route (this is the expected behavior for placeholder tabs)
-    if (activeTabId.value) {
-      const currentActiveTab = tabs.value.find(
-        (t) => t.id === activeTabId.value
+    // Route doesn't exist - create new tab or update active tab
+    if (comingFromNonTabsRoute || !activeTabId.value) {
+      const newTab = await addTab(
+        fullPath,
+        (route.meta?.breadcrumb as string) || (route.name as string)
       )
-      if (currentActiveTab && isDefaultRoute(currentActiveTab)) {
-        updateActiveTab(
-          fullPath,
-          (route.meta?.breadcrumb as string) ||
-            (route.name as string) ||
-            currentActiveTab.name
-        )
-        return
-      }
+      if (newTab) setActiveTab(newTab.id)
+    } else {
+      updateActiveTab(
+        fullPath,
+        (route.meta?.breadcrumb as string) || (route.name as string)
+      )
     }
-
-    // Active tab is not a default route - create a new tab for the new route
-    const newTab = await addTab(
-      fullPath,
-      (route.meta?.breadcrumb as string) || (route.name as string)
-    )
-    if (newTab) setActiveTab(newTab.id)
   },
   { immediate: true }
 )

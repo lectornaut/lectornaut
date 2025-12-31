@@ -96,7 +96,12 @@ export const useTeamStore = defineStore("teams", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
 
-  const { currentUser, userProfile, pendingUserIds } = storeToRefs(authStore)
+  const {
+    currentUser,
+    userProfile,
+    pendingUserIds,
+    isLoading: isAuthLoading,
+  } = storeToRefs(authStore)
   const { memberships, teamMembers, pendingMembershipIds } =
     storeToRefs(membershipStore)
 
@@ -153,9 +158,19 @@ export const useTeamStore = defineStore("teams", () => {
     },
   })
 
-  const isLoading = computed(
-    () => isFirestoreLoading.value && !optimisticCurrentTeam.value
-  )
+  const isLoading = computed(() => {
+    // Still loading if auth/user profile is loading
+    if (isAuthLoading.value) {
+      return true
+    }
+    // If user has a currentTeamId, wait for team data to load
+    const teamId = userProfile.value?.currentTeamId
+    if (teamId) {
+      return isFirestoreLoading.value && !optimisticCurrentTeam.value
+    }
+    // No team selected - not loading
+    return false
+  })
 
   const isTeamPending = computed(
     () => (id: string) => pendingTeamIds.value.has(id)
