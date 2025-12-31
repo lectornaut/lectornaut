@@ -5,6 +5,7 @@ import {
   IconKeyboard,
   IconRocket,
 } from "@/data/icons"
+import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 </script>
 
 <template>
@@ -31,7 +32,7 @@ import {
           </ItemContent>
           <ItemActions class="pl-16">
             <KbdGroup>
-              <Kbd>⌘</Kbd>
+              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
               <Kbd>K</Kbd>
             </KbdGroup>
           </ItemActions>
@@ -45,7 +46,7 @@ import {
           </ItemContent>
           <ItemActions class="pl-16">
             <KbdGroup>
-              <Kbd>⌘</Kbd>
+              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
               <Kbd>↩</Kbd>
             </KbdGroup>
           </ItemActions>
@@ -61,7 +62,7 @@ import {
           </ItemContent>
           <ItemActions class="pl-16">
             <KbdGroup>
-              <Kbd>⌘</Kbd>
+              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
               <Kbd>/</Kbd>
             </KbdGroup>
           </ItemActions>

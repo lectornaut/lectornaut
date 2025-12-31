@@ -7,6 +7,7 @@ import {
   IconPinOff,
   IconPlus,
 } from "@/data/icons"
+import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 
 defineProps<{
@@ -42,15 +43,17 @@ const userInput = ref("")
               <template v-if="iconDisplay === 'text'"> Ask AI </template>
             </Button>
           </TooltipTrigger>
-          <TooltipContent class="px-2">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              @click="isDocked = !isDocked"
-            >
+          <TooltipContent class="flex items-center gap-2 pr-2">
+            Ask AI
+            <Badge variant="secondary" @click="isDocked = !isDocked">
               <IconPin v-if="!isDocked" />
               <IconPinOff v-else />
-            </Button>
+              {{ isDocked ? "Unpin" : "Pin" }}
+            </Badge>
+            <KbdGroup>
+              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+              <Kbd>↩</Kbd>
+            </KbdGroup>
           </TooltipContent>
         </SheetTrigger>
         <Teleport v-if="isDocked" defer to="#right-dock" :disabled="!isDocked">

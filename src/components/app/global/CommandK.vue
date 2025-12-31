@@ -2,6 +2,7 @@
 import { isTauri } from "@/composables/usePlatform"
 import { IconSearch } from "@/data/icons"
 import {
+  getPlatformSpecialKey,
   shortcuts,
   type Shortcut,
   type ShortcutCategory,
@@ -62,10 +63,10 @@ const filteredShortcuts = computed(() => {
             </Button>
           </DialogTrigger>
         </TooltipTrigger>
-        <TooltipContent>
+        <TooltipContent class="flex items-center gap-2 pr-2">
           {{ t("components.global.commandK.tooltip") }}
           <KbdGroup>
-            <Kbd>⌘</Kbd>
+            <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
             <Kbd>K</Kbd>
           </KbdGroup>
         </TooltipContent>

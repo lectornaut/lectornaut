@@ -223,7 +223,7 @@ const startOnboarding = () => {
                 </TooltipTrigger>
                 <TooltipContent
                   side="right"
-                  class="flex items-center gap-1 pr-2"
+                  class="flex items-center gap-2 pr-2"
                 >
                   Help and Support
                   <KbdGroup>

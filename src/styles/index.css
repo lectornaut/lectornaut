@@ -16,7 +16,6 @@
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    zoom: var(--zoom-scale);
 
     @apply selection:bg-primary;
     @apply selection:text-primary-foreground;
@@ -151,7 +150,6 @@
   --font-display: "Playfair Display Variable", "serif";
   --font-flex: var(--flex);
   --text-size: var(--size);
-  --zoom-scale: var(--scale);
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 

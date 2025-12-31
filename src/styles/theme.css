@@ -31,34 +31,6 @@
     --size: var(--text-xl);
   }
 
-  :root[data-zoom="50"] {
-    --scale: 0.5;
-  }
-
-  :root[data-zoom="75"] {
-    --scale: 0.75;
-  }
-
-  :root[data-zoom="100"] {
-    --scale: 1;
-  }
-
-  :root[data-zoom="125"] {
-    --scale: 1.25;
-  }
-
-  :root[data-zoom="150"] {
-    --scale: 1.5;
-  }
-
-  :root[data-zoom="175"] {
-    --scale: 1.75;
-  }
-
-  :root[data-zoom="200"] {
-    --scale: 2;
-  }
-
   :root {
     color-scheme: light;
 

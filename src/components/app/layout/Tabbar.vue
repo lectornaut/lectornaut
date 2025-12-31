@@ -7,7 +7,6 @@ import {
   IconCircleX,
   IconCopy,
   IconGalleryHorizontalEnd,
-  IconHash,
   IconHistory,
   IconLayers,
   IconPenLine,
@@ -17,6 +16,7 @@ import {
   IconTrash,
   IconX,
 } from "@/data/icons"
+import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useLayoutStore } from "@/stores/layoutStore"
@@ -424,7 +424,7 @@ onUnmounted(() => {
             </template> -->
             <template v-else>
               <div
-                v-for="tab in tabs"
+                v-for="(tab, index) in tabs"
                 :key="tab.id"
                 class="tab-item w-60 min-w-0"
                 :class="{ 'min-w-40 transition-all': tab.id === activeTabId }"
@@ -497,9 +497,15 @@ onUnmounted(() => {
                                     <IconX />
                                   </InputGroupButton>
                                 </TooltipTrigger>
-                                <TooltipContent>{{
-                                  t("common.close")
-                                }}</TooltipContent>
+                                <TooltipContent
+                                  class="flex items-center gap-2 pr-2"
+                                >
+                                  {{ t("common.close") }}
+                                  <KbdGroup>
+                                    <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+                                    <Kbd>W</Kbd>
+                                  </KbdGroup>
+                                </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </RouterLink>
@@ -565,24 +571,20 @@ onUnmounted(() => {
                     </ContextMenu>
                   </HoverCardTrigger>
                   <HoverCardContent
-                    class="grid w-60 grid-cols-1 p-0"
                     :side-offset="12"
+                    class="flex w-60 flex-col gap-1.5 p-1.5"
                   >
-                    <div class="flex flex-col p-3">
-                      <span class="font-medium">
+                    <div class="flex items-center justify-between px-1.5 py-1">
+                      <span class="flex items-center gap-2">
+                        <IconLayers />
                         {{ tab.name }}
                       </span>
-                      <span class="text-secondary-foreground text-xs">
-                        {{ tab.fullPath }}
-                      </span>
+                      <KbdGroup>
+                        <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+                        <Kbd>{{ index + 1 }}</Kbd>
+                      </KbdGroup>
                     </div>
-                    <Separator />
-                    <div
-                      class="bg-accent/50 text-muted-foreground flex items-center gap-2 rounded-b-md p-2"
-                    >
-                      <IconHash />
-                      <span class="truncate">{{ tab.id }}</span>
-                    </div>
+                    <div class="bg-secondary aspect-video rounded border"></div>
                   </HoverCardContent>
                 </HoverCard>
               </div>
