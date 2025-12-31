@@ -13,7 +13,6 @@ import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useTeamStore } from "@/stores/teamStore"
 import { storeToRefs } from "pinia"
-import { computed, ref } from "vue"
 
 const online = useOnline()
 const teamStore = useTeamStore()

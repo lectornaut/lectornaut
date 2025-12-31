@@ -26,7 +26,6 @@ import {
 } from "@/utils/optimistic"
 import { collection, doc, onSnapshot, orderBy, query } from "firebase/firestore"
 import { defineStore } from "pinia"
-import { computed, ref, shallowRef } from "vue"
 
 const todoRef = collection(firestore, "todos")
 

@@ -5,16 +5,18 @@ const user = useCurrentUser()
 const router = useRouter()
 const route = useRoute()
 
-watch(user, async (currentUser, previousUser) => {
-  if (!currentUser && previousUser && route.meta.requiresUser) {
-    console.log("redirecting to /", router)
-    return await router.push("/")
-  }
-  if (currentUser && route.meta.requiresGuest) {
+// Only handle redirecting logged-in users away from guest-only pages.
+// Logout redirects are NOT handled here - the router beforeEach guard
+// handles protecting routes that require authentication.
+watch(user, async (currentUser) => {
+  // Handle authenticated user landing on guest-only routes (e.g., /enter)
+  if (currentUser && route.meta.requiresGuest === true) {
     const redirect =
       typeof route.query?.redirect === "string" ? route.query.redirect : "/home"
-    console.log(`redirecting to ${redirect}`, router)
-    return await router.push(redirect)
+    console.log(
+      `App.vue: User logged in on guest route, redirecting to ${redirect}`
+    )
+    await router.push(redirect)
   }
 })
 </script>

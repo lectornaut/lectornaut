@@ -43,7 +43,6 @@ import {
   uploadBytes,
 } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, type ComputedRef, ref, shallowRef, watch } from "vue"
 import { useDocument } from "vuefire"
 
 // Constants

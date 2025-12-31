@@ -21,7 +21,6 @@ import { cloneState, createPendingSet } from "@/utils/optimistic"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc, setDoc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, reactive, ref, shallowRef, watch } from "vue"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
 export type Tab = {

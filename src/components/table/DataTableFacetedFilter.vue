@@ -2,7 +2,7 @@
 import { IconCirclePlus } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import type { Column } from "@tanstack/vue-table"
-import type { Component } from "vue"
+import type { FunctionalComponent, SVGAttributes } from "vue"
 
 interface DataTableFacetedFilter {
   column?: Column<Task, unknown>
@@ -10,7 +10,7 @@ interface DataTableFacetedFilter {
   options: {
     label: string
     value: string
-    icon?: Component
+    icon?: FunctionalComponent<SVGAttributes>
   }[]
 }
 

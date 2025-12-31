@@ -5,7 +5,6 @@ import { auth } from "@/modules/firebase"
 import { useTeamStore } from "@/stores/teamStore"
 import { signOut } from "firebase/auth"
 import { storeToRefs } from "pinia"
-import { computed, ref } from "vue"
 import { toast } from "vue-sonner"
 
 const teamStore = useTeamStore()

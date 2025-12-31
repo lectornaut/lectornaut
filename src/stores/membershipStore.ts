@@ -33,7 +33,6 @@ import {
   type Timestamp,
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, ref, shallowRef, watch, type ComputedRef } from "vue"
 import { useCollection } from "vuefire"
 
 // Helper to get document references

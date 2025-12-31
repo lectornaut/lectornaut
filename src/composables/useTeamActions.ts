@@ -2,7 +2,6 @@ import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership } from "@/types"
 import { storeToRefs } from "pinia"
-import { computed, nextTick, ref } from "vue"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 

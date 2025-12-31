@@ -2,7 +2,6 @@
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import { storeToRefs } from "pinia"
-import { ref } from "vue"
 
 const teamStore = useTeamStore()
 const membershipStore = useMembershipStore()

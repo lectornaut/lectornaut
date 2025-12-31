@@ -3,11 +3,12 @@ import { IconChevronLeft, IconLock } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { getUserByUsername, type UserFetchResult } from "@/queries/username"
 import type { DocumentData } from "firebase/firestore"
-import { onMounted, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { useIsCurrentUserLoaded } from "vuefire"
 
 const route = useRoute()
 const router = useRouter()
+const isAuthLoaded = useIsCurrentUserLoaded()
 
 const username = computed(() => {
   const name = (route.params as { username?: string }).username || ""
@@ -19,8 +20,15 @@ const user = ref<DocumentData | null>(null)
 const isPrivate = ref(false)
 const privateDisplayName = ref<string | undefined>(undefined)
 const error = ref<string | null>(null)
+const hasFetched = ref(false)
 
-onMounted(async () => {
+const fetchUserProfile = async () => {
+  // Don't fetch if username is empty or already fetched
+  if (!username.value || hasFetched.value) return
+
+  hasFetched.value = true
+  loading.value = true
+
   try {
     const result: UserFetchResult = await getUserByUsername(username.value)
 
@@ -46,7 +54,19 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+// Watch for username and auth state - only fetch after auth has loaded
+// This ensures auth.currentUser is available for private profile checks
+watch(
+  [username, isAuthLoaded],
+  ([newUsername, authLoaded]) => {
+    if (newUsername && authLoaded && !hasFetched.value) {
+      fetchUserProfile()
+    }
+  },
+  { immediate: true }
+)
 
 useHead({
   title: username.value ? `@${username.value}` : "Profile",
