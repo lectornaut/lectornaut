@@ -67,14 +67,14 @@ function onPageSizeChange(val: string) {
               :key="column.id"
               :model-value="column.getIsVisible()"
               class="capitalize"
-              @update:model-value="(value) => column.toggleVisibility(!!value)"
+              @update:model-value="column.toggleVisibility"
             >
               {{ column.id }}
             </DropdownMenuCheckboxItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem @click="props.table.resetColumnVisibility()">
+            <DropdownMenuItem @click="props.table.resetColumnVisibility">
               <IconRotateCcw />
               Reset
             </DropdownMenuItem>

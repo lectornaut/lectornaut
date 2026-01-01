@@ -163,7 +163,7 @@ const closeTab = (id: string) => {
   >
     <TeamSelector />
   </div>
-  <SidebarProvider v-else :default-open="false" class="min-h-auto">
+  <SidebarProvider v-else class="min-h-auto">
     <SidebarInset class="bg-transparent">
       <Headerbar />
       <main class="flex grow overflow-auto overscroll-none scroll-smooth">

@@ -178,7 +178,8 @@
         "confirm": "Are you sure you want to delete your account?",
         "deleted": "Account deleted",
         "deletedDesc": "Your account has been successfully deleted.",
-        "failed": "Failed to delete account"
+        "failed": "Failed to delete account",
+        "confirmLabel": "Type 'delete my account' to confirm deletion."
       }
     },
     "preferences": {

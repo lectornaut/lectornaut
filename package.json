@@ -111,7 +111,7 @@
     "lowlight": "^3.3.0",
     "lucide-vue-next": "^0.562.0",
     "mitt": "^3.0.1",
-    "motion-v": "^1.7.4",
+    "motion-v": "^1.7.5",
     "nprogress": "^0.2.0",
     "overlayscrollbars": "^2.13.0",
     "overlayscrollbars-vue": "^0.5.9",
@@ -130,12 +130,12 @@
     "vuefire": "^3.2.2",
     "workbox-window": "^7.4.0",
     "xterminal": "^2.1.15",
-    "zod": "4.3.2"
+    "zod": "4.3.4"
   },
   "devDependencies": {
     "@eslint/css": "^0.14.1",
     "@eslint/js": "^9.39.2",
-    "@iconify/json": "^2.2.423",
+    "@iconify/json": "^2.2.424",
     "@intlify/eslint-plugin-vue-i18n": "^4.1.0",
     "@intlify/unplugin-vue-i18n": "^11.0.3",
     "@tailwindcss/forms": "^0.5.11",

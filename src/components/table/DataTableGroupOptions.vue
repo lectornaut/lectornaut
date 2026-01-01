@@ -36,14 +36,14 @@ const columns = computed(() =>
           :key="column.id"
           :model-value="column.getIsGrouped()"
           class="capitalize"
-          @update:model-value="() => column.toggleGrouping()"
+          @update:model-value="column.toggleGrouping"
         >
           {{ column.id }}
         </DropdownMenuCheckboxItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        <DropdownMenuItem @click="props.table.resetGrouping()">
+        <DropdownMenuItem @click="props.table.resetGrouping">
           None
         </DropdownMenuItem>
       </DropdownMenuGroup>

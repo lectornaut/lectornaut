@@ -27,7 +27,7 @@ useSortable(el, activeNavItems, {
       <SidebarMenu ref="el">
         <template v-if="isLoading">
           <SidebarMenuItem v-for="n in 5" :key="n">
-            <Skeleton class="h-8 w-full" />
+            <SidebarMenuSkeleton />
           </SidebarMenuItem>
         </template>
         <template v-else>
@@ -66,9 +66,7 @@ useSortable(el, activeNavItems, {
               v-for="item in defaultMenu"
               :key="item.id"
               :model-value="activeNavItems.some((i) => i.id === item.id)"
-              @update:model-value="
-                (checked: boolean) => toggleNavItem(item.id, checked)
-              "
+              @update:model-value="toggleNavItem(item.id, $event)"
             >
               {{ t("navigation.menu." + item.id) }}
             </DropdownMenuCheckboxItem>

@@ -372,9 +372,16 @@ const changePassword = async () => {
 }
 
 const deletingAccount = ref(false)
+const deleteAccountInput = ref("")
+const isDeleteAccountInputValid = computed(
+  () => deleteAccountInput.value.trim().toLowerCase() === "delete my account"
+)
 const deleteAccount = async () => {
+  if (!isDeleteAccountInputValid.value) {
+    toast.error("Please type 'delete my account' to confirm.")
+    return
+  }
   deletingAccount.value = true
-
   await deleteUser(user.value!)
     .then(() => {
       toast.success("Account deleted", {
@@ -388,6 +395,7 @@ const deleteAccount = async () => {
     })
     .finally(() => {
       deletingAccount.value = false
+      deleteAccountInput.value = ""
     })
 }
 
@@ -1249,12 +1257,25 @@ const navigations = computed(() => [
                                 }}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
+                            <span class="text-destructive text-xs">
+                              {{
+                                t("settings.account.deleteAccount.confirmLabel")
+                              }}
+                            </span>
+                            <Input
+                              v-model="deleteAccountInput"
+                              :placeholder="'delete my account'"
+                              :disabled="deletingAccount"
+                            />
                             <AlertDialogFooter>
-                              <AlertDialogCancel>{{
-                                t("common.cancel")
-                              }}</AlertDialogCancel>
+                              <AlertDialogCancel
+                                @click="deleteAccountInput = ''"
+                                >{{ t("common.cancel") }}</AlertDialogCancel
+                              >
                               <AlertDialogAction
-                                :disabled="deletingAccount"
+                                :disabled="
+                                  deletingAccount || !isDeleteAccountInputValid
+                                "
                                 variant="destructive"
                                 @click="deleteAccount"
                               >
@@ -1687,14 +1708,10 @@ const navigations = computed(() => [
                                   isRoleLoading(member.userId)
                                 "
                                 @update:model-value="
-                                  (value) => {
-                                    if (value && typeof value === 'string') {
-                                      changeRole(
-                                        member.userId,
-                                        value as 'owner' | 'member'
-                                      )
-                                    }
-                                  }
+                                  changeRole(
+                                    member.userId,
+                                    $event as 'owner' | 'member'
+                                  )
                                 "
                               >
                                 <SelectTrigger class="w-32">
