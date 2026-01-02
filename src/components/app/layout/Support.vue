@@ -231,7 +231,7 @@ const startOnboarding = () => {
                   </KbdGroup>
                 </TooltipContent>
               </DropdownMenuTrigger>
-              <DropdownMenuContent class="w-48" align="end" side="right">
+              <DropdownMenuContent align="end" side="right">
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
                     <IconMessageCircle />

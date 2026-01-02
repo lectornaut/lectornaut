@@ -523,11 +523,7 @@ const randomIndex = () => {
                             </DropdownMenuTrigger>
                           </TooltipTrigger>
                           <TooltipContent side="top">Attach</TooltipContent>
-                          <DropdownMenuContent
-                            class="w-48 rounded-xl shadow-none"
-                            align="start"
-                            side="top"
-                          >
+                          <DropdownMenuContent align="start" side="top">
                             <DropdownMenuLabel>
                               Attach to your prompt
                             </DropdownMenuLabel>

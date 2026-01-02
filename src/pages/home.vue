@@ -515,11 +515,7 @@ const expandedCard = ref<number | null>(null)
                       <span class="sr-only">More</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    class="w-56 rounded-lg"
-                    align="start"
-                    side="right"
-                  >
+                  <DropdownMenuContent align="start" side="right">
                     <DropdownMenuItem>
                       <IconStarOff class="text-muted-foreground" />
                       <span>Remove from Favorites</span>

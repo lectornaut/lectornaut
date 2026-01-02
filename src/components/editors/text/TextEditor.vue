@@ -305,7 +305,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Turn Into</TooltipContent>
-                <DropdownMenuContent class="w-48" align="start">
+                <DropdownMenuContent align="start">
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Turn into
                   </DropdownMenuLabel>
@@ -512,7 +512,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Text Color</TooltipContent>
-                <DropdownMenuContent class="w-48">
+                <DropdownMenuContent>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Text Color
                   </DropdownMenuLabel>
@@ -556,7 +556,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Highlight Color</TooltipContent>
-                <DropdownMenuContent class="w-48">
+                <DropdownMenuContent>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Highlight Color
                   </DropdownMenuLabel>
@@ -609,7 +609,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Font Size</TooltipContent>
-                <DropdownMenuContent class="w-48">
+                <DropdownMenuContent>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Font Size
                   </DropdownMenuLabel>
@@ -657,7 +657,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Font Family</TooltipContent>
-                <DropdownMenuContent class="w-48">
+                <DropdownMenuContent>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Font Family
                   </DropdownMenuLabel>
@@ -749,7 +749,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Text Align</TooltipContent>
-                <DropdownMenuContent class="w-48">
+                <DropdownMenuContent>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Text Alignment
                   </DropdownMenuLabel>
@@ -855,7 +855,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Table</TooltipContent>
-                <DropdownMenuContent class="w-48">
+                <DropdownMenuContent>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Table
                   </DropdownMenuLabel>
@@ -1025,7 +1025,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Link</TooltipContent>
-                <DropdownMenuContent class="w-48" align="end">
+                <DropdownMenuContent align="end">
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     Link Management
                   </DropdownMenuLabel>

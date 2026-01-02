@@ -620,7 +620,7 @@ onUnmounted(() => {
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
-                    <DropdownMenuContent class="w-56" align="end" side="bottom">
+                    <DropdownMenuContent align="end" side="bottom">
                       <DropdownMenuGroup>
                         <DropdownMenuItem
                           as-child

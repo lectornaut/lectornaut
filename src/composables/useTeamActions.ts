@@ -143,20 +143,6 @@ export function useTeamActions() {
 
         await membershipStore.removeMember(teamIdToRemoveFrom, userId)
 
-        // If removing self from the selected team, switch to another available team
-        if (isCurrentUser && wasSelectedTeam) {
-          await nextTick()
-          const remainingMemberships = memberships.value.filter(
-            (m) => m.teamId !== teamIdToRemoveFrom
-          )
-          if (
-            remainingMemberships.length > 0 &&
-            remainingMemberships[0]?.teamId
-          ) {
-            await teamStore.switchTeam(remainingMemberships[0].teamId)
-          }
-        }
-
         toast.success(
           isCurrentUser
             ? "You have left the team"
@@ -200,20 +186,6 @@ export function useTeamActions() {
 
         await membershipStore.removeMember(teamId, user.value!.uid)
 
-        // If exiting the selected team, switch to another available team
-        if (wasSelectedTeam) {
-          await nextTick()
-          const remainingMemberships = memberships.value.filter(
-            (m) => m.teamId !== teamId
-          )
-          if (
-            remainingMemberships.length > 0 &&
-            remainingMemberships[0]?.teamId
-          ) {
-            await teamStore.switchTeam(remainingMemberships[0].teamId)
-          }
-        }
-
         toast.success("You have left the team")
       } catch (error) {
         toast.error("Failed to leave team", {
@@ -236,20 +208,6 @@ export function useTeamActions() {
         }
 
         await teamStore.deleteTeam(teamId)
-
-        // If deleting the selected team, switch to another available team
-        if (wasSelectedTeam) {
-          await nextTick()
-          const remainingMemberships = memberships.value.filter(
-            (m) => m.teamId !== teamId
-          )
-          if (
-            remainingMemberships.length > 0 &&
-            remainingMemberships[0]?.teamId
-          ) {
-            await teamStore.switchTeam(remainingMemberships[0].teamId)
-          }
-        }
 
         toast.success("Team deleted successfully")
       } catch (error) {

@@ -5,8 +5,8 @@ import {
   IconChevronDown,
   IconCirclePlus,
   IconCircleUser,
-  IconCreditCard,
   IconLogOut,
+  IconSwitchHorizontal,
   IconTrash,
   IconUserRound,
 } from "@/data/icons"
@@ -35,43 +35,15 @@ const handleSwitchAccount = async (uid: string) => {
 <template>
   <SidebarMenu>
     <SidebarMenuItem id="tour-account-menu">
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <SidebarMenuButton
-            :tooltip="t('accountMenu.account')"
-            size="lg"
-            class="data-[state=open]:bg-accent"
-          >
-            <Avatar class="rounded-md">
-              <AvatarImage
-                v-if="user?.photoURL"
-                class="rounded-md"
-                :src="user.photoURL"
-                :alt="user?.displayName"
-                referrerpolicy="no-referrer"
-              />
-              <AvatarFallback class="rounded-md">
-                {{ getInitials(user?.displayName!) }}
-              </AvatarFallback>
-            </Avatar>
-            <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-semibold">
-                {{ user?.displayName }}
-              </span>
-              <span class="truncate text-xs">{{ user?.email }}</span>
-            </div>
-            <IconChevronDown />
-          </SidebarMenuButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          class="w-56"
-          align="end"
-          side="right"
-          :side-offset="4"
-        >
-          <DropdownMenuLabel>
-            <Item size="sm" class="group w-full gap-2 p-0">
-              <ItemMedia>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <SidebarMenuButton
+                :tooltip="t('accountMenu.account')"
+                size="lg"
+                class="data-[state=open]:bg-accent"
+              >
                 <Avatar class="rounded-md">
                   <AvatarImage
                     v-if="user?.photoURL"
@@ -84,136 +56,176 @@ const handleSwitchAccount = async (uid: string) => {
                     {{ getInitials(user?.displayName!) }}
                   </AvatarFallback>
                 </Avatar>
-              </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">
-                  {{ user?.displayName }}
-                </ItemTitle>
-                <ItemDescription class="truncate text-xs">
-                  {{ user?.email }}
-                </ItemDescription>
-              </ItemContent>
-            </Item>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem as-child>
+                <div class="grid flex-1 text-left text-sm leading-tight">
+                  <span class="truncate font-semibold">
+                    {{ user?.displayName }}
+                  </span>
+                  <span class="truncate text-xs">{{ user?.email }}</span>
+                </div>
+                <IconChevronDown />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent class="w-48" align="end" side="right">
+              <DropdownMenuLabel>
+                <Item size="sm" class="group w-full gap-2 p-0">
+                  <ItemMedia>
+                    <Avatar class="rounded-md">
+                      <AvatarImage
+                        v-if="user?.photoURL"
+                        class="rounded-md"
+                        :src="user.photoURL"
+                        :alt="user?.displayName"
+                        referrerpolicy="no-referrer"
+                      />
+                      <AvatarFallback class="rounded-md">
+                        {{ getInitials(user?.displayName!) }}
+                      </AvatarFallback>
+                    </Avatar>
+                  </ItemMedia>
+                  <ItemContent class="gap-0.5 truncate">
+                    <ItemTitle class="truncate">
+                      {{ user?.displayName }}
+                    </ItemTitle>
+                    <ItemDescription class="truncate text-xs">
+                      {{ user?.email }}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem as-child>
+                  <RouterLink to="/profile">
+                    <IconUserRound />
+                    Profile
+                  </RouterLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  @click="emitter.emit('Dialog.Settings.Open', 'account')"
+                >
+                  <IconCircleUser />
+                  {{ t("accountMenu.account") }}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem @click="emitter.emit('Dialog.Exit.Open')">
+                  <IconLogOut />
+                  {{ t("accountMenu.logout") }}
+                  <DropdownMenuShortcut>⇧⌘L</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuSub>
+                  <DropdownMenuItem as-child>
+                    <DropdownMenuSubTrigger>
+                      <IconSwitchHorizontal />
+                      {{ t("accountMenu.switchAccount") }}
+                    </DropdownMenuSubTrigger>
+                  </DropdownMenuItem>
+                  <DropdownMenuSubContent class="w-64">
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel class="text-muted-foreground text-xs">
+                        {{ t("accountMenu.accounts") }}
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        v-for="account in otherAccounts"
+                        :key="account.uid"
+                        @click="handleSwitchAccount(account.uid)"
+                      >
+                        <Item size="sm" class="group w-full gap-2 p-0">
+                          <ItemMedia>
+                            <Avatar class="rounded-md">
+                              <AvatarImage
+                                v-if="account?.photoURL"
+                                class="rounded-md"
+                                :src="account.photoURL"
+                                :alt="account?.displayName"
+                                referrerpolicy="no-referrer"
+                              />
+                              <AvatarFallback class="rounded-md">
+                                {{ getInitials(user?.displayName!) }}
+                              </AvatarFallback>
+                            </Avatar>
+                          </ItemMedia>
+                          <ItemContent class="gap-0.5 truncate">
+                            <ItemTitle class="truncate">
+                              {{ account.displayName }}
+                            </ItemTitle>
+                            <ItemDescription class="truncate text-xs">
+                              {{ account.email }}
+                            </ItemDescription>
+                          </ItemContent>
+                          <ItemActions>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <Button
+                                    variant="secondary"
+                                    size="icon-sm"
+                                    class="invisible transition group-hover:visible"
+                                    @click.stop="removeAccount(account.uid)"
+                                  >
+                                    <IconTrash />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {{ t("enter.removeAccount") }}
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    class="rounded-full"
+                                  >
+                                    <IconArrowRight />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {{ t("enter.useAccount") }}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </ItemActions>
+                        </Item>
+                      </DropdownMenuItem>
+                      <DropdownMenuLabel v-if="otherAccounts.length === 0">
+                        {{ t("accountMenu.noOtherAccounts") }}
+                      </DropdownMenuLabel>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem @click="handleAddAccount">
+                        <IconCirclePlus />
+                        {{ t("accountMenu.addAccount") }}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </ContextMenuTrigger>
+        <ContextMenuContent class="w-48" align="end" side="right">
+          <ContextMenuGroup>
+            <ContextMenuItem as-child>
               <RouterLink to="/profile">
                 <IconUserRound />
-                View Profile
+                Profile
               </RouterLink>
-            </DropdownMenuItem>
-            <DropdownMenuItem
+            </ContextMenuItem>
+            <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'account')"
             >
               <IconCircleUser />
               {{ t("accountMenu.account") }}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              @click="emitter.emit('Dialog.Settings.Open', 'billing')"
-            >
-              <IconCreditCard />
-              {{ t("accountMenu.billing") }}
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuSub>
-              <DropdownMenuItem as-child>
-                <DropdownMenuSubTrigger>
-                  <IconUserRound />
-                  {{ t("accountMenu.switchAccount") }}
-                </DropdownMenuSubTrigger>
-              </DropdownMenuItem>
-              <DropdownMenuSubContent class="w-64">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    {{ t("accountMenu.accounts") }}
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem
-                    v-for="account in otherAccounts"
-                    :key="account.uid"
-                    @click="handleSwitchAccount(account.uid)"
-                  >
-                    <Item size="sm" class="group w-full gap-2 p-0">
-                      <ItemMedia>
-                        <Avatar class="rounded-md">
-                          <AvatarImage
-                            v-if="account?.photoURL"
-                            class="rounded-md"
-                            :src="account.photoURL"
-                            :alt="account?.displayName"
-                            referrerpolicy="no-referrer"
-                          />
-                          <AvatarFallback class="rounded-md">
-                            {{ getInitials(user?.displayName!) }}
-                          </AvatarFallback>
-                        </Avatar>
-                      </ItemMedia>
-                      <ItemContent class="gap-0.5 truncate">
-                        <ItemTitle class="truncate">
-                          {{ account.displayName }}
-                        </ItemTitle>
-                        <ItemDescription class="truncate text-xs">
-                          {{ account.email }}
-                        </ItemDescription>
-                      </ItemContent>
-                      <ItemActions>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button
-                                variant="secondary"
-                                size="icon-sm"
-                                class="invisible transition group-hover:visible"
-                                @click.stop="removeAccount(account.uid)"
-                              >
-                                <IconTrash />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {{ t("enter.removeAccount") }}
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                class="rounded-full"
-                              >
-                                <IconArrowRight />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {{ t("enter.useAccount") }}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </ItemActions>
-                    </Item>
-                  </DropdownMenuItem>
-                  <DropdownMenuLabel v-if="otherAccounts.length === 0">
-                    {{ t("accountMenu.noOtherAccounts") }}
-                  </DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem @click="handleAddAccount">
-                    <IconCirclePlus />
-                    {{ t("accountMenu.addAccount") }}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuItem @click="emitter.emit('Dialog.Exit.Open')">
-              <IconLogOut />
-              {{ t("accountMenu.logout") }}
-              <DropdownMenuShortcut>⇧⌘L</DropdownMenuShortcut>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            </ContextMenuItem>
+          </ContextMenuGroup>
+        </ContextMenuContent>
+      </ContextMenu>
     </SidebarMenuItem>
   </SidebarMenu>
 </template>
