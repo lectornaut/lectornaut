@@ -8,8 +8,8 @@ import {
   IconSearch,
 } from "@/data/icons"
 import {
-  shortcuts,
-  type Shortcut,
+  getFilteredShortcuts,
+  getFlatShortcuts,
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
@@ -26,55 +26,44 @@ emitter.on("Dialog.Shortcuts.Open", () => {
 
 const search = ref("")
 
-const fuseCategory = new Fuse(shortcuts, {
-  keys: ["shortcuts.description", "shortcuts.tags"],
-})
+const filterOptions = computed(() => ({
+  context: "shortcuts" as const,
+  isDesktop: isTauri.value,
+}))
 
-const fuseShortcut = new Fuse(
-  shortcuts.flatMap((category) => category.shortcuts),
-  {
-    keys: ["description", "tags"],
-  }
+// Fuse instances recreated when platform changes
+const fuseCategory = computed(
+  () =>
+    new Fuse(getFilteredShortcuts(filterOptions.value), {
+      keys: ["shortcuts.description", "shortcuts.tags"],
+    })
+)
+
+const fuseShortcut = computed(
+  () =>
+    new Fuse(getFlatShortcuts(filterOptions.value), {
+      keys: ["description", "tags"],
+    })
 )
 
 const filteredShortcuts = computed(() => {
-  const isWeb = !isTauri.value
-  const isDesktop = isTauri.value
-
-  const filterShortcut = (shortcut: Shortcut) =>
-    (isWeb ? !shortcut.hidden.includes("web") : true) &&
-    (isDesktop ? !shortcut.hidden.includes("desktop") : true) &&
-    !shortcut.hidden.includes("shortcuts")
-
-  const filterCategory = (category: ShortcutCategory) =>
-    (isWeb ? !category.hidden.includes("web") : true) &&
-    (isDesktop ? !category.hidden.includes("desktop") : true) &&
-    !category.hidden.includes("shortcuts")
+  const baseShortcuts = getFilteredShortcuts(filterOptions.value)
 
   if (!search.value) {
-    return shortcuts
-      .filter(filterCategory)
-      .map((category) => ({
-        ...category,
-        shortcuts: category.shortcuts.filter(filterShortcut),
-      }))
-      .filter((category) => category.shortcuts.length > 0)
+    return baseShortcuts
   }
 
   const categoryResults = new Set(
-    fuseCategory.search(search.value).map((result) => result.item)
+    fuseCategory.value.search(search.value).map((result) => result.item)
   )
   const shortcutResults = new Set(
-    fuseShortcut.search(search.value).map((result) => result.item)
+    fuseShortcut.value.search(search.value).map((result) => result.item)
   )
 
-  return Array.from(categoryResults)
-    .filter(filterCategory)
+  return (Array.from(categoryResults) as ShortcutCategory[])
     .map((category) => ({
       ...category,
-      shortcuts: category.shortcuts
-        .filter((s) => shortcutResults.has(s))
-        .filter(filterShortcut),
+      shortcuts: category.shortcuts.filter((s) => shortcutResults.has(s)),
     }))
     .filter((category) => category.shortcuts.length > 0)
 })

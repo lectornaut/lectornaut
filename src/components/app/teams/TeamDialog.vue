@@ -198,7 +198,7 @@ const handleSubmit = async () => {
             mode === "create"
               ? "Create Team"
               : mode === "edit"
-                ? "Rename Team"
+                ? "Edit Team"
                 : "Invite Members"
           }}
         </DialogTitle>
@@ -231,8 +231,9 @@ const handleSubmit = async () => {
                   >
                     <AvatarImage
                       v-if="photoPreview"
-                      :src="photoPreview"
                       class="object-cover"
+                      :src="photoPreview"
+                      referrerpolicy="no-referrer"
                     />
                     <AvatarFallback>
                       {{ getInitials(teamName) }}

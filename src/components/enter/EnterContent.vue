@@ -33,7 +33,7 @@ import {
   signUpWithEmailPassword,
   switchAccount,
 } from "@/modules/auth"
-import { getAuthErrorMessage } from "@/utils/auth-errors"
+import { getAuthErrorMessage } from "@/utils/firebase-errors"
 
 const { t } = useI18n()
 
@@ -171,9 +171,10 @@ watch(accounts, (newAccounts) => {
             <ItemMedia>
               <Avatar class="size-9 rounded-md">
                 <AvatarImage
+                  v-if="account.photoURL"
                   class="rounded-md"
-                  :src="account.photoURL!"
-                  :alt="account.displayName!"
+                  :src="account.photoURL"
+                  :alt="account?.displayName"
                   referrerpolicy="no-referrer"
                 />
                 <AvatarFallback class="rounded-md">

@@ -1,9 +1,5 @@
 import { isTauri } from "@/composables/usePlatform"
-import {
-  shortcuts,
-  type Shortcut,
-  type ShortcutCategory,
-} from "@/helpers/shortcuts"
+import { getFilteredShortcuts } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 import hotkeys from "hotkeys-js"
 
@@ -12,21 +8,13 @@ import hotkeys from "hotkeys-js"
  * Filters shortcuts based on platform (Web/Desktop) and registers them using hotkeys-js
  */
 export const initHotkeys = () => {
-  const isWeb = !isTauri.value
-  const isDesktop = isTauri.value
+  const filteredShortcuts = getFilteredShortcuts({
+    context: "hotkeys",
+    isDesktop: isTauri.value,
+  })
 
-  const filterShortcut = (shortcut: Shortcut) =>
-    (isWeb ? !shortcut.hidden.includes("web") : true) &&
-    (isDesktop ? !shortcut.hidden.includes("desktop") : true) &&
-    !shortcut.hidden.includes("hotkeys")
-
-  const filterCategory = (category: ShortcutCategory) =>
-    (isWeb ? !category.hidden.includes("web") : true) &&
-    (isDesktop ? !category.hidden.includes("desktop") : true) &&
-    !category.hidden.includes("hotkeys")
-
-  shortcuts.filter(filterCategory).forEach((category) => {
-    category.shortcuts.filter(filterShortcut).forEach((shortcut) => {
+  filteredShortcuts.forEach((category) => {
+    category.shortcuts.forEach((shortcut) => {
       if (shortcut.hotkeys) {
         hotkeys(shortcut.hotkeys, (event) => {
           event.preventDefault()

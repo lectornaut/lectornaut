@@ -76,6 +76,19 @@ export function useTeamActions() {
     return true
   }
 
+  // Get the reason why role change is disabled
+  const getCannotChangeRoleReason = (member: IMembership): string | null => {
+    if (!isOwner.value) return "settings.teams.members.noPermissionToChangeRole"
+    if (
+      member.userId === user.value?.uid &&
+      ownerCount.value <= 1 &&
+      member.role === "owner"
+    ) {
+      return "settings.teams.members.lastOwnerCannotChangeRole"
+    }
+    return null
+  }
+
   // Check if member can be removed
   const canRemoveMember = (member: IMembership) => {
     // Can't remove if you're not an owner (unless removing yourself)
@@ -85,6 +98,20 @@ export function useTeamActions() {
     // Can't remove the last owner
     if (member.role === "owner" && ownerCount.value <= 1) return false
     return true
+  }
+
+  // Get the reason why member cannot be removed
+  const getCannotRemoveMemberReason = (member: IMembership): string | null => {
+    if (!isOwner.value && member.userId !== user.value?.uid) {
+      return "settings.teams.members.noPermissionToRemove"
+    }
+    if (teamMembers.value.length <= 1) {
+      return "settings.teams.members.lastMemberCannotBeRemoved"
+    }
+    if (member.role === "owner" && ownerCount.value <= 1) {
+      return "settings.teams.members.lastOwnerCannotBeRemoved"
+    }
+    return null
   }
 
   // Check if user can exit a specific team
@@ -364,6 +391,13 @@ export function useTeamActions() {
     canRemoveMember,
     canExitTeam,
     canDeleteTeam,
+
+    // Disabled state reasons
+    getCannotChangeRoleReason,
+    getCannotRemoveMemberReason,
+
+    // Member counts
+    getTeamMemberCount: membershipStore.getTeamMemberCount,
 
     // Actions
     changeRole,

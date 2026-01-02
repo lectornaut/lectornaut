@@ -3,7 +3,7 @@ import {
   normalizeUsername,
   RESERVED_USERNAMES,
   validateUsername,
-} from "@/utils/username"
+} from "@/utils/firebase-username"
 import {
   doc,
   getDoc,

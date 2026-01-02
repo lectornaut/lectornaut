@@ -14,14 +14,18 @@ import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import type { IMembership, ITeam, IUser } from "@/types"
 import {
+  getAllMembershipsGroup,
+  getMembershipRef,
+  getTeamMembershipsCollection,
+  getUserRef,
+  getUsersCollection,
+} from "@/utils/firebase-helpers"
+import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/optimistic"
+} from "@/utils/firebase-optimistic"
 import {
-  collection,
-  collectionGroup,
-  doc,
   getDoc,
   getDocs,
   query,
@@ -34,12 +38,6 @@ import {
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
-
-// Helper to get document references
-const getMembershipRef = (teamId: string, userId: string) =>
-  doc(firestore, "teams", teamId, "memberships", userId)
-
-const getUserRef = (userId: string) => doc(firestore, "users", userId)
 
 // Helper to get ownership count
 const getOwnerCount = (members: IMembership[]) =>
@@ -74,7 +72,7 @@ export const useMembershipStore = defineStore("memberships", () => {
   const membershipsQueryRef = computed(() =>
     currentUser.value
       ? query(
-          collectionGroup(firestore, "memberships"),
+          getAllMembershipsGroup(),
           where("userId", "==", currentUser.value.uid)
         )
       : null
@@ -92,7 +90,7 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   const teamMembersQueryRef = computed(() =>
     currentTeamId.value
-      ? collection(firestore, "teams", currentTeamId.value, "memberships")
+      ? getTeamMembershipsCollection(currentTeamId.value)
       : null
   )
 
@@ -243,6 +241,52 @@ export const useMembershipStore = defineStore("memberships", () => {
   const ownerCount = computed(() => getOwnerCount(teamMembers.value))
 
   // ============================================================================
+  // Team Member Counts - Reactive map of team ID to member count
+  // ============================================================================
+
+  /** Cache of member counts for each team */
+  const teamMemberCounts = ref<Record<string, number>>({})
+
+  /** Get member count for a specific team */
+  const getTeamMemberCount = (teamId: string): number => {
+    return teamMemberCounts.value[teamId] ?? 1
+  }
+
+  /** Fetch member counts for all teams the user is a member of */
+  async function fetchTeamMemberCounts() {
+    const teamIds = memberships.value.map((m) => m.teamId)
+    const counts: Record<string, number> = {}
+
+    await Promise.all(
+      teamIds.map(async (teamId) => {
+        try {
+          const membersSnapshot = await getDocs(
+            getTeamMembershipsCollection(teamId)
+          )
+          counts[teamId] = membersSnapshot.size
+        } catch (error) {
+          console.error(
+            `Failed to fetch member count for team ${teamId}:`,
+            error
+          )
+          counts[teamId] = 1
+        }
+      })
+    )
+
+    teamMemberCounts.value = counts
+  }
+
+  // Fetch member counts when memberships change
+  watch(
+    () => memberships.value.map((m) => m.teamId).join(","),
+    () => {
+      fetchTeamMemberCounts()
+    },
+    { immediate: true }
+  )
+
+  // ============================================================================
   // Sync Optimistic State with Firestore
   // ============================================================================
 
@@ -356,11 +400,8 @@ export const useMembershipStore = defineStore("memberships", () => {
   ): Promise<void> {
     if (!currentUser.value) return
 
-    // Find user by email
-    const usersQuery = query(
-      collection(firestore, "users"),
-      where("email", "==", email)
-    )
+    // Find user by email and check membership in parallel
+    const usersQuery = query(getUsersCollection(), where("email", "==", email))
     const querySnapshot = await getDocs(usersQuery)
 
     if (querySnapshot.empty) {
@@ -381,7 +422,6 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     const timestamp = serverTimestamp()
     const newMembership: IMembership = {
-      id: userId,
       userId,
       teamId,
       role,
@@ -547,7 +587,6 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     const timestamp = serverTimestamp()
     const newMembership: IMembership = {
-      id: currentUser.value.uid,
       userId: currentUser.value.uid,
       teamId,
       role: "owner",
@@ -579,6 +618,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     memberships,
     teamMembers,
     currentTeamId,
+    teamMemberCounts,
 
     // Pending state
     pendingMembershipIds,
@@ -590,12 +630,14 @@ export const useMembershipStore = defineStore("memberships", () => {
     currentUserRole,
     isOwner,
     ownerCount,
+    getTeamMemberCount,
 
     // Actions
     inviteMember,
     changeRole,
     removeMember,
     createOwnerMembership,
+    fetchTeamMemberCounts,
 
     // Internal helpers (for teamStore)
     addMembershipOptimistic,

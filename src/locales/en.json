@@ -308,6 +308,16 @@
         "yearly": "Yearly (Save 20%)",
         "monthly": "Monthly"
       }
+    },
+    "teams": {
+      "memberCount": "{count} member | {count} members",
+      "members": {
+        "noPermissionToChangeRole": "You don't have permission to change roles",
+        "lastOwnerCannotChangeRole": "Cannot change role of the last owner",
+        "noPermissionToRemove": "You don't have permission to remove members",
+        "lastMemberCannotBeRemoved": "Cannot remove the last member",
+        "lastOwnerCannotBeRemoved": "Cannot remove the last owner"
+      }
     }
   },
   "navigation": {

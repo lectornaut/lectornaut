@@ -26,6 +26,7 @@ import {
   IconPencil,
   IconPlus,
   IconSettings,
+  IconSwitchHorizontal,
   IconTrash,
   IconUsersRound,
   IconX,
@@ -43,7 +44,8 @@ import {
   USERNAME_MIN_LENGTH,
   usernamesMatch,
   validateUsername,
-} from "@/utils/username"
+} from "@/utils/firebase-username"
+import { DateFormatter } from "@internationalized/date"
 import {
   deleteUser,
   sendEmailVerification,
@@ -157,7 +159,8 @@ const {
   memberships,
   isLoading,
   isOwner,
-  canChangeRole,
+  getCannotChangeRoleReason,
+  getCannotRemoveMemberReason,
   changeRole,
   removeMember,
   switchTeam,
@@ -168,21 +171,27 @@ const {
   isRoleLoading,
   isMemberLoading,
   isTeamLoading,
+  getTeamMemberCount,
 } = useTeamActions()
 
-// Team Dialog States
-const isCreatingTeamDialogOpen = ref(false)
-const isInvitingMemberDialogOpen = ref(false)
-const isEditingTeamDialogOpen = ref(false)
-const teamToEdit = ref<ITeam | undefined>(undefined)
+// Team Dialog States - Single dialog with dynamic mode
+const isTeamDialogOpen = ref(false)
+const teamDialogMode = ref<"create" | "edit" | "invite">("create")
+const teamDialogTeam = ref<ITeam | undefined>(undefined)
+
+const openTeamDialog = (mode: "create" | "edit" | "invite", team?: ITeam) => {
+  teamDialogMode.value = mode
+  teamDialogTeam.value = team
+  isTeamDialogOpen.value = true
+}
+
 const isDeleteTeamDialogOpen = ref(false)
 const teamToDelete = ref<ITeam | null>(null)
 const isExitTeamDialogOpen = ref(false)
 const teamToExit = ref<ITeam | null>(null)
 
 const startEditingTeam = (team: ITeam) => {
-  teamToEdit.value = team
-  isEditingTeamDialogOpen.value = true
+  openTeamDialog("edit", team)
 }
 
 const confirmDeleteTeam = (team: ITeam) => {
@@ -653,6 +662,10 @@ const navigations = computed(() => [
     ],
   },
 ])
+
+const df = new DateFormatter("en-US", {
+  dateStyle: "medium",
+})
 </script>
 
 <template>
@@ -784,9 +797,10 @@ const navigations = computed(() => [
                                   </template>
                                   <template v-else>
                                     <AvatarImage
+                                      v-if="user?.photoURL"
                                       class="rounded-md"
-                                      :src="user?.photoURL!"
-                                      :alt="user?.displayName"
+                                      :src="user.photoURL"
+                                      :alt="user.displayName"
                                       referrerpolicy="no-referrer"
                                     />
                                     <AvatarFallback class="rounded-md">
@@ -1159,8 +1173,9 @@ const navigations = computed(() => [
                           <div class="relative">
                             <Avatar class="rounded-md">
                               <AvatarImage
+                                v-if="provider.photoURL"
                                 class="rounded-md"
-                                :src="provider.photoURL as string"
+                                :src="provider.photoURL"
                                 :alt="provider.displayName"
                                 referrerpolicy="no-referrer"
                               />
@@ -1459,9 +1474,9 @@ const navigations = computed(() => [
                 <div class="p-6">
                   <FieldGroup>
                     <FieldSet>
-                      <FieldLabel>{{
-                        t("settings.notifications.categories.label")
-                      }}</FieldLabel>
+                      <FieldLabel>
+                        {{ t("settings.notifications.categories.label") }}
+                      </FieldLabel>
                       <Field orientation="horizontal">
                         <FieldContent>
                           <FieldLabel for="communication-notifications">
@@ -1635,160 +1650,291 @@ const navigations = computed(() => [
                 value="members"
               >
                 <div class="p-6">
-                  <!-- Invite Member Section -->
-                  <div v-if="isOwner" class="mb-6">
-                    <FieldGroup>
+                  <FieldGroup>
+                    <FieldSet>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel>Invite Members</FieldLabel>
+                          <FieldLabel>Members</FieldLabel>
                           <FieldDescription>
-                            Add new members to your team by email address.
+                            Manage your team members and their roles.
                           </FieldDescription>
                         </FieldContent>
-                        <Button @click="isInvitingMemberDialogOpen = true">
+                        <Button
+                          v-if="isOwner"
+                          @click="openTeamDialog('invite')"
+                        >
                           <IconPlus />
                           Invite Member
                         </Button>
-                        <TeamDialog
-                          v-model:open="isInvitingMemberDialogOpen"
-                          mode="invite"
-                        />
                       </Field>
-                    </FieldGroup>
-                  </div>
-                  <div class="space-y-4">
-                    <div v-if="isLoading" class="flex justify-center py-8">
-                      <Spinner />
-                    </div>
-                    <div v-else class="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead class="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow
-                            v-for="member in teamMembers"
-                            :key="member.id"
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <div
+                            v-if="isLoading"
+                            class="flex justify-center py-8"
                           >
-                            <TableCell>
-                              <div class="flex items-center gap-4">
-                                <Avatar class="rounded-md">
-                                  <AvatarImage
-                                    class="rounded-md"
-                                    :src="member.user?.photoURL!"
-                                    :alt="
-                                      member.user?.displayName ||
-                                      member.user?.email
-                                    "
-                                    referrerpolicy="no-referrer"
-                                  />
-                                  <AvatarFallback class="rounded-md">
-                                    {{ getInitials(member.user?.displayName!) }}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div class="font-medium">
-                                    {{ member.user?.displayName || "User" }}
-                                  </div>
-                                  <div class="text-muted-foreground text-sm">
-                                    {{ member.user?.email }}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell class="uppercase">
-                              <Select
-                                :model-value="member.role"
-                                :disabled="
-                                  !canChangeRole(member) ||
-                                  isRoleLoading(member.userId)
-                                "
-                                @update:model-value="
-                                  changeRole(
-                                    member.userId,
-                                    $event as 'owner' | 'member'
-                                  )
-                                "
-                              >
-                                <SelectTrigger class="w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="owner">OWNER</SelectItem>
-                                  <SelectItem value="member">MEMBER</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell class="text-right">
-                              <AlertDialog v-if="isOwner">
-                                <AlertDialogTrigger as-child>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    :disabled="isMemberLoading(member.userId)"
+                            <Spinner />
+                          </div>
+                          <div v-else class="rounded-md border">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead class="w-1/4">User</TableHead>
+                                  <TableHead class="w-1/4">Role</TableHead>
+                                  <TableHead class="w-1/4">Joined</TableHead>
+                                  <TableHead
+                                    class="w-1/4 text-right"
+                                  ></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow
+                                  v-for="member in teamMembers"
+                                  :key="member.userId"
+                                >
+                                  <TableCell>
+                                    <Item size="sm" class="p-0">
+                                      <ItemMedia>
+                                        <Avatar class="rounded-md">
+                                          <AvatarImage
+                                            v-if="member.user?.photoURL"
+                                            class="rounded-md"
+                                            :src="member.user?.photoURL"
+                                            :alt="member.user?.displayName"
+                                            referrerpolicy="no-referrer"
+                                          />
+                                          <AvatarFallback class="rounded-md">
+                                            {{
+                                              getInitials(
+                                                member.user?.displayName!
+                                              )
+                                            }}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      </ItemMedia>
+                                      <ItemContent class="gap-0.5 truncate">
+                                        <ItemTitle class="truncate">
+                                          {{ member.user?.displayName }}
+                                        </ItemTitle>
+                                        <ItemDescription
+                                          class="truncate text-xs"
+                                        >
+                                          {{ member.user?.email }}
+                                        </ItemDescription>
+                                      </ItemContent>
+                                    </Item>
+                                  </TableCell>
+                                  <TableCell class="capitalize">
+                                    <TooltipProvider
+                                      v-if="getCannotChangeRoleReason(member)"
+                                    >
+                                      <Tooltip>
+                                        <TooltipTrigger as-child>
+                                          <span class="inline-block">
+                                            <Select
+                                              :model-value="member.role"
+                                              disabled
+                                            >
+                                              <SelectTrigger class="w-32">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="owner">
+                                                  Owner
+                                                </SelectItem>
+                                                <SelectItem value="member">
+                                                  Member
+                                                </SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {{
+                                            t(
+                                              getCannotChangeRoleReason(member)!
+                                            )
+                                          }}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <Select
+                                      v-else
+                                      :model-value="member.role"
+                                      :disabled="isRoleLoading(member.userId)"
+                                      @update:model-value="
+                                        changeRole(
+                                          member.userId,
+                                          $event as 'owner' | 'member'
+                                        )
+                                      "
+                                    >
+                                      <SelectTrigger class="w-32">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="owner">
+                                          Owner
+                                        </SelectItem>
+                                        <SelectItem value="member">
+                                          Member
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                  <TableCell>
+                                    {{ df.format(member.createdAt.toDate()) }}
+                                  </TableCell>
+                                  <TableCell
+                                    class="flex items-center justify-end text-right"
                                   >
-                                    <Spinner
-                                      v-if="isMemberLoading(member.userId)"
-                                    />
-                                    <IconX v-else />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      {{
-                                        member.userId === user?.uid
-                                          ? "Exit Team"
-                                          : "Remove Member"
-                                      }}
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      {{
-                                        member.userId === user?.uid
-                                          ? "Are you sure you want to leave this team? You will lose access to all team resources."
-                                          : `Are you sure you want to remove ${member.user?.displayName || member.user?.email} from this team?`
-                                      }}
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel
-                                      >Cancel</AlertDialogCancel
-                                    >
-                                    <AlertDialogAction
-                                      variant="destructive"
-                                      :disabled="isMemberLoading(member.userId)"
-                                      @click="removeMember(member.userId)"
-                                    >
-                                      <Spinner
-                                        v-if="isMemberLoading(member.userId)"
-                                      />
-                                      {{
-                                        member.userId === user?.uid
-                                          ? "Exit"
-                                          : "Remove"
-                                      }}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </TableCell>
-                          </TableRow>
-                          <TableRow v-if="teamMembers.length === 0">
-                            <TableCell
-                              colspan="3"
-                              class="text-muted-foreground h-24 text-center"
-                            >
-                              No members found.
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
+                                    <ButtonGroup>
+                                      <TooltipProvider
+                                        v-if="
+                                          getCannotRemoveMemberReason(member)
+                                        "
+                                      >
+                                        <Tooltip>
+                                          <TooltipTrigger as-child>
+                                            <span class="inline-block">
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                disabled
+                                              >
+                                                <IconMoreHorizontal />
+                                              </Button>
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            {{
+                                              t(
+                                                getCannotRemoveMemberReason(
+                                                  member
+                                                )!
+                                              )
+                                            }}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <DropdownMenu v-else>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger as-child>
+                                              <DropdownMenuTrigger as-child>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                  :disabled="
+                                                    isMemberLoading(
+                                                      member.userId
+                                                    )
+                                                  "
+                                                >
+                                                  <Spinner
+                                                    v-if="
+                                                      isMemberLoading(
+                                                        member.userId
+                                                      )
+                                                    "
+                                                  />
+                                                  <IconMoreHorizontal v-else />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <AlertDialog>
+                                                  <AlertDialogTrigger as-child>
+                                                    <DropdownMenuItem
+                                                      @select.prevent
+                                                    >
+                                                      <IconLogOut />
+                                                      {{
+                                                        member.userId ===
+                                                        user?.uid
+                                                          ? "Exit"
+                                                          : "Remove"
+                                                      }}
+                                                    </DropdownMenuItem>
+                                                  </AlertDialogTrigger>
+                                                  <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                      <AlertDialogTitle>
+                                                        {{
+                                                          member.userId ===
+                                                          user?.uid
+                                                            ? "Exit Team"
+                                                            : "Remove Member"
+                                                        }}
+                                                      </AlertDialogTitle>
+                                                      <AlertDialogDescription>
+                                                        {{
+                                                          member.userId ===
+                                                          user?.uid
+                                                            ? "Are you sure you want to leave this team? You will lose access to all team resources."
+                                                            : `Are you sure you want to remove ${member.user?.displayName || member.user?.email} from this team?`
+                                                        }}
+                                                      </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                      <AlertDialogCancel
+                                                        >Cancel</AlertDialogCancel
+                                                      >
+                                                      <AlertDialogAction
+                                                        variant="destructive"
+                                                        :disabled="
+                                                          isMemberLoading(
+                                                            member.userId
+                                                          )
+                                                        "
+                                                        @click="
+                                                          removeMember(
+                                                            member.userId
+                                                          )
+                                                        "
+                                                      >
+                                                        <Spinner
+                                                          v-if="
+                                                            isMemberLoading(
+                                                              member.userId
+                                                            )
+                                                          "
+                                                        />
+                                                        {{
+                                                          member.userId ===
+                                                          user?.uid
+                                                            ? "Exit"
+                                                            : "Remove"
+                                                        }}
+                                                      </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                  </AlertDialogContent>
+                                                </AlertDialog>
+                                              </DropdownMenuContent>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              Actions
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </DropdownMenu>
+                                    </ButtonGroup>
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow v-if="teamMembers.length === 0">
+                                  <TableCell
+                                    colspan="4"
+                                    class="text-muted-foreground h-24 text-center"
+                                  >
+                                    No members found.
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </FieldContent>
+                      </Field>
+                    </FieldSet>
+                  </FieldGroup>
                 </div>
               </TabsContent>
               <TabsContent
@@ -1796,286 +1942,264 @@ const navigations = computed(() => [
                 value="teams"
               >
                 <div class="p-6">
-                  <!-- Create Team Section -->
-                  <div class="mb-6">
-                    <FieldGroup>
+                  <FieldGroup>
+                    <FieldSet>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel>Create Team</FieldLabel>
+                          <FieldLabel>Teams</FieldLabel>
                           <FieldDescription>
-                            Create a new team to collaborate with others.
+                            Manage your teams and switch between them.
                           </FieldDescription>
                         </FieldContent>
-                        <Button @click="isCreatingTeamDialogOpen = true">
+                        <Button @click="openTeamDialog('create')">
                           <IconPlus />
                           Create Team
                         </Button>
-                        <TeamDialog
-                          v-model:open="isCreatingTeamDialogOpen"
-                          mode="create"
-                        />
                       </Field>
-                    </FieldGroup>
-                    <AlertDialog v-model:open="isDeleteTeamDialogOpen">
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Team</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete
-                            <span class="text-foreground font-medium">{{
-                              teamToDelete?.name
-                            }}</span
-                            >? This action cannot be undone and will permanently
-                            delete the team and all its data.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            variant="destructive"
-                            :disabled="
-                              teamToDelete &&
-                              isTeamLoading(`delete-${teamToDelete.id}`)
-                            "
-                            @click.prevent="handleDeleteTeam"
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <div
+                            v-if="isLoading"
+                            class="flex justify-center py-8"
                           >
-                            <Spinner
-                              v-if="
-                                teamToDelete &&
-                                isTeamLoading(`delete-${teamToDelete.id}`)
-                              "
-                            />
-                            Delete Team
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <AlertDialog v-model:open="isExitTeamDialogOpen">
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Exit Team</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to leave
-                            <span class="text-foreground font-medium">{{
-                              teamToExit?.name
-                            }}</span
-                            >? You will lose access to all team resources and
-                            need to be re-invited to rejoin.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            variant="destructive"
-                            :disabled="
-                              teamToExit &&
-                              isTeamLoading(`exit-${teamToExit.id}`)
-                            "
-                            @click.prevent="handleExitTeam"
-                          >
-                            <Spinner
-                              v-if="
-                                teamToExit &&
-                                isTeamLoading(`exit-${teamToExit.id}`)
-                              "
-                            />
-                            Exit Team
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                  <div class="space-y-4">
-                    <div v-if="isLoading" class="flex justify-center py-8">
-                      <Spinner />
-                    </div>
-                    <div v-else class="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Team</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead class="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow
-                            v-for="membership in memberships"
-                            :key="membership.id"
-                          >
-                            <TableCell>
-                              <div class="flex items-center gap-4">
-                                <div class="group relative">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger as-child>
-                                        <Avatar
-                                          class="flex items-center justify-center rounded-md"
-                                          :class="{
-                                            'cursor-pointer hover:opacity-80':
-                                              membership.role === 'owner',
-                                          }"
-                                          @click="
-                                            handleTeamAvatarClick(membership)
-                                          "
-                                        >
-                                          <template
+                            <Spinner />
+                          </div>
+                          <div v-else class="rounded-md border">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead class="w-1/4">Team</TableHead>
+                                  <TableHead class="w-1/4">Role</TableHead>
+                                  <TableHead class="w-1/4">Created</TableHead>
+                                  <TableHead
+                                    class="w-1/4 text-right"
+                                  ></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow
+                                  v-for="membership in memberships"
+                                  :key="membership.teamId"
+                                >
+                                  <TableCell>
+                                    <Item size="sm" class="p-0">
+                                      <ItemMedia>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger as-child>
+                                              <Avatar
+                                                class="flex items-center justify-center rounded-md"
+                                                @click="
+                                                  handleTeamAvatarClick(
+                                                    membership
+                                                  )
+                                                "
+                                              >
+                                                <template
+                                                  v-if="
+                                                    isTeamLoading(
+                                                      `photo-${membership.teamId}`
+                                                    )
+                                                  "
+                                                >
+                                                  <Spinner />
+                                                </template>
+                                                <template v-else>
+                                                  <AvatarImage
+                                                    v-if="
+                                                      membership.team?.photoURL
+                                                    "
+                                                    class="rounded-md"
+                                                    :src="
+                                                      membership.team.photoURL
+                                                    "
+                                                    :alt="membership.team?.name"
+                                                  />
+                                                  <AvatarFallback
+                                                    class="rounded-md"
+                                                  >
+                                                    {{
+                                                      getInitials(
+                                                        membership.team?.name
+                                                      )
+                                                    }}
+                                                  </AvatarFallback>
+                                                </template>
+                                              </Avatar>
+                                            </TooltipTrigger>
+                                            <TooltipContent
+                                              v-if="membership.role === 'owner'"
+                                            >
+                                              {{
+                                                isTeamLoading(
+                                                  `photo-${membership.teamId}`
+                                                )
+                                                  ? "Uploading..."
+                                                  : "Upload team photo"
+                                              }}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                          <Tooltip
                                             v-if="
-                                              isTeamLoading(
-                                                `photo-${membership.teamId}`
-                                              )
+                                              membership.role === 'owner' &&
+                                              membership.team?.photoURL
                                             "
                                           >
-                                            <Spinner />
-                                          </template>
-                                          <template v-else>
-                                            <AvatarImage
-                                              class="rounded-md"
-                                              :src="membership.team?.photoURL!"
-                                              :alt="membership.team?.name"
-                                            />
-                                            <AvatarFallback class="rounded-md">
-                                              {{
-                                                getInitials(
-                                                  membership.team?.name
-                                                )
-                                              }}
-                                            </AvatarFallback>
-                                          </template>
-                                        </Avatar>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        v-if="membership.role === 'owner'"
-                                      >
-                                        {{
-                                          isTeamLoading(
-                                            `photo-${membership.teamId}`
-                                          )
-                                            ? "Uploading..."
-                                            : "Upload team photo"
-                                        }}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip
-                                      v-if="
-                                        membership.role === 'owner' &&
-                                        membership.team?.photoURL
-                                      "
-                                    >
-                                      <TooltipTrigger as-child>
-                                        <Button
-                                          variant="secondary"
-                                          class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
-                                          size="icon-sm"
-                                          @click.stop="
-                                            handleRemoveTeamPhoto(
-                                              membership.teamId
-                                            )
-                                          "
+                                            <TooltipTrigger as-child>
+                                              <Button
+                                                variant="secondary"
+                                                class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                                                size="icon-sm"
+                                                @click.stop="
+                                                  handleRemoveTeamPhoto(
+                                                    membership.teamId
+                                                  )
+                                                "
+                                              >
+                                                <IconX />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              Remove team photo
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </ItemMedia>
+                                      <ItemContent class="gap-0.5 truncate">
+                                        <ItemTitle class="truncate">
+                                          {{ membership.team?.name }}
+                                        </ItemTitle>
+                                        <ItemDescription
+                                          class="truncate text-xs"
                                         >
-                                          <IconX />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Remove team photo
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </div>
-                                <div>
-                                  <div class="font-medium">
-                                    {{ membership.team?.name }}
-                                  </div>
-                                  <div class="text-muted-foreground text-sm">
-                                    ID: {{ membership.team?.id }}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell class="uppercase">
-                              {{ membership.role }}
-                            </TableCell>
-                            <TableCell class="text-right">
-                              <div class="flex items-center justify-end gap-2">
-                                <Button
-                                  v-if="currentTeam?.id !== membership.team?.id"
-                                  variant="secondary"
-                                  size="sm"
-                                  :disabled="isTeamLoading(membership.team?.id)"
-                                  @click="switchTeam(membership.team?.id)"
-                                >
-                                  <Spinner
-                                    v-if="isTeamLoading(membership.team?.id)"
-                                  />
-                                  <span v-else>Select</span>
-                                </Button>
-                                <Button
-                                  v-else
-                                  variant="outline"
-                                  size="sm"
-                                  disabled
-                                  class="cursor-default opacity-100"
-                                >
-                                  <IconCheck />
-                                  Selected
-                                </Button>
-
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger as-child>
-                                    <Button variant="ghost" size="icon">
-                                      <IconMoreHorizontal />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      v-if="membership.role === 'owner'"
-                                      @click="
-                                        startEditingTeam(membership.team!)
-                                      "
-                                    >
-                                      <IconPencil />
-                                      Rename
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      @click="confirmExitTeam(membership.team!)"
-                                    >
-                                      <IconLogOut />
-                                      Exit Team
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator
-                                      v-if="membership.role === 'owner'"
-                                    />
-                                    <DropdownMenuItem
-                                      v-if="membership.role === 'owner'"
-                                      @click="
-                                        confirmDeleteTeam(membership.team!)
-                                      "
-                                    >
-                                      <IconTrash />
-                                      Delete Team
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                          <TableRow v-if="memberships.length === 0">
-                            <TableCell
-                              colspan="3"
-                              class="text-muted-foreground h-24 text-center"
-                            >
-                              No teams found.
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                      <TeamDialog
-                        v-model:open="isEditingTeamDialogOpen"
-                        mode="edit"
-                        :team="teamToEdit"
-                      />
-                    </div>
-                  </div>
+                                          {{
+                                            t("settings.teams.memberCount", {
+                                              count: getTeamMemberCount(
+                                                membership.teamId
+                                              ),
+                                            })
+                                          }}
+                                        </ItemDescription>
+                                      </ItemContent>
+                                    </Item>
+                                  </TableCell>
+                                  <TableCell class="capitalize">
+                                    {{ membership.role }}
+                                  </TableCell>
+                                  <TableCell>
+                                    {{
+                                      df.format(membership.createdAt.toDate())
+                                    }}
+                                  </TableCell>
+                                  <TableCell
+                                    class="flex items-center justify-end text-right"
+                                  >
+                                    <ButtonGroup>
+                                      <Button
+                                        v-if="
+                                          currentTeam?.id !==
+                                          membership.team?.id
+                                        "
+                                        variant="outline"
+                                        :disabled="
+                                          isTeamLoading(membership.team?.id)
+                                        "
+                                        @click="switchTeam(membership.team?.id)"
+                                      >
+                                        <Spinner
+                                          v-if="
+                                            isTeamLoading(membership.team?.id)
+                                          "
+                                        />
+                                        <template v-else>
+                                          <IconSwitchHorizontal />
+                                          Switch
+                                        </template>
+                                      </Button>
+                                      <Button v-else variant="outline" disabled>
+                                        <IconCheck />
+                                        Current
+                                      </Button>
+                                      <DropdownMenu>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger as-child>
+                                              <DropdownMenuTrigger as-child>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                >
+                                                  <IconMoreHorizontal />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <DropdownMenuItem
+                                                  @click="
+                                                    confirmExitTeam(
+                                                      membership.team!
+                                                    )
+                                                  "
+                                                >
+                                                  <IconLogOut />
+                                                  Exit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator
+                                                  v-if="
+                                                    membership.role === 'owner'
+                                                  "
+                                                />
+                                                <DropdownMenuItem
+                                                  v-if="
+                                                    membership.role === 'owner'
+                                                  "
+                                                  @click="
+                                                    startEditingTeam(
+                                                      membership.team!
+                                                    )
+                                                  "
+                                                >
+                                                  <IconPencil />
+                                                  Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                  v-if="
+                                                    membership.role === 'owner'
+                                                  "
+                                                  @click="
+                                                    confirmDeleteTeam(
+                                                      membership.team!
+                                                    )
+                                                  "
+                                                >
+                                                  <IconTrash />
+                                                  Delete
+                                                </DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              Actions
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </DropdownMenu>
+                                    </ButtonGroup>
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow v-if="memberships.length === 0">
+                                  <TableCell
+                                    colspan="3"
+                                    class="text-muted-foreground h-24 text-center"
+                                  >
+                                    No teams found.
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </FieldContent>
+                      </Field>
+                    </FieldSet>
+                  </FieldGroup>
                 </div>
               </TabsContent>
               <TabsContent
@@ -2306,6 +2430,71 @@ const navigations = computed(() => [
           </div>
         </SidebarProvider>
       </Tabs>
+      <AlertDialog v-model:open="isDeleteTeamDialogOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete
+              <span class="text-foreground font-medium">{{
+                teamToDelete?.name
+              }}</span
+              >? This action cannot be undone and will permanently delete the
+              team and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              :disabled="
+                teamToDelete && isTeamLoading(`delete-${teamToDelete.id}`)
+              "
+              @click.prevent="handleDeleteTeam"
+            >
+              <Spinner
+                v-if="
+                  teamToDelete && isTeamLoading(`delete-${teamToDelete.id}`)
+                "
+              />
+              Delete Team
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog v-model:open="isExitTeamDialogOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exit Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave
+              <span class="text-foreground font-medium">{{
+                teamToExit?.name
+              }}</span
+              >? You will lose access to all team resources and need to be
+              re-invited to rejoin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              :disabled="teamToExit && isTeamLoading(`exit-${teamToExit.id}`)"
+              @click.prevent="handleExitTeam"
+            >
+              <Spinner
+                v-if="teamToExit && isTeamLoading(`exit-${teamToExit.id}`)"
+              />
+              Exit Team
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <TeamDialog
+        v-model:open="isTeamDialogOpen"
+        :mode="teamDialogMode"
+        :team="teamDialogTeam"
+      />
     </DialogContent>
   </Dialog>
 </template>

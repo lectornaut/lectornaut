@@ -31,7 +31,6 @@ export interface IUser {
 }
 
 export interface IMembership {
-  id: string // same as userId
   userId: string
   teamId: string
   role: "owner" | "member"

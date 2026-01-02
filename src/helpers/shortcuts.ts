@@ -1,7 +1,7 @@
 import {
-  IconBolt,
   IconCheckSquare2,
   IconCircleUser,
+  IconComponent,
   IconCopy,
   IconCreditCard,
   IconHelpCircle,
@@ -21,64 +21,206 @@ import {
   IconSquarePen,
   IconSun,
   IconTerminal,
+  IconUsersRound,
   IconXCircle,
   IconXSquare,
 } from "@/data/icons"
 import type { FunctionalComponent, SVGAttributes } from "vue"
 
-const isAppleDevice = () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
+// ============================================================================
+// Platform Detection (cached for performance)
+// ============================================================================
 
-/**
- * Returns the platform-specific modifier key
- * @returns '⌘' for macOS, 'Ctrl' for others
- */
+const IS_APPLE_DEVICE =
+  typeof navigator !== "undefined" &&
+  /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
+
+/** Platform-specific modifier key: ⌘ (macOS) or Ctrl (others) */
 export const getPlatformSpecialKey = (): string =>
-  isAppleDevice() ? "⌘" : "Ctrl"
+  IS_APPLE_DEVICE ? "⌘" : "Ctrl"
 
-/**
- * Returns the platform-specific alternate key
- * @returns '⌥' for macOS, 'Alt' for others
- */
+/** Platform-specific alternate key: ⌥ (macOS) or Alt (others) */
 export const getPlatformAlternateKey = (): string =>
-  isAppleDevice() ? "⌥" : "Alt"
+  IS_APPLE_DEVICE ? "⌥" : "Alt"
 
-/**
- * Returns the platform-specific control key
- * @returns '⌃' for macOS, 'Ctrl' for others
- */
+/** Platform-specific control key: ⌃ (macOS) or Ctrl (others) */
 export const getPlatformControlKey = (): string =>
-  isAppleDevice() ? "⌃" : "Ctrl"
+  IS_APPLE_DEVICE ? "⌃" : "Ctrl"
 
-type ShortcutHiddenType =
-  | "hotkeys"
-  | "web"
-  | "desktop"
-  | "shortcuts"
-  | "commands"
+// ============================================================================
+// Types
+// ============================================================================
+
+/** Contexts where shortcuts can be displayed or registered */
+export type ShortcutContext =
+  | "hotkeys" // Global keyboard listener registration
+  | "shortcuts" // Shortcuts dialog/panel
+  | "commands" // Command palette (Cmd+K)
+
+/** Platform restrictions for shortcuts */
+export type ShortcutPlatform = "web" | "desktop"
+
+/** Visibility configuration - explicitly define where shortcut appears */
+export type ShortcutVisibility = {
+  /** Contexts where this shortcut should NOT appear (default: shown everywhere) */
+  hideFrom?: ShortcutContext[]
+  /** Platform restrictions - if set, only show on specified platforms */
+  platforms?: ShortcutPlatform[]
+}
 
 export type Shortcut = {
+  /** Breadcrumb-style description path */
   description: string[]
-  keys: string[][]
-  hotkeys: string
+  /** Display keys (e.g., [["⌘", "K"]]) - optional for command-only shortcuts */
+  keys?: string[][]
+  /** hotkeys-js binding string (e.g., "cmd+k,ctrl+k") - required if keys is set */
+  hotkeys?: string
+  /** Event emitted when shortcut is triggered */
   event: string
-  parameters: string | number | undefined
+  /** Optional parameters passed to the event */
+  parameters?: string | number
+  /** Icon component for display */
   icon: FunctionalComponent<SVGAttributes>
+  /** Search tags for fuzzy matching */
   tags: string[]
-  hidden: ShortcutHiddenType[]
+  /** Visibility rules */
+  visibility?: ShortcutVisibility
 }
 
 export type ShortcutCategory = {
   title: string
   id: string
   shortcuts: Shortcut[]
-  hidden: ShortcutHiddenType[]
+  /** Visibility rules applied to all shortcuts in category */
+  visibility?: ShortcutVisibility
+}
+
+// ============================================================================
+// Filter Utilities
+// ============================================================================
+
+export type FilterOptions = {
+  context: ShortcutContext
+  isDesktop: boolean
 }
 
 /**
+ * Check if a shortcut should be visible given the current options
+ */
+export const isShortcutVisible = (
+  shortcut: Shortcut,
+  options: FilterOptions
+): boolean => {
+  const { context, isDesktop } = options
+  const { visibility } = shortcut
+
+  // Check context visibility
+  if (visibility?.hideFrom?.includes(context)) {
+    return false
+  }
+
+  // Check platform restrictions
+  if (visibility?.platforms) {
+    const currentPlatform: ShortcutPlatform = isDesktop ? "desktop" : "web"
+    if (!visibility.platforms.includes(currentPlatform)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
+ * Check if a category should be visible given the current options
+ */
+export const isCategoryVisible = (
+  category: ShortcutCategory,
+  options: FilterOptions
+): boolean => {
+  const { context, isDesktop } = options
+  const { visibility } = category
+
+  // Check context visibility
+  if (visibility?.hideFrom?.includes(context)) {
+    return false
+  }
+
+  // Check platform restrictions
+  if (visibility?.platforms) {
+    const currentPlatform: ShortcutPlatform = isDesktop ? "desktop" : "web"
+    if (!visibility.platforms.includes(currentPlatform)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
+ * Filter shortcuts for a given context and platform
+ * Returns categories with their filtered shortcuts
+ */
+export const getFilteredShortcuts = (
+  options: FilterOptions
+): ShortcutCategory[] => {
+  return shortcuts
+    .filter((category) => isCategoryVisible(category, options))
+    .map((category) => ({
+      ...category,
+      shortcuts: category.shortcuts.filter((shortcut) =>
+        isShortcutVisible(shortcut, options)
+      ),
+    }))
+    .filter((category) => category.shortcuts.length > 0)
+}
+
+/**
+ * Get all shortcuts flattened for search indexing
+ */
+export const getFlatShortcuts = (options?: FilterOptions): Shortcut[] => {
+  const categories = options ? getFilteredShortcuts(options) : shortcuts
+  return categories.flatMap((category) => category.shortcuts)
+}
+
+// ============================================================================
+// Shortcut Generators (reduce repetition)
+// ============================================================================
+
+/** Generate numbered tab selection shortcuts (1-9) */
+const generateTabSelectionShortcuts = (): Shortcut[] =>
+  Array.from({ length: 9 }, (_, i) => {
+    const num = i + 1
+    return {
+      description: [`Select tab ${num}`],
+      keys: [[getPlatformSpecialKey(), String(num)]],
+      hotkeys: `cmd+${num},ctrl+${num}`,
+      event: "Tabs.Select",
+      parameters: num,
+      icon: IconCheckSquare2,
+      tags: ["tab", "select", "number"],
+      visibility: { hideFrom: ["commands", "shortcuts"] },
+    }
+  })
+
+// ============================================================================
+// Shortcuts Configuration
+// ============================================================================
+
+/**
  * Application Shortcuts Configuration
- * Defines all keyboard shortcuts, their events, descriptions, and visibility rules
+ *
+ * Categories are ordered by frequency of use:
+ * 1. General - Most common actions
+ * 2. Navigation - Tab and panel management
+ * 3. Layout - UI arrangement
+ * 4. Settings - Configuration access
+ * 5. Appearance - Theme switching (commands only)
+ * 6. Account - User actions
  */
 export const shortcuts: ShortcutCategory[] = [
+  // ──────────────────────────────────────────────────────────────────────────
+  // General - Core actions available everywhere
+  // ──────────────────────────────────────────────────────────────────────────
   {
     title: "General",
     id: "general",
@@ -88,20 +230,17 @@ export const shortcuts: ShortcutCategory[] = [
         keys: [[getPlatformSpecialKey(), "K"]],
         hotkeys: "cmd+k,ctrl+k",
         event: "Dialog.Command.Open",
-        parameters: undefined,
         icon: IconTerminal,
-        tags: ["command", "search"],
-        hidden: ["commands"],
+        tags: ["command", "search", "palette"],
+        visibility: { hideFrom: ["commands"] }, // Don't show "open commands" in commands
       },
       {
         description: ["Ask AI"],
         keys: [[getPlatformSpecialKey(), "↩"]],
         hotkeys: "cmd+enter,ctrl+enter",
         event: "Dialog.AiAsk.Toggle",
-        parameters: undefined,
         icon: IconSparkles,
-        tags: ["ai", "ask"],
-        hidden: [],
+        tags: ["ai", "ask", "assistant", "copilot"],
       },
       {
         description: ["Settings"],
@@ -110,32 +249,128 @@ export const shortcuts: ShortcutCategory[] = [
         event: "Dialog.Settings.Open",
         parameters: "preferences",
         icon: IconSettings,
-        tags: ["settings"],
-        hidden: [],
+        tags: ["settings", "preferences", "options"],
       },
       {
         description: ["Keyboard shortcuts"],
         keys: [[getPlatformSpecialKey(), "/"]],
         hotkeys: "cmd+/,ctrl+/",
         event: "Dialog.Shortcuts.Open",
-        parameters: undefined,
         icon: IconKeyboard,
-        tags: ["keyboard", "shortcuts", "help"],
-        hidden: [],
+        tags: ["keyboard", "shortcuts", "help", "keys"],
       },
       {
         description: ["Help and support"],
         keys: [["?"]],
         hotkeys: "shift+/",
         event: "Menu.Help.Toggle",
-        parameters: undefined,
         icon: IconHelpCircle,
-        tags: ["help", "support"],
-        hidden: [],
+        tags: ["help", "support", "documentation", "faq"],
       },
     ],
-    hidden: [],
   },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Tabs - Desktop-only tab management
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    title: "Tabs",
+    id: "tabs",
+    visibility: { platforms: ["desktop"], hideFrom: ["commands"] },
+    shortcuts: [
+      {
+        description: ["Open new tab"],
+        keys: [[getPlatformSpecialKey(), "T"]],
+        hotkeys: "cmd+t,ctrl+t",
+        event: "Tabs.Add",
+        icon: IconPlusSquare,
+        tags: ["tab", "new", "add", "open", "create"],
+      },
+      {
+        description: ["Reopen last closed tab"],
+        keys: [[getPlatformSpecialKey(), "⇧", "T"]],
+        hotkeys: "cmd+shift+t,ctrl+shift+t",
+        event: "Tabs.ReopenLast",
+        icon: IconHistory,
+        tags: ["tab", "reopen", "history", "restore", "undo"],
+      },
+      {
+        description: ["Close current tab"],
+        keys: [[getPlatformSpecialKey(), "W"]],
+        hotkeys: "cmd+w,ctrl+w",
+        event: "Tabs.Close",
+        icon: IconMinusSquare,
+        tags: ["tab", "close", "remove"],
+      },
+      {
+        description: ["Close other tabs"],
+        keys: [[getPlatformSpecialKey(), "⇧", "W"]],
+        hotkeys: "cmd+shift+w,ctrl+shift+w",
+        event: "Tabs.Close.Others",
+        icon: IconXCircle,
+        tags: ["tab", "close", "remove", "others"],
+      },
+      {
+        description: ["Close all tabs"],
+        keys: [[getPlatformSpecialKey(), getPlatformAlternateKey(), "W"]],
+        hotkeys: "cmd+alt+w,ctrl+alt+w",
+        event: "Tabs.Close.All",
+        icon: IconXSquare,
+        tags: ["tab", "close", "remove", "all", "clear"],
+      },
+      {
+        description: ["Duplicate tab"],
+        keys: [[getPlatformSpecialKey(), "D"]],
+        hotkeys: "cmd+d,ctrl+d",
+        event: "Tabs.Duplicate",
+        icon: IconCopy,
+        tags: ["tab", "duplicate", "copy", "clone"],
+      },
+      {
+        description: ["Rename tab"],
+        keys: [["F2"]],
+        hotkeys: "f2",
+        event: "Tabs.Rename",
+        icon: IconSquarePen,
+        tags: ["tab", "rename", "edit", "name"],
+      },
+      {
+        description: ["Select next tab"],
+        keys: [[getPlatformControlKey(), "Tab"]],
+        hotkeys: "ctrl+tab",
+        event: "Tabs.Select",
+        parameters: "next",
+        icon: IconCheckSquare2,
+        tags: ["tab", "next", "switch", "cycle"],
+        visibility: { hideFrom: ["commands"] },
+      },
+      {
+        description: ["Select previous tab"],
+        keys: [[getPlatformControlKey(), "⇧", "Tab"]],
+        hotkeys: "ctrl+shift+tab",
+        event: "Tabs.Select",
+        parameters: "previous",
+        icon: IconCheckSquare2,
+        tags: ["tab", "previous", "switch", "cycle"],
+        visibility: { hideFrom: ["commands"] },
+      },
+      // Summary entry for shortcuts panel (no hotkey registration)
+      {
+        description: ["Select Nth tab"],
+        keys: [[getPlatformSpecialKey(), "1-9"]],
+        event: "Tabs.Select",
+        icon: IconCheckSquare2,
+        tags: ["tab", "select", "number"],
+        visibility: { hideFrom: ["hotkeys", "commands"] },
+      },
+      // Individual tab shortcuts (hotkeys only, not shown in UI)
+      ...generateTabSelectionShortcuts(),
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Layout - Panel and sidebar management
+  // ──────────────────────────────────────────────────────────────────────────
   {
     title: "Layout",
     id: "layout",
@@ -145,325 +380,124 @@ export const shortcuts: ShortcutCategory[] = [
         keys: [[getPlatformSpecialKey(), "\\"]],
         hotkeys: "cmd+\\,ctrl+\\",
         event: "Sidebar.Left.Toggle",
-        parameters: undefined,
         icon: IconPanelLeft,
-        tags: ["sidebar", "toggle", "layout"],
-        hidden: [],
+        tags: ["sidebar", "toggle", "layout", "left", "panel"],
       },
       {
         description: ["Sidebar", "Right"],
         keys: [[getPlatformSpecialKey(), "⇧", "\\"]],
         hotkeys: "cmd+shift+\\,ctrl+shift+\\",
         event: "Sidebar.Right.Toggle",
-        parameters: undefined,
         icon: IconPanelRight,
-        tags: ["sidebar", "toggle", "layout"],
-        hidden: [],
+        tags: ["sidebar", "toggle", "layout", "right", "panel"],
       },
       {
         description: ["Panel", "Bottom"],
         keys: [[getPlatformSpecialKey(), "J"]],
         hotkeys: "cmd+j,ctrl+j",
         event: "Panel.Bottom.Toggle",
-        parameters: undefined,
         icon: IconPanelBottom,
-        tags: ["panel", "toggle", "layout"],
-        hidden: [],
+        tags: ["panel", "toggle", "layout", "bottom", "terminal"],
       },
     ],
-    hidden: [],
   },
-  {
-    title: "Tabs",
-    id: "tabs",
-    shortcuts: [
-      {
-        description: ["Open new tab"],
-        keys: [[getPlatformSpecialKey(), "T"]],
-        hotkeys: "cmd+t,ctrl+t",
-        event: "Tabs.Add",
-        parameters: undefined,
-        icon: IconPlusSquare,
-        tags: ["tab", "new", "add", "open"],
-        hidden: [],
-      },
-      {
-        description: ["Reopen last closed tab"],
-        keys: [[getPlatformSpecialKey(), "⇧", "T"]],
-        hotkeys: "cmd+shift+t,ctrl+shift+t",
-        event: "Tabs.ReopenLast",
-        parameters: undefined,
-        icon: IconHistory,
-        tags: ["tab", "reopen", "history"],
-        hidden: [],
-      },
-      {
-        description: ["Close current tab"],
-        keys: [[getPlatformSpecialKey(), "W"]],
-        hotkeys: "cmd+w,ctrl+w",
-        event: "Tabs.Close",
-        parameters: undefined,
-        icon: IconMinusSquare,
-        tags: ["tab", "close", "remove"],
-        hidden: [],
-      },
-      {
-        description: ["Close other tabs"],
-        keys: [[getPlatformSpecialKey(), "⇧", "W"]],
-        hotkeys: "cmd+shift+w,ctrl+shift+w",
-        event: "Tabs.Close.Others",
-        parameters: undefined,
-        icon: IconXCircle,
-        tags: ["tab", "close", "remove", "others"],
-        hidden: [],
-      },
-      {
-        description: ["Close all tabs"],
-        keys: [[getPlatformSpecialKey(), getPlatformAlternateKey(), "W"]],
-        hotkeys: "cmd+alt+w,ctrl+alt+w",
-        event: "Tabs.Close.All",
-        parameters: undefined,
-        icon: IconXSquare,
-        tags: ["tab", "close", "remove", "all"],
-        hidden: [],
-      },
-      {
-        description: ["Duplicate tab"],
-        keys: [[getPlatformSpecialKey(), "D"]],
-        hotkeys: "cmd+d,ctrl+d",
-        event: "Tabs.Duplicate",
-        parameters: undefined,
-        icon: IconCopy,
-        tags: ["tab", "duplicate", "copy"],
-        hidden: [],
-      },
-      {
-        description: ["Rename tab"],
-        keys: [["F2"]],
-        hotkeys: "f2",
-        event: "Tabs.Rename",
-        parameters: undefined,
-        icon: IconSquarePen,
-        tags: ["tab", "rename", "edit"],
-        hidden: [],
-      },
-      {
-        description: ["Select next tab"],
-        keys: [[getPlatformControlKey(), "Tab"]],
-        hotkeys: "ctrl+tab",
-        event: "Tabs.Select",
-        parameters: "next",
-        icon: IconCheckSquare2,
-        tags: ["tab", "next", "switch"],
-        hidden: ["commands"],
-      },
-      {
-        description: ["Select previous tab"],
-        keys: [[getPlatformControlKey(), "⇧", "Tab"]],
-        hotkeys: "ctrl+shift+tab",
-        event: "Tabs.Select",
-        parameters: "previous",
-        icon: IconCheckSquare2,
-        tags: ["tab", "previous", "switch"],
-        hidden: ["commands"],
-      },
-      {
-        description: ["Select Nth tab"],
-        keys: [[getPlatformSpecialKey(), "1, 2, 3, ..., N"]],
-        hotkeys: "",
-        event: "Tabs.Select",
-        parameters: undefined,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["hotkeys", "commands"],
-      },
-      {
-        description: ["Select tab 1"],
-        keys: [[getPlatformSpecialKey(), "1"]],
-        hotkeys: "cmd+1,ctrl+1",
-        event: "Tabs.Select",
-        parameters: 1,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 2"],
-        keys: [[getPlatformSpecialKey(), "2"]],
-        hotkeys: "cmd+2,ctrl+2",
-        event: "Tabs.Select",
-        parameters: 2,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 3"],
-        keys: [[getPlatformSpecialKey(), "3"]],
-        hotkeys: "cmd+3,ctrl+3",
-        event: "Tabs.Select",
-        parameters: 3,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 4"],
-        keys: [[getPlatformSpecialKey(), "4"]],
-        hotkeys: "cmd+4,ctrl+4",
-        event: "Tabs.Select",
-        parameters: 4,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 5"],
-        keys: [[getPlatformSpecialKey(), "5"]],
-        hotkeys: "cmd+5,ctrl+5",
-        event: "Tabs.Select",
-        parameters: 5,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 6"],
-        keys: [[getPlatformSpecialKey(), "6"]],
-        hotkeys: "cmd+6,ctrl+6",
-        event: "Tabs.Select",
-        parameters: 6,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 7"],
-        keys: [[getPlatformSpecialKey(), "7"]],
-        hotkeys: "cmd+7,ctrl+7",
-        event: "Tabs.Select",
-        parameters: 7,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 8"],
-        keys: [[getPlatformSpecialKey(), "8"]],
-        hotkeys: "cmd+8,ctrl+8",
-        event: "Tabs.Select",
-        parameters: 8,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-      {
-        description: ["Select tab 9"],
-        keys: [[getPlatformSpecialKey(), "9"]],
-        hotkeys: "cmd+9,ctrl+9",
-        event: "Tabs.Select",
-        parameters: 9,
-        icon: IconCheckSquare2,
-        tags: ["tab", "select"],
-        hidden: ["commands", "shortcuts"],
-      },
-    ],
-    hidden: ["web", "commands"],
-  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Settings - Quick access to settings panels
+  // ──────────────────────────────────────────────────────────────────────────
   {
     title: "Settings",
     id: "settings",
     shortcuts: [
+      // With keyboard shortcuts
       {
-        description: ["Settings", "General"],
-        keys: [],
-        hotkeys: "",
+        description: ["Settings", "Members"],
+        keys: [[getPlatformSpecialKey(), "⇧", "M"]],
+        hotkeys: "cmd+shift+m,ctrl+shift+m",
         event: "Dialog.Settings.Open",
-        parameters: "general",
-        icon: IconBolt,
-        tags: ["settings", "general"],
-        hidden: [],
+        parameters: "members",
+        icon: IconUsersRound,
+        tags: ["settings", "members", "users", "team"],
       },
       {
+        description: ["Settings", "Teams"],
+        keys: [[getPlatformSpecialKey(), ";"]],
+        hotkeys: "cmd+;,ctrl+;",
+        event: "Dialog.Settings.Open",
+        parameters: "teams",
+        icon: IconComponent,
+        tags: ["settings", "teams", "workspace", "organization"],
+      },
+      // Command palette only (no keyboard shortcuts)
+      {
         description: ["Settings", "Account"],
-        keys: [],
-        hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "account",
         icon: IconCircleUser,
-        tags: ["settings", "account"],
-        hidden: [],
+        tags: ["settings", "account", "profile", "user"],
+        visibility: { hideFrom: ["hotkeys", "shortcuts"] },
       },
       {
         description: ["Settings", "Appearance"],
-        keys: [],
-        hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "appearance",
         icon: IconPalette,
-        tags: ["settings", "appearance", "theme"],
-        hidden: [],
+        tags: ["settings", "appearance", "theme", "look"],
+        visibility: { hideFrom: ["hotkeys", "shortcuts"] },
       },
       {
         description: ["Settings", "Billing"],
-        keys: [],
-        hotkeys: "",
         event: "Dialog.Settings.Open",
         parameters: "billing",
         icon: IconCreditCard,
-        tags: ["settings", "billing"],
-        hidden: [],
+        tags: ["settings", "billing", "payment", "subscription"],
+        visibility: { hideFrom: ["hotkeys", "shortcuts"] },
       },
     ],
-    hidden: ["hotkeys", "shortcuts"],
   },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Appearance - Theme switching (command palette only)
+  // ──────────────────────────────────────────────────────────────────────────
   {
     title: "Appearance",
     id: "appearance",
+    visibility: { hideFrom: ["hotkeys", "shortcuts"] },
     shortcuts: [
       {
         description: ["Theme", "Light"],
-        keys: [],
-        hotkeys: "",
         event: "Theme.Change",
         parameters: "light",
         icon: IconSun,
-        tags: ["settings", "theme", "light"],
-        hidden: [],
+        tags: ["theme", "light", "bright", "day"],
       },
       {
         description: ["Theme", "Dark"],
-        keys: [],
-        hotkeys: "",
         event: "Theme.Change",
         parameters: "dark",
         icon: IconMoon,
-        tags: ["settings", "theme", "dark"],
-        hidden: [],
+        tags: ["theme", "dark", "night"],
       },
       {
         description: ["Theme", "Accent"],
-        keys: [],
-        hotkeys: "",
         event: "Theme.Change",
         parameters: "accent",
         icon: IconPalette,
-        tags: ["settings", "theme", "accent"],
-        hidden: [],
+        tags: ["theme", "accent", "color"],
       },
       {
         description: ["Theme", "Auto"],
-        keys: [],
-        hotkeys: "",
         event: "Theme.Change",
         parameters: "auto",
         icon: IconMonitor,
-        tags: ["settings", "theme", "auto"],
-        hidden: [],
+        tags: ["theme", "auto", "system", "sync"],
       },
     ],
-    hidden: ["hotkeys", "shortcuts"],
   },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Account - User session management
+  // ──────────────────────────────────────────────────────────────────────────
   {
     title: "Account",
     id: "account",
@@ -473,12 +507,9 @@ export const shortcuts: ShortcutCategory[] = [
         keys: [[getPlatformSpecialKey(), "⇧", "L"]],
         hotkeys: "cmd+shift+l,ctrl+shift+l",
         event: "Dialog.Exit.Open",
-        parameters: undefined,
         icon: IconLogOut,
-        tags: ["logout", "sign out"],
-        hidden: [],
+        tags: ["logout", "sign out", "exit", "session"],
       },
     ],
-    hidden: [],
   },
 ]

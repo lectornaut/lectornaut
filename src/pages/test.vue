@@ -91,7 +91,7 @@ const switchTeam = async (teamId: string) => {
             <ul class="space-y-1">
               <li
                 v-for="member in teamMembers"
-                :key="member.id"
+                :key="member.userId"
                 class="flex items-center justify-between rounded border bg-white p-2"
               >
                 <span>
@@ -148,7 +148,7 @@ const switchTeam = async (teamId: string) => {
         <ul class="space-y-2">
           <li
             v-for="membership in memberships"
-            :key="membership.id"
+            :key="membership.teamId"
             class="flex items-center justify-between rounded border p-3 transition hover:bg-slate-50"
           >
             <div>

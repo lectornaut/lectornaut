@@ -9,67 +9,26 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
-import { firestore, storage } from "@/modules/firebase"
 import type { IUser } from "@/types"
+import {
+  getUserRef,
+  updateUserInMemberships,
+  uploadUserPhoto,
+} from "@/utils/firebase-helpers"
 import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/optimistic"
+} from "@/utils/firebase-optimistic"
 import type { User } from "firebase/auth"
 import {
-  collectionGroup,
-  doc,
-  getDocs,
-  query,
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
-  writeBatch,
   type Timestamp,
 } from "firebase/firestore"
-import {
-  getDownloadURL,
-  ref as storageRef,
-  uploadBytes,
-} from "firebase/storage"
 import { defineStore } from "pinia"
 import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
-
-// Constants
-const BATCH_SIZE = 450
-
-// Helper to get document references
-const getUserRef = (userId: string) => doc(firestore, "users", userId)
-
-// Helper to process Firestore batch operations in chunks
-async function processInBatches<T>(
-  items: T[],
-  processFn: (item: T, batch: ReturnType<typeof writeBatch>) => void
-) {
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const chunk = items.slice(i, i + BATCH_SIZE)
-    const batch = writeBatch(firestore)
-    chunk.forEach((item) => processFn(item, batch))
-    await batch.commit()
-  }
-}
-
-// Helper to update all memberships with new data
-async function updateMemberships(
-  queryRef: ReturnType<typeof query>,
-  updateFn: (membershipData: Record<string, unknown>) => Record<string, unknown>
-) {
-  const membershipDocs = await getDocs(queryRef)
-  await processInBatches(membershipDocs.docs, (docSnap, batch) => {
-    const membershipData = docSnap.data() as Record<string, unknown>
-    batch.update(docSnap.ref, {
-      ...updateFn(membershipData),
-      updatedAt: serverTimestamp(),
-    })
-  })
-}
 
 export const useAuthStore = defineStore("auth", () => {
   // ============================================================================
@@ -242,8 +201,9 @@ export const useAuthStore = defineStore("auth", () => {
   async function updateUserProfile(updates: Partial<IUser>): Promise<void> {
     if (!currentUser.value || !userProfile.value) return
 
+    const userId = currentUser.value.uid
     const { photoURL, ...userUpdates } = updates
-    const userRef = getUserRef(currentUser.value.uid)
+    const userRef = getUserRef(userId)
 
     // Normalize photoURL
     const normalizedPhotoURL =
@@ -252,9 +212,16 @@ export const useAuthStore = defineStore("auth", () => {
     // Clone previous state for rollback
     const previousUserProfile = cloneState(userProfile.value)
 
+    // Prepare update payload once
+    const firestoreUpdates = {
+      ...userUpdates,
+      ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
+      updatedAt: serverTimestamp(),
+    }
+
     await withOptimisticUpdate(
       pendingUserIds.value,
-      currentUser.value.uid,
+      userId,
       // Apply optimistic update
       () => {
         optimisticUserProfile.value = {
@@ -267,8 +234,10 @@ export const useAuthStore = defineStore("auth", () => {
       () => {
         optimisticUserProfile.value = previousUserProfile
       },
-      // Firestore operation
+      // Firestore operation - run independent operations in parallel
       async () => {
+        const promises: Promise<unknown>[] = []
+
         // Update Auth Profile if needed
         if (photoURL !== undefined || userUpdates.displayName !== undefined) {
           const authPhotoURL =
@@ -276,43 +245,33 @@ export const useAuthStore = defineStore("auth", () => {
               ? ""
               : (photoURL ?? currentUser.value!.photoURL ?? undefined)
 
-          await updateCurrentUserProfile({
-            displayName:
-              userUpdates.displayName ||
-              currentUser.value!.displayName ||
-              undefined,
-            photoURL: authPhotoURL,
-          })
+          promises.push(
+            updateCurrentUserProfile({
+              displayName:
+                userUpdates.displayName ||
+                currentUser.value!.displayName ||
+                undefined,
+              photoURL: authPhotoURL,
+            })
+          )
         }
 
         // Update User Document
         if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
-          await updateDoc(userRef, {
-            ...userUpdates,
-            ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
-            updatedAt: serverTimestamp(),
-          })
+          promises.push(updateDoc(userRef, firestoreUpdates))
         }
 
         // Update all memberships with new user data
-        const membershipsQuery = query(
-          collectionGroup(firestore, "memberships"),
-          where("userId", "==", currentUser.value!.uid)
-        )
+        const membershipUpdates = {
+          ...userUpdates,
+          ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
+        }
+        if (Object.keys(membershipUpdates).length > 0) {
+          promises.push(updateUserInMemberships(userId, membershipUpdates))
+        }
 
-        await updateMemberships(membershipsQuery, (membershipData) => {
-          const existingUser =
-            (membershipData.user as Record<string, unknown>) || {}
-          return {
-            user: {
-              ...existingUser,
-              ...userUpdates,
-              ...(photoURL !== undefined
-                ? { photoURL: normalizedPhotoURL }
-                : {}),
-            },
-          }
-        })
+        // Run all updates in parallel
+        await Promise.all(promises)
       }
     )
   }
@@ -322,13 +281,7 @@ export const useAuthStore = defineStore("auth", () => {
    */
   async function uploadProfilePhoto(file: File): Promise<string> {
     if (!currentUser.value) throw new Error("Not authenticated")
-
-    const fileRef = storageRef(
-      storage,
-      `users/${currentUser.value.uid}/profilePhoto`
-    )
-    await uploadBytes(fileRef, file)
-    return await getDownloadURL(fileRef)
+    return uploadUserPhoto(currentUser.value.uid, file)
   }
 
   return {

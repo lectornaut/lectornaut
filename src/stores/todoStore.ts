@@ -23,7 +23,7 @@ import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/optimistic"
+} from "@/utils/firebase-optimistic"
 import { collection, doc, onSnapshot, orderBy, query } from "firebase/firestore"
 import { defineStore } from "pinia"
 

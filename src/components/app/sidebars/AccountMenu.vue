@@ -44,9 +44,10 @@ const handleSwitchAccount = async (uid: string) => {
           >
             <Avatar class="rounded-md">
               <AvatarImage
+                v-if="user?.photoURL"
                 class="rounded-md"
-                :src="user?.photoURL!"
-                :alt="user?.displayName!"
+                :src="user.photoURL"
+                :alt="user?.displayName"
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback class="rounded-md">
@@ -73,8 +74,9 @@ const handleSwitchAccount = async (uid: string) => {
               <ItemMedia>
                 <Avatar class="rounded-md">
                   <AvatarImage
+                    v-if="user?.photoURL"
                     class="rounded-md"
-                    :src="user?.photoURL!"
+                    :src="user.photoURL"
                     :alt="user?.displayName"
                     referrerpolicy="no-referrer"
                   />
@@ -137,9 +139,10 @@ const handleSwitchAccount = async (uid: string) => {
                       <ItemMedia>
                         <Avatar class="rounded-md">
                           <AvatarImage
+                            v-if="account?.photoURL"
                             class="rounded-md"
-                            :src="account?.photoURL!"
-                            :alt="account?.displayName!"
+                            :src="account.photoURL"
+                            :alt="account?.displayName"
                             referrerpolicy="no-referrer"
                           />
                           <AvatarFallback class="rounded-md">

@@ -3,46 +3,50 @@
  *
  * Provides utilities for implementing optimistic updates with proper rollback
  * support, pending operation tracking, and snapshot protection.
+ *
+ * Key Features:
+ * - Type-safe optimistic updates with automatic rollback
+ * - Pending operation tracking with reactive triggers
+ * - Retry logic with exponential backoff
+ * - Snapshot protection to prevent VueFire overwrites
  */
 
-import type { Ref } from "vue"
+import type { Ref, ShallowRef } from "vue"
+
+// ============================================================================
+// State Cloning
+// ============================================================================
 
 /**
  * Deep clones an object to preserve previous state for rollback
- * Uses structuredClone for proper deep copying
+ * Optimized for Firestore data structures
+ *
+ * @param state - The state to clone
+ * @returns A deep copy of the state
  */
 export function cloneState<T>(state: T): T {
-  if (state === null || state === undefined) {
-    return state
-  }
+  // Fast path for null/undefined
+  if (state == null) return state
 
-  // Handle primitives
-  if (typeof state !== "object") {
-    return state
-  }
+  // Fast path for primitives
+  if (typeof state !== "object") return state
 
   // Handle Date objects (including Firestore Timestamps with toDate())
   if (state instanceof Date) {
     return new Date(state.getTime()) as T
   }
 
-  // Handle Arrays
+  // Handle Arrays - use map for better performance than structuredClone
   if (Array.isArray(state)) {
     return state.map((item) => cloneState(item)) as T
   }
 
-  // Handle Firestore Timestamp-like objects (has seconds and nanoseconds)
-  if (
-    typeof state === "object" &&
-    state !== null &&
-    "seconds" in state &&
-    "nanoseconds" in state
-  ) {
-    // Return as-is for Timestamps since they're immutable
+  // Handle Firestore Timestamp-like objects (immutable, no need to clone)
+  if ("seconds" in state && "nanoseconds" in state) {
     return state
   }
 
-  // Handle plain objects
+  // Handle plain objects - try structuredClone first (fastest for large objects)
   try {
     return structuredClone(state)
   } catch {
@@ -60,12 +64,60 @@ export function cloneState<T>(state: T): T {
 }
 
 /**
+ * Shallow clone for arrays when deep cloning isn't needed
+ * Much faster than cloneState for simple array operations
+ */
+export function shallowCloneArray<T>(arr: T[]): T[] {
+  return [...arr]
+}
+
+// ============================================================================
+// Pending Set Management
+// ============================================================================
+
+/**
  * Creates a reactive Set for tracking pending operation IDs
  * Used to disable UI actions during in-flight operations
  */
 export function createPendingSet(): Set<string> {
   return new Set<string>()
 }
+
+/**
+ * Triggers reactivity for a ShallowRef<Set>
+ * Call this after modifying the set to ensure Vue detects the change
+ */
+export function triggerPendingUpdate(
+  pendingRef: ShallowRef<Set<string>>
+): void {
+  pendingRef.value = new Set(pendingRef.value)
+}
+
+/**
+ * Add an ID to pending set with reactivity trigger
+ */
+export function addPending(
+  pendingRef: ShallowRef<Set<string>>,
+  id: string
+): void {
+  pendingRef.value.add(id)
+  triggerPendingUpdate(pendingRef)
+}
+
+/**
+ * Remove an ID from pending set with reactivity trigger
+ */
+export function removePending(
+  pendingRef: ShallowRef<Set<string>>,
+  id: string
+): void {
+  pendingRef.value.delete(id)
+  triggerPendingUpdate(pendingRef)
+}
+
+// ============================================================================
+// Optimistic Update Types
+// ============================================================================
 
 /**
  * Result type for optimistic operations
@@ -86,7 +138,15 @@ export interface OptimisticOptions {
   errorMessage?: string
   /** Whether to show toast notifications */
   showToasts?: boolean
+  /** Maximum retry attempts (default: 0) */
+  maxRetries?: number
+  /** Base delay for exponential backoff in ms (default: 1000) */
+  retryBaseDelay?: number
 }
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
 
 /**
  * Helper to check if an operation is pending
@@ -103,21 +163,44 @@ export function hasAnyPending(pendingIds: Set<string>, ids: string[]): boolean {
 }
 
 /**
+ * Sleep helper for retry delays
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Calculate exponential backoff delay
+ */
+function getBackoffDelay(attempt: number, baseDelay: number): number {
+  return Math.min(baseDelay * Math.pow(2, attempt), 30000) // Max 30 seconds
+}
+
+// ============================================================================
+// Core Optimistic Update Function
+// ============================================================================
+
+/**
  * Wraps a Firestore write operation with optimistic update logic
+ * Includes optional retry support with exponential backoff
  *
  * @param pendingIds - Set tracking in-flight operations
  * @param id - Unique identifier for this operation
  * @param applyOptimistic - Function to apply the optimistic update to local state
  * @param rollback - Function to revert to previous state on failure
  * @param firestoreOperation - The actual Firestore write operation
+ * @param options - Optional configuration for retries
  */
 export async function withOptimisticUpdate<T>(
   pendingIds: Set<string>,
   id: string,
   applyOptimistic: () => void,
   rollback: () => void,
-  firestoreOperation: () => Promise<T>
+  firestoreOperation: () => Promise<T>,
+  options: OptimisticOptions = {}
 ): Promise<T> {
+  const { maxRetries = 0, retryBaseDelay = 1000 } = options
+
   // Add to pending set
   pendingIds.add(id)
 
@@ -125,18 +208,32 @@ export async function withOptimisticUpdate<T>(
     // Apply optimistic update immediately
     applyOptimistic()
 
-    // Perform the actual Firestore operation
-    const result = await firestoreOperation()
+    let lastError: Error | undefined
 
-    return result
-  } catch (error) {
-    // Rollback on failure
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Perform the actual Firestore operation
+        return await firestoreOperation()
+      } catch (error) {
+        lastError = error as Error
+
+        // Don't retry on final attempt
+        if (attempt < maxRetries) {
+          const delay = getBackoffDelay(attempt, retryBaseDelay)
+          console.warn(
+            `Firestore operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`,
+            error
+          )
+          await sleep(delay)
+        }
+      }
+    }
+
+    // All retries exhausted - rollback
     rollback()
-
-    // Re-throw the error for the caller to handle
-    throw error
+    throw lastError
   } finally {
-    // Remove from pending set
+    // Always clean up pending state
     pendingIds.delete(id)
   }
 }

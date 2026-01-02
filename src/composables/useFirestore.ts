@@ -4,6 +4,12 @@
  * These functions are designed to be called from Pinia store actions only.
  * Components should never call these directly - use store actions instead.
  *
+ * Features:
+ * - Automatic retry with exponential backoff
+ * - Configurable toast notifications
+ * - Undo support for destructive operations
+ * - Type-safe error handling
+ *
  * Optimistic updates are handled in the store layer, not here.
  * These functions focus on the Firestore operations and error handling.
  */
@@ -21,6 +27,10 @@ import {
 } from "firebase/firestore"
 import { toast } from "vue-sonner"
 
+// ============================================================================
+// Types
+// ============================================================================
+
 /**
  * Options for Firestore operations
  */
@@ -35,12 +45,93 @@ export interface FirestoreOperationOptions {
   errorMessage?: string
   /** Undo callback for delete/update operations */
   onUndo?: () => Promise<void>
+  /** Number of retry attempts (default: 0) */
+  maxRetries?: number
+  /** Base delay for retry backoff in ms (default: 1000) */
+  retryBaseDelay?: number
 }
 
 const defaultOptions: FirestoreOperationOptions = {
   showSuccessToast: true,
   showErrorToast: true,
+  maxRetries: 0,
+  retryBaseDelay: 1000,
 }
+
+// ============================================================================
+// Retry Logic
+// ============================================================================
+
+/**
+ * Sleep helper for retry delays
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Calculate exponential backoff delay with jitter
+ */
+function getBackoffDelay(attempt: number, baseDelay: number): number {
+  const exponentialDelay = baseDelay * Math.pow(2, attempt)
+  // Add jitter (±25%) to prevent thundering herd
+  const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1)
+  return Math.min(exponentialDelay + jitter, 30000) // Max 30 seconds
+}
+
+/**
+ * Check if error is retryable (network errors, temporary server errors)
+ */
+function isRetryableError(error: unknown): boolean {
+  if (error && typeof error === "object" && "code" in error) {
+    const code = (error as FirebaseError).code
+    // Retryable Firestore error codes
+    return [
+      "unavailable",
+      "deadline-exceeded",
+      "resource-exhausted",
+      "aborted",
+      "internal",
+    ].includes(code)
+  }
+  return false
+}
+
+/**
+ * Execute an operation with retry logic
+ */
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  options: Pick<FirestoreOperationOptions, "maxRetries" | "retryBaseDelay">
+): Promise<T> {
+  const { maxRetries = 0, retryBaseDelay = 1000 } = options
+  let lastError: Error | undefined
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error as Error
+
+      // Don't retry non-retryable errors or on final attempt
+      if (!isRetryableError(error) || attempt >= maxRetries) {
+        throw error
+      }
+
+      const delay = getBackoffDelay(attempt, retryBaseDelay)
+      console.warn(
+        `Firestore operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms`
+      )
+      await sleep(delay)
+    }
+  }
+
+  throw lastError
+}
+
+// ============================================================================
+// CRUD Operations
+// ============================================================================
 
 /**
  * Add or set a document in Firestore
@@ -56,14 +147,18 @@ export async function firestoreAddDoc<T extends { id?: string }>(
   const opts = { ...defaultOptions, ...options }
 
   try {
-    let docRef: DocumentReference
+    const docRef = await withRetry(async () => {
+      let ref: DocumentReference
 
-    if (document.id) {
-      docRef = doc(colRef, document.id)
-      await setDoc(docRef, document as DocumentData)
-    } else {
-      docRef = await addDoc(colRef, document as DocumentData)
-    }
+      if (document.id) {
+        ref = doc(colRef, document.id)
+        await setDoc(ref, document as DocumentData)
+      } else {
+        ref = await addDoc(colRef, document as DocumentData)
+      }
+
+      return ref
+    }, opts)
 
     if (opts.showSuccessToast) {
       toast.success(opts.successMessage ?? "Added")
@@ -96,7 +191,10 @@ export async function firestoreSetDoc<T extends { id: string }>(
   const opts = { ...defaultOptions, ...options }
 
   try {
-    await setDoc(doc(colRef, id), document as DocumentData)
+    await withRetry(
+      () => setDoc(doc(colRef, id), document as DocumentData),
+      opts
+    )
 
     if (opts.showSuccessToast) {
       toast.success(opts.successMessage ?? "Saved")
@@ -125,7 +223,7 @@ export async function firestoreDeleteDoc(
   const opts = { ...defaultOptions, ...options }
 
   try {
-    await deleteDoc(doc(colRef, id))
+    await withRetry(() => deleteDoc(doc(colRef, id)), opts)
 
     if (opts.showSuccessToast) {
       if (opts.onUndo) {
@@ -172,7 +270,10 @@ export async function firestoreUpdateDoc<T extends { id: string }>(
   const opts = { ...defaultOptions, ...options }
 
   try {
-    await updateDoc(doc(colRef, id), updates as DocumentData)
+    await withRetry(
+      () => updateDoc(doc(colRef, id), updates as DocumentData),
+      opts
+    )
 
     if (opts.showSuccessToast) {
       if (opts.onUndo) {

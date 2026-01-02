@@ -29,6 +29,7 @@ import IconLucideArrowBigUp from "~icons/lucide/arrow-big-up"
 import IconLucideArrowDown from "~icons/lucide/arrow-down"
 import IconLucideArrowDownToLine from "~icons/lucide/arrow-down-to-line"
 import IconLucideArrowLeft from "~icons/lucide/arrow-left"
+import IconLucideArrowLeftRight from "~icons/lucide/arrow-left-right"
 import IconLucideArrowLeftToLine from "~icons/lucide/arrow-left-to-line"
 import IconLucideArrowRight from "~icons/lucide/arrow-right"
 import IconLucideArrowRightToLine from "~icons/lucide/arrow-right-to-line"
@@ -500,6 +501,7 @@ export {
   IconLucideSun as IconSun,
   IconLucideSunMoon as IconSunMoon,
   IconLucideSuperscript as IconSuperscript,
+  IconLucideArrowLeftRight as IconSwitchHorizontal,
   IconLucideTable as IconTable,
   IconLucideTerminal as IconTerminal,
   IconLucideText as IconText,

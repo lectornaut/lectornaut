@@ -13,83 +13,38 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
-import { firestore, storage } from "@/modules/firebase"
+import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { ITeam } from "@/types"
 import {
+  createTeamMembershipsQuery,
+  createUsersWithTeamQuery,
+  getMembershipRef,
+  getTeamRef,
+  getUserRef,
+  processInBatches,
+  updateTeamInAllMemberships,
+  uploadTeamPhoto,
+} from "@/utils/firebase-helpers"
+import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/optimistic"
+} from "@/utils/firebase-optimistic"
 import {
   collection,
-  collectionGroup,
   deleteDoc,
   doc,
   type FieldValue,
   getDocs,
-  query,
   runTransaction,
   serverTimestamp,
   type Timestamp,
   updateDoc,
-  where,
-  writeBatch,
 } from "firebase/firestore"
-import {
-  getDownloadURL,
-  ref as storageRef,
-  uploadBytes,
-} from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"
-
-// Constants
-const BATCH_SIZE = 450
-
-// Helper to get document references
-const getTeamRef = (teamId: string) => doc(firestore, "teams", teamId)
-
-const getMembershipRef = (teamId: string, userId: string) =>
-  doc(firestore, "teams", teamId, "memberships", userId)
-
-const getUserRef = (userId: string) => doc(firestore, "users", userId)
-
-// Helper to process Firestore batch operations in chunks
-async function processInBatches<T>(
-  items: T[],
-  processFn: (item: T, batch: ReturnType<typeof writeBatch>) => void
-) {
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const chunk = items.slice(i, i + BATCH_SIZE)
-    const batch = writeBatch(firestore)
-    chunk.forEach((item) => processFn(item, batch))
-    await batch.commit()
-  }
-}
-
-// Helper to upload team photo
-async function uploadTeamPhoto(teamId: string, file: File): Promise<string> {
-  const fileRef = storageRef(storage, `teams/${teamId}/profilePhoto`)
-  await uploadBytes(fileRef, file)
-  return await getDownloadURL(fileRef)
-}
-
-// Helper to update all memberships with new data
-async function updateMemberships(
-  queryRef: ReturnType<typeof query>,
-  updateFn: (membershipData: Record<string, unknown>) => Record<string, unknown>
-) {
-  const membershipDocs = await getDocs(queryRef)
-  await processInBatches(membershipDocs.docs, (docSnap, batch) => {
-    const membershipData = docSnap.data() as Record<string, unknown>
-    batch.update(docSnap.ref, {
-      ...updateFn(membershipData),
-      updatedAt: serverTimestamp(),
-    })
-  })
-}
 
 export const useTeamStore = defineStore("teams", () => {
   const authStore = useAuthStore()
@@ -376,9 +331,18 @@ export const useTeamStore = defineStore("teams", () => {
 
     if (name) updateData.name = name
 
+    // Upload photo first if provided (outside of optimistic update to get URL)
     if (photoFile !== undefined) {
       updateData.photoURL =
         photoFile === null ? null : await uploadTeamPhoto(teamId, photoFile)
+    }
+
+    // Prepare optimistic updates for team data
+    const teamUpdates = {
+      ...(name ? { name } : {}),
+      ...(updateData.photoURL !== undefined
+        ? { photoURL: updateData.photoURL }
+        : {}),
     }
 
     // Clone previous state for rollback
@@ -393,47 +357,22 @@ export const useTeamStore = defineStore("teams", () => {
         if (currentTeam.value?.id === teamId) {
           optimisticCurrentTeam.value = {
             ...currentTeam.value,
-            ...(name ? { name } : {}),
-            ...(updateData.photoURL !== undefined
-              ? { photoURL: updateData.photoURL }
-              : {}),
+            ...teamUpdates,
           }
         }
-
-        membershipStore.updateTeamInMemberships(teamId, {
-          ...(name ? { name } : {}),
-          ...(updateData.photoURL !== undefined
-            ? { photoURL: updateData.photoURL }
-            : {}),
-        })
+        membershipStore.updateTeamInMemberships(teamId, teamUpdates)
       },
       // Rollback on error
       () => {
         optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
       },
-      // Firestore operation
+      // Firestore operation - run in parallel
       async () => {
-        await updateDoc(getTeamRef(teamId), updateData)
-
-        // Update all memberships for this team
-        const membershipsQuery = query(
-          collectionGroup(firestore, "memberships"),
-          where("teamId", "==", teamId)
-        )
-
-        await updateMemberships(membershipsQuery, (membershipData) => {
-          const existingTeam =
-            (membershipData.team as Record<string, unknown>) || {}
-          const updatedTeam: Record<string, unknown> = {
-            ...existingTeam,
-            ...updateData,
-          }
-          Object.keys(updatedTeam).forEach(
-            (key) => updatedTeam[key] === undefined && delete updatedTeam[key]
-          )
-          return { team: updatedTeam }
-        })
+        await Promise.all([
+          updateDoc(getTeamRef(teamId), updateData),
+          updateTeamInAllMemberships(teamId, updateData),
+        ])
       }
     )
   }
@@ -473,26 +412,15 @@ export const useTeamStore = defineStore("teams", () => {
       },
       // Firestore operation
       async () => {
-        // Find all memberships and users to update
-        const membershipsQuery = query(
-          collectionGroup(firestore, "memberships"),
-          where("teamId", "==", teamId)
-        )
-        const usersQuery = query(
-          collection(firestore, "users"),
-          where("currentTeamId", "==", teamId)
-        )
-
+        // Fetch all related documents in parallel
         const [membershipDocs, userDocs] = await Promise.all([
-          getDocs(membershipsQuery),
-          getDocs(usersQuery),
+          getDocs(createTeamMembershipsQuery(teamId)),
+          getDocs(createUsersWithTeamQuery(teamId)),
         ])
 
-        // Delete team document
-        await deleteDoc(getTeamRef(teamId))
-
-        // Delete all memberships and update users in batches
+        // Delete team and update related documents in parallel
         await Promise.all([
+          deleteDoc(getTeamRef(teamId)),
           processInBatches(membershipDocs.docs, (docSnap, batch) =>
             batch.delete(docSnap.ref)
           ),

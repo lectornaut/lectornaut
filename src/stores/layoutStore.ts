@@ -17,7 +17,7 @@ import {
 } from "@/helpers/defaults"
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
-import { cloneState, createPendingSet } from "@/utils/optimistic"
+import { cloneState, createPendingSet } from "@/utils/firebase-optimistic"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc, setDoc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"

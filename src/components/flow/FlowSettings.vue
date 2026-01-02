@@ -185,9 +185,11 @@ const teams = [
                         class="ring-background ring-3"
                       >
                         <AvatarImage
+                          v-if="person.avatar"
                           class="inline-block size-8 rounded-full"
                           :src="person.avatar"
                           :alt="person.name"
+                          referrerpolicy="no-referrer"
                         />
                         <AvatarFallback>
                           {{ person.name[0] }}
@@ -221,9 +223,11 @@ const teams = [
                   <div class="flex flex-col gap-2">
                     <Avatar>
                       <AvatarImage
+                        v-if="person.avatar"
                         class="inline-block size-8 rounded-full"
                         :src="person.avatar"
                         :alt="person.name"
+                        referrerpolicy="no-referrer"
                       />
                       <AvatarFallback>
                         {{ person.name[0] }}

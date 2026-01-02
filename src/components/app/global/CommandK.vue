@@ -2,10 +2,8 @@
 import { isTauri } from "@/composables/usePlatform"
 import { IconSearch } from "@/data/icons"
 import {
+  getFilteredShortcuts,
   getPlatformSpecialKey,
-  shortcuts,
-  type Shortcut,
-  type ShortcutCategory,
 } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 
@@ -21,28 +19,12 @@ emitter.on("Dialog.Command.Open", () => {
   openCommand.value = !openCommand.value
 })
 
-const filteredShortcuts = computed(() => {
-  const isWeb = !isTauri.value
-  const isDesktop = isTauri.value
-
-  const filterShortcut = (shortcut: Shortcut) =>
-    (isWeb ? !shortcut.hidden.includes("web") : true) &&
-    (isDesktop ? !shortcut.hidden.includes("desktop") : true) &&
-    !shortcut.hidden.includes("commands")
-
-  const filterCategory = (category: ShortcutCategory) =>
-    (isWeb ? !category.hidden.includes("web") : true) &&
-    (isDesktop ? !category.hidden.includes("desktop") : true) &&
-    !category.hidden.includes("commands")
-
-  return shortcuts
-    .filter(filterCategory)
-    .map((category) => ({
-      ...category,
-      shortcuts: category.shortcuts.filter(filterShortcut),
-    }))
-    .filter((category) => category.shortcuts.length > 0)
-})
+const filteredShortcuts = computed(() =>
+  getFilteredShortcuts({
+    context: "commands",
+    isDesktop: isTauri.value,
+  })
+)
 </script>
 
 <template>

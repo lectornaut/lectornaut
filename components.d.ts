@@ -204,6 +204,7 @@ declare module 'vue' {
     HoverCardContent: typeof import('./src/components/ui/hover-card/HoverCardContent.vue')['default']
     HoverCardTrigger: typeof import('./src/components/ui/hover-card/HoverCardTrigger.vue')['default']
     HyperApp: typeof import('./src/components/hyper/HyperApp.vue')['default']
+    IconCircle: typeof import('~icons/ci/rcle')['default']
     IconCirclePlus: typeof import('~icons/ci/rcle-plus')['default']
     Input: typeof import('./src/components/ui/input/Input.vue')['default']
     InputGroup: typeof import('./src/components/ui/input-group/InputGroup.vue')['default']

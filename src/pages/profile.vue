@@ -36,8 +36,9 @@ const username = computed(() => userData.value?.username ?? "")
     <div class="bg-background mx-auto -mt-10 rounded-full border p-1">
       <Avatar class="size-20 rounded-full">
         <AvatarImage
+          v-if="user?.photoURL"
           class="size-20 rounded-full"
-          :src="user?.photoURL!"
+          :src="user.photoURL"
           :alt="user?.displayName"
           referrerpolicy="no-referrer"
         />

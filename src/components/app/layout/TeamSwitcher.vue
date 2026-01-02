@@ -6,8 +6,8 @@ import {
   IconChevronDown,
   IconCirclePlus,
   IconSettings,
+  IconSwitchHorizontal,
   IconUsers,
-  IconUsersRound,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
@@ -52,7 +52,8 @@ const switchTeam = (teamId: string) => {
           >
             <Avatar class="size-4">
               <AvatarImage
-                :src="currentTeam?.photoURL!"
+                v-if="currentTeam?.photoURL"
+                :src="currentTeam.photoURL"
                 :alt="activeTeamLabel"
                 referrerpolicy="no-referrer"
               />
@@ -80,7 +81,7 @@ const switchTeam = (teamId: string) => {
             >
               <IconSettings />
               Settings
-              <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
+              <DropdownMenuShortcut>⌘;</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'members')"
@@ -95,7 +96,7 @@ const switchTeam = (teamId: string) => {
             <DropdownMenuSub>
               <DropdownMenuItem as-child>
                 <DropdownMenuSubTrigger>
-                  <IconUsersRound />
+                  <IconSwitchHorizontal />
                   Switch team
                 </DropdownMenuSubTrigger>
               </DropdownMenuItem>
@@ -122,9 +123,10 @@ const switchTeam = (teamId: string) => {
                   >
                     <Avatar class="size-4">
                       <AvatarImage
-                        :src="team.original.photoURL!"
-                        referrerpolicy="no-referrer"
+                        v-if="team.original.photoURL"
+                        :src="team.original.photoURL"
                         :alt="team.label"
+                        referrerpolicy="no-referrer"
                       />
                       <AvatarFallback>
                         {{ getInitials(team.label) }}

@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import TeamDialog from "@/components/app/teams/TeamDialog.vue"
 import { getInitials } from "@/helpers/utilities"
-import { auth } from "@/modules/firebase"
 import { useTeamStore } from "@/stores/teamStore"
 import { signOut } from "firebase/auth"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
+import { useFirebaseAuth } from "vuefire"
 
 const teamStore = useTeamStore()
 const { memberships, isLoading } = storeToRefs(teamStore)
@@ -27,6 +27,8 @@ const switchTeam = async (teamId: string) => {
     toast.error("Failed to switch team")
   }
 }
+
+const auth = useFirebaseAuth()!
 
 const handleSignOut = async () => {
   try {
@@ -67,9 +69,10 @@ const handleSignOut = async () => {
             >
               <Avatar class="size-8">
                 <AvatarImage
-                  :src="team.original.photoURL!"
-                  referrerpolicy="no-referrer"
+                  v-if="team.original.photoURL"
+                  :src="team.original.photoURL"
                   :alt="team.label"
+                  referrerpolicy="no-referrer"
                 />
                 <AvatarFallback>
                   {{ getInitials(team.label) }}
