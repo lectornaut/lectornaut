@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useKeychain } from "@/composables/useKeychain"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconActivity,
@@ -33,6 +34,7 @@ import {
 } from "@/data/icons"
 import { accents, fonts, languages, sizes, themes } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
+import { logout } from "@/modules/auth"
 import { emitter } from "@/modules/mitt"
 import { accent, font, size, store } from "@/modules/theme"
 import { updateUserData } from "@/queries/updateUserData"
@@ -338,6 +340,35 @@ const sendVerificationEmail = async () => {
     })
 }
 
+// Helper function to handle auth errors that require recent login
+const handleAuthError = async (
+  error: { code?: string; message?: string },
+  defaultMessage: string
+) => {
+  if (error.code === "auth/requires-recent-login") {
+    toast.error("Re-authentication required", {
+      description:
+        "For security reasons, you need to log in again before performing this action.",
+      action: {
+        label: "Logout",
+        onClick: async () => {
+          // Remove from keychain to force fresh login (not session restore)
+          if (user.value?.uid) {
+            useKeychain().removeAccount(user.value.uid)
+          }
+          // Full logout and redirect to /enter
+          await logout()
+        },
+      },
+    })
+    return true
+  }
+  toast.error(defaultMessage, {
+    description: error.message,
+  })
+  return false
+}
+
 const newEmail = ref("")
 const changingEmail = ref(false)
 const changeEmail = async () => {
@@ -350,9 +381,7 @@ const changeEmail = async () => {
       })
     })
     .catch((error) => {
-      toast.error("Failed to send verification email", {
-        description: error.message,
-      })
+      handleAuthError(error, "Failed to send verification email")
     })
     .finally(() => {
       changingEmail.value = false
@@ -369,11 +398,10 @@ const changePassword = async () => {
       toast.success("Password updated", {
         description: "Your password has been successfully updated.",
       })
+      newPassword.value = ""
     })
     .catch((error) => {
-      toast.error("Failed to update password", {
-        description: error.message,
-      })
+      handleAuthError(error, "Failed to update password")
     })
     .finally(() => {
       changingPassword.value = false
@@ -398,9 +426,7 @@ const deleteAccount = async () => {
       })
     })
     .catch((error) => {
-      toast.error("Failed to delete account", {
-        description: error.message,
-      })
+      handleAuthError(error, "Failed to delete account")
     })
     .finally(() => {
       deletingAccount.value = false
@@ -422,9 +448,7 @@ const unlinkProvider = async (providerId: string) => {
       })
     })
     .catch((error) => {
-      toast.error("Failed to unlink provider", {
-        description: error.message,
-      })
+      handleAuthError(error, "Failed to unlink provider")
     })
     .finally(() => {
       unlinkingProviderMap.value = {
@@ -1003,18 +1027,12 @@ const df = new DateFormatter("en-US", {
                     <FieldSet>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="email">{{
-                            t("settings.account.email.label")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{ user?.email }}
+                          <FieldLabel for="email">
+                            {{ t("settings.account.email.label") }}
                             <TooltipProvider v-if="user?.emailVerified">
                               <Tooltip>
                                 <TooltipTrigger as-child>
-                                  <Badge
-                                    variant="outline"
-                                    class="gap-1 px-1 font-normal"
-                                  >
+                                  <Badge variant="secondary">
                                     <IconBadgeCheck />
                                     {{ t("settings.account.email.verified") }}
                                   </Badge>
@@ -1024,58 +1042,57 @@ const df = new DateFormatter("en-US", {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          </FieldLabel>
+                          <FieldDescription>
+                            {{ user?.email }}
                           </FieldDescription>
                         </FieldContent>
-                        <div class="flex gap-2">
-                          <Button
-                            v-if="!user?.emailVerified"
-                            variant="secondary"
-                            :disabled="sendingVerificationEmail"
-                            @click="sendVerificationEmail"
-                          >
-                            <Spinner v-if="sendingVerificationEmail" />
-                            <span>{{
-                              t("settings.account.email.verify")
-                            }}</span>
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger>
-                              <Button variant="outline">
-                                {{ t("settings.account.email.change") }}
+                        <Button
+                          v-if="!user?.emailVerified"
+                          variant="secondary"
+                          :disabled="sendingVerificationEmail"
+                          @click="sendVerificationEmail"
+                        >
+                          <Spinner v-if="sendingVerificationEmail" />
+                          {{ t("settings.account.email.verify") }}
+                        </Button>
+                        <Dialog>
+                          <DialogTrigger>
+                            <Button variant="outline">
+                              {{ t("settings.account.email.change") }}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>
+                                {{ t("settings.account.email.changeTitle") }}
+                              </DialogTitle>
+                              <DialogDescription>
+                                {{ t("settings.account.email.changeDesc") }}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div>
+                              <Input
+                                v-model="newEmail"
+                                :label="t('settings.account.email.newLabel')"
+                                :placeholder="
+                                  t('settings.account.email.newPlaceholder')
+                                "
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                :disabled="changingEmail || !newEmail"
+                                @click="changeEmail"
+                              >
+                                <Spinner v-if="changingEmail" />
+                                <span>{{
+                                  t("settings.account.email.sendVerification")
+                                }}</span>
                               </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>
-                                  {{ t("settings.account.email.changeTitle") }}
-                                </DialogTitle>
-                                <DialogDescription>
-                                  {{ t("settings.account.email.changeDesc") }}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div>
-                                <Input
-                                  v-model="newEmail"
-                                  :label="t('settings.account.email.newLabel')"
-                                  :placeholder="
-                                    t('settings.account.email.newPlaceholder')
-                                  "
-                                />
-                              </div>
-                              <DialogFooter>
-                                <Button
-                                  :disabled="changingEmail || !newEmail"
-                                  @click="changeEmail"
-                                >
-                                  <Spinner v-if="changingEmail" />
-                                  <span>{{
-                                    t("settings.account.email.sendVerification")
-                                  }}</span>
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>

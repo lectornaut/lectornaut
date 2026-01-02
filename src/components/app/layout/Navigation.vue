@@ -67,6 +67,7 @@ useSortable(el, activeNavItems, {
               :key="item.id"
               :model-value="activeNavItems.some((i) => i.id === item.id)"
               @update:model-value="toggleNavItem(item.id, $event)"
+              @select.prevent
             >
               {{ t("navigation.menu." + item.id) }}
             </DropdownMenuCheckboxItem>
