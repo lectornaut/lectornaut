@@ -83,16 +83,6 @@ const productTour = driver({
       },
     },
     {
-      element: "#tour-apps-menu",
-      popover: {
-        title: "Apps menu",
-        description:
-          "You can access all the apps from the apps menu. This is useful to quickly navigate between different apps.",
-        side: "right",
-        align: "start",
-      },
-    },
-    {
       element: "#tour-tasks-notifications",
       popover: {
         title: "Tasks and notifications",
@@ -100,16 +90,6 @@ const productTour = driver({
           "You can manage your tasks and notifications here. This is useful to keep track of your work.",
         side: "bottom",
         align: "start",
-      },
-    },
-    {
-      element: "#tour-team-switcher",
-      popover: {
-        title: "Select your team",
-        description:
-          "You can switch between teams using the team switcher. This is useful if you are part of multiple teams.",
-        side: "bottom",
-        align: "center",
       },
     },
     {
@@ -128,6 +108,16 @@ const productTour = driver({
         title: "AI Assistant",
         description:
           "You can interact with the AI assistant from here. This is useful if you need help with your tasks.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "#tour-team-switcher",
+      popover: {
+        title: "Select your team",
+        description:
+          "You can switch between teams using the team switcher. This is useful if you are part of multiple teams.",
         side: "bottom",
         align: "center",
       },

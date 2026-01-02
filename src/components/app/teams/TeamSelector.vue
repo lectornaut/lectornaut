@@ -60,8 +60,7 @@ const switchTeam = async (teamId: string) => {
             >
               <Avatar class="size-5">
                 <AvatarImage
-                  v-if="team.original.photoURL"
-                  :src="team.original.photoURL"
+                  :src="team.original?.photoURL!"
                   :alt="team.label"
                   referrerpolicy="no-referrer"
                 />

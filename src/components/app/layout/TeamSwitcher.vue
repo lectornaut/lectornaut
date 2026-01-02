@@ -48,9 +48,8 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
           >
             <Avatar class="rounded-md">
               <AvatarImage
-                v-if="currentTeam?.photoURL"
-                :src="currentTeam.photoURL"
                 class="rounded-md"
+                :src="currentTeam?.photoURL!"
                 :alt="activeTeamLabel"
                 referrerpolicy="no-referrer"
               />
@@ -66,14 +65,13 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
             <div class="flex items-center gap-1">
               <div class="flex -space-x-1">
                 <Avatar
-                  v-for="member in teamMembers.slice(0, 5)"
+                  v-for="member in teamMembers.slice(0, 3)"
                   :key="member.userId"
                   class="ring-sidebar size-5 rounded-full ring-3"
                 >
                   <AvatarImage
-                    v-if="member.user?.photoURL"
                     class="rounded-full"
-                    :src="member.user.photoURL"
+                    :src="member.user?.photoURL!"
                     :alt="member.user?.displayName"
                     referrerpolicy="no-referrer"
                   />
@@ -83,10 +81,10 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                 </Avatar>
               </div>
               <span
-                v-if="teamMembers.length > 5"
+                v-if="teamMembers.length > 3"
                 class="text-muted-foreground text-xs"
               >
-                +{{ teamMembers.length - 5 }}
+                +{{ teamMembers.length - 3 }}
               </span>
             </div>
             <IconChevronsUpDown />
@@ -165,9 +163,8 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                       <ItemMedia>
                         <Avatar class="rounded-md">
                           <AvatarImage
-                            v-if="team.original.photoURL"
                             class="rounded-md"
-                            :src="team.original.photoURL"
+                            :src="team.original?.photoURL!"
                             :alt="team.label"
                             referrerpolicy="no-referrer"
                           />

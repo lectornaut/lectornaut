@@ -107,10 +107,9 @@ useHead({
           <div v-if="user">
             <Avatar class="size-20 rounded-full">
               <AvatarImage
-                v-if="user.photoURL"
                 class="size-20 rounded-full"
-                :src="user.photoURL"
-                :alt="user.displayName"
+                :src="user?.photoURL!"
+                :alt="user?.displayName"
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback class="size-20 rounded-full">

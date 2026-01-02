@@ -312,7 +312,7 @@ const discardChanges = () => {
 }
 
 const photoURL = computed({
-  get: () => user.value?.photoURL ?? "",
+  get: () => user.value?.photoURL,
   set: (value: string) => {
     authStore.updateUserProfile({ photoURL: value })
   },
@@ -795,10 +795,9 @@ const df = new DateFormatter("en-US", {
                                   </template>
                                   <template v-else>
                                     <AvatarImage
-                                      v-if="user?.photoURL"
                                       class="rounded-md"
-                                      :src="user.photoURL"
-                                      :alt="user.displayName"
+                                      :src="user?.photoURL!"
+                                      :alt="user?.displayName"
                                       referrerpolicy="no-referrer"
                                     />
                                     <AvatarFallback class="rounded-md">
@@ -1171,10 +1170,9 @@ const df = new DateFormatter("en-US", {
                           <div class="relative">
                             <Avatar class="rounded-md">
                               <AvatarImage
-                                v-if="provider.photoURL"
                                 class="rounded-md"
-                                :src="provider.photoURL"
-                                :alt="provider.displayName"
+                                :src="provider?.photoURL!"
+                                :alt="provider?.displayName"
                                 referrerpolicy="no-referrer"
                               />
                               <AvatarFallback class="rounded-md">
@@ -1695,9 +1693,8 @@ const df = new DateFormatter("en-US", {
                                       <ItemMedia>
                                         <Avatar class="rounded-md">
                                           <AvatarImage
-                                            v-if="member.user?.photoURL"
                                             class="rounded-md"
-                                            :src="member.user?.photoURL"
+                                            :src="member.user?.photoURL!"
                                             :alt="member.user?.displayName"
                                             referrerpolicy="no-referrer"
                                           />
@@ -2004,12 +2001,9 @@ const df = new DateFormatter("en-US", {
                                                 </template>
                                                 <template v-else>
                                                   <AvatarImage
-                                                    v-if="
-                                                      membership.team?.photoURL
-                                                    "
                                                     class="rounded-md"
                                                     :src="
-                                                      membership.team.photoURL
+                                                      membership.team?.photoURL!
                                                     "
                                                     :alt="membership.team?.name"
                                                   />
@@ -2093,93 +2087,108 @@ const df = new DateFormatter("en-US", {
                                     class="flex items-center justify-end text-right"
                                   >
                                     <ButtonGroup>
-                                      <Button
-                                        v-if="
-                                          currentTeam?.id !==
-                                          membership.team?.id
-                                        "
-                                        variant="outline"
-                                        :disabled="
-                                          isTeamLoading(membership.team?.id)
-                                        "
-                                        @click="switchTeam(membership.team?.id)"
-                                      >
-                                        <Spinner
+                                      <ButtonGroup>
+                                        <Button
                                           v-if="
+                                            currentTeam?.id !==
+                                            membership.team?.id
+                                          "
+                                          variant="outline"
+                                          :disabled="
                                             isTeamLoading(membership.team?.id)
                                           "
-                                        />
-                                        <template v-else>
-                                          <IconSwitchHorizontal />
-                                          Switch
-                                        </template>
-                                      </Button>
-                                      <Button v-else variant="outline" disabled>
-                                        <IconCheck />
-                                        Current
-                                      </Button>
-                                      <DropdownMenu>
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger as-child>
-                                              <DropdownMenuTrigger as-child>
-                                                <Button
-                                                  variant="outline"
-                                                  size="icon"
+                                          @click="
+                                            switchTeam(membership.team?.id)
+                                          "
+                                        >
+                                          <Spinner
+                                            v-if="
+                                              isTeamLoading(membership.team?.id)
+                                            "
+                                          />
+                                          <template v-else>
+                                            <IconSwitchHorizontal />
+                                            Switch
+                                          </template>
+                                        </Button>
+                                        <Button
+                                          v-else
+                                          variant="outline"
+                                          disabled
+                                        >
+                                          <IconCheck />
+                                          Current
+                                        </Button>
+                                      </ButtonGroup>
+                                      <ButtonGroup>
+                                        <DropdownMenu>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger as-child>
+                                                <DropdownMenuTrigger as-child>
+                                                  <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                  >
+                                                    <IconMoreHorizontal />
+                                                  </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent
+                                                  align="end"
                                                 >
-                                                  <IconMoreHorizontal />
-                                                </Button>
-                                              </DropdownMenuTrigger>
-                                              <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                  @click="
-                                                    confirmExitTeam(
-                                                      membership.team!
-                                                    )
-                                                  "
-                                                >
-                                                  <IconLogOut />
-                                                  Exit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator
-                                                  v-if="
-                                                    membership.role === 'owner'
-                                                  "
-                                                />
-                                                <DropdownMenuItem
-                                                  v-if="
-                                                    membership.role === 'owner'
-                                                  "
-                                                  @click="
-                                                    startEditingTeam(
-                                                      membership.team!
-                                                    )
-                                                  "
-                                                >
-                                                  <IconPencil />
-                                                  Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                  v-if="
-                                                    membership.role === 'owner'
-                                                  "
-                                                  @click="
-                                                    confirmDeleteTeam(
-                                                      membership.team!
-                                                    )
-                                                  "
-                                                >
-                                                  <IconTrash />
-                                                  Delete
-                                                </DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              Actions
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      </DropdownMenu>
+                                                  <DropdownMenuItem
+                                                    @click="
+                                                      confirmExitTeam(
+                                                        membership.team!
+                                                      )
+                                                    "
+                                                  >
+                                                    <IconLogOut />
+                                                    Exit
+                                                  </DropdownMenuItem>
+                                                  <DropdownMenuSeparator
+                                                    v-if="
+                                                      membership.role ===
+                                                      'owner'
+                                                    "
+                                                  />
+                                                  <DropdownMenuItem
+                                                    v-if="
+                                                      membership.role ===
+                                                      'owner'
+                                                    "
+                                                    @click="
+                                                      startEditingTeam(
+                                                        membership.team!
+                                                      )
+                                                    "
+                                                  >
+                                                    <IconPencil />
+                                                    Edit
+                                                  </DropdownMenuItem>
+                                                  <DropdownMenuItem
+                                                    v-if="
+                                                      membership.role ===
+                                                      'owner'
+                                                    "
+                                                    @click="
+                                                      confirmDeleteTeam(
+                                                        membership.team!
+                                                      )
+                                                    "
+                                                  >
+                                                    <IconTrash />
+                                                    Delete
+                                                  </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                Actions
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </DropdownMenu>
+                                      </ButtonGroup>
                                     </ButtonGroup>
                                   </TableCell>
                                 </TableRow>
