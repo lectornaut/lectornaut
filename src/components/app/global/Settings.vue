@@ -777,9 +777,7 @@ const df = new DateFormatter("en-US", {
                             }}
                           </FieldDescription>
                         </FieldContent>
-                        <div
-                          class="group relative flex flex-col items-center gap-2"
-                        >
+                        <div class="group relative">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger as-child>
@@ -826,7 +824,7 @@ const df = new DateFormatter("en-US", {
                                   variant="secondary"
                                   class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
                                   size="icon-sm"
-                                  @click="handleRemoveProfilePicture"
+                                  @click.stop="handleRemoveProfilePicture"
                                 >
                                   <IconX />
                                 </Button>
@@ -842,9 +840,9 @@ const df = new DateFormatter("en-US", {
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <FieldLabel for="name">{{
-                            t("settings.account.preferredName.label")
-                          }}</FieldLabel>
+                          <FieldLabel for="name">
+                            {{ t("settings.account.preferredName.label") }}
+                          </FieldLabel>
                           <FieldDescription>
                             {{
                               t("settings.account.preferredName.description")
@@ -1983,7 +1981,7 @@ const df = new DateFormatter("en-US", {
                                 >
                                   <TableCell>
                                     <Item size="sm" class="p-0">
-                                      <ItemMedia>
+                                      <ItemMedia class="group relative">
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger as-child>

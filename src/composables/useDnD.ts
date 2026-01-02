@@ -3,23 +3,24 @@ import { useVueFlow } from "@vue-flow/core"
 let id = 0
 
 /**
- * @returns {string} - A unique id.
+ * Generates a unique ID for drag-and-drop nodes.
+ * @returns A unique node identifier.
  */
-function getId() {
+function getId(): string {
   return `dndnode_${id++}`
 }
 
 /**
- * In a real world scenario you'd want to avoid creating refs in a global scope like this as they might not be cleaned up properly.
- * @type {{draggedType: Ref<string|null>, isDragOver: Ref<boolean>, isDragging: Ref<boolean>}}
+ * Global drag-and-drop state.
+ * Using shallowRef for better performance with primitive values.
  */
 const state = {
-  /**
-   * The type of the node being dragged.
-   */
-  draggedType: ref<string | null>(null),
-  isDragOver: ref(false),
-  isDragging: ref(false),
+  /** The type of the node being dragged */
+  draggedType: shallowRef<string | null>(null),
+  /** Whether a dragged item is over a valid drop zone */
+  isDragOver: shallowRef(false),
+  /** Whether a drag operation is in progress */
+  isDragging: shallowRef(false),
 }
 
 export default function useDragAndDrop() {
@@ -42,6 +43,7 @@ export default function useDragAndDrop() {
     isDragging.value = true
 
     document.addEventListener("drop", onDragEnd)
+    document.addEventListener("dragend", onDragEnd)
   }
 
   /**
@@ -70,6 +72,7 @@ export default function useDragAndDrop() {
     isDragOver.value = false
     draggedType.value = null
     document.removeEventListener("drop", onDragEnd)
+    document.removeEventListener("dragend", onDragEnd)
   }
 
   /**

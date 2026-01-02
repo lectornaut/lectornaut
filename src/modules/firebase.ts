@@ -24,9 +24,8 @@ export const firebaseApp = initializeApp(firebaseConfig)
 export const analytics = getAnalytics(firebaseApp)
 export const firestore = getFirestore(firebaseApp)
 export const auth = getAuth(firebaseApp)
+export const functions = getFunctions(firebaseApp)
+export const storage = getStorage(firebaseApp)
 
 // Explicitly use LocalStorage so we can capture the session blob synchronously.
 setPersistence(auth, browserLocalPersistence)
-
-export const functions = getFunctions(firebaseApp)
-export const storage = getStorage(firebaseApp)

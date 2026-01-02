@@ -224,42 +224,36 @@ const handleSubmit = async () => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Avatar
-                    class="size-16 cursor-pointer"
+                    class="size-16"
                     @click="
                       openFileDialog({ accept: 'image/*', multiple: false })
                     "
                   >
                     <AvatarImage
-                      v-if="photoPreview"
-                      class="object-cover"
-                      :src="photoPreview"
+                      class="size-16"
+                      :src="photoPreview!"
                       referrerpolicy="no-referrer"
                     />
-                    <AvatarFallback>
+                    <AvatarFallback class="size-16">
                       {{ getInitials(teamName) }}
                     </AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent> Upload team photo </TooltipContent>
               </Tooltip>
-              <div
-                v-if="photoPreview"
-                class="absolute -top-1 -right-1 opacity-0 transition-opacity group-hover:opacity-100"
-              >
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      class="size-6 rounded-full p-0"
-                      @click.stop="removePhoto"
-                    >
-                      <IconX class="size-3" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent> Remove team photo </TooltipContent>
-                </Tooltip>
-              </div>
+              <Tooltip v-if="photoPreview">
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="secondary"
+                    class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                    size="icon-sm"
+                    @click.stop="removePhoto"
+                  >
+                    <IconX />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent> Remove team photo </TooltipContent>
+              </Tooltip>
             </TooltipProvider>
           </div>
           <p class="text-muted-foreground text-xs">

@@ -9,12 +9,16 @@
  * - Configurable toast notifications
  * - Undo support for destructive operations
  * - Type-safe error handling
+ * - User-friendly error messages
  *
  * Optimistic updates are handled in the store layer, not here.
  * These functions focus on the Firestore operations and error handling.
  */
 
-import type { FirebaseError } from "firebase/app"
+import {
+  getFirestoreErrorMessage,
+  isRetryableFirebaseError,
+} from "@/utils/firebase-errors"
 import {
   addDoc,
   CollectionReference,
@@ -80,24 +84,6 @@ function getBackoffDelay(attempt: number, baseDelay: number): number {
 }
 
 /**
- * Check if error is retryable (network errors, temporary server errors)
- */
-function isRetryableError(error: unknown): boolean {
-  if (error && typeof error === "object" && "code" in error) {
-    const code = (error as FirebaseError).code
-    // Retryable Firestore error codes
-    return [
-      "unavailable",
-      "deadline-exceeded",
-      "resource-exhausted",
-      "aborted",
-      "internal",
-    ].includes(code)
-  }
-  return false
-}
-
-/**
  * Execute an operation with retry logic
  */
 async function withRetry<T>(
@@ -114,7 +100,7 @@ async function withRetry<T>(
       lastError = error as Error
 
       // Don't retry non-retryable errors or on final attempt
-      if (!isRetryableError(error) || attempt >= maxRetries) {
+      if (!isRetryableFirebaseError(error) || attempt >= maxRetries) {
         throw error
       }
 
@@ -169,7 +155,7 @@ export async function firestoreAddDoc<T extends { id?: string }>(
     console.error("Error in firestoreAddDoc:", error)
 
     if (opts.showErrorToast) {
-      toast.error(opts.errorMessage ?? (error as FirebaseError).message)
+      toast.error(opts.errorMessage ?? getFirestoreErrorMessage(error))
     }
 
     throw error
@@ -203,7 +189,7 @@ export async function firestoreSetDoc<T extends { id: string }>(
     console.error("Error in firestoreSetDoc:", error)
 
     if (opts.showErrorToast) {
-      toast.error(opts.errorMessage ?? (error as FirebaseError).message)
+      toast.error(opts.errorMessage ?? getFirestoreErrorMessage(error))
     }
 
     throw error
@@ -249,7 +235,7 @@ export async function firestoreDeleteDoc(
     console.error("Error in firestoreDeleteDoc:", error)
 
     if (opts.showErrorToast) {
-      toast.error(opts.errorMessage ?? (error as FirebaseError).message)
+      toast.error(opts.errorMessage ?? getFirestoreErrorMessage(error))
     }
 
     throw error
@@ -299,7 +285,7 @@ export async function firestoreUpdateDoc<T extends { id: string }>(
     console.error("Error in firestoreUpdateDoc:", error)
 
     if (opts.showErrorToast) {
-      toast.error(opts.errorMessage ?? (error as FirebaseError).message)
+      toast.error(opts.errorMessage ?? getFirestoreErrorMessage(error))
     }
 
     throw error

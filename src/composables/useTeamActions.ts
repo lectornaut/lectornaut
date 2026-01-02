@@ -1,32 +1,10 @@
+import { useLoadingState } from "@/composables/useLoadingState"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership } from "@/types"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
-
-/**
- * A unified loading state manager for async operations
- */
-function useLoadingState<T extends string = string>() {
-  const loadingMap = ref<Record<T, boolean>>({} as Record<T, boolean>)
-
-  const isLoading = (key: T) => loadingMap.value[key] ?? false
-
-  const withLoading = async <R>(
-    key: T,
-    fn: () => Promise<R>
-  ): Promise<R | undefined> => {
-    loadingMap.value[key] = true
-    try {
-      return await fn()
-    } finally {
-      loadingMap.value[key] = false
-    }
-  }
-
-  return { loadingMap, isLoading, withLoading }
-}
 
 /**
  * Composable for team-related actions with unified loading states and toast notifications

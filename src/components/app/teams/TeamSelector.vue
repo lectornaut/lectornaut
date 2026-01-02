@@ -1,11 +1,10 @@
 <script lang="ts" setup>
 import TeamDialog from "@/components/app/teams/TeamDialog.vue"
 import { getInitials } from "@/helpers/utilities"
+import { logout } from "@/modules/auth"
 import { useTeamStore } from "@/stores/teamStore"
-import { signOut } from "firebase/auth"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
-import { useFirebaseAuth } from "vuefire"
 
 const teamStore = useTeamStore()
 const { memberships, isLoading } = storeToRefs(teamStore)
@@ -27,16 +26,6 @@ const switchTeam = async (teamId: string) => {
     toast.error("Failed to switch team")
   }
 }
-
-const auth = useFirebaseAuth()!
-
-const handleSignOut = async () => {
-  try {
-    await signOut(auth)
-  } catch (_error) {
-    toast.error("Failed to sign out")
-  }
-}
 </script>
 
 <template>
@@ -49,7 +38,7 @@ const handleSignOut = async () => {
         </p>
       </div>
       <div class="bg-background rounded-lg border">
-        <div class="space-y-1 p-2">
+        <div class="p-2">
           <div v-if="isLoading" class="flex justify-center p-4">
             <Spinner />
           </div>
@@ -64,10 +53,11 @@ const handleSignOut = async () => {
               v-for="team in teams"
               :key="team.value"
               variant="ghost"
-              class="w-full justify-start"
+              size="lg"
+              class="w-full justify-start p-3"
               @click="switchTeam(team.value)"
             >
-              <Avatar class="size-8">
+              <Avatar class="size-5">
                 <AvatarImage
                   v-if="team.original.photoURL"
                   :src="team.original.photoURL"
@@ -78,7 +68,7 @@ const handleSignOut = async () => {
                   {{ getInitials(team.label) }}
                 </AvatarFallback>
               </Avatar>
-              <span class="flex-1 truncate font-medium">{{ team.label }}</span>
+              {{ team.label }}
             </Button>
           </template>
         </div>
@@ -90,9 +80,7 @@ const handleSignOut = async () => {
         </div>
       </div>
       <div class="text-center">
-        <Button variant="ghost" size="sm" @click="handleSignOut">
-          Sign out
-        </Button>
+        <Button variant="ghost" size="sm" @click="logout()"> Sign out </Button>
       </div>
     </div>
     <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />

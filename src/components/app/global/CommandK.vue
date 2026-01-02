@@ -29,31 +29,20 @@ const filteredShortcuts = computed(() =>
 
 <template>
   <Dialog v-model:open="openCommand">
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <DialogTrigger as-child>
-            <Button
-              id="tour-search-bar"
-              variant="ghost"
-              :size="iconDisplay === 'text' ? 'default' : 'icon'"
-            >
-              <IconSearch />
-              <template v-if="iconDisplay === 'text'">
-                {{ t("components.global.shortcuts.search") }}
-              </template>
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent class="flex items-center gap-2 pr-2">
-          {{ t("components.global.commandK.tooltip") }}
-          <KbdGroup>
-            <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-            <Kbd>K</Kbd>
-          </KbdGroup>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <DialogTrigger as-child>
+      <Button
+        id="tour-search-bar"
+        variant="outline"
+        class="text-muted-foreground w-full justify-between shadow-none"
+      >
+        <IconSearch />
+        {{ t("components.global.shortcuts.search") }}
+        <KbdGroup>
+          <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+          <Kbd>K</Kbd>
+        </KbdGroup>
+      </Button>
+    </DialogTrigger>
     <DialogContent class="bg-sidebar-accent p-1.5">
       <Command highlight-on-hover class="border">
         <CommandInput

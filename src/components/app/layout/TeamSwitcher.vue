@@ -1,88 +1,101 @@
 <script lang="ts" setup>
 import TeamDialog from "@/components/app/teams/TeamDialog.vue"
+import { useTeamActions } from "@/composables/useTeamActions"
 import {
-  IconBxsZap,
   IconCheck,
-  IconChevronDown,
+  IconChevronsUpDown,
   IconCirclePlus,
   IconSettings,
-  IconSwitchHorizontal,
   IconUsers,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
-import { useTeamStore } from "@/stores/teamStore"
-import { storeToRefs } from "pinia"
 
-const online = useOnline()
-const teamStore = useTeamStore()
-const { currentTeam, memberships, isLoading } = storeToRefs(teamStore)
+const { currentTeam, memberships, isLoading, switchTeam } = useTeamActions()
 
 const isCreatingTeamDialogOpen = ref(false)
 
-// Group memberships for the dropdown
-const groups = computed(() => [
-  {
-    label: "My Teams",
-    teams: memberships.value.map((m) => ({
-      label: m.team.name,
-      value: m.team.id,
-      original: m.team,
-    })),
-  },
-])
+const teams = computed(() =>
+  memberships.value.map((m) => ({
+    label: m.team.name,
+    value: m.team.id,
+    original: m.team,
+  }))
+)
 
 const activeTeamLabel = computed(() => currentTeam.value?.name || "Select Team")
 const activeTeamValue = computed(() => currentTeam.value?.id || "")
-
-const switchTeam = (teamId: string) => {
-  teamStore.switchTeam(teamId)
-}
 </script>
 
 <template>
-  <div class="flex items-center justify-between gap-2">
-    <Dialog>
+  <ContextMenu>
+    <ContextMenuTrigger>
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button
+          <SidebarMenuButton
             id="tour-team-switcher"
-            variant="ghost"
+            tooltip="Switch team"
+            size="lg"
             class="data-[state=open]:bg-accent"
           >
-            <Avatar class="size-4">
+            <Avatar class="rounded-md">
               <AvatarImage
                 v-if="currentTeam?.photoURL"
                 :src="currentTeam.photoURL"
+                class="rounded-md"
                 :alt="activeTeamLabel"
                 referrerpolicy="no-referrer"
               />
-              <AvatarFallback>
+              <AvatarFallback class="rounded-md">
                 {{ getInitials(activeTeamLabel) }}
               </AvatarFallback>
             </Avatar>
             <span
-              v-if="!online"
-              class="bg-muted text-muted-foreground flex items-center gap-1 rounded-full border px-1.5 py-0.5"
+              class="flex grow truncate text-base leading-tight font-semibold tracking-tight"
             >
-              <IconBxsZap />
-              Offline
-            </span>
-            <span v-else class="hidden md:flex">
               {{ activeTeamLabel }}
             </span>
-            <IconChevronDown />
-          </Button>
+            <IconChevronsUpDown />
+          </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-48" align="center">
-          <DropdownMenuGroup>
+        <DropdownMenuContent class="w-48" align="start" side="right">
+          <DropdownMenuGroup v-if="isLoading" class="flex justify-center py-2">
+            <Spinner />
+          </DropdownMenuGroup>
+          <DropdownMenuGroup v-else>
             <DropdownMenuItem
-              @click="emitter.emit('Dialog.Settings.Open', 'teams')"
+              v-for="team in teams"
+              :key="team.value"
+              @click="switchTeam(team.value)"
             >
-              <IconSettings />
-              Settings
-              <DropdownMenuShortcut>⌘;</DropdownMenuShortcut>
+              <Item size="sm" class="group w-full gap-2 p-0">
+                <ItemMedia>
+                  <Avatar class="size-4 rounded-md">
+                    <AvatarImage
+                      v-if="team.original.photoURL"
+                      class="rounded-md"
+                      :src="team.original.photoURL"
+                      :alt="team.label"
+                      referrerpolicy="no-referrer"
+                    />
+                    <AvatarFallback class="rounded-md">
+                      {{ getInitials(team.label) }}
+                    </AvatarFallback>
+                  </Avatar>
+                </ItemMedia>
+                <ItemContent class="gap-0.5 truncate">
+                  <ItemTitle class="truncate">
+                    {{ team.label }}
+                  </ItemTitle>
+                </ItemContent>
+                <ItemActions v-if="activeTeamValue === team.value">
+                  <IconCheck />
+                </ItemActions>
+              </Item>
             </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
             <DropdownMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'members')"
             >
@@ -90,68 +103,40 @@ const switchTeam = (teamId: string) => {
               Members
               <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
             </DropdownMenuItem>
+            <DropdownMenuItem
+              @click="emitter.emit('Dialog.Settings.Open', 'teams')"
+            >
+              <IconSettings />
+              Settings
+              <DropdownMenuShortcut>⌘;</DropdownMenuShortcut>
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuSub>
-              <DropdownMenuItem as-child>
-                <DropdownMenuSubTrigger>
-                  <IconSwitchHorizontal />
-                  Switch team
-                </DropdownMenuSubTrigger>
-              </DropdownMenuItem>
-              <DropdownMenuSubContent class="w-48" align="start">
-                <DropdownMenuGroup
-                  v-if="isLoading"
-                  class="flex justify-center py-2"
-                >
-                  <Spinner />
-                </DropdownMenuGroup>
-                <DropdownMenuGroup
-                  v-for="group in groups"
-                  v-else
-                  :key="group.label"
-                  :heading="group.label"
-                >
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    {{ group.label }}
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem
-                    v-for="team in group.teams"
-                    :key="team.value"
-                    @click="switchTeam(team.value)"
-                  >
-                    <Avatar class="size-4">
-                      <AvatarImage
-                        v-if="team.original.photoURL"
-                        :src="team.original.photoURL"
-                        :alt="team.label"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback>
-                        {{ getInitials(team.label) }}
-                      </AvatarFallback>
-                    </Avatar>
-                    {{ team.label }}
-                    <IconCheck
-                      v-if="activeTeamValue === team.value"
-                      class="ml-auto"
-                    />
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem @click="isCreatingTeamDialogOpen = true">
-                    <IconCirclePlus />
-                    Create team
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+            <DropdownMenuItem @click="isCreatingTeamDialogOpen = true">
+              <IconCirclePlus />
+              Create team
+            </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-      <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
-    </Dialog>
-  </div>
+    </ContextMenuTrigger>
+    <ContextMenuContent class="w-48">
+      <ContextMenuGroup>
+        <ContextMenuItem
+          @click="emitter.emit('Dialog.Settings.Open', 'members')"
+        >
+          <IconUsers />
+          Members
+          <ContextMenuShortcut>⇧⌘M</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem @click="emitter.emit('Dialog.Settings.Open', 'teams')">
+          <IconSettings />
+          Settings
+          <ContextMenuShortcut>⌘;</ContextMenuShortcut>
+        </ContextMenuItem>
+      </ContextMenuGroup>
+    </ContextMenuContent>
+  </ContextMenu>
+  <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
 </template>

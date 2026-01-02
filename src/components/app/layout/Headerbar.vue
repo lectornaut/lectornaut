@@ -32,13 +32,12 @@ const iconDisplay = ref<"icon" | "text">("icon")
             data-tauri-drag-region
             class="flex grow items-center justify-center gap-2"
           >
-            <TeamSwitcher />
+            <CommandK :icon-display="iconDisplay" />
           </div>
           <div
             data-tauri-drag-region
             class="flex grow items-center justify-end gap-2"
           >
-            <CommandK :icon-display="iconDisplay" />
             <AiAsk :icon-display="iconDisplay" />
           </div>
         </div>

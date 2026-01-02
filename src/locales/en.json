@@ -891,7 +891,7 @@
     "global": {
       "shortcuts": {
         "title": "Keyboard shortcuts",
-        "search": "Search",
+        "search": "Search and commands",
         "noShortcuts": "No shortcuts found.",
         "getSupport": "Get support",
         "documentation": "Documentation"

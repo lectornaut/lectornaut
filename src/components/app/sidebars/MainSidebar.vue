@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconApps, IconBell, IconChevronsUpDown, IconGift } from "@/data/icons"
-import { defaultMenu } from "@/helpers/defaults"
+import { IconBell, IconGift } from "@/data/icons"
 import { collection, doc } from "firebase/firestore"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
@@ -38,51 +37,7 @@ const isFullscreen = useIsFullscreen()
         >
           <SidebarMenu>
             <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <SidebarMenuButton
-                    id="tour-apps-menu"
-                    tooltip="Menu"
-                    size="lg"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <div
-                      class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md"
-                    >
-                      <IconApps />
-                    </div>
-                    <div class="grid flex-1 text-left text-sm leading-tight">
-                      <span class="truncate font-semibold"> Go to </span>
-                      <span class="truncate text-xs"> My apps </span>
-                    </div>
-                    <IconChevronsUpDown />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  side="right"
-                  class="grid w-40 grid-cols-1 gap-1 p-1"
-                >
-                  <div
-                    v-for="(item, index) in defaultMenu"
-                    :key="index"
-                    class="group/nav"
-                  >
-                    <DropdownMenuItem
-                      class="group-has-[.router-link-active]/nav:bg-accent group-has-[.router-link-active]/nav:text-accent-foreground text-secondary-foreground size-full justify-start"
-                      as-child
-                    >
-                      <RouterLink :to="item.url">
-                        <Component :is="item.icon" :class="item.textColor" />
-                        {{ item.title }}
-                        <DropdownMenuShortcut>
-                          {{ item.shortcut }}
-                        </DropdownMenuShortcut>
-                      </RouterLink>
-                    </DropdownMenuItem>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <TeamSwitcher />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
