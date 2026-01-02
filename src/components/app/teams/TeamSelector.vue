@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import TeamDialog from "@/components/app/teams/TeamDialog.vue"
+import { IconCirclePlus, IconLogOut } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { useTeamStore } from "@/stores/teamStore"
@@ -47,7 +48,7 @@ const switchTeam = async (teamId: string) => {
               v-if="teams.length === 0"
               class="text-muted-foreground p-4 text-center"
             >
-              You are not a member of any teams.
+              You don't belong to any teams yet.
             </div>
             <Button
               v-for="team in teams"
@@ -75,12 +76,16 @@ const switchTeam = async (teamId: string) => {
         <Separator />
         <div class="grid p-2">
           <Button @click="isCreatingTeamDialogOpen = true">
-            Create a new team
+            <IconCirclePlus />
+            Create team
           </Button>
         </div>
       </div>
       <div class="text-center">
-        <Button variant="ghost" size="sm" @click="logout()"> Sign out </Button>
+        <Button variant="outline" size="sm" @click="logout()">
+          <IconLogOut />
+          Log out
+        </Button>
       </div>
     </div>
     <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />

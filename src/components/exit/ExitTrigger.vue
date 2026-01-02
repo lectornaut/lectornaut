@@ -14,7 +14,7 @@ emitter.on("Dialog.Exit.Open", () => {
     <AlertDialogContent class="w-sm max-w-fit">
       <AlertDialogHeader>
         <AlertDialogTitle> Are you sure you want to logout? </AlertDialogTitle>
-        <AlertDialogDescription>
+        <AlertDialogDescription class="text-xs">
           You will be redirected to the login page.
         </AlertDialogDescription>
       </AlertDialogHeader>
