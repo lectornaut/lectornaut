@@ -152,7 +152,11 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                 </DropdownMenuGroup>
                 <DropdownMenuGroup v-else>
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    My Teams
+                    {{
+                      teams.length === 0
+                        ? "No other teams available"
+                        : "My Teams"
+                    }}
                   </DropdownMenuLabel>
                   <DropdownMenuItem
                     v-for="team in teams"

@@ -49,7 +49,7 @@ const messages = [
                 'var(--chart-4)',
                 'var(--chart-5)',
               ]"
-              class="sticky bottom-0 size-5"
+              class="sticky bottom-0 size-8 border-4 border-transparent"
             />
             <div
               :class="[

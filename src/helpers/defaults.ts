@@ -111,7 +111,7 @@ export const sizes = [
   { id: "xl", name: "Extra large", icon: IconMdiFormatTextVariant },
 ]
 
-export const defaultSize = "sm"
+export const defaultSize = "base"
 
 export const defaultMenu = [
   {

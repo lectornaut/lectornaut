@@ -32,7 +32,7 @@
     @apply accent-current;
     @apply antialiased;
     @apply font-flex;
-    @apply text-size;
+    @apply text-sm;
   }
 
   :root {
@@ -43,6 +43,7 @@
     @apply pr-safe-right;
     @apply pt-safe-top;
     @apply pb-safe-bottom;
+    @apply text-size;
 
     --vis-tooltip-background-color: none;
     --vis-tooltip-border-color: none;

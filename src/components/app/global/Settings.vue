@@ -4,6 +4,9 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconActivity,
   IconAlertTriangle,
+  IconArrowDown,
+  IconArrowUp,
+  IconArrowUpDown,
   IconAsterisk,
   IconAtSign,
   IconBadgeCheck,
@@ -543,6 +546,97 @@ watch(teamFiles, async (newFiles) => {
 const handleRemoveTeamPhoto = async (teamId: string) => {
   await removeTeamPhoto(teamId)
 }
+
+// Sorting state for members table
+type SortDirection = "asc" | "desc" | null
+type MemberSortKey = "name" | "joined"
+type TeamSortKey = "name" | "created"
+
+const memberSortKey = ref<MemberSortKey | null>(null)
+const memberSortDirection = ref<SortDirection>(null)
+
+const teamSortKey = ref<TeamSortKey | null>(null)
+const teamSortDirection = ref<SortDirection>(null)
+
+const toggleMemberSort = (key: MemberSortKey) => {
+  if (memberSortKey.value === key) {
+    if (memberSortDirection.value === "asc") {
+      memberSortDirection.value = "desc"
+    } else if (memberSortDirection.value === "desc") {
+      memberSortKey.value = null
+      memberSortDirection.value = null
+    } else {
+      memberSortDirection.value = "asc"
+    }
+  } else {
+    memberSortKey.value = key
+    memberSortDirection.value = "asc"
+  }
+}
+
+const toggleTeamSort = (key: TeamSortKey) => {
+  if (teamSortKey.value === key) {
+    if (teamSortDirection.value === "asc") {
+      teamSortDirection.value = "desc"
+    } else if (teamSortDirection.value === "desc") {
+      teamSortKey.value = null
+      teamSortDirection.value = null
+    } else {
+      teamSortDirection.value = "asc"
+    }
+  } else {
+    teamSortKey.value = key
+    teamSortDirection.value = "asc"
+  }
+}
+
+const sortedTeamMembers = computed(() => {
+  if (!memberSortKey.value || !memberSortDirection.value) {
+    return teamMembers.value
+  }
+
+  const sorted = [...teamMembers.value]
+  const direction = memberSortDirection.value === "asc" ? 1 : -1
+
+  sorted.sort((a, b) => {
+    if (memberSortKey.value === "name") {
+      const nameA = (a.user?.displayName || a.user?.email || "").toLowerCase()
+      const nameB = (b.user?.displayName || b.user?.email || "").toLowerCase()
+      return nameA.localeCompare(nameB) * direction
+    } else if (memberSortKey.value === "joined") {
+      const dateA = a.createdAt?.toDate?.()?.getTime() || 0
+      const dateB = b.createdAt?.toDate?.()?.getTime() || 0
+      return (dateA - dateB) * direction
+    }
+    return 0
+  })
+
+  return sorted
+})
+
+const sortedMemberships = computed(() => {
+  if (!teamSortKey.value || !teamSortDirection.value) {
+    return memberships.value
+  }
+
+  const sorted = [...memberships.value]
+  const direction = teamSortDirection.value === "asc" ? 1 : -1
+
+  sorted.sort((a, b) => {
+    if (teamSortKey.value === "name") {
+      const nameA = (a.team?.name || "").toLowerCase()
+      const nameB = (b.team?.name || "").toLowerCase()
+      return nameA.localeCompare(nameB) * direction
+    } else if (teamSortKey.value === "created") {
+      const dateA = a.createdAt?.toDate?.()?.getTime() || 0
+      const dateB = b.createdAt?.toDate?.()?.getTime() || 0
+      return (dateA - dateB) * direction
+    }
+    return 0
+  })
+
+  return sorted
+})
 
 const handleRemoveProfilePicture = async () => {
   try {
@@ -1692,9 +1786,51 @@ const df = new DateFormatter("en-US", {
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead class="w-1/4">User</TableHead>
+                                  <TableHead class="w-1/4">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      @click="toggleMemberSort('name')"
+                                    >
+                                      User
+                                      <IconArrowUp
+                                        v-if="
+                                          memberSortKey === 'name' &&
+                                          memberSortDirection === 'asc'
+                                        "
+                                      />
+                                      <IconArrowDown
+                                        v-else-if="
+                                          memberSortKey === 'name' &&
+                                          memberSortDirection === 'desc'
+                                        "
+                                      />
+                                      <IconArrowUpDown v-else />
+                                    </Button>
+                                  </TableHead>
                                   <TableHead class="w-1/4">Role</TableHead>
-                                  <TableHead class="w-1/4">Joined</TableHead>
+                                  <TableHead class="w-1/4">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      @click="toggleMemberSort('joined')"
+                                    >
+                                      Joined
+                                      <IconArrowUp
+                                        v-if="
+                                          memberSortKey === 'joined' &&
+                                          memberSortDirection === 'asc'
+                                        "
+                                      />
+                                      <IconArrowDown
+                                        v-else-if="
+                                          memberSortKey === 'joined' &&
+                                          memberSortDirection === 'desc'
+                                        "
+                                      />
+                                      <IconArrowUpDown v-else />
+                                    </Button>
+                                  </TableHead>
                                   <TableHead
                                     class="w-1/4 text-right"
                                   ></TableHead>
@@ -1702,7 +1838,7 @@ const df = new DateFormatter("en-US", {
                               </TableHeader>
                               <TableBody>
                                 <TableRow
-                                  v-for="member in teamMembers"
+                                  v-for="member in sortedTeamMembers"
                                   :key="member.userId"
                                 >
                                   <TableCell>
@@ -1980,9 +2116,51 @@ const df = new DateFormatter("en-US", {
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead class="w-1/4">Team</TableHead>
+                                  <TableHead class="w-1/4">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      @click="toggleTeamSort('name')"
+                                    >
+                                      Team
+                                      <IconArrowUp
+                                        v-if="
+                                          teamSortKey === 'name' &&
+                                          teamSortDirection === 'asc'
+                                        "
+                                      />
+                                      <IconArrowDown
+                                        v-else-if="
+                                          teamSortKey === 'name' &&
+                                          teamSortDirection === 'desc'
+                                        "
+                                      />
+                                      <IconArrowUpDown v-else />
+                                    </Button>
+                                  </TableHead>
                                   <TableHead class="w-1/4">Role</TableHead>
-                                  <TableHead class="w-1/4">Created</TableHead>
+                                  <TableHead class="w-1/4">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      @click="toggleTeamSort('created')"
+                                    >
+                                      Created
+                                      <IconArrowUp
+                                        v-if="
+                                          teamSortKey === 'created' &&
+                                          teamSortDirection === 'asc'
+                                        "
+                                      />
+                                      <IconArrowDown
+                                        v-else-if="
+                                          teamSortKey === 'created' &&
+                                          teamSortDirection === 'desc'
+                                        "
+                                      />
+                                      <IconArrowUpDown v-else />
+                                    </Button>
+                                  </TableHead>
                                   <TableHead
                                     class="w-1/4 text-right"
                                   ></TableHead>
@@ -1990,7 +2168,7 @@ const df = new DateFormatter("en-US", {
                               </TableHeader>
                               <TableBody>
                                 <TableRow
-                                  v-for="membership in memberships"
+                                  v-for="membership in sortedMemberships"
                                   :key="membership.teamId"
                                 >
                                   <TableCell>

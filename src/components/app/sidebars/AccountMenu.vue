@@ -125,7 +125,11 @@ const handleSwitchAccount = async (uid: string) => {
                   <DropdownMenuSubContent class="w-64">
                     <DropdownMenuGroup>
                       <DropdownMenuLabel class="text-muted-foreground text-xs">
-                        {{ t("accountMenu.accounts") }}
+                        {{
+                          otherAccounts.length === 0
+                            ? t("accountMenu.noOtherAccounts")
+                            : t("accountMenu.accounts")
+                        }}
                       </DropdownMenuLabel>
                       <DropdownMenuItem
                         v-for="account in otherAccounts"
@@ -189,9 +193,6 @@ const handleSwitchAccount = async (uid: string) => {
                           </ItemActions>
                         </Item>
                       </DropdownMenuItem>
-                      <DropdownMenuLabel v-if="otherAccounts.length === 0">
-                        {{ t("accountMenu.noOtherAccounts") }}
-                      </DropdownMenuLabel>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
