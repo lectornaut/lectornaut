@@ -47,7 +47,9 @@ const df = new DateFormatter("en-US", {
   dateStyle: "medium",
 })
 
-const presets = [
+const { t } = useI18n()
+
+const presets = computed(() => [
   {
     id: 0,
     value: {
@@ -56,7 +58,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Today",
+    label: t("pages.home.presets.today"),
   },
   {
     id: 7,
@@ -66,7 +68,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 7 days",
+    label: t("pages.home.presets.last7days"),
   },
   {
     id: 14,
@@ -76,7 +78,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 14 days",
+    label: t("pages.home.presets.last14days"),
   },
   {
     id: 30,
@@ -86,7 +88,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 30 days",
+    label: t("pages.home.presets.last30days"),
   },
   {
     id: 90,
@@ -96,7 +98,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 3 months",
+    label: t("pages.home.presets.last3months"),
   },
   {
     id: 180,
@@ -106,7 +108,7 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 6 months",
+    label: t("pages.home.presets.last6months"),
   },
   {
     id: 365,
@@ -116,11 +118,11 @@ const presets = [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 1 year",
+    label: t("pages.home.presets.last1year"),
   },
-]
+])
 
-const defaultRange = presets.find((preset) => preset.id === 0)!
+const defaultRange = presets.value.find((preset) => preset.id === 0)!
 
 const range = ref({
   start: defaultRange.value.start,
@@ -138,50 +140,53 @@ const chartData = [
 
 type Data = (typeof chartData)[number]
 
-const chartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "var(--chart-1)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--chart-3)",
-  },
-} satisfies ChartConfig
+const chartConfig = computed(
+  () =>
+    ({
+      desktop: {
+        label: t("pages.home.chart.desktop"),
+        color: "var(--chart-1)",
+      },
+      mobile: {
+        label: t("pages.home.chart.mobile"),
+        color: "var(--chart-3)",
+      },
+    }) satisfies ChartConfig
+)
 
-const navMain = [
+const navMain = computed(() => [
   {
-    title: "Search",
+    title: t("pages.home.navMain.search"),
     url: "#",
     icon: IconSearch,
   },
   {
-    title: "Ask AI",
+    title: t("pages.home.navMain.askAi"),
     url: "#",
     icon: IconSparkles,
   },
-]
+])
 
-const navSecondary = [
+const navSecondary = computed(() => [
   {
-    title: "Calendar",
+    title: t("pages.home.navSecondary.calendar"),
     url: "#",
     icon: IconCalendar,
     badge: false,
   },
   {
-    title: "Templates",
+    title: t("pages.home.navSecondary.templates"),
     url: "#",
     icon: IconBlocks,
     badge: false,
   },
   {
-    title: "Trash",
+    title: t("pages.home.navSecondary.trash"),
     url: "#",
     icon: IconTrash2,
     badge: false,
   },
-]
+])
 
 const favorites = [
   {
@@ -488,7 +493,9 @@ const expandedCard = ref<number | null>(null)
       <SidebarContent>
         <OverlayScrollbarsWrapper>
           <SidebarGroup class="group-data-[collapsible=icon]:hidden">
-            <SidebarGroupLabel>Favorites</SidebarGroupLabel>
+            <SidebarGroupLabel>{{
+              t("pages.home.sidebar.favorites")
+            }}</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem v-for="item in favorites" :key="item.name">
                 <SidebarMenuButton>
@@ -512,27 +519,29 @@ const expandedCard = ref<number | null>(null)
                       class="data-[state=open]:bg-accent"
                     >
                       <IconMoreVertical />
-                      <span class="sr-only">More</span>
+                      <span class="sr-only">{{ t("actions.more") }}</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" side="right">
                     <DropdownMenuItem>
                       <IconStarOff class="text-muted-foreground" />
-                      <span>Remove from Favorites</span>
+                      <span>{{
+                        t("pages.home.dropdown.removeFromFavorites")
+                      }}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                       <IconLink class="text-muted-foreground" />
-                      <span>Copy Link</span>
+                      <span>{{ t("actions.copyLink") }}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <IconArrowUpRight class="text-muted-foreground" />
-                      <span>Open in New Tab</span>
+                      <span>{{ t("actions.openInNewTab") }}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                       <IconTrash2 class="text-muted-foreground" />
-                      <span>Delete</span>
+                      <span>{{ t("actions.delete") }}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -540,13 +549,15 @@ const expandedCard = ref<number | null>(null)
               <SidebarMenuItem>
                 <SidebarMenuButton class="text-sidebar-foreground">
                   <IconMoreHorizontal />
-                  <span>More</span>
+                  <span>{{ t("actions.more") }}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
           <SidebarGroup>
-            <SidebarGroupLabel>Teams</SidebarGroupLabel>
+            <SidebarGroupLabel>{{
+              t("pages.home.sidebar.teams")
+            }}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <Collapsible v-for="team in teams" :key="team.name">
@@ -602,7 +613,7 @@ const expandedCard = ref<number | null>(null)
                 <SidebarMenuItem>
                   <SidebarMenuButton class="text-sidebar-foreground">
                     <IconMoreHorizontal />
-                    <span>More</span>
+                    <span>{{ t("actions.more") }}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -652,7 +663,7 @@ const expandedCard = ref<number | null>(null)
                 <div class="p-2">
                   <Select v-model="range">
                     <SelectTrigger class="w-full">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue :placeholder="t('common.select')" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem
@@ -675,8 +686,12 @@ const expandedCard = ref<number | null>(null)
               </PopoverContent>
             </Popover>
             <TabsList>
-              <TabsTrigger value="overview"> Overview </TabsTrigger>
-              <TabsTrigger value="usage"> Usage </TabsTrigger>
+              <TabsTrigger value="overview">
+                {{ t("pages.home.tabs.overview") }}
+              </TabsTrigger>
+              <TabsTrigger value="usage">
+                {{ t("pages.home.tabs.usage") }}
+              </TabsTrigger>
             </TabsList>
           </div>
         </Teleport>
@@ -720,7 +735,11 @@ const expandedCard = ref<number | null>(null)
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {{ expandedCard === card.id ? "Collapse" : "Expand" }}
+                        {{
+                          expandedCard === card.id
+                            ? t("actions.collapse")
+                            : t("actions.expand")
+                        }}
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>
@@ -736,20 +755,24 @@ const expandedCard = ref<number | null>(null)
                             </Button>
                           </DropdownMenuTrigger>
                         </TooltipTrigger>
-                        <TooltipContent>More options</TooltipContent>
+                        <TooltipContent>{{
+                          t("actions.moreOptions")
+                        }}</TooltipContent>
 
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>
                             <IconStar />
-                            <span>Add to Favorites</span>
+                            <span>{{
+                              t("pages.home.dropdown.addToFavorites")
+                            }}</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <IconLink />
-                            <span>Copy Link</span>
+                            <span>{{ t("actions.copyLink") }}</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <IconArrowUpRight />
-                            <span>Open in New Tab</span>
+                            <span>{{ t("actions.openInNewTab") }}</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -828,7 +851,9 @@ const expandedCard = ref<number | null>(null)
       <SidebarContent>
         <OverlayScrollbarsWrapper>
           <SidebarGroup>
-            <SidebarGroupLabel>Table of Contents</SidebarGroupLabel>
+            <SidebarGroupLabel>{{
+              t("pages.home.sidebar.tableOfContents")
+            }}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem v-for="item in navToc" :key="item.title">

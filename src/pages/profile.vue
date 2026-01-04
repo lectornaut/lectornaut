@@ -18,6 +18,8 @@ useHead({
   title: "Profile",
 })
 
+const { t } = useI18n()
+
 const user = useCurrentUser()
 const db = useFirestore()
 const userDocRef = computed(() =>
@@ -64,20 +66,20 @@ const username = computed(() => userData.value?.username ?? "")
       <IconAtSign />
       {{ username }}
     </a>
-    <span v-else> No username set </span>
+    <span v-else> {{ t("pages.profile.noUsername") }} </span>
     <!-- </Badge> -->
     <div class="flex items-center gap-2">
       <Badge variant="secondary">
         <IconGlobe v-if="isPublic" />
         <IconLock v-else />
-        {{ isPublic ? "Public" : "Private" }}
+        {{ isPublic ? t("pages.profile.public") : t("pages.profile.private") }}
       </Badge>
       <Badge
         variant="outline"
         @click="emitter.emit('Dialog.Settings.Open', 'account')"
       >
         <IconSettings />
-        Settings
+        {{ t("actions.settings") }}
       </Badge>
     </div>
   </div>

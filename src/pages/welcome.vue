@@ -27,32 +27,34 @@ const completeOnboarding = () => {
   router.push("/home")
 }
 
-const steps = [
+const { t } = useI18n()
+
+const steps = computed(() => [
   {
     step: 1,
-    title: "Account",
-    description: "Add your address",
+    title: t("pages.welcome.steps.account.title"),
+    description: t("pages.welcome.steps.account.description"),
     icon: IconBox,
   },
   {
     step: 2,
-    title: "Preferences",
-    description: "Set your preferred",
+    title: t("pages.welcome.steps.preferences.title"),
+    description: t("pages.welcome.steps.preferences.description"),
     icon: IconAperture,
   },
   {
     step: 3,
-    title: "Payment",
-    description: "Add any payment",
+    title: t("pages.welcome.steps.payment.title"),
+    description: t("pages.welcome.steps.payment.description"),
     icon: IconBlocks,
   },
   {
     step: 4,
-    title: "Confirmation",
-    description: "Confirm your order",
+    title: t("pages.welcome.steps.confirmation.title"),
+    description: t("pages.welcome.steps.confirmation.description"),
     icon: IconCheck,
   },
-]
+])
 
 const currentStep = ref(2)
 
@@ -110,33 +112,43 @@ const handleNextStep = () => {
           class="bg-background flex flex-1 flex-col items-center justify-center gap-4 rounded-md p-4"
         >
           <template v-if="currentStep === 1">
-            <h2 class="text-xl font-semibold">Account Details</h2>
+            <h2 class="text-xl font-semibold">
+              {{ t("pages.welcome.content.accountDetails") }}
+            </h2>
             <p class="text-muted-foreground">
-              Enter your personal information and address to get started.
+              {{ t("pages.welcome.content.accountDescription") }}
             </p>
           </template>
           <template v-else-if="currentStep === 2">
-            <h2 class="text-xl font-semibold">Your Preferences</h2>
+            <h2 class="text-xl font-semibold">
+              {{ t("pages.welcome.content.preferences") }}
+            </h2>
             <p class="text-muted-foreground">
-              Customize your experience by setting your preferred options.
+              {{ t("pages.welcome.content.preferencesDescription") }}
             </p>
           </template>
           <template v-else-if="currentStep === 3">
-            <h2 class="text-xl font-semibold">Payment Method</h2>
+            <h2 class="text-xl font-semibold">
+              {{ t("pages.welcome.content.paymentMethod") }}
+            </h2>
             <p class="text-muted-foreground">
-              Add a payment method to complete your subscription.
+              {{ t("pages.welcome.content.paymentDescription") }}
             </p>
           </template>
           <template v-else-if="currentStep === 4">
-            <h2 class="text-xl font-semibold">Confirmation</h2>
+            <h2 class="text-xl font-semibold">
+              {{ t("pages.welcome.content.confirmation") }}
+            </h2>
             <p class="text-muted-foreground">
-              Review and confirm your details before proceeding.
+              {{ t("pages.welcome.content.confirmationDescription") }}
             </p>
           </template>
           <template v-else>
-            <h2 class="text-xl font-semibold">All Set!</h2>
+            <h2 class="text-xl font-semibold">
+              {{ t("pages.welcome.content.allSet") }}
+            </h2>
             <p class="text-muted-foreground">
-              You're ready to start using the app.
+              {{ t("pages.welcome.content.allSetDescription") }}
             </p>
           </template>
         </div>

@@ -14,6 +14,8 @@ definePage({
 useHead({
   title: "Exit",
 })
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -21,7 +23,7 @@ useHead({
     <div class="flex grow flex-col gap-2 p-2">
       <Button variant="secondary" @click="emitter.emit('Dialog.Exit.Open')">
         <IconLogOut />
-        Log out
+        {{ t("actions.logout") }}
       </Button>
     </div>
   </div>

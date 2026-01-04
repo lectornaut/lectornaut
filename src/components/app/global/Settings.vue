@@ -7,7 +7,6 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconArrowUpDown,
-  IconAsterisk,
   IconAtSign,
   IconBadgeCheck,
   IconBadgeDollarSign,
@@ -22,6 +21,7 @@ import {
   IconCreditCard,
   IconDatabase,
   IconGoogleIcon,
+  IconKeyRound,
   IconLock,
   IconLogOut,
   IconLogs,
@@ -939,7 +939,7 @@ const df = new DateFormatter("en-US", {
                                 <Button
                                   v-if="photoURL"
                                   variant="secondary"
-                                  class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                                  class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
                                   size="icon-sm"
                                   @click.stop="handleRemoveProfilePicture"
                                 >
@@ -1261,88 +1261,86 @@ const df = new DateFormatter("en-US", {
                             }}
                           </FieldDescription>
                         </FieldContent>
-                        <Button variant="outline">
+                        <!-- <Button variant="outline">
                           <span>{{
                             t("settings.account.identityProviders.connect")
                           }}</span>
+                        </Button> -->
+                      </Field>
+                      <Field
+                        v-for="provider in user?.providerData"
+                        :key="provider.providerId"
+                        orientation="horizontal"
+                      >
+                        <FieldContent>
+                          <Item class="p-0" size="sm">
+                            <ItemMedia class="group relative">
+                              <Avatar class="rounded-md">
+                                <AvatarImage
+                                  class="rounded-md"
+                                  :src="provider?.photoURL!"
+                                  :alt="provider?.displayName"
+                                  referrerpolicy="no-referrer"
+                                />
+                                <AvatarFallback class="rounded-md">
+                                  {{ getInitials(provider.displayName!) }}
+                                </AvatarFallback>
+                              </Avatar>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger as-child>
+                                    <Button
+                                      variant="secondary"
+                                      class="ring-background absolute -right-2 -bottom-2 size-5 rounded-full ring-2"
+                                      size="icon-sm"
+                                    >
+                                      <IconGoogleIcon
+                                        v-if="
+                                          provider.providerId === 'google.com'
+                                        "
+                                      />
+                                      <IconKeyRound
+                                        v-else-if="
+                                          provider.providerId === 'password'
+                                        "
+                                      />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right">
+                                    {{
+                                      getComputedProviderName(
+                                        provider.providerId
+                                      )
+                                    }}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </ItemMedia>
+                            <ItemContent class="gap-0.5 truncate">
+                              <ItemTitle class="truncate">
+                                {{ provider.displayName }}
+                              </ItemTitle>
+                              <ItemDescription class="truncate">
+                                {{ provider.email }}
+                              </ItemDescription>
+                            </ItemContent>
+                          </Item>
+                        </FieldContent>
+                        <Button
+                          :disabled="unlinkingProviderMap[provider.providerId]"
+                          variant="secondary"
+                          @click="unlinkProvider(provider.providerId)"
+                        >
+                          <Spinner
+                            v-if="unlinkingProviderMap[provider.providerId]"
+                          />
+                          <span> {{ t("common.remove") }} </span>
                         </Button>
                       </Field>
                       <div
-                        v-if="
-                          user?.providerData && user.providerData.length > 0
-                        "
-                        class="flex flex-col-reverse gap-4"
+                        v-if="user?.providerData?.length === 0"
+                        class="text-muted-foreground"
                       >
-                        <div
-                          v-for="provider in user?.providerData"
-                          :key="provider.providerId"
-                          class="flex items-center gap-4"
-                        >
-                          <div class="relative">
-                            <Avatar class="rounded-md">
-                              <AvatarImage
-                                class="rounded-md"
-                                :src="provider?.photoURL!"
-                                :alt="provider?.displayName"
-                                referrerpolicy="no-referrer"
-                              />
-                              <AvatarFallback class="rounded-md">
-                                {{ getInitials(provider.displayName!) }}
-                              </AvatarFallback>
-                            </Avatar>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger as-child>
-                                  <span
-                                    class="bg-background border-background absolute -right-2 -bottom-2 flex items-center justify-center rounded-full border-4"
-                                  >
-                                    <IconGoogleIcon
-                                      v-if="
-                                        provider.providerId === 'google.com'
-                                      "
-                                    />
-                                    <IconAsterisk
-                                      v-else-if="
-                                        provider.providerId === 'password'
-                                      "
-                                    />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="right">
-                                  {{
-                                    getComputedProviderName(provider.providerId)
-                                  }}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <div class="flex flex-col gap-1">
-                            <p class="leading-none font-medium">
-                              {{ provider.displayName }}
-                            </p>
-                            <p
-                              class="text-muted-foreground flex items-center gap-2"
-                            >
-                              {{ provider.email }}
-                            </p>
-                          </div>
-                          <div class="ml-auto flex gap-2">
-                            <Button
-                              :disabled="
-                                unlinkingProviderMap[provider.providerId]
-                              "
-                              variant="secondary"
-                              @click="unlinkProvider(provider.providerId)"
-                            >
-                              <Spinner
-                                v-if="unlinkingProviderMap[provider.providerId]"
-                              />
-                              <span> {{ t("common.remove") }} </span>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      <div v-else class="text-muted-foreground">
                         {{ t("settings.account.identityProviders.noAccounts") }}
                       </div>
                     </FieldSet>
@@ -2235,7 +2233,7 @@ const df = new DateFormatter("en-US", {
                                             <TooltipTrigger as-child>
                                               <Button
                                                 variant="secondary"
-                                                class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                                                class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
                                                 size="icon-sm"
                                                 @click.stop="
                                                   handleRemoveTeamPhoto(

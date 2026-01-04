@@ -12,6 +12,8 @@ import {
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 
+const { t } = useI18n()
+
 const {
   currentTeam,
   memberships,
@@ -112,7 +114,8 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                   {{ currentTeam?.name }}
                 </ItemTitle>
                 <ItemDescription class="truncate text-xs">
-                  {{ getTeamMemberCount(currentTeam?.id!) }} members
+                  {{ getTeamMemberCount(currentTeam?.id!) }}
+                  {{ t("components.teamSwitcher.members") }}
                 </ItemDescription>
               </ItemContent>
             </Item>
@@ -123,14 +126,14 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
               @click="emitter.emit('Dialog.Settings.Open', 'members')"
             >
               <IconUsersRound />
-              Members
+              {{ t("components.teamSwitcher.menu.members") }}
               <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'teams')"
             >
               <IconComponent />
-              Settings
+              {{ t("components.teamSwitcher.menu.settings") }}
               <DropdownMenuShortcut>⌘;</DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -140,7 +143,7 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
               <DropdownMenuItem as-child>
                 <DropdownMenuSubTrigger>
                   <IconSwitchHorizontal />
-                  Switch team
+                  {{ t("components.teamSwitcher.menu.switchTeam") }}
                 </DropdownMenuSubTrigger>
               </DropdownMenuItem>
               <DropdownMenuSubContent class="w-56">
@@ -154,8 +157,8 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                   <DropdownMenuLabel class="text-muted-foreground text-xs">
                     {{
                       teams.length === 0
-                        ? "No other teams available"
-                        : "My Teams"
+                        ? t("components.teamSwitcher.noOtherTeams")
+                        : t("components.teamSwitcher.myTeams")
                     }}
                   </DropdownMenuLabel>
                   <DropdownMenuItem
@@ -182,7 +185,8 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                           {{ team.label }}
                         </ItemTitle>
                         <ItemDescription class="truncate text-xs">
-                          {{ getTeamMemberCount(team.value) }} members
+                          {{ getTeamMemberCount(team.value) }}
+                          {{ t("components.teamSwitcher.members") }}
                         </ItemDescription>
                       </ItemContent>
                       <ItemActions v-if="activeTeamValue === team.value">
@@ -195,7 +199,7 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                 <DropdownMenuGroup>
                   <DropdownMenuItem @click="isCreatingTeamDialogOpen = true">
                     <IconCirclePlus />
-                    Create team
+                    {{ t("components.teamSwitcher.createTeam") }}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuSubContent>
@@ -210,12 +214,12 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
           @click="emitter.emit('Dialog.Settings.Open', 'members')"
         >
           <IconUsersRound />
-          Members
+          {{ t("components.teamSwitcher.menu.members") }}
           <ContextMenuShortcut>⇧⌘M</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem @click="emitter.emit('Dialog.Settings.Open', 'teams')">
           <IconComponent />
-          Settings
+          {{ t("components.teamSwitcher.menu.settings") }}
           <ContextMenuShortcut>⌘;</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuGroup>

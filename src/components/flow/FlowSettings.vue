@@ -206,11 +206,15 @@ const teams = [
                   </div>
                   <Select v-model="team.role">
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue :placeholder="t('actions.select')" />
                     </SelectTrigger>
                     <SelectContent align="end">
-                      <SelectItem value="edit"> Edit </SelectItem>
-                      <SelectItem value="view"> View </SelectItem>
+                      <SelectItem value="edit">
+                        {{ t("actions.edit") }}
+                      </SelectItem>
+                      <SelectItem value="view">
+                        {{ t("actions.view") }}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -242,11 +246,15 @@ const teams = [
                   </div>
                   <Select v-model="person.role">
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue :placeholder="t('actions.select')" />
                     </SelectTrigger>
                     <SelectContent align="end">
-                      <SelectItem value="edit"> Edit </SelectItem>
-                      <SelectItem value="view"> View </SelectItem>
+                      <SelectItem value="edit">
+                        {{ t("actions.edit") }}
+                      </SelectItem>
+                      <SelectItem value="view">
+                        {{ t("actions.view") }}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

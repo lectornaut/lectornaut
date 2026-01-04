@@ -17,6 +17,8 @@ const emit = defineEmits<{
   (e: "success"): void
 }>()
 
+const { t } = useI18n()
+
 const teamStore = useTeamStore()
 const membershipStore = useMembershipStore()
 
@@ -196,19 +198,19 @@ const handleSubmit = async () => {
         <DialogTitle>
           {{
             mode === "create"
-              ? "Create Team"
+              ? t("components.teamDialog.title.create")
               : mode === "edit"
-                ? "Edit Team"
-                : "Invite Members"
+                ? t("components.teamDialog.title.edit")
+                : t("components.teamDialog.title.invite")
           }}
         </DialogTitle>
         <DialogDescription>
           {{
             mode === "create"
-              ? "Add a new team to manage products and customers."
+              ? t("components.teamDialog.description.create")
               : mode === "edit"
-                ? "Update your team name and profile picture."
-                : "Invite new members to your team."
+                ? t("components.teamDialog.description.edit")
+                : t("components.teamDialog.description.invite")
           }}
         </DialogDescription>
       </DialogHeader>
@@ -224,47 +226,55 @@ const handleSubmit = async () => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Avatar
-                    class="size-16"
+                    class="size-16 rounded-md"
                     @click="
                       openFileDialog({ accept: 'image/*', multiple: false })
                     "
                   >
                     <AvatarImage
-                      class="size-16"
+                      class="size-16 rounded-md"
                       :src="photoPreview!"
                       referrerpolicy="no-referrer"
                     />
-                    <AvatarFallback class="size-16">
+                    <AvatarFallback class="size-16 rounded-md">
                       {{ getInitials(teamName) }}
                     </AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
-                <TooltipContent> Upload team photo </TooltipContent>
+                <TooltipContent>
+                  {{ t("components.teamDialog.tooltips.uploadPhoto") }}
+                </TooltipContent>
               </Tooltip>
               <Tooltip v-if="photoPreview">
                 <TooltipTrigger as-child>
                   <Button
                     variant="secondary"
-                    class="border-background absolute -top-2 -right-2 size-6 rounded-full border-2 p-2 opacity-0 transition group-hover:opacity-100"
+                    class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
                     size="icon-sm"
                     @click.stop="removePhoto"
                   >
                     <IconX />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent> Remove team photo </TooltipContent>
+                <TooltipContent>
+                  {{ t("components.teamDialog.tooltips.removePhoto") }}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <p class="text-muted-foreground text-xs">
-            {{ photoPreview ? "Click to change" : "Click to upload logo" }}
+            {{
+              photoPreview
+                ? t("components.teamDialog.labels.clickToChange")
+                : t("components.teamDialog.labels.clickToUpload")
+            }}
           </p>
         </div>
 
         <!-- Team Name (Create/Edit Mode) -->
         <div v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
           <Label class="text-secondary-foreground text-xs" for="name">
-            Team name
+            {{ t("components.teamDialog.labels.teamName") }}
           </Label>
           <Input
             id="name"
@@ -277,7 +287,11 @@ const handleSubmit = async () => {
         <!-- Invite Members (Create/Invite Mode Only) -->
         <div v-if="mode !== 'edit'" class="grid gap-2">
           <Label class="text-secondary-foreground text-xs" for="invite">
-            {{ mode === "create" ? "Invite members" : "Email address" }}
+            {{
+              mode === "create"
+                ? t("components.teamDialog.labels.inviteMembers")
+                : t("components.teamDialog.labels.emailAddress")
+            }}
           </Label>
           <div class="flex gap-2">
             <Input
@@ -292,12 +306,16 @@ const handleSubmit = async () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="owner">Owner</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="owner">{{
+                  t("components.teamDialog.roles.owner")
+                }}</SelectItem>
+                <SelectItem value="member">{{
+                  t("components.teamDialog.roles.member")
+                }}</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" type="button" @click="addPendingInvite">
-              Add
+              {{ t("actions.add") }}
             </Button>
           </div>
 
@@ -328,7 +346,7 @@ const handleSubmit = async () => {
 
       <DialogFooter>
         <DialogClose as-child>
-          <Button variant="outline">Cancel</Button>
+          <Button variant="outline">{{ t("actions.cancel") }}</Button>
         </DialogClose>
         <Button
           :disabled="
@@ -341,10 +359,12 @@ const handleSubmit = async () => {
           <Spinner v-if="isLoading" />
           {{
             mode === "create"
-              ? "Create Team"
+              ? t("components.teamDialog.buttons.createTeam")
               : mode === "edit"
-                ? "Save Changes"
-                : `Invite ${pendingInvites.length > 0 ? pendingInvites.length : ""} Member${pendingInvites.length !== 1 ? "s" : ""}`
+                ? t("components.teamDialog.buttons.saveChanges")
+                : t("components.teamDialog.buttons.inviteMembers", {
+                    count: pendingInvites.length,
+                  })
           }}
         </Button>
       </DialogFooter>

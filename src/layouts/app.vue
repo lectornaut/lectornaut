@@ -38,6 +38,7 @@ import { storeToRefs } from "pinia"
 const teamStore = useTeamStore()
 const { currentTeam, isLoading } = storeToRefs(teamStore)
 
+const { t } = useI18n()
 const router = useRouter()
 
 const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
@@ -190,7 +191,7 @@ const closeTab = (id: string) => {
             </ContextMenuTrigger>
             <ContextMenuContent align="start" side="bottom">
               <ContextMenuItem @click="leftPanel?.splitterPanel?.collapse()">
-                <IconX /> Close panel
+                <IconX /> {{ t("tooltips.closePanel") }}
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -210,21 +211,22 @@ const closeTab = (id: string) => {
                 <div class="flex flex-col gap-1">
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                     <span class="flex items-center gap-2">
-                      <IconHand /> Drag to resize
+                      <IconHand /> {{ t("tooltips.dragToResize") }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <IconPointerClick /> Double click to toggle
+                      <IconPointerClick />
+                      {{ t("tooltips.doubleClickToggle") }}
                     </span>
                   </div>
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                     <span class="flex items-center gap-2">
-                      <IconArrowRight /> Right arrow to expand
+                      <IconArrowRight /> {{ t("tooltips.rightArrowExpand") }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <IconArrowLeft /> Left arrow to collapse
+                      <IconArrowLeft /> {{ t("tooltips.leftArrowCollapse") }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <IconArrowBigUp /> Shift for large steps
+                      <IconArrowBigUp /> {{ t("tooltips.shiftLargeSteps") }}
                     </span>
                   </div>
                 </div>
@@ -259,14 +261,14 @@ const closeTab = (id: string) => {
                 </ContextMenuTrigger>
                 <ContextMenuContent align="start" side="bottom">
                   <ContextMenuItem @click="router.go(0)">
-                    <IconRefreshCcw /> Refresh
+                    <IconRefreshCcw /> {{ t("actions.refresh") }}
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem @click="router.go(-1)">
-                    <IconArrowLeft /> Go back
+                    <IconArrowLeft /> {{ t("actions.goBack") }}
                   </ContextMenuItem>
                   <ContextMenuItem @click="router.go(1)">
-                    <IconArrowRight /> Go forward
+                    <IconArrowRight /> {{ t("actions.goForward") }}
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -286,21 +288,24 @@ const closeTab = (id: string) => {
                     <div class="flex flex-col gap-1">
                       <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                         <span class="flex items-center gap-2">
-                          <IconHand /> Drag to resize
+                          <IconHand /> {{ t("tooltips.dragToResize") }}
                         </span>
                         <span class="flex items-center gap-2">
-                          <IconPointerClick /> Double click to toggle
+                          <IconPointerClick />
+                          {{ t("tooltips.doubleClickToggle") }}
                         </span>
                       </div>
                       <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                         <span class="flex items-center gap-2">
-                          <IconArrowUp /> Up arrow to expand
+                          <IconArrowUp /> {{ t("tooltips.upArrowExpand") }}
                         </span>
                         <span class="flex items-center gap-2">
-                          <IconArrowDown /> Down arrow to collapse
+                          <IconArrowDown />
+                          {{ t("tooltips.downArrowCollapse") }}
                         </span>
                         <span class="flex items-center gap-2">
-                          <IconArrowBigUp /> Shift for large steps
+                          <IconArrowBigUp />
+                          {{ t("tooltips.shiftLargeSteps") }}
                         </span>
                       </div>
                     </div>
@@ -354,7 +359,9 @@ const closeTab = (id: string) => {
                                         <IconX class="size-3!" />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent> Close tab </TooltipContent>
+                                    <TooltipContent>
+                                      {{ t("layouts.app.tabs.close") }}
+                                    </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               </TabsTrigger>
@@ -374,7 +381,9 @@ const closeTab = (id: string) => {
                                       <IconPlus />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent> New tab </TooltipContent>
+                                  <TooltipContent>
+                                    {{ t("layouts.app.tabs.new") }}
+                                  </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             </div>
@@ -405,8 +414,8 @@ const closeTab = (id: string) => {
                                 <TooltipContent>
                                   {{
                                     topPanel?.splitterPanel?.isCollapsed
-                                      ? "Minimize panel"
-                                      : "Maximize panel"
+                                      ? t("layouts.app.panel.minimize")
+                                      : t("layouts.app.panel.maximize")
                                   }}
                                 </TooltipContent>
                               </Tooltip>
@@ -423,7 +432,9 @@ const closeTab = (id: string) => {
                                     <IconX />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent> Close panel </TooltipContent>
+                                <TooltipContent>
+                                  {{ t("layouts.app.panel.close") }}
+                                </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </div>
@@ -446,15 +457,16 @@ const closeTab = (id: string) => {
                                   class="text-muted-foreground h-6 w-6"
                                 />
                               </EmptyMedia>
-                              <EmptyTitle> Console </EmptyTitle>
+                              <EmptyTitle>
+                                {{ t("layouts.app.empty.console.title") }}
+                              </EmptyTitle>
                               <EmptyDescription>
-                                No active terminal sessions. Create a new
-                                terminal to get started.
+                                {{ t("layouts.app.empty.console.description") }}
                               </EmptyDescription>
                             </EmptyHeader>
                             <EmptyContent>
                               <Button variant="outline" @click="newTab()">
-                                New Terminal
+                                {{ t("layouts.app.empty.console.action") }}
                               </Button>
                             </EmptyContent>
                           </Empty>
@@ -475,14 +487,14 @@ const closeTab = (id: string) => {
                     <IconMaximize v-else />
                     {{
                       topPanel?.splitterPanel?.isCollapsed
-                        ? "Collapse panel"
-                        : "Expand panel"
+                        ? t("layouts.app.panel.collapse")
+                        : t("layouts.app.panel.expand")
                     }}
                   </ContextMenuItem>
                   <ContextMenuItem
                     @click="bottomPanel?.splitterPanel?.collapse()"
                   >
-                    <IconX /> Close panel
+                    <IconX /> {{ t("layouts.app.panel.close") }}
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -504,21 +516,22 @@ const closeTab = (id: string) => {
                 <div class="flex flex-col gap-1">
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                     <span class="flex items-center gap-2">
-                      <IconHand /> Drag to resize
+                      <IconHand /> {{ t("tooltips.dragToResize") }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <IconPointerClick /> Double click to toggle
+                      <IconPointerClick />
+                      {{ t("tooltips.doubleClickToToggle") }}
                     </span>
                   </div>
                   <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
                     <span class="flex items-center gap-2">
-                      <IconArrowLeft /> Left arrow to expand
+                      <IconArrowLeft /> {{ t("tooltips.leftArrowExpand") }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <IconArrowRight /> Right arrow to collapse
+                      <IconArrowRight /> {{ t("tooltips.rightArrowCollapse") }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <IconArrowBigUp /> Shift for large steps
+                      <IconArrowBigUp /> {{ t("tooltips.shiftLargeSteps") }}
                     </span>
                   </div>
                 </div>
@@ -542,7 +555,7 @@ const closeTab = (id: string) => {
             </ContextMenuTrigger>
             <ContextMenuContent align="start" side="bottom">
               <ContextMenuItem @click="rightPanel?.splitterPanel?.collapse()">
-                <IconX /> Close panel
+                <IconX /> {{ t("layouts.app.panel.close") }}
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -597,7 +610,9 @@ const closeTab = (id: string) => {
                     "
                     @dblclick="isPoppedOutMinimized = !isPoppedOutMinimized"
                   >
-                    <span class="ml-1 font-medium">Popout</span>
+                    <span class="ml-1 font-medium">{{
+                      t("layouts.app.popout.title")
+                    }}</span>
                     <ButtonGroup>
                       <TooltipProvider>
                         <Tooltip>
@@ -616,8 +631,8 @@ const closeTab = (id: string) => {
                           <TooltipContent>
                             {{
                               isPoppedOutMinimized
-                                ? "Expand sidebar"
-                                : "Minimize sidebar"
+                                ? t("layouts.app.sidebar.expand")
+                                : t("layouts.app.sidebar.minimize")
                             }}
                           </TooltipContent>
                         </Tooltip>
@@ -631,7 +646,9 @@ const closeTab = (id: string) => {
                               <IconX />
                             </InputGroupButton>
                           </TooltipTrigger>
-                          <TooltipContent> Close sidebar </TooltipContent>
+                          <TooltipContent>
+                            {{ t("layouts.app.sidebar.close") }}
+                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </ButtonGroup>
@@ -649,11 +666,13 @@ const closeTab = (id: string) => {
                   <IconMinus v-if="!isPoppedOutMinimized" />
                   <IconPlus v-else />
                   {{
-                    isPoppedOutMinimized ? "Expand sidebar" : "Minimize sidebar"
+                    isPoppedOutMinimized
+                      ? t("layouts.app.sidebar.expand")
+                      : t("layouts.app.sidebar.minimize")
                   }}
                 </ContextMenuItem>
                 <ContextMenuItem @click="isPoppedOut = false">
-                  <IconX /> Close sidebar
+                  <IconX /> {{ t("layouts.app.sidebar.close") }}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
@@ -682,9 +701,15 @@ const closeTab = (id: string) => {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <template v-if="!isOnline"> You are offline </template>
-                    <template v-else-if="isSyncing"> Syncing... </template>
-                    <template v-else> Synced to cloud </template>
+                    <template v-if="!isOnline">
+                      {{ t("layouts.app.status.offline") }}
+                    </template>
+                    <template v-else-if="isSyncing">
+                      {{ t("layouts.app.status.syncing") }}
+                    </template>
+                    <template v-else>
+                      {{ t("layouts.app.status.synced") }}
+                    </template>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -701,15 +726,15 @@ const closeTab = (id: string) => {
                     >
                       <IconTerminal />
                       <template v-if="iconDisplay === 'text'">
-                        Console
+                        {{ t("layouts.app.statusBar.console") }}
                       </template>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     {{
                       bottomPanel?.splitterPanel?.isCollapsed
-                        ? "Expand"
-                        : "Collapse"
+                        ? t("actions.expand")
+                        : t("actions.collapse")
                     }}
                   </TooltipContent>
                 </Tooltip>
@@ -732,12 +757,20 @@ const closeTab = (id: string) => {
                       <IconPictureInPicture2 v-if="!isPoppedOut" />
                       <IconPictureInPicture v-else />
                       <template v-if="iconDisplay === 'text'">
-                        {{ isPoppedOut ? "Dock" : "Pop out" }}
+                        {{
+                          isPoppedOut
+                            ? t("layouts.app.statusBar.dock")
+                            : t("layouts.app.statusBar.popOut")
+                        }}
                       </template>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {{ isPoppedOut ? "Dock" : "Pop out" }}
+                    {{
+                      isPoppedOut
+                        ? t("layouts.app.statusBar.dock")
+                        : t("layouts.app.statusBar.popOut")
+                    }}
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -753,15 +786,15 @@ const closeTab = (id: string) => {
                       />
                       <IconPanelLeftClose v-else />
                       <template v-if="iconDisplay === 'text'">
-                        Sidebar
+                        {{ t("layouts.app.statusBar.sidebar") }}
                       </template>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     {{
                       leftPanel?.splitterPanel?.isCollapsed
-                        ? "Expand"
-                        : "Collapse"
+                        ? t("actions.expand")
+                        : t("actions.collapse")
                     }}
                   </TooltipContent>
                 </Tooltip>
@@ -777,14 +810,16 @@ const closeTab = (id: string) => {
                         v-if="bottomPanel?.splitterPanel?.isCollapsed"
                       />
                       <IconPanelBottomClose v-else />
-                      <template v-if="iconDisplay === 'text'"> Panel </template>
+                      <template v-if="iconDisplay === 'text'">
+                        {{ t("layouts.app.statusBar.panel") }}
+                      </template>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     {{
                       bottomPanel?.splitterPanel?.isCollapsed
-                        ? "Expand"
-                        : "Collapse"
+                        ? t("actions.expand")
+                        : t("actions.collapse")
                     }}
                   </TooltipContent>
                 </Tooltip>
@@ -801,15 +836,15 @@ const closeTab = (id: string) => {
                       />
                       <IconPanelRightClose v-else />
                       <template v-if="iconDisplay === 'text'">
-                        Sidebar
+                        {{ t("layouts.app.statusBar.sidebar") }}
                       </template>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     {{
                       rightPanel?.splitterPanel?.isCollapsed
-                        ? "Expand"
-                        : "Collapse"
+                        ? t("actions.expand")
+                        : t("actions.collapse")
                     }}
                   </TooltipContent>
                 </Tooltip>
@@ -819,14 +854,14 @@ const closeTab = (id: string) => {
         </ContextMenuTrigger>
         <ContextMenuContent align="start" side="bottom">
           <ContextMenuLabel class="text-muted-foreground text-xs">
-            Appearance
+            {{ t("layouts.app.statusBar.appearance") }}
           </ContextMenuLabel>
           <ContextMenuRadioGroup v-model="iconDisplay">
             <ContextMenuRadioItem value="icon">
-              Icons only
+              {{ t("layouts.app.statusBar.iconsOnly") }}
             </ContextMenuRadioItem>
             <ContextMenuRadioItem value="text">
-              Icons and text
+              {{ t("layouts.app.statusBar.iconsAndText") }}
             </ContextMenuRadioItem>
           </ContextMenuRadioGroup>
         </ContextMenuContent>

@@ -15,6 +15,8 @@ useHead({
   title: "Create",
 })
 
+const { t } = useI18n()
+
 const temperature = ref([0.5])
 const maxLength = ref([1000])
 const topP = ref([0.9])
@@ -96,7 +98,7 @@ const generatePoem = async () => {
         <div class="grid grid-cols-1 gap-4 p-2">
           <div class="grid gap-2">
             <Label class="text-secondary-foreground text-xs" for="agent">
-              Avatar
+              {{ t("pages.create.labels.avatar") }}
             </Label>
             <div class="flex items-center justify-center">
               <Avatar class="size-16">
@@ -111,33 +113,45 @@ const generatePoem = async () => {
           </div>
           <div class="grid gap-2">
             <Label class="text-secondary-foreground text-xs" for="name">
-              Name
+              {{ t("labels.name") }}
             </Label>
-            <Input id="name" type="text" placeholder="Enter a name" />
+            <Input
+              id="name"
+              type="text"
+              :placeholder="t('pages.create.placeholders.name')"
+            />
           </div>
           <div class="grid gap-2">
-            <Label class="text-secondary-foreground text-xs" for="description"
-              >Description</Label
+            <Label
+              class="text-secondary-foreground text-xs"
+              for="description"
+              >{{ t("labels.description") }}</Label
             >
             <Textarea
               id="description"
-              placeholder="Enter a description"
+              :placeholder="t('pages.create.placeholders.description')"
               rows="3"
             />
           </div>
           <div class="grid gap-2">
-            <Label class="text-secondary-foreground text-xs" for="prompt"
-              >Prompt</Label
-            >
-            <Textarea id="prompt" placeholder="Enter a prompt" rows="15" />
+            <Label class="text-secondary-foreground text-xs" for="prompt">{{
+              t("pages.create.labels.prompt")
+            }}</Label>
+            <Textarea
+              id="prompt"
+              :placeholder="t('pages.create.placeholders.prompt')"
+              rows="15"
+            />
           </div>
           <div class="grid gap-2">
             <Label class="text-secondary-foreground text-xs" for="model">
-              Model
+              {{ t("pages.create.labels.model") }}
             </Label>
             <Select id="model" v-model="selectedModel">
               <SelectTrigger class="w-full">
-                <SelectValue placeholder="Select a model" />
+                <SelectValue
+                  :placeholder="t('pages.create.placeholders.model')"
+                />
               </SelectTrigger>
               <SelectContent>
                 <template
@@ -162,8 +176,10 @@ const generatePoem = async () => {
             </Select>
           </div>
           <div class="grid gap-2">
-            <Label class="text-secondary-foreground text-xs" for="temperature"
-              >Temperature</Label
+            <Label
+              class="text-secondary-foreground text-xs"
+              for="temperature"
+              >{{ t("pages.create.labels.temperature") }}</Label
             >
             <Slider
               id="temperature"
@@ -174,9 +190,9 @@ const generatePoem = async () => {
             />
           </div>
           <div class="grid gap-2">
-            <Label class="text-secondary-foreground text-xs" for="maxlength"
-              >Maximum Length</Label
-            >
+            <Label class="text-secondary-foreground text-xs" for="maxlength">{{
+              t("pages.create.labels.maxLength")
+            }}</Label>
             <Slider
               id="maxlength"
               v-model="maxLength"
@@ -186,9 +202,9 @@ const generatePoem = async () => {
             />
           </div>
           <div class="grid gap-2">
-            <Label class="text-secondary-foreground text-xs" for="top-p"
-              >Top P</Label
-            >
+            <Label class="text-secondary-foreground text-xs" for="top-p">{{
+              t("pages.create.labels.topP")
+            }}</Label>
             <Slider
               id="top-p"
               v-model="topP"
@@ -205,17 +221,24 @@ const generatePoem = async () => {
     >
       <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">
-          <Input v-model="subject" placeholder="Subject" />
+          <Input
+            v-model="subject"
+            :placeholder="t('pages.create.placeholders.subject')"
+          />
           <Button :disabled="isLoading" @click="generatePoem()">
             <Spinner v-if="isLoading" />
-            {{ isLoading ? "Composing..." : "Compose" }}
+            {{
+              isLoading
+                ? t("pages.create.composing")
+                : t("pages.create.compose")
+            }}
           </Button>
           <p class="rounded-md border p-2">
             <span v-if="isLoading" class="text-muted-foreground">
-              Generating poem...
+              {{ t("pages.create.generating") }}
             </span>
             <span v-else>
-              {{ poem ? poem : "Your poem will appear here." }}
+              {{ poem ? poem : t("pages.create.poemPlaceholder") }}
             </span>
           </p>
         </div>

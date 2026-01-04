@@ -1,5 +1,131 @@
 {
   "hello": "Hello",
+  "actions": {
+    "add": "Add",
+    "cancel": "Cancel",
+    "close": "Close",
+    "collapse": "Collapse",
+    "confirm": "Confirm",
+    "copy": "Copy",
+    "copyLink": "Copy Link",
+    "create": "Create",
+    "delete": "Delete",
+    "dock": "Dock",
+    "download": "Download",
+    "duplicate": "Duplicate",
+    "edit": "Edit",
+    "expand": "Expand",
+    "filter": "Filter",
+    "goBack": "Go back",
+    "goForward": "Go forward",
+    "invite": "Invite",
+    "logout": "Log out",
+    "maximize": "Maximize",
+    "minimize": "Minimize",
+    "more": "More",
+    "moreOptions": "More options",
+    "new": "New",
+    "openInNewTab": "Open in New Tab",
+    "pin": "Pin",
+    "popOut": "Pop out",
+    "refresh": "Refresh",
+    "remove": "Remove",
+    "rename": "Rename",
+    "reset": "Reset",
+    "save": "Save",
+    "saveChanges": "Save Changes",
+    "search": "Search",
+    "select": "Select",
+    "send": "Send",
+    "settings": "Settings",
+    "share": "Share",
+    "switch": "Switch",
+    "unpin": "Unpin",
+    "update": "Update",
+    "upload": "Upload",
+    "view": "View"
+  },
+  "labels": {
+    "account": "Account",
+    "active": "Active",
+    "appearance": "Appearance",
+    "available": "Available",
+    "calendar": "Calendar",
+    "checking": "Checking",
+    "console": "Console",
+    "createdBy": "Created by",
+    "createdOn": "Created on",
+    "description": "Description",
+    "desktop": "Desktop",
+    "dimensions": "Dimensions",
+    "email": "Email",
+    "emailAddress": "Email address",
+    "endDate": "End date",
+    "favorites": "Favorites",
+    "history": "History",
+    "iconsAndText": "Icons and text",
+    "iconsOnly": "Icons only",
+    "information": "Information",
+    "lastModified": "Last modified",
+    "members": "Members",
+    "mobile": "Mobile",
+    "name": "Name",
+    "notifications": "Notifications",
+    "overview": "Overview",
+    "owner": "Owner",
+    "panel": "Panel",
+    "password": "Password",
+    "private": "Private",
+    "public": "Public",
+    "resolution": "Resolution",
+    "roles": "Roles",
+    "search": "Search",
+    "sharedWith": "Shared with",
+    "sidebar": "Sidebar",
+    "startDate": "Start date",
+    "status": "Status",
+    "tableOfContents": "Table of Contents",
+    "tasks": "Tasks",
+    "teams": "Teams",
+    "templates": "Templates",
+    "trash": "Trash",
+    "usage": "Usage",
+    "viewer": "Viewer"
+  },
+  "states": {
+    "loading": "Loading...",
+    "offline": "You are offline",
+    "synced": "Synced to cloud",
+    "syncing": "Syncing...",
+    "unknown": "Unknown"
+  },
+  "tooltips": {
+    "closePanel": "Close panel",
+    "closeTab": "Close tab",
+    "closeSidebar": "Close sidebar",
+    "collapsePanel": "Collapse panel",
+    "doubleClickToggle": "Double click to toggle",
+    "doubleClickToToggle": "Double click to toggle",
+    "dragToResize": "Drag to resize",
+    "expandPanel": "Expand panel",
+    "expandSidebar": "Expand sidebar",
+    "leftArrowCollapse": "Left arrow to collapse",
+    "leftArrowExpand": "Left arrow to expand",
+    "maximizePanel": "Maximize panel",
+    "minimizePanel": "Minimize panel",
+    "minimizeSidebar": "Minimize sidebar",
+    "newTab": "New tab",
+    "newTerminal": "New Terminal",
+    "rightArrowCollapse": "Right arrow to collapse",
+    "rightArrowExpand": "Right arrow to expand",
+    "shiftLargeSteps": "Shift for large steps",
+    "upArrowExpand": "Up arrow to expand",
+    "downArrowCollapse": "Down arrow to collapse"
+  },
+  "empty": {
+    "noResults": "No results found.",
+    "noActiveSessions": "No active terminal sessions. Create a new terminal to get started."
+  },
   "enter": {
     "title": "Enter",
     "subtitle": "Enter subtitle",
@@ -46,7 +172,11 @@
     "removeAccount": "Remove account",
     "useAccount": "Use this account",
     "showAllAuthOptions": "Show all sign-in options",
-    "showAllAccounts": "Show all accounts"
+    "showAllAccounts": "Show all accounts",
+    "footer": {
+      "terms": "Terms",
+      "privacy": "Privacy"
+    }
   },
   "common": {
     "cancel": "Cancel",
@@ -59,7 +189,8 @@
     "loading": "Loading...",
     "reset": "Reset",
     "backToHome": "Back to Home",
-    "select": "Select"
+    "select": "Select",
+    "none": "None"
   },
   "settings": {
     "titles": {
@@ -362,6 +493,26 @@
       "enter": "Enter",
       "description": "track expenses, set goals, and save money."
     },
+    "faq": {
+      "tooltip": "FAQ",
+      "title": "Frequently Asked Questions",
+      "description": "Get answers to common questions.",
+      "enter": "Enter",
+      "items": {
+        "accessible": {
+          "title": "Is it accessible?",
+          "content": "Yes. It adheres to the WAI-ARIA design pattern."
+        },
+        "unstyled": {
+          "title": "Is it unstyled?",
+          "content": "Yes. It's unstyled by default, giving you freedom over the look and feel."
+        },
+        "animated": {
+          "title": "Can it be animated?",
+          "content": "Yes! You can use the transition prop to configure the animation."
+        }
+      }
+    },
     "header": {
       "copyIcon": "Copy icon as .SVG",
       "copyWordmark": "Copy wordmark as .SVG",
@@ -543,12 +694,36 @@
       "temperature": "Temperature",
       "maxLength": "Maximum Length",
       "topP": "Top P",
+      "composing": "Composing...",
+      "compose": "Compose",
+      "generating": "Generating poem...",
+      "poemPlaceholder": "Your poem will appear here.",
+      "labels": {
+        "avatar": "Avatar",
+        "name": "Name",
+        "description": "Description",
+        "prompt": "Prompt",
+        "model": "Model",
+        "temperature": "Temperature",
+        "maxLength": "Maximum Length",
+        "topP": "Top P"
+      },
       "placeholders": {
         "name": "Enter a name",
         "description": "Enter a description",
         "prompt": "Enter a prompt",
         "model": "Select a model",
         "subject": "Subject"
+      },
+      "status": {
+        "composing": "Composing...",
+        "generating": "Generating poem..."
+      },
+      "buttons": {
+        "compose": "Compose"
+      },
+      "poem": {
+        "placeholder": "Your poem will appear here."
       },
       "alts": {
         "agent": "Agent"
@@ -595,10 +770,45 @@
       "searchPlaceholder": "Search agents, functionalities, or categories...",
       "featured": "Featured",
       "empty": "No results found.",
+      "title": "Agent Network",
+      "description": "Discover and deploy AI agents that automate your workflows, enhance productivity, and transform your business operations.",
+      "trending": "Trending Agents",
       "categories": {
+        "featured": "Featured",
+        "writing": "Writing",
+        "productivity": "Productivity",
+        "research": "Research",
+        "coding": "Coding",
+        "data": "Data",
+        "design": "Design",
+        "marketing": "Marketing",
+        "sales": "Sales",
+        "support": "Support",
+        "hr": "HR",
+        "finance": "Finance",
+        "legal": "Legal",
+        "education": "Education",
+        "entertainment": "Entertainment",
         "calendar": "Calendar",
         "searchEmoji": "Search Emoji",
         "calculator": "Calculator"
+      },
+      "sections": {
+        "featured": "Featured",
+        "featuredDescription": "Explore our featured agents designed to boost your productivity.",
+        "trending": "Trending",
+        "trendingDescription": "Discover the most popular agents used by our community.",
+        "byAgentNetwork": "By Agent Network",
+        "byAgentNetworkDescription": "Agents created by the Agent Network team."
+      },
+      "buttons": {
+        "new": "New",
+        "recruit": "Recruit",
+        "addToTeam": "Add to Team"
+      },
+      "badges": {
+        "runs": "RUNS",
+        "hours": "HOURS"
       }
     },
     "pricing": {
@@ -724,6 +934,45 @@
       "enterprise": "Enterprise",
       "contactUs": "Contact us",
       "ai": "AI",
+      "presets": {
+        "today": "Today",
+        "last7days": "Last 7 days",
+        "last14days": "Last 14 days",
+        "last30days": "Last 30 days",
+        "last3months": "Last 3 months",
+        "last6months": "Last 6 months",
+        "last1year": "Last 1 year"
+      },
+      "chart": {
+        "desktop": "Desktop",
+        "mobile": "Mobile"
+      },
+      "navMain": {
+        "search": "Search",
+        "askAi": "Ask AI"
+      },
+      "navSecondary": {
+        "calendar": "Calendar",
+        "templates": "Templates",
+        "trash": "Trash"
+      },
+      "sidebar": {
+        "favorites": "Favorites",
+        "teams": "Teams",
+        "more": "More",
+        "tableOfContents": "Table of Contents"
+      },
+      "dropdown": {
+        "addToFavorites": "Add to Favorites",
+        "removeFromFavorites": "Remove from Favorites",
+        "copyLink": "Copy Link",
+        "openInNewTab": "Open in New Tab",
+        "delete": "Delete"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "usage": "Usage"
+      },
       "features": {
         "personal": {
           "notes": "Unlimited notes, upto 10MB per note.",
@@ -749,20 +998,85 @@
         }
       }
     },
+    "profile": {
+      "noUsername": "No username set",
+      "public": "Public",
+      "private": "Private",
+      "settings": "Settings"
+    },
+    "welcome": {
+      "steps": {
+        "account": {
+          "title": "Account",
+          "description": "Add your address"
+        },
+        "preferences": {
+          "title": "Preferences",
+          "description": "Set your preferred"
+        },
+        "payment": {
+          "title": "Payment",
+          "description": "Add any payment"
+        },
+        "confirmation": {
+          "title": "Confirmation",
+          "description": "Confirm your order"
+        }
+      },
+      "content": {
+        "accountDetails": "Account Details",
+        "accountDescription": "Enter your personal information and address to get started.",
+        "preferences": "Your Preferences",
+        "preferencesDescription": "Customize your experience by setting your preferred options.",
+        "paymentMethod": "Payment Method",
+        "paymentDescription": "Add a payment method to complete your subscription.",
+        "confirmation": "Confirmation",
+        "confirmationDescription": "Review and confirm your details before proceeding.",
+        "allSet": "All Set!",
+        "allSetDescription": "You're ready to start using the app."
+      }
+    },
+    "exit": {
+      "logout": "Log out",
+      "dialog": {
+        "title": "Are you sure you want to logout?",
+        "description": "You will be redirected to the login page.",
+        "cancel": "Cancel",
+        "logout": "Logout"
+      }
+    },
     "test": {
-      "signInMessage": "Please sign in to manage teams.",
+      "signInPrompt": "Please sign in to manage teams.",
       "userProfile": "User Profile",
       "uid": "UID",
       "email": "Email",
       "currentTeamId": "Current Team ID",
       "currentTeam": "Current Team",
+      "id": "ID",
       "members": "Members",
       "inviteMember": "Invite Member",
       "noTeamSelected": "No team selected.",
       "createNewTeam": "Create New Team",
       "create": "Create",
       "myTeams": "My Teams",
+      "role": "Role",
       "active": "Active",
+      "inviting": "Inviting...",
+      "inviteSuccess": "User invited successfully!",
+      "userEmail": "User Email",
+      "teamName": "Team Name",
+      "status": {
+        "inviting": "Inviting...",
+        "active": "Active"
+      },
+      "success": {
+        "invited": "User invited successfully!"
+      },
+      "buttons": {
+        "invite": "Invite",
+        "create": "Create",
+        "switch": "Switch"
+      },
       "placeholders": {
         "userEmail": "User Email",
         "teamName": "Team Name"
@@ -770,10 +1084,148 @@
     }
   },
   "components": {
+    "dataTable": {
+      "labels": "Labels",
+      "actions": "Actions"
+    },
+    "teamSwitcher": {
+      "switchTeam": "Switch team",
+      "members": "members",
+      "noOtherTeams": "No other teams available",
+      "myTeams": "My Teams",
+      "createTeam": "Create team",
+      "menu": {
+        "members": "Members",
+        "settings": "Settings",
+        "switchTeam": "Switch team"
+      }
+    },
+    "teamDialog": {
+      "title": {
+        "create": "Create Team",
+        "edit": "Edit Team",
+        "invite": "Invite Members"
+      },
+      "description": {
+        "create": "Add a new team to manage products and customers.",
+        "edit": "Update your team name and profile picture.",
+        "invite": "Invite new members to your team."
+      },
+      "tooltips": {
+        "uploadPhoto": "Upload team photo",
+        "removePhoto": "Remove team photo"
+      },
+      "labels": {
+        "clickToChange": "Click to change",
+        "clickToUpload": "Click to upload logo",
+        "teamName": "Team name",
+        "inviteMembers": "Invite members",
+        "emailAddress": "Email address"
+      },
+      "roles": {
+        "owner": "Owner",
+        "member": "Member"
+      },
+      "buttons": {
+        "add": "Add",
+        "cancel": "Cancel",
+        "createTeam": "Create Team",
+        "saveChanges": "Save Changes",
+        "inviteMembers": "Invite {count} Member(s)"
+      }
+    },
+    "subNavigation": {
+      "contextMenu": {
+        "refresh": "Refresh",
+        "goBack": "Go back",
+        "goForward": "Go forward"
+      }
+    },
+    "settingsMenu": {
+      "settings": "Settings",
+      "tooltip": "Settings"
+    },
+    "tasksNotifications": {
+      "tasks": "Tasks",
+      "tasksHeader": "Tasks",
+      "notifications": "Notifications",
+      "notificationsHeader": "Notifications",
+      "tabs": {
+        "inbox": "Inbox",
+        "saved": "Saved",
+        "done": "Done"
+      },
+      "buttons": {
+        "newTask": "New task",
+        "markAllDone": "Mark all as done",
+        "markAllSaved": "Mark all as saved"
+      }
+    },
+    "mainSidebar": {
+      "completeOnboarding": "Complete onboarding",
+      "contextMenu": {
+        "appearance": "Appearance",
+        "iconsOnly": "Icons only",
+        "iconsAndText": "Icons and text"
+      }
+    },
+    "aiAsk": {
+      "buttons": {
+        "askAi": "Ask AI",
+        "pin": "Pin",
+        "unpin": "Unpin"
+      },
+      "tooltips": {
+        "askAi": "Ask AI"
+      },
+      "sheet": {
+        "title": "Ask AI",
+        "description": "Chat with our AI assistant for help and suggestions."
+      },
+      "placeholders": {
+        "input": "Ask, Search or Chat..."
+      },
+      "modes": {
+        "auto": "Auto",
+        "agent": "Agent",
+        "manual": "Manual"
+      },
+      "status": {
+        "used": "{percent}% used"
+      }
+    },
     "flow": {
       "title": "Flow",
       "steps": "Steps",
       "actions": "Actions",
+      "sidebar": {
+        "widgets": "Widgets",
+        "settings": "Settings"
+      },
+      "details": {
+        "runs": "Runs",
+        "runsUnit": "runs",
+        "jobsUnit": "jobs",
+        "errorsUnit": "errors",
+        "firstRun": "First run",
+        "lastRun": "Last run",
+        "usedInBillingCycle": "used in billing cycle.",
+        "used": "Used",
+        "reserved": "Reserved",
+        "information": "Information",
+        "createdBy": "Created by",
+        "createdOn": "Created on",
+        "lastModified": "Last modified",
+        "dimensions": "Dimensions",
+        "resolution": "Resolution",
+        "description": "Description",
+        "addDescription": "Add a description.",
+        "sharedWith": "Shared with",
+        "roles": {
+          "owner": "Owner",
+          "viewer": "Viewer"
+        }
+      },
       "activity": {
         "history": "History",
         "startDate": "Start date",
@@ -870,6 +1322,32 @@
       "askAi": "Ask AI what you want to find..."
     },
     "landing": {
+      "cta": {
+        "tooltip": "Press {key} to login or sign up"
+      },
+      "faq": {
+        "tooltip": "FAQ",
+        "title": "Frequently Asked Questions",
+        "description": "Get answers to common questions.",
+        "buttons": {
+          "enter": "Enter",
+          "close": "Close"
+        },
+        "items": {
+          "accessible": {
+            "question": "Is it accessible?",
+            "answer": "Yes. It adheres to the WAI-ARIA design pattern."
+          },
+          "styled": {
+            "question": "Is it styled?",
+            "answer": "Yes. It comes with default styles that match the other components' aesthetic."
+          },
+          "animated": {
+            "question": "Is it animated?",
+            "answer": "Yes. It's animated by default, but you can disable it if you prefer."
+          }
+        }
+      },
       "qrCode": {
         "alt": "QR Code",
         "heroAlt": "Hero",
@@ -916,6 +1394,102 @@
     "switchAccount": "Switch account",
     "accounts": "Accounts",
     "addAccount": "Add account",
-    "logout": "Log out"
+    "logout": "Log out",
+    "profile": "Profile"
+  },
+  "layouts": {
+    "app": {
+      "contextMenu": {
+        "closePanel": "Close panel",
+        "collapsePanel": "Collapse panel",
+        "expandPanel": "Expand panel",
+        "closeSidebar": "Close sidebar",
+        "expandSidebar": "Expand sidebar",
+        "minimizeSidebar": "Minimize sidebar",
+        "refresh": "Refresh",
+        "goBack": "Go back",
+        "goForward": "Go forward",
+        "appearance": "Appearance",
+        "iconsOnly": "Icons only",
+        "iconsAndText": "Icons and text"
+      },
+      "tooltips": {
+        "closePanel": "Close panel",
+        "closeTab": "Close tab",
+        "closeSidebar": "Close sidebar",
+        "dragToResize": "Drag to resize",
+        "doubleClickToggle": "Double click to toggle",
+        "rightArrowExpand": "Right arrow to expand",
+        "leftArrowCollapse": "Left arrow to collapse",
+        "leftArrowExpand": "Left arrow to expand",
+        "rightArrowCollapse": "Right arrow to collapse",
+        "upArrowExpand": "Up arrow to expand",
+        "downArrowCollapse": "Down arrow to collapse",
+        "shiftLargeSteps": "Shift for large steps",
+        "newTab": "New tab",
+        "minimizePanel": "Minimize panel",
+        "maximizePanel": "Maximize panel",
+        "expand": "Expand",
+        "collapse": "Collapse",
+        "dock": "Dock",
+        "popOut": "Pop out"
+      },
+      "emptyState": {
+        "console": "Console",
+        "noActiveSessions": "No active terminal sessions. Create a new terminal to get started."
+      },
+      "buttons": {
+        "newTerminal": "New Terminal",
+        "console": "Console",
+        "sidebar": "Sidebar",
+        "panel": "Panel",
+        "dock": "Dock",
+        "popOut": "Pop out"
+      },
+      "status": {
+        "offline": "You are offline",
+        "syncing": "Syncing...",
+        "synced": "Synced to cloud"
+      },
+      "popout": {
+        "title": "Popout",
+        "expand": "Expand sidebar",
+        "minimize": "Minimize sidebar",
+        "close": "Close sidebar"
+      },
+      "tabs": {
+        "close": "Close tab",
+        "new": "New tab"
+      },
+      "panel": {
+        "close": "Close panel",
+        "collapse": "Collapse panel",
+        "expand": "Expand panel",
+        "minimize": "Minimize panel",
+        "maximize": "Maximize panel"
+      },
+      "sidebar": {
+        "close": "Close sidebar",
+        "expand": "Expand sidebar",
+        "minimize": "Minimize sidebar"
+      },
+      "empty": {
+        "console": {
+          "title": "Console",
+          "description": "No active terminal sessions. Create a new terminal to get started.",
+          "action": "New Terminal"
+        }
+      },
+      "statusBar": {
+        "console": "Console",
+        "sidebar": "Sidebar",
+        "panel": "Panel",
+        "dock": "Dock",
+        "popOut": "Pop out",
+        "appearance": "Appearance",
+        "iconsOnly": "Icons only",
+        "iconsAndText": "Icons and text"
+      }
+    }
   }
 }

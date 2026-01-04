@@ -3,6 +3,8 @@ import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import { storeToRefs } from "pinia"
 
+const { t } = useI18n()
+
 const teamStore = useTeamStore()
 const membershipStore = useMembershipStore()
 const {
@@ -61,33 +63,43 @@ const switchTeam = async (teamId: string) => {
     </div>
 
     <div v-else-if="!currentUser" class="text-center">
-      <p>Please sign in to manage teams.</p>
+      <p>{{ t("pages.test.signInPrompt") }}</p>
       <!-- Add a temporary sign in button if needed, or assume global auth handling -->
     </div>
 
     <div v-else class="space-y-8">
       <!-- User Info -->
       <section class="rounded-lg border p-4">
-        <h2 class="mb-2 text-xl font-bold">User Profile</h2>
-        <p><strong>UID:</strong> {{ userProfile?.uid }}</p>
-        <p><strong>Email:</strong> {{ userProfile?.email }}</p>
+        <h2 class="mb-2 text-xl font-bold">
+          {{ t("pages.test.userProfile") }}
+        </h2>
         <p>
-          <strong>Current Team ID:</strong>
-          {{ userProfile?.currentTeamId || "None" }}
+          <strong>{{ t("pages.test.uid") }}:</strong> {{ userProfile?.uid }}
+        </p>
+        <p>
+          <strong>{{ t("labels.email") }}:</strong> {{ userProfile?.email }}
+        </p>
+        <p>
+          <strong>{{ t("pages.test.currentTeamId") }}:</strong>
+          {{ userProfile?.currentTeamId || t("common.none") }}
         </p>
       </section>
 
       <!-- Current Team -->
       <section class="rounded-lg border bg-slate-50 p-4">
-        <h2 class="mb-2 text-xl font-bold">Current Team</h2>
+        <h2 class="mb-2 text-xl font-bold">
+          {{ t("pages.test.currentTeam") }}
+        </h2>
         <div v-if="currentTeam">
           <h3 class="text-primary text-2xl font-bold">
             {{ currentTeam.name }}
           </h3>
-          <p class="text-muted-foreground text-sm">ID: {{ currentTeam.id }}</p>
+          <p class="text-muted-foreground text-sm">
+            {{ t("pages.test.id") }}: {{ currentTeam.id }}
+          </p>
 
           <div class="mt-4">
-            <h4 class="mb-2 font-semibold">Members</h4>
+            <h4 class="mb-2 font-semibold">{{ t("labels.members") }}</h4>
             <ul class="space-y-1">
               <li
                 v-for="member in teamMembers"
@@ -105,46 +117,52 @@ const switchTeam = async (teamId: string) => {
           </div>
 
           <div class="mt-4 border-t pt-4">
-            <h4 class="mb-2 font-semibold">Invite Member</h4>
+            <h4 class="mb-2 font-semibold">
+              {{ t("pages.test.inviteMember") }}
+            </h4>
             <div class="flex gap-2">
               <Input
                 v-model="inviteEmail"
-                placeholder="User Email"
+                :placeholder="t('pages.test.userEmail')"
                 @keyup.enter="handleInvite"
               />
               <Button :disabled="isInviting" @click="handleInvite">
-                {{ isInviting ? "Inviting..." : "Invite" }}
+                {{
+                  isInviting ? t("pages.test.inviting") : t("actions.invite")
+                }}
               </Button>
             </div>
             <p v-if="inviteError" class="text-destructive mt-1 text-sm">
               {{ inviteError }}
             </p>
             <p v-if="inviteSuccess" class="mt-1 text-sm text-green-600">
-              User invited successfully!
+              {{ t("pages.test.inviteSuccess") }}
             </p>
           </div>
         </div>
         <div v-else>
-          <p>No team selected.</p>
+          <p>{{ t("pages.test.noTeamSelected") }}</p>
         </div>
       </section>
 
       <!-- Create Team -->
       <section class="rounded-lg border p-4">
-        <h2 class="mb-2 text-xl font-bold">Create New Team</h2>
+        <h2 class="mb-2 text-xl font-bold">
+          {{ t("pages.test.createNewTeam") }}
+        </h2>
         <div class="flex gap-2">
           <Input
             v-model="newTeamName"
-            placeholder="Team Name"
+            :placeholder="t('pages.test.teamName')"
             @keyup.enter="handleCreateTeam"
           />
-          <Button @click="handleCreateTeam">Create</Button>
+          <Button @click="handleCreateTeam">{{ t("actions.create") }}</Button>
         </div>
       </section>
 
       <!-- My Teams -->
       <section class="rounded-lg border p-4">
-        <h2 class="mb-2 text-xl font-bold">My Teams</h2>
+        <h2 class="mb-2 text-xl font-bold">{{ t("pages.test.myTeams") }}</h2>
         <ul class="space-y-2">
           <li
             v-for="membership in memberships"
@@ -154,7 +172,7 @@ const switchTeam = async (teamId: string) => {
             <div>
               <div class="font-medium">{{ membership.team.name }}</div>
               <div class="text-muted-foreground text-xs">
-                Role: {{ membership.role }}
+                {{ t("pages.test.role") }}: {{ membership.role }}
               </div>
             </div>
             <Button
@@ -163,11 +181,11 @@ const switchTeam = async (teamId: string) => {
               size="sm"
               @click="switchTeam(membership.teamId)"
             >
-              Switch
+              {{ t("actions.switch") }}
             </Button>
-            <span v-else class="text-sm font-medium text-green-600"
-              >Active</span
-            >
+            <span v-else class="text-sm font-medium text-green-600">{{
+              t("labels.active")
+            }}</span>
           </li>
         </ul>
       </section>

@@ -146,7 +146,7 @@ const getFirebaseKey = () => {
  * Listens for auth state changes (token refreshes, sign-ins) and keeps the keychain updated.
  * This ensures we capture the freshest session data whenever it changes.
  */
-export const initKeychainListener = () => {
+export const initKeychain = () => {
   onIdTokenChanged(auth, async (user) => {
     if (user) {
       const key = getFirebaseKey()

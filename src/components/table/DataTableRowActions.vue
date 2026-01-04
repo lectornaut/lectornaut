@@ -14,6 +14,7 @@ defineEmits<{
   (e: "expand"): void
 }>()
 
+const { t } = useI18n()
 const task = computed(() => taskSchema.parse(props.row.original))
 </script>
 
@@ -32,16 +33,18 @@ const task = computed(() => taskSchema.parse(props.row.original))
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Edit</DropdownMenuItem>
-            <DropdownMenuItem>Make a copy</DropdownMenuItem>
-            <DropdownMenuItem>Favorite</DropdownMenuItem>
+            <DropdownMenuItem>{{ t("actions.edit") }}</DropdownMenuItem>
+            <DropdownMenuItem>{{ t("actions.duplicate") }}</DropdownMenuItem>
+            <DropdownMenuItem>{{ t("labels.favorites") }}</DropdownMenuItem>
             <!-- <DropdownMenuItem @click="$emit('expand')">
               {{ row.getIsExpanded() ? "Collapse" : "Expand" }}
             </DropdownMenuItem> -->
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuItem as-child>
-                <DropdownMenuSubTrigger> Labels </DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger>
+                  {{ t("components.dataTable.labels") }}
+                </DropdownMenuSubTrigger>
               </DropdownMenuItem>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup v-model="task.label">
@@ -57,12 +60,12 @@ const task = computed(() => taskSchema.parse(props.row.original))
             </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              Delete
+              {{ t("actions.delete") }}
               <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </TooltipTrigger>
-        <TooltipContent>Actions</TooltipContent>
+        <TooltipContent>{{ t("actions.moreOptions") }}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   </DropdownMenu>

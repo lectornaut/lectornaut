@@ -125,6 +125,7 @@ import IconLucideImage from "~icons/lucide/image"
 import IconLucideInbox from "~icons/lucide/inbox"
 import IconLucideInfo from "~icons/lucide/info"
 import IconLucideItalic from "~icons/lucide/italic"
+import IconLucideKeyRound from "~icons/lucide/key-round"
 import IconLucideKeyboard from "~icons/lucide/keyboard"
 import IconLucideLanguages from "~icons/lucide/languages"
 import IconLucideLayers from "~icons/lucide/layers"
@@ -400,6 +401,7 @@ export {
   IconLucideItalic as IconItalic,
   IconJapan,
   IconLucideKeyboard as IconKeyboard,
+  IconLucideKeyRound as IconKeyRound,
   IconLucideLanguages as IconLanguages,
   IconMingcuteLayerFill as IconLayerFill,
   IconLucideLayers as IconLayers,

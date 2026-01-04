@@ -95,7 +95,7 @@ const handleSwitchAccount = async (uid: string) => {
                 <DropdownMenuItem as-child>
                   <RouterLink to="/profile">
                     <IconUserRound />
-                    Profile
+                    {{ t("accountMenu.profile") }}
                   </RouterLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -212,7 +212,7 @@ const handleSwitchAccount = async (uid: string) => {
             <ContextMenuItem as-child>
               <RouterLink to="/profile">
                 <IconUserRound />
-                Profile
+                {{ t("accountMenu.profile") }}
               </RouterLink>
             </ContextMenuItem>
             <ContextMenuItem

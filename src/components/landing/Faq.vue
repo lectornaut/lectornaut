@@ -1,23 +1,25 @@
 <script lang="ts" setup>
 import { IconCircleHelp } from "@/data/icons"
-const accordionItems = [
+
+const { t } = useI18n()
+
+const accordionItems = computed(() => [
   {
     value: "item-1",
-    title: "Is it accessible?",
-    content: "Yes. It adheres to the WAI-ARIA design pattern.",
+    title: t("landing.faq.items.accessible.title"),
+    content: t("landing.faq.items.accessible.content"),
   },
   {
     value: "item-2",
-    title: "Is it unstyled?",
-    content:
-      "Yes. It's unstyled by default, giving you freedom over the look and feel.",
+    title: t("landing.faq.items.unstyled.title"),
+    content: t("landing.faq.items.unstyled.content"),
   },
   {
     value: "item-3",
-    title: "Can it be animated?",
-    content: "Yes! You can use the transition prop to configure the animation.",
+    title: t("landing.faq.items.animated.title"),
+    content: t("landing.faq.items.animated.content"),
   },
-]
+])
 </script>
 
 <template>
@@ -29,14 +31,16 @@ const accordionItems = [
             <IconCircleHelp />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="top"> FAQ </TooltipContent>
+        <TooltipContent side="top">
+          {{ t("landing.faq.tooltip") }}
+        </TooltipContent>
       </DrawerTrigger>
       <DrawerContent class="outline-hidden">
         <div class="mx-auto flex w-full max-w-sm flex-col">
           <DrawerHeader class="sr-only">
-            <DrawerTitle> Frequently Asked Questions </DrawerTitle>
+            <DrawerTitle> {{ t("landing.faq.title") }} </DrawerTitle>
             <DrawerDescription>
-              Get answers to common questions.
+              {{ t("landing.faq.description") }}
             </DrawerDescription>
           </DrawerHeader>
           <Accordion type="single" collapsible class="p-4">
@@ -55,10 +59,12 @@ const accordionItems = [
           </Accordion>
           <DrawerFooter class="mb-safe-bottom">
             <Button class="w-full" as-child>
-              <RouterLink to="/enter" class="w-full"> Enter </RouterLink>
+              <RouterLink to="/enter" class="w-full">
+                {{ t("landing.faq.enter") }}
+              </RouterLink>
             </Button>
             <DrawerClose as-child>
-              <Button variant="outline"> Close </Button>
+              <Button variant="outline"> {{ t("actions.close") }} </Button>
             </DrawerClose>
           </DrawerFooter>
         </div>
