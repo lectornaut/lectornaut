@@ -1840,7 +1840,10 @@ const df = new DateFormatter("en-US", {
                                   :key="member.userId"
                                 >
                                   <TableCell>
-                                    <Item size="sm" class="p-0">
+                                    <Item
+                                      size="sm"
+                                      class="group w-full gap-2 p-0"
+                                    >
                                       <ItemMedia>
                                         <Avatar class="rounded-md">
                                           <AvatarImage
@@ -2170,7 +2173,10 @@ const df = new DateFormatter("en-US", {
                                   :key="membership.teamId"
                                 >
                                   <TableCell>
-                                    <Item size="sm" class="p-0">
+                                    <Item
+                                      size="sm"
+                                      class="group w-full gap-2 p-0"
+                                    >
                                       <ItemMedia class="group relative">
                                         <TooltipProvider>
                                           <Tooltip>

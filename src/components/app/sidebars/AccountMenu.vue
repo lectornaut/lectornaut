@@ -55,13 +55,19 @@ const handleSwitchAccount = async (uid: string) => {
                     {{ getInitials(user?.displayName!) }}
                   </AvatarFallback>
                 </Avatar>
-                <div class="grid flex-1 text-left text-sm leading-tight">
-                  <span class="truncate font-semibold">
+                <div class="flex grow flex-col">
+                  <span
+                    class="truncate text-base leading-tight font-semibold tracking-tight"
+                  >
                     {{ user?.displayName }}
                   </span>
-                  <span class="truncate text-xs">{{ user?.email }}</span>
+                  <span class="text-muted-foreground truncate text-xs">
+                    {{ user?.email }}
+                  </span>
                 </div>
-                <IconChevronDown />
+                <div class="flex items-center">
+                  <IconChevronDown />
+                </div>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-48" align="end" side="right">

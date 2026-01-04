@@ -32,9 +32,6 @@ const teams = computed(() =>
     original: m.team,
   }))
 )
-
-const activeTeamLabel = computed(() => currentTeam.value?.name || "Select Team")
-const activeTeamValue = computed(() => currentTeam.value?.id || "")
 </script>
 
 <template>
@@ -52,18 +49,24 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
               <AvatarImage
                 class="rounded-md"
                 :src="currentTeam?.photoURL!"
-                :alt="activeTeamLabel"
+                :alt="currentTeam?.name"
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback class="rounded-md">
-                {{ getInitials(activeTeamLabel) }}
+                {{ getInitials(currentTeam?.name!) }}
               </AvatarFallback>
             </Avatar>
-            <span
-              class="flex grow truncate text-base leading-tight font-semibold tracking-tight"
-            >
-              {{ activeTeamLabel }}
-            </span>
+            <div class="flex grow flex-col">
+              <span
+                class="truncate text-base leading-tight font-semibold tracking-tight"
+              >
+                {{ currentTeam?.name }}
+              </span>
+              <span class="text-muted-foreground truncate text-xs">
+                {{ getTeamMemberCount(currentTeam?.id!) }}
+                {{ t("components.teamSwitcher.members") }}
+              </span>
+            </div>
             <div class="flex items-center gap-1">
               <div class="flex -space-x-1">
                 <Avatar
@@ -101,11 +104,11 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                     v-if="currentTeam?.photoURL"
                     class="rounded-md"
                     :src="currentTeam.photoURL"
-                    :alt="activeTeamLabel"
+                    :alt="currentTeam?.name"
                     referrerpolicy="no-referrer"
                   />
                   <AvatarFallback class="rounded-md">
-                    {{ getInitials(activeTeamLabel) }}
+                    {{ getInitials(currentTeam?.name!) }}
                   </AvatarFallback>
                 </Avatar>
               </ItemMedia>
@@ -189,7 +192,7 @@ const activeTeamValue = computed(() => currentTeam.value?.id || "")
                           {{ t("components.teamSwitcher.members") }}
                         </ItemDescription>
                       </ItemContent>
-                      <ItemActions v-if="activeTeamValue === team.value">
+                      <ItemActions v-if="currentTeam?.id === team.value">
                         <IconCheck />
                       </ItemActions>
                     </Item>
