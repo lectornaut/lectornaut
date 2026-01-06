@@ -4,6 +4,7 @@ export interface KeychainAccount {
   displayName: string | null
   photoURL: string | null
   sessionData: Record<string, unknown>
+  lastActive: number
 }
 
 const STORAGE_KEY = "lectornaut-keychain"
@@ -24,14 +25,14 @@ export function useKeychain() {
    * Add or update an account in the keychain.
    * If an account with the same UID exists, it will be replaced.
    */
-  const addAccount = (account: KeychainAccount): void => {
+  const addAccount = (account: Omit<KeychainAccount, "lastActive">): void => {
     if (!account.uid) {
       console.error("Cannot add account without uid")
       return
     }
     // Remove existing account with same UID to update
     const filtered = keychain.value.filter((a) => a.uid !== account.uid)
-    keychain.value = [...filtered, account]
+    keychain.value = [...filtered, { ...account, lastActive: Date.now() }]
   }
 
   /**
@@ -42,6 +43,17 @@ export function useKeychain() {
     const initialLength = keychain.value.length
     keychain.value = keychain.value.filter((a) => a.uid !== uid)
     return keychain.value.length < initialLength
+  }
+
+  /**
+   * Prune accounts that have been inactive for longer than the specified duration.
+   * @param maxAgeMs The maximum allowed inactivity duration in milliseconds.
+   */
+  const pruneExpiredAccounts = (maxAgeMs: number): void => {
+    const now = Date.now()
+    keychain.value = keychain.value.filter((account) => {
+      return now - account.lastActive <= maxAgeMs
+    })
   }
 
   /**
@@ -92,6 +104,8 @@ export function useKeychain() {
     addAccount,
     /** Remove an account by UID */
     removeAccount,
+    /** Prune expired accounts */
+    pruneExpiredAccounts,
     /** Get an account by UID */
     getAccount,
     /** Check if an account exists */

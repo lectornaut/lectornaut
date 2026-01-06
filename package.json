@@ -156,7 +156,7 @@
     "prettier": "^3.7.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "sass-embedded": "^1.97.1",
+    "sass-embedded": "^1.97.2",
     "sharp": "^0.34.5",
     "stylelint": "^16.26.1",
     "stylelint-config-standard-scss": "^16.0.0",

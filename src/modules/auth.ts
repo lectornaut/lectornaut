@@ -147,19 +147,33 @@ const getFirebaseKey = () => {
  * This ensures we capture the freshest session data whenever it changes.
  */
 export const initKeychain = () => {
+  // Prune accounts inactive for 30 days
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+  useKeychain().pruneExpiredAccounts(THIRTY_DAYS_MS)
+
   onIdTokenChanged(auth, async (user) => {
     if (user) {
-      const key = getFirebaseKey()
-      if (key) {
-        const sessionData = useStorage(key, null)
-        if (sessionData.value) {
-          useKeychain().addAccount({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            sessionData: sessionData.value as Record<string, unknown>,
-          })
+      // If we intended to switch to this user, clear the pending flag since it succeeded
+      const pendingUid = sessionStorage.getItem("pendingAccountSwitch")
+      if (pendingUid === user.uid) {
+        sessionStorage.removeItem("pendingAccountSwitch")
+      }
+
+      const { hasAccount, addAccount } = useKeychain()
+      // Only update if account is already trusted (in keychain)
+      if (hasAccount(user.uid)) {
+        const key = getFirebaseKey()
+        if (key) {
+          const sessionData = useStorage(key, null)
+          if (sessionData.value) {
+            addAccount({
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+              sessionData: sessionData.value as Record<string, unknown>,
+            })
+          }
         }
       }
     }
@@ -168,6 +182,35 @@ export const initKeychain = () => {
 
 const finishAuthentication = async (result: UserCredential) => {
   toast.success("Logged in")
+
+  // Check if account is already in keychain
+  const { hasAccount, addAccount } = useKeychain()
+  const user = result.user
+
+  if (!hasAccount(user.uid)) {
+    toast("Trust this device for 30 days?", {
+      action: {
+        label: "Yes",
+        onClick: () => {
+          const key = getFirebaseKey()
+          if (key) {
+            const sessionData = useStorage(key, null)
+            if (sessionData.value) {
+              addAccount({
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                sessionData: sessionData.value as Record<string, unknown>,
+              })
+              toast.success("Account saved to keychain")
+            }
+          }
+        },
+      },
+      duration: 10000, // Give user some time to decide
+    })
+  }
 
   if (getAdditionalUserInfo(result)?.isNewUser) {
     setDefaultUserData()
@@ -197,6 +240,9 @@ export const switchAccount = async (targetUid: string) => {
 
     const key = getFirebaseKey()
     if (key) {
+      // Store intent to switch account so we can handle session expiry/failure on reload
+      sessionStorage.setItem("pendingAccountSwitch", targetUid)
+
       const sessionData = useStorage<Record<string, unknown> | null>(key, null)
       sessionData.value = account.sessionData
       // Reload to force Firebase SDK to pick up the injected persistence
@@ -212,6 +258,7 @@ export const switchAccount = async (targetUid: string) => {
   } catch (error) {
     console.error("Error switching account:", error)
     toast.error("Failed to switch account.")
+    sessionStorage.removeItem("pendingAccountSwitch")
   }
 }
 
@@ -512,6 +559,7 @@ export const logout = async () => {
   return auth
     .signOut()
     .then(async () => {
+      toast.dismiss()
       toast.success("Logged out")
       await router.push("/enter")
     })

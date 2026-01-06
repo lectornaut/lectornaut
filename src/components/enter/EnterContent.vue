@@ -117,6 +117,22 @@ watch(accounts, (newAccounts) => {
     isShowAllOptionsOpen.value = true
   }
 })
+
+onMounted(() => {
+  const pendingUid = sessionStorage.getItem("pendingAccountSwitch")
+  if (pendingUid) {
+    sessionStorage.removeItem("pendingAccountSwitch")
+    const account = accounts.value.find((a) => a.uid === pendingUid)
+    if (account) {
+      email.value = account.email || ""
+      authMode.value = "sign-in"
+      isShowAllOptionsOpen.value = true
+      authenticateError.value = `Session expired for ${
+        account.displayName || account.email
+      }. Please sign in again.`
+    }
+  }
+})
 </script>
 
 <template>
