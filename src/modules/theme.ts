@@ -42,6 +42,15 @@ export const initTheme = () => {
     { immediate: true }
   )
 
+  // Sync Base
+  watch(
+    () => themeSettings.value.base,
+    (val) => {
+      document.documentElement.setAttribute("data-base", val)
+    },
+    { immediate: true }
+  )
+
   // Sync Font
   watch(
     () => themeSettings.value.font,
@@ -79,6 +88,17 @@ export const accent = computed({
   set: (val: string) => {
     const s = useLayoutStore()
     s.themeSettings.accent = val
+  },
+})
+
+export const base = computed({
+  get: () => {
+    const s = useLayoutStore()
+    return s.themeSettings.base
+  },
+  set: (val: string) => {
+    const s = useLayoutStore()
+    s.themeSettings.base = val
   },
 })
 

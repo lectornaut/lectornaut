@@ -35,11 +35,18 @@ import {
   IconUsersRound,
   IconX,
 } from "@/data/icons"
-import { accents, fonts, languages, sizes, themes } from "@/helpers/defaults"
+import {
+  accents,
+  bases,
+  fonts,
+  languages,
+  sizes,
+  themes,
+} from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { emitter } from "@/modules/mitt"
-import { accent, font, size, store } from "@/modules/theme"
+import { accent, base, font, size, store } from "@/modules/theme"
 import { updateUserData } from "@/queries/updateUserData"
 import { checkUsernameAvailability, claimUsername } from "@/queries/username"
 import { useAuthStore } from "@/stores/authStore"
@@ -1076,19 +1083,9 @@ const df = new DateFormatter("en-US", {
                             {{
                               t("settings.account.publicProfile.description")
                             }}
-                            <span
-                              v-if="!hasUsername"
-                              class="mt-1 block text-xs text-amber-500"
-                            >
-                              {{
-                                t(
-                                  "settings.account.publicProfile.requiresUsername"
-                                )
-                              }}
-                            </span>
                           </FieldDescription>
                         </FieldContent>
-                        <TooltipProvider v-if="!hasUsername">
+                        <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger as-child>
                               <span class="inline-block">
@@ -1102,19 +1099,22 @@ const df = new DateFormatter("en-US", {
                             </TooltipTrigger>
                             <TooltipContent>
                               {{
-                                t(
-                                  "settings.account.publicProfile.requiresUsername"
-                                )
+                                !hasUsername
+                                  ? t(
+                                      "settings.account.publicProfile.requiresUsername"
+                                    )
+                                  : isPublic
+                                    ? t(
+                                        "settings.account.publicProfile.availableAt",
+                                        { url: `/@${localUsername}` }
+                                      )
+                                    : t(
+                                        "settings.account.publicProfile.turnOnToEnable"
+                                      )
                               }}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        <Switch
-                          v-else
-                          id="is-public"
-                          :model-value="isPublic"
-                          @update:model-value="toggleIsPublic"
-                        />
                       </Field>
                     </FieldSet>
                     <FieldSeparator />
@@ -1448,6 +1448,29 @@ const df = new DateFormatter("en-US", {
                       </Field>
                       <Field orientation="horizontal">
                         <FieldContent>
+                          <FieldLabel for="base">Base</FieldLabel>
+                          <FieldDescription>
+                            Select the base color for the application.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Select id="base" v-model="base">
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a base color" />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem
+                              v-for="color in bases"
+                              :key="color.id"
+                              :value="color.id"
+                            >
+                              <IconCircleFilled :class="color.style" />
+                              {{ color.name }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field orientation="horizontal">
+                        <FieldContent>
                           <FieldLabel for="accent">{{
                             t("settings.preferences.accent.label")
                           }}</FieldLabel>
@@ -1469,9 +1492,7 @@ const df = new DateFormatter("en-US", {
                               :key="color.id"
                               :value="color.id"
                             >
-                              <IconCircleFilled
-                                :class="`text-${color.id}-500`"
-                              />
+                              <IconCircleFilled :class="color.style" />
                               {{ color.name }}
                             </SelectItem>
                           </SelectContent>
@@ -1530,7 +1551,7 @@ const df = new DateFormatter("en-US", {
                               :value="family.id"
                             >
                               <Component :is="family.icon" />
-                              <span :class="`font-${family.id}`">
+                              <span :class="family.style">
                                 {{ family.name }}
                               </span>
                             </SelectItem>
@@ -1561,7 +1582,7 @@ const df = new DateFormatter("en-US", {
                               :value="scale.id"
                             >
                               <Component :is="scale.icon" />
-                              <span :class="`text-${scale.id}`">
+                              <span :class="scale.style">
                                 {{ scale.name }}
                               </span>
                             </SelectItem>

@@ -10,6 +10,7 @@
 
 import {
   defaultAccent,
+  defaultBase,
   defaultFont,
   defaultLanguage,
   defaultMenu,
@@ -45,6 +46,7 @@ export const useLayoutStore = defineStore("layout", () => {
 
   // Pre-load from localStorage to avoid flash
   const mode = useStorage<ThemeMode>("theme", "auto")
+  const base = useStorage("base", defaultBase)
   const accent = useStorage("accent", defaultAccent)
   const font = useStorage("font", defaultFont)
   const size = useStorage("size", defaultSize)
@@ -64,6 +66,7 @@ export const useLayoutStore = defineStore("layout", () => {
   // Theme State - use storage refs directly to avoid double-wrapping
   const themeSettings = reactive({
     mode,
+    base,
     accent,
     font,
     size,
@@ -233,6 +236,7 @@ export const useLayoutStore = defineStore("layout", () => {
       // Only sync if values differ (avoids unnecessary localStorage writes)
       // Use 'in' operator to check for key existence rather than truthy value
       if ("mode" in doc && doc.mode !== mode.value) mode.value = doc.mode
+      if ("base" in doc && doc.base !== base.value) base.value = doc.base
       if ("accent" in doc && doc.accent !== accent.value)
         accent.value = doc.accent
       if ("font" in doc && doc.font !== font.value) font.value = doc.font
@@ -317,6 +321,7 @@ export const useLayoutStore = defineStore("layout", () => {
   async function persistTheme(): Promise<boolean> {
     return safeSetDoc(themeDocRef.value, {
       mode: mode.value,
+      base: base.value,
       accent: accent.value,
       font: font.value,
       size: size.value,
@@ -352,7 +357,7 @@ export const useLayoutStore = defineStore("layout", () => {
 
   // Persist Theme (debounced)
   watchDebounced(
-    [mode, accent, font, size, language],
+    [mode, base, accent, font, size, language],
     () => {
       // Skip persistence during pending operations
       if (pendingTheme.value) return

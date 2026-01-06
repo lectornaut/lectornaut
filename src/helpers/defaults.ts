@@ -69,46 +69,65 @@ export const themes = [
 export const defaultTheme = "auto"
 
 export const accents = [
-  { id: "red", name: "Red" },
-  { id: "orange", name: "Orange" },
-  { id: "amber", name: "Amber" },
-  { id: "yellow", name: "Yellow" },
-  { id: "lime", name: "Lime" },
-  { id: "green", name: "Green" },
-  { id: "emerald", name: "Emerald" },
-  { id: "teal", name: "Teal" },
-  { id: "cyan", name: "Cyan" },
-  { id: "sky", name: "Sky" },
-  { id: "blue", name: "Blue" },
-  { id: "indigo", name: "Indigo" },
-  { id: "violet", name: "Violet" },
-  { id: "purple", name: "Purple" },
-  { id: "fuchsia", name: "Fuchsia" },
-  { id: "pink", name: "Pink" },
-  { id: "rose", name: "Rose" },
-  { id: "slate", name: "Slate" },
-  { id: "gray", name: "Gray" },
-  { id: "zinc", name: "Zinc" },
-  { id: "neutral", name: "Neutral" },
-  { id: "stone", name: "Stone" },
+  { id: "red", name: "Red", style: "text-red-500" },
+  { id: "orange", name: "Orange", style: "text-orange-500" },
+  { id: "amber", name: "Amber", style: "text-amber-500" },
+  { id: "yellow", name: "Yellow", style: "text-yellow-500" },
+  { id: "lime", name: "Lime", style: "text-lime-500" },
+  { id: "green", name: "Green", style: "text-green-500" },
+  { id: "emerald", name: "Emerald", style: "text-emerald-500" },
+  { id: "teal", name: "Teal", style: "text-teal-500" },
+  { id: "cyan", name: "Cyan", style: "text-cyan-500" },
+  { id: "sky", name: "Sky", style: "text-sky-500" },
+  { id: "blue", name: "Blue", style: "text-blue-500" },
+  { id: "indigo", name: "Indigo", style: "text-indigo-500" },
+  { id: "violet", name: "Violet", style: "text-violet-500" },
+  { id: "purple", name: "Purple", style: "text-purple-500" },
+  { id: "fuchsia", name: "Fuchsia", style: "text-fuchsia-500" },
+  { id: "pink", name: "Pink", style: "text-pink-500" },
+  { id: "rose", name: "Rose", style: "text-rose-500" },
 ]
 
-export const defaultAccent = "neutral"
+export const bases = [
+  { id: "slate", name: "Slate", style: "text-slate-500" },
+  { id: "gray", name: "Gray", style: "text-gray-500" },
+  { id: "zinc", name: "Zinc", style: "text-zinc-500" },
+  { id: "neutral", name: "Neutral", style: "text-neutral-500" },
+  { id: "stone", name: "Stone", style: "text-stone-500" },
+]
+
+export const defaultBase = "neutral"
+export const defaultAccent = "orange"
 
 export const fonts = [
-  { id: "sans", name: "Sans", icon: IconFontSans },
-  { id: "serif", name: "Serif", icon: IconFontSansSerif },
-  { id: "mono", name: "Mono", icon: IconFontMono },
+  { id: "sans", name: "Sans", icon: IconFontSans, style: "font-sans" },
+  { id: "serif", name: "Serif", icon: IconFontSansSerif, style: "font-serif" },
+  { id: "mono", name: "Mono", icon: IconFontMono, style: "font-mono" },
 ]
 
 export const defaultFont = "sans"
 
 export const sizes = [
-  { id: "xs", name: "Extra small", icon: IconMdiFormatTextVariant },
-  { id: "sm", name: "Small", icon: IconMdiFormatTextVariant },
-  { id: "base", name: "Normal", icon: IconMdiFormatTextVariant },
-  { id: "lg", name: "Large", icon: IconMdiFormatTextVariant },
-  { id: "xl", name: "Extra large", icon: IconMdiFormatTextVariant },
+  {
+    id: "xs",
+    name: "Extra small",
+    icon: IconMdiFormatTextVariant,
+    style: "text-xs",
+  },
+  { id: "sm", name: "Small", icon: IconMdiFormatTextVariant, style: "text-sm" },
+  {
+    id: "base",
+    name: "Normal",
+    icon: IconMdiFormatTextVariant,
+    style: "text-base",
+  },
+  { id: "lg", name: "Large", icon: IconMdiFormatTextVariant, style: "text-lg" },
+  {
+    id: "xl",
+    name: "Extra large",
+    icon: IconMdiFormatTextVariant,
+    style: "text-xl",
+  },
 ]
 
 export const defaultSize = "base"

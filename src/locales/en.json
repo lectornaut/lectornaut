@@ -252,7 +252,9 @@
       "publicProfile": {
         "label": "Public profile",
         "description": "Allow others to view your profile.",
-        "requiresUsername": "Set a username to enable public profile"
+        "requiresUsername": "Set a username to enable public profile",
+        "turnOnToEnable": "Turn on to enable public access",
+        "availableAt": "Profile is available at {url}"
       },
       "username": {
         "label": "Username",

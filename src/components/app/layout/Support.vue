@@ -200,222 +200,193 @@ const startOnboarding = () => {
 <template>
   <SidebarMenu>
     <SidebarMenuItem id="tour-help-support">
-      <TooltipProvider>
-        <Tooltip>
-          <Dialog>
-            <DropdownMenu v-model:open="openSupport">
-              <DropdownMenuTrigger as-child>
-                <TooltipTrigger as-child>
-                  <SidebarMenuButton class="data-[state=open]:bg-accent">
-                    <IconCircleHelp />
-                    Help
-                  </SidebarMenuButton>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  class="flex items-center gap-2 pr-2"
-                >
-                  Help and Support
-                  <KbdGroup>
-                    <Kbd>?</Kbd>
-                  </KbdGroup>
-                </TooltipContent>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="right">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <IconMessageCircle />
-                    Get support
-                  </DropdownMenuItem>
-                  <DialogTrigger as-child>
+      <Dialog>
+        <DropdownMenu v-model:open="openSupport">
+          <DropdownMenuTrigger as-child>
+            <SidebarMenuButton
+              class="data-[state=open]:bg-accent"
+              tooltip="Help and Support"
+            >
+              <IconCircleHelp />
+              Help
+            </SidebarMenuButton>
+            <SidebarMenuBadge>
+              <KbdGroup>
+                <Kbd>?</Kbd>
+              </KbdGroup>
+            </SidebarMenuBadge>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="right">
+            <DropdownMenuGroup>
+              <DropdownMenuItem>
+                <IconMessageCircle />
+                Get support
+              </DropdownMenuItem>
+              <DialogTrigger as-child>
+                <DropdownMenuItem>
+                  <IconBadgeCheck />
+                  Contact sales
+                </DropdownMenuItem>
+              </DialogTrigger>
+              <DropdownMenuItem @click="productTour.drive()">
+                <IconCirclePlay />
+                Product tour
+              </DropdownMenuItem>
+              <DropdownMenuItem @click="startOnboarding">
+                <IconGift />
+                Onboarding tour
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <IconBookOpen />
+                Documentation <IconArrowUpRight />
+              </DropdownMenuItem>
+              <DropdownMenuItem @click="emitter.emit('Dialog.Shortcuts.Open')">
+                <IconKeyboard />
+                Shortcuts
+                <DropdownMenuShortcut>⌘ /</DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuItem as-child>
+                  <DropdownMenuSubTrigger>
+                    <IconEllipsis />
+                    More
+                  </DropdownMenuSubTrigger>
+                </DropdownMenuItem>
+                <DropdownMenuSubContent>
+                  <DropdownMenuGroup>
                     <DropdownMenuItem>
-                      <IconBadgeCheck />
-                      Contact sales
+                      Status <IconArrowUpRight />
                     </DropdownMenuItem>
-                  </DialogTrigger>
-                  <DropdownMenuItem @click="productTour.drive()">
-                    <IconCirclePlay />
-                    Product tour
-                  </DropdownMenuItem>
-                  <DropdownMenuItem @click="startOnboarding">
-                    <IconGift />
-                    Onboarding tour
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <IconBookOpen />
-                    Documentation <IconArrowUpRight />
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="emitter.emit('Dialog.Shortcuts.Open')"
-                  >
-                    <IconKeyboard />
-                    Shortcuts
-                    <DropdownMenuShortcut>⌘ /</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuItem as-child>
-                      <DropdownMenuSubTrigger>
-                        <IconEllipsis />
-                        More
-                      </DropdownMenuSubTrigger>
+                    <DropdownMenuItem>
+                      Terms of service <IconArrowUpRight />
                     </DropdownMenuItem>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem>
-                          Status <IconArrowUpRight />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          Terms of service <IconArrowUpRight />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          Privacy policy <IconArrowUpRight />
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuGroup>
-                        <DropdownMenuLabel
-                          class="text-muted-foreground text-xs"
-                        >
-                          Lectornaut v{{ version }}
-                        </DropdownMenuLabel>
-                      </DropdownMenuGroup>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  What's new
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    v-for="(log, index) in changelog.slice(0, 2)"
-                    :key="index"
-                    @click="emitter.emit('Dialog.Changelog.Open', log.id)"
+                    <DropdownMenuItem>
+                      Privacy policy <IconArrowUpRight />
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel class="text-muted-foreground text-xs">
+                      Lectornaut v{{ version }}
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel class="text-muted-foreground text-xs">
+              What's new
+            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                v-for="(log, index) in changelog.slice(0, 2)"
+                :key="index"
+                @click="emitter.emit('Dialog.Changelog.Open', log.id)"
+              >
+                <IconCircleDotDashed />
+                <span class="truncate">{{ log.title }}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem @click="emitter.emit('Dialog.Changelog.Open')">
+                <IconCalendar />
+                Full changelog
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DialogContent class="w-sm max-w-fit">
+          <DialogHeader>
+            <DialogTitle> Contact sales </DialogTitle>
+            <DialogDescription>
+              Fill out the form below to contact our sales team. We will get
+              back to you as soon as possible.
+            </DialogDescription>
+            <div class="mt-4 grid gap-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="grid gap-2">
+                  <Label
+                    class="text-secondary-foreground text-xs"
+                    for="first-name"
                   >
-                    <IconCircleDotDashed />
-                    <span class="truncate">{{ log.title }}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="emitter.emit('Dialog.Changelog.Open')"
-                  >
-                    <IconCalendar />
-                    Full changelog
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DialogContent class="w-sm max-w-fit">
-              <DialogHeader>
-                <DialogTitle> Contact sales </DialogTitle>
-                <DialogDescription>
-                  Fill out the form below to contact our sales team. We will get
-                  back to you as soon as possible.
-                </DialogDescription>
-                <div class="mt-4 grid gap-4">
-                  <div class="grid grid-cols-2 gap-4">
-                    <div class="grid gap-2">
-                      <Label
-                        class="text-secondary-foreground text-xs"
-                        for="first-name"
-                      >
-                        First name
-                      </Label>
-                      <Input id="first-name" type="text" placeholder="Ada" />
-                    </div>
-                    <div class="grid gap-2">
-                      <Label
-                        class="text-secondary-foreground text-xs"
-                        for="last-name"
-                      >
-                        Last name
-                      </Label>
-                      <Input
-                        id="last-name"
-                        type="text"
-                        placeholder="Lovelace"
-                      />
-                    </div>
-                  </div>
-                  <div class="grid gap-2">
-                    <Label
-                      class="text-secondary-foreground text-xs"
-                      for="email"
-                    >
-                      Work email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="ada@lovelace.com"
-                    />
-                  </div>
-                  <div class="grid gap-2">
-                    <Label
-                      class="text-secondary-foreground text-xs"
-                      for="company-size"
-                    >
-                      Company size
-                    </Label>
-                    <Select v-model="selectedCompanySize">
-                      <SelectTrigger class="w-full">
-                        <SelectValue placeholder="Number of employees" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          v-for="size in companySizes"
-                          :key="size.value"
-                          :value="size.value"
-                        >
-                          {{ size.label }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div class="grid gap-2">
-                    <Label
-                      class="text-secondary-foreground text-xs"
-                      for="category"
-                    >
-                      Category
-                    </Label>
-                    <Select v-model="selectedCategory">
-                      <SelectTrigger class="w-full">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          v-for="item in supportCategories"
-                          :key="item.value"
-                          :value="item.value"
-                        >
-                          {{ item.label }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div v-if="selectedCategory === 'other'" class="grid gap-2">
-                    <Label
-                      class="text-secondary-foreground text-xs"
-                      for="message"
-                      >Message</Label
-                    >
-                    <Textarea
-                      id="message"
-                      placeholder="How can we help you?"
-                      class="resize-none"
-                    />
-                  </div>
+                    First name
+                  </Label>
+                  <Input id="first-name" type="text" placeholder="Ada" />
                 </div>
-              </DialogHeader>
-              <DialogFooter class="grid grid-cols-1 gap-2">
-                <DialogClose as-child>
-                  <Button> Send request </Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </Tooltip>
-      </TooltipProvider>
+                <div class="grid gap-2">
+                  <Label
+                    class="text-secondary-foreground text-xs"
+                    for="last-name"
+                  >
+                    Last name
+                  </Label>
+                  <Input id="last-name" type="text" placeholder="Lovelace" />
+                </div>
+              </div>
+              <div class="grid gap-2">
+                <Label class="text-secondary-foreground text-xs" for="email">
+                  Work email
+                </Label>
+                <Input id="email" type="email" placeholder="ada@lovelace.com" />
+              </div>
+              <div class="grid gap-2">
+                <Label
+                  class="text-secondary-foreground text-xs"
+                  for="company-size"
+                >
+                  Company size
+                </Label>
+                <Select v-model="selectedCompanySize">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="Number of employees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="size in companySizes"
+                      :key="size.value"
+                      :value="size.value"
+                    >
+                      {{ size.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="grid gap-2">
+                <Label class="text-secondary-foreground text-xs" for="category">
+                  Category
+                </Label>
+                <Select v-model="selectedCategory">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="item in supportCategories"
+                      :key="item.value"
+                      :value="item.value"
+                    >
+                      {{ item.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div v-if="selectedCategory === 'other'" class="grid gap-2">
+                <Label class="text-secondary-foreground text-xs" for="message"
+                  >Message</Label
+                >
+                <Textarea
+                  id="message"
+                  placeholder="How can we help you?"
+                  class="resize-none"
+                />
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogFooter class="grid grid-cols-1 gap-2">
+            <DialogClose as-child>
+              <Button> Send request </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarMenuItem>
     <Shortcuts />
     <Changelog />

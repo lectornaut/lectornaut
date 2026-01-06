@@ -7,25 +7,19 @@ import { emitter } from "@/modules/mitt"
 <template>
   <SidebarMenu>
     <SidebarMenuItem id="tour-help-support">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <SidebarMenuButton
-              @click="emitter.emit('Dialog.Settings.Open', 'preferences')"
-            >
-              <IconSettings />
-              Settings
-            </SidebarMenuButton>
-          </TooltipTrigger>
-          <TooltipContent side="right" class="flex items-center gap-2 pr-2">
-            Settings
-            <KbdGroup>
-              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-              <Kbd>,</Kbd>
-            </KbdGroup>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <SidebarMenuButton
+        tooltip="Settings"
+        @click="emitter.emit('Dialog.Settings.Open', 'preferences')"
+      >
+        <IconSettings />
+        Settings
+      </SidebarMenuButton>
+      <SidebarMenuBadge>
+        <KbdGroup>
+          <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+          <Kbd>,</Kbd>
+        </KbdGroup>
+      </SidebarMenuBadge>
     </SidebarMenuItem>
   </SidebarMenu>
 </template>
