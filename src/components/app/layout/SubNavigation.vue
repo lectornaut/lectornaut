@@ -22,7 +22,7 @@ const router = useRouter()
                 <BreadcrumbPage as-child>
                   <BreadcrumbLink as-child>
                     <Button variant="ghost" as-child>
-                      <RouterLink to="/home">
+                      <RouterLink to="/start">
                         <IconHome />
                       </RouterLink>
                     </Button>

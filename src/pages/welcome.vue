@@ -24,7 +24,7 @@ const router = useRouter()
 
 const completeOnboarding = () => {
   updateUserData({ onboarding: false })
-  router.push("/home")
+  router.push("/start")
 }
 
 const { t } = useI18n()

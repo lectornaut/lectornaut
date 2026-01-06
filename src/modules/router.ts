@@ -63,7 +63,7 @@ router.beforeEach(async (to, from) => {
     if (user) {
       return {
         path:
-          typeof to.query.redirect === "string" ? to.query.redirect : "/home",
+          typeof to.query.redirect === "string" ? to.query.redirect : "/start",
       }
     }
   }

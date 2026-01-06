@@ -278,15 +278,15 @@ const { t } = useI18n()
             <Spinner />
           </Button>
           <Button v-else-if="user" as-child>
-            <RouterLink to="/home">{{
-              t("landing.header.openApp")
-            }}</RouterLink>
+            <RouterLink to="/start">
+              {{ t("landing.header.openApp") }}
+            </RouterLink>
           </Button>
           <EnterTrigger v-else>
             <Button variant="destructive" as-child>
-              <RouterLink to="/enter">{{
-                t("landing.header.getStarted")
-              }}</RouterLink>
+              <RouterLink to="/enter">
+                {{ t("landing.header.getStarted") }}
+              </RouterLink>
             </Button>
           </EnterTrigger>
           <div class="flex md:hidden">

@@ -176,7 +176,7 @@ const finishAuthentication = async (result: UserCredential) => {
     updateUserData()
 
     const redirect = router.currentRoute.value.query.redirect
-    await router.push(typeof redirect === "string" ? redirect : "/home")
+    await router.push(typeof redirect === "string" ? redirect : "/start")
   }
 }
 

@@ -12,7 +12,9 @@ watch(user, async (currentUser) => {
   // Handle authenticated user landing on guest-only routes (e.g., /enter)
   if (currentUser && route.meta.requiresGuest === true) {
     const redirect =
-      typeof route.query?.redirect === "string" ? route.query.redirect : "/home"
+      typeof route.query?.redirect === "string"
+        ? route.query.redirect
+        : "/start"
     console.log(
       `App.vue: User logged in on guest route, redirecting to ${redirect}`
     )

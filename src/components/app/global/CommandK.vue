@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri } from "@/composables/usePlatform"
 import { IconSearch } from "@/data/icons"
 import {
@@ -12,6 +13,7 @@ defineProps<{
 }>()
 
 const { t } = useI18n()
+const { isMobile } = useSidebar()
 
 const openCommand = ref(false)
 
@@ -33,10 +35,12 @@ const filteredShortcuts = computed(() =>
       <Button
         id="tour-search-bar"
         variant="outline"
-        class="text-muted-foreground w-full justify-between shadow-none"
+        class="text-muted-foreground justify-between shadow-none md:w-full"
       >
         <IconSearch />
-        {{ t("components.global.shortcuts.search") }}
+        <template v-if="!isMobile">
+          {{ t("components.global.shortcuts.search") }}
+        </template>
         <KbdGroup>
           <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
           <Kbd>K</Kbd>

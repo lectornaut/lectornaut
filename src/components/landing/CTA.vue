@@ -11,7 +11,7 @@ hotkeys("enter", (event) => {
   console.log("Enter key pressed")
   event.preventDefault()
   if (user.value) {
-    router.push("/home")
+    router.push("/start")
   } else {
     router.push("/enter")
   }
@@ -37,7 +37,7 @@ hotkeys("enter", (event) => {
               <Spinner />
             </Button>
             <Button v-else-if="user" as-child variant="outline" size="sm">
-              <RouterLink to="/home">
+              <RouterLink to="/start">
                 {{ t("landing.cta.enter") }}
               </RouterLink>
             </Button>
