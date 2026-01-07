@@ -1397,7 +1397,8 @@
     "accounts": "Accounts",
     "addAccount": "Add account",
     "logout": "Log out",
-    "profile": "Profile"
+    "profile": "Profile",
+    "accountRemoved": "Account removed"
   },
   "layouts": {
     "app": {

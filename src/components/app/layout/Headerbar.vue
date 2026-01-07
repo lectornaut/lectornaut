@@ -1,8 +1,9 @@
 <script lang="ts" setup>
+import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 
 const { t } = useI18n()
-
+const { isMobile } = useSidebar()
 const isFullscreen = useIsFullscreen()
 
 const iconDisplay = ref<"icon" | "text">("icon")
@@ -23,7 +24,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
             class="flex grow items-center justify-start gap-2 transition-all"
             :class="{ 'pl-20': isTauri && !isFullscreen }"
           >
-            <SidebarTrigger class="md:hidden" />
+            <SidebarTrigger v-if="isMobile" />
             <Logo class="size-8 p-2" />
             <Separator orientation="vertical" class="max-h-4 min-h-4" />
             <TasksNotifications :icon-display="iconDisplay" />

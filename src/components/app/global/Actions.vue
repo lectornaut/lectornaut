@@ -81,9 +81,10 @@ watch(online, (value) => {
 <template>
   <Sonner
     offset="8px"
-    :theme="sonnerTheme"
+    rich-colors
     close-button
     close-button-position="top-right"
     position="bottom-center"
+    :theme="sonnerTheme"
   />
 </template>

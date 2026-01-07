@@ -203,12 +203,11 @@ const finishAuthentication = async (result: UserCredential) => {
                 photoURL: user.photoURL,
                 sessionData: sessionData.value as Record<string, unknown>,
               })
-              toast.success("Account saved to keychain")
             }
           }
         },
       },
-      duration: 10000, // Give user some time to decide
+      duration: Infinity, // Give user time to decide
     })
   }
 

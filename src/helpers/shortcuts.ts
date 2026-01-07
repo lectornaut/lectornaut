@@ -479,13 +479,6 @@ export const shortcuts: ShortcutCategory[] = [
         tags: ["theme", "dark", "night"],
       },
       {
-        description: ["Theme", "Accent"],
-        event: "Theme.Change",
-        parameters: "accent",
-        icon: IconPalette,
-        tags: ["theme", "accent", "color"],
-      },
-      {
         description: ["Theme", "Auto"],
         event: "Theme.Change",
         parameters: "auto",

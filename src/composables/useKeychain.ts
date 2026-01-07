@@ -1,3 +1,5 @@
+import { toast } from "vue-sonner"
+
 export interface KeychainAccount {
   uid: string
   email: string | null
@@ -25,14 +27,22 @@ export function useKeychain() {
    * Add or update an account in the keychain.
    * If an account with the same UID exists, it will be replaced.
    */
-  const addAccount = (account: Omit<KeychainAccount, "lastActive">): void => {
+  const addAccount = (
+    account: Omit<KeychainAccount, "lastActive">,
+    options?: { silent?: boolean }
+  ): void => {
     if (!account.uid) {
       console.error("Cannot add account without uid")
       return
     }
+    // Check if account already exists (update vs add)
+    const isUpdate = keychain.value.some((a) => a.uid === account.uid)
     // Remove existing account with same UID to update
     const filtered = keychain.value.filter((a) => a.uid !== account.uid)
     keychain.value = [...filtered, { ...account, lastActive: Date.now() }]
+    if (!options?.silent && !isUpdate) {
+      toast.success("Account added")
+    }
   }
 
   /**
@@ -42,7 +52,11 @@ export function useKeychain() {
   const removeAccount = (uid: string): boolean => {
     const initialLength = keychain.value.length
     keychain.value = keychain.value.filter((a) => a.uid !== uid)
-    return keychain.value.length < initialLength
+    const removed = keychain.value.length < initialLength
+    if (removed) {
+      toast.success("Account removed")
+    }
+    return removed
   }
 
   /**
@@ -89,7 +103,7 @@ export function useKeychain() {
     const account = getAccount(uid)
     if (!account) return false
 
-    addAccount({ ...account, sessionData })
+    addAccount({ ...account, sessionData }, { silent: true })
     return true
   }
 
