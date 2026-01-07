@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { emitter } from "@/modules/mitt"
 import { state, store } from "@/modules/theme"
+import type { ThemeMode } from "@/stores/layoutStore"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
 
@@ -17,7 +18,6 @@ const favicon = computed(() => {
 useFavicon(favicon)
 
 const sonnerTheme = computed(() => {
-  if (state.value === "accent") return isDark.value ? "dark" : "light"
   if (state.value === "dark") return "dark"
   if (state.value === "light") return "light"
   return "system"
@@ -36,7 +36,7 @@ useHead({
 })
 
 emitter.on("Theme.Change", (newTheme) => {
-  store.value = newTheme as "light" | "dark" | "accent" | "auto"
+  store.value = newTheme as ThemeMode
 })
 
 const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW()

@@ -1485,6 +1485,7 @@
       "statusBar": {
         "console": "Console",
         "sidebar": "Sidebar",
+        "sync": "Sync",
         "panel": "Panel",
         "dock": "Dock",
         "popOut": "Pop out",

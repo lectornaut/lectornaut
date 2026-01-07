@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { IconMonitor, IconMoon, IconPalette, IconSun } from "@/data/icons"
 import { themes } from "@/helpers/defaults"
 import { store } from "@/modules/theme"
 </script>
@@ -15,10 +14,7 @@ import { store } from "@/modules/theme"
               size="icon"
               class="data-[state=open]:bg-accent"
             >
-              <IconSun v-if="store == 'light'" />
-              <IconMoon v-if="store == 'dark'" />
-              <IconPalette v-if="store == 'accent'" />
-              <IconMonitor v-if="store == 'auto'" />
+              <Component :is="themes.find((t) => t.id === store)?.icon" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>

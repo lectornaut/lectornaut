@@ -29,8 +29,11 @@ export default function useDragAndDrop() {
   const { addNodes, screenToFlowCoordinate, onNodesInitialized, updateNode } =
     useVueFlow()
 
-  watch(isDragging, (dragging) => {
-    document.body.style.userSelect = dragging ? "none" : ""
+  // Global watcher for cursor style
+  watch(state.isDragging, (dragging) => {
+    if (typeof document !== "undefined" && document.body) {
+      document.body.style.userSelect = dragging ? "none" : ""
+    }
   })
 
   function onDragStart(event: DragEvent, type: string) {

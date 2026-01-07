@@ -18,7 +18,11 @@ import {
 } from "@/helpers/defaults"
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
-import { cloneState, createPendingSet } from "@/utils/firebase-optimistic"
+import {
+  cloneState,
+  createPendingSet,
+  withOptimisticUpdate,
+} from "@/utils/firebase-optimistic"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc, setDoc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
@@ -32,7 +36,7 @@ export type Tab = {
 
 export type NavItem = (typeof defaultMenu)[number]
 
-export type ThemeMode = "light" | "dark" | "accent" | "auto"
+export type ThemeMode = "light" | "dark" | "auto"
 
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
@@ -390,30 +394,29 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
 
-    // Mark as pending
-    pendingTabIds.value.add(newTab.id)
-
-    try {
+    await withOptimisticUpdate(
+      pendingTabIds.value,
+      newTab.id,
       // Apply optimistic update
-      tabs.value = [...tabs.value, newTab]
-      activeTabId.value = newTab.id
-
-      // Persist immediately for critical action
-      const success = await persistTabs()
-      if (!success) {
-        throw new Error("Failed to persist tab")
-      }
-
-      return newTab
-    } catch (error) {
+      () => {
+        tabs.value = [...tabs.value, newTab]
+        activeTabId.value = newTab.id
+      },
       // Rollback on error
-      tabs.value = previousTabs
-      activeTabId.value = previousActiveTabId
-      console.error("[layoutStore] addTab failed:", error)
-      throw error
-    } finally {
-      pendingTabIds.value.delete(newTab.id)
-    }
+      () => {
+        tabs.value = previousTabs
+        activeTabId.value = previousActiveTabId
+      },
+      // Persistence
+      async () => {
+        const success = await persistTabs()
+        if (!success) {
+          throw new Error("Failed to persist tab")
+        }
+      }
+    )
+
+    return newTab
   }
 
   function addToHistory(tab: Tab) {
@@ -444,52 +447,52 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
 
-    // Mark as pending
-    pendingTabIds.value.add(id)
+    let nextPathResult: string | null = null
 
-    try {
-      // Add to history
-      addToHistory(closing)
+    await withOptimisticUpdate(
+      pendingTabIds.value,
+      id,
+      // Apply optimistic update
+      () => {
+        // Add to history
+        addToHistory(closing)
 
-      // Prepare new state
-      const newTabs = [...tabs.value]
-      newTabs.splice(idx, 1)
+        // Prepare new state
+        const newTabs = [...tabs.value]
+        newTabs.splice(idx, 1)
 
-      let nextPath: string | null = null
-      let nextId = activeTabId.value
+        let nextId = activeTabId.value
 
-      if (newTabs.length === 0) {
-        nextId = ""
-        nextPath = "/start"
-      } else if (closing.id === activeTabId.value) {
-        const nextTab = newTabs[idx] || newTabs[idx - 1]
-        if (nextTab) {
-          nextId = nextTab.id
-          nextPath = nextTab.fullPath
+        if (newTabs.length === 0) {
+          nextId = ""
+          nextPathResult = "/start"
+        } else if (closing.id === activeTabId.value) {
+          const nextTab = newTabs[idx] || newTabs[idx - 1]
+          if (nextTab) {
+            nextId = nextTab.id
+            nextPathResult = nextTab.fullPath
+          }
+        }
+
+        tabs.value = newTabs
+        activeTabId.value = nextId
+      },
+      // Rollback on error
+      () => {
+        tabs.value = previousTabs
+        activeTabId.value = previousActiveTabId
+        recentlyClosed.value = previousRecentlyClosed
+      },
+      // Persistence
+      async () => {
+        const success = await persistTabs()
+        if (!success) {
+          throw new Error("Failed to persist tab close")
         }
       }
+    )
 
-      // Apply optimistic updates
-      tabs.value = newTabs
-      activeTabId.value = nextId
-
-      // Persist immediately for critical action
-      const success = await persistTabs()
-      if (!success) {
-        throw new Error("Failed to persist tab close")
-      }
-
-      return nextPath ? { nextPath } : null
-    } catch (error) {
-      // Rollback on error
-      tabs.value = previousTabs
-      activeTabId.value = previousActiveTabId
-      recentlyClosed.value = previousRecentlyClosed
-      console.error("[layoutStore] closeTab failed:", error)
-      throw error
-    } finally {
-      pendingTabIds.value.delete(id)
-    }
+    return nextPathResult ? { nextPath: nextPathResult } : null
   }
 
   /**
@@ -504,34 +507,45 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
 
-    // Mark all tabs as pending
+    // Use loop to execute updates for "other" tabs since we don't have a single ID
+    // But since we persist the whole tabs collection, we can just use keepId as the pending key
+    // or maybe a special key. However, withOptimisticUpdate expects a single ID key.
+    // For bulk operations that affect the whole collection, we can pick the 'keepId' or a generic key.
+    // Let's use keepId as the primary key since that's the one remaining.
+
+    // To prevent interaction with other tabs during this, we ideally mark them all.
+    // withOptimisticUpdate only marks one ID.
+    // So we will manually mark others, and let withOptimisticUpdate handle the main one.
+
     const tabsToClose = tabs.value.filter((t) => t.id !== keepId)
     tabsToClose.forEach((t) => pendingTabIds.value.add(t.id))
-    pendingTabIds.value.add(keepId)
 
     try {
-      // Add tabs to history
-      tabsToClose.forEach(addToHistory)
-
-      // Apply optimistic update
-      tabs.value = [keep]
-      activeTabId.value = keep.id
-
-      // Persist
-      const success = await persistTabs()
-      if (!success) {
-        throw new Error("Failed to persist closeOtherTabs")
-      }
-    } catch (error) {
-      // Rollback on error
-      tabs.value = previousTabs
-      activeTabId.value = previousActiveTabId
-      recentlyClosed.value = previousRecentlyClosed
-      console.error("[layoutStore] closeOtherTabs failed:", error)
-      throw error
+      await withOptimisticUpdate(
+        pendingTabIds.value,
+        keepId,
+        // Apply optimistic update
+        () => {
+          tabsToClose.forEach(addToHistory)
+          tabs.value = [keep]
+          activeTabId.value = keep.id
+        },
+        // Rollback on error
+        () => {
+          tabs.value = previousTabs
+          activeTabId.value = previousActiveTabId
+          recentlyClosed.value = previousRecentlyClosed
+        },
+        // Persistence
+        async () => {
+          const success = await persistTabs()
+          if (!success) {
+            throw new Error("Failed to persist closeOtherTabs")
+          }
+        }
+      )
     } finally {
       tabsToClose.forEach((t) => pendingTabIds.value.delete(t.id))
-      pendingTabIds.value.delete(keepId)
     }
   }
 
@@ -546,30 +560,39 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
 
-    // Mark all tabs as pending
     const tabsToClose = [...tabs.value]
+    // Mark all as pending manually except one to carry the operation?
+    // Or we use a special ID like 'all-tabs' but that might not block individual tab clicks if logic checks tab.id
+    // It's safer to mark all.
     tabsToClose.forEach((t) => pendingTabIds.value.add(t.id))
 
     try {
-      // Add tabs to history
-      tabsToClose.forEach(addToHistory)
+      // We can't easily use withOptimisticUpdate here because we need to clear ALL pending flags
+      // and withOptimisticUpdate manages one.
+      // But we can wrap the persistence part.
+      // Actually, let's keep the manual try/catch for this bulk operation but follow the pattern closer if possible.
+      // Or, we accept that withOptimisticUpdate is best for single-item or focused operations.
+      // 'closeAll' affects everything.
+      // Let's stick to manual try/catch for this one to ensure all IDs are cleared properly,
+      // mirroring the previous implementation but maybe ensuring we use the same error logging/behavior?
+      // The previous implementation was fine for bulk, but let's see if we can simplify.
+      // No, let's keep it manual as it involves multiple IDs.
 
-      // Apply optimistic update
-      tabs.value = []
-      activeTabId.value = ""
+      // Wait, the previous implementation was:
+      try {
+        tabsToClose.forEach(addToHistory)
+        tabs.value = []
+        activeTabId.value = ""
 
-      // Persist
-      const success = await persistTabs()
-      if (!success) {
-        throw new Error("Failed to persist closeAllTabs")
+        const success = await persistTabs()
+        if (!success) throw new Error("Failed to persist closeAllTabs")
+      } catch (error) {
+        tabs.value = previousTabs
+        activeTabId.value = previousActiveTabId
+        recentlyClosed.value = previousRecentlyClosed
+        console.error("[layoutStore] closeAllTabs failed:", error)
+        throw error
       }
-    } catch (error) {
-      // Rollback on error
-      tabs.value = previousTabs
-      activeTabId.value = previousActiveTabId
-      recentlyClosed.value = previousRecentlyClosed
-      console.error("[layoutStore] closeAllTabs failed:", error)
-      throw error
     } finally {
       tabsToClose.forEach((t) => pendingTabIds.value.delete(t.id))
     }
@@ -607,28 +630,27 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
 
-    // Mark as pending
-    pendingTabIds.value.add(duplicate.id)
-
-    try {
+    await withOptimisticUpdate(
+      pendingTabIds.value,
+      duplicate.id,
       // Apply optimistic update
-      tabs.value = [...tabs.value, duplicate]
-      activeTabId.value = duplicate.id
-
-      // Persist
-      const success = await persistTabs()
-      if (!success) {
-        throw new Error("Failed to persist duplicateTab")
-      }
-    } catch (error) {
+      () => {
+        tabs.value = [...tabs.value, duplicate]
+        activeTabId.value = duplicate.id
+      },
       // Rollback on error
-      tabs.value = previousTabs
-      activeTabId.value = previousActiveTabId
-      console.error("[layoutStore] duplicateTab failed:", error)
-      throw error
-    } finally {
-      pendingTabIds.value.delete(duplicate.id)
-    }
+      () => {
+        tabs.value = previousTabs
+        activeTabId.value = previousActiveTabId
+      },
+      // Persistence
+      async () => {
+        const success = await persistTabs()
+        if (!success) {
+          throw new Error("Failed to persist duplicateTab")
+        }
+      }
+    )
   }
 
   /**
@@ -643,28 +665,27 @@ export const useLayoutStore = defineStore("layout", () => {
     // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
 
-    // Mark as pending
-    pendingTabIds.value.add(id)
-
-    try {
+    await withOptimisticUpdate(
+      pendingTabIds.value,
+      id,
       // Apply optimistic update
-      tabs.value = tabs.value.map((t) =>
-        t.id === id ? { ...t, name: newName.trim() } : t
-      )
-
-      // Persist
-      const success = await persistTabs()
-      if (!success) {
-        throw new Error("Failed to persist renameTab")
-      }
-    } catch (error) {
+      () => {
+        tabs.value = tabs.value.map((t) =>
+          t.id === id ? { ...t, name: newName.trim() } : t
+        )
+      },
       // Rollback on error
-      tabs.value = previousTabs
-      console.error("[layoutStore] renameTab failed:", error)
-      throw error
-    } finally {
-      pendingTabIds.value.delete(id)
-    }
+      () => {
+        tabs.value = previousTabs
+      },
+      // Persistence
+      async () => {
+        const success = await persistTabs()
+        if (!success) {
+          throw new Error("Failed to persist renameTab")
+        }
+      }
+    )
   }
 
   function setActiveTab(id: string) {

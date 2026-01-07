@@ -690,14 +690,13 @@ const closeTab = (id: string) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      class="w-[calc(var(--sidebar-width-icon))] rounded-none"
-                    >
+                    <Button variant="ghost" size="sm" class="rounded-none">
                       <IconCloudAlert v-if="!isOnline" />
                       <IconCloudSync v-else-if="isSyncing" />
                       <IconCloudCheck v-else />
+                      <template v-if="iconDisplay === 'text'">
+                        {{ t("layouts.app.statusBar.sync") }}
+                      </template>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>

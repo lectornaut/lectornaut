@@ -11,6 +11,7 @@
  * - Snapshot protection to prevent VueFire overwrites
  */
 
+import { isRetryableFirebaseError } from "@/utils/firebase-errors"
 import type { Ref, ShallowRef } from "vue"
 
 // ============================================================================
@@ -217,15 +218,17 @@ export async function withOptimisticUpdate<T>(
       } catch (error) {
         lastError = error as Error
 
-        // Don't retry on final attempt
-        if (attempt < maxRetries) {
-          const delay = getBackoffDelay(attempt, retryBaseDelay)
-          console.warn(
-            `Firestore operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`,
-            error
-          )
-          await sleep(delay)
+        // Don't retry non-retryable errors or on final attempt
+        if (!isRetryableFirebaseError(error) || attempt >= maxRetries) {
+          throw error
         }
+
+        const delay = getBackoffDelay(attempt, retryBaseDelay)
+        console.warn(
+          `Firestore operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`,
+          error
+        )
+        await sleep(delay)
       }
     }
 

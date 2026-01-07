@@ -6,9 +6,6 @@ import { storeToRefs } from "pinia"
 export const { store, system, state } = useColorMode({
   attribute: "data-theme",
   storageKey: "theme",
-  modes: {
-    accent: "accent",
-  },
 })
 
 // Initialize theme sync
@@ -133,9 +130,6 @@ if (isTauri.value) {
         break
       case "dark":
         await setTheme("dark")
-        break
-      case "accent":
-        await setTheme(null)
         break
       case "auto":
         await setTheme(null)

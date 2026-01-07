@@ -6,7 +6,6 @@ import {
   IconBot,
   IconBriefcase,
   IconComponent,
-  IconContrast,
   IconFileText,
   IconFontMono,
   IconFontSans,
@@ -55,11 +54,6 @@ export const themes = [
     icon: IconMoon,
   },
   {
-    id: "accent",
-    name: "Accent",
-    icon: IconContrast,
-  },
-  {
     id: "auto",
     name: "Auto",
     icon: IconSunMoon,
@@ -94,6 +88,7 @@ export const bases = [
   { id: "zinc", name: "Zinc", style: "text-zinc-500" },
   { id: "neutral", name: "Neutral", style: "text-neutral-500" },
   { id: "stone", name: "Stone", style: "text-stone-500" },
+  { id: "accent", name: "Accent", style: "text-primary" },
 ]
 
 export const defaultBase = "neutral"
