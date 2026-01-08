@@ -21,9 +21,11 @@
     @apply selection:text-primary-foreground;
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-linear-to-b;
+    @apply bg-background;
+
+    /* @apply bg-linear-to-b;
     @apply from-background;
-    @apply to-background/95;
+    @apply to-background/95; */
     @apply text-foreground;
     @apply select-none;
     @apply overflow-auto;

@@ -6,13 +6,50 @@ import {
   IconRocket,
 } from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
+import { emitter } from "@/modules/mitt"
+
+type ActionItem = {
+  title: string
+  icon: Component
+  keys: string[]
+  event: string
+}
+
+const platformKey = getPlatformSpecialKey()
+
+const actionItems: ActionItem[] = [
+  {
+    title: "Search and Commands",
+    icon: IconCommand,
+    keys: [platformKey, "K"],
+    event: "Dialog.Command.Open",
+  },
+  {
+    title: "Ask AI",
+    icon: IconRocket,
+    keys: [platformKey, "↩"],
+    event: "Dialog.AiAsk.Toggle",
+  },
+  {
+    title: "Keyboard Shortcuts",
+    icon: IconKeyboard,
+    keys: [platformKey, "/"],
+    event: "Dialog.Shortcuts.Open",
+  },
+  {
+    title: "Help and Support",
+    icon: IconHelpCircle,
+    keys: ["?"],
+    event: "Menu.Help.Toggle",
+  },
+]
 </script>
 
 <template>
   <Empty>
     <EmptyHeader>
       <EmptyMedia variant="icon">
-        <Logo class="h-6 w-6" />
+        <Logo class="text-muted-foreground size-6" />
       </EmptyMedia>
       <EmptyTitle> Welcome to Lectornaut </EmptyTitle>
       <EmptyDescription>
@@ -21,64 +58,25 @@ import { getPlatformSpecialKey } from "@/helpers/shortcuts"
     </EmptyHeader>
     <EmptyContent>
       <ItemGroup class="grid grid-cols-1 gap-2">
-        <Item variant="muted" size="sm">
+        <Item
+          v-for="item in actionItems"
+          :key="item.event"
+          variant="muted"
+          size="sm"
+          class="hover:bg-accent cursor-pointer transition-colors"
+          @click="emitter.emit(item.event)"
+        >
           <ItemMedia class="text-muted-foreground">
-            <IconCommand />
+            <Component :is="item.icon" />
           </ItemMedia>
           <ItemContent>
             <ItemTitle class="text-secondary-foreground">
-              Search and Commands
+              {{ item.title }}
             </ItemTitle>
           </ItemContent>
           <ItemActions class="pl-16">
             <KbdGroup>
-              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-              <Kbd>K</Kbd>
-            </KbdGroup>
-          </ItemActions>
-        </Item>
-        <Item variant="muted" size="sm">
-          <ItemMedia class="text-muted-foreground">
-            <IconRocket />
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle class="text-secondary-foreground"> Ask AI </ItemTitle>
-          </ItemContent>
-          <ItemActions class="pl-16">
-            <KbdGroup>
-              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-              <Kbd>↩</Kbd>
-            </KbdGroup>
-          </ItemActions>
-        </Item>
-        <Item variant="muted" size="sm">
-          <ItemMedia class="text-muted-foreground">
-            <IconKeyboard />
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle class="text-secondary-foreground">
-              Keyboard Shortcuts
-            </ItemTitle>
-          </ItemContent>
-          <ItemActions class="pl-16">
-            <KbdGroup>
-              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-              <Kbd>/</Kbd>
-            </KbdGroup>
-          </ItemActions>
-        </Item>
-        <Item variant="muted" size="sm">
-          <ItemMedia class="text-muted-foreground">
-            <IconHelpCircle />
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle class="text-secondary-foreground">
-              Help and Support
-            </ItemTitle>
-          </ItemContent>
-          <ItemActions class="pl-16">
-            <KbdGroup>
-              <Kbd>?</Kbd>
+              <Kbd v-for="key in item.keys" :key="key">{{ key }}</Kbd>
             </KbdGroup>
           </ItemActions>
         </Item>

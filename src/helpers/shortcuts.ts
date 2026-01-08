@@ -25,7 +25,7 @@ import {
   IconXCircle,
   IconXSquare,
 } from "@/data/icons"
-import type { FunctionalComponent, SVGAttributes } from "vue"
+import type { Component } from "vue"
 
 // ============================================================================
 // Platform Detection (cached for performance)
@@ -80,7 +80,7 @@ export type Shortcut = {
   /** Optional parameters passed to the event */
   parameters?: string | number
   /** Icon component for display */
-  icon: FunctionalComponent<SVGAttributes>
+  icon: Component
   /** Search tags for fuzzy matching */
   tags: string[]
   /** Visibility rules */

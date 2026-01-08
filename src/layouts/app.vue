@@ -454,7 +454,7 @@ const closeTab = (id: string) => {
                             <EmptyHeader>
                               <EmptyMedia variant="icon">
                                 <IconLayerFill
-                                  class="text-muted-foreground h-6 w-6"
+                                  class="text-muted-foreground size-6"
                                 />
                               </EmptyMedia>
                               <EmptyTitle>
