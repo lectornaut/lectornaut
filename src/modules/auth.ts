@@ -554,7 +554,15 @@ export const signInWithApple = async () => {
 /**
  * Logs out the current user and redirects to the home page
  */
-export const logout = async () => {
+export const logout = async (removeFromKeychain: boolean = false) => {
+  const { removeAccount } = useKeychain()
+  const currentUserUid = auth.currentUser?.uid
+
+  // Remove account from keychain if requested
+  if (removeFromKeychain && currentUserUid) {
+    removeAccount(currentUserUid)
+  }
+
   return auth
     .signOut()
     .then(async () => {

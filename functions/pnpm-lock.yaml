@@ -20,15 +20,15 @@ importers:
         specifier: ^13.6.0
         version: 13.6.0
       firebase-functions:
-        specifier: ^7.0.2
-        version: 7.0.2(firebase-admin@13.6.0)
+        specifier: ^7.0.3
+        version: 7.0.3(firebase-admin@13.6.0)
       genkit:
         specifier: ^1.27.0
         version: 1.27.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
     devDependencies:
       firebase-functions-test:
         specifier: ^3.4.1
-        version: 3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.2(firebase-admin@13.6.0))(jest@30.2.0(@types/node@25.0.3))
+        version: 3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.3(firebase-admin@13.6.0))(jest@30.2.0(@types/node@25.0.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -317,16 +317,16 @@ packages:
         integrity: sha512-R4MSXTVnuMzGD7bzHdW2ZhhdPC/igELENcq5IjEverBvq5hn1SXCWcsi6eSsdWP0/Ur+SItRRjAktmdoX/8R/Q==,
       }
 
-  "@emnapi/core@1.7.1":
+  "@emnapi/core@1.8.1":
     resolution:
       {
-        integrity: sha512-o1uhUASyo921r2XtHYOHy7gdkGLge8ghBEQHMWmyJFoXlpU58kIrhhN3w26lpQb6dspetweapMn2CSNwQ8I4wg==,
+        integrity: sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg==,
       }
 
-  "@emnapi/runtime@1.7.1":
+  "@emnapi/runtime@1.8.1":
     resolution:
       {
-        integrity: sha512-PVtJr5CmLwYAU9PZDMITZoR5iAOShYREoR45EyyLrbntV50mdePTgUn4AmOw90Ifcj+x2kRjdzr1HP3RrNiHGA==,
+        integrity: sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg==,
       }
 
   "@emnapi/wasi-threads@1.1.0":
@@ -1543,10 +1543,10 @@ packages:
         integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==,
       }
 
-  "@sinclair/typebox@0.34.45":
+  "@sinclair/typebox@0.34.47":
     resolution:
       {
-        integrity: sha512-qJcFVfCa5jxBFSuv7S5WYbA8XdeCPmhnaVVfX/2Y6L8WYg8sk3XY2+6W0zH+3mq1Cz+YC7Ki66HfqX6IHAwnkg==,
+        integrity: sha512-ZGIBQ+XDvO5JQku9wmwtabcVTHJsgSWAHYtVuM9pBNNR5E88v6Jcj/llpmsjivig5X8A8HHOb4/mbEKPS5EvAw==,
       }
 
   "@sinonjs/commons@3.0.1":
@@ -2256,10 +2256,10 @@ packages:
         integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==,
       }
 
-  baseline-browser-mapping@2.9.11:
+  baseline-browser-mapping@2.9.13:
     resolution:
       {
-        integrity: sha512-Sg0xJUNDU1sJNGdfGWhVHX0kkZ+HWcvmVymJbj6NSgZZmW/8S9Y2HQ5euytnIgakgxN6papOAWiwDo1ctFDcoQ==,
+        integrity: sha512-WhtvB2NG2wjr04+h77sg3klAIwrgOqnjS49GGudnUPGFFgg7G17y7Qecqp+2Dr5kUDxNRBca0SK7cG8JwzkWDQ==,
       }
     hasBin: true
 
@@ -2391,10 +2391,10 @@ packages:
       }
     engines: { node: ">=10" }
 
-  caniuse-lite@1.0.30001762:
+  caniuse-lite@1.0.30001763:
     resolution:
       {
-        integrity: sha512-PxZwGNvH7Ak8WX5iXzoK1KPZttBXNPuaOvI2ZYU7NrlM+d9Ov+TUvlLOBNGzVXAntMSMMlJPd+jY6ovrVjSmUw==,
+        integrity: sha512-mh/dGtq56uN98LlNX9qdbKnzINhX0QzhiWBFEkFfsFO4QyCvL8YegrJAazCwXIeqkIob8BlZPGM3xdnY+sgmvQ==,
       }
 
   chalk@4.1.2:
@@ -2424,10 +2424,10 @@ packages:
         integrity: sha512-9z8TZaGM1pfswYeXrUpzPrkx8UnWYdhJclsiYMm6x/w5+nN+8Tf/LnAgfLGQCm59qAOxU8WwHEq2vNwF6i4j+Q==,
       }
 
-  cjs-module-lexer@2.1.1:
+  cjs-module-lexer@2.2.0:
     resolution:
       {
-        integrity: sha512-+CmxIZ/L2vNcEfvNtLdU0ZQ6mbq3FZnwAP2PPTiKP+1QOoKwlKlPgb8UKV0Dds7QVaMnHm+FwSft2VB0s/SLjQ==,
+        integrity: sha512-4bHTS2YuzUvtoLjdy+98ykbNB5jS0+07EvFNXerqZQJ89F7DI6ET7OQo/HJuW6K0aVsKA9hj9/RVb2kQVOrPDQ==,
       }
 
   cliui@8.0.1:
@@ -2990,15 +2990,22 @@ packages:
       firebase-functions: ">=4.9.0"
       jest: ">=28.0.0"
 
-  firebase-functions@7.0.2:
+  firebase-functions@7.0.3:
     resolution:
       {
-        integrity: sha512-AFAZOn2iMp6X6lvCzEI92/J/JfT2ZAGSHKAfop4btWZdIqeHU40gFwVBGPl53bnqEpuv5VYKirmkxGuPu4OHpA==,
+        integrity: sha512-DiIjIUv0OS4KEAA3jqyIc7ymZKdcmMcaXy7FCCkrDQo/1CVMbDDWMdZIslmsgSjldA2nhau1dTE/6JQI8Urjjw==,
       }
     engines: { node: ">=18.0.0" }
     hasBin: true
     peerDependencies:
+      "@apollo/server": ^5.2.0
+      "@as-integrations/express4": ^1.1.2
       firebase-admin: ^11.10.0 || ^12.0.0 || ^13.0.0
+    peerDependenciesMeta:
+      "@apollo/server":
+        optional: true
+      "@as-integrations/express4":
+        optional: true
 
   fn.name@1.1.0:
     resolution:
@@ -5713,13 +5720,13 @@ snapshots:
       enabled: 2.0.0
       kuler: 2.0.0
 
-  "@emnapi/core@1.7.1":
+  "@emnapi/core@1.8.1":
     dependencies:
       "@emnapi/wasi-threads": 1.1.0
       tslib: 2.8.1
     optional: true
 
-  "@emnapi/runtime@1.7.1":
+  "@emnapi/runtime@1.8.1":
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -6175,7 +6182,7 @@ snapshots:
 
   "@jest/schemas@30.0.5":
     dependencies:
-      "@sinclair/typebox": 0.34.45
+      "@sinclair/typebox": 0.34.47
 
   "@jest/snapshot-utils@30.2.0":
     dependencies:
@@ -6265,8 +6272,8 @@ snapshots:
 
   "@napi-rs/wasm-runtime@0.2.12":
     dependencies:
-      "@emnapi/core": 1.7.1
-      "@emnapi/runtime": 1.7.1
+      "@emnapi/core": 1.8.1
+      "@emnapi/runtime": 1.8.1
       "@tybys/wasm-util": 0.10.1
     optional: true
 
@@ -6929,7 +6936,7 @@ snapshots:
 
   "@protobufjs/utf8@1.1.0": {}
 
-  "@sinclair/typebox@0.34.45": {}
+  "@sinclair/typebox@0.34.47": {}
 
   "@sinonjs/commons@3.0.1":
     dependencies:
@@ -7340,7 +7347,7 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  baseline-browser-mapping@2.9.11: {}
+  baseline-browser-mapping@2.9.13: {}
 
   bignumber.js@9.3.1: {}
 
@@ -7404,8 +7411,8 @@ snapshots:
 
   browserslist@4.28.1:
     dependencies:
-      baseline-browser-mapping: 2.9.11
-      caniuse-lite: 1.0.30001762
+      baseline-browser-mapping: 2.9.13
+      caniuse-lite: 1.0.30001763
       electron-to-chromium: 1.5.267
       node-releases: 2.0.27
       update-browserslist-db: 1.2.3(browserslist@4.28.1)
@@ -7450,7 +7457,7 @@ snapshots:
 
   camelcase@6.3.0: {}
 
-  caniuse-lite@1.0.30001762: {}
+  caniuse-lite@1.0.30001763: {}
 
   chalk@4.1.2:
     dependencies:
@@ -7463,7 +7470,7 @@ snapshots:
 
   cjs-module-lexer@1.4.3: {}
 
-  cjs-module-lexer@2.1.1: {}
+  cjs-module-lexer@2.2.0: {}
 
   cliui@8.0.1:
     dependencies:
@@ -7830,16 +7837,16 @@ snapshots:
       - encoding
       - supports-color
 
-  firebase-functions-test@3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.2(firebase-admin@13.6.0))(jest@30.2.0(@types/node@25.0.3)):
+  firebase-functions-test@3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.3(firebase-admin@13.6.0))(jest@30.2.0(@types/node@25.0.3)):
     dependencies:
       "@types/lodash": 4.17.21
       firebase-admin: 13.6.0
-      firebase-functions: 7.0.2(firebase-admin@13.6.0)
+      firebase-functions: 7.0.3(firebase-admin@13.6.0)
       jest: 30.2.0(@types/node@25.0.3)
       lodash: 4.17.21
       ts-deepmerge: 2.0.7
 
-  firebase-functions@7.0.2(firebase-admin@13.6.0):
+  firebase-functions@7.0.3(firebase-admin@13.6.0):
     dependencies:
       "@types/cors": 2.8.19
       "@types/express": 4.17.25
@@ -8508,7 +8515,7 @@ snapshots:
       "@jest/types": 30.2.0
       "@types/node": 25.0.3
       chalk: 4.1.2
-      cjs-module-lexer: 2.1.1
+      cjs-module-lexer: 2.2.0
       collect-v8-coverage: 1.0.3
       glob: 10.5.0
       graceful-fs: 4.2.11

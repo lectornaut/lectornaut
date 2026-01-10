@@ -12,7 +12,7 @@ import { defaultMenu } from "@/helpers/defaults"
         size="sm"
         variant="muted"
       >
-        <ItemMedia variant="icon">
+        <ItemMedia variant="icon" :class="[item.style.bg, item.style.text]">
           <Component :is="item.icon" />
         </ItemMedia>
         <ItemContent>

@@ -15,29 +15,27 @@ type ActionItem = {
   event: string
 }
 
-const platformKey = getPlatformSpecialKey()
-
 const actionItems: ActionItem[] = [
   {
-    title: "Search and Commands",
-    icon: IconCommand,
-    keys: [platformKey, "K"],
-    event: "Dialog.Command.Open",
-  },
-  {
-    title: "Ask AI",
+    title: "Ask AI anything",
     icon: IconRocket,
-    keys: [platformKey, "↩"],
+    keys: [getPlatformSpecialKey(), "↩"],
     event: "Dialog.AiAsk.Toggle",
   },
   {
-    title: "Keyboard Shortcuts",
+    title: "Search and commands",
+    icon: IconCommand,
+    keys: [getPlatformSpecialKey(), "K"],
+    event: "Dialog.Command.Open",
+  },
+  {
+    title: "Keyboard shortcuts",
     icon: IconKeyboard,
-    keys: [platformKey, "/"],
+    keys: [getPlatformSpecialKey(), "/"],
     event: "Dialog.Shortcuts.Open",
   },
   {
-    title: "Help and Support",
+    title: "Help and support",
     icon: IconHelpCircle,
     keys: ["?"],
     event: "Menu.Help.Toggle",
@@ -63,7 +61,7 @@ const actionItems: ActionItem[] = [
           :key="item.event"
           variant="muted"
           size="sm"
-          class="hover:bg-accent cursor-pointer transition-colors"
+          class="hover:bg-secondary cursor-pointer"
           @click="emitter.emit(item.event)"
         >
           <ItemMedia class="text-muted-foreground">

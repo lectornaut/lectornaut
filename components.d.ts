@@ -199,6 +199,7 @@ declare module 'vue' {
     FormMessage: typeof import('./src/components/ui/form/FormMessage.vue')['default']
     Header: typeof import('./src/components/landing/Header.vue')['default']
     Headerbar: typeof import('./src/components/app/layout/Headerbar.vue')['default']
+    HeroImage: typeof import('./src/components/landing/HeroImage.vue')['default']
     HeroText: typeof import('./src/components/landing/HeroText.vue')['default']
     HoverCard: typeof import('./src/components/ui/hover-card/HoverCard.vue')['default']
     HoverCardContent: typeof import('./src/components/ui/hover-card/HoverCardContent.vue')['default']

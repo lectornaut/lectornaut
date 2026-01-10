@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { IconSettings } from "@/data/icons"
-import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 </script>
 
@@ -14,12 +13,6 @@ import { emitter } from "@/modules/mitt"
         <IconSettings />
         Settings
       </SidebarMenuButton>
-      <SidebarMenuBadge>
-        <KbdGroup>
-          <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-          <Kbd>,</Kbd>
-        </KbdGroup>
-      </SidebarMenuBadge>
     </SidebarMenuItem>
   </SidebarMenu>
 </template>

@@ -850,7 +850,7 @@ const df = new DateFormatter("en-US", {
           <div
             class="flex flex-1 flex-col overflow-auto overscroll-none scroll-smooth"
           >
-            <DialogHeader class="p-6">
+            <DialogHeader class="m-6">
               <DialogTitle>
                 {{
                   navigations
@@ -2640,7 +2640,13 @@ const df = new DateFormatter("en-US", {
               </TabsContent>
             </OverlayScrollbarsWrapper>
             <Separator />
-            <DialogFooter class="p-6">
+            <DialogFooter class="m-6">
+              <div
+                v-if="hasPendingChanges"
+                class="flex flex-1 items-center text-sm"
+              >
+                {{ t("common.unsavedChanges") }}
+              </div>
               <DialogClose as-child>
                 <Button variant="outline" @click="discardChanges">
                   {{ t("common.cancel") }}

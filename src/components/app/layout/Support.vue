@@ -210,11 +210,6 @@ const startOnboarding = () => {
               <IconCircleHelp />
               Help
             </SidebarMenuButton>
-            <SidebarMenuBadge>
-              <KbdGroup>
-                <Kbd>?</Kbd>
-              </KbdGroup>
-            </SidebarMenuBadge>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="right">
             <DropdownMenuGroup>

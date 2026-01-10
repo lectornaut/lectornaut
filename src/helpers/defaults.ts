@@ -135,8 +135,11 @@ export const defaultMenu = [
     url: "/home",
     id: "home",
     icon: IconHome,
-    textColor: "text-pink-500",
-    bgColor: "bg-pink-500/75",
+    style: {
+      text: "text-pink-600/90 dark:text-pink-300/90",
+      bg: "bg-pink-50 dark:bg-pink-950/40",
+      grid: "",
+    },
     shortcut: "⌘H",
   },
   {
@@ -146,8 +149,11 @@ export const defaultMenu = [
     url: "/write",
     id: "write",
     icon: IconFileText,
-    textColor: "text-teal-500",
-    bgColor: "bg-teal-500/75",
+    style: {
+      text: "text-teal-700/90 dark:text-teal-300/90",
+      bg: "bg-teal-50 dark:bg-teal-950/40",
+      grid: "",
+    },
     shortcut: "⌘W",
   },
   {
@@ -157,8 +163,11 @@ export const defaultMenu = [
     url: "/agents",
     id: "agents",
     icon: IconBot,
-    textColor: "text-orange-500",
-    bgColor: "bg-orange-500/75",
+    style: {
+      text: "text-orange-700/90 dark:text-orange-300/90",
+      bg: "bg-orange-50 dark:bg-orange-950/40",
+      grid: "",
+    },
     shortcut: "⌘A",
   },
   {
@@ -168,8 +177,11 @@ export const defaultMenu = [
     url: "/tasks",
     id: "tasks",
     icon: IconBadgeCheck,
-    textColor: "text-green-500",
-    bgColor: "bg-green-500/75",
+    style: {
+      text: "text-green-700/90 dark:text-green-300/90",
+      bg: "bg-green-50 dark:bg-green-950/40",
+      grid: "",
+    },
     shortcut: "⌘T",
   },
   {
@@ -179,8 +191,11 @@ export const defaultMenu = [
     url: "/runs",
     id: "runs",
     icon: IconActivity,
-    textColor: "text-blue-500",
-    bgColor: "bg-blue-500/75",
+    style: {
+      text: "text-blue-700/90 dark:text-blue-300/90",
+      bg: "bg-blue-50 dark:bg-blue-950/40",
+      grid: "",
+    },
     shortcut: "⌘R",
   },
   {
@@ -190,8 +205,11 @@ export const defaultMenu = [
     url: "/teams",
     id: "teams",
     icon: IconComponent,
-    textColor: "text-indigo-500",
-    bgColor: "bg-indigo-500/75",
+    style: {
+      text: "text-indigo-700/90 dark:text-indigo-300/90",
+      bg: "bg-indigo-50 dark:bg-indigo-950/40",
+      grid: "",
+    },
     shortcut: "⌘E",
   },
   {
@@ -201,8 +219,11 @@ export const defaultMenu = [
     url: "/create",
     id: "create",
     icon: IconSparkle,
-    textColor: "text-purple-500",
-    bgColor: "bg-purple-500/75",
+    style: {
+      text: "text-purple-700/90 dark:text-purple-300/90",
+      bg: "bg-purple-50 dark:bg-purple-950/40",
+      grid: "",
+    },
     shortcut: "⌘N",
   },
   {
@@ -212,8 +233,11 @@ export const defaultMenu = [
     url: "/profile",
     id: "profile",
     icon: IconUserRound,
-    textColor: "text-rose-500",
-    bgColor: "bg-rose-500/75",
+    style: {
+      text: "text-rose-700/90 dark:text-rose-300/90",
+      bg: "bg-rose-50 dark:bg-rose-950/40",
+      grid: "",
+    },
     shortcut: "⌘P",
   },
 ]
@@ -232,7 +256,11 @@ export const productsMenu = [
     url: "https://lectornaut.io",
     id: "lectornaut",
     icon: IconAsterisk,
-    style: { text: "text-sky-500/80", bg: "bg-sky-500/20", grid: "" },
+    style: {
+      text: "text-sky-600/90 dark:text-sky-300/90",
+      bg: "bg-sky-50 dark:bg-sky-950/40",
+      grid: "",
+    },
   },
   {
     title: "Lectornaut AI",
@@ -240,7 +268,11 @@ export const productsMenu = [
     url: "https://lectornaut.ai",
     id: "lectornaut-ai",
     icon: IconBot,
-    style: { text: "text-blue-500/80", bg: "bg-blue-500/20", grid: "" },
+    style: {
+      text: "text-blue-600/90 dark:text-blue-300/90",
+      bg: "bg-blue-50 dark:bg-blue-950/40",
+      grid: "",
+    },
   },
   {
     title: "Lectornaut CLI",
@@ -248,7 +280,11 @@ export const productsMenu = [
     url: "https://lectornaut.io/cli",
     id: "lectornaut-cli",
     icon: IconComponent,
-    style: { text: "text-pink-500/80", bg: "bg-pink-500/20", grid: "" },
+    style: {
+      text: "text-pink-600/90 dark:text-pink-300/90",
+      bg: "bg-pink-50 dark:bg-pink-950/40",
+      grid: "",
+    },
   },
   {
     title: "Lectornaut SDK",
@@ -256,7 +292,11 @@ export const productsMenu = [
     url: "https://lectornaut.io/sdk",
     id: "lectornaut-sdk",
     icon: IconBadgeCheck,
-    style: { text: "text-rose-500/80", bg: "bg-rose-500/20", grid: "" },
+    style: {
+      text: "text-rose-600/90 dark:text-rose-300/90",
+      bg: "bg-rose-50 dark:bg-rose-950/40",
+      grid: "",
+    },
   },
 ]
 
@@ -271,7 +311,11 @@ export const solutionsMenu = [
         url: "https://lectornaut.io/cli",
         id: "lectornaut-cli",
         icon: IconComponent,
-        style: { text: "text-violet-500/80", bg: "bg-violet-500/20", grid: "" },
+        style: {
+          text: "text-violet-600/90 dark:text-violet-300/90",
+          bg: "bg-violet-50 dark:bg-violet-950/40",
+          grid: "",
+        },
       },
       {
         title: "Lectornaut SDK",
@@ -279,7 +323,11 @@ export const solutionsMenu = [
         url: "https://lectornaut.io/sdk",
         id: "lectornaut-sdk",
         icon: IconComponent,
-        style: { text: "text-violet-500/80", bg: "bg-violet-500/20", grid: "" },
+        style: {
+          text: "text-violet-600/90 dark:text-violet-300/90",
+          bg: "bg-violet-50 dark:bg-violet-950/40",
+          grid: "",
+        },
       },
     ],
   },
@@ -293,7 +341,11 @@ export const solutionsMenu = [
         url: "https://lectornaut.io/teams",
         id: "lectornaut-teams",
         icon: IconComponent,
-        style: { text: "text-purple-500/80", bg: "bg-purple-500/20", grid: "" },
+        style: {
+          text: "text-purple-600/90 dark:text-purple-300/90",
+          bg: "bg-purple-50 dark:bg-purple-950/40",
+          grid: "",
+        },
       },
       {
         title: "Lectornaut Runs",
@@ -301,7 +353,11 @@ export const solutionsMenu = [
         url: "https://lectornaut.io/runs",
         id: "lectornaut-runs",
         icon: IconComponent,
-        style: { text: "text-purple-500/80", bg: "bg-purple-500/20", grid: "" },
+        style: {
+          text: "text-purple-600/90 dark:text-purple-300/90",
+          bg: "bg-purple-50 dark:bg-purple-950/40",
+          grid: "",
+        },
       },
     ],
   },
@@ -316,8 +372,8 @@ export const solutionsMenu = [
         id: "lectornaut-agents",
         icon: IconComponent,
         style: {
-          text: "text-fuchsia-500/80",
-          bg: "bg-fuchsia-500/20",
+          text: "text-fuchsia-600/90 dark:text-fuchsia-300/90",
+          bg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
           grid: "",
         },
       },
@@ -328,8 +384,8 @@ export const solutionsMenu = [
         id: "lectornaut-ai",
         icon: IconComponent,
         style: {
-          text: "text-fuchsia-500/80",
-          bg: "bg-fuchsia-500/20",
+          text: "text-fuchsia-600/90 dark:text-fuchsia-300/90",
+          bg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
           grid: "",
         },
       },
@@ -345,7 +401,11 @@ export const solutionsMenu = [
         url: "https://lectornaut.io/enterprise",
         id: "lectornaut-enterprise",
         icon: IconComponent,
-        style: { text: "text-pink-500/80", bg: "bg-pink-500/20", grid: "" },
+        style: {
+          text: "text-pink-600/90 dark:text-pink-300/90",
+          bg: "bg-pink-50 dark:bg-pink-950/40",
+          grid: "",
+        },
       },
       {
         title: "Lectornaut Cloud",
@@ -353,7 +413,11 @@ export const solutionsMenu = [
         url: "https://lectornaut.io/cloud",
         id: "lectornaut-cloud",
         icon: IconComponent,
-        style: { text: "text-pink-500/80", bg: "bg-pink-500/20", grid: "" },
+        style: {
+          text: "text-pink-600/90 dark:text-pink-300/90",
+          bg: "bg-pink-50 dark:bg-pink-950/40",
+          grid: "",
+        },
       },
     ],
   },
@@ -367,8 +431,8 @@ export const resourcesMenu = [
     id: "download",
     icon: IconArrowDownToLine,
     style: {
-      text: "text-cyan-500/80",
-      bg: "bg-cyan-500/20",
+      text: "text-cyan-600/90 dark:text-cyan-300/90",
+      bg: "bg-cyan-50 dark:bg-cyan-950/40",
       grid: "row-span-2",
     },
   },
@@ -378,7 +442,11 @@ export const resourcesMenu = [
     url: "https://developers.lectornaut.io",
     id: "developers",
     icon: IconUsersRound,
-    style: { text: "text-teal-500/80", bg: "bg-teal-500/20", grid: "" },
+    style: {
+      text: "text-teal-600/90 dark:text-teal-300/90",
+      bg: "bg-teal-50 dark:bg-teal-950/40",
+      grid: "",
+    },
   },
   {
     title: "Documentation",
@@ -386,7 +454,11 @@ export const resourcesMenu = [
     url: "https://docs.lectornaut.io",
     id: "documentation",
     icon: IconFileText,
-    style: { text: "text-emerald-500/80", bg: "bg-emerald-500/20", grid: "" },
+    style: {
+      text: "text-emerald-600/90 dark:text-emerald-300/90",
+      bg: "bg-emerald-50 dark:bg-emerald-950/40",
+      grid: "",
+    },
   },
   {
     title: "Blog",
@@ -394,7 +466,11 @@ export const resourcesMenu = [
     url: "https://blog.lectornaut.io",
     id: "blog",
     icon: IconScroll,
-    style: { text: "text-green-500/80", bg: "bg-green-500/20", grid: "" },
+    style: {
+      text: "text-green-600/90 dark:text-green-300/90",
+      bg: "bg-green-50 dark:bg-green-950/40",
+      grid: "",
+    },
   },
   {
     title: "Changelog",
@@ -402,7 +478,11 @@ export const resourcesMenu = [
     url: "https://lectornaut.io/changelog",
     id: "changelog",
     icon: IconLogs,
-    style: { text: "text-lime-500/80", bg: "bg-lime-500/20", grid: "" },
+    style: {
+      text: "text-lime-600/90 dark:text-lime-300/90",
+      bg: "bg-lime-50 dark:bg-lime-950/40",
+      grid: "",
+    },
   },
   {
     title: "Customers",
@@ -410,7 +490,11 @@ export const resourcesMenu = [
     url: "https://customers.lectornaut.io",
     id: "customers",
     icon: IconUsersRound,
-    style: { text: "text-yellow-500/80", bg: "bg-yellow-500/20", grid: "" },
+    style: {
+      text: "text-yellow-600/90 dark:text-yellow-300/90",
+      bg: "bg-yellow-50 dark:bg-yellow-950/40",
+      grid: "",
+    },
   },
   {
     title: "Community",
@@ -418,7 +502,11 @@ export const resourcesMenu = [
     url: "https://community.lectornaut.io",
     id: "community",
     icon: IconScroll,
-    style: { text: "text-amber-500/80", bg: "bg-amber-500/20", grid: "" },
+    style: {
+      text: "text-amber-600/90 dark:text-amber-300/90",
+      bg: "bg-amber-50 dark:bg-amber-950/40",
+      grid: "",
+    },
   },
   {
     title: "Security",
@@ -426,7 +514,11 @@ export const resourcesMenu = [
     url: "https://security.lectornaut.io",
     id: "security",
     icon: IconShieldCheck,
-    style: { text: "text-orange-500/80", bg: "bg-orange-500/20", grid: "" },
+    style: {
+      text: "text-orange-600/90 dark:text-orange-300/90",
+      bg: "bg-orange-50 dark:bg-orange-950/40",
+      grid: "",
+    },
   },
   {
     title: "Help Center",
@@ -434,7 +526,11 @@ export const resourcesMenu = [
     url: "https://help.lectornaut.io",
     id: "help-center",
     icon: IconLifeBuoy,
-    style: { text: "text-red-500/80", bg: "bg-red-500/20", grid: "" },
+    style: {
+      text: "text-red-600/90 dark:text-red-300/90",
+      bg: "bg-red-50 dark:bg-red-950/40",
+      grid: "",
+    },
   },
 ]
 
@@ -445,7 +541,11 @@ export const companyMenu = [
     url: "https://lectornaut.io/about",
     id: "about-us",
     icon: IconUsersRound,
-    style: { text: "text-neutral-500/80", bg: "bg-neutral-500/20", grid: "" },
+    style: {
+      text: "text-neutral-600/90 dark:text-neutral-300/90",
+      bg: "bg-neutral-50 dark:bg-neutral-950/40",
+      grid: "",
+    },
   },
   {
     title: "Careers",
@@ -453,7 +553,11 @@ export const companyMenu = [
     url: "https://lectornaut.io/careers",
     id: "careers",
     icon: IconBriefcase,
-    style: { text: "text-neutral-500/80", bg: "bg-neutral-500/20", grid: "" },
+    style: {
+      text: "text-neutral-600/90 dark:text-neutral-300/90",
+      bg: "bg-neutral-50 dark:bg-neutral-950/40",
+      grid: "",
+    },
   },
   {
     title: "Contact",
@@ -461,7 +565,11 @@ export const companyMenu = [
     url: "https://lectornaut.io/contact",
     id: "contact-us",
     icon: IconMessageCircle,
-    style: { text: "text-neutral-500/80", bg: "bg-neutral-500/20", grid: "" },
+    style: {
+      text: "text-neutral-600/90 dark:text-neutral-300/90",
+      bg: "bg-neutral-50 dark:bg-neutral-950/40",
+      grid: "",
+    },
   },
 ]
 

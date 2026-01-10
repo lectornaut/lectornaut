@@ -15,7 +15,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="mx-auto my-32 grid max-w-4xl gap-32">
+  <div class="mx-auto my-32 flex max-w-4xl flex-col gap-32">
     <Tabs default-value="you" class="grid w-full">
       <TabsList class="mx-auto">
         <TabsTrigger value="you"> {{ t("pages.home.forYou") }} </TabsTrigger>
@@ -273,4 +273,5 @@ const { t } = useI18n()
     </Tabs>
     <Users />
   </div>
+  <HeroImage />
 </template>

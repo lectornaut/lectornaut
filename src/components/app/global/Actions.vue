@@ -81,7 +81,6 @@ watch(online, (value) => {
 <template>
   <Sonner
     offset="8px"
-    rich-colors
     close-button
     close-button-position="top-right"
     position="bottom-center"

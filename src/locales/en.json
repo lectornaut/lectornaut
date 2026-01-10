@@ -190,7 +190,8 @@
     "reset": "Reset",
     "backToHome": "Back to Home",
     "select": "Select",
-    "none": "None"
+    "none": "None",
+    "unsavedChanges": "Unsaved changes"
   },
   "settings": {
     "titles": {
@@ -1044,7 +1045,8 @@
         "title": "Are you sure you want to logout?",
         "description": "You will be redirected to the login page.",
         "cancel": "Cancel",
-        "logout": "Logout"
+        "logout": "Logout",
+        "removeKeychainProfile": "Remove profile from this device"
       }
     },
     "test": {

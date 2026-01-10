@@ -72,7 +72,9 @@ onMounted(() => {
       .catch(
         (err) =>
           err &&
-          term.writeln(`<span class='text-destructive'>Error: ${err}</span>`)
+          term.writeln(
+            `<span class='text-destructive'>Error: ${XTerminal.escapeHTML(String(err))}</span>`
+          )
       )
       .finally(() => {
         promptUser()
