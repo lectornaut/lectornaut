@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { IconX } from "@/data/icons"
+import { IconPlus, IconTrash, IconX } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
-import type { ITeam } from "@/types"
+import type { IMembership, IMembershipRole, ITeam } from "@/types"
 import { toast } from "vue-sonner"
 
 const props = defineProps<{
@@ -28,8 +28,9 @@ const isLoading = ref(false)
 // Form State
 const teamName = ref("")
 const inviteEmail = ref("")
-const inviteRole = ref<"owner" | "member">("member")
-const pendingInvites = ref<{ email: string; role: "owner" | "member" }[]>([])
+const inviteRole = ref<IMembershipRole>("member")
+const members = ref<{ email: string; role: IMembershipRole; id?: string }[]>([])
+const removedMemberIds = ref<string[]>([])
 
 // Photo Upload State
 const photoFile = ref<File | null>(null)
@@ -69,7 +70,8 @@ const resetForm = () => {
   teamName.value = ""
   inviteEmail.value = ""
   inviteRole.value = "member"
-  pendingInvites.value = []
+  members.value = []
+  removedMemberIds.value = []
   photoFile.value = null
   photoPreview.value = null
   reset()
@@ -83,7 +85,7 @@ watch(
   }
 )
 
-watch(isOpen, (val) => {
+watch(isOpen, async (val) => {
   emit("update:open", val)
   if (!val) {
     resetForm()
@@ -92,24 +94,44 @@ watch(isOpen, (val) => {
     if (props.mode === "edit" && props.team) {
       teamName.value = props.team.name
       photoPreview.value = props.team.photoURL || null
+      // Load existing team members from membershipStore
+      const teamMembers = membershipStore.teamMembers
+      if (teamMembers && teamMembers.length > 0) {
+        members.value = teamMembers.map((membership: IMembership) => ({
+          email: membership.user.email!,
+          role: membership.role,
+          id: membership.userId,
+        }))
+      }
     }
   }
 })
 
-const addPendingInvite = () => {
-  if (!inviteEmail.value.trim()) return
-  if (!pendingInvites.value.some((i) => i.email === inviteEmail.value.trim())) {
-    pendingInvites.value.push({
-      email: inviteEmail.value.trim(),
-      role: inviteRole.value,
-    })
+const addMember = (e?: Event) => {
+  e?.preventDefault()
+
+  const email = inviteEmail.value.trim()
+  if (!email) return
+
+  // Check if email already exists
+  if (members.value.some((m) => m.email === email)) {
+    toast.error("Email already added")
+    return
   }
+
+  members.value.push({
+    email: email,
+    role: inviteRole.value,
+  })
   inviteEmail.value = ""
   inviteRole.value = "member"
 }
 
-const removePendingInvite = (email: string) => {
-  pendingInvites.value = pendingInvites.value.filter((i) => i.email !== email)
+const removeMember = (email: string, id?: string) => {
+  if (id) {
+    removedMemberIds.value.push(id)
+  }
+  members.value = members.value.filter((m) => m.email !== email)
 }
 
 const handleSubmit = async () => {
@@ -150,21 +172,46 @@ const handleSubmit = async () => {
       toast.success("Team updated successfully")
     }
 
-    // 2. Process Invites (for create and invite modes)
-    if (props.mode !== "edit" && pendingInvites.value.length > 0) {
+    // 2. Process Member Changes
+    if (props.mode === "edit") {
+      // Remove deleted members
+      if (removedMemberIds.value.length > 0) {
+        // TODO: Implement member removal from backend
+        // await membershipStore.removeMembers(props.team.id, removedMemberIds.value)
+      }
+      // Invite new members (those without an id)
+      const newMembers = members.value.filter((m) => !m.id)
+      if (newMembers.length > 0) {
+        const currentTeam = teamStore.currentTeam
+        if (!currentTeam) throw new Error("No current team")
+        const invitePromises = newMembers.map((member) =>
+          membershipStore
+            .inviteMember(
+              currentTeam.id,
+              currentTeam,
+              member.email,
+              member.role
+            )
+            .catch((e: Error) =>
+              console.error(`Failed to invite ${member.email}:`, e)
+            )
+        )
+        await Promise.all(invitePromises)
+      }
+    } else if (members.value.length > 0) {
+      // For create and invite modes, invite all members
       const currentTeam = teamStore.currentTeam
       if (!currentTeam) throw new Error("No current team")
-
-      const invitePromises = pendingInvites.value.map((invite) =>
+      const invitePromises = members.value.map((member) =>
         membershipStore
-          .inviteMember(currentTeam.id, currentTeam, invite.email, invite.role)
+          .inviteMember(currentTeam.id, currentTeam, member.email, member.role)
           .catch((e: Error) =>
-            console.error(`Failed to invite ${invite.email}:`, e)
+            console.error(`Failed to invite ${member.email}:`, e)
           )
       )
       await Promise.all(invitePromises)
       if (props.mode === "invite") {
-        toast.success(`Invited ${pendingInvites.value.length} members`)
+        toast.success(`Invited ${members.value.length} members`)
       }
     }
 
@@ -193,7 +240,7 @@ const handleSubmit = async () => {
     <DialogTrigger as-child>
       <slot name="trigger" />
     </DialogTrigger>
-    <DialogContent class="w-sm max-w-fit">
+    <DialogContent class="w-md max-w-fit">
       <DialogHeader>
         <DialogTitle>
           {{
@@ -217,131 +264,159 @@ const handleSubmit = async () => {
 
       <div class="mt-4 grid gap-4">
         <!-- Team Profile Picture (Create/Edit Mode) -->
-        <div
-          v-if="mode === 'create' || mode === 'edit'"
-          class="flex flex-col items-center gap-2"
-        >
-          <div class="group relative">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Avatar
-                    class="size-16 rounded-md"
-                    @click="
-                      openFileDialog({ accept: 'image/*', multiple: false })
-                    "
-                  >
-                    <AvatarImage
+        <div v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
+          <div class="flex flex-col items-center gap-2">
+            <Label class="text-secondary-foreground text-xs">
+              {{ t("components.teamDialog.labels.teamPhoto") }}
+            </Label>
+            <div class="group relative">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Avatar
                       class="size-16 rounded-md"
-                      :src="photoPreview!"
-                      referrerpolicy="no-referrer"
-                    />
-                    <AvatarFallback class="size-16 rounded-md">
-                      {{ getInitials(teamName) }}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{ t("components.teamDialog.tooltips.uploadPhoto") }}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip v-if="photoPreview">
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="secondary"
-                    class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
-                    size="icon-sm"
-                    @click.stop="removePhoto"
-                  >
-                    <IconX />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{ t("components.teamDialog.tooltips.removePhoto") }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                      @click="
+                        openFileDialog({ accept: 'image/*', multiple: false })
+                      "
+                    >
+                      <AvatarImage
+                        class="size-16 rounded-md"
+                        :src="photoPreview!"
+                        referrerpolicy="no-referrer"
+                      />
+                      <AvatarFallback class="size-16 rounded-md">
+                        {{ getInitials(teamName) }}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("components.teamDialog.tooltips.uploadPhoto") }}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip v-if="photoPreview">
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="secondary"
+                      class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
+                      size="icon-sm"
+                      @click.stop="removePhoto"
+                    >
+                      <IconX />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("components.teamDialog.tooltips.removePhoto") }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p class="text-muted-foreground text-xs">
+              {{
+                photoPreview
+                  ? t("components.teamDialog.labels.clickToChange")
+                  : t("components.teamDialog.labels.clickToUpload")
+              }}
+            </p>
           </div>
-          <p class="text-muted-foreground text-xs">
-            {{
-              photoPreview
-                ? t("components.teamDialog.labels.clickToChange")
-                : t("components.teamDialog.labels.clickToUpload")
-            }}
-          </p>
         </div>
 
         <!-- Team Name (Create/Edit Mode) -->
-        <div v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
-          <Label class="text-secondary-foreground text-xs" for="name">
+        <Field v-if="mode === 'create' || mode === 'edit'">
+          <FieldLabel class="text-secondary-foreground text-xs" for="name">
             {{ t("components.teamDialog.labels.teamName") }}
-          </Label>
+          </FieldLabel>
           <Input
             id="name"
             v-model="teamName"
             placeholder="Acme Inc."
             @keyup.enter="handleSubmit"
           />
-        </div>
+        </Field>
 
-        <!-- Invite Members (Create/Invite Mode Only) -->
-        <div v-if="mode !== 'edit'" class="grid gap-2">
-          <Label class="text-secondary-foreground text-xs" for="invite">
+        <!-- Invite/Manage Members -->
+        <form @submit="addMember">
+          <Field>
+            <FieldLabel class="text-secondary-foreground text-xs">
+              {{ t("components.teamDialog.labels.inviteMembers") }}
+            </FieldLabel>
+            <ButtonGroup class="w-full">
+              <ButtonGroup class="flex-1">
+                <Input
+                  id="invite"
+                  v-model="inviteEmail"
+                  placeholder="email@example.com"
+                  type="email"
+                  required
+                />
+              </ButtonGroup>
+              <ButtonGroup>
+                <Select v-model="inviteRole">
+                  <SelectTrigger class="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="owner">{{
+                      t("components.teamDialog.roles.owner")
+                    }}</SelectItem>
+                    <SelectItem value="member">{{
+                      t("components.teamDialog.roles.member")
+                    }}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" type="submit">
+                  <IconPlus />
+                </Button>
+              </ButtonGroup>
+            </ButtonGroup>
+          </Field>
+        </form>
+
+        <!-- Pending Members List -->
+        <Field v-if="members.length > 0">
+          <FieldLabel class="text-secondary-foreground text-xs">
             {{
-              mode === "create"
-                ? t("components.teamDialog.labels.inviteMembers")
-                : t("components.teamDialog.labels.emailAddress")
+              mode === "edit"
+                ? t("components.teamDialog.labels.members")
+                : t("components.teamDialog.labels.sendInvites")
             }}
-          </Label>
-          <div class="flex gap-2">
-            <Input
-              id="invite"
-              v-model="inviteEmail"
-              placeholder="email@example.com"
-              class="flex-1"
-              @keyup.enter="addPendingInvite"
-            />
-            <Select v-model="inviteRole">
-              <SelectTrigger class="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="owner">{{
-                  t("components.teamDialog.roles.owner")
-                }}</SelectItem>
-                <SelectItem value="member">{{
-                  t("components.teamDialog.roles.member")
-                }}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" type="button" @click="addPendingInvite">
-              {{ t("actions.add") }}
-            </Button>
-          </div>
-
-          <!-- Pending Invites List -->
-          <div
-            v-if="pendingInvites.length > 0"
-            class="mt-2 flex flex-wrap gap-2"
+          </FieldLabel>
+          <ButtonGroup
+            v-for="(member, index) in members"
+            :key="index"
+            class="w-full"
           >
-            <div
-              v-for="invite in pendingInvites"
-              :key="invite.email"
-              class="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-md px-2 py-1 text-xs"
-            >
-              <span>{{ invite.email }}</span>
-              <span class="text-muted-foreground text-[10px] uppercase">
-                ({{ invite.role }})
-              </span>
-              <button
-                class="hover:text-destructive"
-                @click="removePendingInvite(invite.email)"
+            <ButtonGroup class="flex-1">
+              <Input
+                v-model="member.email"
+                type="email"
+                required
+                :disabled="mode === 'edit' && member.id"
+              />
+            </ButtonGroup>
+            <ButtonGroup>
+              <Select v-model="member.role">
+                <SelectTrigger class="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">{{
+                    t("components.teamDialog.roles.owner")
+                  }}</SelectItem>
+                  <SelectItem value="member">{{
+                    t("components.teamDialog.roles.member")
+                  }}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                @click="removeMember(member.email, member.id)"
               >
-                <IconX class="size-3" />
-              </button>
-            </div>
-          </div>
-        </div>
+                <IconTrash />
+              </Button>
+            </ButtonGroup>
+          </ButtonGroup>
+        </Field>
       </div>
 
       <DialogFooter>
@@ -352,7 +427,7 @@ const handleSubmit = async () => {
           :disabled="
             isLoading ||
             (mode !== 'invite' && !teamName.trim()) ||
-            (mode === 'invite' && pendingInvites.length === 0)
+            (mode === 'invite' && members.length === 0)
           "
           @click="handleSubmit"
         >
@@ -363,7 +438,7 @@ const handleSubmit = async () => {
               : mode === "edit"
                 ? t("components.teamDialog.buttons.saveChanges")
                 : t("components.teamDialog.buttons.inviteMembers", {
-                    count: pendingInvites.length,
+                    count: members.length,
                   })
           }}
         </Button>

@@ -28,7 +28,7 @@ const { t } = useI18n()
   >
     <div class="mx-auto flex w-full max-w-6xl items-center justify-center">
       <div
-        class="bg-background/50 grid w-full grid-cols-3 gap-2 rounded-b-lg p-2 shadow-lg backdrop-blur-lg"
+        class="bg-background/25 grid w-full grid-cols-3 gap-2 rounded-b-lg p-2 backdrop-blur-lg"
       >
         <div class="flex grow items-center justify-start gap-2">
           <ContextMenu>

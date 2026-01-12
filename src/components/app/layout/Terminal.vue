@@ -103,6 +103,6 @@ onBeforeUnmount(() => {
   --xt-fg: var(--foreground);
   --xt-font-size: var(--text-xs);
   --xt-font-family: var(--font-mono);
-  --xt-padding: 0.625rem;
+  --xt-padding: var(--size);
 }
 </style>

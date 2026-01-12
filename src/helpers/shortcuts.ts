@@ -418,6 +418,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: "members",
         icon: IconUsersRound,
         tags: ["settings", "members", "users", "team"],
+        visibility: { hideFrom: ["commands"] },
       },
       {
         description: ["Settings", "Teams"],
@@ -427,6 +428,7 @@ export const shortcuts: ShortcutCategory[] = [
         parameters: "teams",
         icon: IconComponent,
         tags: ["settings", "teams", "workspace", "organization"],
+        visibility: { hideFrom: ["commands"] },
       },
       // Command palette only (no keyboard shortcuts)
       {

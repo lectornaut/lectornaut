@@ -7,7 +7,7 @@
 
 @layer base {
   * {
-    @apply border-border/90 outline-ring/50;
+    @apply border-border/75 outline-ring/50;
 
     /* border: 1px solid #f00; */
   }
@@ -67,7 +67,7 @@
     text-rendering: optimizelegibility;
   }
 
-  ::-webkit-scrollbar {
+  /* ::-webkit-scrollbar {
     @apply size-3;
   }
 
@@ -94,7 +94,7 @@
 
   ::-webkit-scrollbar-thumb:active {
     @apply bg-muted;
-  }
+  } */
 }
 
 @theme inline {

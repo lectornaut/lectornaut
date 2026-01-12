@@ -1124,7 +1124,10 @@
         "clickToUpload": "Click to upload logo",
         "teamName": "Team name",
         "inviteMembers": "Invite members",
-        "emailAddress": "Email address"
+        "emailAddress": "Email address",
+        "members": "Members",
+        "sendInvites": "Send invites",
+        "teamPhoto": "Team photo"
       },
       "roles": {
         "owner": "Owner",
@@ -1135,7 +1138,7 @@
         "cancel": "Cancel",
         "createTeam": "Create Team",
         "saveChanges": "Save Changes",
-        "inviteMembers": "Invite {count} Member(s)"
+        "inviteMembers": "Invite {count} Member | Invite {count} Members"
       }
     },
     "subNavigation": {

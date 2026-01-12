@@ -30,10 +30,12 @@ export interface IUser {
   updatedAt: Timestamp
 }
 
+export type IMembershipRole = "owner" | "admin" | "member"
+
 export interface IMembership {
   userId: string
   teamId: string
-  role: "owner" | "member"
+  role: IMembershipRole
   user: IUser // Snapshot of user data
   team: ITeam // Snapshot of team data
   createdAt: Timestamp
