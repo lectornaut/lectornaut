@@ -637,201 +637,202 @@ const expandedCard = ref<number | null>(null)
       </SidebarFooter>
     </Sidebar>
   </Teleport>
-  <OverlayScrollbarsWrapper>
-    <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
-      <Tabs default-value="overview" class="gap-0">
-        <Teleport defer to="#cta-dock">
-          <div class="flex items-center justify-between gap-2">
-            <Popover>
-              <PopoverTrigger as-child>
-                <Button variant="ghost" class="data-[state=open]:bg-accent">
-                  <IconCalendar />
-                  {{
-                    range.start
-                      ? df.format(range.start.toDate(getLocalTimeZone()))
-                      : "Start date"
-                  }}
-                  -
-                  {{
-                    range.end
-                      ? df.format(range.end.toDate(getLocalTimeZone()))
-                      : "End date"
-                  }}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent class="grid w-full p-0">
-                <div class="p-2">
-                  <Select v-model="range">
-                    <SelectTrigger class="w-full">
-                      <SelectValue :placeholder="t('common.select')" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        v-for="preset in presets"
-                        :key="preset.id"
-                        :value="preset.value"
-                      >
-                        {{ preset.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Separator />
-                <RangeCalendar
-                  v-model="range"
-                  :max-value="today(getLocalTimeZone())"
-                  initial-focus
-                  class="p-2"
-                />
-              </PopoverContent>
-            </Popover>
-            <TabsList>
-              <TabsTrigger value="overview">
-                {{ t("pages.home.tabs.overview") }}
-              </TabsTrigger>
-              <TabsTrigger value="usage">
-                {{ t("pages.home.tabs.usage") }}
-              </TabsTrigger>
-            </TabsList>
-          </div>
-        </Teleport>
-        <TabsContent
-          value="overview"
-          class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-3"
-        >
-          <Card
-            v-for="card in dashboardData"
-            :key="card.id"
-            :class="[
-              'col-span-1 shadow-none',
-              expandedCard === card.id
-                ? 'md:col-span-2 lg:col-span-3'
-                : 'md:col-span-1 lg:col-span-1',
-            ]"
-          >
-            <CardHeader class="relative">
-              <CardTitle>{{ card.title }}</CardTitle>
-              <CardDescription>{{ card.description }}</CardDescription>
-              <div class="absolute top-0 right-6 flex gap-2">
-                <ButtonGroup>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
+  <Tabs default-value="overview" class="gap-0">
+    <Teleport defer to="#cta-dock">
+      <div class="flex grow items-center justify-between gap-2">
+        <Popover>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <PopoverTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconCalendar />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent class="grid w-full p-0">
+                  <div class="p-2">
+                    <Select v-model="range">
+                      <SelectTrigger class="w-full">
+                        <SelectValue :placeholder="t('common.select')" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          v-for="preset in presets"
+                          :key="preset.id"
+                          :value="preset.value"
+                        >
+                          {{ preset.label }}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Separator />
+                  <RangeCalendar
+                    v-model="range"
+                    :max-value="today(getLocalTimeZone())"
+                    initial-focus
+                    class="p-2"
+                  />
+                </PopoverContent>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{
+                  range.start
+                    ? df.format(range.start.toDate(getLocalTimeZone()))
+                    : "Start date"
+                }}
+                -
+                {{
+                  range.end
+                    ? df.format(range.end.toDate(getLocalTimeZone()))
+                    : "End date"
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Popover>
+        <TabsList class="flex h-full min-w-0 items-stretch gap-1 p-0.5">
+          <TabsTrigger value="overview" class="size-full py-0.5">
+            {{ t("pages.home.tabs.overview") }}
+          </TabsTrigger>
+          <TabsTrigger value="usage" class="size-full py-0.5">
+            {{ t("pages.home.tabs.usage") }}
+          </TabsTrigger>
+        </TabsList>
+      </div>
+    </Teleport>
+    <TabsContent
+      value="overview"
+      class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-3"
+    >
+      <Card
+        v-for="card in dashboardData"
+        :key="card.id"
+        :class="[
+          'col-span-1 shadow-none',
+          expandedCard === card.id
+            ? 'md:col-span-2 lg:col-span-3'
+            : 'md:col-span-1 lg:col-span-1',
+        ]"
+      >
+        <CardHeader class="relative">
+          <CardTitle>{{ card.title }}</CardTitle>
+          <CardDescription>{{ card.description }}</CardDescription>
+          <div class="absolute top-0 right-6 flex gap-2">
+            <ButtonGroup>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      @click="
+                        expandedCard = expandedCard === card.id ? null : card.id
+                      "
+                    >
+                      <Component
+                        :is="
+                          expandedCard === card.id ? IconMinimize : IconMaximize
+                        "
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{
+                      expandedCard === card.id
+                        ? t("actions.collapse")
+                        : t("actions.expand")
+                    }}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <DropdownMenu>
+                    <TooltipTrigger as-child>
+                      <DropdownMenuTrigger as-child>
                         <Button
                           variant="outline"
                           size="icon-sm"
-                          @click="
-                            expandedCard =
-                              expandedCard === card.id ? null : card.id
-                          "
+                          class="data-[state=open]:bg-accent"
                         >
-                          <Component
-                            :is="
-                              expandedCard === card.id
-                                ? IconMinimize
-                                : IconMaximize
-                            "
-                          />
+                          <IconMoreHorizontal />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {{
-                          expandedCard === card.id
-                            ? t("actions.collapse")
-                            : t("actions.expand")
-                        }}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <DropdownMenu>
-                        <TooltipTrigger as-child>
-                          <DropdownMenuTrigger as-child>
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              class="data-[state=open]:bg-accent"
-                            >
-                              <IconMoreHorizontal />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>{{
-                          t("actions.moreOptions")
-                        }}</TooltipContent>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>{{
+                      t("actions.moreOptions")
+                    }}</TooltipContent>
 
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <IconStar />
-                            <span>{{
-                              t("pages.home.dropdown.addToFavorites")
-                            }}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <IconLink />
-                            <span>{{ t("actions.copyLink") }}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <IconArrowUpRight />
-                            <span>{{ t("actions.openInNewTab") }}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </Tooltip>
-                  </TooltipProvider>
-                </ButtonGroup>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer :config="chartConfig" class="h-46 w-full">
-                <VisXYContainer :data="chartData">
-                  <VisGroupedBar
-                    :x="(d: Data) => d.date"
-                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0.25"
-                  />
-                  <VisAxis
-                    type="x"
-                    :x="(d: Data) => d.date"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :grid-line="false"
-                    :tick-format="
-                      (d: number) =>
-                        new Date(d).toLocaleDateString('en-US', {
-                          month: 'short',
-                        })
-                    "
-                    :tick-values="chartData.map((d) => d.date)"
-                  />
-                  <ChartTooltip />
-                  <ChartCrosshair
-                    :template="
-                      componentToString(chartConfig, ChartTooltipContent, {
-                        labelFormatter(d) {
-                          return new Date(d).toLocaleDateString('en-US', {
-                            month: 'long',
-                          })
-                        },
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <IconStar />
+                        <span>{{
+                          t("pages.home.dropdown.addToFavorites")
+                        }}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <IconLink />
+                        <span>{{ t("actions.copyLink") }}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <IconArrowUpRight />
+                        <span>{{ t("actions.openInNewTab") }}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </Tooltip>
+              </TooltipProvider>
+            </ButtonGroup>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer :config="chartConfig" class="h-46 w-full">
+            <VisXYContainer :data="chartData">
+              <VisGroupedBar
+                :x="(d: Data) => d.date"
+                :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
+                :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
+                bar-padding="0.1"
+                group-padding="0.25"
+              />
+              <VisAxis
+                type="x"
+                :x="(d: Data) => d.date"
+                :tick-line="false"
+                :domain-line="false"
+                :grid-line="false"
+                :tick-format="
+                  (d: number) =>
+                    new Date(d).toLocaleDateString('en-US', {
+                      month: 'short',
+                    })
+                "
+                :tick-values="chartData.map((d) => d.date)"
+              />
+              <ChartTooltip />
+              <ChartCrosshair
+                :template="
+                  componentToString(chartConfig, ChartTooltipContent, {
+                    labelFormatter(d) {
+                      return new Date(d).toLocaleDateString('en-US', {
+                        month: 'long',
                       })
-                    "
-                    :color="[
-                      chartConfig.desktop.color,
-                      chartConfig.mobile.color,
-                    ]"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-                </VisXYContainer>
-                <ChartLegendContent />
-              </ChartContainer>
-            </CardContent>
-            <!-- <Separator /> -->
-            <!-- <CardFooter>
+                    },
+                  })
+                "
+                :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
+                bar-padding="0.1"
+                group-padding="0"
+              />
+            </VisXYContainer>
+            <ChartLegendContent />
+          </ChartContainer>
+        </CardContent>
+        <!-- <Separator /> -->
+        <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
                 <IconRocket /> Ask AI
@@ -840,12 +841,10 @@ const expandedCard = ref<number | null>(null)
                 <IconArrowUpRight />
               </Button>
             </CardFooter> -->
-          </Card>
-        </TabsContent>
-        <TabsContent value="usage"> </TabsContent>
-      </Tabs>
-    </div>
-  </OverlayScrollbarsWrapper>
+      </Card>
+    </TabsContent>
+    <TabsContent value="usage"> </TabsContent>
+  </Tabs>
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>

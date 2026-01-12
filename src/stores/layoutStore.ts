@@ -381,13 +381,13 @@ export const useLayoutStore = defineStore("layout", () => {
     // Note: Router resolution usually happens in component,
     // but we can pass the resolved name or handle it here if we had access to router.
     // For now, we'll expect the component to pass a name or we use a default.
-    return { id: generateId(), name: "New Tab", fullPath }
+    return { id: generateId(), name: "New tab", fullPath }
   }
 
   /**
    * Add a new tab with optimistic update
    */
-  async function addTab(fullPath = "/new", name = "New Tab"): Promise<Tab> {
+  async function addTab(fullPath = "/new", name = "New tab"): Promise<Tab> {
     const newTab = createTab(fullPath, name)
 
     // Clone previous state for rollback

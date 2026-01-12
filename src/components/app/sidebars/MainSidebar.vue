@@ -30,7 +30,7 @@ const isFullscreen = useIsFullscreen()
     <ContextMenuTrigger>
       <Sidebar
         collapsible="icon"
-        class="top-13 bottom-8 h-[calc(100vh-var(--spacing-14)-var(--spacing-8))]"
+        class="top-13 bottom-12 h-[calc(100vh-var(--spacing-13)-var(--spacing-12))] overflow-hidden rounded-r-2xl border"
       >
         <SidebarHeader
           :class="{ 'mt-13': isTauri && isMobile && !isFullscreen }"

@@ -175,7 +175,7 @@ const isDocked = ref(false)
         </NavigationMenuContent>
       </NavigationMenuItem>
       <Teleport v-if="isDocked" defer to="#left-dock" :disabled="!isDocked">
-        <Tasks class="shadow-border relative shadow-[1px_0px]" />
+        <Tasks class="rounded-2xl border" />
       </Teleport>
     </NavigationMenuList>
   </NavigationMenu>

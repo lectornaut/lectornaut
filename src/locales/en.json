@@ -25,7 +25,7 @@
     "more": "More",
     "moreOptions": "More options",
     "new": "New",
-    "openInNewTab": "Open in New Tab",
+    "openInNewTab": "Open in New tab",
     "pin": "Pin",
     "popOut": "Pop out",
     "refresh": "Refresh",
@@ -969,7 +969,7 @@
         "addToFavorites": "Add to Favorites",
         "removeFromFavorites": "Remove from Favorites",
         "copyLink": "Copy Link",
-        "openInNewTab": "Open in New Tab",
+        "openInNewTab": "Open in New tab",
         "delete": "Delete"
       },
       "tabs": {
@@ -1376,14 +1376,14 @@
     "global": {
       "shortcuts": {
         "title": "Keyboard shortcuts",
-        "search": "Search and commands",
+        "search": "Search",
         "noShortcuts": "No shortcuts found.",
         "getSupport": "Get support",
         "documentation": "Documentation"
       },
       "commandK": {
         "placeholder": "Type a command or search",
-        "tooltip": "Commands",
+        "tooltip": "Search and commands",
         "noResults": "No results found."
       }
     },

@@ -57,7 +57,7 @@ const userInput = ref("")
           </TooltipContent>
         </SheetTrigger>
         <Teleport v-if="isDocked" defer to="#right-dock" :disabled="!isDocked">
-          <AiChat class="shadow-border relative shadow-[-1px_0px]" />
+          <AiChat class="rounded-l-2xl border" />
         </Teleport>
         <SheetContent
           class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"

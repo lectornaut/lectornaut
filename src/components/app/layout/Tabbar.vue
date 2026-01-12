@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 import {
-  IconArrowLeft,
-  IconArrowRight,
   IconCheck,
   IconChevronDown,
   IconCircleX,
@@ -368,417 +366,382 @@ onUnmounted(() => {
 
 <template>
   <ContextMenu>
-    <div class="bg-background flex w-full flex-col">
-      <ContextMenuTrigger as-child>
-        <div
-          data-tauri-drag-region
-          class="flex grow items-stretch gap-2 p-2 transition-all"
+    <ContextMenuTrigger as-child>
+      <div
+        data-tauri-drag-region
+        class="flex min-w-0 items-stretch gap-2 p-2 transition-all"
+      >
+        <BackForth />
+        <nav
+          ref="el"
+          class="relative flex min-w-0 items-stretch justify-start gap-2"
         >
-          <div class="flex items-stretch justify-start gap-2">
-            <ButtonGroup>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      @click="router.go(-1)"
-                    >
-                      <IconArrowLeft />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent> {{ t("tabs.goBack") }} </TooltipContent>
-                </Tooltip>
-                <ButtonGroupSeparator />
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      @click="router.go(1)"
-                    >
-                      <IconArrowRight />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent> {{ t("tabs.goForward") }} </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </ButtonGroup>
-          </div>
-          <nav
-            ref="el"
-            class="relative flex min-w-0 items-stretch justify-center"
-            :class="tabs.length === 0 ? 'hidden' : 'gap-2'"
-          >
-            <template v-if="pending">
-              <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
-            </template>
-            <!-- <template v-else-if="tabs.length === 0">
-              <Button
-                variant="ghost"
-                size="icon"
-                @click="emitter.emit('Tabs.Add')"
-              >
-                <IconCircle />
-              </Button>
-            </template> -->
-            <template v-else>
-              <div
-                v-for="(tab, index) in tabs"
-                :key="tab.id"
-                class="tab-item w-60 min-w-0"
-                :class="{ 'min-w-40 transition-all': tab.id === activeTabId }"
-              >
-                <InputGroup v-if="renamingTabId === tab.id">
-                  <InputGroupAddon>
-                    <IconPenLine />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    v-model="renamingName"
-                    :placeholder="tab.name"
-                    @keydown.enter="saveRename"
-                    @keydown.esc="cancelRename"
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <InputGroupButton
-                            variant="secondary"
-                            size="icon-xs"
-                            @click.prevent="saveRename"
-                          >
-                            <IconCheck />
-                          </InputGroupButton>
-                        </TooltipTrigger>
-                        <TooltipContent>{{ t("common.save") }}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </InputGroupAddon>
-                </InputGroup>
-                <HoverCard v-else :open-delay="2000" :close-delay="0">
-                  <HoverCardTrigger class="hover-trigger">
-                    <ContextMenu>
-                      <ContextMenuTrigger as-child class="context-trigger">
-                        <Button
-                          :variant="
-                            tab.id === activeTabId ? 'secondary' : 'ghost'
-                          "
-                          class="group w-[-webkit-fill-available] min-w-0 pr-1.5!"
-                          :class="
-                            tab.id === activeTabId
-                              ? 'text-foreground shadow-none'
-                              : 'text-secondary-foreground/50 bg-secondary/50'
-                          "
-                          as-child
+          <template v-if="pending">
+            <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
+          </template>
+          <template v-else-if="tabs.length === 0">
+            <Button
+              variant="outline"
+              class="w-60 min-w-0 shrink-0 justify-start border-dashed shadow-none"
+              @click="emitter.emit('Tabs.Add')"
+            >
+              <IconPlus />
+              {{ t("tabs.newTab") }}
+            </Button>
+          </template>
+          <template v-else>
+            <div
+              v-for="(tab, index) in tabs"
+              :key="tab.id"
+              class="tab-item w-60 min-w-0 shrink"
+              :class="{ 'min-w-40 transition-all': tab.id === activeTabId }"
+            >
+              <InputGroup v-if="renamingTabId === tab.id">
+                <InputGroupAddon>
+                  <IconPenLine />
+                </InputGroupAddon>
+                <InputGroupInput
+                  v-model="renamingName"
+                  :placeholder="tab.name"
+                  @keydown.enter="saveRename"
+                  @keydown.esc="cancelRename"
+                />
+                <InputGroupAddon align="inline-end">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <InputGroupButton
+                          variant="secondary"
+                          size="icon-xs"
+                          @click.prevent="saveRename"
                         >
-                          <RouterLink
-                            :to="tab.fullPath"
-                            @click="onTabClick(tab)"
-                            @dblclick="
-                              !isDefaultRoute(tab)
-                                ? handleRenameTab(tab.id)
-                                : null
-                            "
-                          >
-                            <IconLayers />
-                            <span class="mr-auto truncate">
-                              {{ tab.name }}
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger as-child>
-                                  <InputGroupButton
-                                    variant="ghost"
-                                    size="icon-xs"
-                                    class="invisible group-hover:visible"
-                                    @click.stop.prevent="handleCloseTab(tab.id)"
-                                  >
-                                    <IconX />
-                                  </InputGroupButton>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  class="flex items-center gap-2 pr-2"
+                          <IconCheck />
+                        </InputGroupButton>
+                      </TooltipTrigger>
+                      <TooltipContent>{{ t("common.save") }}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </InputGroupAddon>
+              </InputGroup>
+              <HoverCard v-else :open-delay="2000" :close-delay="0">
+                <HoverCardTrigger class="hover-trigger">
+                  <ContextMenu>
+                    <ContextMenuTrigger as-child class="context-trigger">
+                      <Button
+                        :variant="
+                          tab.id === activeTabId ? 'secondary' : 'ghost'
+                        "
+                        class="group w-[-webkit-fill-available] min-w-0 pr-1.5!"
+                        :class="
+                          tab.id === activeTabId
+                            ? 'text-foreground shadow-none'
+                            : 'text-secondary-foreground/50 bg-secondary/50'
+                        "
+                        as-child
+                      >
+                        <RouterLink
+                          :to="tab.fullPath"
+                          @click="onTabClick(tab)"
+                          @dblclick="
+                            !isDefaultRoute(tab)
+                              ? handleRenameTab(tab.id)
+                              : null
+                          "
+                        >
+                          <IconLayers />
+                          <span class="mr-auto truncate">
+                            {{ tab.name }}
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <InputGroupButton
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  class="invisible group-hover:visible"
+                                  @click.stop.prevent="handleCloseTab(tab.id)"
                                 >
-                                  {{ t("common.close") }}
-                                  <KbdGroup>
-                                    <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-                                    <Kbd>W</Kbd>
-                                  </KbdGroup>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </RouterLink>
-                        </Button>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent class="w-56">
-                        <ContextMenuGroup>
-                          <ContextMenuItem
-                            as-child
-                            @click="emitter.emit('Tabs.Add')"
-                          >
-                            <RouterLink to="/new">
-                              <IconPlus />
-                              {{ t("tabs.newTab") }}
-                              <ContextMenuShortcut>⌘T</ContextMenuShortcut>
-                            </RouterLink>
-                          </ContextMenuItem>
-                        </ContextMenuGroup>
-                        <ContextMenuSeparator />
-                        <ContextMenuGroup>
-                          <ContextMenuItem @click="handleCloseTab(tab.id)">
-                            <IconX />
-                            {{ t("common.close") }}
-                            <ContextMenuShortcut>⌘W</ContextMenuShortcut>
-                          </ContextMenuItem>
-                          <ContextMenuItem
-                            :disabled="tabs.length === 0"
-                            @click="emitter.emit('Tabs.Close.All')"
-                          >
-                            <IconCircleX />
-                            {{ t("tabs.closeAll") }}
-                            <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
-                          </ContextMenuItem>
-                          <ContextMenuItem
-                            :disabled="tabs.length <= 1"
-                            @click="emitter.emit('Tabs.Close.Others', tab.id)"
-                          >
-                            <IconSquareX />
-                            {{ t("tabs.closeOthers") }}
-                            <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
-                          </ContextMenuItem>
-                        </ContextMenuGroup>
-                        <ContextMenuSeparator />
-                        <ContextMenuGroup>
-                          <ContextMenuItem
-                            :disabled="isDefaultRoute(tab)"
-                            @click="handleRenameTab(tab.id)"
-                          >
-                            <IconSquarePen />
-                            {{ t("tabs.rename") }}
-                            <ContextMenuShortcut>F2</ContextMenuShortcut>
-                          </ContextMenuItem>
-                          <ContextMenuItem
-                            :disabled="isDefaultRoute(tab)"
-                            @click="handleDuplicateTab(tab.id)"
-                          >
-                            <IconCopy />
-                            {{ t("tabs.duplicate") }}
-                            <ContextMenuShortcut>⌘D</ContextMenuShortcut>
-                          </ContextMenuItem>
-                        </ContextMenuGroup>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  </HoverCardTrigger>
-                  <HoverCardContent
-                    :side-offset="12"
-                    class="flex w-60 flex-col gap-1.5 p-1.5"
-                  >
-                    <div class="flex items-center justify-between px-1.5 py-1">
-                      <span class="flex items-center gap-2">
-                        <IconLayers />
-                        {{ tab.name }}
-                      </span>
-                      <KbdGroup>
-                        <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-                        <Kbd>{{ index + 1 }}</Kbd>
-                      </KbdGroup>
-                    </div>
-                    <div class="bg-secondary aspect-video rounded border"></div>
-                  </HoverCardContent>
-                </HoverCard>
-              </div>
-            </template>
-          </nav>
-          <div class="flex grow items-stretch justify-between gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    as-child
-                    @click="emitter.emit('Tabs.Add')"
-                  >
-                    <RouterLink to="/new">
-                      <IconPlus />
-                    </RouterLink>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent> {{ t("tabs.newTab") }} </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <div class="flex items-stretch justify-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <DropdownMenu>
-                    <TooltipTrigger as-child>
-                      <DropdownMenuTrigger as-child>
-                        <Button variant="secondary" size="icon">
-                          <IconChevronDown />
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
-                    <DropdownMenuContent align="end" side="bottom">
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
+                                  <IconX />
+                                </InputGroupButton>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                class="flex items-center gap-2 pr-2"
+                              >
+                                {{ t("common.close") }}
+                                <KbdGroup>
+                                  <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+                                  <Kbd>W</Kbd>
+                                </KbdGroup>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </RouterLink>
+                      </Button>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent class="w-56">
+                      <ContextMenuGroup>
+                        <ContextMenuItem
                           as-child
                           @click="emitter.emit('Tabs.Add')"
                         >
                           <RouterLink to="/new">
                             <IconPlus />
                             {{ t("tabs.newTab") }}
-                            <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+                            <ContextMenuShortcut>⌘T</ContextMenuShortcut>
                           </RouterLink>
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
-                          :disabled="!activeTabId"
-                          @click="handleCloseTab(activeTabId)"
-                        >
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                      <ContextMenuSeparator />
+                      <ContextMenuGroup>
+                        <ContextMenuItem @click="handleCloseTab(tab.id)">
                           <IconX />
                           {{ t("common.close") }}
-                          <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
+                          <ContextMenuShortcut>⌘W</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem
                           :disabled="tabs.length === 0"
                           @click="emitter.emit('Tabs.Close.All')"
                         >
                           <IconCircleX />
                           {{ t("tabs.closeAll") }}
-                          <DropdownMenuShortcut>⌘⌥W</DropdownMenuShortcut>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          :disabled="tabs.length <= 1 || !activeTabId"
-                          @click="
-                            emitter.emit('Tabs.Close.Others', activeTabId)
-                          "
+                          <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          :disabled="tabs.length <= 1"
+                          @click="emitter.emit('Tabs.Close.Others', tab.id)"
                         >
                           <IconSquareX />
                           {{ t("tabs.closeOthers") }}
-                          <DropdownMenuShortcut>⌘⇧W</DropdownMenuShortcut>
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
-                          :disabled="!activeTabId || isDefaultRoute(activeTab!)"
-                          @click="handleRenameTab(activeTabId)"
+                          <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                      <ContextMenuSeparator />
+                      <ContextMenuGroup>
+                        <ContextMenuItem
+                          :disabled="isDefaultRoute(tab)"
+                          @click="handleRenameTab(tab.id)"
                         >
                           <IconSquarePen />
                           {{ t("tabs.rename") }}
-                          <DropdownMenuShortcut>F2</DropdownMenuShortcut>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          :disabled="!activeTabId || isDefaultRoute(activeTab!)"
-                          @click="handleDuplicateTab(activeTabId)"
+                          <ContextMenuShortcut>F2</ContextMenuShortcut>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          :disabled="isDefaultRoute(tab)"
+                          @click="handleDuplicateTab(tab.id)"
                         >
                           <IconCopy />
                           {{ t("tabs.duplicate") }}
-                          <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuGroup>
-                        <DropdownMenuSub>
-                          <DropdownMenuItem as-child>
-                            <DropdownMenuSubTrigger>
-                              <IconGalleryHorizontalEnd />
-                              {{ t("tabs.activeTabs") }}
-                            </DropdownMenuSubTrigger>
-                          </DropdownMenuItem>
-                          <DropdownMenuSubContent class="w-56">
-                            <DropdownMenuLabel
-                              v-if="tabs.length === 0"
-                              class="text-muted-foreground text-xs"
-                            >
-                              {{ t("tabs.activeTabsEmpty") }}
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem
-                              v-for="tab in tabs"
-                              :key="tab.id"
-                              @click="emitter.emit('Tabs.Select', tab.id)"
-                            >
-                              <IconLayers />
-                              {{ tab.name }}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              :disabled="tabs.length === 0"
-                              @click="emitter.emit('Tabs.Close.All')"
-                            >
-                              <IconTrash />
-                              {{ t("tabs.closeAllTabs") }}
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                          <DropdownMenuItem as-child>
-                            <DropdownMenuSubTrigger>
-                              <IconHistory />
-                              {{ t("tabs.recentClosedTabs") }}
-                            </DropdownMenuSubTrigger>
-                          </DropdownMenuItem>
-                          <DropdownMenuSubContent class="w-56">
-                            <DropdownMenuLabel
-                              v-if="recentlyClosed.length === 0"
-                              class="text-muted-foreground text-xs"
-                            >
-                              {{ t("tabs.recentlyClosedEmpty") }}
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem
-                              v-for="tab in recentlyClosed"
-                              :key="tab.id + tab.fullPath"
-                              @click="emitter.emit('Tabs.Reopen', tab)"
-                            >
-                              <IconLayers />
-                              {{ tab.name }}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              :disabled="recentlyClosed.length === 0"
-                              @click="clearRecentlyClosed"
-                            >
-                              <IconTrash />
-                              {{ t("tabs.clearRecent") }}
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </Tooltip>
-              </TooltipProvider>
+                          <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                </HoverCardTrigger>
+                <HoverCardContent
+                  :side-offset="12"
+                  class="flex w-60 flex-col gap-1.5 p-1.5"
+                >
+                  <div class="flex items-center justify-between px-1.5 py-1">
+                    <span class="flex items-center gap-2">
+                      <IconLayers />
+                      {{ tab.name }}
+                    </span>
+                    <KbdGroup>
+                      <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+                      <Kbd>{{ index + 1 }}</Kbd>
+                    </KbdGroup>
+                  </div>
+                  <div class="bg-secondary aspect-video rounded border"></div>
+                </HoverCardContent>
+              </HoverCard>
             </div>
+          </template>
+        </nav>
+        <div class="flex shrink-0 grow items-stretch justify-between gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  as-child
+                  @click="emitter.emit('Tabs.Add')"
+                >
+                  <RouterLink to="/new">
+                    <IconPlus />
+                  </RouterLink>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent> {{ t("tabs.newTab") }} </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div class="flex items-stretch justify-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <DropdownMenu>
+                  <TooltipTrigger as-child>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="secondary" size="icon">
+                        <IconChevronDown />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
+                  <DropdownMenuContent align="end" side="bottom">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        as-child
+                        @click="emitter.emit('Tabs.Add')"
+                      >
+                        <RouterLink to="/new">
+                          <IconPlus />
+                          {{ t("tabs.newTab") }}
+                          <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+                        </RouterLink>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        :disabled="!activeTabId"
+                        @click="handleCloseTab(activeTabId)"
+                      >
+                        <IconX />
+                        {{ t("common.close") }}
+                        <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        :disabled="tabs.length === 0"
+                        @click="emitter.emit('Tabs.Close.All')"
+                      >
+                        <IconCircleX />
+                        {{ t("tabs.closeAll") }}
+                        <DropdownMenuShortcut>⌘⌥W</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        :disabled="tabs.length <= 1 || !activeTabId"
+                        @click="emitter.emit('Tabs.Close.Others', activeTabId)"
+                      >
+                        <IconSquareX />
+                        {{ t("tabs.closeOthers") }}
+                        <DropdownMenuShortcut>⌘⇧W</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        :disabled="!activeTabId || isDefaultRoute(activeTab!)"
+                        @click="handleRenameTab(activeTabId)"
+                      >
+                        <IconSquarePen />
+                        {{ t("tabs.rename") }}
+                        <DropdownMenuShortcut>F2</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        :disabled="!activeTabId || isDefaultRoute(activeTab!)"
+                        @click="handleDuplicateTab(activeTabId)"
+                      >
+                        <IconCopy />
+                        {{ t("tabs.duplicate") }}
+                        <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuSub>
+                        <DropdownMenuItem as-child>
+                          <DropdownMenuSubTrigger>
+                            <IconGalleryHorizontalEnd />
+                            {{ t("tabs.activeTabs") }}
+                          </DropdownMenuSubTrigger>
+                        </DropdownMenuItem>
+                        <DropdownMenuSubContent class="w-56">
+                          <DropdownMenuLabel
+                            v-if="tabs.length === 0"
+                            class="text-muted-foreground text-xs"
+                          >
+                            {{ t("tabs.activeTabsEmpty") }}
+                          </DropdownMenuLabel>
+                          <DropdownMenuItem
+                            v-for="tab in tabs"
+                            :key="tab.id"
+                            @click="emitter.emit('Tabs.Select', tab.id)"
+                          >
+                            <IconLayers />
+                            {{ tab.name }}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            :disabled="tabs.length === 0"
+                            @click="emitter.emit('Tabs.Close.All')"
+                          >
+                            <IconTrash />
+                            {{ t("tabs.closeAllTabs") }}
+                          </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSub>
+                        <DropdownMenuItem as-child>
+                          <DropdownMenuSubTrigger>
+                            <IconHistory />
+                            {{ t("tabs.recentClosedTabs") }}
+                          </DropdownMenuSubTrigger>
+                        </DropdownMenuItem>
+                        <DropdownMenuSubContent class="w-56">
+                          <DropdownMenuLabel
+                            v-if="recentlyClosed.length === 0"
+                            class="text-muted-foreground text-xs"
+                          >
+                            {{ t("tabs.recentlyClosedEmpty") }}
+                          </DropdownMenuLabel>
+                          <DropdownMenuItem
+                            v-for="tab in recentlyClosed"
+                            :key="tab.id + tab.fullPath"
+                            @click="emitter.emit('Tabs.Reopen', tab)"
+                          >
+                            <IconLayers />
+                            {{ tab.name }}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            :disabled="recentlyClosed.length === 0"
+                            @click="clearRecentlyClosed"
+                          >
+                            <IconTrash />
+                            {{ t("tabs.clearRecent") }}
+                          </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent class="w-56" align="start" side="bottom">
-        <ContextMenuGroup>
-          <ContextMenuItem as-child @click="emitter.emit('Tabs.Add')">
-            <RouterLink to="/new">
-              <IconPlus />
-              {{ t("tabs.newTab") }}
-              <ContextMenuShortcut>⌘T</ContextMenuShortcut>
-            </RouterLink>
-          </ContextMenuItem>
-        </ContextMenuGroup>
-        <ContextMenuSeparator />
-        <ContextMenuGroup>
-          <ContextMenuItem
-            :disabled="recentlyClosed.length === 0"
-            @click="emitter.emit('Tabs.ReopenLast')"
-          >
-            <IconHistory />
-            {{ t("tabs.reopenLast") }}
-            <ContextMenuShortcut>⌘⇧T</ContextMenuShortcut>
-          </ContextMenuItem>
-        </ContextMenuGroup>
-      </ContextMenuContent>
-    </div>
-    <Separator />
+      </div>
+    </ContextMenuTrigger>
+    <ContextMenuContent class="w-56" align="start" side="bottom">
+      <ContextMenuGroup>
+        <ContextMenuItem as-child @click="emitter.emit('Tabs.Add')">
+          <RouterLink to="/new">
+            <IconPlus />
+            {{ t("tabs.newTab") }}
+            <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+          </RouterLink>
+        </ContextMenuItem>
+      </ContextMenuGroup>
+      <ContextMenuSeparator />
+      <ContextMenuGroup>
+        <ContextMenuItem
+          :disabled="recentlyClosed.length === 0"
+          @click="emitter.emit('Tabs.ReopenLast')"
+        >
+          <IconHistory />
+          {{ t("tabs.reopenLast") }}
+          <ContextMenuShortcut>⌘⇧T</ContextMenuShortcut>
+        </ContextMenuItem>
+      </ContextMenuGroup>
+    </ContextMenuContent>
   </ContextMenu>
 </template>
