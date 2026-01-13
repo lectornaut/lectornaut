@@ -70,9 +70,9 @@
     /* Sidebar tokens */
     --sidebar: var(--color-neutral-50);
     --sidebar-foreground: var(--color-neutral-800);
-    --sidebar-primary: var(--color-neutral-900);
+    --sidebar-primary: var(--color-neutral-800);
     --sidebar-primary-foreground: var(--color-neutral-50);
-    --sidebar-accent: var(--color-neutral-100);
+    --sidebar-accent: var(--color-neutral-200);
     --sidebar-accent-foreground: var(--color-neutral-900);
     --sidebar-border: var(--color-neutral-200);
   }
@@ -89,7 +89,7 @@
     --popover-foreground: var(--color-slate-900);
     --secondary: var(--color-slate-100);
     --secondary-foreground: var(--color-slate-800);
-    --muted: var(--color-slate-200);
+    --muted: var(--color-slate-100);
     --muted-foreground: var(--color-slate-600);
     --accent: var(--color-slate-200);
     --accent-foreground: var(--color-slate-900);
@@ -97,9 +97,9 @@
     --input: var(--color-slate-200);
     --sidebar: var(--color-slate-50);
     --sidebar-foreground: var(--color-slate-800);
-    --sidebar-primary: var(--color-slate-900);
+    --sidebar-primary: var(--color-slate-800);
     --sidebar-primary-foreground: var(--color-slate-50);
-    --sidebar-accent: var(--color-slate-100);
+    --sidebar-accent: var(--color-slate-200);
     --sidebar-accent-foreground: var(--color-slate-900);
     --sidebar-border: var(--color-slate-200);
   }
@@ -113,7 +113,7 @@
     --popover-foreground: var(--color-gray-900);
     --secondary: var(--color-gray-100);
     --secondary-foreground: var(--color-gray-800);
-    --muted: var(--color-gray-200);
+    --muted: var(--color-gray-100);
     --muted-foreground: var(--color-gray-600);
     --accent: var(--color-gray-200);
     --accent-foreground: var(--color-gray-900);
@@ -121,9 +121,9 @@
     --input: var(--color-gray-200);
     --sidebar: var(--color-gray-50);
     --sidebar-foreground: var(--color-gray-800);
-    --sidebar-primary: var(--color-gray-900);
+    --sidebar-primary: var(--color-gray-800);
     --sidebar-primary-foreground: var(--color-gray-50);
-    --sidebar-accent: var(--color-gray-100);
+    --sidebar-accent: var(--color-gray-200);
     --sidebar-accent-foreground: var(--color-gray-900);
     --sidebar-border: var(--color-gray-200);
   }
@@ -137,7 +137,7 @@
     --popover-foreground: var(--color-zinc-900);
     --secondary: var(--color-zinc-100);
     --secondary-foreground: var(--color-zinc-800);
-    --muted: var(--color-zinc-200);
+    --muted: var(--color-zinc-100);
     --muted-foreground: var(--color-zinc-600);
     --accent: var(--color-zinc-200);
     --accent-foreground: var(--color-zinc-900);
@@ -145,9 +145,9 @@
     --input: var(--color-zinc-200);
     --sidebar: var(--color-zinc-50);
     --sidebar-foreground: var(--color-zinc-800);
-    --sidebar-primary: var(--color-zinc-900);
+    --sidebar-primary: var(--color-zinc-800);
     --sidebar-primary-foreground: var(--color-zinc-50);
-    --sidebar-accent: var(--color-zinc-100);
+    --sidebar-accent: var(--color-zinc-200);
     --sidebar-accent-foreground: var(--color-zinc-900);
     --sidebar-border: var(--color-zinc-200);
   }
@@ -161,7 +161,7 @@
     --popover-foreground: var(--color-neutral-900);
     --secondary: var(--color-neutral-100);
     --secondary-foreground: var(--color-neutral-800);
-    --muted: var(--color-neutral-200);
+    --muted: var(--color-neutral-100);
     --muted-foreground: var(--color-neutral-600);
     --accent: var(--color-neutral-200);
     --accent-foreground: var(--color-neutral-900);
@@ -169,9 +169,9 @@
     --input: var(--color-neutral-200);
     --sidebar: var(--color-neutral-50);
     --sidebar-foreground: var(--color-neutral-800);
-    --sidebar-primary: var(--color-neutral-900);
+    --sidebar-primary: var(--color-neutral-800);
     --sidebar-primary-foreground: var(--color-neutral-50);
-    --sidebar-accent: var(--color-neutral-100);
+    --sidebar-accent: var(--color-neutral-200);
     --sidebar-accent-foreground: var(--color-neutral-900);
     --sidebar-border: var(--color-neutral-200);
   }
@@ -185,7 +185,7 @@
     --popover-foreground: var(--color-stone-900);
     --secondary: var(--color-stone-100);
     --secondary-foreground: var(--color-stone-800);
-    --muted: var(--color-stone-200);
+    --muted: var(--color-stone-100);
     --muted-foreground: var(--color-stone-600);
     --accent: var(--color-stone-200);
     --accent-foreground: var(--color-stone-900);
@@ -193,9 +193,9 @@
     --input: var(--color-stone-200);
     --sidebar: var(--color-stone-50);
     --sidebar-foreground: var(--color-stone-800);
-    --sidebar-primary: var(--color-stone-900);
+    --sidebar-primary: var(--color-stone-800);
     --sidebar-primary-foreground: var(--color-stone-50);
-    --sidebar-accent: var(--color-stone-100);
+    --sidebar-accent: var(--color-stone-200);
     --sidebar-accent-foreground: var(--color-stone-900);
     --sidebar-border: var(--color-stone-200);
   }
@@ -469,10 +469,10 @@
 
     /* Sidebar tokens */
     --sidebar: var(--color-neutral-900);
-    --sidebar-foreground: var(--color-neutral-200);
-    --sidebar-primary: var(--color-neutral-100);
+    --sidebar-foreground: var(--color-neutral-300);
+    --sidebar-primary: var(--color-neutral-200);
     --sidebar-primary-foreground: var(--color-neutral-950);
-    --sidebar-accent: var(--color-neutral-800);
+    --sidebar-accent: var(--color-neutral-700);
     --sidebar-accent-foreground: var(--color-neutral-100);
     --sidebar-border: var(--color-neutral-800);
   }
@@ -489,17 +489,17 @@
     --popover-foreground: var(--color-slate-100);
     --secondary: var(--color-slate-900);
     --secondary-foreground: var(--color-slate-200);
-    --muted: var(--color-slate-800);
+    --muted: var(--color-slate-900);
     --muted-foreground: var(--color-slate-400);
     --accent: var(--color-slate-800);
     --accent-foreground: var(--color-slate-100);
     --border: var(--color-slate-800);
     --input: var(--color-slate-800);
     --sidebar: var(--color-slate-900);
-    --sidebar-foreground: var(--color-slate-200);
-    --sidebar-primary: var(--color-slate-100);
+    --sidebar-foreground: var(--color-slate-300);
+    --sidebar-primary: var(--color-slate-200);
     --sidebar-primary-foreground: var(--color-slate-950);
-    --sidebar-accent: var(--color-slate-800);
+    --sidebar-accent: var(--color-slate-700);
     --sidebar-accent-foreground: var(--color-slate-100);
     --sidebar-border: var(--color-slate-800);
   }
@@ -513,17 +513,17 @@
     --popover-foreground: var(--color-gray-100);
     --secondary: var(--color-gray-900);
     --secondary-foreground: var(--color-gray-200);
-    --muted: var(--color-gray-800);
+    --muted: var(--color-gray-900);
     --muted-foreground: var(--color-gray-400);
     --accent: var(--color-gray-800);
     --accent-foreground: var(--color-gray-100);
     --border: var(--color-gray-800);
     --input: var(--color-gray-800);
     --sidebar: var(--color-gray-900);
-    --sidebar-foreground: var(--color-gray-200);
-    --sidebar-primary: var(--color-gray-100);
+    --sidebar-foreground: var(--color-gray-300);
+    --sidebar-primary: var(--color-gray-200);
     --sidebar-primary-foreground: var(--color-gray-950);
-    --sidebar-accent: var(--color-gray-800);
+    --sidebar-accent: var(--color-gray-700);
     --sidebar-accent-foreground: var(--color-gray-100);
     --sidebar-border: var(--color-gray-800);
   }
@@ -537,17 +537,17 @@
     --popover-foreground: var(--color-zinc-100);
     --secondary: var(--color-zinc-900);
     --secondary-foreground: var(--color-zinc-200);
-    --muted: var(--color-zinc-800);
+    --muted: var(--color-zinc-900);
     --muted-foreground: var(--color-zinc-400);
     --accent: var(--color-zinc-800);
     --accent-foreground: var(--color-zinc-100);
     --border: var(--color-zinc-800);
     --input: var(--color-zinc-800);
     --sidebar: var(--color-zinc-900);
-    --sidebar-foreground: var(--color-zinc-200);
-    --sidebar-primary: var(--color-zinc-100);
+    --sidebar-foreground: var(--color-zinc-300);
+    --sidebar-primary: var(--color-zinc-200);
     --sidebar-primary-foreground: var(--color-zinc-950);
-    --sidebar-accent: var(--color-zinc-800);
+    --sidebar-accent: var(--color-zinc-700);
     --sidebar-accent-foreground: var(--color-zinc-100);
     --sidebar-border: var(--color-zinc-800);
   }
@@ -561,17 +561,17 @@
     --popover-foreground: var(--color-neutral-100);
     --secondary: var(--color-neutral-900);
     --secondary-foreground: var(--color-neutral-200);
-    --muted: var(--color-neutral-800);
+    --muted: var(--color-neutral-900);
     --muted-foreground: var(--color-neutral-400);
     --accent: var(--color-neutral-800);
     --accent-foreground: var(--color-neutral-100);
     --border: var(--color-neutral-800);
     --input: var(--color-neutral-800);
     --sidebar: var(--color-neutral-900);
-    --sidebar-foreground: var(--color-neutral-200);
-    --sidebar-primary: var(--color-neutral-100);
+    --sidebar-foreground: var(--color-neutral-300);
+    --sidebar-primary: var(--color-neutral-200);
     --sidebar-primary-foreground: var(--color-neutral-950);
-    --sidebar-accent: var(--color-neutral-800);
+    --sidebar-accent: var(--color-neutral-700);
     --sidebar-accent-foreground: var(--color-neutral-100);
     --sidebar-border: var(--color-neutral-800);
   }
@@ -585,17 +585,17 @@
     --popover-foreground: var(--color-stone-100);
     --secondary: var(--color-stone-900);
     --secondary-foreground: var(--color-stone-200);
-    --muted: var(--color-stone-800);
+    --muted: var(--color-stone-900);
     --muted-foreground: var(--color-stone-400);
     --accent: var(--color-stone-800);
     --accent-foreground: var(--color-stone-100);
     --border: var(--color-stone-800);
     --input: var(--color-stone-800);
     --sidebar: var(--color-stone-900);
-    --sidebar-foreground: var(--color-stone-200);
-    --sidebar-primary: var(--color-stone-100);
+    --sidebar-foreground: var(--color-stone-300);
+    --sidebar-primary: var(--color-stone-200);
     --sidebar-primary-foreground: var(--color-stone-950);
-    --sidebar-accent: var(--color-stone-800);
+    --sidebar-accent: var(--color-stone-700);
     --sidebar-accent-foreground: var(--color-stone-100);
     --sidebar-border: var(--color-stone-800);
   }
@@ -864,9 +864,9 @@
     --input: var(--color-red-200);
     --sidebar: var(--color-red-100);
     --sidebar-foreground: var(--color-red-950);
-    --sidebar-primary: var(--color-red-950);
+    --sidebar-primary: var(--color-red-900);
     --sidebar-primary-foreground: var(--color-red-50);
-    --sidebar-accent: var(--color-red-200);
+    --sidebar-accent: var(--color-red-300);
     --sidebar-accent-foreground: var(--color-red-950);
     --sidebar-border: var(--color-red-200);
   }
@@ -880,17 +880,17 @@
     --popover-foreground: var(--color-red-50);
     --secondary: var(--color-red-900);
     --secondary-foreground: var(--color-red-200);
-    --muted: var(--color-red-800);
+    --muted: var(--color-red-900);
     --muted-foreground: var(--color-red-400);
     --accent: var(--color-red-800);
     --accent-foreground: var(--color-red-100);
     --border: var(--color-red-800);
     --input: var(--color-red-800);
     --sidebar: var(--color-red-900);
-    --sidebar-foreground: var(--color-red-200);
-    --sidebar-primary: var(--color-red-100);
+    --sidebar-foreground: var(--color-red-300);
+    --sidebar-primary: var(--color-red-200);
     --sidebar-primary-foreground: var(--color-red-950);
-    --sidebar-accent: var(--color-red-800);
+    --sidebar-accent: var(--color-red-700);
     --sidebar-accent-foreground: var(--color-red-100);
     --sidebar-border: var(--color-red-800);
   }
@@ -913,9 +913,9 @@
     --input: var(--color-orange-200);
     --sidebar: var(--color-orange-100);
     --sidebar-foreground: var(--color-orange-950);
-    --sidebar-primary: var(--color-orange-950);
+    --sidebar-primary: var(--color-orange-900);
     --sidebar-primary-foreground: var(--color-orange-50);
-    --sidebar-accent: var(--color-orange-200);
+    --sidebar-accent: var(--color-orange-300);
     --sidebar-accent-foreground: var(--color-orange-950);
     --sidebar-border: var(--color-orange-200);
   }
@@ -929,17 +929,17 @@
     --popover-foreground: var(--color-orange-50);
     --secondary: var(--color-orange-900);
     --secondary-foreground: var(--color-orange-200);
-    --muted: var(--color-orange-800);
+    --muted: var(--color-orange-900);
     --muted-foreground: var(--color-orange-400);
     --accent: var(--color-orange-800);
     --accent-foreground: var(--color-orange-100);
     --border: var(--color-orange-800);
     --input: var(--color-orange-800);
     --sidebar: var(--color-orange-900);
-    --sidebar-foreground: var(--color-orange-200);
-    --sidebar-primary: var(--color-orange-100);
+    --sidebar-foreground: var(--color-orange-300);
+    --sidebar-primary: var(--color-orange-200);
     --sidebar-primary-foreground: var(--color-orange-950);
-    --sidebar-accent: var(--color-orange-800);
+    --sidebar-accent: var(--color-orange-700);
     --sidebar-accent-foreground: var(--color-orange-100);
     --sidebar-border: var(--color-orange-800);
   }
@@ -962,9 +962,9 @@
     --input: var(--color-amber-200);
     --sidebar: var(--color-amber-100);
     --sidebar-foreground: var(--color-amber-950);
-    --sidebar-primary: var(--color-amber-950);
+    --sidebar-primary: var(--color-amber-900);
     --sidebar-primary-foreground: var(--color-amber-50);
-    --sidebar-accent: var(--color-amber-200);
+    --sidebar-accent: var(--color-amber-300);
     --sidebar-accent-foreground: var(--color-amber-950);
     --sidebar-border: var(--color-amber-200);
   }
@@ -978,17 +978,17 @@
     --popover-foreground: var(--color-amber-50);
     --secondary: var(--color-amber-900);
     --secondary-foreground: var(--color-amber-200);
-    --muted: var(--color-amber-800);
+    --muted: var(--color-amber-900);
     --muted-foreground: var(--color-amber-400);
     --accent: var(--color-amber-800);
     --accent-foreground: var(--color-amber-100);
     --border: var(--color-amber-800);
     --input: var(--color-amber-800);
     --sidebar: var(--color-amber-900);
-    --sidebar-foreground: var(--color-amber-200);
-    --sidebar-primary: var(--color-amber-100);
+    --sidebar-foreground: var(--color-amber-300);
+    --sidebar-primary: var(--color-amber-200);
     --sidebar-primary-foreground: var(--color-amber-950);
-    --sidebar-accent: var(--color-amber-800);
+    --sidebar-accent: var(--color-amber-700);
     --sidebar-accent-foreground: var(--color-amber-100);
     --sidebar-border: var(--color-amber-800);
   }
@@ -1011,9 +1011,9 @@
     --input: var(--color-yellow-200);
     --sidebar: var(--color-yellow-100);
     --sidebar-foreground: var(--color-yellow-950);
-    --sidebar-primary: var(--color-yellow-950);
+    --sidebar-primary: var(--color-yellow-900);
     --sidebar-primary-foreground: var(--color-yellow-50);
-    --sidebar-accent: var(--color-yellow-200);
+    --sidebar-accent: var(--color-yellow-300);
     --sidebar-accent-foreground: var(--color-yellow-950);
     --sidebar-border: var(--color-yellow-200);
   }
@@ -1027,17 +1027,17 @@
     --popover-foreground: var(--color-yellow-50);
     --secondary: var(--color-yellow-900);
     --secondary-foreground: var(--color-yellow-200);
-    --muted: var(--color-yellow-800);
+    --muted: var(--color-yellow-900);
     --muted-foreground: var(--color-yellow-400);
     --accent: var(--color-yellow-800);
     --accent-foreground: var(--color-yellow-100);
     --border: var(--color-yellow-800);
     --input: var(--color-yellow-800);
     --sidebar: var(--color-yellow-900);
-    --sidebar-foreground: var(--color-yellow-200);
-    --sidebar-primary: var(--color-yellow-100);
+    --sidebar-foreground: var(--color-yellow-300);
+    --sidebar-primary: var(--color-yellow-200);
     --sidebar-primary-foreground: var(--color-yellow-950);
-    --sidebar-accent: var(--color-yellow-800);
+    --sidebar-accent: var(--color-yellow-700);
     --sidebar-accent-foreground: var(--color-yellow-100);
     --sidebar-border: var(--color-yellow-800);
   }
@@ -1060,9 +1060,9 @@
     --input: var(--color-lime-200);
     --sidebar: var(--color-lime-100);
     --sidebar-foreground: var(--color-lime-950);
-    --sidebar-primary: var(--color-lime-950);
+    --sidebar-primary: var(--color-lime-900);
     --sidebar-primary-foreground: var(--color-lime-50);
-    --sidebar-accent: var(--color-lime-200);
+    --sidebar-accent: var(--color-lime-300);
     --sidebar-accent-foreground: var(--color-lime-950);
     --sidebar-border: var(--color-lime-200);
   }
@@ -1076,17 +1076,17 @@
     --popover-foreground: var(--color-lime-50);
     --secondary: var(--color-lime-900);
     --secondary-foreground: var(--color-lime-200);
-    --muted: var(--color-lime-800);
+    --muted: var(--color-lime-900);
     --muted-foreground: var(--color-lime-400);
     --accent: var(--color-lime-800);
     --accent-foreground: var(--color-lime-100);
     --border: var(--color-lime-800);
     --input: var(--color-lime-800);
     --sidebar: var(--color-lime-900);
-    --sidebar-foreground: var(--color-lime-200);
-    --sidebar-primary: var(--color-lime-100);
+    --sidebar-foreground: var(--color-lime-300);
+    --sidebar-primary: var(--color-lime-200);
     --sidebar-primary-foreground: var(--color-lime-950);
-    --sidebar-accent: var(--color-lime-800);
+    --sidebar-accent: var(--color-lime-700);
     --sidebar-accent-foreground: var(--color-lime-100);
     --sidebar-border: var(--color-lime-800);
   }
@@ -1109,9 +1109,9 @@
     --input: var(--color-green-200);
     --sidebar: var(--color-green-100);
     --sidebar-foreground: var(--color-green-950);
-    --sidebar-primary: var(--color-green-950);
+    --sidebar-primary: var(--color-green-900);
     --sidebar-primary-foreground: var(--color-green-50);
-    --sidebar-accent: var(--color-green-200);
+    --sidebar-accent: var(--color-green-300);
     --sidebar-accent-foreground: var(--color-green-950);
     --sidebar-border: var(--color-green-200);
   }
@@ -1125,17 +1125,17 @@
     --popover-foreground: var(--color-green-50);
     --secondary: var(--color-green-900);
     --secondary-foreground: var(--color-green-200);
-    --muted: var(--color-green-800);
+    --muted: var(--color-green-900);
     --muted-foreground: var(--color-green-400);
     --accent: var(--color-green-800);
     --accent-foreground: var(--color-green-100);
     --border: var(--color-green-800);
     --input: var(--color-green-800);
     --sidebar: var(--color-green-900);
-    --sidebar-foreground: var(--color-green-200);
-    --sidebar-primary: var(--color-green-100);
+    --sidebar-foreground: var(--color-green-300);
+    --sidebar-primary: var(--color-green-200);
     --sidebar-primary-foreground: var(--color-green-950);
-    --sidebar-accent: var(--color-green-800);
+    --sidebar-accent: var(--color-green-700);
     --sidebar-accent-foreground: var(--color-green-100);
     --sidebar-border: var(--color-green-800);
   }
@@ -1158,9 +1158,9 @@
     --input: var(--color-emerald-200);
     --sidebar: var(--color-emerald-100);
     --sidebar-foreground: var(--color-emerald-950);
-    --sidebar-primary: var(--color-emerald-950);
+    --sidebar-primary: var(--color-emerald-900);
     --sidebar-primary-foreground: var(--color-emerald-50);
-    --sidebar-accent: var(--color-emerald-200);
+    --sidebar-accent: var(--color-emerald-300);
     --sidebar-accent-foreground: var(--color-emerald-950);
     --sidebar-border: var(--color-emerald-200);
   }
@@ -1174,17 +1174,17 @@
     --popover-foreground: var(--color-emerald-50);
     --secondary: var(--color-emerald-900);
     --secondary-foreground: var(--color-emerald-200);
-    --muted: var(--color-emerald-800);
+    --muted: var(--color-emerald-900);
     --muted-foreground: var(--color-emerald-400);
     --accent: var(--color-emerald-800);
     --accent-foreground: var(--color-emerald-100);
     --border: var(--color-emerald-800);
     --input: var(--color-emerald-800);
     --sidebar: var(--color-emerald-900);
-    --sidebar-foreground: var(--color-emerald-200);
-    --sidebar-primary: var(--color-emerald-100);
+    --sidebar-foreground: var(--color-emerald-300);
+    --sidebar-primary: var(--color-emerald-200);
     --sidebar-primary-foreground: var(--color-emerald-950);
-    --sidebar-accent: var(--color-emerald-800);
+    --sidebar-accent: var(--color-emerald-700);
     --sidebar-accent-foreground: var(--color-emerald-100);
     --sidebar-border: var(--color-emerald-800);
   }
@@ -1207,9 +1207,9 @@
     --input: var(--color-teal-200);
     --sidebar: var(--color-teal-100);
     --sidebar-foreground: var(--color-teal-950);
-    --sidebar-primary: var(--color-teal-950);
+    --sidebar-primary: var(--color-teal-900);
     --sidebar-primary-foreground: var(--color-teal-50);
-    --sidebar-accent: var(--color-teal-200);
+    --sidebar-accent: var(--color-teal-300);
     --sidebar-accent-foreground: var(--color-teal-950);
     --sidebar-border: var(--color-teal-200);
   }
@@ -1223,17 +1223,17 @@
     --popover-foreground: var(--color-teal-50);
     --secondary: var(--color-teal-900);
     --secondary-foreground: var(--color-teal-200);
-    --muted: var(--color-teal-800);
+    --muted: var(--color-teal-900);
     --muted-foreground: var(--color-teal-400);
     --accent: var(--color-teal-800);
     --accent-foreground: var(--color-teal-100);
     --border: var(--color-teal-800);
     --input: var(--color-teal-800);
     --sidebar: var(--color-teal-900);
-    --sidebar-foreground: var(--color-teal-200);
-    --sidebar-primary: var(--color-teal-100);
+    --sidebar-foreground: var(--color-teal-300);
+    --sidebar-primary: var(--color-teal-200);
     --sidebar-primary-foreground: var(--color-teal-950);
-    --sidebar-accent: var(--color-teal-800);
+    --sidebar-accent: var(--color-teal-700);
     --sidebar-accent-foreground: var(--color-teal-100);
     --sidebar-border: var(--color-teal-800);
   }
@@ -1256,9 +1256,9 @@
     --input: var(--color-cyan-200);
     --sidebar: var(--color-cyan-100);
     --sidebar-foreground: var(--color-cyan-950);
-    --sidebar-primary: var(--color-cyan-950);
+    --sidebar-primary: var(--color-cyan-900);
     --sidebar-primary-foreground: var(--color-cyan-50);
-    --sidebar-accent: var(--color-cyan-200);
+    --sidebar-accent: var(--color-cyan-300);
     --sidebar-accent-foreground: var(--color-cyan-950);
     --sidebar-border: var(--color-cyan-200);
   }
@@ -1272,17 +1272,17 @@
     --popover-foreground: var(--color-cyan-50);
     --secondary: var(--color-cyan-900);
     --secondary-foreground: var(--color-cyan-200);
-    --muted: var(--color-cyan-800);
+    --muted: var(--color-cyan-900);
     --muted-foreground: var(--color-cyan-400);
     --accent: var(--color-cyan-800);
     --accent-foreground: var(--color-cyan-100);
     --border: var(--color-cyan-800);
     --input: var(--color-cyan-800);
     --sidebar: var(--color-cyan-900);
-    --sidebar-foreground: var(--color-cyan-200);
-    --sidebar-primary: var(--color-cyan-100);
+    --sidebar-foreground: var(--color-cyan-300);
+    --sidebar-primary: var(--color-cyan-200);
     --sidebar-primary-foreground: var(--color-cyan-950);
-    --sidebar-accent: var(--color-cyan-800);
+    --sidebar-accent: var(--color-cyan-700);
     --sidebar-accent-foreground: var(--color-cyan-100);
     --sidebar-border: var(--color-cyan-800);
   }
@@ -1305,9 +1305,9 @@
     --input: var(--color-sky-200);
     --sidebar: var(--color-sky-100);
     --sidebar-foreground: var(--color-sky-950);
-    --sidebar-primary: var(--color-sky-950);
+    --sidebar-primary: var(--color-sky-900);
     --sidebar-primary-foreground: var(--color-sky-50);
-    --sidebar-accent: var(--color-sky-200);
+    --sidebar-accent: var(--color-sky-300);
     --sidebar-accent-foreground: var(--color-sky-950);
     --sidebar-border: var(--color-sky-200);
   }
@@ -1321,17 +1321,17 @@
     --popover-foreground: var(--color-sky-50);
     --secondary: var(--color-sky-900);
     --secondary-foreground: var(--color-sky-200);
-    --muted: var(--color-sky-800);
+    --muted: var(--color-sky-900);
     --muted-foreground: var(--color-sky-400);
     --accent: var(--color-sky-800);
     --accent-foreground: var(--color-sky-100);
     --border: var(--color-sky-800);
     --input: var(--color-sky-800);
     --sidebar: var(--color-sky-900);
-    --sidebar-foreground: var(--color-sky-200);
-    --sidebar-primary: var(--color-sky-100);
+    --sidebar-foreground: var(--color-sky-300);
+    --sidebar-primary: var(--color-sky-200);
     --sidebar-primary-foreground: var(--color-sky-950);
-    --sidebar-accent: var(--color-sky-800);
+    --sidebar-accent: var(--color-sky-700);
     --sidebar-accent-foreground: var(--color-sky-100);
     --sidebar-border: var(--color-sky-800);
   }
@@ -1354,9 +1354,9 @@
     --input: var(--color-blue-200);
     --sidebar: var(--color-blue-100);
     --sidebar-foreground: var(--color-blue-950);
-    --sidebar-primary: var(--color-blue-950);
+    --sidebar-primary: var(--color-blue-900);
     --sidebar-primary-foreground: var(--color-blue-50);
-    --sidebar-accent: var(--color-blue-200);
+    --sidebar-accent: var(--color-blue-300);
     --sidebar-accent-foreground: var(--color-blue-950);
     --sidebar-border: var(--color-blue-200);
   }
@@ -1370,17 +1370,17 @@
     --popover-foreground: var(--color-blue-50);
     --secondary: var(--color-blue-900);
     --secondary-foreground: var(--color-blue-200);
-    --muted: var(--color-blue-800);
+    --muted: var(--color-blue-900);
     --muted-foreground: var(--color-blue-400);
     --accent: var(--color-blue-800);
     --accent-foreground: var(--color-blue-100);
     --border: var(--color-blue-800);
     --input: var(--color-blue-800);
     --sidebar: var(--color-blue-900);
-    --sidebar-foreground: var(--color-blue-200);
-    --sidebar-primary: var(--color-blue-100);
+    --sidebar-foreground: var(--color-blue-300);
+    --sidebar-primary: var(--color-blue-200);
     --sidebar-primary-foreground: var(--color-blue-950);
-    --sidebar-accent: var(--color-blue-800);
+    --sidebar-accent: var(--color-blue-700);
     --sidebar-accent-foreground: var(--color-blue-100);
     --sidebar-border: var(--color-blue-800);
   }
@@ -1403,9 +1403,9 @@
     --input: var(--color-indigo-200);
     --sidebar: var(--color-indigo-100);
     --sidebar-foreground: var(--color-indigo-950);
-    --sidebar-primary: var(--color-indigo-950);
+    --sidebar-primary: var(--color-indigo-900);
     --sidebar-primary-foreground: var(--color-indigo-50);
-    --sidebar-accent: var(--color-indigo-200);
+    --sidebar-accent: var(--color-indigo-300);
     --sidebar-accent-foreground: var(--color-indigo-950);
     --sidebar-border: var(--color-indigo-200);
   }
@@ -1419,17 +1419,17 @@
     --popover-foreground: var(--color-indigo-50);
     --secondary: var(--color-indigo-900);
     --secondary-foreground: var(--color-indigo-200);
-    --muted: var(--color-indigo-800);
+    --muted: var(--color-indigo-900);
     --muted-foreground: var(--color-indigo-400);
     --accent: var(--color-indigo-800);
     --accent-foreground: var(--color-indigo-100);
     --border: var(--color-indigo-800);
     --input: var(--color-indigo-800);
     --sidebar: var(--color-indigo-900);
-    --sidebar-foreground: var(--color-indigo-200);
-    --sidebar-primary: var(--color-indigo-100);
+    --sidebar-foreground: var(--color-indigo-300);
+    --sidebar-primary: var(--color-indigo-200);
     --sidebar-primary-foreground: var(--color-indigo-950);
-    --sidebar-accent: var(--color-indigo-800);
+    --sidebar-accent: var(--color-indigo-700);
     --sidebar-accent-foreground: var(--color-indigo-100);
     --sidebar-border: var(--color-indigo-800);
   }
@@ -1452,9 +1452,9 @@
     --input: var(--color-violet-200);
     --sidebar: var(--color-violet-100);
     --sidebar-foreground: var(--color-violet-950);
-    --sidebar-primary: var(--color-violet-950);
+    --sidebar-primary: var(--color-violet-900);
     --sidebar-primary-foreground: var(--color-violet-50);
-    --sidebar-accent: var(--color-violet-200);
+    --sidebar-accent: var(--color-violet-300);
     --sidebar-accent-foreground: var(--color-violet-950);
     --sidebar-border: var(--color-violet-200);
   }
@@ -1468,17 +1468,17 @@
     --popover-foreground: var(--color-violet-50);
     --secondary: var(--color-violet-900);
     --secondary-foreground: var(--color-violet-200);
-    --muted: var(--color-violet-800);
+    --muted: var(--color-violet-900);
     --muted-foreground: var(--color-violet-400);
     --accent: var(--color-violet-800);
     --accent-foreground: var(--color-violet-100);
     --border: var(--color-violet-800);
     --input: var(--color-violet-800);
     --sidebar: var(--color-violet-900);
-    --sidebar-foreground: var(--color-violet-200);
-    --sidebar-primary: var(--color-violet-100);
+    --sidebar-foreground: var(--color-violet-300);
+    --sidebar-primary: var(--color-violet-200);
     --sidebar-primary-foreground: var(--color-violet-950);
-    --sidebar-accent: var(--color-violet-800);
+    --sidebar-accent: var(--color-violet-700);
     --sidebar-accent-foreground: var(--color-violet-100);
     --sidebar-border: var(--color-violet-800);
   }
@@ -1501,9 +1501,9 @@
     --input: var(--color-purple-200);
     --sidebar: var(--color-purple-100);
     --sidebar-foreground: var(--color-purple-950);
-    --sidebar-primary: var(--color-purple-950);
+    --sidebar-primary: var(--color-purple-900);
     --sidebar-primary-foreground: var(--color-purple-50);
-    --sidebar-accent: var(--color-purple-200);
+    --sidebar-accent: var(--color-purple-300);
     --sidebar-accent-foreground: var(--color-purple-950);
     --sidebar-border: var(--color-purple-200);
   }
@@ -1517,17 +1517,17 @@
     --popover-foreground: var(--color-purple-50);
     --secondary: var(--color-purple-900);
     --secondary-foreground: var(--color-purple-200);
-    --muted: var(--color-purple-800);
+    --muted: var(--color-purple-900);
     --muted-foreground: var(--color-purple-400);
     --accent: var(--color-purple-800);
     --accent-foreground: var(--color-purple-100);
     --border: var(--color-purple-800);
     --input: var(--color-purple-800);
     --sidebar: var(--color-purple-900);
-    --sidebar-foreground: var(--color-purple-200);
-    --sidebar-primary: var(--color-purple-100);
+    --sidebar-foreground: var(--color-purple-300);
+    --sidebar-primary: var(--color-purple-200);
     --sidebar-primary-foreground: var(--color-purple-950);
-    --sidebar-accent: var(--color-purple-800);
+    --sidebar-accent: var(--color-purple-700);
     --sidebar-accent-foreground: var(--color-purple-100);
     --sidebar-border: var(--color-purple-800);
   }
@@ -1550,9 +1550,9 @@
     --input: var(--color-fuchsia-200);
     --sidebar: var(--color-fuchsia-100);
     --sidebar-foreground: var(--color-fuchsia-950);
-    --sidebar-primary: var(--color-fuchsia-950);
+    --sidebar-primary: var(--color-fuchsia-900);
     --sidebar-primary-foreground: var(--color-fuchsia-50);
-    --sidebar-accent: var(--color-fuchsia-200);
+    --sidebar-accent: var(--color-fuchsia-300);
     --sidebar-accent-foreground: var(--color-fuchsia-950);
     --sidebar-border: var(--color-fuchsia-200);
   }
@@ -1566,17 +1566,17 @@
     --popover-foreground: var(--color-fuchsia-50);
     --secondary: var(--color-fuchsia-900);
     --secondary-foreground: var(--color-fuchsia-200);
-    --muted: var(--color-fuchsia-800);
+    --muted: var(--color-fuchsia-900);
     --muted-foreground: var(--color-fuchsia-400);
     --accent: var(--color-fuchsia-800);
     --accent-foreground: var(--color-fuchsia-100);
     --border: var(--color-fuchsia-800);
     --input: var(--color-fuchsia-800);
     --sidebar: var(--color-fuchsia-900);
-    --sidebar-foreground: var(--color-fuchsia-200);
-    --sidebar-primary: var(--color-fuchsia-100);
+    --sidebar-foreground: var(--color-fuchsia-300);
+    --sidebar-primary: var(--color-fuchsia-200);
     --sidebar-primary-foreground: var(--color-fuchsia-950);
-    --sidebar-accent: var(--color-fuchsia-800);
+    --sidebar-accent: var(--color-fuchsia-700);
     --sidebar-accent-foreground: var(--color-fuchsia-100);
     --sidebar-border: var(--color-fuchsia-800);
   }
@@ -1599,9 +1599,9 @@
     --input: var(--color-pink-200);
     --sidebar: var(--color-pink-100);
     --sidebar-foreground: var(--color-pink-950);
-    --sidebar-primary: var(--color-pink-950);
+    --sidebar-primary: var(--color-pink-900);
     --sidebar-primary-foreground: var(--color-pink-50);
-    --sidebar-accent: var(--color-pink-200);
+    --sidebar-accent: var(--color-pink-300);
     --sidebar-accent-foreground: var(--color-pink-950);
     --sidebar-border: var(--color-pink-200);
   }
@@ -1615,17 +1615,17 @@
     --popover-foreground: var(--color-pink-50);
     --secondary: var(--color-pink-900);
     --secondary-foreground: var(--color-pink-200);
-    --muted: var(--color-pink-800);
+    --muted: var(--color-pink-900);
     --muted-foreground: var(--color-pink-400);
     --accent: var(--color-pink-800);
     --accent-foreground: var(--color-pink-100);
     --border: var(--color-pink-800);
     --input: var(--color-pink-800);
     --sidebar: var(--color-pink-900);
-    --sidebar-foreground: var(--color-pink-200);
-    --sidebar-primary: var(--color-pink-100);
+    --sidebar-foreground: var(--color-pink-300);
+    --sidebar-primary: var(--color-pink-200);
     --sidebar-primary-foreground: var(--color-pink-950);
-    --sidebar-accent: var(--color-pink-800);
+    --sidebar-accent: var(--color-pink-700);
     --sidebar-accent-foreground: var(--color-pink-100);
     --sidebar-border: var(--color-pink-800);
   }
@@ -1648,9 +1648,9 @@
     --input: var(--color-rose-200);
     --sidebar: var(--color-rose-100);
     --sidebar-foreground: var(--color-rose-950);
-    --sidebar-primary: var(--color-rose-950);
+    --sidebar-primary: var(--color-rose-900);
     --sidebar-primary-foreground: var(--color-rose-50);
-    --sidebar-accent: var(--color-rose-200);
+    --sidebar-accent: var(--color-rose-300);
     --sidebar-accent-foreground: var(--color-rose-950);
     --sidebar-border: var(--color-rose-200);
   }
@@ -1664,17 +1664,17 @@
     --popover-foreground: var(--color-rose-50);
     --secondary: var(--color-rose-900);
     --secondary-foreground: var(--color-rose-200);
-    --muted: var(--color-rose-800);
+    --muted: var(--color-rose-900);
     --muted-foreground: var(--color-rose-400);
     --accent: var(--color-rose-800);
     --accent-foreground: var(--color-rose-100);
     --border: var(--color-rose-800);
     --input: var(--color-rose-800);
     --sidebar: var(--color-rose-900);
-    --sidebar-foreground: var(--color-rose-200);
-    --sidebar-primary: var(--color-rose-100);
+    --sidebar-foreground: var(--color-rose-300);
+    --sidebar-primary: var(--color-rose-200);
     --sidebar-primary-foreground: var(--color-rose-950);
-    --sidebar-accent: var(--color-rose-800);
+    --sidebar-accent: var(--color-rose-700);
     --sidebar-accent-foreground: var(--color-rose-100);
     --sidebar-border: var(--color-rose-800);
   }

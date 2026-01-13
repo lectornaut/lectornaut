@@ -44,7 +44,7 @@ const filteredShortcuts = computed(() =>
               </template>
             </Button>
           </DialogTrigger>
-          <DialogContent class="bg-sidebar-accent p-1.5">
+          <DialogContent class="bg-secondary p-1.5">
             <Command highlight-on-hover class="border">
               <CommandInput
                 :placeholder="t('components.global.commandK.placeholder')"

@@ -191,7 +191,7 @@ const closeTab = (id: string) => {
                 }"
                 :inert="leftPanel?.splitterPanel?.isCollapsed"
               >
-                <div class="pr-2">
+                <div class="h-full pr-2">
                   <div
                     id="left-sidebar"
                     ref="leftSidebarEl"
@@ -276,7 +276,7 @@ const closeTab = (id: string) => {
                       >
                         <div
                           ref="subNavContainer"
-                          class="bg-sidebar sticky top-0 z-20 mx-2 flex items-center justify-between overflow-clip rounded-b-2xl border-x border-b p-2 shadow-xs"
+                          class="bg-sidebar sticky top-0 z-20 mx-2 flex items-center justify-between overflow-clip rounded-b-2xl border-x border-b p-1.5 shadow-xs"
                         >
                           <SubNavigation />
                           <div
@@ -358,169 +358,173 @@ const closeTab = (id: string) => {
                     :max-size="100"
                     :collapsed-size="0"
                     as-child
+                    :class="{
+                      'pointer-events-none hidden':
+                        bottomPanel?.splitterPanel?.isCollapsed,
+                    }"
+                    :inert="bottomPanel?.splitterPanel?.isCollapsed"
                   >
                     <Tabs v-model="activeTab">
-                      <div
-                        id="bottom-sidebar"
-                        class="bg-background mt-2 flex flex-1 flex-col overflow-hidden overscroll-none rounded-2xl border"
-                        :class="{
-                          'pointer-events-none hidden':
-                            bottomPanel?.splitterPanel?.isCollapsed,
-                        }"
-                        :inert="bottomPanel?.splitterPanel?.isCollapsed"
-                      >
+                      <div class="h-full pt-2">
                         <div
-                          class="flex items-stretch gap-2 p-2 transition-all"
+                          id="bottom-sidebar"
+                          class="bg-background flex h-full flex-col overflow-hidden overscroll-none rounded-2xl border"
                         >
                           <div
-                            class="relative flex min-w-0 flex-1 items-stretch justify-start gap-2"
+                            class="flex items-stretch gap-1.5 p-1.5 transition-all"
                           >
-                            <TabsList
-                              v-if="source.length > 0"
-                              class="flex h-full min-w-0 items-stretch gap-2 bg-transparent p-0"
+                            <div
+                              class="relative flex min-w-0 flex-1 items-stretch justify-start gap-1.5"
                             >
-                              <TabsTrigger
-                                v-for="tab in source"
-                                :key="tab.id"
-                                :value="tab.id"
-                                class="hover:bg-secondary/50 size-full w-60 max-w-60 min-w-0 gap-2 border-0 px-3"
-                                :class="{
-                                  'min-w-40 transition-all':
-                                    tab.id === activeTab,
-                                  'bg-secondary! shadow-none!':
-                                    tab.id === activeTab,
-                                }"
-                                @click="setActiveTab(tab.id)"
+                              <TabsList
+                                v-if="source.length > 0"
+                                class="flex h-full min-w-0 items-stretch gap-1.5 bg-transparent p-0"
                               >
-                                <IconCode />
-                                <span
-                                  class="flex-1 items-center justify-start truncate text-left"
+                                <TabsTrigger
+                                  v-for="tab in source"
+                                  :key="tab.id"
+                                  :value="tab.id"
+                                  class="hover:bg-secondary/50 size-full w-60 max-w-60 min-w-0 gap-2 border-0 px-3"
+                                  :class="{
+                                    'min-w-40 transition-all':
+                                      tab.id === activeTab,
+                                    'bg-secondary! shadow-none!':
+                                      tab.id === activeTab,
+                                  }"
+                                  @click="setActiveTab(tab.id)"
                                 >
-                                  {{ tab.label }}
-                                </span>
+                                  <IconCode />
+                                  <span
+                                    class="flex-1 items-center justify-start truncate text-left"
+                                  >
+                                    {{ tab.label }}
+                                  </span>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger as-child>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon-sm"
+                                          class="size-4 shrink-0"
+                                          @click.stop.prevent="closeTab(tab.id)"
+                                        >
+                                          <IconX class="size-3!" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {{ t("layouts.app.tabs.close") }}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </TabsTrigger>
+                              </TabsList>
+                              <div
+                                class="bg-background after:bg-border sticky right-0 z-30 flex shrink-0 items-center"
+                              >
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger as-child>
                                       <Button
                                         variant="ghost"
                                         size="icon-sm"
-                                        class="size-4 shrink-0"
-                                        @click.stop.prevent="closeTab(tab.id)"
+                                        @click="newTab()"
                                       >
-                                        <IconX class="size-3!" />
+                                        <IconPlus />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      {{ t("layouts.app.tabs.close") }}
+                                      {{ t("layouts.app.tabs.new") }}
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
-                              </TabsTrigger>
-                            </TabsList>
+                              </div>
+                            </div>
                             <div
-                              class="bg-background after:bg-border sticky right-0 z-30 flex shrink-0 items-center"
+                              class="flex shrink-0 items-center justify-end gap-2"
                             >
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger as-child>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      @click="newTab()"
-                                    >
-                                      <IconPlus />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {{ t("layouts.app.tabs.new") }}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <ButtonGroup>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <Button
+                                        variant="secondary"
+                                        size="icon-sm"
+                                        @click="
+                                          topPanel?.splitterPanel?.isCollapsed
+                                            ? topPanel?.splitterPanel?.expand()
+                                            : topPanel?.splitterPanel?.collapse()
+                                        "
+                                      >
+                                        <IconMinimize
+                                          v-if="
+                                            topPanel?.splitterPanel?.isCollapsed
+                                          "
+                                        />
+                                        <IconMaximize v-else />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {{
+                                        topPanel?.splitterPanel?.isCollapsed
+                                          ? t("layouts.app.panel.minimize")
+                                          : t("layouts.app.panel.maximize")
+                                      }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <ButtonGroupSeparator />
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <Button
+                                        variant="secondary"
+                                        size="icon-sm"
+                                        @click="
+                                          bottomPanel?.splitterPanel?.collapse()
+                                        "
+                                      >
+                                        <IconX />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {{ t("layouts.app.panel.close") }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </ButtonGroup>
                             </div>
                           </div>
-                          <div
-                            class="flex shrink-0 items-center justify-end gap-2"
-                          >
-                            <ButtonGroup>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger as-child>
-                                    <Button
-                                      variant="secondary"
-                                      size="icon-sm"
-                                      @click="
-                                        topPanel?.splitterPanel?.isCollapsed
-                                          ? topPanel?.splitterPanel?.expand()
-                                          : topPanel?.splitterPanel?.collapse()
-                                      "
-                                    >
-                                      <IconMinimize
-                                        v-if="
-                                          topPanel?.splitterPanel?.isCollapsed
-                                        "
-                                      />
-                                      <IconMaximize v-else />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {{
-                                      topPanel?.splitterPanel?.isCollapsed
-                                        ? t("layouts.app.panel.minimize")
-                                        : t("layouts.app.panel.maximize")
-                                    }}
-                                  </TooltipContent>
-                                </Tooltip>
-                                <ButtonGroupSeparator />
-                                <Tooltip>
-                                  <TooltipTrigger as-child>
-                                    <Button
-                                      variant="secondary"
-                                      size="icon-sm"
-                                      @click="
-                                        bottomPanel?.splitterPanel?.collapse()
-                                      "
-                                    >
-                                      <IconX />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {{ t("layouts.app.panel.close") }}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </ButtonGroup>
-                          </div>
+                          <OverlayScrollbarsWrapper>
+                            <TabsContent
+                              v-for="tab in source"
+                              :key="tab.id"
+                              :value="tab.id"
+                              class="size-full"
+                            >
+                              <Terminal />
+                            </TabsContent>
+                            <Empty v-if="source.length === 0">
+                              <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                  <IconLayerFill
+                                    class="text-muted-foreground size-6"
+                                  />
+                                </EmptyMedia>
+                                <EmptyTitle>
+                                  {{ t("layouts.app.empty.console.title") }}
+                                </EmptyTitle>
+                                <EmptyDescription>
+                                  {{
+                                    t("layouts.app.empty.console.description")
+                                  }}
+                                </EmptyDescription>
+                              </EmptyHeader>
+                              <EmptyContent>
+                                <Button variant="outline" @click="newTab()">
+                                  {{ t("layouts.app.empty.console.action") }}
+                                </Button>
+                              </EmptyContent>
+                            </Empty>
+                          </OverlayScrollbarsWrapper>
                         </div>
-                        <OverlayScrollbarsWrapper>
-                          <TabsContent
-                            v-for="tab in source"
-                            :key="tab.id"
-                            :value="tab.id"
-                            class="size-full"
-                          >
-                            <Terminal />
-                          </TabsContent>
-                          <Empty v-if="source.length === 0">
-                            <EmptyHeader>
-                              <EmptyMedia variant="icon">
-                                <IconLayerFill
-                                  class="text-muted-foreground size-6"
-                                />
-                              </EmptyMedia>
-                              <EmptyTitle>
-                                {{ t("layouts.app.empty.console.title") }}
-                              </EmptyTitle>
-                              <EmptyDescription>
-                                {{ t("layouts.app.empty.console.description") }}
-                              </EmptyDescription>
-                            </EmptyHeader>
-                            <EmptyContent>
-                              <Button variant="outline" @click="newTab()">
-                                {{ t("layouts.app.empty.console.action") }}
-                              </Button>
-                            </EmptyContent>
-                          </Empty>
-                        </OverlayScrollbarsWrapper>
                       </div>
                     </Tabs>
                   </ResizablePanel>
@@ -605,7 +609,7 @@ const closeTab = (id: string) => {
                 }"
                 :inert="rightPanel?.splitterPanel?.isCollapsed"
               >
-                <div class="pl-2">
+                <div class="h-full pl-2">
                   <div
                     id="right-sidebar"
                     ref="rightSidebarEl"

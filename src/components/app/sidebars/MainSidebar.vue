@@ -33,7 +33,7 @@ const isFullscreen = useIsFullscreen()
         class="top-13 bottom-12 h-[calc(100vh-var(--spacing-13)-var(--spacing-12))] overflow-hidden rounded-r-2xl border"
       >
         <SidebarHeader
-          :class="{ 'mt-13': isTauri && isMobile && !isFullscreen }"
+          :class="{ 'mt-12': isTauri && isMobile && !isFullscreen }"
         >
           <SidebarMenu>
             <SidebarMenuItem>

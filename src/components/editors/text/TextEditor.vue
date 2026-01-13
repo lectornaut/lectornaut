@@ -1157,7 +1157,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
           <Checkbox id="readOnly" v-model="readOnly" />
           <Label for="readOnly" class="text-xs">Read-only</Label>
         </div>
-        <Button variant="ghost" size="icon" @click="copy(source)">
+        <Button variant="ghost" size="icon-sm" @click="copy(source)">
           <IconCopy v-if="!copied" />
           <IconCheck v-else />
         </Button>
