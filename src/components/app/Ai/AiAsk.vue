@@ -37,7 +37,7 @@ const userInput = ref("")
               id="tour-ai-assistant"
               variant="ghost"
               class="shadow-none"
-              :size="iconDisplay === 'text' ? 'default' : 'icon'"
+              :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
             >
               <IconAiFill />
               <template v-if="iconDisplay === 'text'"> Ask AI </template>

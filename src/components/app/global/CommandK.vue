@@ -36,7 +36,7 @@ const filteredShortcuts = computed(() =>
             <Button
               id="tour-search-bar"
               variant="ghost"
-              :size="iconDisplay === 'text' ? 'default' : 'icon'"
+              :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
             >
               <IconSearch />
               <template v-if="iconDisplay === 'text'">

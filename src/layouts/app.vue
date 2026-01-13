@@ -166,7 +166,7 @@ const closeTab = (id: string) => {
     <TeamSelector />
   </div>
   <SidebarProvider v-else>
-    <SidebarInset>
+    <SidebarInset class="bg-transparent">
       <Headerbar />
       <main class="flex grow gap-2 overflow-auto overscroll-none scroll-smooth">
         <MainSidebar />
@@ -210,7 +210,7 @@ const closeTab = (id: string) => {
             <Tooltip>
               <TooltipTrigger as-child>
                 <ResizableHandle
-                  class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 my-8 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                  class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-8 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                   @dblclick="
                     leftPanel?.splitterPanel?.isCollapsed
                       ? leftPanel?.splitterPanel?.expand()
@@ -266,7 +266,7 @@ const closeTab = (id: string) => {
                     :inert="topPanel?.splitterPanel?.isCollapsed"
                   >
                     <div
-                      class="flex grow flex-col overflow-hidden rounded-2xl border"
+                      class="bg-background/95 flex grow flex-col overflow-hidden rounded-2xl border backdrop-blur-lg"
                     >
                       <Tabbar />
                       <Separator />
@@ -276,7 +276,7 @@ const closeTab = (id: string) => {
                       >
                         <div
                           ref="subNavContainer"
-                          class="bg-sidebar sticky top-0 z-20 mx-2 flex items-center justify-between overflow-clip rounded-b-2xl border-x border-b p-1.5 shadow-xs"
+                          class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex items-center justify-between overflow-clip rounded-b-2xl border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
                         >
                           <SubNavigation />
                           <div
@@ -307,7 +307,7 @@ const closeTab = (id: string) => {
                   <div class="px-8">
                     <TooltipTrigger as-child>
                       <ResizableHandle
-                        class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-40 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                        class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-40 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                         @dblclick="
                           bottomPanel?.splitterPanel?.isCollapsed
                             ? bottomPanel?.splitterPanel?.expand()
@@ -558,7 +558,7 @@ const closeTab = (id: string) => {
             <Tooltip>
               <TooltipTrigger as-child>
                 <ResizableHandle
-                  class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-primary focus-visible:bg-primary z-50 my-8 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                  class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-8 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                   @dblclick="
                     rightPanel?.splitterPanel?.isCollapsed
                       ? rightPanel?.splitterPanel?.expand()

@@ -557,7 +557,10 @@ onUnmounted(() => {
             </div>
           </template>
         </nav>
-        <div class="flex shrink-0 grow items-stretch justify-between gap-2">
+        <div
+          data-tauri-drag-region
+          class="flex shrink-0 grow items-stretch justify-between gap-2"
+        >
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>

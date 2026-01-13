@@ -22,7 +22,7 @@ const isDocked = ref(false)
     <NavigationMenuList class="gap-2">
       <NavigationMenuItem>
         <NavigationMenuTrigger
-          class="bg-transparent px-3"
+          class="h-8 bg-transparent px-3"
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
           <IconInbox />
@@ -99,7 +99,7 @@ const isDocked = ref(false)
       </NavigationMenuItem>
       <NavigationMenuItem>
         <NavigationMenuTrigger
-          class="bg-transparent px-3"
+          class="h-8 bg-transparent px-3"
           :class="{ 'gap-2': iconDisplay === 'text' }"
         >
           <IconBell />
