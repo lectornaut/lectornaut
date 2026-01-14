@@ -705,134 +705,135 @@ const expandedCard = ref<number | null>(null)
         </TabsList>
       </div>
     </Teleport>
-    <TabsContent
-      value="overview"
-      class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2 lg:grid-cols-3"
-    >
-      <Card
-        v-for="card in dashboardData"
-        :key="card.id"
-        :class="[
-          'col-span-1 shadow-none',
-          expandedCard === card.id
-            ? 'md:col-span-2 lg:col-span-3'
-            : 'md:col-span-1 lg:col-span-1',
-        ]"
+    <TabsContent value="overview" class="@container">
+      <div
+        class="grid grid-cols-1 gap-2 p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
       >
-        <CardHeader class="relative">
-          <CardTitle>{{ card.title }}</CardTitle>
-          <CardDescription>{{ card.description }}</CardDescription>
-          <div class="absolute top-0 right-6 flex gap-2">
-            <ButtonGroup>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="outline"
-                      size="icon-sm"
-                      @click="
-                        expandedCard = expandedCard === card.id ? null : card.id
-                      "
-                    >
-                      <Component
-                        :is="
-                          expandedCard === card.id ? IconMinimize : IconMaximize
-                        "
-                      />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      expandedCard === card.id
-                        ? t("actions.collapse")
-                        : t("actions.expand")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <DropdownMenu>
+        <Card
+          v-for="card in dashboardData"
+          :key="card.id"
+          :class="[
+            'col-span-1 shadow-none',
+            { '@3xl:col-span-3 @5xl:col-span-4': expandedCard === card.id },
+          ]"
+        >
+          <CardHeader class="relative">
+            <CardTitle>{{ card.title }}</CardTitle>
+            <CardDescription>{{ card.description }}</CardDescription>
+            <div class="absolute top-0 right-6 flex gap-2">
+              <ButtonGroup>
+                <TooltipProvider>
+                  <Tooltip>
                     <TooltipTrigger as-child>
-                      <DropdownMenuTrigger as-child>
-                        <Button
-                          variant="outline"
-                          size="icon-sm"
-                          class="data-[state=open]:bg-accent"
-                        >
-                          <IconMoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        @click="
+                          expandedCard =
+                            expandedCard === card.id ? null : card.id
+                        "
+                      >
+                        <Component
+                          :is="
+                            expandedCard === card.id
+                              ? IconMinimize
+                              : IconMaximize
+                          "
+                        />
+                      </Button>
                     </TooltipTrigger>
-                    <TooltipContent>{{
-                      t("actions.moreOptions")
-                    }}</TooltipContent>
+                    <TooltipContent>
+                      {{
+                        expandedCard === card.id
+                          ? t("actions.collapse")
+                          : t("actions.expand")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <DropdownMenu>
+                      <TooltipTrigger as-child>
+                        <DropdownMenuTrigger as-child>
+                          <Button
+                            variant="outline"
+                            size="icon-sm"
+                            class="data-[state=open]:bg-accent"
+                          >
+                            <IconMoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>{{
+                        t("actions.moreOptions")
+                      }}</TooltipContent>
 
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <IconStar />
-                        <span>{{
-                          t("pages.home.dropdown.addToFavorites")
-                        }}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <IconLink />
-                        <span>{{ t("actions.copyLink") }}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <IconArrowUpRight />
-                        <span>{{ t("actions.openInNewTab") }}</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </Tooltip>
-              </TooltipProvider>
-            </ButtonGroup>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer :config="chartConfig" class="h-46 w-full">
-            <VisXYContainer :data="chartData">
-              <VisGroupedBar
-                :x="(d: Data) => d.date"
-                :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
-                :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
-                bar-padding="0.1"
-                group-padding="0.25"
-              />
-              <VisAxis
-                type="x"
-                :x="(d: Data) => d.date"
-                :tick-line="false"
-                :domain-line="false"
-                :grid-line="false"
-                :tick-format="
-                  (d: number) =>
-                    new Date(d).toLocaleDateString('en-US', {
-                      month: 'short',
-                    })
-                "
-                :tick-values="chartData.map((d) => d.date)"
-              />
-              <ChartTooltip />
-              <ChartCrosshair
-                :template="
-                  componentToString(chartConfig, ChartTooltipContent, {
-                    labelFormatter(d) {
-                      return new Date(d).toLocaleDateString('en-US', {
-                        month: 'long',
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <IconStar />
+                          <span>{{
+                            t("pages.home.dropdown.addToFavorites")
+                          }}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <IconLink />
+                          <span>{{ t("actions.copyLink") }}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <IconArrowUpRight />
+                          <span>{{ t("actions.openInNewTab") }}</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </Tooltip>
+                </TooltipProvider>
+              </ButtonGroup>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer :config="chartConfig" class="h-46 w-full">
+              <VisXYContainer :data="chartData">
+                <VisGroupedBar
+                  :x="(d: Data) => d.date"
+                  :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
+                  :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
+                  bar-padding="0.1"
+                  group-padding="0.25"
+                />
+                <VisAxis
+                  type="x"
+                  :x="(d: Data) => d.date"
+                  :tick-line="false"
+                  :domain-line="false"
+                  :grid-line="false"
+                  :tick-format="
+                    (d: number) =>
+                      new Date(d).toLocaleDateString('en-US', {
+                        month: 'short',
                       })
-                    },
-                  })
-                "
-                :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
-                bar-padding="0.1"
-                group-padding="0"
-              />
-            </VisXYContainer>
-            <ChartLegendContent />
-          </ChartContainer>
-        </CardContent>
-        <!-- <Separator /> -->
-        <!-- <CardFooter>
+                  "
+                  :tick-values="chartData.map((d) => d.date)"
+                />
+                <ChartTooltip />
+                <ChartCrosshair
+                  :template="
+                    componentToString(chartConfig, ChartTooltipContent, {
+                      labelFormatter(d) {
+                        return new Date(d).toLocaleDateString('en-US', {
+                          month: 'long',
+                        })
+                      },
+                    })
+                  "
+                  :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
+                  bar-padding="0.1"
+                  group-padding="0"
+                />
+              </VisXYContainer>
+              <ChartLegendContent />
+            </ChartContainer>
+          </CardContent>
+          <!-- <Separator /> -->
+          <!-- <CardFooter>
               <CardDescription>{{ card.description }}</CardDescription>
               <Button variant="outline" size="sm">
                 <IconRocket /> Ask AI
@@ -841,7 +842,8 @@ const expandedCard = ref<number | null>(null)
                 <IconArrowUpRight />
               </Button>
             </CardFooter> -->
-      </Card>
+        </Card>
+      </div>
     </TabsContent>
     <TabsContent value="usage"> </TabsContent>
   </Tabs>

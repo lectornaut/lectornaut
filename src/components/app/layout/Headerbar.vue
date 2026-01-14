@@ -13,11 +13,11 @@ const iconDisplay = ref<"icon" | "text">("icon")
   <ContextMenu>
     <ContextMenuTrigger as-child>
       <header
-        class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top relative z-40 w-full shrink-0 overflow-hidden"
+        class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top relative z-40 w-full shrink-0"
       >
         <div
           data-tauri-drag-region
-          class="flex w-full min-w-0 items-center justify-start gap-2 overflow-hidden p-2 transition-all"
+          class="flex w-full min-w-0 items-center justify-start gap-2 p-2 transition-all"
           :class="{ 'pl-22': isTauri && !isFullscreen }"
         >
           <SidebarTrigger v-if="isMobile" />

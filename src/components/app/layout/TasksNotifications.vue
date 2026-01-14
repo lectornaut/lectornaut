@@ -30,7 +30,7 @@ const isDocked = ref(false)
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="inbox">
-            <div class="w-96">
+            <div class="w-md">
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
@@ -107,7 +107,7 @@ const isDocked = ref(false)
         </NavigationMenuTrigger>
         <NavigationMenuContent class="p-0">
           <Tabs default-value="inbox">
-            <div class="w-96">
+            <div class="w-md">
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >

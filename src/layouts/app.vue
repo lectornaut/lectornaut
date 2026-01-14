@@ -168,10 +168,13 @@ const closeTab = (id: string) => {
   <SidebarProvider v-else>
     <SidebarInset class="bg-transparent">
       <Headerbar />
-      <main class="flex grow gap-2 overflow-auto overscroll-none scroll-smooth">
+      <main
+        class="flex min-w-0 grow gap-2 overflow-auto overscroll-none scroll-smooth"
+      >
         <MainSidebar />
         <div id="left-dock" class="flex max-w-80 shrink-0 empty:hidden"></div>
         <ResizablePanelGroup
+          class="min-w-0 overflow-clip!"
           direction="horizontal"
           auto-save-id="app-horizontal-layout"
         >
@@ -210,7 +213,7 @@ const closeTab = (id: string) => {
             <Tooltip>
               <TooltipTrigger as-child>
                 <ResizableHandle
-                  class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-8 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                  class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                   @dblclick="
                     leftPanel?.splitterPanel?.isCollapsed
                       ? leftPanel?.splitterPanel?.expand()
@@ -246,6 +249,7 @@ const closeTab = (id: string) => {
           </TooltipProvider>
           <ResizablePanel>
             <ResizablePanelGroup
+              class="min-w-0 overflow-clip!"
               direction="vertical"
               auto-save-id="app-vertical-layout"
             >
@@ -253,38 +257,42 @@ const closeTab = (id: string) => {
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
                     ref="topPanel"
-                    class="flex grow flex-col gap-2 overflow-auto overscroll-none scroll-smooth"
                     collapsible
                     :min-size="15"
                     :default-size="80"
                     :max-size="100"
                     :collapsed-size="0"
+                    as-child
                     :class="{
                       'pointer-events-none hidden':
                         topPanel?.splitterPanel?.isCollapsed,
                     }"
                     :inert="topPanel?.splitterPanel?.isCollapsed"
                   >
-                    <div
-                      class="bg-background/95 flex grow flex-col overflow-hidden rounded-2xl border backdrop-blur-lg"
-                    >
-                      <Tabbar />
-                      <Separator />
+                    <div class="flex min-h-0 flex-1 flex-col gap-2">
                       <div
-                        ref="subNavScrollContainer"
-                        class="relative flex grow flex-col overflow-auto overscroll-none scroll-smooth"
+                        class="bg-background/95 flex min-h-0 flex-1 flex-col rounded-2xl border backdrop-blur-lg"
                       >
-                        <div
-                          ref="subNavContainer"
-                          class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex items-center justify-between overflow-clip rounded-b-2xl border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
-                        >
-                          <SubNavigation />
-                          <div
-                            id="cta-dock"
-                            class="flex shrink-0 empty:hidden"
-                          ></div>
+                        <!-- Non-scrollable header -->
+                        <div class="flex shrink-0 flex-col">
+                          <Tabbar />
+                          <Separator />
                         </div>
-                        <RouterView />
+                        <!-- Scrollable content area - isolate scroll context -->
+                        <div
+                          class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [scrollbar-gutter:stable]"
+                        >
+                          <div
+                            class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b-2xl border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
+                          >
+                            <SubNavigation />
+                            <div
+                              id="cta-dock"
+                              class="flex shrink-0 empty:hidden"
+                            ></div>
+                          </div>
+                          <RouterView />
+                        </div>
                       </div>
                     </div>
                   </ResizablePanel>
@@ -304,48 +312,43 @@ const closeTab = (id: string) => {
               </ContextMenu>
               <TooltipProvider>
                 <Tooltip>
-                  <div class="px-8">
-                    <TooltipTrigger as-child>
-                      <ResizableHandle
-                        class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-40 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
-                        @dblclick="
-                          bottomPanel?.splitterPanel?.isCollapsed
-                            ? bottomPanel?.splitterPanel?.expand()
-                            : bottomPanel?.splitterPanel?.collapse()
-                        "
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" class="p-1!">
-                      <div class="flex flex-col gap-1">
-                        <div
-                          class="bg-accent/5 flex flex-col gap-2 rounded p-2"
-                        >
-                          <span class="flex items-center gap-2">
-                            <IconHand /> {{ t("tooltips.dragToResize") }}
-                          </span>
-                          <span class="flex items-center gap-2">
-                            <IconPointerClick />
-                            {{ t("tooltips.doubleClickToggle") }}
-                          </span>
-                        </div>
-                        <div
-                          class="bg-accent/5 flex flex-col gap-2 rounded p-2"
-                        >
-                          <span class="flex items-center gap-2">
-                            <IconArrowUp /> {{ t("tooltips.upArrowExpand") }}
-                          </span>
-                          <span class="flex items-center gap-2">
-                            <IconArrowDown />
-                            {{ t("tooltips.downArrowCollapse") }}
-                          </span>
-                          <span class="flex items-center gap-2">
-                            <IconArrowBigUp />
-                            {{ t("tooltips.shiftLargeSteps") }}
-                          </span>
-                        </div>
+                  <TooltipTrigger as-child>
+                    <ResizableHandle
+                      class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 mx-13.5 w-auto! bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                      :with-handle="topPanel?.splitterPanel?.isCollapsed"
+                      @dblclick="
+                        bottomPanel?.splitterPanel?.isCollapsed
+                          ? bottomPanel?.splitterPanel?.expand()
+                          : bottomPanel?.splitterPanel?.collapse()
+                      "
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" class="p-1!">
+                    <div class="flex flex-col gap-1">
+                      <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                        <span class="flex items-center gap-2">
+                          <IconHand /> {{ t("tooltips.dragToResize") }}
+                        </span>
+                        <span class="flex items-center gap-2">
+                          <IconPointerClick />
+                          {{ t("tooltips.doubleClickToggle") }}
+                        </span>
                       </div>
-                    </TooltipContent>
-                  </div>
+                      <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                        <span class="flex items-center gap-2">
+                          <IconArrowUp /> {{ t("tooltips.upArrowExpand") }}
+                        </span>
+                        <span class="flex items-center gap-2">
+                          <IconArrowDown />
+                          {{ t("tooltips.downArrowCollapse") }}
+                        </span>
+                        <span class="flex items-center gap-2">
+                          <IconArrowBigUp />
+                          {{ t("tooltips.shiftLargeSteps") }}
+                        </span>
+                      </div>
+                    </div>
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <ContextMenu>
@@ -558,7 +561,7 @@ const closeTab = (id: string) => {
             <Tooltip>
               <TooltipTrigger as-child>
                 <ResizableHandle
-                  class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-8 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                  class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                   @dblclick="
                     rightPanel?.splitterPanel?.isCollapsed
                       ? rightPanel?.splitterPanel?.expand()
