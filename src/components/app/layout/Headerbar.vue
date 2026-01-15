@@ -1,10 +1,18 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { emitter } from "@/modules/mitt"
 
 const { t } = useI18n()
 const { isMobile } = useSidebar()
 const isFullscreen = useIsFullscreen()
+
+watch(isMobile, (val) => {
+  if (val) {
+    emitter.emit("Sidebar.Left.Collapse")
+    emitter.emit("Sidebar.Right.Collapse")
+  }
+})
 
 const iconDisplay = ref<"icon" | "text">("icon")
 </script>

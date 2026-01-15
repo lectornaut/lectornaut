@@ -64,10 +64,22 @@ emitter.on("Sidebar.Left.Toggle", () => {
   }
 })
 
+emitter.on("Sidebar.Left.Collapse", () => {
+  if (!leftPanel.value?.splitterPanel?.isCollapsed) {
+    leftPanel.value?.splitterPanel?.collapse()
+  }
+})
+
 emitter.on("Sidebar.Right.Toggle", () => {
   if (rightPanel.value?.splitterPanel?.isCollapsed) {
     rightPanel.value?.splitterPanel?.expand()
   } else {
+    rightPanel.value?.splitterPanel?.collapse()
+  }
+})
+
+emitter.on("Sidebar.Right.Collapse", () => {
+  if (!rightPanel.value?.splitterPanel?.isCollapsed) {
     rightPanel.value?.splitterPanel?.collapse()
   }
 })

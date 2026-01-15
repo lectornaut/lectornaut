@@ -249,6 +249,39 @@ export const defaultRoutes = [
   ...defaultMenu.map((item) => item.url),
 ]
 
+export const defaultCreateMenu = [
+  {
+    title: "New Document",
+    action: "/new/document",
+    id: "new-document",
+    icon: IconFileText,
+  },
+  {
+    title: "New Agent",
+    action: "/new/agent",
+    id: "new-agent",
+    icon: IconBot,
+  },
+  {
+    title: "New Task",
+    action: "/new/task",
+    id: "new-task",
+    icon: IconBadgeCheck,
+  },
+  {
+    title: "New Run",
+    action: "/new/run",
+    id: "new-run",
+    icon: IconActivity,
+  },
+  {
+    title: "New Team",
+    action: "/new/team",
+    id: "new-team",
+    icon: IconUsersRound,
+  },
+]
+
 export const productsMenu = [
   {
     title: "Lectornaut",

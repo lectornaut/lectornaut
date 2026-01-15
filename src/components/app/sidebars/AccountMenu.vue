@@ -2,7 +2,7 @@
 import { useKeychain } from "@/composables/useKeychain"
 import {
   IconArrowRight,
-  IconChevronDown,
+  IconChevronsUpDown,
   IconCirclePlus,
   IconCircleUser,
   IconLogOut,
@@ -65,9 +65,9 @@ const handleSwitchAccount = async (uid: string) => {
                     {{ user?.email }}
                   </span>
                 </div>
-                <div class="flex items-center">
-                  <IconChevronDown />
-                </div>
+                <SidebarMenuBadge>
+                  <IconChevronsUpDown />
+                </SidebarMenuBadge>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-48" align="end" side="right">

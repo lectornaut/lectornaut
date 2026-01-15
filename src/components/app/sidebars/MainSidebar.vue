@@ -33,13 +33,9 @@ const isFullscreen = useIsFullscreen()
         class="inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-2xl border-y border-r"
       >
         <SidebarHeader
-          :class="{ 'mt-10': isTauri && isMobile && !isFullscreen }"
+          :class="{ 'mt-12': isTauri && isMobile && !isFullscreen }"
         >
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <TeamSwitcher />
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <TeamSwitcher />
         </SidebarHeader>
         <Separator />
         <SidebarContent>
@@ -74,6 +70,7 @@ const isFullscreen = useIsFullscreen()
           <Separator />
           <Support />
           <SettingsMenu />
+          <CreateMenu />
           <AccountMenu />
         </SidebarFooter>
         <SidebarRail class="my-13.5" />

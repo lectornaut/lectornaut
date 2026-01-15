@@ -73,7 +73,7 @@ const filteredShortcuts = computed(() => {
   <Sheet v-model:open="openShortcuts">
     <SheetContent
       class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
-      :class="{ 'mt-13': isTauri && !isFullscreen }"
+      :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader class="gap-4">
         <SheetTitle>{{ t("components.global.shortcuts.title") }}</SheetTitle>

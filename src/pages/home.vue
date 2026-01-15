@@ -714,7 +714,9 @@ const expandedCard = ref<number | null>(null)
           :key="card.id"
           :class="[
             'col-span-1 shadow-none',
-            { '@3xl:col-span-3 @5xl:col-span-4': expandedCard === card.id },
+            {
+              '@xl:col-span-2 @6xl:col-span-2': expandedCard === card.id,
+            },
           ]"
         >
           <CardHeader class="relative">

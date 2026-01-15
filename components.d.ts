@@ -115,6 +115,7 @@ declare module 'vue' {
     ContextMenuSubContent: typeof import('./src/components/ui/context-menu/ContextMenuSubContent.vue')['default']
     ContextMenuSubTrigger: typeof import('./src/components/ui/context-menu/ContextMenuSubTrigger.vue')['default']
     ContextMenuTrigger: typeof import('./src/components/ui/context-menu/ContextMenuTrigger.vue')['default']
+    CreateMenu: typeof import('./src/components/app/layout/CreateMenu.vue')['default']
     CTA: typeof import('./src/components/landing/CTA.vue')['default']
     DataTable: typeof import('./src/components/table/DataTable.vue')['default']
     DataTableColumnHeader: typeof import('./src/components/table/DataTableColumnHeader.vue')['default']

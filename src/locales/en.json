@@ -1500,5 +1500,8 @@
         "iconsAndText": "Icons and text"
       }
     }
+  },
+  "mainSidebar": {
+    "createNew": "Create new"
   }
 }
