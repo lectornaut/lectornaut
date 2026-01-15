@@ -101,7 +101,7 @@ useHead({
     <template v-else>
       <div class="flex flex-col items-center justify-center p-2">
         <div
-          class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] bg-fixed"
+          class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
         ></div>
         <div class="bg-background mx-auto -mt-10 rounded-full border p-1">
           <div v-if="user">

@@ -30,10 +30,10 @@ const isFullscreen = useIsFullscreen()
     <ContextMenuTrigger>
       <Sidebar
         collapsible="icon"
-        class="inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-hidden rounded-r-2xl border-y border-r"
+        class="inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-2xl border-y border-r"
       >
         <SidebarHeader
-          :class="{ 'mt-12': isTauri && isMobile && !isFullscreen }"
+          :class="{ 'mt-10': isTauri && isMobile && !isFullscreen }"
         >
           <SidebarMenu>
             <SidebarMenuItem>
@@ -76,7 +76,7 @@ const isFullscreen = useIsFullscreen()
           <SettingsMenu />
           <AccountMenu />
         </SidebarFooter>
-        <SidebarRail />
+        <SidebarRail class="my-13.5" />
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent align="start" side="bottom">

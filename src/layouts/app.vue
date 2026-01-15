@@ -157,7 +157,15 @@ const closeTab = (id: string) => {
     v-if="isLoading"
     class="bg-secondary flex size-full flex-1 items-center justify-center"
   >
-    <Spinner />
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia>
+          <Spinner />
+        </EmptyMedia>
+        <EmptyDescription> Loading your workspace... </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent> </EmptyContent>
+    </Empty>
   </div>
   <div
     v-else-if="!currentTeam"
@@ -166,7 +174,7 @@ const closeTab = (id: string) => {
     <TeamSelector />
   </div>
   <SidebarProvider v-else>
-    <SidebarInset class="bg-transparent">
+    <SidebarInset class="bg-secondary">
       <Headerbar />
       <main
         class="flex min-w-0 grow gap-2 overflow-auto overscroll-none scroll-smooth"
@@ -271,7 +279,7 @@ const closeTab = (id: string) => {
                   >
                     <div class="flex min-h-0 flex-1 flex-col gap-2">
                       <div
-                        class="bg-background/95 flex min-h-0 flex-1 flex-col rounded-2xl border backdrop-blur-lg"
+                        class="bg-background flex min-h-0 flex-1 flex-col rounded-2xl border"
                       >
                         <!-- Non-scrollable header -->
                         <div class="flex shrink-0 flex-col">
@@ -374,14 +382,14 @@ const closeTab = (id: string) => {
                           class="bg-background flex h-full flex-col overflow-hidden overscroll-none rounded-2xl border"
                         >
                           <div
-                            class="flex items-stretch gap-1.5 p-1.5 transition-all"
+                            class="flex items-stretch gap-2 p-2 transition-all"
                           >
                             <div
-                              class="relative flex min-w-0 flex-1 items-stretch justify-start gap-1.5"
+                              class="relative flex min-w-0 flex-1 items-stretch justify-start gap-2"
                             >
                               <TabsList
                                 v-if="source.length > 0"
-                                class="flex h-full min-w-0 items-stretch gap-1.5 bg-transparent p-0"
+                                class="flex h-full min-w-0 items-stretch gap-2 bg-transparent p-0"
                               >
                                 <TabsTrigger
                                   v-for="tab in source"
@@ -663,7 +671,7 @@ const closeTab = (id: string) => {
                           height: `${observedSize.height}px`,
                         }
                   "
-                  class="bg-sidebar-accent pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded-md border will-change-transform"
+                  class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded-md border will-change-transform"
                   :class="
                     isPoppedOutMinimized
                       ? 'border-foreground shadow-md ring-1'
@@ -672,15 +680,15 @@ const closeTab = (id: string) => {
                 >
                   <div
                     ref="draggableHandleEl"
-                    class="flex cursor-move items-center justify-between p-1.5"
+                    class="flex cursor-move items-center justify-between p-2"
                     :class="
-                      isPoppedOutMinimized ? 'bg-sidebar' : 'bg-sidebar-accent'
+                      isPoppedOutMinimized ? 'bg-sidebar' : 'bg-secondary'
                     "
                     @dblclick="isPoppedOutMinimized = !isPoppedOutMinimized"
                   >
-                    <span class="ml-1 font-medium">{{
-                      t("layouts.app.popout.title")
-                    }}</span>
+                    <span class="ml-1 font-medium">
+                      {{ t("layouts.app.popout.title") }}
+                    </span>
                     <ButtonGroup>
                       <TooltipProvider>
                         <Tooltip>
@@ -723,8 +731,14 @@ const closeTab = (id: string) => {
                   </div>
                   <div
                     v-if="!isPoppedOutMinimized"
-                    class="bg-background mx-1.5 mb-1.5 grow rounded border p-2"
-                  ></div>
+                    class="bg-background mx-2 mb-2 grow rounded border p-2"
+                  >
+                    <div
+                      class="size-full bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+                    >
+                      Sample Content
+                    </div>
+                  </div>
                 </Draggable>
               </ContextMenuTrigger>
               <ContextMenuContent align="start" side="bottom">

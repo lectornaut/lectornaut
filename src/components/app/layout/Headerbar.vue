@@ -20,7 +20,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
           class="flex w-full min-w-0 items-center justify-start gap-2 p-2 transition-all"
           :class="{ 'pl-22': isTauri && !isFullscreen }"
         >
-          <SidebarTrigger v-if="isMobile" />
+          <SidebarTrigger v-if="isMobile" class="size-8" />
           <Logo class="size-8 shrink-0 p-2" />
           <Separator orientation="vertical" class="max-h-4 min-h-4" />
           <TasksNotifications :icon-display="iconDisplay" />

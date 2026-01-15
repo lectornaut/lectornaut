@@ -43,12 +43,11 @@ const userInput = ref("")
               <template v-if="iconDisplay === 'text'"> Ask AI </template>
             </Button>
           </TooltipTrigger>
-          <TooltipContent class="flex items-center gap-2 pr-2">
-            Ask AI
+          <TooltipContent class="flex items-center gap-2 px-2">
             <Badge variant="secondary" @click="isDocked = !isDocked">
               <IconPin v-if="!isDocked" />
               <IconPinOff v-else />
-              {{ isDocked ? "Unpin" : "Pin" }}
+              Ask AI
             </Badge>
             <KbdGroup>
               <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
