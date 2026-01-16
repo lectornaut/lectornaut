@@ -1,3 +1,8 @@
+/*
+  Core imports and Tailwind plugin configuration
+  - Keep imports and plugin declarations at the top so Tailwind can
+    process layers and utilities correctly.
+*/
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@/styles/theme.css";
@@ -5,6 +10,11 @@
 @plugin "@tailwindcss/forms";
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
+/*
+  Base layer
+  - Global resets, body defaults, accessibility-aware tweaks,
+    and small utility styles that form the base of the app.
+*/
 @layer base {
   * {
     @apply border-border/75 outline-ring/50;
@@ -16,6 +26,9 @@
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
+    font-variation-settings: "GRAD" var(--grade-axis);
+
+    --grade-axis: 0;
 
     @apply selection:bg-primary;
     @apply selection:text-primary-foreground;
@@ -36,6 +49,37 @@
     @apply text-sm;
   }
 
+  @media (prefers-contrast: more) {
+    body {
+      --grade-axis: 700;
+    }
+  }
+
+  @media (prefers-contrast: less) {
+    body {
+      --grade-axis: -50;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      --grade-axis: -50;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+    body {
+      --grade-axis: 150;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) and (prefers-contrast: less) {
+    body {
+      --grade-axis: -150;
+    }
+  }
+
+  /* Global custom properties used across the app and component libraries */
   :root {
     @apply overflow-auto;
     @apply overscroll-none;
@@ -96,6 +140,11 @@
   } */
 }
 
+/*
+  Theme token mappings
+  - Map internal CSS variables to higher-level theme tokens used by
+    components and runtime theming systems.
+*/
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -176,6 +225,11 @@
   }
 }
 
+/*
+  Component layer
+  - Component-specific utilities and overrides (nprogress, scrollbar helpers,
+    etc.). Keep component styling in this layer so Tailwind can scope it.
+*/
 @layer components {
   #nprogress {
     @apply pointer-events-none;
@@ -218,6 +272,9 @@
   }
 }
 
+/* Driver.js popover theme
+  - Styling overrides for driver.js popovers used in guided tours.
+*/
 .driver-popover.driverjs-theme {
   @apply bg-background;
   @apply text-foreground;
@@ -309,6 +366,9 @@
   @apply border-b-background;
 }
 
+/* Small transition helpers
+  - Reusable fade transitions for simple enter/leave animations.
+*/
 .fade-enter-active,
 .fade-leave-active {
   @apply transition-opacity;
