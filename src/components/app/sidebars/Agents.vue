@@ -15,7 +15,7 @@ const userInput = ref("")
 </script>
 
 <template>
-  <SidebarMenu id="tour-team-members">
+  <SidebarMenu id="tour-team-members" data-tauri-drag-region>
     <SidebarMenuItem>
       <SidebarMenuButton tooltip="New Agent">
         <IconCirclePlus />

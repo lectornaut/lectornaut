@@ -33,13 +33,14 @@ const isFullscreen = useIsFullscreen()
         class="inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-2xl border-y border-r"
       >
         <SidebarHeader
+          data-tauri-drag-region
           :class="{ 'mt-12': isTauri && isMobile && !isFullscreen }"
         >
           <TeamSwitcher />
         </SidebarHeader>
         <Separator />
         <SidebarContent>
-          <OverlayScrollbarsWrapper>
+          <OverlayScrollbarsWrapper data-tauri-drag-region>
             <Navigation />
           </OverlayScrollbarsWrapper>
         </SidebarContent>
@@ -65,7 +66,7 @@ const isFullscreen = useIsFullscreen()
           </SidebarMenu>
         </SidebarFooter>
         <Separator />
-        <SidebarFooter>
+        <SidebarFooter data-tauri-drag-region>
           <Agents />
           <Separator />
           <Support />

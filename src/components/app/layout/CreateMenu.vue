@@ -34,7 +34,7 @@ const { t } = useI18n()
             :key="item.id"
             @click="item.action"
           >
-            <Component :is="item.icon" />
+            <Component :is="item.icon" :class="item.style.text" />
             {{ item.title }}
           </DropdownMenuItem>
         </DropdownMenuContent>

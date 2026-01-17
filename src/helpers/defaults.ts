@@ -255,30 +255,50 @@ export const defaultCreateMenu = [
     action: "/new/document",
     id: "new-document",
     icon: IconFileText,
+    style: {
+      text: "text-teal-700/90 dark:text-teal-300/90",
+      bg: "bg-teal-50 dark:bg-teal-950/40",
+    },
   },
   {
     title: "New Agent",
     action: "/new/agent",
     id: "new-agent",
     icon: IconBot,
+    style: {
+      text: "text-orange-700/90 dark:text-orange-300/90",
+      bg: "bg-orange-50 dark:bg-orange-950/40",
+    },
   },
   {
     title: "New Task",
     action: "/new/task",
     id: "new-task",
     icon: IconBadgeCheck,
+    style: {
+      text: "text-green-700/90 dark:text-green-300/90",
+      bg: "bg-green-50 dark:bg-green-950/40",
+    },
   },
   {
     title: "New Run",
     action: "/new/run",
     id: "new-run",
     icon: IconActivity,
+    style: {
+      text: "text-blue-700/90 dark:text-blue-300/90",
+      bg: "bg-blue-50 dark:bg-blue-950/40",
+    },
   },
   {
     title: "New Team",
     action: "/new/team",
     id: "new-team",
     icon: IconUsersRound,
+    style: {
+      text: "text-indigo-700/90 dark:text-indigo-300/90",
+      bg: "bg-indigo-50 dark:bg-indigo-950/40",
+    },
   },
 ]
 

@@ -135,7 +135,7 @@
   "devDependencies": {
     "@eslint/css": "^0.14.1",
     "@eslint/js": "^9.39.2",
-    "@iconify/json": "^2.2.428",
+    "@iconify/json": "^2.2.429",
     "@intlify/eslint-plugin-vue-i18n": "^4.1.1",
     "@intlify/unplugin-vue-i18n": "^11.0.3",
     "@tailwindcss/forms": "^0.5.11",
@@ -149,7 +149,7 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
-    "eslint-plugin-vue": "^10.6.2",
+    "eslint-plugin-vue": "^10.7.0",
     "globals": "^17.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",

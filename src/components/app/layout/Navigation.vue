@@ -22,9 +22,9 @@ useSortable(el, activeNavItems, {
 </script>
 
 <template>
-  <SidebarGroup>
+  <SidebarGroup data-tauri-drag-region>
     <SidebarGroupContent id="tour-primary-navigation">
-      <SidebarMenu ref="el">
+      <SidebarMenu ref="el" data-tauri-drag-region>
         <template v-if="isLoading">
           <SidebarMenuItem v-for="n in 5" :key="n">
             <SidebarMenuSkeleton />

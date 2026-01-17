@@ -378,3 +378,8 @@
 .fade-leave-to {
   @apply opacity-0;
 }
+
+/* [data-tauri-drag-region] {
+  @apply border;
+  @apply border-red-400;
+} */

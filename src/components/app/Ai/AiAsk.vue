@@ -96,7 +96,7 @@ const userInput = ref("")
                 <InputGroupText class="ml-auto text-xs">
                   52% used
                 </InputGroupText>
-                <!-- <Separator orientation="vertical" /> -->
+                <Separator orientation="vertical" />
                 <InputGroupButton
                   variant="default"
                   size="icon-xs"

@@ -91,62 +91,58 @@ const filteredShortcuts = computed(() => {
       </SheetHeader>
       <Separator />
       <OverlayScrollbarsWrapper>
-        <div
-          class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
+        <Accordion
+          collapsible
+          type="multiple"
+          :default-value="filteredShortcuts.map((category) => category.id)"
+          class="px-4"
         >
-          <Accordion
-            collapsible
-            type="multiple"
-            :default-value="filteredShortcuts.map((category) => category.id)"
-            class="px-4"
+          <AccordionItem
+            v-for="category in filteredShortcuts"
+            :key="category.id"
+            :value="category.id"
           >
-            <AccordionItem
-              v-for="category in filteredShortcuts"
-              :key="category.id"
-              :value="category.id"
-            >
-              <AccordionTrigger>
-                {{ category.title }}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div
-                  v-for="(shortcut, shortcutIndex) in category.shortcuts"
-                  :key="shortcutIndex"
-                  class="flex items-center justify-between py-2"
-                >
-                  <div class="text-muted-foreground flex items-center gap-2">
-                    <template
-                      v-for="(step, stepIndex) in shortcut.description"
-                      :key="stepIndex"
-                    >
-                      <span>
-                        {{ step }}
-                      </span>
-                      <span v-if="stepIndex < shortcut.description.length - 1">
-                        <IconChevronRight />
-                      </span>
-                    </template>
-                  </div>
-                  <div>
-                    <KbdGroup
-                      v-for="keys in shortcut.keys"
-                      :key="keys.toString()"
-                    >
-                      <Kbd v-for="key in keys" :key="key">
-                        {{ key }}
-                      </Kbd>
-                    </KbdGroup>
-                  </div>
+            <AccordionTrigger>
+              {{ category.title }}
+            </AccordionTrigger>
+            <AccordionContent>
+              <div
+                v-for="(shortcut, shortcutIndex) in category.shortcuts"
+                :key="shortcutIndex"
+                class="flex items-center justify-between py-2"
+              >
+                <div class="text-muted-foreground flex items-center gap-2">
+                  <template
+                    v-for="(step, stepIndex) in shortcut.description"
+                    :key="stepIndex"
+                  >
+                    <span>
+                      {{ step }}
+                    </span>
+                    <span v-if="stepIndex < shortcut.description.length - 1">
+                      <IconChevronRight />
+                    </span>
+                  </template>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-            <div v-if="filteredShortcuts.length === 0">
-              <p class="text-muted-foreground p-4 text-center">
-                {{ t("components.global.shortcuts.noShortcuts") }}
-              </p>
-            </div>
-          </Accordion>
-        </div>
+                <div>
+                  <KbdGroup
+                    v-for="keys in shortcut.keys"
+                    :key="keys.toString()"
+                  >
+                    <Kbd v-for="key in keys" :key="key">
+                      {{ key }}
+                    </Kbd>
+                  </KbdGroup>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <div v-if="filteredShortcuts.length === 0">
+            <p class="text-muted-foreground p-4 text-center">
+              {{ t("components.global.shortcuts.noShortcuts") }}
+            </p>
+          </div>
+        </Accordion>
       </OverlayScrollbarsWrapper>
       <Separator />
       <SheetFooter>

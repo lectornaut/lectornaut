@@ -781,8 +781,8 @@ const closeTab = (id: string) => {
             class="pb-safe-bottom relative z-20 m-2 grid shrink-0 grid-cols-3 gap-2"
           >
             <div
-              class="flex items-center justify-start gap-2"
               data-tauri-drag-region
+              class="flex items-center justify-start gap-2"
             >
               <TooltipProvider>
                 <Tooltip>
@@ -839,12 +839,12 @@ const closeTab = (id: string) => {
               </TooltipProvider>
             </div>
             <div
-              class="flex items-center justify-center gap-2"
               data-tauri-drag-region
+              class="flex items-center justify-center gap-2"
             ></div>
             <div
-              class="flex items-center justify-end gap-2"
               data-tauri-drag-region
+              class="flex items-center justify-end gap-2"
             >
               <TooltipProvider>
                 <Tooltip>
