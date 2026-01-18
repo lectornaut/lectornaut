@@ -8,6 +8,14 @@
  * - Debounced persistence to Firestore
  */
 
+import type {
+  AccentId,
+  BaseId,
+  FontId,
+  LanguageId,
+  SizeId,
+  ThemeId,
+} from "@/helpers/defaults"
 import {
   defaultAccent,
   defaultBase,
@@ -36,7 +44,7 @@ export type Tab = {
 
 export type NavItem = (typeof defaultMenu)[number]
 
-export type ThemeMode = "light" | "dark" | "auto"
+export type ThemeMode = ThemeId
 
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
@@ -50,11 +58,11 @@ export const useLayoutStore = defineStore("layout", () => {
 
   // Pre-load from localStorage to avoid flash
   const mode = useStorage<ThemeMode>("theme", "auto")
-  const base = useStorage("base", defaultBase)
-  const accent = useStorage("accent", defaultAccent)
-  const font = useStorage("font", defaultFont)
-  const size = useStorage("size", defaultSize)
-  const language = useStorage("language", defaultLanguage)
+  const base = useStorage<BaseId>("base", defaultBase)
+  const accent = useStorage<AccentId>("accent", defaultAccent)
+  const font = useStorage<FontId>("font", defaultFont)
+  const size = useStorage<SizeId>("size", defaultSize)
+  const language = useStorage<LanguageId>("language", defaultLanguage)
 
   const tabs = ref<Tab[]>([])
   const activeTabId = ref("")

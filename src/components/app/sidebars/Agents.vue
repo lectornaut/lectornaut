@@ -6,9 +6,9 @@ import Avatar from "vue-boring-avatars"
 const isFullscreen = useIsFullscreen()
 
 const agents = [
-  { id: 1, name: "Alice" },
-  { id: 2, name: "Bob" },
-  { id: 3, name: "Charlie" },
+  { id: 1, name: "Alpha" },
+  { id: 2, name: "Beta" },
+  { id: 3, name: "Gamma" },
 ]
 
 const userInput = ref("")
@@ -28,7 +28,7 @@ const userInput = ref("")
           <SidebarMenuButton :tooltip="agent.name">
             <Avatar
               variant="beam"
-              :name="`Agent ${agent.id}`"
+              :name="agent.name"
               :colors="[
                 'var(--chart-1)',
                 'var(--chart-2)',

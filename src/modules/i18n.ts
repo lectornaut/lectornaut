@@ -1,3 +1,4 @@
+import type { LanguageId } from "@/helpers/defaults"
 import { defaultLanguage } from "@/helpers/defaults"
 import { useLayoutStore } from "@/stores/layoutStore"
 import messages from "@intlify/unplugin-vue-i18n/messages"
@@ -34,7 +35,7 @@ export const initLanguage = () => {
       typeof newLang === "string" &&
       themeSettings.value.language !== newLang
     ) {
-      themeSettings.value.language = newLang
+      themeSettings.value.language = newLang as LanguageId
     }
   })
 }

@@ -1,4 +1,11 @@
 import { isTauri } from "@/composables/usePlatform"
+import type {
+  AccentId,
+  BaseId,
+  FontId,
+  SizeId,
+  ThemeId,
+} from "@/helpers/defaults"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { setTheme } from "@tauri-apps/api/app"
 import { storeToRefs } from "pinia"
@@ -26,7 +33,7 @@ export const initTheme = () => {
 
   watch(store, (val) => {
     if (val && val !== themeSettings.value.mode) {
-      themeSettings.value.mode = val
+      themeSettings.value.mode = val as ThemeId
     }
   })
 
@@ -82,7 +89,7 @@ export const accent = computed({
     const s = useLayoutStore()
     return s.themeSettings.accent
   },
-  set: (val: string) => {
+  set: (val: AccentId) => {
     const s = useLayoutStore()
     s.themeSettings.accent = val
   },
@@ -93,7 +100,7 @@ export const base = computed({
     const s = useLayoutStore()
     return s.themeSettings.base
   },
-  set: (val: string) => {
+  set: (val: BaseId) => {
     const s = useLayoutStore()
     s.themeSettings.base = val
   },
@@ -104,7 +111,7 @@ export const font = computed({
     const s = useLayoutStore()
     return s.themeSettings.font
   },
-  set: (val: string) => {
+  set: (val: FontId) => {
     const s = useLayoutStore()
     s.themeSettings.font = val
   },
@@ -115,7 +122,7 @@ export const size = computed({
     const s = useLayoutStore()
     return s.themeSettings.size
   },
-  set: (val: string) => {
+  set: (val: SizeId) => {
     const s = useLayoutStore()
     s.themeSettings.size = val
   },

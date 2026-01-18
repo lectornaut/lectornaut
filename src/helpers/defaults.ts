@@ -38,9 +38,10 @@ export const languages = [
     name: "Japanese",
     icon: IconJapan,
   },
-]
+] as const
 
-export const defaultLanguage = "en-US"
+export type LanguageId = (typeof languages)[number]["id"]
+export const defaultLanguage: LanguageId = "en-US"
 
 export const themes = [
   {
@@ -58,9 +59,10 @@ export const themes = [
     name: "Auto",
     icon: IconSunMoon,
   },
-]
+] as const
 
-export const defaultTheme = "auto"
+export type ThemeId = (typeof themes)[number]["id"]
+export const defaultTheme: ThemeId = "auto"
 
 export const accents = [
   { id: "red", name: "Red", style: "text-red-500" },
@@ -80,7 +82,9 @@ export const accents = [
   { id: "fuchsia", name: "Fuchsia", style: "text-fuchsia-500" },
   { id: "pink", name: "Pink", style: "text-pink-500" },
   { id: "rose", name: "Rose", style: "text-rose-500" },
-]
+] as const
+
+export type AccentId = (typeof accents)[number]["id"]
 
 export const bases = [
   { id: "slate", name: "Slate", style: "text-slate-500" },
@@ -89,18 +93,22 @@ export const bases = [
   { id: "neutral", name: "Neutral", style: "text-neutral-500" },
   { id: "stone", name: "Stone", style: "text-stone-500" },
   { id: "accent", name: "Accent", style: "text-primary" },
-]
+] as const
 
-export const defaultBase = "neutral"
-export const defaultAccent = "orange"
+export type BaseId = (typeof bases)[number]["id"]
+
+export const defaultBase: BaseId = "neutral"
+export const defaultAccent: AccentId = "orange"
 
 export const fonts = [
   { id: "sans", name: "Sans", icon: IconFontSans, style: "font-sans" },
   { id: "serif", name: "Serif", icon: IconFontSansSerif, style: "font-serif" },
   { id: "mono", name: "Mono", icon: IconFontMono, style: "font-mono" },
-]
+] as const
 
-export const defaultFont = "sans"
+export type FontId = (typeof fonts)[number]["id"]
+
+export const defaultFont: FontId = "sans"
 
 export const sizes = [
   {
@@ -123,9 +131,11 @@ export const sizes = [
     icon: IconMdiFormatTextVariant,
     style: "text-xl",
   },
-]
+] as const
 
-export const defaultSize = "base"
+export type SizeId = (typeof sizes)[number]["id"]
+
+export const defaultSize: SizeId = "base"
 
 export const defaultMenu = [
   {
@@ -240,14 +250,14 @@ export const defaultMenu = [
     },
     shortcut: "⌘P",
   },
-]
+] as const
 
 export const defaultRoutes = [
   "/new",
   "/start",
   "/welcome",
   ...defaultMenu.map((item) => item.url),
-]
+] as const
 
 export const defaultCreateMenu = [
   {
@@ -300,7 +310,7 @@ export const defaultCreateMenu = [
       bg: "bg-indigo-50 dark:bg-indigo-950/40",
     },
   },
-]
+] as const
 
 export const productsMenu = [
   {
@@ -351,7 +361,7 @@ export const productsMenu = [
       grid: "",
     },
   },
-]
+] as const
 
 export const solutionsMenu = [
   {
@@ -474,7 +484,7 @@ export const solutionsMenu = [
       },
     ],
   },
-]
+] as const
 
 export const resourcesMenu = [
   {
@@ -585,7 +595,7 @@ export const resourcesMenu = [
       grid: "",
     },
   },
-]
+] as const
 
 export const companyMenu = [
   {
@@ -624,7 +634,7 @@ export const companyMenu = [
       grid: "",
     },
   },
-]
+] as const
 
 export const footerSections = [
   {
@@ -687,4 +697,4 @@ export const footerSections = [
       { title: "DPA", href: "#" },
     ],
   },
-]
+] as const
