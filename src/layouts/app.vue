@@ -84,6 +84,18 @@ emitter.on("Sidebar.Right.Collapse", () => {
   }
 })
 
+emitter.on("Sidebar.Left.Expand", () => {
+  if (leftPanel.value?.splitterPanel?.isCollapsed) {
+    leftPanel.value?.splitterPanel?.expand()
+  }
+})
+
+emitter.on("Sidebar.Right.Expand", () => {
+  if (rightPanel.value?.splitterPanel?.isCollapsed) {
+    rightPanel.value?.splitterPanel?.expand()
+  }
+})
+
 emitter.on("Panel.Bottom.Toggle", () => {
   if (bottomPanel.value?.splitterPanel?.isCollapsed) {
     bottomPanel.value?.splitterPanel?.expand()

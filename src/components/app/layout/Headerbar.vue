@@ -11,6 +11,9 @@ watch(isMobile, (val) => {
   if (val) {
     emitter.emit("Sidebar.Left.Collapse")
     emitter.emit("Sidebar.Right.Collapse")
+  } else {
+    emitter.emit("Sidebar.Left.Expand")
+    emitter.emit("Sidebar.Right.Expand")
   }
 })
 

@@ -28,9 +28,9 @@ const isDocked = ref(false)
           <IconInbox />
           <template v-if="iconDisplay === 'text'"> Tasks </template>
         </NavigationMenuTrigger>
-        <NavigationMenuContent class="p-0">
+        <NavigationMenuContent class="bg-secondary">
           <Tabs default-value="inbox">
-            <div class="w-md">
+            <div class="bg-background w-md overflow-clip rounded border">
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >
@@ -105,9 +105,9 @@ const isDocked = ref(false)
           <IconBell />
           <template v-if="iconDisplay === 'text'"> Notifications </template>
         </NavigationMenuTrigger>
-        <NavigationMenuContent class="p-0">
+        <NavigationMenuContent class="bg-secondary">
           <Tabs default-value="inbox">
-            <div class="w-md">
+            <div class="bg-background w-md overflow-clip rounded border">
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
               >

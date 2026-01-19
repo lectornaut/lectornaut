@@ -1273,7 +1273,7 @@ const df = new DateFormatter("en-US", {
                         orientation="horizontal"
                       >
                         <FieldContent>
-                          <Item class="p-0" size="sm">
+                          <Item size="sm" class="p-0">
                             <ItemMedia class="group relative">
                               <Avatar class="rounded-md">
                                 <AvatarImage

@@ -229,6 +229,7 @@ declare module 'vue' {
     LanguageSwitcher: typeof import('./src/components/app/global/LanguageSwitcher.vue')['default']
     Logo: typeof import('./src/components/app/global/Logo.vue')['default']
     MainSidebar: typeof import('./src/components/app/sidebars/MainSidebar.vue')['default']
+    Motion: typeof import('motion-v')['Motion']
     NativeSelect: typeof import('./src/components/ui/native-select/NativeSelect.vue')['default']
     NativeSelectOptGroup: typeof import('./src/components/ui/native-select/NativeSelectOptGroup.vue')['default']
     NativeSelectOption: typeof import('./src/components/ui/native-select/NativeSelectOption.vue')['default']

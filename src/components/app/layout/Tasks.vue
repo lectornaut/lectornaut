@@ -112,25 +112,27 @@ const tasks = [
   <OverlayScrollbarsWrapper>
     <ItemGroup>
       <template v-for="(component, index) in tasks" :key="index">
-        <Item>
+        <Item size="sm" class="p-2">
           <ItemMedia variant="icon">
             <IconInbox />
           </ItemMedia>
-          <ItemContent>
-            <ItemTitle>{{ component.title }}</ItemTitle>
-            <ItemDescription>
+          <ItemContent class="gap-0.5 truncate">
+            <ItemTitle class="truncate">
+              {{ component.title }}
+            </ItemTitle>
+            <ItemDescription class="line-clamp-1 truncate text-xs">
               {{ component.description }}
             </ItemDescription>
           </ItemContent>
           <ItemActions>
-            <ToggleGroup type="single" variant="outline">
+            <ToggleGroup type="single" variant="outline" size="sm">
               <ToggleGroupItem value="saved">
                 <IconBookmark />
-                <!-- Save -->
+                Save
               </ToggleGroupItem>
               <ToggleGroupItem value="done">
                 <IconCheck />
-                <!-- Done -->
+                Done
               </ToggleGroupItem>
             </ToggleGroup>
           </ItemActions>
