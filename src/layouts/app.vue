@@ -776,178 +776,180 @@ const closeTab = (id: string) => {
       </main>
       <ContextMenu>
         <ContextMenuTrigger as-child>
-          <div
-            data-tauri-drag-region
-            class="pb-safe-bottom relative z-20 m-2 grid shrink-0 grid-cols-3 gap-2"
-          >
+          <footer class="pb-safe-bottom">
             <div
               data-tauri-drag-region
-              class="flex items-center justify-start gap-2"
+              class="relative z-20 grid shrink-0 grid-cols-3 gap-2 p-2"
             >
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
-                    >
-                      <IconCloudAlert v-if="!isOnline" />
-                      <IconCloudSync v-else-if="isSyncing" />
-                      <IconCloudCheck v-else />
-                      <template v-if="iconDisplay === 'text'">
-                        {{ t("layouts.app.statusBar.sync") }}
+              <div
+                data-tauri-drag-region
+                class="flex items-center justify-start gap-2"
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                      >
+                        <IconCloudAlert v-if="!isOnline" />
+                        <IconCloudSync v-else-if="isSyncing" />
+                        <IconCloudCheck v-else />
+                        <template v-if="iconDisplay === 'text'">
+                          {{ t("layouts.app.statusBar.sync") }}
+                        </template>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <template v-if="!isOnline">
+                        {{ t("layouts.app.status.offline") }}
                       </template>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <template v-if="!isOnline">
-                      {{ t("layouts.app.status.offline") }}
-                    </template>
-                    <template v-else-if="isSyncing">
-                      {{ t("layouts.app.status.syncing") }}
-                    </template>
-                    <template v-else>
-                      {{ t("layouts.app.status.synced") }}
-                    </template>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
-                      @click="
+                      <template v-else-if="isSyncing">
+                        {{ t("layouts.app.status.syncing") }}
+                      </template>
+                      <template v-else>
+                        {{ t("layouts.app.status.synced") }}
+                      </template>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        @click="
+                          bottomPanel?.splitterPanel?.isCollapsed
+                            ? bottomPanel?.splitterPanel?.expand()
+                            : bottomPanel?.splitterPanel?.collapse()
+                        "
+                      >
+                        <IconTerminal />
+                        <template v-if="iconDisplay === 'text'">
+                          {{ t("layouts.app.statusBar.console") }}
+                        </template>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
                         bottomPanel?.splitterPanel?.isCollapsed
-                          ? bottomPanel?.splitterPanel?.expand()
-                          : bottomPanel?.splitterPanel?.collapse()
-                      "
-                    >
-                      <IconTerminal />
-                      <template v-if="iconDisplay === 'text'">
-                        {{ t("layouts.app.statusBar.console") }}
-                      </template>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      bottomPanel?.splitterPanel?.isCollapsed
-                        ? t("actions.expand")
-                        : t("actions.collapse")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                          ? t("actions.expand")
+                          : t("actions.collapse")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div
+                data-tauri-drag-region
+                class="flex items-center justify-center gap-2"
+              ></div>
+              <div
+                data-tauri-drag-region
+                class="flex items-center justify-end gap-2"
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        @click="isPoppedOut = !isPoppedOut"
+                      >
+                        <IconPictureInPicture2 v-if="!isPoppedOut" />
+                        <IconPictureInPicture v-else />
+                        <template v-if="iconDisplay === 'text'">
+                          {{
+                            isPoppedOut
+                              ? t("layouts.app.statusBar.dock")
+                              : t("layouts.app.statusBar.popOut")
+                          }}
+                        </template>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        isPoppedOut
+                          ? t("layouts.app.statusBar.dock")
+                          : t("layouts.app.statusBar.popOut")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        @click="emitter.emit('Sidebar.Left.Toggle')"
+                      >
+                        <IconPanelLeft
+                          v-if="leftPanel?.splitterPanel?.isCollapsed"
+                        />
+                        <IconPanelLeftClose v-else />
+                        <template v-if="iconDisplay === 'text'">
+                          {{ t("layouts.app.statusBar.sidebar") }}
+                        </template>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        leftPanel?.splitterPanel?.isCollapsed
+                          ? t("actions.expand")
+                          : t("actions.collapse")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        @click="emitter.emit('Panel.Bottom.Toggle')"
+                      >
+                        <IconPanelBottom
+                          v-if="bottomPanel?.splitterPanel?.isCollapsed"
+                        />
+                        <IconPanelBottomClose v-else />
+                        <template v-if="iconDisplay === 'text'">
+                          {{ t("layouts.app.statusBar.panel") }}
+                        </template>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        bottomPanel?.splitterPanel?.isCollapsed
+                          ? t("actions.expand")
+                          : t("actions.collapse")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        @click="emitter.emit('Sidebar.Right.Toggle')"
+                      >
+                        <IconPanelRight
+                          v-if="rightPanel?.splitterPanel?.isCollapsed"
+                        />
+                        <IconPanelRightClose v-else />
+                        <template v-if="iconDisplay === 'text'">
+                          {{ t("layouts.app.statusBar.sidebar") }}
+                        </template>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        rightPanel?.splitterPanel?.isCollapsed
+                          ? t("actions.expand")
+                          : t("actions.collapse")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
-            <div
-              data-tauri-drag-region
-              class="flex items-center justify-center gap-2"
-            ></div>
-            <div
-              data-tauri-drag-region
-              class="flex items-center justify-end gap-2"
-            >
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
-                      @click="isPoppedOut = !isPoppedOut"
-                    >
-                      <IconPictureInPicture2 v-if="!isPoppedOut" />
-                      <IconPictureInPicture v-else />
-                      <template v-if="iconDisplay === 'text'">
-                        {{
-                          isPoppedOut
-                            ? t("layouts.app.statusBar.dock")
-                            : t("layouts.app.statusBar.popOut")
-                        }}
-                      </template>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      isPoppedOut
-                        ? t("layouts.app.statusBar.dock")
-                        : t("layouts.app.statusBar.popOut")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
-                      @click="emitter.emit('Sidebar.Left.Toggle')"
-                    >
-                      <IconPanelLeft
-                        v-if="leftPanel?.splitterPanel?.isCollapsed"
-                      />
-                      <IconPanelLeftClose v-else />
-                      <template v-if="iconDisplay === 'text'">
-                        {{ t("layouts.app.statusBar.sidebar") }}
-                      </template>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      leftPanel?.splitterPanel?.isCollapsed
-                        ? t("actions.expand")
-                        : t("actions.collapse")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
-                      @click="emitter.emit('Panel.Bottom.Toggle')"
-                    >
-                      <IconPanelBottom
-                        v-if="bottomPanel?.splitterPanel?.isCollapsed"
-                      />
-                      <IconPanelBottomClose v-else />
-                      <template v-if="iconDisplay === 'text'">
-                        {{ t("layouts.app.statusBar.panel") }}
-                      </template>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      bottomPanel?.splitterPanel?.isCollapsed
-                        ? t("actions.expand")
-                        : t("actions.collapse")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
-                      @click="emitter.emit('Sidebar.Right.Toggle')"
-                    >
-                      <IconPanelRight
-                        v-if="rightPanel?.splitterPanel?.isCollapsed"
-                      />
-                      <IconPanelRightClose v-else />
-                      <template v-if="iconDisplay === 'text'">
-                        {{ t("layouts.app.statusBar.sidebar") }}
-                      </template>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      rightPanel?.splitterPanel?.isCollapsed
-                        ? t("actions.expand")
-                        : t("actions.collapse")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
+          </footer>
         </ContextMenuTrigger>
         <ContextMenuContent align="start" side="bottom">
           <ContextMenuLabel class="text-muted-foreground text-xs">

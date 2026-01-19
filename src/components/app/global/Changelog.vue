@@ -27,9 +27,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       </SheetHeader>
       <Separator />
       <OverlayScrollbarsWrapper>
-        <div
-          class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
-        >
+        <div class="flex grow flex-col">
           <Accordion
             collapsible
             type="multiple"

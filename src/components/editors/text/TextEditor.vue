@@ -121,7 +121,7 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "focus:outline-none size-full pl-10 pr-2 py-2 prose prose-sm max-w-none prose-neutral dark:prose-invert",
+        "focus:outline-none size-full pl-10 pr-2 py-8 prose prose-sm max-w-none prose-neutral dark:prose-invert",
     },
   },
   extensions: [
@@ -285,885 +285,845 @@ const { copy, copied } = useClipboard({ source, legacy: true })
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper>
-    <EditorContent :editor="editor" />
-    <BubbleMenu v-if="editor" :editor="editor">
-      <div class="bg-card flex rounded-lg border p-1 shadow-lg">
-        <TooltipProvider>
-          <ButtonGroup>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconRefreshCcw />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Turn Into</TooltipContent>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Turn into
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().setParagraph().run()"
-                    >
-                      <IconType /> Paragraph
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('paragraph')"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .toggleHeading({ level: 1 })
-                          .run()
-                      "
-                    >
-                      <IconHeading1 /> Heading 1
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('heading', { level: 1 })"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .toggleHeading({ level: 2 })
-                          .run()
-                      "
-                    >
-                      <IconHeading2 /> Heading 2
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('heading', { level: 2 })"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .toggleHeading({ level: 3 })
-                          .run()
-                      "
-                    >
-                      <IconHeading3 /> Heading 3
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('heading', { level: 3 })"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleBulletList().run()"
-                    >
-                      <IconList /> Bulleted list
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('bulletList')"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleOrderedList().run()"
-                    >
-                      <IconListOrdered /> Numbered list
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('orderedList')"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleTaskList().run()"
-                    >
-                      <IconListChecks /> To-do list
-                      <DropdownMenuShortcut v-if="editor?.isActive('taskList')">
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().setDetails().run()"
-                    >
-                      <IconListCollapse /> Toggle list
-                      <DropdownMenuShortcut v-if="editor?.isActive('details')">
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleCodeBlock().run()"
-                    >
-                      <IconCode /> Code block
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('codeBlock')"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleBlockquote().run()"
-                    >
-                      <IconQuote /> Blockquote
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('blockquote')"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-          </ButtonGroup>
-
+  <EditorContent :editor="editor" />
+  <BubbleMenu v-if="editor" :editor="editor">
+    <div class="bg-card flex rounded-lg border p-1 shadow-lg">
+      <TooltipProvider>
+        <ButtonGroup>
           <Tooltip>
-            <TooltipTrigger as-child>
-              <Toggle
-                :value="'bold'"
-                :pressed="editor?.isActive('bold')"
-                @click="editor?.chain().focus().toggleBold().run()"
-              >
-                <IconBold />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Bold</TooltipContent>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconRefreshCcw />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Turn Into</TooltipContent>
+              <DropdownMenuContent align="start">
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Turn into
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().setParagraph().run()"
+                  >
+                    <IconType /> Paragraph
+                    <DropdownMenuShortcut v-if="editor?.isActive('paragraph')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="
+                      editor?.chain().focus().toggleHeading({ level: 1 }).run()
+                    "
+                  >
+                    <IconHeading1 /> Heading 1
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive('heading', { level: 1 })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="
+                      editor?.chain().focus().toggleHeading({ level: 2 }).run()
+                    "
+                  >
+                    <IconHeading2 /> Heading 2
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive('heading', { level: 2 })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="
+                      editor?.chain().focus().toggleHeading({ level: 3 }).run()
+                    "
+                  >
+                    <IconHeading3 /> Heading 3
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive('heading', { level: 3 })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleBulletList().run()"
+                  >
+                    <IconList /> Bulleted list
+                    <DropdownMenuShortcut v-if="editor?.isActive('bulletList')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleOrderedList().run()"
+                  >
+                    <IconListOrdered /> Numbered list
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive('orderedList')"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleTaskList().run()"
+                  >
+                    <IconListChecks /> To-do list
+                    <DropdownMenuShortcut v-if="editor?.isActive('taskList')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().setDetails().run()"
+                  >
+                    <IconListCollapse /> Toggle list
+                    <DropdownMenuShortcut v-if="editor?.isActive('details')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleCodeBlock().run()"
+                  >
+                    <IconCode /> Code block
+                    <DropdownMenuShortcut v-if="editor?.isActive('codeBlock')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleBlockquote().run()"
+                  >
+                    <IconQuote /> Blockquote
+                    <DropdownMenuShortcut v-if="editor?.isActive('blockquote')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </ButtonGroup>
+
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Toggle
+              :value="'bold'"
+              :pressed="editor?.isActive('bold')"
+              @click="editor?.chain().focus().toggleBold().run()"
+            >
+              <IconBold />
+            </Toggle>
+          </TooltipTrigger>
+          <TooltipContent>Bold</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Toggle
+              :value="'italic'"
+              :pressed="editor?.isActive('italic')"
+              @click="editor?.chain().focus().toggleItalic().run()"
+            >
+              <IconItalic />
+            </Toggle>
+          </TooltipTrigger>
+          <TooltipContent>Italic</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Toggle
+              :value="'underline'"
+              :pressed="editor?.isActive('underline')"
+              @click="editor?.chain().focus().toggleUnderline().run()"
+            >
+              <IconUnderline />
+            </Toggle>
+          </TooltipTrigger>
+          <TooltipContent>Underline</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Toggle
+              :value="'strike'"
+              :pressed="editor?.isActive('strike')"
+              @click="editor?.chain().focus().toggleStrike().run()"
+            >
+              <IconStrikethrough />
+            </Toggle>
+          </TooltipTrigger>
+          <TooltipContent>Strike</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Toggle
+              :value="'code'"
+              :pressed="editor?.isActive('code')"
+              @click="editor?.chain().focus().toggleCode().run()"
+            >
+              <IconBraces />
+            </Toggle>
+          </TooltipTrigger>
+          <TooltipContent>Code</TooltipContent>
+        </Tooltip>
+
+        <ButtonGroup>
+          <Tooltip>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconPalette />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Text Color</TooltipContent>
+              <DropdownMenuContent>
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Text Color
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    v-for="color in accents"
+                    :key="color.id"
+                    @click="editor?.chain().focus().setColor(color.id).run()"
+                  >
+                    <IconCircleFilled :class="`text-${color.id}-500`" />
+                    {{ color.name }}
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive('textStyle', { color: color.id })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetColor().run()"
+                >
+                  <IconX /> Remove Color
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </Tooltip>
           <Tooltip>
-            <TooltipTrigger as-child>
-              <Toggle
-                :value="'italic'"
-                :pressed="editor?.isActive('italic')"
-                @click="editor?.chain().focus().toggleItalic().run()"
-              >
-                <IconItalic />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Italic</TooltipContent>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconHighlighter />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Highlight Color</TooltipContent>
+              <DropdownMenuContent>
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Highlight Color
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    v-for="color in accents"
+                    :key="color.id"
+                    @click="
+                      editor
+                        ?.chain()
+                        .focus()
+                        .toggleHighlight({ color: color.id })
+                        .run()
+                    "
+                  >
+                    <IconCircleFilled :class="`text-${color.id}-500`" />
+                    {{ color.name }}
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive('highlight', { color: color.id })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetHighlight().run()"
+                >
+                  <IconX /> Remove Highlight
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </ButtonGroup>
+
+        <ButtonGroup>
+          <Tooltip>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconType />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Font Size</TooltipContent>
+              <DropdownMenuContent>
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Font Size
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    v-for="size in sizes"
+                    :key="size.id"
+                    @click="editor?.chain().focus().setFontSize(size.id).run()"
+                  >
+                    <span class="mr-2" :style="{ fontSize: size.id }">Aa</span>
+                    {{ size.name }}
+                    <DropdownMenuShortcut
+                      v-if="
+                        editor?.isActive('textStyle', { fontSize: size.id })
+                      "
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetFontSize().run()"
+                >
+                  <IconX /> Remove Font Size
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </Tooltip>
           <Tooltip>
-            <TooltipTrigger as-child>
-              <Toggle
-                :value="'underline'"
-                :pressed="editor?.isActive('underline')"
-                @click="editor?.chain().focus().toggleUnderline().run()"
-              >
-                <IconUnderline />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Underline</TooltipContent>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconText />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Font Family</TooltipContent>
+              <DropdownMenuContent>
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Font Family
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    v-for="font in fonts"
+                    :key="font.id"
+                    @click="
+                      editor?.chain().focus().setFontFamily(font.id).run()
+                    "
+                  >
+                    <span class="mr-2" :style="{ fontFamily: font.id }"
+                      >Aa</span
+                    >
+                    {{ font.name }}
+                    <DropdownMenuShortcut
+                      v-if="
+                        editor?.isActive('textStyle', {
+                          fontFamily: font.id,
+                        })
+                      "
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="
+                      editor
+                        ?.chain()
+                        .focus()
+                        .setFontFamily('Comic Sans MS, Comic Sans')
+                        .run()
+                    "
+                  >
+                    <span class="mr-2" :style="{ fontFamily: 'Comic Sans MS' }"
+                      >Aa</span
+                    >
+                    Comic Sans
+                    <DropdownMenuShortcut
+                      v-if="
+                        editor?.isActive('textStyle', {
+                          fontFamily: 'Comic Sans MS, Comic Sans',
+                        })
+                      "
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="
+                      editor?.chain().focus().setFontFamily('cursive').run()
+                    "
+                  >
+                    <span class="mr-2" style="font-family: cursive">Aa</span>
+                    Cursive
+                    <DropdownMenuShortcut
+                      v-if="
+                        editor?.isActive('textStyle', {
+                          fontFamily: 'cursive',
+                        })
+                      "
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetFontFamily().run()"
+                >
+                  <IconX /> Remove Font Family
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </Tooltip>
           <Tooltip>
-            <TooltipTrigger as-child>
-              <Toggle
-                :value="'strike'"
-                :pressed="editor?.isActive('strike')"
-                @click="editor?.chain().focus().toggleStrike().run()"
-              >
-                <IconStrikethrough />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Strike</TooltipContent>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconAlignLeft />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Text Align</TooltipContent>
+              <DropdownMenuContent>
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Text Alignment
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().setTextAlign('left').run()"
+                  >
+                    <IconAlignLeft /> Left
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive({ textAlign: 'left' })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="
+                      editor?.chain().focus().setTextAlign('center').run()
+                    "
+                  >
+                    <IconAlignCenter /> Center
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive({ textAlign: 'center' })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().setTextAlign('right').run()"
+                  >
+                    <IconAlignRight /> Right
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive({ textAlign: 'right' })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="
+                      editor?.chain().focus().setTextAlign('justify').run()
+                    "
+                  >
+                    <IconAlignJustify /> Justify
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive({ textAlign: 'justify' })"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Text Style
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleSubscript().run()"
+                  >
+                    <IconSubscript /> Subscript
+                    <DropdownMenuShortcut v-if="editor?.isActive('subscript')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleSuperscript().run()"
+                  >
+                    <IconSuperscript /> Superscript
+                    <DropdownMenuShortcut
+                      v-if="editor?.isActive('superscript')"
+                    >
+                      <IconCheck />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetTextAlign().run()"
+                >
+                  <IconX /> Remove Alignment
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </Tooltip>
+        </ButtonGroup>
+
+        <ButtonGroup>
           <Tooltip>
-            <TooltipTrigger as-child>
-              <Toggle
-                :value="'code'"
-                :pressed="editor?.isActive('code')"
-                @click="editor?.chain().focus().toggleCode().run()"
-              >
-                <IconBraces />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Code</TooltipContent>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
+                  >
+                    <IconTable />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Table</TooltipContent>
+              <DropdownMenuContent>
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Table
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="
+                      editor
+                        ?.chain()
+                        .focus()
+                        .insertTable({
+                          rows: 3,
+                          cols: 3,
+                          withHeaderRow: true,
+                        })
+                        .run()
+                    "
+                  >
+                    <IconPlus /> Insert Table
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().deleteTable().run()"
+                  >
+                    <IconTrash /> Delete Table
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Columns
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().addColumnBefore().run()"
+                  >
+                    <IconArrowLeft /> Add Column Before
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().addColumnAfter().run()"
+                  >
+                    <IconArrowRight /> Add Column After
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().deleteColumn().run()"
+                  >
+                    <IconTrash /> Delete Column
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Rows
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().addRowBefore().run()"
+                  >
+                    <IconArrowUp /> Add Row Before
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().addRowAfter().run()"
+                  >
+                    <IconArrowDown /> Add Row After
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().deleteRow().run()"
+                  >
+                    <IconTrash /> Delete Row
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Cells
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().mergeCells().run()"
+                  >
+                    <IconCombine /> Merge Cells
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().splitCell().run()"
+                  >
+                    <IconSplit /> Split Cell
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().mergeOrSplit().run()"
+                  >
+                    <IconSplitSquareHorizontal /> Merge or Split
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Headers
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleHeaderColumn().run()"
+                  >
+                    <IconColumns /> Toggle Header Column
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleHeaderRow().run()"
+                  >
+                    <IconRows /> Toggle Header Row
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().toggleHeaderCell().run()"
+                  >
+                    <IconSquare /> Toggle Header Cell
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Navigation
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().goToNextCell().run()"
+                  >
+                    <IconArrowRight /> Go to Next Cell
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().goToPreviousCell().run()"
+                  >
+                    <IconArrowLeft /> Go to Previous Cell
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Advanced
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    @click="
+                      editor
+                        ?.chain()
+                        .focus()
+                        .setCellAttribute('colspan', 2)
+                        .run()
+                    "
+                  >
+                    <IconSettings /> Set Cell Attribute
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    @click="editor?.chain().focus().fixTables().run()"
+                  >
+                    <IconWrench /> Fix Tables
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </Tooltip>
+        </ButtonGroup>
 
-          <ButtonGroup>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconPalette />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Text Color</TooltipContent>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Text Color
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      v-for="color in accents"
-                      :key="color.id"
-                      @click="editor?.chain().focus().setColor(color.id).run()"
-                    >
-                      <IconCircleFilled :class="`text-${color.id}-500`" />
-                      {{ color.name }}
-                      <DropdownMenuShortcut
-                        v-if="
-                          editor?.isActive('textStyle', { color: color.id })
-                        "
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().unsetColor().run()"
+        <ButtonGroup>
+          <Tooltip>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="data-[state=open]:bg-accent"
                   >
-                    <IconX /> Remove Color
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconHighlighter />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Highlight Color</TooltipContent>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Highlight Color
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      v-for="color in accents"
-                      :key="color.id"
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .toggleHighlight({ color: color.id })
-                          .run()
-                      "
-                    >
-                      <IconCircleFilled :class="`text-${color.id}-500`" />
-                      {{ color.name }}
-                      <DropdownMenuShortcut
-                        v-if="
-                          editor?.isActive('highlight', { color: color.id })
-                        "
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
+                    <IconLink />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Link</TooltipContent>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  Link Management
+                </DropdownMenuLabel>
+                <DropdownMenuGroup>
                   <DropdownMenuItem
-                    @click="editor?.chain().focus().unsetHighlight().run()"
+                    @click="
+                      editor
+                        ?.chain()
+                        .focus()
+                        .toggleLink({ href: 'https://example.com' })
+                        .run()
+                    "
                   >
-                    <IconX /> Remove Highlight
+                    <IconLink /> Toggle Link
+                    <DropdownMenuShortcut v-if="editor?.isActive('link')">
+                      <IconCheck />
+                    </DropdownMenuShortcut>
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-          </ButtonGroup>
-
-          <ButtonGroup>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconType />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Font Size</TooltipContent>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Font Size
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      v-for="size in sizes"
-                      :key="size.id"
-                      @click="
-                        editor?.chain().focus().setFontSize(size.id).run()
-                      "
-                    >
-                      <span class="mr-2" :style="{ fontSize: size.id }"
-                        >Aa</span
-                      >
-                      {{ size.name }}
-                      <DropdownMenuShortcut
-                        v-if="
-                          editor?.isActive('textStyle', { fontSize: size.id })
-                        "
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    @click="editor?.chain().focus().unsetFontSize().run()"
-                  >
-                    <IconX /> Remove Font Size
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconText />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Font Family</TooltipContent>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Font Family
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      v-for="font in fonts"
-                      :key="font.id"
-                      @click="
-                        editor?.chain().focus().setFontFamily(font.id).run()
-                      "
-                    >
-                      <span class="mr-2" :style="{ fontFamily: font.id }"
-                        >Aa</span
-                      >
-                      {{ font.name }}
-                      <DropdownMenuShortcut
-                        v-if="
-                          editor?.isActive('textStyle', {
-                            fontFamily: font.id,
-                          })
-                        "
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .setFontFamily('Comic Sans MS, Comic Sans')
-                          .run()
-                      "
-                    >
-                      <span
-                        class="mr-2"
-                        :style="{ fontFamily: 'Comic Sans MS' }"
-                        >Aa</span
-                      >
-                      Comic Sans
-                      <DropdownMenuShortcut
-                        v-if="
-                          editor?.isActive('textStyle', {
-                            fontFamily: 'Comic Sans MS, Comic Sans',
-                          })
-                        "
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor?.chain().focus().setFontFamily('cursive').run()
-                      "
-                    >
-                      <span class="mr-2" style="font-family: cursive">Aa</span>
-                      Cursive
-                      <DropdownMenuShortcut
-                        v-if="
-                          editor?.isActive('textStyle', {
-                            fontFamily: 'cursive',
-                          })
-                        "
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().unsetFontFamily().run()"
-                  >
-                    <IconX /> Remove Font Family
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconAlignLeft />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Text Align</TooltipContent>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Text Alignment
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="
-                        editor?.chain().focus().setTextAlign('left').run()
-                      "
-                    >
-                      <IconAlignLeft /> Left
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive({ textAlign: 'left' })"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor?.chain().focus().setTextAlign('center').run()
-                      "
-                    >
-                      <IconAlignCenter /> Center
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive({ textAlign: 'center' })"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor?.chain().focus().setTextAlign('right').run()
-                      "
-                    >
-                      <IconAlignRight /> Right
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive({ textAlign: 'right' })"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor?.chain().focus().setTextAlign('justify').run()
-                      "
-                    >
-                      <IconAlignJustify /> Justify
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive({ textAlign: 'justify' })"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Text Style
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleSubscript().run()"
-                    >
-                      <IconSubscript /> Subscript
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('subscript')"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleSuperscript().run()"
-                    >
-                      <IconSuperscript /> Superscript
-                      <DropdownMenuShortcut
-                        v-if="editor?.isActive('superscript')"
-                      >
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().unsetTextAlign().run()"
-                  >
-                    <IconX /> Remove Alignment
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-          </ButtonGroup>
-
-          <ButtonGroup>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconTable />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Table</TooltipContent>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Table
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .insertTable({
-                            rows: 3,
-                            cols: 3,
-                            withHeaderRow: true,
-                          })
-                          .run()
-                      "
-                    >
-                      <IconPlus /> Insert Table
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().deleteTable().run()"
-                    >
-                      <IconTrash /> Delete Table
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Columns
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().addColumnBefore().run()"
-                    >
-                      <IconArrowLeft /> Add Column Before
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().addColumnAfter().run()"
-                    >
-                      <IconArrowRight /> Add Column After
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().deleteColumn().run()"
-                    >
-                      <IconTrash /> Delete Column
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Rows
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().addRowBefore().run()"
-                    >
-                      <IconArrowUp /> Add Row Before
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().addRowAfter().run()"
-                    >
-                      <IconArrowDown /> Add Row After
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().deleteRow().run()"
-                    >
-                      <IconTrash /> Delete Row
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Cells
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().mergeCells().run()"
-                    >
-                      <IconCombine /> Merge Cells
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().splitCell().run()"
-                    >
-                      <IconSplit /> Split Cell
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().mergeOrSplit().run()"
-                    >
-                      <IconSplitSquareHorizontal /> Merge or Split
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Headers
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="
-                        editor?.chain().focus().toggleHeaderColumn().run()
-                      "
-                    >
-                      <IconColumns /> Toggle Header Column
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleHeaderRow().run()"
-                    >
-                      <IconRows /> Toggle Header Row
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().toggleHeaderCell().run()"
-                    >
-                      <IconSquare /> Toggle Header Cell
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Navigation
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().goToNextCell().run()"
-                    >
-                      <IconArrowRight /> Go to Next Cell
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().goToPreviousCell().run()"
-                    >
-                      <IconArrowLeft /> Go to Previous Cell
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Advanced
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .setCellAttribute('colspan', 2)
-                          .run()
-                      "
-                    >
-                      <IconSettings /> Set Cell Attribute
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="editor?.chain().focus().fixTables().run()"
-                    >
-                      <IconWrench /> Fix Tables
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-          </ButtonGroup>
-
-          <ButtonGroup>
-            <Tooltip>
-              <DropdownMenu>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="data-[state=open]:bg-accent"
-                    >
-                      <IconLink />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Link</TooltipContent>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel class="text-muted-foreground text-xs">
-                    Link Management
-                  </DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      @click="
-                        editor
-                          ?.chain()
-                          .focus()
-                          .toggleLink({ href: 'https://example.com' })
-                          .run()
-                      "
-                    >
-                      <IconLink /> Toggle Link
-                      <DropdownMenuShortcut v-if="editor?.isActive('link')">
-                        <IconCheck />
-                      </DropdownMenuShortcut>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="
-                        editor?.getAttributes('link').href !== null
-                          ? editor?.getAttributes('link').href === ''
-                            ? editor
-                                ?.chain()
-                                .focus()
-                                .extendMarkRange('link')
-                                .unsetLink()
-                                .run()
-                            : editor
-                                ?.chain()
-                                .focus()
-                                .extendMarkRange('link')
-                                .setLink({ href: 'https://example.com' })
-                                .run()
+                    @click="
+                      editor?.getAttributes('link').href !== null
+                        ? editor?.getAttributes('link').href === ''
+                          ? editor
+                              ?.chain()
+                              .focus()
+                              .extendMarkRange('link')
+                              .unsetLink()
+                              .run()
                           : editor
                               ?.chain()
                               .focus()
                               .extendMarkRange('link')
                               .setLink({ href: 'https://example.com' })
                               .run()
-                      "
-                    >
-                      <IconExternalLink /> Set Link
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      :disabled="!editor?.isActive('link')"
-                      @click="editor?.chain().focus().unsetLink().run()"
-                    >
-                      <IconUnlink /> Remove Link
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Tooltip>
-          </ButtonGroup>
-        </TooltipProvider>
-      </div>
-    </BubbleMenu>
-    <FloatingMenu
-      v-if="editor"
-      :editor="editor"
-      :tippy-options="{ duration: 100 }"
+                        : editor
+                            ?.chain()
+                            .focus()
+                            .extendMarkRange('link')
+                            .setLink({ href: 'https://example.com' })
+                            .run()
+                    "
+                  >
+                    <IconExternalLink /> Set Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    :disabled="!editor?.isActive('link')"
+                    @click="editor?.chain().focus().unsetLink().run()"
+                  >
+                    <IconUnlink /> Remove Link
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </ButtonGroup>
+      </TooltipProvider>
+    </div>
+  </BubbleMenu>
+  <FloatingMenu
+    v-if="editor"
+    :editor="editor"
+    :tippy-options="{ duration: 100 }"
+  >
+    <div
+      class="bg-card flex items-center gap-1 rounded-lg border p-1 shadow-lg"
     >
-      <div
-        class="bg-card flex items-center gap-1 rounded-lg border p-1 shadow-lg"
+      <Button
+        variant="ghost"
+        size="icon"
+        :class="{ 'bg-accent': editor?.isActive('heading', { level: 1 }) }"
+        @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          :class="{ 'bg-accent': editor?.isActive('heading', { level: 1 }) }"
-          @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
-        >
-          <IconHeading1 />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          :class="{ 'bg-accent': editor?.isActive('heading', { level: 2 }) }"
-          @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
-        >
-          <IconHeading2 />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          :class="{ 'bg-accent': editor?.isActive('bulletList') }"
-          @click="editor?.chain().focus().toggleBulletList().run()"
-        >
-          <IconList />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          :class="{ 'bg-accent': editor?.isActive('orderedList') }"
-          @click="editor?.chain().focus().toggleOrderedList().run()"
-        >
-          <IconListOrdered />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          :class="{ 'bg-accent': editor?.isActive('taskList') }"
-          @click="editor?.chain().focus().toggleTaskList().run()"
-        >
-          <IconListChecks />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          :class="{ 'bg-accent': editor?.isActive('codeBlock') }"
-          @click="editor?.chain().focus().toggleCodeBlock().run()"
-        >
-          <IconCode />
-        </Button>
-      </div>
-    </FloatingMenu>
-    <DragHandle v-if="editor" :editor="editor">
-      <Button variant="ghost" size="icon-sm" class="mr-2 size-6">
-        <IconGripVertical />
+        <IconHeading1 />
       </Button>
-    </DragHandle>
-    <Teleport defer to="#cta-dock">
-      <div class="text-muted-foreground flex items-center gap-2 text-xs">
-        {{ editor?.storage.characterCount.characters() }} characters /
-        {{ editor?.storage.characterCount.words() }} words /
-        {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
-        read
-        <div class="flex items-center gap-2">
-          <Checkbox id="readOnly" v-model="readOnly" />
-          <Label for="readOnly" class="text-xs">Read-only</Label>
-        </div>
-        <Button variant="ghost" size="icon-sm" @click="copy(source)">
-          <IconCopy v-if="!copied" />
-          <IconCheck v-else />
-        </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        :class="{ 'bg-accent': editor?.isActive('heading', { level: 2 }) }"
+        @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
+      >
+        <IconHeading2 />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        :class="{ 'bg-accent': editor?.isActive('bulletList') }"
+        @click="editor?.chain().focus().toggleBulletList().run()"
+      >
+        <IconList />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        :class="{ 'bg-accent': editor?.isActive('orderedList') }"
+        @click="editor?.chain().focus().toggleOrderedList().run()"
+      >
+        <IconListOrdered />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        :class="{ 'bg-accent': editor?.isActive('taskList') }"
+        @click="editor?.chain().focus().toggleTaskList().run()"
+      >
+        <IconListChecks />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        :class="{ 'bg-accent': editor?.isActive('codeBlock') }"
+        @click="editor?.chain().focus().toggleCodeBlock().run()"
+      >
+        <IconCode />
+      </Button>
+    </div>
+  </FloatingMenu>
+  <DragHandle v-if="editor" :editor="editor">
+    <Button variant="ghost" size="icon-sm" class="mr-2 size-6">
+      <IconGripVertical />
+    </Button>
+  </DragHandle>
+  <Teleport defer to="#cta-dock">
+    <div class="text-muted-foreground flex items-center gap-2 text-xs">
+      {{ editor?.storage.characterCount.characters() }} characters /
+      {{ editor?.storage.characterCount.words() }} words /
+      {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
+      read
+      <div class="flex items-center gap-2">
+        <Checkbox id="readOnly" v-model="readOnly" />
+        <Label for="readOnly" class="text-xs">Read-only</Label>
       </div>
-    </Teleport>
-  </OverlayScrollbarsWrapper>
+      <Button variant="ghost" size="icon-sm" @click="copy(source)">
+        <IconCopy v-if="!copied" />
+        <IconCheck v-else />
+      </Button>
+    </div>
+  </Teleport>
 </template>
 
 <style lang="scss">

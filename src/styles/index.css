@@ -19,7 +19,8 @@
   * {
     @apply border-border/75 outline-ring/50;
 
-    /* border: 1px solid #f00; */
+    /* @apply border;
+    @apply border-red-500; */
   }
 
   body {
@@ -30,8 +31,7 @@
 
     --grade-axis: 0;
 
-    @apply selection:bg-primary;
-    @apply selection:text-primary-foreground;
+    @apply selection:bg-primary/25;
     @apply h-dvh;
     @apply w-dvw;
     @apply bg-background;
@@ -381,5 +381,10 @@
 
 /* [data-tauri-drag-region] {
   @apply border;
-  @apply border-red-400;
+  @apply border-red-500;
+} */
+
+/* [data-slot="context-menu-trigger"] {
+  @apply border;
+  @apply border-red-500;
 } */

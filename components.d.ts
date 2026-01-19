@@ -192,7 +192,6 @@ declare module 'vue' {
     FlowSettings: typeof import('./src/components/flow/FlowSettings.vue')['default']
     FlowSidebar: typeof import('./src/components/flow/FlowSidebar.vue')['default']
     Footer: typeof import('./src/components/landing/Footer.vue')['default']
-    FooterBar: typeof import('./src/components/app/layout/FooterBar.vue')['default']
     FooterText: typeof import('./src/components/landing/FooterText.vue')['default']
     FormControl: typeof import('./src/components/ui/form/FormControl.vue')['default']
     FormDescription: typeof import('./src/components/ui/form/FormDescription.vue')['default']
@@ -207,9 +206,6 @@ declare module 'vue' {
     HoverCardContent: typeof import('./src/components/ui/hover-card/HoverCardContent.vue')['default']
     HoverCardTrigger: typeof import('./src/components/ui/hover-card/HoverCardTrigger.vue')['default']
     HyperApp: typeof import('./src/components/hyper/HyperApp.vue')['default']
-    IconCircle: typeof import('~icons/ci/rcle')['default']
-    IconCircleDotSolid: typeof import('~icons/ci/rcle-dot-solid')['default']
-    IconCirclePlus: typeof import('~icons/ci/rcle-plus')['default']
     Input: typeof import('./src/components/ui/input/Input.vue')['default']
     InputGroup: typeof import('./src/components/ui/input-group/InputGroup.vue')['default']
     InputGroupAddon: typeof import('./src/components/ui/input-group/InputGroupAddon.vue')['default']
@@ -366,7 +362,6 @@ declare module 'vue' {
     Terminal: typeof import('./src/components/app/layout/Terminal.vue')['default']
     Textarea: typeof import('./src/components/ui/textarea/Textarea.vue')['default']
     TextEditor: typeof import('./src/components/editors/text/TextEditor.vue')['default']
-    Titlebar: typeof import('./src/components/app/layout/Titlebar.vue')['default']
     Toggle: typeof import('./src/components/ui/toggle/Toggle.vue')['default']
     ToggleGroup: typeof import('./src/components/ui/toggle-group/ToggleGroup.vue')['default']
     ToggleGroupItem: typeof import('./src/components/ui/toggle-group/ToggleGroupItem.vue')['default']
@@ -377,6 +372,5 @@ declare module 'vue' {
     Tree: typeof import('./src/components/smart/Tree.vue')['default']
     Users: typeof import('./src/components/landing/Users.vue')['default']
     WallOfLove: typeof import('./src/components/landing/WallOfLove.vue')['default']
-    WorkspaceSwitcher: typeof import('./src/components/app/layout/WorkspaceSwitcher.vue')['default']
   }
 }

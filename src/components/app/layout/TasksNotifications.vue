@@ -61,9 +61,9 @@ const isDocked = ref(false)
                 </TabsList>
               </div>
               <Separator />
-              <div class="flex h-96 flex-col overflow-y-auto">
+              <OverlayScrollbarsWrapper class="flex h-96 flex-col">
                 <Tasks />
-              </div>
+              </OverlayScrollbarsWrapper>
               <Separator />
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"
@@ -138,9 +138,9 @@ const isDocked = ref(false)
                 </TabsList>
               </div>
               <Separator />
-              <div class="flex h-96 flex-col overflow-y-auto">
+              <OverlayScrollbarsWrapper class="flex h-96 flex-col">
                 <Notifications />
-              </div>
+              </OverlayScrollbarsWrapper>
               <Separator />
               <div
                 class="bg-background sticky top-0 z-10 flex items-center justify-between p-2"

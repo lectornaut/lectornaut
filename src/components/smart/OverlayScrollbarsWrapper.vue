@@ -1,11 +1,10 @@
-<!-- <script lang="ts" setup>
+<script lang="ts" setup>
 import { state } from "@/modules/theme"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
-</script> -->
+</script>
 
 <template>
-  <div class="relative size-full overflow-auto overscroll-none scroll-smooth">
-    <!-- <OverlayScrollbarsComponent
+  <OverlayScrollbarsComponent
     defer
     :options="{
       scrollbars: {
@@ -14,8 +13,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"
       },
     }"
     class="size-full overflow-auto overscroll-none scroll-smooth"
-  > -->
+  >
     <slot />
-    <!-- </OverlayScrollbarsComponent> -->
-  </div>
+  </OverlayScrollbarsComponent>
 </template>
