@@ -229,7 +229,6 @@ declare module 'vue' {
     LanguageSwitcher: typeof import('./src/components/app/global/LanguageSwitcher.vue')['default']
     Logo: typeof import('./src/components/app/global/Logo.vue')['default']
     MainSidebar: typeof import('./src/components/app/sidebars/MainSidebar.vue')['default']
-    Motion: typeof import('motion-v')['Motion']
     NativeSelect: typeof import('./src/components/ui/native-select/NativeSelect.vue')['default']
     NativeSelectOptGroup: typeof import('./src/components/ui/native-select/NativeSelectOptGroup.vue')['default']
     NativeSelectOption: typeof import('./src/components/ui/native-select/NativeSelectOption.vue')['default']
@@ -373,5 +372,8 @@ declare module 'vue' {
     Tree: typeof import('./src/components/smart/Tree.vue')['default']
     Users: typeof import('./src/components/landing/Users.vue')['default']
     WallOfLove: typeof import('./src/components/landing/WallOfLove.vue')['default']
+    WorkspaceDialog: typeof import('./src/components/app/workspaces/WorkspaceDialog.vue')['default']
+    WorkspaceSelector: typeof import('./src/components/app/workspaces/WorkspaceSelector.vue')['default']
+    WorkspaceSwitcher: typeof import('./src/components/app/layout/WorkspaceSwitcher.vue')['default']
   }
 }

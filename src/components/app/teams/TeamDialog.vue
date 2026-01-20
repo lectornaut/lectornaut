@@ -175,9 +175,11 @@ const handleSubmit = async () => {
     // 2. Process Member Changes
     if (props.mode === "edit") {
       // Remove deleted members
-      if (removedMemberIds.value.length > 0) {
-        // TODO: Implement member removal from backend
-        // await membershipStore.removeMembers(props.team.id, removedMemberIds.value)
+      if (removedMemberIds.value.length > 0 && props.team) {
+        await membershipStore.removeMembers(
+          props.team.id,
+          removedMemberIds.value
+        )
       }
       // Invite new members (those without an id)
       const newMembers = members.value.filter((m) => !m.id)

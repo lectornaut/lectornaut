@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
+import { isTauri } from "@/composables/usePlatform"
 import {
   IconArrowBigUp,
   IconArrowDown,
@@ -48,12 +49,14 @@ const topPanel = ref<InstanceType<typeof ResizablePanel>>()
 const bottomPanel = ref<InstanceType<typeof ResizablePanel>>()
 
 onMounted(async () => {
-  await listen("tray-action", (event) => {
-    console.log("Tray action received:", event.payload)
-    if (event.payload === "settings") {
-      emitter.emit("Dialog.Settings.Open", "preferences")
-    }
-  })
+  if (isTauri.value) {
+    await listen("tray-action", (event) => {
+      console.log("Tray action received:", event.payload)
+      if (event.payload === "settings") {
+        emitter.emit("Dialog.Settings.Open", "preferences")
+      }
+    })
+  }
 })
 
 emitter.on("Sidebar.Left.Toggle", () => {
@@ -303,7 +306,7 @@ const closeTab = (id: string) => {
                   >
                     <div class="flex min-h-0 flex-1 flex-col gap-2">
                       <div
-                        class="bg-background flex min-h-0 flex-1 flex-col rounded-2xl border"
+                        class="bg-background flex min-h-0 flex-1 flex-col overflow-clip rounded-2xl border"
                       >
                         <!-- Non-scrollable header -->
                         <div class="flex shrink-0 flex-col">

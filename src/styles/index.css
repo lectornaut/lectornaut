@@ -108,6 +108,7 @@
 
     font-synthesis: none;
     text-rendering: optimizelegibility;
+    interpolate-size: allow-keywords;
   }
 
   /* ::-webkit-scrollbar {

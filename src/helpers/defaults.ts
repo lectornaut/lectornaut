@@ -3,9 +3,16 @@ import {
   IconArrowDownToLine,
   IconAsterisk,
   IconBadgeCheck,
+  IconBadgeDollarSign,
+  IconBell,
+  IconBlocks,
+  IconBolt,
   IconBot,
   IconBriefcase,
+  IconCircleUserRound,
   IconComponent,
+  IconCreditCard,
+  IconDatabase,
   IconFileText,
   IconFontMono,
   IconFontSans,
@@ -13,11 +20,14 @@ import {
   IconHome,
   IconJapan,
   IconLifeBuoy,
+  IconLock,
   IconLogs,
   IconMdiFormatTextVariant,
   IconMessageCircle,
   IconMoon,
+  IconPalette,
   IconScroll,
+  IconSettings,
   IconShieldCheck,
   IconSparkle,
   IconSun,
@@ -698,3 +708,122 @@ export const footerSections = [
     ],
   },
 ] as const
+
+export const defaultSettingsTabs = [
+  {
+    title: "settings.titles.general",
+    id: "general",
+    links: [
+      {
+        name: "settings.titles.preferences",
+        icon: IconSettings,
+        id: "preferences",
+        description: "settings.descriptions.preferences",
+      },
+      {
+        name: "settings.titles.account",
+        icon: IconCircleUserRound,
+        id: "account",
+        description: "settings.descriptions.account",
+      },
+      {
+        name: "settings.titles.notifications",
+        icon: IconBell,
+        id: "notifications",
+        description: "settings.descriptions.notifications",
+      },
+      {
+        name: "settings.titles.appearance",
+        icon: IconPalette,
+        id: "appearance",
+        description: "settings.descriptions.appearance",
+      },
+      {
+        name: "settings.titles.security",
+        icon: IconLock,
+        id: "security",
+        description: "settings.descriptions.security",
+      },
+    ],
+  },
+  {
+    title: "settings.titles.workspace",
+    id: "workspace",
+    links: [
+      {
+        name: "settings.titles.teams",
+        icon: IconComponent,
+        id: "teams",
+        description: "settings.descriptions.teams",
+      },
+      {
+        name: "settings.titles.members",
+        icon: IconUsersRound,
+        id: "members",
+        description: "settings.descriptions.members",
+      },
+      {
+        name: "settings.titles.workspaces",
+        icon: IconBlocks,
+        id: "workspaces",
+        description: "settings.descriptions.workspaces",
+      },
+      {
+        name: "settings.titles.agents",
+        icon: IconBot,
+        id: "agents",
+        description: "settings.descriptions.agents",
+      },
+      {
+        name: "settings.titles.runs",
+        icon: IconActivity,
+        id: "runs",
+        description: "settings.descriptions.runs",
+      },
+      {
+        name: "settings.titles.knowledge",
+        icon: IconDatabase,
+        id: "knowledge",
+        description: "settings.descriptions.knowledge",
+      },
+      {
+        name: "settings.titles.integrations",
+        icon: IconBlocks,
+        id: "integrations",
+        description: "settings.descriptions.integrations",
+      },
+      {
+        name: "settings.titles.logs",
+        icon: IconLogs,
+        id: "logs",
+        description: "settings.descriptions.logs",
+      },
+    ],
+  },
+  {
+    title: "settings.titles.administration",
+    id: "administration",
+    links: [
+      {
+        name: "settings.titles.general",
+        icon: IconBolt,
+        id: "general",
+        description: "settings.descriptions.general",
+      },
+      {
+        name: "settings.titles.billing",
+        icon: IconCreditCard,
+        id: "billing",
+        description: "settings.descriptions.billing",
+      },
+      {
+        name: "settings.titles.plans",
+        icon: IconBadgeDollarSign,
+        id: "plans",
+        description: "settings.descriptions.plans",
+      },
+    ],
+  },
+] as const
+
+export const defaultSettingsTab = "preferences"

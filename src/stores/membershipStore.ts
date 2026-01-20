@@ -37,6 +37,7 @@ import {
   type Timestamp,
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
+import { computed, ref, shallowRef } from "vue"
 import { useCollection } from "vuefire"
 
 // Helper to get ownership count
@@ -575,6 +576,100 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   /**
+   * Remove multiple members from a team with optimistic update
+   */
+  async function removeMembers(
+    teamId: string,
+    userIds: string[]
+  ): Promise<void> {
+    if (!currentUser.value) return
+
+    if (!userIds || userIds.length === 0) return
+
+    // Resolve membership docs for all provided userIds
+    const membershipDocs = await Promise.all(
+      userIds.map((userId) => getDoc(getMembershipRef(teamId, userId)))
+    )
+
+    const membershipsToRemove: IMembership[] = []
+    for (const snap of membershipDocs) {
+      if (!snap.exists()) {
+        throw new Error("Membership not found for one or more users")
+      }
+      membershipsToRemove.push(snap.data() as IMembership)
+    }
+
+    // Compute resulting members after removal to validate constraints
+    const userIdSet = new Set(userIds)
+    const remainingMembers = teamMembers.value.filter(
+      (m) => !userIdSet.has(m.userId)
+    )
+
+    if (remainingMembers.length <= 0) {
+      throw new Error(
+        "Cannot remove all members. Every team must have at least one member."
+      )
+    }
+
+    if (getOwnerCount(remainingMembers) <= 0) {
+      throw new Error(
+        "Cannot remove owners leaving team without an owner. Assign another owner first."
+      )
+    }
+
+    const membershipKeys = membershipsToRemove.map(
+      (m) => `${m.teamId}-${m.userId}`
+    )
+    const previousTeamMembers = cloneState(teamMembers.value)
+    const previousMemberships = cloneState(memberships.value)
+    const previousUserProfile = cloneState(userProfile.value)
+
+    const isRemovingSelf = userIds.includes(currentUser.value.uid)
+
+    try {
+      // Mark all membership keys as pending
+      membershipKeys.forEach((k) => pendingMembershipIds.value.add(k))
+
+      // Apply optimistic updates
+      optimisticTeamMembers.value = teamMembers.value.filter(
+        (m) => !userIdSet.has(m.userId)
+      )
+
+      if (isRemovingSelf) {
+        pendingUserIds.value.add(currentUser.value.uid)
+        optimisticMemberships.value = memberships.value.filter(
+          (m) => m.teamId !== teamId
+        )
+        if (userProfile.value) {
+          authStore.setCurrentTeamId(null)
+        }
+      }
+
+      // Firestore operation: delete all membership docs in a transaction
+      await runTransaction(firestore, async (transaction) => {
+        for (const m of membershipsToRemove) {
+          const ref = getMembershipRef(teamId, m.userId)
+          transaction.delete(ref)
+        }
+      })
+    } catch (error) {
+      // Rollback optimistic state on error
+      optimisticTeamMembers.value = previousTeamMembers
+      optimisticMemberships.value = previousMemberships
+      if (isRemovingSelf && previousUserProfile?.currentTeamId) {
+        authStore.setCurrentTeamId(previousUserProfile.currentTeamId)
+      }
+      throw error
+    } finally {
+      // Clear pending flags
+      if (isRemovingSelf) {
+        pendingUserIds.value.delete(currentUser.value.uid)
+      }
+      membershipKeys.forEach((k) => pendingMembershipIds.value.delete(k))
+    }
+  }
+
+  /**
    * Create a membership for a new team (used by teamStore)
    */
   async function createOwnerMembership(
@@ -636,6 +731,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     inviteMember,
     changeRole,
     removeMember,
+    removeMembers,
     createOwnerMembership,
     fetchTeamMemberCounts,
 
