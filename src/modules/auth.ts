@@ -1,4 +1,7 @@
-import { useKeychain } from "@/composables/useKeychain"
+import {
+  DEFAULT_KEYCHAIN_MAX_AGE_MS,
+  useKeychain,
+} from "@/composables/useKeychain"
 import { isTauri } from "@/composables/usePlatform"
 import { generateRandomString } from "@/helpers/utilities"
 import { auth } from "@/modules/firebase"
@@ -148,8 +151,7 @@ const getFirebaseKey = () => {
  */
 export const initKeychain = () => {
   // Prune accounts inactive for 30 days
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
-  useKeychain().pruneExpiredAccounts(THIRTY_DAYS_MS)
+  useKeychain().pruneExpiredAccounts(DEFAULT_KEYCHAIN_MAX_AGE_MS)
 
   onIdTokenChanged(auth, async (user) => {
     if (user) {

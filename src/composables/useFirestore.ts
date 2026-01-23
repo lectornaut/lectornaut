@@ -19,6 +19,7 @@ import {
   getFirestoreErrorMessage,
   isRetryableFirebaseError,
 } from "@/utils/firebase-errors"
+import { getBackoffDelay, sleep } from "@/utils/firebase-optimistic"
 import {
   addDoc,
   CollectionReference,
@@ -65,23 +66,6 @@ const defaultOptions: FirestoreOperationOptions = {
 // ============================================================================
 // Retry Logic
 // ============================================================================
-
-/**
- * Sleep helper for retry delays
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-/**
- * Calculate exponential backoff delay with jitter
- */
-function getBackoffDelay(attempt: number, baseDelay: number): number {
-  const exponentialDelay = baseDelay * Math.pow(2, attempt)
-  // Add jitter (±25%) to prevent thundering herd
-  const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1)
-  return Math.min(exponentialDelay + jitter, 30000) // Max 30 seconds
-}
 
 /**
  * Execute an operation with retry logic

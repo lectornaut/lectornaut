@@ -10,6 +10,10 @@ export interface KeychainAccount {
 }
 
 const STORAGE_KEY = "lectornaut-keychain"
+
+/** Default maximum age for keychain accounts (30 days in milliseconds) */
+export const DEFAULT_KEYCHAIN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+
 const keychain = useStorage<KeychainAccount[]>(STORAGE_KEY, [])
 
 /**

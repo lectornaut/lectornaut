@@ -267,7 +267,7 @@ export const useMembershipStore = defineStore("memberships", () => {
           counts[teamId] = membersSnapshot.size
         } catch (error) {
           console.error(
-            `Failed to fetch member count for team ${teamId}:`,
+            `[membershipStore] Failed to fetch member count for team ${teamId}:`,
             error
           )
           counts[teamId] = 1

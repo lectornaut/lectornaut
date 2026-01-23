@@ -213,7 +213,7 @@ export const useTeamStore = defineStore("teams", () => {
       try {
         photoURL = await uploadTeamPhoto(teamId, photoFile)
       } catch (error) {
-        console.error("Error uploading team photo:", error)
+        console.error("[teamStore] Error uploading team photo:", error)
       }
     }
 

@@ -11,7 +11,13 @@ function getId(): string {
 }
 
 /**
- * Global drag-and-drop state.
+ * Global drag-and-drop state shared across all component instances.
+ *
+ * This is intentionally defined at module scope because:
+ * 1. Only one drag operation can occur at a time in the browser
+ * 2. Multiple drop zones need to react to the same drag state
+ * 3. The cursor style needs to be coordinated globally
+ *
  * Using shallowRef for better performance with primitive values.
  */
 const state = {
@@ -33,6 +39,18 @@ export default function useDragAndDrop() {
   watch(state.isDragging, (dragging) => {
     if (typeof document !== "undefined" && document.body) {
       document.body.style.userSelect = dragging ? "none" : ""
+    }
+  })
+
+  // Cleanup event listeners on component unmount to prevent memory leaks
+  onUnmounted(() => {
+    document.removeEventListener("drop", onDragEnd)
+    document.removeEventListener("dragend", onDragEnd)
+    // Reset state if this component was mid-drag
+    if (isDragging.value) {
+      isDragging.value = false
+      isDragOver.value = false
+      draggedType.value = null
     }
   })
 

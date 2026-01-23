@@ -166,15 +166,19 @@ export function hasAnyPending(pendingIds: Set<string>, ids: string[]): boolean {
 /**
  * Sleep helper for retry delays
  */
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
- * Calculate exponential backoff delay
+ * Calculate exponential backoff delay with jitter
+ * Jitter helps prevent thundering herd problems when multiple retries happen simultaneously
  */
-function getBackoffDelay(attempt: number, baseDelay: number): number {
-  return Math.min(baseDelay * Math.pow(2, attempt), 30000) // Max 30 seconds
+export function getBackoffDelay(attempt: number, baseDelay: number): number {
+  const exponentialDelay = baseDelay * Math.pow(2, attempt)
+  // Add jitter (±25%) to prevent thundering herd
+  const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1)
+  return Math.min(exponentialDelay + jitter, 30000) // Max 30 seconds
 }
 
 // ============================================================================
@@ -234,7 +238,7 @@ export async function withOptimisticUpdate<T>(
 
     // All retries exhausted - rollback
     rollback()
-    throw lastError
+    throw lastError ?? new Error("Operation failed after retries")
   } finally {
     // Always clean up pending state
     pendingIds.delete(id)

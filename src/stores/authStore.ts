@@ -28,6 +28,7 @@ import {
   type Timestamp,
 } from "firebase/firestore"
 import { defineStore } from "pinia"
+import { toast } from "vue-sonner"
 import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
 
 export const useAuthStore = defineStore("auth", () => {
@@ -109,19 +110,24 @@ export const useAuthStore = defineStore("auth", () => {
 
       // User exists but no profile - create one
       if (!profile) {
-        const userRef = getUserRef(user.uid)
-        const newUser: IUser = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          currentTeamId: null,
-          createdAt: serverTimestamp() as Timestamp,
-          updatedAt: serverTimestamp() as Timestamp,
+        try {
+          const userRef = getUserRef(user.uid)
+          const newUser: IUser = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            currentTeamId: null,
+            createdAt: serverTimestamp() as Timestamp,
+            updatedAt: serverTimestamp() as Timestamp,
+          }
+          await setDoc(userRef, newUser)
+          // Set optimistic profile immediately
+          optimisticUserProfile.value = newUser
+        } catch (error) {
+          console.error("[authStore] Failed to create user profile:", error)
+          toast.error("Failed to create user profile. Please try again.")
         }
-        await setDoc(userRef, newUser)
-        // Set optimistic profile immediately
-        optimisticUserProfile.value = newUser
       }
     },
     { immediate: true }
