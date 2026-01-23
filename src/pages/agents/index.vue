@@ -13,11 +13,7 @@ import {
   IconStar,
   IconUserRoundPlus,
 } from "@/data/icons"
-import AutoplayDefault from "embla-carousel-autoplay"
-import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import Avatar from "vue-boring-avatars"
-
-const Autoplay = AutoplayDefault
 
 definePage({
   meta: {
@@ -294,7 +290,6 @@ const route = useRoute()
                 :opts="{
                   align: 'start',
                 }"
-                :plugins="[WheelGesturesPlugin()]"
               >
                 <CarouselContent class="-ml-2 p-1">
                   <CarouselItem
@@ -327,12 +322,6 @@ const route = useRoute()
                   align: 'start',
                   loop: true,
                 }"
-                :plugins="[
-                  WheelGesturesPlugin(),
-                  Autoplay({
-                    delay: 5000,
-                  }),
-                ]"
               >
                 <CarouselContent class="-ml-6">
                   <CarouselItem

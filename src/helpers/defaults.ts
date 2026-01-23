@@ -22,6 +22,7 @@ import {
   IconLifeBuoy,
   IconLock,
   IconLogs,
+  IconMapPin,
   IconMdiFormatTextVariant,
   IconMessageCircle,
   IconMoon,
@@ -161,6 +162,20 @@ export const defaultMenu = [
       grid: "",
     },
     shortcut: "⌘H",
+  },
+  {
+    title: "Maps",
+    action: "Create a Map",
+    description: "Visualize ideas and concepts in a structured way.",
+    url: "/maps",
+    id: "maps",
+    icon: IconMapPin,
+    style: {
+      text: "text-yellow-700/90 dark:text-yellow-300/90",
+      bg: "bg-yellow-50 dark:bg-yellow-950/40",
+      grid: "",
+    },
+    shortcut: "⌘M",
   },
   {
     title: "Write",

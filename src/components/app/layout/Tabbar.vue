@@ -22,7 +22,7 @@ import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
 import { useRouter } from "vue-router"
 
-const el = ref<HTMLElement | null>(null)
+const el = ref<HTMLElement>()
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()

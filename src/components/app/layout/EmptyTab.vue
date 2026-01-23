@@ -18,8 +18,10 @@ import { defaultMenu } from "@/helpers/defaults"
         <ItemTitle>{{ item.action }}</ItemTitle>
       </ItemContent>
       <ItemActions>
-        <Button variant="outline" size="icon">
-          <IconArrowRight />
+        <Button variant="outline" size="icon" as-child>
+          <RouterLink :to="item.url">
+            <IconArrowRight />
+          </RouterLink>
         </Button>
       </ItemActions>
     </Item>

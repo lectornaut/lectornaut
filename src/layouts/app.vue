@@ -182,6 +182,7 @@ const closeTab = (id: string) => {
 <template>
   <div
     v-if="isLoading"
+    data-tauri-drag-region
     class="bg-secondary flex size-full flex-1 items-center justify-center"
   >
     <Empty>
@@ -191,11 +192,11 @@ const closeTab = (id: string) => {
         </EmptyMedia>
         <EmptyDescription> Loading your workspace... </EmptyDescription>
       </EmptyHeader>
-      <EmptyContent> </EmptyContent>
     </Empty>
   </div>
   <div
     v-else-if="!currentTeam"
+    data-tauri-drag-region
     class="bg-secondary flex size-full flex-1 items-center justify-center"
   >
     <TeamSelector />

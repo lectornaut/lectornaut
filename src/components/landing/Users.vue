@@ -13,9 +13,6 @@ import {
   IconLogosTwitter,
   IconLogosZoom,
 } from "@/data/icons"
-import AutoScrollDefault from "embla-carousel-auto-scroll"
-
-const AutoScroll = AutoScrollDefault
 
 const users = [
   {
@@ -80,14 +77,6 @@ const users = [
         align: 'start',
         loop: true,
       }"
-      :plugins="[
-        AutoScroll({
-          speed: 0.5,
-          startDelay: 0,
-          stopOnInteraction: false,
-          stopOnMouseEnter: false,
-        }),
-      ]"
     >
       <CarouselContent class="-ml-16">
         <CarouselItem

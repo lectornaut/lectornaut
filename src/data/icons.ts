@@ -142,6 +142,7 @@ import IconLucideLock from "~icons/lucide/lock"
 import IconLucideLogOut from "~icons/lucide/log-out"
 import IconLucideLogs from "~icons/lucide/logs"
 import IconLucideMail from "~icons/lucide/mail"
+import IconLucideMapPin from "~icons/lucide/map-pin"
 import IconLucideMaximize from "~icons/lucide/maximize"
 import IconLucideMenu from "~icons/lucide/menu"
 import IconLucideMessageCircle from "~icons/lucide/message-circle"
@@ -430,6 +431,7 @@ export {
   IconLucideLogOut as IconLogOut,
   IconLucideLogs as IconLogs,
   IconLucideMail as IconMail,
+  IconLucideMapPin as IconMapPin,
   IconLucideMaximize as IconMaximize,
   IconMdiFormatTextVariant as IconMdiFormatTextVariant,
   IconLucideMenu as IconMenu,

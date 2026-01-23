@@ -23,10 +23,6 @@ import {
   IconUpload,
   IconX,
 } from "@/data/icons"
-import AutoScrollDefault from "embla-carousel-auto-scroll"
-import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
-
-const AutoScroll = AutoScrollDefault
 
 const carouselContainerRef = ref<typeof Carousel | null>(null)
 
@@ -272,15 +268,6 @@ const randomIndex = () => {
           align: 'start',
           loop: true,
         }"
-        :plugins="[
-          WheelGesturesPlugin(),
-          AutoScroll({
-            speed: randomIndex() * 0.05,
-            startDelay: 0,
-            stopOnInteraction: false,
-            stopOnMouseEnter: true,
-          }),
-        ]"
       >
         <CarouselContent class="m-0 max-h-dvh min-h-0">
           <CarouselItem
@@ -301,7 +288,6 @@ const randomIndex = () => {
     <Carousel
       ref="carouselContainerRef"
       orientation="vertical"
-      :plugins="[WheelGesturesPlugin()]"
       class="focus-visible:outline-none"
       @init-api="(val: any) => (emblaMainApi = val.carouselApi.value)"
     >

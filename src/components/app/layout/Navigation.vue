@@ -10,7 +10,7 @@ const layoutStore = useLayoutStore()
 const { activeNavItems, isLoading } = storeToRefs(layoutStore)
 const { toggleNavItem, resetNavItems } = layoutStore
 
-const el = ref<HTMLElement | null>(null)
+const el = ref<HTMLElement>()
 
 useSortable(el, activeNavItems, {
   animation: 150,

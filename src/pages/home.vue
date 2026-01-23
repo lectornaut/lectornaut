@@ -834,16 +834,14 @@ const expandedCard = ref<number | null>(null)
               <ChartLegendContent />
             </ChartContainer>
           </CardContent>
-          <!-- <Separator /> -->
-          <!-- <CardFooter>
-              <CardDescription>{{ card.description }}</CardDescription>
-              <Button variant="outline" size="sm">
-                <IconRocket /> Ask AI
-              </Button>
-              <Button variant="outline" size="icon-sm">
-                <IconArrowUpRight />
-              </Button>
-            </CardFooter> -->
+          <!-- <Separator />
+          <CardFooter>
+            <CardDescription>{{ card.description }}</CardDescription>
+            <Button variant="outline" size="sm"> <IconRocket /> Ask AI </Button>
+            <Button variant="outline" size="icon-sm">
+              <IconArrowUpRight />
+            </Button>
+          </CardFooter> -->
         </Card>
       </div>
     </TabsContent>
