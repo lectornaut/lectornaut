@@ -1395,6 +1395,11 @@
         "searchPlaceholder": "Ask, Search or Chat...",
         "mode": "Mode"
       }
+    },
+    "workspaceSwitcher": {
+      "noOtherWorkspaces": "No other workspaces",
+      "myWorkspaces": "My workspaces",
+      "createWorkspace": "Create workspace"
     }
   },
   "accountMenu": {

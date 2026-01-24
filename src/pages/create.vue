@@ -103,7 +103,7 @@ const generatePoem = async () => {
             <div class="flex items-center justify-center">
               <Avatar class="size-16">
                 <AvatarImage
-                  :src="`https://avatar.vercel.sh/agent.png`"
+                  src="https://avatar.vercel.sh/agent.png"
                   alt="Agent"
                   referrerpolicy="no-referrer"
                 />
