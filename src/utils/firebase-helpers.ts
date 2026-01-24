@@ -246,6 +246,20 @@ export async function uploadTeamPhoto(
   return uploadFile(`teams/${teamId}/profilePhoto`, file)
 }
 
+/**
+ * Upload workspace profile photo
+ */
+export async function uploadWorkspacePhoto(
+  teamId: string,
+  workspaceId: string,
+  file: File
+): Promise<string> {
+  return uploadFile(
+    `teams/${teamId}/workspaces/${workspaceId}/profilePhoto`,
+    file
+  )
+}
+
 // ============================================================================
 // Query Helpers
 // ============================================================================

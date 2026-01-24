@@ -64,10 +64,14 @@ export function useWorkspaceActions() {
   }
 
   // Create a new workspace
-  const createWorkspace = async (name: string, description?: string) => {
+  const createWorkspace = async (
+    name: string,
+    description?: string,
+    photoFile?: File
+  ) => {
     return workspaceLoading.withLoading("create", async () => {
       try {
-        await workspaceStore.createWorkspace(name, description)
+        await workspaceStore.createWorkspace(name, description, photoFile)
         toast.success("Workspace created successfully")
       } catch (error) {
         toast.error("Failed to create workspace", {
@@ -81,7 +85,11 @@ export function useWorkspaceActions() {
   // Update workspace details
   const updateWorkspace = async (
     workspaceId: string,
-    updates: { name?: string; description?: string | null }
+    updates: {
+      name?: string
+      description?: string | null
+      photoFile?: File | null
+    }
   ) => {
     return workspaceLoading.withLoading(`update-${workspaceId}`, async () => {
       try {
@@ -89,6 +97,36 @@ export function useWorkspaceActions() {
         toast.success("Workspace updated successfully")
       } catch (error) {
         toast.error("Failed to update workspace", {
+          description: (error as Error).message,
+        })
+        throw error
+      }
+    })
+  }
+
+  // Update workspace photo
+  const updateWorkspacePhoto = async (workspaceId: string, file: File) => {
+    return workspaceLoading.withLoading(`photo-${workspaceId}`, async () => {
+      try {
+        await workspaceStore.updateWorkspace(workspaceId, { photoFile: file })
+        toast.success("Workspace photo updated successfully")
+      } catch (error) {
+        toast.error("Failed to update workspace photo", {
+          description: (error as Error).message,
+        })
+        throw error
+      }
+    })
+  }
+
+  // Remove workspace photo
+  const removeWorkspacePhoto = async (workspaceId: string) => {
+    return workspaceLoading.withLoading(`photo-${workspaceId}`, async () => {
+      try {
+        await workspaceStore.updateWorkspace(workspaceId, { photoFile: null })
+        toast.success("Workspace photo removed successfully")
+      } catch (error) {
+        toast.error("Failed to remove workspace photo", {
           description: (error as Error).message,
         })
         throw error
@@ -116,5 +154,7 @@ export function useWorkspaceActions() {
     deleteWorkspace,
     createWorkspace,
     updateWorkspace,
+    updateWorkspacePhoto,
+    removeWorkspacePhoto,
   }
 }

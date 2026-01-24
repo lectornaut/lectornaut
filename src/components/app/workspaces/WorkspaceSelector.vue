@@ -60,7 +60,7 @@ const deselectTeam = async () => {
             >
               <Avatar class="size-5">
                 <AvatarImage
-                  :src="`https://avatar.vercel.sh/${workspace.name}.png`"
+                  :src="workspace.photoURL!"
                   :alt="workspace.name"
                   referrerpolicy="no-referrer"
                 />

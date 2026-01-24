@@ -185,6 +185,8 @@ const {
   isWorkspaceLoading: isWorkspaceActionLoading,
   switchWorkspace,
   deleteWorkspace,
+  updateWorkspacePhoto,
+  removeWorkspacePhoto,
 } = useWorkspaceActions()
 
 // Team Dialog States - Single dialog with dynamic mode
@@ -589,6 +591,39 @@ watch(teamFiles, async (newFiles) => {
 
 const handleRemoveTeamPhoto = async (teamId: string) => {
   await removeTeamPhoto(teamId)
+}
+
+// Workspace photo upload
+const workspaceIdToUpdate = ref<string | null>(null)
+const {
+  files: workspaceFiles,
+  open: openWorkspaceUpload,
+  reset: resetWorkspaceUpload,
+} = useFileDialog({
+  accept: "image/*",
+  multiple: false,
+})
+
+const handleWorkspaceAvatarClick = (workspace: IWorkspace) => {
+  if (!canManageWorkspaces.value) return
+  workspaceIdToUpdate.value = workspace.id
+  openWorkspaceUpload()
+}
+
+watch(workspaceFiles, async (newFiles) => {
+  if (newFiles && newFiles.length > 0 && workspaceIdToUpdate.value) {
+    const file = newFiles.item(0)
+    const workspaceId = workspaceIdToUpdate.value
+    if (file) {
+      await updateWorkspacePhoto(workspaceId, file)
+    }
+    resetWorkspaceUpload()
+    workspaceIdToUpdate.value = null
+  }
+})
+
+const handleRemoveWorkspacePhoto = async (workspaceId: string) => {
+  await removeWorkspacePhoto(workspaceId)
 }
 
 // Sorting state for members table
@@ -2356,8 +2391,7 @@ const df = new DateFormatter("en-US", {
                       <FieldContent>
                         <FieldLabel>Workspaces</FieldLabel>
                         <FieldDescription>
-                          Manage workspaces in your current team. Only owners
-                          can create, edit, or delete workspaces.
+                          Manage workspaces in your current team.
                         </FieldDescription>
                       </FieldContent>
                       <Button
@@ -2433,20 +2467,84 @@ const df = new DateFormatter("en-US", {
                                 :key="workspace.id"
                               >
                                 <TableCell>
-                                  <Item size="sm" class="w-full gap-2 p-0">
-                                    <ItemMedia>
-                                      <Avatar
-                                        class="flex items-center justify-center rounded-md"
-                                      >
-                                        <AvatarImage
-                                          class="rounded-md"
-                                          :src="`https://avatar.vercel.sh/${workspace.name}.png`"
-                                          :alt="workspace.name"
-                                        />
-                                        <AvatarFallback class="rounded-md">
-                                          {{ getInitials(workspace.name) }}
-                                        </AvatarFallback>
-                                      </Avatar>
+                                  <Item
+                                    size="sm"
+                                    class="group w-full gap-2 p-0"
+                                  >
+                                    <ItemMedia class="group relative">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger as-child>
+                                            <Avatar
+                                              class="flex items-center justify-center rounded-md"
+                                              @click="
+                                                handleWorkspaceAvatarClick(
+                                                  workspace
+                                                )
+                                              "
+                                            >
+                                              <template
+                                                v-if="
+                                                  isWorkspaceActionLoading(
+                                                    `photo-${workspace.id}`
+                                                  )
+                                                "
+                                              >
+                                                <Spinner />
+                                              </template>
+                                              <template v-else>
+                                                <AvatarImage
+                                                  class="rounded-md"
+                                                  :src="workspace.photoURL!"
+                                                  :alt="workspace.name"
+                                                />
+                                                <AvatarFallback
+                                                  class="rounded-md"
+                                                >
+                                                  {{
+                                                    getInitials(workspace.name)
+                                                  }}
+                                                </AvatarFallback>
+                                              </template>
+                                            </Avatar>
+                                          </TooltipTrigger>
+                                          <TooltipContent
+                                            v-if="canManageWorkspaces"
+                                          >
+                                            {{
+                                              isWorkspaceActionLoading(
+                                                `photo-${workspace.id}`
+                                              )
+                                                ? "Uploading..."
+                                                : "Upload workspace photo"
+                                            }}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip
+                                          v-if="
+                                            canManageWorkspaces &&
+                                            workspace.photoURL
+                                          "
+                                        >
+                                          <TooltipTrigger as-child>
+                                            <Button
+                                              variant="secondary"
+                                              class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
+                                              size="icon-sm"
+                                              @click.stop="
+                                                handleRemoveWorkspacePhoto(
+                                                  workspace.id
+                                                )
+                                              "
+                                            >
+                                              <IconX />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Remove workspace photo
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </ItemMedia>
                                     <ItemContent class="gap-0.5 truncate">
                                       <ItemTitle class="truncate">

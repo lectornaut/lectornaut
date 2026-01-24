@@ -25,6 +25,7 @@ export interface IWorkspace {
   teamId: string
   name: string
   description?: string | null
+  photoURL?: string | null
   createdAt: Timestamp
   updatedAt: Timestamp
 }

@@ -22,6 +22,7 @@ import {
   createTeamWorkspacesQuery,
   getUserRef,
   getWorkspaceRef,
+  uploadWorkspacePhoto,
 } from "@/utils/firebase-helpers"
 import {
   cloneState,
@@ -180,7 +181,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
    */
   async function createWorkspace(
     name: string,
-    description?: string
+    description?: string,
+    photoFile?: File
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
@@ -195,11 +197,29 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const workspaceId = workspaceRef.id
     const timestamp = serverTimestamp()
 
+    // Upload photo first if provided
+    let photoURL: string | null = null
+    if (photoFile) {
+      try {
+        photoURL = await uploadWorkspacePhoto(
+          currentTeamId.value,
+          workspaceId,
+          photoFile
+        )
+      } catch (error) {
+        console.error(
+          "[workspaceStore] Error uploading workspace photo:",
+          error
+        )
+      }
+    }
+
     const newWorkspace: IWorkspace = {
       id: workspaceId,
       teamId: currentTeamId.value,
       name,
       description: description ?? null,
+      photoURL,
       createdAt: timestamp as Timestamp,
       updatedAt: timestamp as Timestamp,
     }
@@ -276,7 +296,11 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
    */
   async function updateWorkspace(
     workspaceId: string,
-    updates: { name?: string; description?: string | null }
+    updates: {
+      name?: string
+      description?: string | null
+      photoFile?: File | null
+    }
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
@@ -285,10 +309,11 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       throw new Error("Only team owners and editors can update workspaces")
     }
 
-    const { name, description } = updates
+    const { name, description, photoFile } = updates
     const updateData: {
       name?: string
       description?: string | null
+      photoURL?: string | null
       updatedAt: FieldValue
     } = {
       updatedAt: serverTimestamp(),
@@ -296,6 +321,27 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
+
+    // Upload photo first if provided (outside of optimistic update to get URL)
+    if (photoFile !== undefined) {
+      updateData.photoURL =
+        photoFile === null
+          ? null
+          : await uploadWorkspacePhoto(
+              currentTeamId.value,
+              workspaceId,
+              photoFile
+            )
+    }
+
+    // Prepare optimistic updates for workspace data
+    const workspaceUpdates = {
+      ...(name !== undefined ? { name } : {}),
+      ...(description !== undefined ? { description } : {}),
+      ...(updateData.photoURL !== undefined
+        ? { photoURL: updateData.photoURL }
+        : {}),
+    }
 
     // Clone previous state for rollback
     const previousWorkspaces = cloneState(workspaces.value)
@@ -306,7 +352,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // Apply optimistic update
       () => {
         optimisticWorkspaces.value = workspaces.value.map((w) =>
-          w.id === workspaceId ? { ...w, ...updates } : w
+          w.id === workspaceId ? { ...w, ...workspaceUpdates } : w
         )
       },
       // Rollback on error

@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { IconCheck, IconChevronDown, IconCirclePlus } from "@/data/icons"
+import {
+  IconBlocks,
+  IconCheck,
+  IconChevronDown,
+  IconCirclePlus,
+} from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
+import { emitter } from "@/modules/mitt"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
@@ -30,12 +36,12 @@ const switchWorkspace = async (workspaceId: string) => {
             <Avatar class="size-4">
               <AvatarImage
                 class="size-4"
-                :src="`https://avatar.vercel.sh/${currentWorkspace?.name!}.png`"
+                :src="currentWorkspace?.photoURL!"
                 :alt="currentWorkspace?.name!"
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback class="size-4">
-                {{ currentWorkspace?.name! }}
+                {{ getInitials(currentWorkspace?.name!) }}
               </AvatarFallback>
             </Avatar>
             {{ currentWorkspace?.name! }}
@@ -62,7 +68,7 @@ const switchWorkspace = async (workspaceId: string) => {
               <Avatar class="size-4">
                 <AvatarImage
                   class="size-4"
-                  :src="`https://avatar.vercel.sh/${workspace.name}.png`"
+                  :src="workspace.photoURL!"
                   :alt="workspace.name"
                   referrerpolicy="no-referrer"
                 />
@@ -90,6 +96,16 @@ const switchWorkspace = async (workspaceId: string) => {
         </DropdownMenuContent>
       </DropdownMenu>
     </ContextMenuTrigger>
+    <ContextMenuContent class="w-48">
+      <ContextMenuGroup>
+        <ContextMenuItem
+          @click="emitter.emit('Dialog.Settings.Open', 'workspaces')"
+        >
+          <IconBlocks />
+          {{ t("components.workspaceSwitcher.menu.settings") }}
+        </ContextMenuItem>
+      </ContextMenuGroup>
+    </ContextMenuContent>
   </ContextMenu>
   <WorkspaceDialog v-model:open="isCreatingWorkspaceDialogOpen" mode="create" />
 </template>

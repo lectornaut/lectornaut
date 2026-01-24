@@ -772,16 +772,16 @@ export const defaultSettingsTabs = [
         description: "settings.descriptions.teams",
       },
       {
-        name: "settings.titles.members",
-        icon: IconUsersRound,
-        id: "members",
-        description: "settings.descriptions.members",
-      },
-      {
         name: "settings.titles.workspaces",
         icon: IconBlocks,
         id: "workspaces",
         description: "settings.descriptions.workspaces",
+      },
+      {
+        name: "settings.titles.members",
+        icon: IconUsersRound,
+        id: "members",
+        description: "settings.descriptions.members",
       },
       {
         name: "settings.titles.agents",

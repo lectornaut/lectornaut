@@ -1399,7 +1399,10 @@
     "workspaceSwitcher": {
       "noOtherWorkspaces": "No other workspaces",
       "myWorkspaces": "My workspaces",
-      "createWorkspace": "Create workspace"
+      "createWorkspace": "Create workspace",
+      "menu": {
+        "settings": "Settings"
+      }
     }
   },
   "accountMenu": {
