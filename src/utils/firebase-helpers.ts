@@ -51,6 +51,13 @@ export const getMembershipRef = (
   userId: string
 ): DocumentReference => doc(firestore, "teams", teamId, "memberships", userId)
 
+/** Get a reference to a workspace document */
+export const getWorkspaceRef = (
+  teamId: string,
+  workspaceId: string
+): DocumentReference =>
+  doc(firestore, "teams", teamId, "workspaces", workspaceId)
+
 /** Get a reference to a todo document */
 export const getTodoRef = (todoId: string): DocumentReference =>
   doc(firestore, "todos", todoId)
@@ -75,6 +82,10 @@ export const getTeamMembershipsCollection = (teamId: string) =>
 /** Get all memberships across all teams (collection group) */
 export const getAllMembershipsGroup = () =>
   collectionGroup(firestore, "memberships")
+
+/** Get workspaces subcollection for a team */
+export const getTeamWorkspacesCollection = (teamId: string) =>
+  collection(firestore, "teams", teamId, "workspaces")
 
 // ============================================================================
 // Batch Processing
@@ -258,4 +269,11 @@ export function createTeamMembershipsQuery(teamId: string) {
  */
 export function createUsersWithTeamQuery(teamId: string) {
   return query(getUsersCollection(), where("currentTeamId", "==", teamId))
+}
+
+/**
+ * Create a query for team's workspaces
+ */
+export function createTeamWorkspacesQuery(teamId: string) {
+  return getTeamWorkspacesCollection(teamId)
 }

@@ -320,6 +320,12 @@ export const useTeamStore = defineStore("teams", () => {
   ): Promise<void> {
     if (!currentUser.value) return
 
+    // Check if user is owner of the team
+    const membership = memberships.value.find((m) => m.teamId === teamId)
+    if (!membership || membership.role !== "owner") {
+      throw new Error("Only team owners can update team details")
+    }
+
     const { name, photoFile } = updates
     const updateData: {
       name?: string

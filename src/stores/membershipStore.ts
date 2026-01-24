@@ -238,6 +238,15 @@ export const useMembershipStore = defineStore("memberships", () => {
   /** Check if current user is an owner of the current team */
   const isOwner = computed(() => currentUserRole.value === "owner")
 
+  /** Check if current user is an editor of the current team */
+  const isEditor = computed(() => currentUserRole.value === "editor")
+
+  /** Check if current user can manage workspaces (owner or editor) */
+  const canManageWorkspaces = computed(
+    () =>
+      currentUserRole.value === "owner" || currentUserRole.value === "editor"
+  )
+
   /** Count of owners in the current team */
   const ownerCount = computed(() => getOwnerCount(teamMembers.value))
 
@@ -397,7 +406,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamId: string,
     team: ITeam,
     email: string,
-    role: IMembership["role"] = "member"
+    role: IMembership["role"] = "viewer"
   ): Promise<void> {
     if (!currentUser.value) return
 
@@ -472,7 +481,13 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     // Prevent changing role if this is the last owner
     if (currentMembership.role === "owner" && newRole !== "owner") {
-      if (getOwnerCount(teamMembers.value) <= 1) {
+      // If teamId is not the current team, we need to fetch its members to validate owner count
+      let membersToValidate = teamMembers.value
+      if (teamId !== currentTeamId.value) {
+        membersToValidate = await getMembersForTeam(teamId)
+      }
+
+      if (getOwnerCount(membersToValidate) <= 1) {
         throw new Error("Cannot change role: Team must have at least one owner")
       }
     }
@@ -495,10 +510,15 @@ export const useMembershipStore = defineStore("memberships", () => {
       },
       // Firestore operation
       async () => {
-        await updateDoc(membershipRef, {
-          role: newRole,
-          updatedAt: serverTimestamp(),
-        })
+        try {
+          await updateDoc(membershipRef, {
+            role: newRole,
+            updatedAt: serverTimestamp(),
+          })
+        } catch (error) {
+          console.error("[membershipStore] Error changing role:", error)
+          throw new Error(`Failed to update role: ${(error as Error).message}`)
+        }
       }
     )
   }
@@ -517,7 +537,14 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
 
     const membershipData = membershipSnap.data() as IMembership
-    validateMemberRemoval(membershipData, teamMembers.value)
+
+    // If teamId is not the current team, we need to fetch its members to validate removal
+    let membersToValidate = teamMembers.value
+    if (teamId !== currentTeamId.value) {
+      membersToValidate = await getMembersForTeam(teamId)
+    }
+
+    validateMemberRemoval(membershipData, membersToValidate)
 
     const membershipKey = `${teamId}-${userId}`
     const previousTeamMembers = cloneState(teamMembers.value)
@@ -601,7 +628,14 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     // Compute resulting members after removal to validate constraints
     const userIdSet = new Set(userIds)
-    const remainingMembers = teamMembers.value.filter(
+
+    // If teamId is not the current team, we need to fetch its members to validate removal
+    let membersToValidate = teamMembers.value
+    if (teamId !== currentTeamId.value) {
+      membersToValidate = await getMembersForTeam(teamId)
+    }
+
+    const remainingMembers = membersToValidate.filter(
       (m) => !userIdSet.has(m.userId)
     )
 
@@ -708,6 +742,24 @@ export const useMembershipStore = defineStore("memberships", () => {
     pendingMembershipIds.value.delete(key)
   }
 
+  /**
+   * Get members for a specific team (without switching current team)
+   */
+  async function getMembersForTeam(teamId: string): Promise<IMembership[]> {
+    try {
+      const membersSnapshot = await getDocs(
+        getTeamMembershipsCollection(teamId)
+      )
+      return membersSnapshot.docs.map((doc) => doc.data() as IMembership)
+    } catch (error) {
+      console.error(
+        `[membershipStore] Failed to fetch members for team ${teamId}:`,
+        error
+      )
+      return []
+    }
+  }
+
   return {
     // State
     memberships,
@@ -724,6 +776,8 @@ export const useMembershipStore = defineStore("memberships", () => {
     getMembershipForTeam,
     currentUserRole,
     isOwner,
+    isEditor,
+    canManageWorkspaces,
     ownerCount,
     getTeamMemberCount,
 
@@ -734,6 +788,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     removeMembers,
     createOwnerMembership,
     fetchTeamMemberCounts,
+    getMembersForTeam,
 
     // Internal helpers (for teamStore)
     addMembershipOptimistic,

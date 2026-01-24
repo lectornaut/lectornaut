@@ -94,13 +94,17 @@ export function useTeamActions() {
 
   // Check if user can exit a specific team
   const canExitTeam = (membership: IMembership) => {
-    // Can't exit if it's the last member (team would be orphaned)
-    // We need to check the members of that specific team, not just current team
-    // For now, we'll check if user is the only owner in that team
+    // Can't exit if it's the last owner
     if (membership.role === "owner") {
-      // If user is an owner, we need to ensure there's at least one other owner or member
-      // This check is simplified - the backend will validate properly
-      return true
+      // If it's the current team, we can check the owner count
+      if (membership.teamId === currentTeam.value?.id) {
+        return ownerCount.value > 1
+      }
+      // For other teams, we'll return true and let the store/backend handle it
+      // or we could check getTeamMemberCount as a hint
+      if (membershipStore.getTeamMemberCount(membership.teamId) <= 1) {
+        return false
+      }
     }
     return true
   }
@@ -286,7 +290,7 @@ export function useTeamActions() {
   // Invite a member to the team
   const inviteMember = async (
     email: string,
-    role: IMembership["role"] = "member"
+    role: IMembership["role"] = "viewer"
   ) => {
     return memberLoading.withLoading(`invite-${email}`, async () => {
       if (!currentTeam.value) return

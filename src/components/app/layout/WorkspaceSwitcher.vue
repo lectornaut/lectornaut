@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { IconCheck, IconChevronDown, IconCirclePlus } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
+import { storeToRefs } from "pinia"
+import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
-const isLoading = ref(false)
-const workspaces = [
-  { id: "1", name: "Workspace one" },
-  { id: "2", name: "Workspace two" },
-]
-const activeWorkspace = ref(workspaces[0])
-const switchWorkspace = (workspaceId: string) => {
-  activeWorkspace.value = workspaces.find(
-    (workspace) => workspace.id === workspaceId
-  )!
-  console.log(`Switching to workspace with ID: ${workspaceId}`)
+const workspaceStore = useWorkspaceStore()
+const { workspaces, currentWorkspace, isLoading } = storeToRefs(workspaceStore)
+
+const isCreatingWorkspaceDialogOpen = ref(false)
+
+const switchWorkspace = async (workspaceId: string) => {
+  try {
+    await workspaceStore.switchWorkspace(workspaceId)
+  } catch (_error) {
+    toast.error("Failed to switch workspace")
+  }
 }
 </script>
 
@@ -27,15 +30,15 @@ const switchWorkspace = (workspaceId: string) => {
             <Avatar class="size-4">
               <AvatarImage
                 class="size-4"
-                :src="`https://avatar.vercel.sh/${activeWorkspace?.name!}.png`"
-                :alt="activeWorkspace?.name!"
+                :src="`https://avatar.vercel.sh/${currentWorkspace?.name!}.png`"
+                :alt="currentWorkspace?.name!"
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback class="size-4">
-                {{ activeWorkspace?.name! }}
+                {{ currentWorkspace?.name! }}
               </AvatarFallback>
             </Avatar>
-            {{ activeWorkspace?.name! }}
+            {{ currentWorkspace?.name! }}
             <IconChevronDown />
           </Button>
         </DropdownMenuTrigger>
@@ -70,14 +73,16 @@ const switchWorkspace = (workspaceId: string) => {
               <span class="truncate">
                 {{ workspace.name }}
               </span>
-              <DropdownMenuShortcut v-if="workspace.id === activeWorkspace?.id">
+              <DropdownMenuShortcut
+                v-if="workspace.id === currentWorkspace?.id"
+              >
                 <IconCheck />
               </DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem @click="console.log('Create workspace')">
+            <DropdownMenuItem @click="isCreatingWorkspaceDialogOpen = true">
               <IconCirclePlus />
               {{ t("components.workspaceSwitcher.createWorkspace") }}
             </DropdownMenuItem>
@@ -86,4 +91,5 @@ const switchWorkspace = (workspaceId: string) => {
       </DropdownMenu>
     </ContextMenuTrigger>
   </ContextMenu>
+  <WorkspaceDialog v-model:open="isCreatingWorkspaceDialogOpen" mode="create" />
 </template>

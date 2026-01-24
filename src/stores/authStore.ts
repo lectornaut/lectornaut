@@ -118,6 +118,7 @@ export const useAuthStore = defineStore("auth", () => {
             displayName: user.displayName,
             photoURL: user.photoURL,
             currentTeamId: null,
+            currentWorkspaceId: null,
             createdAt: serverTimestamp() as Timestamp,
             updatedAt: serverTimestamp() as Timestamp,
           }
@@ -199,6 +200,20 @@ export const useAuthStore = defineStore("auth", () => {
         })
       }
     )
+  }
+
+  /**
+   * Update the current workspace ID for the user
+   * Used by workspaceStore when switching/creating workspaces
+   */
+  function setCurrentWorkspaceId(workspaceId: string | null): void {
+    if (!currentUser.value || !userProfile.value) return
+
+    // Optimistically update the workspace ID
+    optimisticUserProfile.value = {
+      ...userProfile.value,
+      currentWorkspaceId: workspaceId,
+    }
   }
 
   /**
@@ -306,6 +321,7 @@ export const useAuthStore = defineStore("auth", () => {
 
     // Actions
     setCurrentTeamId,
+    setCurrentWorkspaceId,
     updateUserProfile,
     uploadProfilePhoto,
 

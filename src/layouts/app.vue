@@ -33,12 +33,16 @@ import {
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useTeamStore } from "@/stores/teamStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { listen } from "@tauri-apps/api/event"
 import { UseDraggable as Draggable } from "@vueuse/components"
 import { storeToRefs } from "pinia"
 
 const teamStore = useTeamStore()
 const { currentTeam, isLoading } = storeToRefs(teamStore)
+
+const workspaceStore = useWorkspaceStore()
+const { currentWorkspace } = storeToRefs(workspaceStore)
 
 const { t } = useI18n()
 const router = useRouter()
@@ -200,6 +204,13 @@ const closeTab = (id: string) => {
     class="bg-secondary flex size-full flex-1 items-center justify-center"
   >
     <TeamSelector />
+  </div>
+  <div
+    v-else-if="!currentWorkspace"
+    data-tauri-drag-region
+    class="bg-secondary flex size-full flex-1 items-center justify-center"
+  >
+    <WorkspaceSelector />
   </div>
   <SidebarProvider v-else>
     <SidebarInset class="bg-secondary">

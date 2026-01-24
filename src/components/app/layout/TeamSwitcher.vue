@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import TeamDialog from "@/components/app/teams/TeamDialog.vue"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconCheck,
@@ -64,8 +63,7 @@ const teams = computed(() =>
                     {{ currentTeam?.name }}
                   </span>
                   <span class="text-muted-foreground truncate text-xs">
-                    {{ getTeamMemberCount(currentTeam?.id!) }}
-                    {{ t("components.teamSwitcher.members") }}
+                    {{ teamMembers.length === 1 ? "Free" : "Pro" }} Plan
                   </span>
                 </div>
                 <div class="flex items-center gap-1">
@@ -118,8 +116,11 @@ const teams = computed(() =>
                       {{ currentTeam?.name }}
                     </ItemTitle>
                     <ItemDescription class="truncate text-xs">
-                      {{ getTeamMemberCount(currentTeam?.id!) }}
-                      {{ t("components.teamSwitcher.members") }}
+                      {{
+                        t("components.teamSwitcher.members", {
+                          count: getTeamMemberCount(currentTeam?.id!),
+                        })
+                      }}
                     </ItemDescription>
                   </ItemContent>
                 </Item>
@@ -189,8 +190,11 @@ const teams = computed(() =>
                               {{ team.label }}
                             </ItemTitle>
                             <ItemDescription class="truncate text-xs">
-                              {{ getTeamMemberCount(team.value) }}
-                              {{ t("components.teamSwitcher.members") }}
+                              {{
+                                t("components.teamSwitcher.members", {
+                                  count: getTeamMemberCount(team.value),
+                                })
+                              }}
                             </ItemDescription>
                           </ItemContent>
                           <ItemActions v-if="currentTeam?.id === team.value">

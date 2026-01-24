@@ -28,8 +28,15 @@ const isLoading = ref(false)
 // Form State
 const teamName = ref("")
 const inviteEmail = ref("")
-const inviteRole = ref<IMembershipRole>("member")
-const members = ref<{ email: string; role: IMembershipRole; id?: string }[]>([])
+const inviteRole = ref<IMembershipRole>("viewer")
+const members = ref<
+  {
+    email: string
+    role: IMembershipRole
+    id?: string
+    originalRole?: IMembershipRole
+  }[]
+>([])
 const removedMemberIds = ref<string[]>([])
 
 // Photo Upload State
@@ -69,7 +76,7 @@ const resetForm = () => {
   }
   teamName.value = ""
   inviteEmail.value = ""
-  inviteRole.value = "member"
+  inviteRole.value = "viewer"
   members.value = []
   removedMemberIds.value = []
   photoFile.value = null
@@ -92,16 +99,24 @@ watch(isOpen, async (val) => {
   } else {
     // Initialize form when opened
     if (props.mode === "edit" && props.team) {
-      teamName.value = props.team.name
-      photoPreview.value = props.team.photoURL || null
-      // Load existing team members from membershipStore
-      const teamMembers = membershipStore.teamMembers
-      if (teamMembers && teamMembers.length > 0) {
-        members.value = teamMembers.map((membership: IMembership) => ({
-          email: membership.user.email!,
-          role: membership.role,
-          id: membership.userId,
-        }))
+      isLoading.value = true
+      try {
+        teamName.value = props.team.name
+        photoPreview.value = props.team.photoURL || null
+        // Load existing team members from membershipStore for the specific team
+        const teamMembers = await membershipStore.getMembersForTeam(
+          props.team.id
+        )
+        if (teamMembers && teamMembers.length > 0) {
+          members.value = teamMembers.map((membership: IMembership) => ({
+            email: membership.user.email!,
+            role: membership.role,
+            id: membership.userId,
+            originalRole: membership.role,
+          }))
+        }
+      } finally {
+        isLoading.value = false
       }
     }
   }
@@ -124,7 +139,7 @@ const addMember = (e?: Event) => {
     role: inviteRole.value,
   })
   inviteEmail.value = ""
-  inviteRole.value = "member"
+  inviteRole.value = "viewer"
 }
 
 const removeMember = (email: string, id?: string) => {
@@ -180,6 +195,17 @@ const handleSubmit = async () => {
           props.team.id,
           removedMemberIds.value
         )
+      }
+
+      // Update existing member roles if changed
+      const membersToUpdate = members.value.filter(
+        (m) => m.id && m.role !== m.originalRole
+      )
+      if (membersToUpdate.length > 0 && props.team) {
+        const updatePromises = membersToUpdate.map((member) =>
+          membershipStore.changeRole(props.team!.id, member.id!, member.role)
+        )
+        await Promise.all(updatePromises)
       }
       // Invite new members (those without an id)
       const newMembers = members.value.filter((m) => !m.id)
@@ -360,8 +386,11 @@ const handleSubmit = async () => {
                     <SelectItem value="owner">{{
                       t("components.teamDialog.roles.owner")
                     }}</SelectItem>
-                    <SelectItem value="member">{{
-                      t("components.teamDialog.roles.member")
+                    <SelectItem value="editor">{{
+                      t("components.teamDialog.roles.editor")
+                    }}</SelectItem>
+                    <SelectItem value="viewer">{{
+                      t("components.teamDialog.roles.viewer")
                     }}</SelectItem>
                   </SelectContent>
                 </Select>
@@ -404,8 +433,11 @@ const handleSubmit = async () => {
                   <SelectItem value="owner">{{
                     t("components.teamDialog.roles.owner")
                   }}</SelectItem>
-                  <SelectItem value="member">{{
-                    t("components.teamDialog.roles.member")
+                  <SelectItem value="editor">{{
+                    t("components.teamDialog.roles.editor")
+                  }}</SelectItem>
+                  <SelectItem value="viewer">{{
+                    t("components.teamDialog.roles.viewer")
                   }}</SelectItem>
                 </SelectContent>
               </Select>

@@ -20,17 +20,27 @@ export interface ITeam {
   updatedAt: Timestamp
 }
 
+export interface IWorkspace {
+  id: string
+  teamId: string
+  name: string
+  description?: string | null
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
 export interface IUser {
   uid: string
   email: string | null
   displayName: string | null
   photoURL: string | null
   currentTeamId: string | null
+  currentWorkspaceId: string | null
   createdAt: Timestamp
   updatedAt: Timestamp
 }
 
-export type IMembershipRole = "owner" | "admin" | "member"
+export type IMembershipRole = "owner" | "editor" | "viewer"
 
 export interface IMembership {
   userId: string

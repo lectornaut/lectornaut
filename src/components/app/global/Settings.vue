@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useKeychain } from "@/composables/useKeychain"
 import { useTeamActions } from "@/composables/useTeamActions"
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconAlertTriangle,
   IconArrowDown,
@@ -37,7 +38,7 @@ import { accent, base, font, size, store } from "@/modules/theme"
 import { updateUserData } from "@/queries/updateUserData"
 import { checkUsernameAvailability, claimUsername } from "@/queries/username"
 import { useAuthStore } from "@/stores/authStore"
-import type { IMembership, ITeam } from "@/types"
+import type { IMembership, IMembershipRole, ITeam, IWorkspace } from "@/types"
 import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
@@ -170,8 +171,21 @@ const {
   isRoleLoading,
   isMemberLoading,
   isTeamLoading,
+  canExitTeam,
+  canDeleteTeam,
   getTeamMemberCount,
 } = useTeamActions()
+
+// Use workspace actions composable
+const {
+  currentWorkspace,
+  workspaces,
+  isLoading: isWorkspaceLoading,
+  canManageWorkspaces,
+  isWorkspaceLoading: isWorkspaceActionLoading,
+  switchWorkspace,
+  deleteWorkspace,
+} = useWorkspaceActions()
 
 // Team Dialog States - Single dialog with dynamic mode
 const isTeamDialogOpen = ref(false)
@@ -220,6 +234,42 @@ const handleExitTeam = async () => {
     isExitTeamDialogOpen.value = false
   } finally {
     teamToExit.value = null
+  }
+}
+
+// Workspace Dialog States
+const isWorkspaceDialogOpen = ref(false)
+const workspaceDialogMode = ref<"create" | "edit">("create")
+const workspaceDialogWorkspace = ref<IWorkspace | undefined>(undefined)
+
+const openWorkspaceDialog = (
+  mode: "create" | "edit",
+  workspace?: IWorkspace
+) => {
+  workspaceDialogMode.value = mode
+  workspaceDialogWorkspace.value = workspace
+  isWorkspaceDialogOpen.value = true
+}
+
+const isDeleteWorkspaceDialogOpen = ref(false)
+const workspaceToDelete = ref<IWorkspace | null>(null)
+
+const startEditingWorkspace = (workspace: IWorkspace) => {
+  openWorkspaceDialog("edit", workspace)
+}
+
+const confirmDeleteWorkspace = (workspace: IWorkspace) => {
+  workspaceToDelete.value = workspace
+  isDeleteWorkspaceDialogOpen.value = true
+}
+
+const handleDeleteWorkspace = async () => {
+  if (!workspaceToDelete.value) return
+  try {
+    await deleteWorkspace(workspaceToDelete.value.id)
+    isDeleteWorkspaceDialogOpen.value = false
+  } finally {
+    workspaceToDelete.value = null
   }
 }
 
@@ -545,12 +595,16 @@ const handleRemoveTeamPhoto = async (teamId: string) => {
 type SortDirection = "asc" | "desc" | null
 type MemberSortKey = "name" | "joined"
 type TeamSortKey = "name" | "created"
+type WorkspaceSortKey = "name" | "created"
 
 const memberSortKey = ref<MemberSortKey | null>(null)
 const memberSortDirection = ref<SortDirection>(null)
 
 const teamSortKey = ref<TeamSortKey | null>(null)
 const teamSortDirection = ref<SortDirection>(null)
+
+const workspaceSortKey = ref<WorkspaceSortKey | null>(null)
+const workspaceSortDirection = ref<SortDirection>(null)
 
 const toggleMemberSort = (key: MemberSortKey) => {
   if (memberSortKey.value === key) {
@@ -581,6 +635,22 @@ const toggleTeamSort = (key: TeamSortKey) => {
   } else {
     teamSortKey.value = key
     teamSortDirection.value = "asc"
+  }
+}
+
+const toggleWorkspaceSort = (key: WorkspaceSortKey) => {
+  if (workspaceSortKey.value === key) {
+    if (workspaceSortDirection.value === "asc") {
+      workspaceSortDirection.value = "desc"
+    } else if (workspaceSortDirection.value === "desc") {
+      workspaceSortKey.value = null
+      workspaceSortDirection.value = null
+    } else {
+      workspaceSortDirection.value = "asc"
+    }
+  } else {
+    workspaceSortKey.value = key
+    workspaceSortDirection.value = "asc"
   }
 }
 
@@ -622,6 +692,30 @@ const sortedMemberships = computed(() => {
       const nameB = (b.team?.name || "").toLowerCase()
       return nameA.localeCompare(nameB) * direction
     } else if (teamSortKey.value === "created") {
+      const dateA = a.createdAt?.toDate?.()?.getTime() || 0
+      const dateB = b.createdAt?.toDate?.()?.getTime() || 0
+      return (dateA - dateB) * direction
+    }
+    return 0
+  })
+
+  return sorted
+})
+
+const sortedWorkspaces = computed(() => {
+  if (!workspaceSortKey.value || !workspaceSortDirection.value) {
+    return workspaces.value
+  }
+
+  const sorted = [...workspaces.value]
+  const direction = workspaceSortDirection.value === "asc" ? 1 : -1
+
+  sorted.sort((a, b) => {
+    if (workspaceSortKey.value === "name") {
+      const nameA = (a.name || "").toLowerCase()
+      const nameB = (b.name || "").toLowerCase()
+      return nameA.localeCompare(nameB) * direction
+    } else if (workspaceSortKey.value === "created") {
       const dateA = a.createdAt?.toDate?.()?.getTime() || 0
       const dateB = b.createdAt?.toDate?.()?.getTime() || 0
       return (dateA - dateB) * direction
@@ -1750,8 +1844,11 @@ const df = new DateFormatter("en-US", {
                                               <SelectItem value="owner">
                                                 Owner
                                               </SelectItem>
-                                              <SelectItem value="member">
-                                                Member
+                                              <SelectItem value="editor">
+                                                Editor
+                                              </SelectItem>
+                                              <SelectItem value="viewer">
+                                                Viewer
                                               </SelectItem>
                                             </SelectContent>
                                           </Select>
@@ -1769,10 +1866,11 @@ const df = new DateFormatter("en-US", {
                                     :model-value="member.role"
                                     :disabled="isRoleLoading(member.userId)"
                                     @update:model-value="
-                                      changeRole(
-                                        member.userId,
-                                        $event as 'owner' | 'member'
-                                      )
+                                      (role) =>
+                                        changeRole(
+                                          member.userId,
+                                          role as IMembershipRole
+                                        )
                                     "
                                   >
                                     <SelectTrigger class="w-32">
@@ -1782,8 +1880,11 @@ const df = new DateFormatter("en-US", {
                                       <SelectItem value="owner">
                                         Owner
                                       </SelectItem>
-                                      <SelectItem value="member">
-                                        Member
+                                      <SelectItem value="editor">
+                                        Editor
+                                      </SelectItem>
+                                      <SelectItem value="viewer">
+                                        Viewer
                                       </SelectItem>
                                     </SelectContent>
                                   </Select>
@@ -2172,6 +2273,9 @@ const df = new DateFormatter("en-US", {
                                               </DropdownMenuTrigger>
                                               <DropdownMenuContent align="end">
                                                 <DropdownMenuItem
+                                                  :disabled="
+                                                    !canExitTeam(membership)
+                                                  "
                                                   @click="
                                                     confirmExitTeam(
                                                       membership.team!
@@ -2188,7 +2292,7 @@ const df = new DateFormatter("en-US", {
                                                 />
                                                 <DropdownMenuItem
                                                   v-if="
-                                                    membership.role === 'owner'
+                                                    canDeleteTeam(membership)
                                                   "
                                                   @click="
                                                     startEditingTeam(
@@ -2201,7 +2305,7 @@ const df = new DateFormatter("en-US", {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                   v-if="
-                                                    membership.role === 'owner'
+                                                    canDeleteTeam(membership)
                                                   "
                                                   @click="
                                                     confirmDeleteTeam(
@@ -2245,7 +2349,216 @@ const df = new DateFormatter("en-US", {
               class="overflow-auto overscroll-none scroll-smooth"
               value="workspaces"
             >
-              <div class="p-6"></div>
+              <div class="p-6">
+                <FieldGroup>
+                  <FieldSet>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel>Workspaces</FieldLabel>
+                        <FieldDescription>
+                          Manage workspaces in your current team. Only owners
+                          can create, edit, or delete workspaces.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Button
+                        v-if="canManageWorkspaces"
+                        @click="openWorkspaceDialog('create')"
+                      >
+                        <IconPlus />
+                        Create Workspace
+                      </Button>
+                    </Field>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <div
+                          v-if="isWorkspaceLoading"
+                          class="flex justify-center py-8"
+                        >
+                          <Spinner />
+                        </div>
+                        <div v-else class="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead class="w-1/3">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="toggleWorkspaceSort('name')"
+                                  >
+                                    Workspace
+                                    <IconArrowUp
+                                      v-if="
+                                        workspaceSortKey === 'name' &&
+                                        workspaceSortDirection === 'asc'
+                                      "
+                                    />
+                                    <IconArrowDown
+                                      v-else-if="
+                                        workspaceSortKey === 'name' &&
+                                        workspaceSortDirection === 'desc'
+                                      "
+                                    />
+                                    <IconArrowUpDown v-else />
+                                  </Button>
+                                </TableHead>
+                                <TableHead class="w-1/3">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="toggleWorkspaceSort('created')"
+                                  >
+                                    Created
+                                    <IconArrowUp
+                                      v-if="
+                                        workspaceSortKey === 'created' &&
+                                        workspaceSortDirection === 'asc'
+                                      "
+                                    />
+                                    <IconArrowDown
+                                      v-else-if="
+                                        workspaceSortKey === 'created' &&
+                                        workspaceSortDirection === 'desc'
+                                      "
+                                    />
+                                    <IconArrowUpDown v-else />
+                                  </Button>
+                                </TableHead>
+                                <TableHead class="w-1/3 text-right"></TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow
+                                v-for="workspace in sortedWorkspaces"
+                                :key="workspace.id"
+                              >
+                                <TableCell>
+                                  <Item size="sm" class="w-full gap-2 p-0">
+                                    <ItemMedia>
+                                      <Avatar
+                                        class="flex items-center justify-center rounded-md"
+                                      >
+                                        <AvatarImage
+                                          class="rounded-md"
+                                          :src="`https://avatar.vercel.sh/${workspace.name}.png`"
+                                          :alt="workspace.name"
+                                        />
+                                        <AvatarFallback class="rounded-md">
+                                          {{ getInitials(workspace.name) }}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </ItemMedia>
+                                    <ItemContent class="gap-0.5 truncate">
+                                      <ItemTitle class="truncate">
+                                        {{ workspace.name }}
+                                      </ItemTitle>
+                                      <ItemDescription
+                                        v-if="workspace.description"
+                                        class="truncate text-xs"
+                                      >
+                                        {{ workspace.description }}
+                                      </ItemDescription>
+                                    </ItemContent>
+                                  </Item>
+                                </TableCell>
+                                <TableCell>
+                                  {{ df.format(workspace.createdAt.toDate()) }}
+                                </TableCell>
+                                <TableCell
+                                  class="flex items-center justify-end text-right"
+                                >
+                                  <ButtonGroup>
+                                    <ButtonGroup>
+                                      <Button
+                                        v-if="
+                                          currentWorkspace?.id !== workspace.id
+                                        "
+                                        variant="outline"
+                                        :disabled="
+                                          isWorkspaceActionLoading(workspace.id)
+                                        "
+                                        @click="switchWorkspace(workspace.id)"
+                                      >
+                                        <Spinner
+                                          v-if="
+                                            isWorkspaceActionLoading(
+                                              workspace.id
+                                            )
+                                          "
+                                        />
+                                        <template v-else>
+                                          <IconSwitchHorizontal />
+                                          Switch
+                                        </template>
+                                      </Button>
+                                      <Button v-else variant="outline" disabled>
+                                        <IconCheck />
+                                        Current
+                                      </Button>
+                                    </ButtonGroup>
+                                    <ButtonGroup v-if="canManageWorkspaces">
+                                      <DropdownMenu>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger as-child>
+                                              <DropdownMenuTrigger as-child>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                >
+                                                  <IconMoreHorizontal />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <DropdownMenuItem
+                                                  @click="
+                                                    startEditingWorkspace(
+                                                      workspace
+                                                    )
+                                                  "
+                                                >
+                                                  <IconPencil />
+                                                  Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                  @click="
+                                                    confirmDeleteWorkspace(
+                                                      workspace
+                                                    )
+                                                  "
+                                                >
+                                                  <IconTrash />
+                                                  Delete
+                                                </DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              Actions
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </DropdownMenu>
+                                    </ButtonGroup>
+                                  </ButtonGroup>
+                                </TableCell>
+                              </TableRow>
+                              <TableRow v-if="workspaces.length === 0">
+                                <TableCell
+                                  colspan="3"
+                                  class="text-muted-foreground h-24 text-center"
+                                >
+                                  No workspaces found. Create one to get
+                                  started.
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </FieldContent>
+                    </Field>
+                  </FieldSet>
+                </FieldGroup>
+              </div>
             </TabsContent>
             <TabsContent
               class="overflow-auto overscroll-none scroll-smooth"
@@ -2531,10 +2844,49 @@ const df = new DateFormatter("en-US", {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog v-model:open="isDeleteWorkspaceDialogOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete
+              <span class="text-foreground font-medium">{{
+                workspaceToDelete?.name
+              }}</span>
+              ? This action cannot be undone and will permanently delete the
+              workspace and all its content.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              :disabled="
+                workspaceToDelete &&
+                isWorkspaceActionLoading(`delete-${workspaceToDelete.id}`)
+              "
+              @click.prevent="handleDeleteWorkspace"
+            >
+              <Spinner
+                v-if="
+                  workspaceToDelete &&
+                  isWorkspaceActionLoading(`delete-${workspaceToDelete.id}`)
+                "
+              />
+              Delete Workspace
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <TeamDialog
         v-model:open="isTeamDialogOpen"
         :mode="teamDialogMode"
         :team="teamDialogTeam"
+      />
+      <WorkspaceDialog
+        v-model:open="isWorkspaceDialogOpen"
+        :mode="workspaceDialogMode"
+        :workspace="workspaceDialogWorkspace"
       />
     </DialogContent>
   </Dialog>

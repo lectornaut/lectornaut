@@ -1,29 +1,30 @@
 <script lang="ts" setup>
 import { IconCirclePlus, IconLogOut } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
-import { logout } from "@/modules/auth"
 import { useTeamStore } from "@/stores/teamStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
+const workspaceStore = useWorkspaceStore()
+const { workspaces, isLoading } = storeToRefs(workspaceStore)
+
 const teamStore = useTeamStore()
-const { memberships, isLoading } = storeToRefs(teamStore)
 
-const isCreatingTeamDialogOpen = ref(false)
+const isCreatingWorkspaceDialogOpen = ref(false)
 
-const teams = computed(() =>
-  memberships.value.map((m) => ({
-    label: m.team.name,
-    value: m.team.id,
-    original: m.team,
-  }))
-)
-
-const switchTeam = async (teamId: string) => {
+const switchWorkspace = async (workspaceId: string) => {
   try {
-    await teamStore.switchTeam(teamId)
+    await workspaceStore.switchWorkspace(workspaceId)
   } catch (_error) {
-    toast.error("Failed to switch team")
+    toast.error("Failed to switch workspace")
+  }
+}
+
+const deselectTeam = async () => {
+  try {
+    await teamStore.clearCurrentTeam()
+  } catch (_error) {
+    toast.error("Failed to deselect team")
   }
 }
 </script>
@@ -32,9 +33,9 @@ const switchTeam = async (teamId: string) => {
   <div>
     <div class="w-full max-w-sm space-y-4">
       <div class="space-y-2 text-center">
-        <h1 class="text-2xl font-bold tracking-tight">Teams</h1>
+        <h1 class="text-2xl font-bold tracking-tight">Workspaces</h1>
         <p class="text-muted-foreground text-xs">
-          Choose a team to continue or create a new one.
+          Choose a workspace to continue or create a new one.
         </p>
       </div>
       <div class="bg-background rounded-lg border">
@@ -44,48 +45,51 @@ const switchTeam = async (teamId: string) => {
           </div>
           <template v-else>
             <div
-              v-if="teams.length === 0"
+              v-if="workspaces.length === 0"
               class="text-muted-foreground p-4 text-center"
             >
-              You don't belong to any teams yet.
+              No workspaces available yet.
             </div>
             <Button
-              v-for="team in teams"
-              :key="team.value"
+              v-for="workspace in workspaces"
+              :key="workspace.id"
               variant="ghost"
               size="lg"
               class="w-full justify-start p-3"
-              @click="switchTeam(team.value)"
+              @click="switchWorkspace(workspace.id)"
             >
               <Avatar class="size-5">
                 <AvatarImage
-                  :src="team.original?.photoURL!"
-                  :alt="team.label"
+                  :src="`https://avatar.vercel.sh/${workspace.name}.png`"
+                  :alt="workspace.name"
                   referrerpolicy="no-referrer"
                 />
                 <AvatarFallback>
-                  {{ getInitials(team.label) }}
+                  {{ workspace.name.charAt(0).toUpperCase() }}
                 </AvatarFallback>
               </Avatar>
-              {{ team.label }}
+              {{ workspace.name }}
             </Button>
           </template>
         </div>
         <Separator />
         <div class="grid p-2">
-          <Button @click="isCreatingTeamDialogOpen = true">
+          <Button @click="isCreatingWorkspaceDialogOpen = true">
             <IconCirclePlus />
-            Create team
+            Create workspace
           </Button>
         </div>
       </div>
       <div class="text-center">
-        <Button variant="outline" size="sm" @click="logout()">
+        <Button variant="outline" size="sm" @click="deselectTeam">
           <IconLogOut />
-          Log out
+          Deselect team
         </Button>
       </div>
     </div>
-    <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
+    <WorkspaceDialog
+      v-model:open="isCreatingWorkspaceDialogOpen"
+      mode="create"
+    />
   </div>
 </template>

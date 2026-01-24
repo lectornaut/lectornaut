@@ -1097,7 +1097,7 @@
     },
     "teamSwitcher": {
       "switchTeam": "Switch team",
-      "members": "members",
+      "members": "{count} member | {count} members",
       "noOtherTeams": "No other teams available",
       "myTeams": "My Teams",
       "createTeam": "Create team",

@@ -26,6 +26,7 @@ import {
 } from "@/helpers/defaults"
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
 import {
   cloneState,
   createPendingSet,
@@ -51,6 +52,8 @@ export const useLayoutStore = defineStore("layout", () => {
   const user = useCurrentUser()
   const teamStore = useTeamStore()
   const { currentTeam } = storeToRefs(teamStore)
+  const workspaceStore = useWorkspaceStore()
+  const { currentWorkspace } = storeToRefs(workspaceStore)
 
   // ============================================================================
   // State
@@ -106,15 +109,26 @@ export const useLayoutStore = defineStore("layout", () => {
   // ============================================================================
 
   const tabsDocRef = computed(() => {
-    if (!user.value?.uid || !currentTeam.value?.id) return null
+    if (
+      !user.value?.uid ||
+      !currentTeam.value?.id ||
+      !currentWorkspace.value?.id
+    )
+      return null
     return doc(
       collection(
         doc(
           collection(
-            doc(collection(db, "teams"), currentTeam.value.id),
-            "memberships"
+            doc(
+              collection(
+                doc(collection(db, "teams"), currentTeam.value.id),
+                "memberships"
+              ),
+              user.value.uid
+            ),
+            "workspaces"
           ),
-          user.value.uid
+          currentWorkspace.value.id
         ),
         "layout"
       ),
@@ -178,12 +192,15 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
-  // Reset tabs when team changes (tabsDocRef will update automatically)
+  // Reset tabs when team or workspace changes (tabsDocRef will update automatically)
   watch(
-    () => currentTeam.value?.id,
-    (newTeamId, oldTeamId) => {
-      if (newTeamId !== oldTeamId && oldTeamId !== undefined) {
-        // Clear local state while waiting for new team's tabs to load
+    [() => currentTeam.value?.id, () => currentWorkspace.value?.id],
+    ([newTeamId, newWorkspaceId], [oldTeamId, oldWorkspaceId]) => {
+      if (
+        (newTeamId !== oldTeamId && oldTeamId !== undefined) ||
+        (newWorkspaceId !== oldWorkspaceId && oldWorkspaceId !== undefined)
+      ) {
+        // Clear local state while waiting for new team/workspace's tabs to load
         tabs.value = []
         activeTabId.value = ""
         recentlyClosed.value = []
