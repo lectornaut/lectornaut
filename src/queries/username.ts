@@ -5,6 +5,7 @@ import {
   validateUsername,
 } from "@/utils/firebase-username"
 import {
+  deleteDoc,
   doc,
   getDoc,
   runTransaction,
@@ -154,5 +155,27 @@ export const getUserByUsername = async (
       return { status: "private" }
     }
     throw error
+  }
+}
+
+/**
+ * Releases a username so it can be claimed by others.
+ * Should be called when a user deletes their account.
+ * @param username The username to release.
+ * @returns Promise<void>
+ */
+export const releaseUsername = async (username: string): Promise<void> => {
+  const user = auth.currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const normalized = normalizeUsername(username)
+  if (!normalized) return
+
+  const usernameDocRef = doc(firestore, "usernames", normalized)
+  const usernameDoc = await getDoc(usernameDocRef)
+
+  // Only delete if it belongs to the requesting user
+  if (usernameDoc.exists() && usernameDoc.data().uid === user.uid) {
+    await deleteDoc(usernameDocRef)
   }
 }

@@ -21,6 +21,7 @@ import {
   IconTrash,
   IconX,
 } from "@/data/icons"
+import { createUserMembershipsQuery } from "@/utils/firebase-helpers"
 import {
   accents,
   bases,
@@ -36,7 +37,11 @@ import { logout } from "@/modules/auth"
 import { emitter } from "@/modules/mitt"
 import { accent, base, font, size, store } from "@/modules/theme"
 import { updateUserData } from "@/queries/updateUserData"
-import { checkUsernameAvailability, claimUsername } from "@/queries/username"
+import {
+  checkUsernameAvailability,
+  claimUsername,
+  releaseUsername,
+} from "@/queries/username"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole, ITeam, IWorkspace } from "@/types"
@@ -54,8 +59,8 @@ import {
   updatePassword,
   verifyBeforeUpdateEmail,
 } from "firebase/auth"
-import { collection, doc } from "firebase/firestore"
-import { ref as storageRef } from "firebase/storage"
+import { collection, deleteDoc, doc, getDocs } from "firebase/firestore"
+import { deleteObject, ref as storageRef } from "firebase/storage"
 import { toast } from "vue-sonner"
 import {
   useCurrentUser,
@@ -470,7 +475,16 @@ const deleteAccount = async () => {
 
   try {
     const membershipStore = useMembershipStore()
-    const membershipsToCheck = membershipStore.memberships
+
+    // 0. Verification: Ensure we have the latest state relative to memberships
+    // Fetch directly from Firestore to ensure we aren't using stale data
+    // This is critical because if the store is stale, we might miss validation checks
+    const membershipsSnapshot = await getDocs(
+      createUserMembershipsQuery(user.value!.uid)
+    )
+    const membershipsToCheck = membershipsSnapshot.docs.map(
+      (d) => d.data() as IMembership
+    )
     const errors: string[] = []
 
     // 1. Validate: Check for sole ownership or sole membership errors across all teams
@@ -499,22 +513,40 @@ const deleteAccount = async () => {
       toast.error("Cannot delete account", {
         description: errors[0],
       })
-      deletingAccount.value = false
+      // STOP: Do not proceed with any cleanup
       return
     }
 
     // 2. Cleanup: Remove user from all teams
-    // Run sequentially to ensure stability, though parallel could work
+    // Run sequentially to ensure stability
     for (const membership of membershipsToCheck) {
       await membershipStore.removeMember(membership.teamId, user.value!.uid)
     }
 
-    // 3. Local Cleanup: Remove from keychain
+    // 4. Release username
+    // Important: Any error here should halt the deletion process as requested
+    // We removed the try-catch block that was swallowing errors
+    if (userData.value?.username) {
+      await releaseUsername(userData.value.username)
+    }
+
+    // 5. Cleanup Storage (Profile Photos)
+    // Try to delete common profile photo paths. We catch errors in case files don't exist.
+    await Promise.allSettled([
+      deleteObject(storageRef(storage, `users/${user.value!.uid}/profilePhoto`)),
+    ])
+
+    // 6. Cleanup Firestore User Document
+    if (userDocRef.value) {
+      await deleteDoc(userDocRef.value)
+    }
+
+    // 7. Local Cleanup: Remove from keychain
     if (user.value?.uid) {
       useKeychain().removeAccount(user.value.uid)
     }
 
-    // 4. Delete User Account
+    // 8. Delete User Account
     await deleteUser(user.value!)
     toast.success("Account deleted", {
       description: "Your account has been successfully deleted.",

@@ -13,7 +13,7 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
-import { firestore } from "@/modules/firebase"
+import { firestore, storage } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { ITeam } from "@/types"
@@ -47,6 +47,7 @@ import {
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"
+import { deleteObject, ref as storageRef } from "firebase/storage"
 
 export const useTeamStore = defineStore("teams", () => {
   const authStore = useAuthStore()
@@ -429,7 +430,27 @@ export const useTeamStore = defineStore("teams", () => {
         ])
 
         // Delete team and update related documents in parallel
-        await Promise.all([
+        // Also cleanup Storage for Team Photo and all Workspace Photos
+        const storagePromises: Promise<any>[] = []
+
+        // 1. Team Photo
+        storagePromises.push(
+          deleteObject(storageRef(storage, `teams/${teamId}/profilePhoto`))
+        )
+
+        // 2. Workspace Photos
+        workspaceDocs.docs.forEach((doc) => {
+          storagePromises.push(
+            deleteObject(
+              storageRef(
+                storage,
+                `teams/${teamId}/workspaces/${doc.id}/profilePhoto`
+              )
+            )
+          )
+        })
+
+        await Promise.allSettled([
           deleteDoc(getTeamRef(teamId)),
           processInBatches(membershipDocs.docs, (docSnap, batch) =>
             batch.delete(docSnap.ref)
@@ -444,6 +465,7 @@ export const useTeamStore = defineStore("teams", () => {
               updatedAt: serverTimestamp(),
             })
           ),
+          ...storagePromises,
         ])
       }
     )

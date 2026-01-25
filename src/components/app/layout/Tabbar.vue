@@ -169,19 +169,19 @@ watch(
   () => currentWorkspace.value?.id,
   (newId, oldId) => {
     if (newId !== oldId) {
-       // When switching workspace, the store clears tabs.
-       // We might want to go to /start immediately to avoid "ghost" routes adding themselves?
-       // But usually the App persistence will redirect us.
-       // The previous logic used `hasInitialized` to gate this.
-       // With our simpler "Route -> Store" logic, if the user stays on OldRoute, it will try to AddTab to NewWorkspace.
-       // We should indeed redirect to start or the workspace's active tab.
-       // However, `layoutStore` persistence might load the new active tab and trigger the activeTabId watcher,
-       // which will push the new route.
-       // So mostly handled, but let's prevent accidental addition.
-       // For now, relies on layoutStore clearing activeTabId -> triggers Router push /start
-       if(tabs.value.length === 0) {
-           router.push('/start')
-       }
+      // When switching workspace, the store clears tabs.
+      // We might want to go to /start immediately to avoid "ghost" routes adding themselves?
+      // But usually the App persistence will redirect us.
+      // The previous logic used `hasInitialized` to gate this.
+      // With our simpler "Route -> Store" logic, if the user stays on OldRoute, it will try to AddTab to NewWorkspace.
+      // We should indeed redirect to start or the workspace's active tab.
+      // However, `layoutStore` persistence might load the new active tab and trigger the activeTabId watcher,
+      // which will push the new route.
+      // So mostly handled, but let's prevent accidental addition.
+      // For now, relies on layoutStore clearing activeTabId -> triggers Router push /start
+      if (tabs.value.length === 0) {
+        router.push("/start")
+      }
     }
   }
 )
@@ -294,7 +294,9 @@ function selectTab(idOrDirection: string | number) {
 // Global Events (Mitt)
 // ----------------------------------------------------------------------------
 function onTabsAdd(raw?: unknown) {
-  const data = raw as { fullPath?: string; path?: string; url?: string; name?: string } | undefined
+  const data = raw as
+    | { fullPath?: string; path?: string; url?: string; name?: string }
+    | undefined
   const path = data?.fullPath || data?.path || data?.url || "/new"
   handleAddTab(path, data?.name)
 }
@@ -330,24 +332,28 @@ function onTabsReopen(raw?: unknown) {
 }
 
 function onTabsDuplicate(id?: unknown) {
-  handleDuplicateTab((typeof id === "string" ? id : activeTabId.value) || undefined)
+  handleDuplicateTab(
+    (typeof id === "string" ? id : activeTabId.value) || undefined
+  )
 }
 
 function onTabsRename(id?: unknown) {
-  handleRenameTab((typeof id === "string" ? id : activeTabId.value) || undefined)
+  handleRenameTab(
+    (typeof id === "string" ? id : activeTabId.value) || undefined
+  )
 }
 
 // Register/Cleanup
 onMounted(() => {
-    emitter.on("Tabs.Add", onTabsAdd)
-    emitter.on("Tabs.Close", onTabsClose)
-    emitter.on("Tabs.Close.Others", onTabsCloseOthers)
-    emitter.on("Tabs.Close.All", onTabsCloseAll)
-    emitter.on("Tabs.Select", onTabsSelect)
-    emitter.on("Tabs.ReopenLast", onTabsReopenLast)
-    emitter.on("Tabs.Reopen", onTabsReopen)
-    emitter.on("Tabs.Duplicate", onTabsDuplicate)
-    emitter.on("Tabs.Rename", onTabsRename)
+  emitter.on("Tabs.Add", onTabsAdd)
+  emitter.on("Tabs.Close", onTabsClose)
+  emitter.on("Tabs.Close.Others", onTabsCloseOthers)
+  emitter.on("Tabs.Close.All", onTabsCloseAll)
+  emitter.on("Tabs.Select", onTabsSelect)
+  emitter.on("Tabs.ReopenLast", onTabsReopenLast)
+  emitter.on("Tabs.Reopen", onTabsReopen)
+  emitter.on("Tabs.Duplicate", onTabsDuplicate)
+  emitter.on("Tabs.Rename", onTabsRename)
 })
 
 onUnmounted(() => {

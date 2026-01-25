@@ -187,13 +187,13 @@ const closeTab = (id: string) => {
   <SidebarProvider>
     <SidebarInset class="bg-secondary">
       <Headerbar />
-      <div data-tauri-drag-region class="grid grow">
+      <div data-tauri-drag-region class="grid min-h-0 min-w-0 grow">
         <Spinner v-if="isLoading" class="m-auto" />
         <TeamSelector v-else-if="!currentTeam" class="m-auto" />
         <WorkspaceSelector v-else-if="!currentWorkspace" class="m-auto" />
         <main
           v-else
-          class="flex grow gap-2 self-stretch overflow-auto overscroll-none scroll-smooth"
+          class="flex min-h-0 min-w-0 grow gap-2 self-stretch overflow-hidden overscroll-none scroll-smooth"
         >
           <MainSidebar />
           <div id="left-dock" class="flex max-w-80 shrink-0 empty:hidden"></div>

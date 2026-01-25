@@ -14,7 +14,7 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
-import { firestore } from "@/modules/firebase"
+import { firestore, storage } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IWorkspace } from "@/types"
@@ -41,6 +41,7 @@ import {
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
+import { deleteObject, ref as storageRef } from "firebase/storage"
 
 export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
@@ -334,10 +335,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         photoFile === null
           ? null
           : await uploadWorkspacePhoto(
-              currentTeamId.value,
-              workspaceId,
-              photoFile
-            )
+            currentTeamId.value,
+            workspaceId,
+            photoFile
+          )
     }
 
     // Prepare optimistic updates for workspace data
@@ -418,7 +419,14 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // Firestore operation
       async () => {
         try {
-          await deleteDoc(getWorkspaceRef(currentTeamId.value!, workspaceId))
+          // Cleanup Storage (Profile Photo) - Run in parallel with Firestore delete
+          const photoPath = `teams/${currentTeamId.value!}/workspaces/${workspaceId}/profilePhoto`
+          const fileRef = storageRef(storage, photoPath)
+
+          await Promise.allSettled([
+            deleteDoc(getWorkspaceRef(currentTeamId.value!, workspaceId)),
+            deleteObject(fileRef)
+          ])
         } finally {
           if (isCurrentWorkspace) {
             pendingUserIds.value.delete(currentUser.value!.uid)
