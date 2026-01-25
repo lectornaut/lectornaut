@@ -41,7 +41,7 @@ export interface IUser {
   updatedAt: Timestamp
 }
 
-export type IMembershipRole = "owner" | "editor" | "viewer"
+export type IMembershipRole = "owner" | "admin" | "member" | "guest"
 
 export interface IMembership {
   userId: string

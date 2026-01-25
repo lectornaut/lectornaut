@@ -33,6 +33,7 @@ import {
   createPendingSet,
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
+import { canPerformTeamAction } from "@/utils/permissions"
 import {
   collection,
   deleteDoc,
@@ -321,9 +322,9 @@ export const useTeamStore = defineStore("teams", () => {
   ): Promise<void> {
     if (!currentUser.value) return
 
-    // Check if user is owner of the team
+    // Check if user is owner of the team (using centralized permissions)
     const membership = memberships.value.find((m) => m.teamId === teamId)
-    if (!membership || membership.role !== "owner") {
+    if (!membership || !canPerformTeamAction(membership.role, "update")) {
       throw new Error("Only team owners can update team details")
     }
 
@@ -390,8 +391,9 @@ export const useTeamStore = defineStore("teams", () => {
   async function deleteTeam(teamId: string): Promise<void> {
     if (!currentUser.value) return
 
+    // Check if user is owner of the team (using centralized permissions)
     const membership = memberships.value.find((m) => m.teamId === teamId)
-    if (!membership || membership.role !== "owner") {
+    if (!membership || !canPerformTeamAction(membership.role, "delete")) {
       throw new Error("Only team owners can delete the team")
     }
 

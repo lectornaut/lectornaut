@@ -73,6 +73,7 @@
     "notifications": "Notifications",
     "overview": "Overview",
     "owner": "Owner",
+    "admin": "Admin",
     "panel": "Panel",
     "password": "Password",
     "private": "Private",
@@ -90,7 +91,9 @@
     "templates": "Templates",
     "trash": "Trash",
     "usage": "Usage",
-    "viewer": "Viewer"
+    "viewer": "Viewer",
+    "member": "Member",
+    "guest": "Guest"
   },
   "states": {
     "loading": "Loading...",
@@ -1134,8 +1137,9 @@
       },
       "roles": {
         "owner": "Owner",
-        "editor": "Editor",
-        "viewer": "Viewer"
+        "admin": "Admin",
+        "member": "Member",
+        "guest": "Guest"
       },
       "buttons": {
         "add": "Add",
@@ -1234,8 +1238,9 @@
         "sharedWith": "Shared with",
         "roles": {
           "owner": "Owner",
-          "editor": "Editor",
-          "viewer": "Viewer"
+          "admin": "Admin",
+          "member": "Member",
+          "guest": "Guest"
         }
       },
       "activity": {

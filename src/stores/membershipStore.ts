@@ -10,6 +10,7 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
+import { defaultTeamRole } from "@/helpers/defaults"
 import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import type { IMembership, ITeam, IUser } from "@/types"
@@ -25,6 +26,11 @@ import {
   createPendingSet,
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
+import {
+  canPerformMemberAction,
+  canPerformWorkspaceAction,
+  hasExactRole,
+} from "@/utils/permissions"
 import {
   getDoc,
   getDocs,
@@ -73,9 +79,9 @@ export const useMembershipStore = defineStore("memberships", () => {
   const membershipsQueryRef = computed(() =>
     currentUser.value
       ? query(
-          getAllMembershipsGroup(),
-          where("userId", "==", currentUser.value.uid)
-        )
+        getAllMembershipsGroup(),
+        where("userId", "==", currentUser.value.uid)
+      )
       : null
   )
 
@@ -236,15 +242,22 @@ export const useMembershipStore = defineStore("memberships", () => {
   })
 
   /** Check if current user is an owner of the current team */
-  const isOwner = computed(() => currentUserRole.value === "owner")
+  const isOwner = computed(() => hasExactRole(currentUserRole.value, "owner"))
 
-  /** Check if current user is an editor of the current team */
-  const isEditor = computed(() => currentUserRole.value === "editor")
+  /** Check if current user is an admin of the current team */
+  const isAdmin = computed(() => hasExactRole(currentUserRole.value, "admin"))
 
-  /** Check if current user can manage workspaces (owner or editor) */
-  const canManageWorkspaces = computed(
-    () =>
-      currentUserRole.value === "owner" || currentUserRole.value === "editor"
+  /** Check if current user is a member of the current team */
+  const isMember = computed(() => hasExactRole(currentUserRole.value, "member"))
+
+  /** Check if current user can manage workspaces (member or higher) */
+  const canManageWorkspaces = computed(() =>
+    canPerformWorkspaceAction(currentUserRole.value, "create")
+  )
+
+  /** Check if current user can manage team members (admin or higher) */
+  const canManageMembers = computed(() =>
+    canPerformMemberAction(currentUserRole.value, "create")
   )
 
   /** Count of owners in the current team */
@@ -406,7 +419,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamId: string,
     team: ITeam,
     email: string,
-    role: IMembership["role"] = "viewer"
+    role: IMembership["role"] = defaultTeamRole
   ): Promise<void> {
     if (!currentUser.value) return
 
@@ -776,8 +789,10 @@ export const useMembershipStore = defineStore("memberships", () => {
     getMembershipForTeam,
     currentUserRole,
     isOwner,
-    isEditor,
+    isAdmin,
+    isMember,
     canManageWorkspaces,
+    canManageMembers,
     ownerCount,
     getTeamMemberCount,
 

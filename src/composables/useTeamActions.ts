@@ -1,7 +1,9 @@
 import { useLoadingState } from "@/composables/useLoadingState"
+import { defaultTeamRole } from "@/helpers/defaults"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership } from "@/types"
+import { hasExactRole } from "@/utils/permissions"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
@@ -20,12 +22,15 @@ export function useTeamActions() {
     isLoading: storeLoading,
   } = storeToRefs(teamStore)
 
+  // Get permission-related computed values from membershipStore (single source of truth)
+  const { isOwner, ownerCount, canManageMembers } = storeToRefs(membershipStore)
+
   // Unified loading states
   const roleLoading = useLoadingState<string>()
   const memberLoading = useLoadingState<string>()
   const teamLoading = useLoadingState<string>()
 
-  // Current user's role in the current team
+  // Current user's role in the current team (for returning to consumers)
   const currentUserRole = computed(() => {
     if (!user.value || !currentTeam.value) return null
     const membership = teamMembers.value.find(
@@ -33,12 +38,6 @@ export function useTeamActions() {
     )
     return membership?.role || null
   })
-
-  const isOwner = computed(() => currentUserRole.value === "owner")
-
-  const ownerCount = computed(
-    () => teamMembers.value.filter((m) => m.role === "owner").length
-  )
 
   // Check if role can be changed for a member
   const canChangeRole = (member: IMembership) => {
@@ -109,9 +108,14 @@ export function useTeamActions() {
     return true
   }
 
-  // Check if user can delete a team (must be owner)
+  // Check if user can delete a team (must be owner of that team)
   const canDeleteTeam = (membership: IMembership) => {
-    return membership.role === "owner"
+    return hasExactRole(membership.role, "owner")
+  }
+
+  // Check if user can invite members to the current team
+  const canInviteMembers = () => {
+    return canManageMembers.value
   }
 
   // Change member role
@@ -290,7 +294,7 @@ export function useTeamActions() {
   // Invite a member to the team
   const inviteMember = async (
     email: string,
-    role: IMembership["role"] = "viewer"
+    role: IMembership["role"] = defaultTeamRole
   ) => {
     return memberLoading.withLoading(`invite-${email}`, async () => {
       if (!currentTeam.value) return
@@ -331,6 +335,7 @@ export function useTeamActions() {
     canRemoveMember,
     canExitTeam,
     canDeleteTeam,
+    canInviteMembers,
 
     // Disabled state reasons
     getCannotChangeRoleReason,

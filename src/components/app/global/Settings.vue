@@ -1928,11 +1928,14 @@ const df = new DateFormatter("en-US", {
                                               <SelectItem value="owner">
                                                 Owner
                                               </SelectItem>
-                                              <SelectItem value="editor">
-                                                Editor
+                                              <SelectItem value="admin">
+                                                Admin
                                               </SelectItem>
-                                              <SelectItem value="viewer">
-                                                Viewer
+                                              <SelectItem value="member">
+                                                Member
+                                              </SelectItem>
+                                              <SelectItem value="guest">
+                                                Guest
                                               </SelectItem>
                                             </SelectContent>
                                           </Select>
@@ -1964,11 +1967,14 @@ const df = new DateFormatter("en-US", {
                                       <SelectItem value="owner">
                                         Owner
                                       </SelectItem>
-                                      <SelectItem value="editor">
-                                        Editor
+                                      <SelectItem value="admin">
+                                        Admin
                                       </SelectItem>
-                                      <SelectItem value="viewer">
-                                        Viewer
+                                      <SelectItem value="member">
+                                        Member
+                                      </SelectItem>
+                                      <SelectItem value="guest">
+                                        Guest
                                       </SelectItem>
                                     </SelectContent>
                                   </Select>

@@ -22,14 +22,14 @@ export function useWorkspaceActions() {
   // Unified loading states
   const workspaceLoading = useLoadingState<string>()
 
-  // Check if user can delete a workspace (must be owner)
+  // Check if user can delete a workspace (owner or editor - uses canManageWorkspaces)
   const canDeleteWorkspace = () => {
-    return isOwner.value
+    return canManageWorkspaces.value
   }
 
-  // Check if user can edit a workspace (must be owner)
+  // Check if user can edit a workspace (owner or editor - uses canManageWorkspaces)
   const canEditWorkspace = () => {
-    return isOwner.value
+    return canManageWorkspaces.value
   }
 
   // Switch to another workspace

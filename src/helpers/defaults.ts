@@ -842,3 +842,5 @@ export const defaultSettingsTabs = [
 ] as const
 
 export const defaultSettingsTab = "preferences"
+
+export const defaultTeamRole = "member"

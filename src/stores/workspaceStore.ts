@@ -2,7 +2,7 @@
  * Workspace Store - Workspace CRUD Operations
  *
  * Handles:
- * - Workspace creation, update, deletion (owner-only)
+ * - Workspace creation, update, deletion (owner or member)
  * - Current workspace selection and switching (all members)
  * - Workspaces for the current team
  *
@@ -177,7 +177,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   // ============================================================================
 
   /**
-   * Create a new workspace with optimistic update (owner-only)
+   * Create a new workspace with optimistic update (owner or member)
    */
   async function createWorkspace(
     name: string,
@@ -186,9 +186,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
-    // Check if user can manage workspaces (owner or editor)
+    // Check if user can manage workspaces (owner or member)
     if (!canManageWorkspaces.value) {
-      throw new Error("Only team owners and editors can create workspaces")
+      throw new Error("Only team owners and members can create workspaces")
     }
 
     const workspaceRef = doc(
@@ -292,7 +292,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   /**
-   * Update workspace details with optimistic update (owner-only)
+   * Update workspace details with optimistic update (owner or member)
    */
   async function updateWorkspace(
     workspaceId: string,
@@ -304,9 +304,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
-    // Check if user can manage workspaces (owner or editor)
+    // Check if user can manage workspaces (owner or member)
     if (!canManageWorkspaces.value) {
-      throw new Error("Only team owners and editors can update workspaces")
+      throw new Error("Only team owners and members can update workspaces")
     }
 
     const { name, description, photoFile } = updates
@@ -370,14 +370,14 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   /**
-   * Delete a workspace with optimistic update (owner-only)
+   * Delete a workspace with optimistic update (owner or member)
    */
   async function deleteWorkspace(workspaceId: string): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
-    // Check if user can manage workspaces (owner or editor)
+    // Check if user can manage workspaces (owner or member)
     if (!canManageWorkspaces.value) {
-      throw new Error("Only team owners and editors can delete workspaces")
+      throw new Error("Only team owners and members can delete workspaces")
     }
 
     // Clone previous state for rollback

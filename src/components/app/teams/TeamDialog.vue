@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { IconPlus, IconTrash, IconX } from "@/data/icons"
+import { defaultTeamRole } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
@@ -28,7 +29,7 @@ const isLoading = ref(false)
 // Form State
 const teamName = ref("")
 const inviteEmail = ref("")
-const inviteRole = ref<IMembershipRole>("viewer")
+const inviteRole = ref<IMembershipRole>(defaultTeamRole)
 const members = ref<
   {
     email: string
@@ -76,7 +77,7 @@ const resetForm = () => {
   }
   teamName.value = ""
   inviteEmail.value = ""
-  inviteRole.value = "viewer"
+  inviteRole.value = defaultTeamRole
   members.value = []
   removedMemberIds.value = []
   photoFile.value = null
@@ -139,7 +140,7 @@ const addMember = (e?: Event) => {
     role: inviteRole.value,
   })
   inviteEmail.value = ""
-  inviteRole.value = "viewer"
+  inviteRole.value = defaultTeamRole
 }
 
 const removeMember = (email: string, id?: string) => {
@@ -158,17 +159,23 @@ const handleSubmit = async () => {
       // 1. Create Team
       await teamStore.createTeam(teamName.value, photoFile.value || undefined)
       toast.success("Team created successfully")
-    } else if (props.mode === "edit" && props.team) {
-      // Update Team
-      // If photoFile is set, we upload it.
-      // If photoPreview is null but we had a photo, it means we removed it.
-      // However, my logic for removePhoto sets photoFile to null and preview to null.
-      // If I want to support removing the photo, I need to distinguish between "no change" and "remove".
-      // Current logic:
-      // - If photoFile is present -> Upload new photo
-      // - If photoFile is null AND photoPreview is null AND props.team.photoURL is present -> Remove photo
-      // - Else -> No change to photo
 
+      // 2. Invite Members to New Team
+      if (members.value.length > 0) {
+        const newTeam = teamStore.currentTeam
+        if (newTeam) {
+          const invitePromises = members.value.map((member) =>
+            membershipStore
+              .inviteMember(newTeam.id, newTeam, member.email, member.role)
+              .catch((e: Error) =>
+                console.error(`Failed to invite ${member.email}:`, e)
+              )
+          )
+          await Promise.all(invitePromises)
+        }
+      }
+    } else if (props.mode === "edit" && props.team) {
+      // 1. Update Team
       let filePayload: File | null | undefined = undefined
       if (photoFile.value) {
         filePayload = photoFile.value
@@ -185,12 +192,10 @@ const handleSubmit = async () => {
         photoFile: filePayload,
       })
       toast.success("Team updated successfully")
-    }
 
-    // 2. Process Member Changes
-    if (props.mode === "edit") {
+      // 2. Process Member Changes
       // Remove deleted members
-      if (removedMemberIds.value.length > 0 && props.team) {
+      if (removedMemberIds.value.length > 0) {
         await membershipStore.removeMembers(
           props.team.id,
           removedMemberIds.value
@@ -201,22 +206,21 @@ const handleSubmit = async () => {
       const membersToUpdate = members.value.filter(
         (m) => m.id && m.role !== m.originalRole
       )
-      if (membersToUpdate.length > 0 && props.team) {
+      if (membersToUpdate.length > 0) {
         const updatePromises = membersToUpdate.map((member) =>
           membershipStore.changeRole(props.team!.id, member.id!, member.role)
         )
         await Promise.all(updatePromises)
       }
+
       // Invite new members (those without an id)
       const newMembers = members.value.filter((m) => !m.id)
       if (newMembers.length > 0) {
-        const currentTeam = teamStore.currentTeam
-        if (!currentTeam) throw new Error("No current team")
         const invitePromises = newMembers.map((member) =>
           membershipStore
             .inviteMember(
-              currentTeam.id,
-              currentTeam,
+              props.team!.id,
+              props.team!,
               member.email,
               member.role
             )
@@ -226,19 +230,21 @@ const handleSubmit = async () => {
         )
         await Promise.all(invitePromises)
       }
-    } else if (members.value.length > 0) {
-      // For create and invite modes, invite all members
-      const currentTeam = teamStore.currentTeam
-      if (!currentTeam) throw new Error("No current team")
-      const invitePromises = members.value.map((member) =>
-        membershipStore
-          .inviteMember(currentTeam.id, currentTeam, member.email, member.role)
-          .catch((e: Error) =>
-            console.error(`Failed to invite ${member.email}:`, e)
-          )
-      )
-      await Promise.all(invitePromises)
-      if (props.mode === "invite") {
+    } else if (props.mode === "invite") {
+      // Invite Mode
+      // Use props.team if available, otherwise fallback to currentTeam
+      const targetTeam = props.team || teamStore.currentTeam
+      if (!targetTeam) throw new Error("No team to invite to")
+
+      if (members.value.length > 0) {
+        const invitePromises = members.value.map((member) =>
+          membershipStore
+            .inviteMember(targetTeam.id, targetTeam, member.email, member.role)
+            .catch((e: Error) =>
+              console.error(`Failed to invite ${member.email}:`, e)
+            )
+        )
+        await Promise.all(invitePromises)
         toast.success(`Invited ${members.value.length} members`)
       }
     }
@@ -383,15 +389,18 @@ const handleSubmit = async () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="owner">{{
-                      t("components.teamDialog.roles.owner")
-                    }}</SelectItem>
-                    <SelectItem value="editor">{{
-                      t("components.teamDialog.roles.editor")
-                    }}</SelectItem>
-                    <SelectItem value="viewer">{{
-                      t("components.teamDialog.roles.viewer")
-                    }}</SelectItem>
+                    <SelectItem value="owner">
+                      {{ t("components.teamDialog.roles.owner") }}
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      {{ t("components.teamDialog.roles.admin") }}
+                    </SelectItem>
+                    <SelectItem value="member">
+                      {{ t("components.teamDialog.roles.member") }}
+                    </SelectItem>
+                    <SelectItem value="guest">
+                      {{ t("components.teamDialog.roles.guest") }}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="icon" type="submit">
@@ -430,15 +439,18 @@ const handleSubmit = async () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="owner">{{
-                    t("components.teamDialog.roles.owner")
-                  }}</SelectItem>
-                  <SelectItem value="editor">{{
-                    t("components.teamDialog.roles.editor")
-                  }}</SelectItem>
-                  <SelectItem value="viewer">{{
-                    t("components.teamDialog.roles.viewer")
-                  }}</SelectItem>
+                  <SelectItem value="owner">
+                    {{ t("components.teamDialog.roles.owner") }}
+                  </SelectItem>
+                  <SelectItem value="admin">
+                    {{ t("components.teamDialog.roles.admin") }}
+                  </SelectItem>
+                  <SelectItem value="member">
+                    {{ t("components.teamDialog.roles.member") }}
+                  </SelectItem>
+                  <SelectItem value="guest">
+                    {{ t("components.teamDialog.roles.guest") }}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -455,7 +467,9 @@ const handleSubmit = async () => {
 
       <DialogFooter>
         <DialogClose as-child>
-          <Button variant="outline">{{ t("actions.cancel") }}</Button>
+          <Button variant="outline">
+            {{ t("actions.cancel") }}
+          </Button>
         </DialogClose>
         <Button
           :disabled="
