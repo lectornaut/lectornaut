@@ -45,9 +45,9 @@ import {
   type Timestamp,
   updateDoc,
 } from "firebase/firestore"
+import { deleteObject, ref as storageRef } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"
-import { deleteObject, ref as storageRef } from "firebase/storage"
 
 export const useTeamStore = defineStore("teams", () => {
   const authStore = useAuthStore()
@@ -431,7 +431,7 @@ export const useTeamStore = defineStore("teams", () => {
 
         // Delete team and update related documents in parallel
         // Also cleanup Storage for Team Photo and all Workspace Photos
-        const storagePromises: Promise<any>[] = []
+        const storagePromises: Promise<void>[] = []
 
         // 1. Team Photo
         storagePromises.push(

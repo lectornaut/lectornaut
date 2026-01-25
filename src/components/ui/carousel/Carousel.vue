@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils"
+import type { UnwrapRef } from "vue"
 import type {
+  CarouselContext,
   CarouselEmits,
   CarouselProps,
   WithClassAsProps,
@@ -13,6 +15,10 @@ const props = withDefaults(defineProps<CarouselProps & WithClassAsProps>(), {
 
 const emits = defineEmits<CarouselEmits>()
 
+defineSlots<{
+  default(props: UnwrapRef<CarouselContext>): unknown
+}>()
+
 const {
   canScrollNext,
   canScrollPrev,
@@ -23,7 +29,7 @@ const {
   scrollPrev,
 } = useProvideCarousel(props, emits)
 
-defineExpose({
+defineExpose<CarouselContext>({
   canScrollNext,
   canScrollPrev,
   carouselApi,

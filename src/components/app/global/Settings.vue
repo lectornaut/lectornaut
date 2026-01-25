@@ -21,7 +21,6 @@ import {
   IconTrash,
   IconX,
 } from "@/data/icons"
-import { createUserMembershipsQuery } from "@/utils/firebase-helpers"
 import {
   accents,
   bases,
@@ -45,6 +44,7 @@ import {
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole, ITeam, IWorkspace } from "@/types"
+import { createUserMembershipsQuery } from "@/utils/firebase-helpers"
 import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
@@ -533,7 +533,9 @@ const deleteAccount = async () => {
     // 5. Cleanup Storage (Profile Photos)
     // Try to delete common profile photo paths. We catch errors in case files don't exist.
     await Promise.allSettled([
-      deleteObject(storageRef(storage, `users/${user.value!.uid}/profilePhoto`)),
+      deleteObject(
+        storageRef(storage, `users/${user.value!.uid}/profilePhoto`)
+      ),
     ])
 
     // 6. Cleanup Firestore User Document

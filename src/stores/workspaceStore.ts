@@ -39,9 +39,9 @@ import {
   type Timestamp,
   updateDoc,
 } from "firebase/firestore"
+import { deleteObject, ref as storageRef } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
-import { deleteObject, ref as storageRef } from "firebase/storage"
 
 export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
@@ -335,10 +335,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         photoFile === null
           ? null
           : await uploadWorkspacePhoto(
-            currentTeamId.value,
-            workspaceId,
-            photoFile
-          )
+              currentTeamId.value,
+              workspaceId,
+              photoFile
+            )
     }
 
     // Prepare optimistic updates for workspace data
@@ -425,7 +425,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
           await Promise.allSettled([
             deleteDoc(getWorkspaceRef(currentTeamId.value!, workspaceId)),
-            deleteObject(fileRef)
+            deleteObject(fileRef),
           ])
         } finally {
           if (isCurrentWorkspace) {
