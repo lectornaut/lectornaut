@@ -77,37 +77,57 @@ function navigateToTab(tab: { fullPath: string }) {
 // 1. Route -> Store (Primary Truth)
 // When URL changes, ensure Store reflects it (either by activating existing or adding new)
 watch(
-  () => route.fullPath,
-  async (newPath) => {
-    // Ignore non-navigation updates or pending hydration
-    if (!currentWorkspace.value) return
+  [() => route.fullPath, isHydrated],
+  async ([newPath, hydrated]) => {
+    // Ignore updates until hydrated or valid workspace
+    if (!hydrated || !currentWorkspace.value) return
+
+    // Optimization: If the new route is already the active tab, do nothing.
+    // This allows multiple /new tabs to exist without forcing a switch to the first one.
+    if (activeTab.value?.fullPath === newPath) {
+      return
+    }
 
     // Case A: Route matches existing tab
+    // Skip if newPath is /new (allow multiple instances)
     const existingTab = tabs.value.find((t) => t.fullPath === newPath)
-    if (existingTab) {
+    if (existingTab && newPath !== "/new") {
       if (activeTabId.value !== existingTab.id) {
         setActiveTab(existingTab.id)
       }
       return
     }
 
-    // Case B: Route is a "Landing" page (start, etc) that shouldn't be a tab?
-    // The previous logic had a check for "comingFromNonTabsRoute".
-    // Let's rely on `route.name` or specific paths.
-    // If it's a generic route that we treat as a workspace tab, add it.
-    if (newPath === "/start" && tabs.value.length === 0) {
-        // Special case: /start is allowed when no tabs exist
-        return
+    // Case B: Consumable Tab Logic
+    // If current tab is /new, reuse it for the new route
+    if (activeTab.value?.fullPath === "/new") {
+      const name =
+        (route.meta?.breadcrumb as string) ||
+        (route.name as string) ||
+        "New tab"
+      updateActiveTab(newPath, name)
+      return
     }
-    
-    // If we are at /start but we HAVE tabs, we probably shouldn't be there unless activeTab is null?
-    // Actually, simple logic: if user navigates to a URL, it should probably be a tab if it's not a special page.
-    // Currently, addTab handles the creation.
-    
+
+    // Case C: Session Restore
+    // If we are at /start (initial load), try to restore the last active tab from store.
+    if (newPath === "/start") {
+      if (activeTabId.value) {
+        const tab = tabs.value.find((t) => t.id === activeTabId.value)
+        if (tab) {
+          router.push(tab.fullPath)
+        }
+      }
+      return
+    }
+
     // Check if we should add a tab
     if (route.name) {
-      const name = (route.meta?.breadcrumb as string) || (route.name as string) || "New tab"
-      const newTab = await addTab(newPath, name)
+      const name =
+        (route.meta?.breadcrumb as string) ||
+        (route.name as string) ||
+        "New tab"
+      await addTab(newPath, name)
       // addTab inside store (optimistic) sets activeId, so we are good.
     }
   },
@@ -119,6 +139,9 @@ watch(
 watch(
   activeTabId,
   (newId) => {
+    // Ignore updates until hydrated
+    if (!isHydrated.value) return
+
     // If no active tab, maybe go to start?
     if (!newId) {
       if (route.fullPath !== "/start" && tabs.value.length === 0) {
@@ -135,7 +158,7 @@ watch(
   // We generally don't need immediate here because the Route watcher handles the initial sync.
   // But if the store loads *after* the route, the route watcher might miss if the store was empty?
   // No, the route watcher handles "addTab".
-  { flush: 'post' } 
+  { flush: "post" }
 )
 
 // 3. Workspace Switch
