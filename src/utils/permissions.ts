@@ -168,8 +168,7 @@ export function createPermissionHelpers(
     // Workspace CRUD
     canCreateWorkspace: () =>
       canPerformWorkspaceAction(getCurrentRole(), "create"),
-    canReadWorkspace: () =>
-      canPerformWorkspaceAction(getCurrentRole(), "read"),
+    canReadWorkspace: () => canPerformWorkspaceAction(getCurrentRole(), "read"),
     canUpdateWorkspace: () =>
       canPerformWorkspaceAction(getCurrentRole(), "update"),
     canDeleteWorkspace: () =>

@@ -248,7 +248,13 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // Firestore operation
       async () => {
         try {
-          await setDoc(workspaceRef, newWorkspace)
+          await Promise.all([
+            setDoc(workspaceRef, newWorkspace),
+            updateDoc(getUserRef(currentUser.value!.uid), {
+              currentWorkspaceId: workspaceId,
+              updatedAt: serverTimestamp(),
+            }),
+          ])
         } finally {
           pendingUserIds.value.delete(currentUser.value!.uid)
         }

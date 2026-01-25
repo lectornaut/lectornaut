@@ -1,8 +1,10 @@
 <script lang="ts" setup>
-import { IconCirclePlus, IconLogOut } from "@/data/icons"
+import { IconCirclePlus, IconFolder, IconLogOut } from "@/data/icons"
+import { getInitials } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { storeToRefs } from "pinia"
+import type { AcceptableValue } from "reka-ui"
 import { toast } from "vue-sonner"
 
 const workspaceStore = useWorkspaceStore()
@@ -12,7 +14,17 @@ const teamStore = useTeamStore()
 
 const isCreatingWorkspaceDialogOpen = ref(false)
 
-const switchWorkspace = async (workspaceId: string) => {
+const computedWorkspaces = computed(() =>
+  workspaces.value.map((w) => ({
+    label: w.name,
+    value: w.id,
+    original: w,
+  }))
+)
+
+const switchWorkspace = async (workspaceId: AcceptableValue) => {
+  if (typeof workspaceId !== "string") return
+
   try {
     await workspaceStore.switchWorkspace(workspaceId)
   } catch (_error) {
@@ -30,66 +42,62 @@ const deselectTeam = async () => {
 </script>
 
 <template>
-  <div>
-    <div class="w-full max-w-sm space-y-4">
-      <div class="space-y-2 text-center">
-        <h1 class="text-2xl font-bold tracking-tight">Workspaces</h1>
-        <p class="text-muted-foreground text-xs">
-          Choose a workspace to continue or create a new one.
-        </p>
+  <Empty>
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <IconFolder class="text-muted-foreground size-6" />
+      </EmptyMedia>
+      <EmptyTitle>Workspaces</EmptyTitle>
+      <EmptyDescription> Select a workspace to continue </EmptyDescription>
+    </EmptyHeader>
+    <EmptyContent
+      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-lg border p-2"
+    >
+      <div v-if="isLoading" class="flex justify-center p-4">
+        <Spinner />
       </div>
-      <div class="bg-background rounded-lg border">
-        <div class="p-2">
-          <div v-if="isLoading" class="flex justify-center p-4">
-            <Spinner />
-          </div>
-          <template v-else>
-            <div
-              v-if="workspaces.length === 0"
-              class="text-muted-foreground p-4 text-center"
-            >
-              No workspaces available yet.
-            </div>
-            <Button
-              v-for="workspace in workspaces"
-              :key="workspace.id"
-              variant="ghost"
-              size="lg"
-              class="w-full justify-start p-3"
-              @click="switchWorkspace(workspace.id)"
-            >
+      <Select v-else @update:model-value="switchWorkspace">
+        <SelectTrigger class="w-full">
+          <SelectValue placeholder="Select workspace" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectLabel v-if="computedWorkspaces.length === 0">
+            No workspaces available
+          </SelectLabel>
+          <SelectItem
+            v-for="workspace in computedWorkspaces"
+            :key="workspace.value"
+            :value="workspace.value"
+          >
+            <div class="flex items-center gap-2">
               <Avatar class="size-5">
                 <AvatarImage
-                  :src="workspace.photoURL!"
-                  :alt="workspace.name"
+                  :src="workspace.original?.photoURL!"
+                  :alt="workspace.label"
                   referrerpolicy="no-referrer"
                 />
                 <AvatarFallback>
-                  {{ workspace.name.charAt(0).toUpperCase() }}
+                  {{ getInitials(workspace.label) }}
                 </AvatarFallback>
               </Avatar>
-              {{ workspace.name }}
-            </Button>
-          </template>
-        </div>
-        <Separator />
-        <div class="grid p-2">
-          <Button @click="isCreatingWorkspaceDialogOpen = true">
-            <IconCirclePlus />
-            Create workspace
-          </Button>
-        </div>
-      </div>
-      <div class="text-center">
-        <Button variant="outline" size="sm" @click="deselectTeam">
-          <IconLogOut />
-          Deselect team
-        </Button>
-      </div>
-    </div>
-    <WorkspaceDialog
-      v-model:open="isCreatingWorkspaceDialogOpen"
-      mode="create"
-    />
-  </div>
+              {{ workspace.label }}
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Button
+        variant="secondary"
+        class="justify-start"
+        @click="isCreatingWorkspaceDialogOpen = true"
+      >
+        <IconCirclePlus />
+        Create workspace
+      </Button>
+    </EmptyContent>
+    <Button variant="outline" size="sm" @click="deselectTeam">
+      <IconLogOut />
+      Deselect team
+    </Button>
+  </Empty>
+  <WorkspaceDialog v-model:open="isCreatingWorkspaceDialogOpen" mode="create" />
 </template>

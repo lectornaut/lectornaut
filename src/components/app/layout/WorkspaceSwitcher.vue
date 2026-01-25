@@ -7,6 +7,7 @@ import {
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
+import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
@@ -15,6 +16,9 @@ const { t } = useI18n()
 
 const workspaceStore = useWorkspaceStore()
 const { workspaces, currentWorkspace, isLoading } = storeToRefs(workspaceStore)
+
+const teamStore = useTeamStore()
+const { currentTeam } = storeToRefs(teamStore)
 
 const isCreatingWorkspaceDialogOpen = ref(false)
 
@@ -32,7 +36,12 @@ const switchWorkspace = async (workspaceId: string) => {
     <ContextMenuTrigger>
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button variant="ghost" size="sm" class="data-[state=open]:bg-accent">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="data-[state=open]:bg-accent"
+            :disabled="!currentTeam"
+          >
             <template v-if="currentWorkspace">
               <Avatar class="size-4">
                 <AvatarImage

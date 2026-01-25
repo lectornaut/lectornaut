@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { IconCirclePlus, IconLogOut } from "@/data/icons"
+import { IconCirclePlus, IconLogOut, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { useTeamStore } from "@/stores/teamStore"
 import { storeToRefs } from "pinia"
+import type { AcceptableValue } from "reka-ui"
 import { toast } from "vue-sonner"
 
 const teamStore = useTeamStore()
@@ -11,7 +12,7 @@ const { memberships, isLoading } = storeToRefs(teamStore)
 
 const isCreatingTeamDialogOpen = ref(false)
 
-const teams = computed(() =>
+const computedTeams = computed(() =>
   memberships.value.map((m) => ({
     label: m.team.name,
     value: m.team.id,
@@ -19,7 +20,9 @@ const teams = computed(() =>
   }))
 )
 
-const switchTeam = async (teamId: string) => {
+const switchTeam = async (teamId: AcceptableValue) => {
+  if (typeof teamId !== "string") return
+
   try {
     await teamStore.switchTeam(teamId)
   } catch (_error) {
@@ -29,34 +32,34 @@ const switchTeam = async (teamId: string) => {
 </script>
 
 <template>
-  <div>
-    <div class="w-full max-w-sm space-y-4">
-      <div class="space-y-2 text-center">
-        <h1 class="text-2xl font-bold tracking-tight">Teams</h1>
-        <p class="text-muted-foreground text-xs">
-          Choose a team to continue or create a new one.
-        </p>
+  <Empty>
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <IconUsers class="text-muted-foreground size-6" />
+      </EmptyMedia>
+      <EmptyTitle>Teams</EmptyTitle>
+      <EmptyDescription> Select a team to continue </EmptyDescription>
+    </EmptyHeader>
+    <EmptyContent
+      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-lg border p-2"
+    >
+      <div v-if="isLoading" class="flex justify-center p-4">
+        <Spinner />
       </div>
-      <div class="bg-background rounded-lg border">
-        <div class="p-2">
-          <div v-if="isLoading" class="flex justify-center p-4">
-            <Spinner />
-          </div>
-          <template v-else>
-            <div
-              v-if="teams.length === 0"
-              class="text-muted-foreground p-4 text-center"
-            >
-              You don't belong to any teams yet.
-            </div>
-            <Button
-              v-for="team in teams"
-              :key="team.value"
-              variant="ghost"
-              size="lg"
-              class="w-full justify-start p-3"
-              @click="switchTeam(team.value)"
-            >
+      <Select v-else @update:model-value="switchTeam">
+        <SelectTrigger class="w-full">
+          <SelectValue placeholder="Select team" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectLabel v-if="computedTeams.length === 0">
+            No teams available
+          </SelectLabel>
+          <SelectItem
+            v-for="team in computedTeams"
+            :key="team.value"
+            :value="team.value"
+          >
+            <div class="flex items-center gap-2">
               <Avatar class="size-5">
                 <AvatarImage
                   :src="team.original?.photoURL!"
@@ -68,24 +71,23 @@ const switchTeam = async (teamId: string) => {
                 </AvatarFallback>
               </Avatar>
               {{ team.label }}
-            </Button>
-          </template>
-        </div>
-        <Separator />
-        <div class="grid p-2">
-          <Button @click="isCreatingTeamDialogOpen = true">
-            <IconCirclePlus />
-            Create team
-          </Button>
-        </div>
-      </div>
-      <div class="text-center">
-        <Button variant="outline" size="sm" @click="logout()">
-          <IconLogOut />
-          Log out
-        </Button>
-      </div>
-    </div>
-    <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
-  </div>
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Button
+        variant="secondary"
+        class="justify-start"
+        @click="isCreatingTeamDialogOpen = true"
+      >
+        <IconCirclePlus />
+        Create team
+      </Button>
+    </EmptyContent>
+    <Button variant="outline" size="sm" @click="logout()">
+      <IconLogOut />
+      Log out
+    </Button>
+  </Empty>
+  <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
 </template>

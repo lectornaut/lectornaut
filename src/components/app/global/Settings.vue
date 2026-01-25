@@ -1831,7 +1831,7 @@ const df = new DateFormatter("en-US", {
                                     size="sm"
                                     @click="toggleMemberSort('name')"
                                   >
-                                    User
+                                    Name
                                     <IconArrowUp
                                       v-if="
                                         memberSortKey === 'name' &&
@@ -2164,7 +2164,7 @@ const df = new DateFormatter("en-US", {
                                     size="sm"
                                     @click="toggleTeamSort('name')"
                                   >
-                                    Team
+                                    Name
                                     <IconArrowUp
                                       v-if="
                                         teamSortKey === 'name' &&
@@ -2420,7 +2420,7 @@ const df = new DateFormatter("en-US", {
                               </TableRow>
                               <TableRow v-if="memberships.length === 0">
                                 <TableCell
-                                  colspan="3"
+                                  colspan="4"
                                   class="text-muted-foreground h-24 text-center"
                                 >
                                   No teams found.
@@ -2475,7 +2475,7 @@ const df = new DateFormatter("en-US", {
                                     size="sm"
                                     @click="toggleWorkspaceSort('name')"
                                   >
-                                    Workspace
+                                    Name
                                     <IconArrowUp
                                       v-if="
                                         workspaceSortKey === 'name' &&
@@ -2708,8 +2708,7 @@ const df = new DateFormatter("en-US", {
                                   colspan="4"
                                   class="text-muted-foreground h-24 text-center"
                                 >
-                                  No workspaces found. Create one to get
-                                  started.
+                                  No workspaces found.
                                 </TableCell>
                               </TableRow>
                             </TableBody>

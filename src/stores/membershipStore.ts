@@ -79,9 +79,9 @@ export const useMembershipStore = defineStore("memberships", () => {
   const membershipsQueryRef = computed(() =>
     currentUser.value
       ? query(
-        getAllMembershipsGroup(),
-        where("userId", "==", currentUser.value.uid)
-      )
+          getAllMembershipsGroup(),
+          where("userId", "==", currentUser.value.uid)
+        )
       : null
   )
 
