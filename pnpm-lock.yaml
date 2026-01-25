@@ -296,8 +296,8 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1
       motion-v:
-        specifier: ^1.10.0
-        version: 1.10.0(@vueuse/core@14.1.0(vue@3.5.27(typescript@5.9.3)))(vue@3.5.27(typescript@5.9.3))
+        specifier: ^1.10.2
+        version: 1.10.2(@vueuse/core@14.1.0(vue@3.5.27(typescript@5.9.3)))(vue@3.5.27(typescript@5.9.3))
       nprogress:
         specifier: ^0.2.0
         version: 0.2.0
@@ -8663,10 +8663,10 @@ packages:
         integrity: sha512-B55gcoL85Mcdt2IEStY5EEAsrMSVE2sI14xQ/uAdPL+mfQxhKKFaEag9JmfxedJOR4vZpBGoPeC/Gm13I/4g5Q==,
       }
 
-  motion-v@1.10.0:
+  motion-v@1.10.2:
     resolution:
       {
-        integrity: sha512-KPNuzKwIsZdfrHe/FnBQeKgWj7zURMxGDbGdSOND9FXQznFNGNOPUH0Oj00SOW67vClqv9iDni/BY1QfoLYYXQ==,
+        integrity: sha512-K+Zus21KKgZP4CBY7CvU/B7UZCV9sZTHG0FgsAfGHlbZi+u8EolmZ2kvJe5zOG0RzCgdiVCobHBt54qch9rweg==,
       }
     peerDependencies:
       "@vueuse/core": ">=10.0.0"
@@ -16897,7 +16897,7 @@ snapshots:
 
   motion-utils@12.27.2: {}
 
-  motion-v@1.10.0(@vueuse/core@14.1.0(vue@3.5.27(typescript@5.9.3)))(vue@3.5.27(typescript@5.9.3)):
+  motion-v@1.10.2(@vueuse/core@14.1.0(vue@3.5.27(typescript@5.9.3)))(vue@3.5.27(typescript@5.9.3)):
     dependencies:
       "@vueuse/core": 14.1.0(vue@3.5.27(typescript@5.9.3))
       framer-motion: 12.29.0

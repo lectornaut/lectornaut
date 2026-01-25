@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { IconCirclePlus, IconFolder, IconLogOut } from "@/data/icons"
+import { IconCirclePlus, IconFolder, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
@@ -11,6 +11,7 @@ const workspaceStore = useWorkspaceStore()
 const { workspaces, isLoading } = storeToRefs(workspaceStore)
 
 const teamStore = useTeamStore()
+const { currentTeam } = storeToRefs(teamStore)
 
 const isCreatingWorkspaceDialogOpen = ref(false)
 
@@ -56,7 +57,11 @@ const deselectTeam = async () => {
       <div v-if="isLoading" class="flex justify-center p-4">
         <Spinner />
       </div>
-      <Select v-else @update:model-value="switchWorkspace">
+      <Select
+        v-else
+        :disabled="!currentTeam"
+        @update:model-value="switchWorkspace"
+      >
         <SelectTrigger class="w-full">
           <SelectValue placeholder="Select workspace" />
         </SelectTrigger>
@@ -88,6 +93,7 @@ const deselectTeam = async () => {
       <Button
         variant="secondary"
         class="justify-start"
+        :disabled="!currentTeam"
         @click="isCreatingWorkspaceDialogOpen = true"
       >
         <IconCirclePlus />
@@ -95,8 +101,8 @@ const deselectTeam = async () => {
       </Button>
     </EmptyContent>
     <Button variant="outline" size="sm" @click="deselectTeam">
-      <IconLogOut />
-      Deselect team
+      <IconUsers />
+      Change team
     </Button>
   </Empty>
   <WorkspaceDialog v-model:open="isCreatingWorkspaceDialogOpen" mode="create" />

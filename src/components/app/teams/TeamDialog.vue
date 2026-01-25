@@ -1,11 +1,26 @@
 <script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
 import { IconPlus, IconTrash, IconX } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
-import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership, IMembershipRole, ITeam } from "@/types"
 import { toast } from "vue-sonner"
+
+/** Member pending invite or already on team */
+interface PendingMember {
+  email: string
+  role: IMembershipRole
+  id?: string
+  originalRole?: IMembershipRole
+}
+
+/** Result of a single invite attempt */
+interface InviteResult {
+  email: string
+  success: boolean
+  error?: Error
+}
 
 const props = defineProps<{
   open?: boolean
@@ -19,9 +34,10 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-
-const teamStore = useTeamStore()
+const { createTeam, updateTeam, currentTeam } = useTeamActions()
 const membershipStore = useMembershipStore()
+
+// State
 
 const isOpen = ref(props.open || false)
 const isLoading = ref(false)
@@ -30,14 +46,7 @@ const isLoading = ref(false)
 const teamName = ref("")
 const inviteEmail = ref("")
 const inviteRole = ref<IMembershipRole>(defaultTeamRole)
-const members = ref<
-  {
-    email: string
-    role: IMembershipRole
-    id?: string
-    originalRole?: IMembershipRole
-  }[]
->([])
+const members = ref<PendingMember[]>([])
 const removedMemberIds = ref<string[]>([])
 
 // Photo Upload State
@@ -52,29 +61,30 @@ const {
   multiple: false,
 })
 
+/** Revoke blob URL to prevent memory leaks */
+const revokeBlobUrl = () => {
+  if (photoPreview.value?.startsWith("blob:")) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
+}
+
 watch(files, (newFiles) => {
-  if (newFiles && newFiles.length > 0) {
-    const file = newFiles.item(0)
-    if (file) {
-      photoFile.value = file
-      photoPreview.value = URL.createObjectURL(file)
-    }
+  const file = newFiles?.item(0)
+  if (file) {
+    photoFile.value = file
+    photoPreview.value = URL.createObjectURL(file)
   }
 })
 
 const removePhoto = () => {
-  if (photoPreview.value && photoPreview.value.startsWith("blob:")) {
-    URL.revokeObjectURL(photoPreview.value)
-  }
+  revokeBlobUrl()
   photoFile.value = null
   photoPreview.value = null
   reset()
 }
 
 const resetForm = () => {
-  if (photoPreview.value && photoPreview.value.startsWith("blob:")) {
-    URL.revokeObjectURL(photoPreview.value)
-  }
+  revokeBlobUrl()
   teamName.value = ""
   inviteEmail.value = ""
   inviteRole.value = defaultTeamRole
@@ -123,15 +133,74 @@ watch(isOpen, async (val) => {
   }
 })
 
+// Helpers
+
+/** Validate email format */
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+/**
+ * Invite members with partial success handling.
+ * Returns results for each invite attempt.
+ */
+const inviteMembers = async (
+  teamId: string,
+  team: ITeam,
+  membersToInvite: PendingMember[]
+): Promise<InviteResult[]> => {
+  const results = await Promise.all(
+    membersToInvite.map(async (member): Promise<InviteResult> => {
+      try {
+        await membershipStore.inviteMember(
+          teamId,
+          team,
+          member.email,
+          member.role
+        )
+        return { email: member.email, success: true }
+      } catch (error) {
+        console.error(`Failed to invite ${member.email}:`, error)
+        return { email: member.email, success: false, error: error as Error }
+      }
+    })
+  )
+  return results
+}
+
+/** Show appropriate toast based on invite results */
+const showInviteResultToast = (results: InviteResult[]) => {
+  const succeeded = results.filter((r) => r.success).length
+  const failed = results.length - succeeded
+
+  if (failed === 0) {
+    toast.success(
+      t("components.teamDialog.toasts.invitedAll", { count: succeeded })
+    )
+  } else if (succeeded === 0) {
+    toast.error(t("components.teamDialog.toasts.inviteFailed"))
+  } else {
+    toast.warning(
+      t("components.teamDialog.toasts.invitePartial", { succeeded, failed })
+    )
+  }
+}
+
+// Actions
+
 const addMember = (e?: Event) => {
   e?.preventDefault()
 
   const email = inviteEmail.value.trim()
   if (!email) return
 
+  // Validate email format
+  if (!isValidEmail(email)) {
+    toast.error(t("components.teamDialog.errors.invalidEmail"))
+    return
+  }
+
   // Check if email already exists
   if (members.value.some((m) => m.email === email)) {
-    toast.error("Email already added")
+    toast.error(t("components.teamDialog.errors.emailAlreadyAdded"))
     return
   }
 
@@ -156,26 +225,25 @@ const handleSubmit = async () => {
   isLoading.value = true
   try {
     if (props.mode === "create") {
-      // 1. Create Team
-      await teamStore.createTeam(teamName.value, photoFile.value || undefined)
-      toast.success("Team created successfully")
+      // 1. Create Team (useTeamActions handles success toast)
+      await createTeam(teamName.value, photoFile.value || undefined)
 
       // 2. Invite Members to New Team
       if (members.value.length > 0) {
-        const newTeam = teamStore.currentTeam
+        const newTeam = currentTeam.value
         if (newTeam) {
-          const invitePromises = members.value.map((member) =>
-            membershipStore
-              .inviteMember(newTeam.id, newTeam, member.email, member.role)
-              .catch((e: Error) =>
-                console.error(`Failed to invite ${member.email}:`, e)
-              )
+          const results = await inviteMembers(
+            newTeam.id,
+            newTeam,
+            members.value
           )
-          await Promise.all(invitePromises)
+          if (results.some((r) => !r.success)) {
+            showInviteResultToast(results)
+          }
         }
       }
     } else if (props.mode === "edit" && props.team) {
-      // 1. Update Team
+      // 1. Update Team (useTeamActions handles success toast)
       let filePayload: File | null | undefined = undefined
       if (photoFile.value) {
         filePayload = photoFile.value
@@ -187,11 +255,10 @@ const handleSubmit = async () => {
         filePayload = null // Signal to remove photo
       }
 
-      await teamStore.updateTeam(props.team.id, {
+      await updateTeam(props.team.id, {
         name: teamName.value,
         photoFile: filePayload,
       })
-      toast.success("Team updated successfully")
 
       // 2. Process Member Changes
       // Remove deleted members
@@ -216,36 +283,28 @@ const handleSubmit = async () => {
       // Invite new members (those without an id)
       const newMembers = members.value.filter((m) => !m.id)
       if (newMembers.length > 0) {
-        const invitePromises = newMembers.map((member) =>
-          membershipStore
-            .inviteMember(
-              props.team!.id,
-              props.team!,
-              member.email,
-              member.role
-            )
-            .catch((e: Error) =>
-              console.error(`Failed to invite ${member.email}:`, e)
-            )
+        const results = await inviteMembers(
+          props.team.id,
+          props.team,
+          newMembers
         )
-        await Promise.all(invitePromises)
+        if (results.some((r) => !r.success)) {
+          showInviteResultToast(results)
+        }
       }
     } else if (props.mode === "invite") {
       // Invite Mode
       // Use props.team if available, otherwise fallback to currentTeam
-      const targetTeam = props.team || teamStore.currentTeam
-      if (!targetTeam) throw new Error("No team to invite to")
+      const targetTeam = props.team || currentTeam.value
+      if (!targetTeam) throw new Error(t("components.teamDialog.errors.noTeam"))
 
       if (members.value.length > 0) {
-        const invitePromises = members.value.map((member) =>
-          membershipStore
-            .inviteMember(targetTeam.id, targetTeam, member.email, member.role)
-            .catch((e: Error) =>
-              console.error(`Failed to invite ${member.email}:`, e)
-            )
+        const results = await inviteMembers(
+          targetTeam.id,
+          targetTeam,
+          members.value
         )
-        await Promise.all(invitePromises)
-        toast.success(`Invited ${members.value.length} members`)
+        showInviteResultToast(results)
       }
     }
 

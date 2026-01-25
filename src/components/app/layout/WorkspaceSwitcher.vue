@@ -34,34 +34,41 @@ const switchWorkspace = async (workspaceId: string) => {
 <template>
   <ContextMenu>
     <ContextMenuTrigger>
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="data-[state=open]:bg-accent"
-            :disabled="!currentTeam"
-          >
-            <template v-if="currentWorkspace">
-              <Avatar class="size-4">
-                <AvatarImage
-                  class="size-4"
-                  :src="currentWorkspace?.photoURL!"
-                  :alt="currentWorkspace?.name!"
-                  referrerpolicy="no-referrer"
-                />
-                <AvatarFallback class="size-4">
-                  {{ getInitials(currentWorkspace?.name!) }}
-                </AvatarFallback>
-              </Avatar>
-              {{ currentWorkspace?.name! }}
-            </template>
-            <template v-else>
-              {{ t("components.workspaceSwitcher.selectWorkspace") }}
-            </template>
-            <IconChevronDown />
-          </Button>
-        </DropdownMenuTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <DropdownMenu>
+            <TooltipTrigger as-child>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="data-[state=open]:bg-accent"
+                  :disabled="!currentTeam"
+                >
+                  <template v-if="currentWorkspace">
+                    <Avatar class="size-4">
+                      <AvatarImage
+                        class="size-4"
+                        :src="currentWorkspace?.photoURL!"
+                        :alt="currentWorkspace?.name!"
+                        referrerpolicy="no-referrer"
+                      />
+                      <AvatarFallback class="size-4">
+                        {{ getInitials(currentWorkspace?.name!) }}
+                      </AvatarFallback>
+                    </Avatar>
+                    {{ currentWorkspace?.name! }}
+                  </template>
+                  <template v-else>
+                    {{ t("components.workspaceSwitcher.selectWorkspace") }}
+                  </template>
+                  <IconChevronDown />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              {{ t("components.workspaceSwitcher.tooltip") }}
+            </TooltipContent>
         <DropdownMenuContent class="w-48">
           <DropdownMenuGroup v-if="isLoading" class="flex justify-center py-2">
             <Spinner />
@@ -108,7 +115,9 @@ const switchWorkspace = async (workspaceId: string) => {
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
-      </DropdownMenu>
+          </DropdownMenu>
+        </Tooltip>
+      </TooltipProvider>
     </ContextMenuTrigger>
     <ContextMenuContent class="w-48">
       <ContextMenuGroup>

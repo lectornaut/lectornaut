@@ -169,9 +169,7 @@ const {
   deleteTeam,
   updateTeamPhoto,
   removeTeamPhoto,
-  isRoleLoading,
-  isMemberLoading,
-  isTeamLoading,
+  loading: teamLoading,
   canExitTeam,
   canDeleteTeam,
   getTeamMemberCount,
@@ -181,9 +179,9 @@ const {
 const {
   currentWorkspace,
   workspaces,
-  isLoading: isWorkspaceLoading,
+  isLoading: isWorkspaceStoreLoading,
   canManageWorkspaces,
-  isWorkspaceLoading: isWorkspaceActionLoading,
+  loading: workspaceLoading,
   switchWorkspace,
   deleteWorkspace,
   updateWorkspacePhoto,
@@ -1951,7 +1949,9 @@ const df = new DateFormatter("en-US", {
                                   <Select
                                     v-else
                                     :model-value="member.role"
-                                    :disabled="isRoleLoading(member.userId)"
+                                    :disabled="
+                                      teamLoading.role.isLoading(member.userId)
+                                    "
                                     @update:model-value="
                                       (role) =>
                                         changeRole(
@@ -2021,12 +2021,14 @@ const df = new DateFormatter("en-US", {
                                                 variant="outline"
                                                 size="icon"
                                                 :disabled="
-                                                  isMemberLoading(member.userId)
+                                                  teamLoading.member.isLoading(
+                                                    member.userId
+                                                  )
                                                 "
                                               >
                                                 <Spinner
                                                   v-if="
-                                                    isMemberLoading(
+                                                    teamLoading.member.isLoading(
                                                       member.userId
                                                     )
                                                   "
@@ -2075,7 +2077,7 @@ const df = new DateFormatter("en-US", {
                                                     <AlertDialogAction
                                                       variant="destructive"
                                                       :disabled="
-                                                        isMemberLoading(
+                                                        teamLoading.member.isLoading(
                                                           member.userId
                                                         )
                                                       "
@@ -2087,7 +2089,7 @@ const df = new DateFormatter("en-US", {
                                                     >
                                                       <Spinner
                                                         v-if="
-                                                          isMemberLoading(
+                                                          teamLoading.member.isLoading(
                                                             member.userId
                                                           )
                                                         "
@@ -2230,7 +2232,7 @@ const df = new DateFormatter("en-US", {
                                             >
                                               <template
                                                 v-if="
-                                                  isTeamLoading(
+                                                  teamLoading.team.isLoading(
                                                     `photo-${membership.teamId}`
                                                   )
                                                 "
@@ -2261,7 +2263,7 @@ const df = new DateFormatter("en-US", {
                                             v-if="membership.role === 'owner'"
                                           >
                                             {{
-                                              isTeamLoading(
+                                              teamLoading.team.isLoading(
                                                 `photo-${membership.teamId}`
                                               )
                                                 ? "Uploading..."
@@ -2329,13 +2331,17 @@ const df = new DateFormatter("en-US", {
                                         "
                                         variant="outline"
                                         :disabled="
-                                          isTeamLoading(membership.team?.id)
+                                          teamLoading.team.isLoading(
+                                            membership.team?.id
+                                          )
                                         "
                                         @click="switchTeam(membership.team?.id)"
                                       >
                                         <Spinner
                                           v-if="
-                                            isTeamLoading(membership.team?.id)
+                                            teamLoading.team.isLoading(
+                                              membership.team?.id
+                                            )
                                           "
                                         />
                                         <template v-else>
@@ -2460,7 +2466,7 @@ const df = new DateFormatter("en-US", {
                     <Field orientation="horizontal">
                       <FieldContent>
                         <div
-                          v-if="isWorkspaceLoading"
+                          v-if="isWorkspaceStoreLoading"
                           class="flex justify-center py-8"
                         >
                           <Spinner />
@@ -2543,7 +2549,7 @@ const df = new DateFormatter("en-US", {
                                             >
                                               <template
                                                 v-if="
-                                                  isWorkspaceActionLoading(
+                                                  workspaceLoading.isLoading(
                                                     `photo-${workspace.id}`
                                                   )
                                                 "
@@ -2570,7 +2576,7 @@ const df = new DateFormatter("en-US", {
                                             v-if="canManageWorkspaces"
                                           >
                                             {{
-                                              isWorkspaceActionLoading(
+                                              workspaceLoading.isLoading(
                                                 `photo-${workspace.id}`
                                               )
                                                 ? "Uploading..."
@@ -2636,13 +2642,15 @@ const df = new DateFormatter("en-US", {
                                         "
                                         variant="outline"
                                         :disabled="
-                                          isWorkspaceActionLoading(workspace.id)
+                                          workspaceLoading.isLoading(
+                                            workspace.id
+                                          )
                                         "
                                         @click="switchWorkspace(workspace.id)"
                                       >
                                         <Spinner
                                           v-if="
-                                            isWorkspaceActionLoading(
+                                            workspaceLoading.isLoading(
                                               workspace.id
                                             )
                                           "
@@ -2962,13 +2970,15 @@ const df = new DateFormatter("en-US", {
             <AlertDialogAction
               variant="destructive"
               :disabled="
-                teamToDelete && isTeamLoading(`delete-${teamToDelete.id}`)
+                teamToDelete &&
+                teamLoading.team.isLoading(`delete-${teamToDelete.id}`)
               "
               @click.prevent="handleDeleteTeam"
             >
               <Spinner
                 v-if="
-                  teamToDelete && isTeamLoading(`delete-${teamToDelete.id}`)
+                  teamToDelete &&
+                  teamLoading.team.isLoading(`delete-${teamToDelete.id}`)
                 "
               />
               Delete Team
@@ -2993,11 +3003,17 @@ const df = new DateFormatter("en-US", {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              :disabled="teamToExit && isTeamLoading(`exit-${teamToExit.id}`)"
+              :disabled="
+                teamToExit &&
+                teamLoading.team.isLoading(`exit-${teamToExit.id}`)
+              "
               @click.prevent="handleExitTeam"
             >
               <Spinner
-                v-if="teamToExit && isTeamLoading(`exit-${teamToExit.id}`)"
+                v-if="
+                  teamToExit &&
+                  teamLoading.team.isLoading(`exit-${teamToExit.id}`)
+                "
               />
               Exit Team
             </AlertDialogAction>
@@ -3023,14 +3039,14 @@ const df = new DateFormatter("en-US", {
               variant="destructive"
               :disabled="
                 workspaceToDelete &&
-                isWorkspaceActionLoading(`delete-${workspaceToDelete.id}`)
+                workspaceLoading.isLoading(`delete-${workspaceToDelete.id}`)
               "
               @click.prevent="handleDeleteWorkspace"
             >
               <Spinner
                 v-if="
                   workspaceToDelete &&
-                  isWorkspaceActionLoading(`delete-${workspaceToDelete.id}`)
+                  workspaceLoading.isLoading(`delete-${workspaceToDelete.id}`)
                 "
               />
               Delete Workspace

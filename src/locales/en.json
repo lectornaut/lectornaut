@@ -1147,6 +1147,16 @@
         "createTeam": "Create Team",
         "saveChanges": "Save Changes",
         "inviteMembers": "Invite {count} Member | Invite {count} Members"
+      },
+      "errors": {
+        "invalidEmail": "Please enter a valid email address",
+        "emailAlreadyAdded": "This email has already been added",
+        "noTeam": "No team to invite to"
+      },
+      "toasts": {
+        "invitedAll": "Invited {count} member | Invited {count} members",
+        "inviteFailed": "Failed to invite members",
+        "invitePartial": "Invited {succeeded} member(s), {failed} failed"
       }
     },
     "subNavigation": {
@@ -1410,7 +1420,8 @@
       "menu": {
         "settings": "Settings"
       },
-      "selectWorkspace": "Select workspace"
+      "selectWorkspace": "Select workspace",
+      "tooltip": "Change workspace"
     }
   },
   "accountMenu": {

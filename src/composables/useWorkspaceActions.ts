@@ -1,88 +1,62 @@
 import { useLoadingState } from "@/composables/useLoadingState"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
+import { withToast } from "@/utils/toast-helpers"
 import { storeToRefs } from "pinia"
-import { toast } from "vue-sonner"
 
 /**
- * Composable for workspace-related actions with unified loading states and toast notifications
+ * Workspace actions composable with unified loading states and toast notifications.
+ * Wraps workspaceStore operations with loading tracking and user feedback.
  */
 export function useWorkspaceActions() {
   const workspaceStore = useWorkspaceStore()
   const membershipStore = useMembershipStore()
 
-  const {
-    workspaces,
-    currentWorkspace,
-    isLoading: storeLoading,
-  } = storeToRefs(workspaceStore)
-
+  const { workspaces, currentWorkspace, isLoading } =
+    storeToRefs(workspaceStore)
   const { isOwner, canManageWorkspaces } = storeToRefs(membershipStore)
+  const loading = useLoadingState<string>()
 
-  // Unified loading states
-  const workspaceLoading = useLoadingState<string>()
+  /** Permission check for workspace management (create, edit, delete) */
+  const canManage = () => canManageWorkspaces.value
 
-  // Check if user can delete a workspace (owner or editor - uses canManageWorkspaces)
-  const canDeleteWorkspace = () => {
-    return canManageWorkspaces.value
-  }
-
-  // Check if user can edit a workspace (owner or editor - uses canManageWorkspaces)
-  const canEditWorkspace = () => {
-    return canManageWorkspaces.value
-  }
-
-  // Switch to another workspace
+  /** Switch to a different workspace */
   const switchWorkspace = async (workspaceId: string) => {
     if (currentWorkspace.value?.id === workspaceId) return
-    return workspaceLoading.withLoading(workspaceId, async () => {
-      try {
-        await workspaceStore.switchWorkspace(workspaceId)
-        toast.success("Switched workspace successfully")
-      } catch (error) {
-        toast.error("Failed to switch workspace", {
-          description: (error as Error).message,
-        })
-        throw error
-      }
-    })
+    return loading.withLoading(workspaceId, () =>
+      withToast(() => workspaceStore.switchWorkspace(workspaceId), {
+        success: "Switched workspace successfully",
+        error: "Failed to switch workspace",
+      })
+    )
   }
 
-  // Delete a workspace
-  const deleteWorkspace = async (workspaceId: string) => {
-    return workspaceLoading.withLoading(`delete-${workspaceId}`, async () => {
-      try {
-        await workspaceStore.deleteWorkspace(workspaceId)
-        toast.success("Workspace deleted successfully")
-      } catch (error) {
-        toast.error("Failed to delete workspace", {
-          description: (error as Error).message,
-        })
-        throw error
-      }
-    })
-  }
+  /** Permanently delete a workspace */
+  const deleteWorkspace = async (workspaceId: string) =>
+    loading.withLoading(`delete-${workspaceId}`, () =>
+      withToast(() => workspaceStore.deleteWorkspace(workspaceId), {
+        success: "Workspace deleted successfully",
+        error: "Failed to delete workspace",
+      })
+    )
 
-  // Create a new workspace
+  /** Create a new workspace */
   const createWorkspace = async (
     name: string,
     description?: string,
     photoFile?: File
-  ) => {
-    return workspaceLoading.withLoading("create", async () => {
-      try {
-        await workspaceStore.createWorkspace(name, description, photoFile)
-        toast.success("Workspace created successfully")
-      } catch (error) {
-        toast.error("Failed to create workspace", {
-          description: (error as Error).message,
-        })
-        throw error
-      }
-    })
-  }
+  ) =>
+    loading.withLoading("create", () =>
+      withToast(
+        () => workspaceStore.createWorkspace(name, description, photoFile),
+        {
+          success: "Workspace created successfully",
+          error: "Failed to create workspace",
+        }
+      )
+    )
 
-  // Update workspace details
+  /** Update workspace details (name, description, photo) */
   const updateWorkspace = async (
     workspaceId: string,
     updates: {
@@ -90,64 +64,52 @@ export function useWorkspaceActions() {
       description?: string | null
       photoFile?: File | null
     }
-  ) => {
-    return workspaceLoading.withLoading(`update-${workspaceId}`, async () => {
-      try {
-        await workspaceStore.updateWorkspace(workspaceId, updates)
-        toast.success("Workspace updated successfully")
-      } catch (error) {
-        toast.error("Failed to update workspace", {
-          description: (error as Error).message,
-        })
-        throw error
-      }
-    })
-  }
+  ) =>
+    loading.withLoading(`update-${workspaceId}`, () =>
+      withToast(() => workspaceStore.updateWorkspace(workspaceId, updates), {
+        success: "Workspace updated successfully",
+        error: "Failed to update workspace",
+      })
+    )
 
-  // Update workspace photo
-  const updateWorkspacePhoto = async (workspaceId: string, file: File) => {
-    return workspaceLoading.withLoading(`photo-${workspaceId}`, async () => {
-      try {
-        await workspaceStore.updateWorkspace(workspaceId, { photoFile: file })
-        toast.success("Workspace photo updated successfully")
-      } catch (error) {
-        toast.error("Failed to update workspace photo", {
-          description: (error as Error).message,
-        })
-        throw error
-      }
-    })
-  }
+  /** Upload a new workspace photo */
+  const updateWorkspacePhoto = async (workspaceId: string, file: File) =>
+    loading.withLoading(`photo-${workspaceId}`, () =>
+      withToast(
+        () => workspaceStore.updateWorkspace(workspaceId, { photoFile: file }),
+        {
+          info: "Uploading workspace photo...",
+          success: "Workspace photo updated successfully",
+          error: "Failed to update workspace photo",
+        }
+      )
+    )
 
-  // Remove workspace photo
-  const removeWorkspacePhoto = async (workspaceId: string) => {
-    return workspaceLoading.withLoading(`photo-${workspaceId}`, async () => {
-      try {
-        await workspaceStore.updateWorkspace(workspaceId, { photoFile: null })
-        toast.success("Workspace photo removed successfully")
-      } catch (error) {
-        toast.error("Failed to remove workspace photo", {
-          description: (error as Error).message,
-        })
-        throw error
-      }
-    })
-  }
+  /** Remove the workspace photo */
+  const removeWorkspacePhoto = async (workspaceId: string) =>
+    loading.withLoading(`photo-${workspaceId}`, () =>
+      withToast(
+        () => workspaceStore.updateWorkspace(workspaceId, { photoFile: null }),
+        {
+          success: "Workspace photo removed successfully",
+          error: "Failed to remove workspace photo",
+        }
+      )
+    )
 
   return {
     // State
     currentWorkspace,
     workspaces,
-    isLoading: storeLoading,
+    isLoading,
     isOwner,
     canManageWorkspaces,
 
-    // Loading states
-    isWorkspaceLoading: workspaceLoading.isLoading,
+    // Loading - check specific action loading with loading.isLoading(key)
+    loading,
 
-    // Permission checks
-    canDeleteWorkspace,
-    canEditWorkspace,
+    // Permission
+    canManageWorkspace: canManage,
 
     // Actions
     switchWorkspace,
