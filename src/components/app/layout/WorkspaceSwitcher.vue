@@ -69,52 +69,55 @@ const switchWorkspace = async (workspaceId: string) => {
             <TooltipContent>
               {{ t("components.workspaceSwitcher.tooltip") }}
             </TooltipContent>
-        <DropdownMenuContent class="w-48">
-          <DropdownMenuGroup v-if="isLoading" class="flex justify-center py-2">
-            <Spinner />
-          </DropdownMenuGroup>
-          <DropdownMenuGroup v-else>
-            <DropdownMenuLabel class="text-muted-foreground text-xs">
-              {{
-                workspaces.length === 0
-                  ? t("components.workspaceSwitcher.noOtherWorkspaces")
-                  : t("components.workspaceSwitcher.myWorkspaces")
-              }}
-            </DropdownMenuLabel>
-            <DropdownMenuItem
-              v-for="workspace in workspaces"
-              :key="workspace.id"
-              @click="switchWorkspace(workspace.id)"
-            >
-              <Avatar class="size-4">
-                <AvatarImage
-                  class="size-4"
-                  :src="workspace.photoURL!"
-                  :alt="workspace.name"
-                  referrerpolicy="no-referrer"
-                />
-                <AvatarFallback class="size-4">
-                  {{ getInitials(workspace.name) }}
-                </AvatarFallback>
-              </Avatar>
-              <span class="truncate">
-                {{ workspace.name }}
-              </span>
-              <DropdownMenuShortcut
-                v-if="workspace.id === currentWorkspace?.id"
+            <DropdownMenuContent class="w-48">
+              <DropdownMenuGroup
+                v-if="isLoading"
+                class="flex justify-center py-2"
               >
-                <IconCheck />
-              </DropdownMenuShortcut>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem @click="isCreatingWorkspaceDialogOpen = true">
-              <IconCirclePlus />
-              {{ t("components.workspaceSwitcher.createWorkspace") }}
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
+                <Spinner />
+              </DropdownMenuGroup>
+              <DropdownMenuGroup v-else>
+                <DropdownMenuLabel class="text-muted-foreground text-xs">
+                  {{
+                    workspaces.length === 0
+                      ? t("components.workspaceSwitcher.noOtherWorkspaces")
+                      : t("components.workspaceSwitcher.myWorkspaces")
+                  }}
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  v-for="workspace in workspaces"
+                  :key="workspace.id"
+                  @click="switchWorkspace(workspace.id)"
+                >
+                  <Avatar class="size-4">
+                    <AvatarImage
+                      class="size-4"
+                      :src="workspace.photoURL!"
+                      :alt="workspace.name"
+                      referrerpolicy="no-referrer"
+                    />
+                    <AvatarFallback class="size-4">
+                      {{ getInitials(workspace.name) }}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span class="truncate">
+                    {{ workspace.name }}
+                  </span>
+                  <DropdownMenuShortcut
+                    v-if="workspace.id === currentWorkspace?.id"
+                  >
+                    <IconCheck />
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem @click="isCreatingWorkspaceDialogOpen = true">
+                  <IconCirclePlus />
+                  {{ t("components.workspaceSwitcher.createWorkspace") }}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
           </DropdownMenu>
         </Tooltip>
       </TooltipProvider>

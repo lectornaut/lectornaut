@@ -18,6 +18,7 @@ import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useLayoutStore } from "@/stores/layoutStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
 import { useRouter } from "vue-router"
@@ -60,53 +61,154 @@ useSortable(el, tabs, {
   handle: ".hover-trigger",
 })
 
-const isSyncing = ref(false)
-const hasInitialized = ref(false)
-const previousRoutePath = ref<string | null>(null)
+const workspaceStore = useWorkspaceStore()
+const { currentWorkspace } = storeToRefs(workspaceStore)
 
-// Navigate to a tab (used by event handlers and programmatic navigation)
-function navigateToTab(tab: { id: string; fullPath: string }) {
-  setActiveTab(tab.id)
-  router.push(tab.fullPath)
+// Navigation Helper
+function navigateToTab(tab: { fullPath: string }) {
+  if (route.fullPath !== tab.fullPath) {
+    router.push(tab.fullPath)
+  }
 }
 
-// Handle tab click - switch to the clicked tab
+// ----------------------------------------------------------------------------
+// Core Synchronization Logic
+// ----------------------------------------------------------------------------
+// 1. Route -> Store (Primary Truth)
+// When URL changes, ensure Store reflects it (either by activating existing or adding new)
+watch(
+  () => route.fullPath,
+  async (newPath) => {
+    // Ignore non-navigation updates or pending hydration
+    if (!currentWorkspace.value) return
+
+    // Case A: Route matches existing tab
+    const existingTab = tabs.value.find((t) => t.fullPath === newPath)
+    if (existingTab) {
+      if (activeTabId.value !== existingTab.id) {
+        setActiveTab(existingTab.id)
+      }
+      return
+    }
+
+    // Case B: Route is a "Landing" page (start, etc) that shouldn't be a tab?
+    // The previous logic had a check for "comingFromNonTabsRoute".
+    // Let's rely on `route.name` or specific paths.
+    // If it's a generic route that we treat as a workspace tab, add it.
+    if (newPath === "/start" && tabs.value.length === 0) {
+        // Special case: /start is allowed when no tabs exist
+        return
+    }
+    
+    // If we are at /start but we HAVE tabs, we probably shouldn't be there unless activeTab is null?
+    // Actually, simple logic: if user navigates to a URL, it should probably be a tab if it's not a special page.
+    // Currently, addTab handles the creation.
+    
+    // Check if we should add a tab
+    if (route.name) {
+      const name = (route.meta?.breadcrumb as string) || (route.name as string) || "New tab"
+      const newTab = await addTab(newPath, name)
+      // addTab inside store (optimistic) sets activeId, so we are good.
+    }
+  },
+  { immediate: true }
+)
+
+// 2. Store -> Route (Secondary Truth)
+// When Store activeTabId changes (e.g. closed tab, clicked tab in other window), ensure Router follows.
+watch(
+  activeTabId,
+  (newId) => {
+    // If no active tab, maybe go to start?
+    if (!newId) {
+      if (route.fullPath !== "/start" && tabs.value.length === 0) {
+        router.push("/start")
+      }
+      return
+    }
+
+    const tab = tabs.value.find((t) => t.id === newId)
+    if (tab && tab.fullPath !== route.fullPath) {
+      router.push(tab.fullPath)
+    }
+  },
+  // We generally don't need immediate here because the Route watcher handles the initial sync.
+  // But if the store loads *after* the route, the route watcher might miss if the store was empty?
+  // No, the route watcher handles "addTab".
+  { flush: 'post' } 
+)
+
+// 3. Workspace Switch
+// When workspace changes, the store will clear tabs.
+// We just need to ensure we don't accidentally add the *old* route as a new tab in the *new* workspace
+// before the router has a chance to update to the new workspace's default/active tab.
+watch(
+  () => currentWorkspace.value?.id,
+  (newId, oldId) => {
+    if (newId !== oldId) {
+       // When switching workspace, the store clears tabs.
+       // We might want to go to /start immediately to avoid "ghost" routes adding themselves?
+       // But usually the App persistence will redirect us.
+       // The previous logic used `hasInitialized` to gate this.
+       // With our simpler "Route -> Store" logic, if the user stays on OldRoute, it will try to AddTab to NewWorkspace.
+       // We should indeed redirect to start or the workspace's active tab.
+       // However, `layoutStore` persistence might load the new active tab and trigger the activeTabId watcher,
+       // which will push the new route.
+       // So mostly handled, but let's prevent accidental addition.
+       // For now, relies on layoutStore clearing activeTabId -> triggers Router push /start
+       if(tabs.value.length === 0) {
+           router.push('/start')
+       }
+    }
+  }
+)
+
+// ----------------------------------------------------------------------------
+// Event Handlers
+// ----------------------------------------------------------------------------
+
 function onTabClick(tab: { id: string }) {
+  // Just set active, let the watcher handle routing if needed?
+  // Actually, UI usually has <RouterLink> which handles the push.
+  // Then the Route watcher handles the setActiveTab.
+  // The store setActiveTab is redundant if RouterLink is used, BUT
+  // RouterLink update might be slightly delayed.
+  // Setting active tab immediately makes UI snappy.
   setActiveTab(tab.id)
 }
 
-// Add a new tab
 async function handleAddTab(fullPath = "/new", name?: string) {
   const newTab = await addTab(fullPath, name)
   if (newTab) navigateToTab(newTab)
 }
 
-// Close a tab with null safety
 async function handleCloseTab(id: string | undefined) {
   if (!id) return
+  // If closing active tab, store calculates next one and updates activeTabId
+  // Our activeTabId watcher will then trigger the route change.
+  // BUT, we might want to manually push if we know the next path to feel faster?
+  // Let's rely on the result from closeTab if available for max speed.
   const result = await closeTab(id)
   if (result?.nextPath) {
     router.push(result.nextPath)
   }
 }
 
-// Duplicate a tab with null safety
 async function handleDuplicateTab(id: string | undefined) {
   if (!id) return
   await duplicateTab(id)
-  // Ideally navigate to new tab, but store doesn't return it yet.
-  // Workaround: find tab with activeTabId
+  // Store doesn't return new tab easily unless we search for it.
+  // User might expect to switch to it?
+  // Previous logic found it and switched.
   const newTab = tabs.value.find((t) => t.id === activeTabId.value)
-  if (newTab) navigateToTab(newTab)
+  // If duplicatTab set it as active, we just nav there.
+  if (newTab && newTab.id !== id) navigateToTab(newTab)
 }
 
-// Rename a tab with null safety
 function handleRenameTab(id: string | undefined) {
   if (!id) return
   const tab = tabs.value.find((t) => t.id === id)
-  if (!tab) return
-
-  if (isDefaultRoute(tab)) return
+  if (!tab || isDefaultRoute(tab)) return
 
   renamingTabId.value = id
   renamingName.value = tab.name
@@ -133,7 +235,7 @@ function cancelRename() {
 function selectTab(idOrDirection: string | number) {
   if (tabs.value.length === 0) return
 
-  let targetId: string
+  let targetId: string | undefined
 
   if (idOrDirection === "next" || idOrDirection === "previous") {
     // Visual order cycling
@@ -148,149 +250,28 @@ function selectTab(idOrDirection: string | number) {
       nextIndex = (start - 1 + tabs.value.length) % tabs.value.length
     }
 
-    const target = tabs.value[nextIndex]
-    if (target) {
-      targetId = target.id
-    } else {
-      return
-    }
+    targetId = tabs.value[nextIndex]?.id
   } else if (typeof idOrDirection === "number") {
     const tabIdx = Math.max(
       0,
       Math.min(idOrDirection - 1, tabs.value.length - 1)
     )
-    const tab = tabs.value[tabIdx]
-    if (!tab) return
-    targetId = tab.id
+    targetId = tabs.value[tabIdx]?.id
   } else {
     targetId = idOrDirection as string
   }
+
+  if (!targetId) return
 
   const target = tabs.value.find((t) => t.id === targetId)
   if (target) navigateToTab(target)
 }
 
-// Sync route changes with tabs (Route -> Store)
-watch(
-  [() => route.fullPath, pending, isHydrated],
-  async ([fullPath, isPending, hydrated]) => {
-    if (isPending || !hydrated) return
-
-    // Check if coming from a non-tabs route (landing pages: /, /pricing, /changelog)
-    const comingFromNonTabsRoute =
-      previousRoutePath.value !== null &&
-      !tabs.value.some((t) => t.fullPath === previousRoutePath.value)
-
-    previousRoutePath.value = fullPath
-
-    // Handle first run after hydration
-    if (!hasInitialized.value) {
-      hasInitialized.value = true
-
-      const existingTab = tabs.value.find((t) => t.fullPath === fullPath)
-      if (existingTab) {
-        setActiveTab(existingTab.id)
-        return
-      }
-
-      if (tabs.value.length > 0) {
-        const activeTabMatchesRoute =
-          activeTabId.value &&
-          tabs.value.find(
-            (t) => t.id === activeTabId.value && t.fullPath === fullPath
-          )
-        if (activeTabMatchesRoute) return
-
-        const newTab = await addTab(
-          fullPath,
-          (route.meta?.breadcrumb as string) || (route.name as string)
-        )
-        if (newTab) setActiveTab(newTab.id)
-        return
-      }
-
-      if (activeTabId.value) return
-    }
-
-    if (isSyncing.value) return
-    if (!route.name) return
-
-    // If clicked on an existing tab, it's already active
-    const clickedTab = tabs.value.find(
-      (t) => t.id === activeTabId.value && t.fullPath === fullPath
-    )
-    if (clickedTab) return
-
-    // Switch to existing tab if route matches
-    const existingTab = tabs.value.find((t) => t.fullPath === fullPath)
-    if (existingTab) {
-      setActiveTab(existingTab.id)
-      return
-    }
-
-    // Route doesn't exist - create new tab or update active tab
-    if (comingFromNonTabsRoute || !activeTabId.value) {
-      const newTab = await addTab(
-        fullPath,
-        (route.meta?.breadcrumb as string) || (route.name as string)
-      )
-      if (newTab) setActiveTab(newTab.id)
-    } else {
-      updateActiveTab(
-        fullPath,
-        (route.meta?.breadcrumb as string) || (route.name as string)
-      )
-    }
-  },
-  { immediate: true }
-)
-
-// Sync active tab changes from other sessions with local route (Store -> Route)
-watch(
-  [activeTabId, () => activeTab.value?.fullPath, pending],
-  async ([newId, newPath, isPending]) => {
-    if (isPending) return
-    if (isSyncing.value) return // Prevent re-entry during active sync
-
-    // Ensure we have current path to compare against
-    const currentPath = route.fullPath
-
-    // If no active tab exists (e.g. all tabs closed in another session)
-    if (!newId || !newPath) {
-      if (tabs.value.length === 0 && currentPath !== "/start") {
-        isSyncing.value = true
-        try {
-          await router.push("/start")
-        } finally {
-          // Use setTimeout to ensure router has fully settled
-          setTimeout(() => {
-            isSyncing.value = false
-          }, 0)
-        }
-      }
-      return
-    }
-
-    // If the local route doesn't match the active tab's route, navigate
-    if (currentPath !== newPath) {
-      isSyncing.value = true
-      try {
-        await router.push(newPath)
-      } finally {
-        // Use setTimeout to ensure router has fully settled
-        setTimeout(() => {
-          isSyncing.value = false
-        }, 0)
-      }
-    }
-  }
-)
-
-// Event handlers - store references for cleanup
+// ----------------------------------------------------------------------------
+// Global Events (Mitt)
+// ----------------------------------------------------------------------------
 function onTabsAdd(raw?: unknown) {
-  const data = raw as
-    | { fullPath?: string; path?: string; url?: string; name?: string }
-    | undefined
+  const data = raw as { fullPath?: string; path?: string; url?: string; name?: string } | undefined
   const path = data?.fullPath || data?.path || data?.url || "/new"
   handleAddTab(path, data?.name)
 }
@@ -301,9 +282,7 @@ function onTabsClose(id?: unknown) {
 
 function onTabsCloseOthers(id?: unknown) {
   const keepId = typeof id === "string" ? id : activeTabId.value
-  if (keepId) {
-    closeOtherTabs(keepId)
-  }
+  if (keepId) closeOtherTabs(keepId)
 }
 
 async function onTabsCloseAll() {
@@ -328,29 +307,26 @@ function onTabsReopen(raw?: unknown) {
 }
 
 function onTabsDuplicate(id?: unknown) {
-  handleDuplicateTab(
-    (typeof id === "string" ? id : activeTabId.value) || undefined
-  )
+  handleDuplicateTab((typeof id === "string" ? id : activeTabId.value) || undefined)
 }
 
 function onTabsRename(id?: unknown) {
-  handleRenameTab(
-    (typeof id === "string" ? id : activeTabId.value) || undefined
-  )
+  handleRenameTab((typeof id === "string" ? id : activeTabId.value) || undefined)
 }
 
-// Register event listeners
-emitter.on("Tabs.Add", onTabsAdd)
-emitter.on("Tabs.Close", onTabsClose)
-emitter.on("Tabs.Close.Others", onTabsCloseOthers)
-emitter.on("Tabs.Close.All", onTabsCloseAll)
-emitter.on("Tabs.Select", onTabsSelect)
-emitter.on("Tabs.ReopenLast", onTabsReopenLast)
-emitter.on("Tabs.Reopen", onTabsReopen)
-emitter.on("Tabs.Duplicate", onTabsDuplicate)
-emitter.on("Tabs.Rename", onTabsRename)
+// Register/Cleanup
+onMounted(() => {
+    emitter.on("Tabs.Add", onTabsAdd)
+    emitter.on("Tabs.Close", onTabsClose)
+    emitter.on("Tabs.Close.Others", onTabsCloseOthers)
+    emitter.on("Tabs.Close.All", onTabsCloseAll)
+    emitter.on("Tabs.Select", onTabsSelect)
+    emitter.on("Tabs.ReopenLast", onTabsReopenLast)
+    emitter.on("Tabs.Reopen", onTabsReopen)
+    emitter.on("Tabs.Duplicate", onTabsDuplicate)
+    emitter.on("Tabs.Rename", onTabsRename)
+})
 
-// Cleanup event listeners on unmount to prevent memory leaks
 onUnmounted(() => {
   emitter.off("Tabs.Add", onTabsAdd)
   emitter.off("Tabs.Close", onTabsClose)
