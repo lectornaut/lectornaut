@@ -33,18 +33,23 @@ const switchWorkspace = async (workspaceId: string) => {
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <Button variant="ghost" size="sm" class="data-[state=open]:bg-accent">
-            <Avatar class="size-4">
-              <AvatarImage
-                class="size-4"
-                :src="currentWorkspace?.photoURL!"
-                :alt="currentWorkspace?.name!"
-                referrerpolicy="no-referrer"
-              />
-              <AvatarFallback class="size-4">
-                {{ getInitials(currentWorkspace?.name!) }}
-              </AvatarFallback>
-            </Avatar>
-            {{ currentWorkspace?.name! }}
+            <template v-if="currentWorkspace">
+              <Avatar class="size-4">
+                <AvatarImage
+                  class="size-4"
+                  :src="currentWorkspace?.photoURL!"
+                  :alt="currentWorkspace?.name!"
+                  referrerpolicy="no-referrer"
+                />
+                <AvatarFallback class="size-4">
+                  {{ getInitials(currentWorkspace?.name!) }}
+                </AvatarFallback>
+              </Avatar>
+              {{ currentWorkspace?.name! }}
+            </template>
+            <template v-else>
+              {{ t("components.workspaceSwitcher.selectWorkspace") }}
+            </template>
             <IconChevronDown />
           </Button>
         </DropdownMenuTrigger>

@@ -383,9 +383,5 @@ const startOnboarding = () => {
         </DialogContent>
       </Dialog>
     </SidebarMenuItem>
-    <Shortcuts />
-    <Changelog />
-    <Settings />
-    <ExitTrigger />
   </SidebarMenu>
 </template>

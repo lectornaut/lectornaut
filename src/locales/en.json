@@ -1134,7 +1134,8 @@
       },
       "roles": {
         "owner": "Owner",
-        "member": "Member"
+        "editor": "Editor",
+        "viewer": "Viewer"
       },
       "buttons": {
         "add": "Add",
@@ -1233,6 +1234,7 @@
         "sharedWith": "Shared with",
         "roles": {
           "owner": "Owner",
+          "editor": "Editor",
           "viewer": "Viewer"
         }
       },
@@ -1402,7 +1404,8 @@
       "createWorkspace": "Create workspace",
       "menu": {
         "settings": "Settings"
-      }
+      },
+      "selectWorkspace": "Select workspace"
     }
   },
   "accountMenu": {

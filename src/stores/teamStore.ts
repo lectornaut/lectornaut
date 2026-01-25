@@ -19,6 +19,7 @@ import { useMembershipStore } from "@/stores/membershipStore"
 import type { ITeam } from "@/types"
 import {
   createTeamMembershipsQuery,
+  createTeamWorkspacesQuery,
   createUsersWithTeamQuery,
   getMembershipRef,
   getTeamRef,
@@ -419,9 +420,10 @@ export const useTeamStore = defineStore("teams", () => {
       // Firestore operation
       async () => {
         // Fetch all related documents in parallel
-        const [membershipDocs, userDocs] = await Promise.all([
+        const [membershipDocs, userDocs, workspaceDocs] = await Promise.all([
           getDocs(createTeamMembershipsQuery(teamId)),
           getDocs(createUsersWithTeamQuery(teamId)),
+          getDocs(createTeamWorkspacesQuery(teamId)),
         ])
 
         // Delete team and update related documents in parallel
@@ -430,9 +432,13 @@ export const useTeamStore = defineStore("teams", () => {
           processInBatches(membershipDocs.docs, (docSnap, batch) =>
             batch.delete(docSnap.ref)
           ),
+          processInBatches(workspaceDocs.docs, (docSnap, batch) =>
+            batch.delete(docSnap.ref)
+          ),
           processInBatches(userDocs.docs, (docSnap, batch) =>
             batch.update(docSnap.ref, {
               currentTeamId: null,
+              currentWorkspaceId: null,
               updatedAt: serverTimestamp(),
             })
           ),

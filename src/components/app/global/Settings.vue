@@ -38,6 +38,7 @@ import { accent, base, font, size, store } from "@/modules/theme"
 import { updateUserData } from "@/queries/updateUserData"
 import { checkUsernameAvailability, claimUsername } from "@/queries/username"
 import { useAuthStore } from "@/stores/authStore"
+import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole, ITeam, IWorkspace } from "@/types"
 import {
   USERNAME_MAX_LENGTH,
@@ -468,19 +469,67 @@ const deleteAccount = async () => {
     return
   }
   deletingAccount.value = true
-  await deleteUser(user.value!)
-    .then(() => {
-      toast.success("Account deleted", {
-        description: "Your account has been successfully deleted.",
+
+  try {
+    const membershipStore = useMembershipStore()
+    const membershipsToCheck = membershipStore.memberships
+    const errors: string[] = []
+
+    // 1. Validate: Check for sole ownership or sole membership errors across all teams
+    for (const membership of membershipsToCheck) {
+      if (!membership.teamId) continue
+
+      // Fetch latest members to ensure accuracy
+      const members = await membershipStore.getMembersForTeam(membership.teamId)
+      const memberCount = members.length
+      const owners = members.filter((m) => m.role === "owner")
+      const teamName = membership.team?.name || "Unknown Team"
+
+      if (memberCount <= 1) {
+        errors.push(
+          `You are the only member of the team '${teamName}'. Please delete the team first.`
+        )
+      } else if (membership.role === "owner" && owners.length <= 1) {
+        errors.push(
+          `You are the sole owner of the team '${teamName}'. Please transfer ownership or delete the team.`
+        )
+      }
+    }
+
+    if (errors.length > 0) {
+      // Show the first error to the user
+      toast.error("Cannot delete account", {
+        description: errors[0],
       })
-    })
-    .catch((error) => {
-      handleAuthError(error, "Failed to delete account")
-    })
-    .finally(() => {
       deletingAccount.value = false
-      deleteAccountInput.value = ""
+      return
+    }
+
+    // 2. Cleanup: Remove user from all teams
+    // Run sequentially to ensure stability, though parallel could work
+    for (const membership of membershipsToCheck) {
+      await membershipStore.removeMember(membership.teamId, user.value!.uid)
+    }
+
+    // 3. Local Cleanup: Remove from keychain
+    if (user.value?.uid) {
+      useKeychain().removeAccount(user.value.uid)
+    }
+
+    // 4. Delete User Account
+    await deleteUser(user.value!)
+    toast.success("Account deleted", {
+      description: "Your account has been successfully deleted.",
     })
+  } catch (error) {
+    handleAuthError(
+      error as { code?: string; message?: string },
+      "Failed to delete account"
+    )
+  } finally {
+    deletingAccount.value = false
+    deleteAccountInput.value = ""
+  }
 }
 
 const unlinkingProviderMap = ref<Record<string, boolean>>({})
@@ -2414,7 +2463,7 @@ const df = new DateFormatter("en-US", {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead class="w-1/3">
+                                <TableHead class="w-1/4">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -2436,7 +2485,10 @@ const df = new DateFormatter("en-US", {
                                     <IconArrowUpDown v-else />
                                   </Button>
                                 </TableHead>
-                                <TableHead class="w-1/3">
+                                <TableHead class="w-1/4">
+                                  Description
+                                </TableHead>
+                                <TableHead class="w-1/4">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -2458,7 +2510,7 @@ const df = new DateFormatter("en-US", {
                                     <IconArrowUpDown v-else />
                                   </Button>
                                 </TableHead>
-                                <TableHead class="w-1/3 text-right"></TableHead>
+                                <TableHead class="w-1/4 text-right"></TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -2550,14 +2602,19 @@ const df = new DateFormatter("en-US", {
                                       <ItemTitle class="truncate">
                                         {{ workspace.name }}
                                       </ItemTitle>
-                                      <ItemDescription
-                                        v-if="workspace.description"
-                                        class="truncate text-xs"
-                                      >
-                                        {{ workspace.description }}
+                                      <ItemDescription class="truncate text-xs">
+                                        {{
+                                          workspace.description ||
+                                          "No description"
+                                        }}
                                       </ItemDescription>
                                     </ItemContent>
                                   </Item>
+                                </TableCell>
+                                <TableCell class="truncate">
+                                  {{
+                                    workspace.description || "No description"
+                                  }}
                                 </TableCell>
                                 <TableCell>
                                   {{ df.format(workspace.createdAt.toDate()) }}
@@ -2642,7 +2699,7 @@ const df = new DateFormatter("en-US", {
                               </TableRow>
                               <TableRow v-if="workspaces.length === 0">
                                 <TableCell
-                                  colspan="3"
+                                  colspan="4"
                                   class="text-muted-foreground h-24 text-center"
                                 >
                                   No workspaces found. Create one to get

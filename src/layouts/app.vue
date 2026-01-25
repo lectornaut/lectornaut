@@ -184,38 +184,40 @@ const closeTab = (id: string) => {
 </script>
 
 <template>
-  <div
-    v-if="isLoading"
-    data-tauri-drag-region
-    class="bg-secondary flex size-full flex-1 items-center justify-center"
-  >
-    <Empty>
-      <EmptyHeader>
-        <EmptyMedia>
-          <Spinner />
-        </EmptyMedia>
-        <EmptyDescription> Loading your workspace... </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
-  </div>
-  <div
-    v-else-if="!currentTeam"
-    data-tauri-drag-region
-    class="bg-secondary flex size-full flex-1 items-center justify-center"
-  >
-    <TeamSelector />
-  </div>
-  <div
-    v-else-if="!currentWorkspace"
-    data-tauri-drag-region
-    class="bg-secondary flex size-full flex-1 items-center justify-center"
-  >
-    <WorkspaceSelector />
-  </div>
-  <SidebarProvider v-else>
+  <SidebarProvider>
     <SidebarInset class="bg-secondary">
       <Headerbar />
+
+      <div
+        v-if="isLoading"
+        data-tauri-drag-region
+        class="bg-secondary flex size-full flex-1 items-center justify-center"
+      >
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia>
+              <Spinner />
+            </EmptyMedia>
+            <EmptyDescription> Loading your workspace... </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
+      <div
+        v-else-if="!currentTeam"
+        data-tauri-drag-region
+        class="bg-secondary flex size-full flex-1 items-center justify-center"
+      >
+        <TeamSelector />
+      </div>
+      <div
+        v-else-if="!currentWorkspace"
+        data-tauri-drag-region
+        class="bg-secondary flex size-full flex-1 items-center justify-center"
+      >
+        <WorkspaceSelector />
+      </div>
       <main
+        v-else
         class="flex min-w-0 grow gap-2 overflow-auto overscroll-none scroll-smooth"
       >
         <MainSidebar />
