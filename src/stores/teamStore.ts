@@ -20,7 +20,6 @@ import type { ITeam } from "@/types"
 import {
   createTeamMembershipsQuery,
   createTeamWorkspacesQuery,
-  createUsersWithTeamQuery,
   getMembershipRef,
   getTeamRef,
   getUserRef,
@@ -57,21 +56,32 @@ export const useTeamStore = defineStore("teams", () => {
     currentUser,
     userProfile,
     pendingUserIds,
+    currentTeamId,
     isLoading: isAuthLoading,
   } = storeToRefs(authStore)
-  const { memberships, teamMembers, pendingMembershipIds } =
-    storeToRefs(membershipStore)
+  const {
+    memberships,
+    teamMembers,
+    pendingMembershipIds,
+    isLoading: isMembershipLoading,
+  } = storeToRefs(membershipStore)
 
   // ============================================================================
   // VueFire Reactive Bindings
   // ============================================================================
 
   // Computed document reference - null when no team selected
-  const teamDocRef = computed(() =>
-    userProfile.value?.currentTeamId
-      ? getTeamRef(userProfile.value.currentTeamId)
-      : null
-  )
+  const teamDocRef = computed(() => {
+    const teamId = currentTeamId.value
+    if (!teamId) return null
+
+    // Ensure user is actually a member of this team before attempting to read
+    // This prevents "Missing or insufficient permissions" errors if the user was removed
+    const hasMembership = memberships.value.some((m) => m.teamId === teamId)
+    if (!hasMembership) return null
+
+    return getTeamRef(teamId)
+  })
 
   // VueFire reactive document binding for current team
   // Use intermediate variables with type assertions to isolate VueFire types
@@ -100,7 +110,7 @@ export const useTeamStore = defineStore("teams", () => {
   // Merged current team: optimistic updates take precedence when pending
   const currentTeam = computed({
     get: () => {
-      const teamId = userProfile.value?.currentTeamId
+      const teamId = currentTeamId.value
       // Return null if no team is selected
       if (!teamId) {
         return null
@@ -121,7 +131,7 @@ export const useTeamStore = defineStore("teams", () => {
       return true
     }
     // If user has a currentTeamId, wait for team data to load
-    const teamId = userProfile.value?.currentTeamId
+    const teamId = currentTeamId.value
     if (teamId) {
       return isFirestoreLoading.value && !optimisticCurrentTeam.value
     }
@@ -148,7 +158,7 @@ export const useTeamStore = defineStore("teams", () => {
   watch(
     firestoreCurrentTeam,
     (team) => {
-      const teamId = userProfile.value?.currentTeamId
+      const teamId = currentTeamId.value
       if (team && teamId && !pendingTeamIds.value.has(teamId)) {
         optimisticCurrentTeam.value = team
       }
@@ -158,7 +168,7 @@ export const useTeamStore = defineStore("teams", () => {
 
   // Also try to get team from cached memberships for faster initial load
   watch(
-    () => userProfile.value?.currentTeamId,
+    currentTeamId,
     (teamId) => {
       if (!teamId) {
         optimisticCurrentTeam.value = null
@@ -179,6 +189,34 @@ export const useTeamStore = defineStore("teams", () => {
       }
     },
     { immediate: true }
+  )
+
+  // Handle stale currentTeamId (e.g. team deleted by owner or membership removed)
+  watch(
+    [
+      currentTeamId,
+      firestoreCurrentTeam,
+      isFirestoreLoading,
+      isMembershipLoading,
+    ],
+    async ([teamId, team, loading, membershipLoading]) => {
+      if (!teamId || loading || membershipLoading) return
+
+      // If we have a teamId but no team data, and we're not loading,
+      // and we don't have a pending operation for this team
+      if (!team && !pendingTeamIds.value.has(teamId)) {
+        console.warn(
+          "[teamStore] Detected stale team ID (team deleted or membership removed), clearing...",
+          teamId
+        )
+        // Verify one more time that we really don't have membership
+        const hasMembership = memberships.value.some((m) => m.teamId === teamId)
+        if (!hasMembership) {
+          await authStore.setCurrentTeamId(null)
+          optimisticCurrentTeam.value = null
+        }
+      }
+    }
   )
 
   // ============================================================================
@@ -422,23 +460,34 @@ export const useTeamStore = defineStore("teams", () => {
       },
       // Firestore operation
       async () => {
-        // Fetch all related documents in parallel
-        const [membershipDocs, userDocs, workspaceDocs] = await Promise.all([
+        // Fetch all related documents
+        // We do this first to ensure we have references before we start deleting
+        const [membershipDocs, workspaceDocs] = await Promise.all([
           getDocs(createTeamMembershipsQuery(teamId)),
-          getDocs(createUsersWithTeamQuery(teamId)),
           getDocs(createTeamWorkspacesQuery(teamId)),
         ])
 
-        // Delete team and update related documents in parallel
-        // Also cleanup Storage for Team Photo and all Workspace Photos
-        const storagePromises: Promise<void>[] = []
-
-        // 1. Team Photo
-        storagePromises.push(
-          deleteObject(storageRef(storage, `teams/${teamId}/profilePhoto`))
+        // Identify current user's membership to delete LAST
+        const otherMemberDocs = membershipDocs.docs.filter(
+          (d) => d.id !== currentUser.value!.uid
+        )
+        const currentUserMemberDoc = membershipDocs.docs.find(
+          (d) => d.id === currentUser.value!.uid
         )
 
-        // 2. Workspace Photos
+        // 1. Cleanup Storage (Images)
+        // These operations rely on "storage.rules" checking Firestore membership
+        // So we MUST validity/existence of the membership during these calls.
+        const storagePromises: Promise<void>[] = []
+
+        // Team Photo
+        storagePromises.push(
+          deleteObject(
+            storageRef(storage, `teams/${teamId}/profilePhoto`)
+          ).catch(() => {}) // Ignore if not exists
+        )
+
+        // Workspace Photos
         workspaceDocs.docs.forEach((doc) => {
           storagePromises.push(
             deleteObject(
@@ -446,27 +495,49 @@ export const useTeamStore = defineStore("teams", () => {
                 storage,
                 `teams/${teamId}/workspaces/${doc.id}/profilePhoto`
               )
-            )
+            ).catch(() => {}) // Ignore if not exists
           )
         })
 
-        await Promise.allSettled([
-          deleteDoc(getTeamRef(teamId)),
-          processInBatches(membershipDocs.docs, (docSnap, batch) =>
+        // Wait for storage cleanup to finish before removing permissions (membership)
+        await Promise.all(storagePromises)
+
+        // 2. Delete Workspaces
+        // Rule: allow write: if hasRole(...)
+        if (!workspaceDocs.empty) {
+          await processInBatches(workspaceDocs.docs, (docSnap, batch) =>
             batch.delete(docSnap.ref)
-          ),
-          processInBatches(workspaceDocs.docs, (docSnap, batch) =>
+          )
+        }
+
+        // 3. Delete Other Memberships
+        // Rule: allow delete: if hasRole(...)
+        if (otherMemberDocs.length > 0) {
+          await processInBatches(otherMemberDocs, (docSnap, batch) =>
             batch.delete(docSnap.ref)
-          ),
-          processInBatches(userDocs.docs, (docSnap, batch) =>
-            batch.update(docSnap.ref, {
-              currentTeamId: null,
-              currentWorkspaceId: null,
-              updatedAt: serverTimestamp(),
-            })
-          ),
-          ...storagePromises,
-        ])
+          )
+        }
+
+        // 4. Delete Team Document
+        // Rule: allow delete: if hasRole(...)
+        await deleteDoc(getTeamRef(teamId))
+
+        // 5. Delete Current User Membership
+        // We do this last because "hasRole" checks existence of THIS document
+        if (currentUserMemberDoc) {
+          await deleteDoc(currentUserMemberDoc.ref)
+        }
+
+        // 6. Update Current User Profile
+        // We CANNOT update other users' profiles (rule: allow update: if isUser(userId))
+        // They will have a stale currentTeamId, which the app must handle gracefully
+        if (userProfile.value?.currentTeamId === teamId) {
+          await updateDoc(getUserRef(currentUser.value!.uid), {
+            currentTeamId: null,
+            currentWorkspaceId: null,
+            updatedAt: serverTimestamp(),
+          })
+        }
       }
     )
   }

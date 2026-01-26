@@ -69,7 +69,8 @@ function validateMemberRemoval(
 
 export const useMembershipStore = defineStore("memberships", () => {
   const authStore = useAuthStore()
-  const { currentUser, userProfile, pendingUserIds } = storeToRefs(authStore)
+  const { currentUser, userProfile, pendingUserIds, currentTeamId } =
+    storeToRefs(authStore)
 
   // ============================================================================
   // VueFire Reactive Bindings
@@ -93,13 +94,19 @@ export const useMembershipStore = defineStore("memberships", () => {
   )
 
   // Query for team members - null when no team selected
-  const currentTeamId = computed(() => userProfile.value?.currentTeamId ?? null)
 
-  const teamMembersQueryRef = computed(() =>
-    currentTeamId.value
-      ? getTeamMembershipsCollection(currentTeamId.value)
-      : null
-  )
+  const teamMembersQueryRef = computed(() => {
+    const teamId = currentTeamId.value
+    if (!teamId) return null
+
+    // Guard: Ensure user is a member of the team before trying to list its members.
+    // This prevents the "Missing or insufficient permissions" error.
+    // Note: memberships.value comes from the user's own membership list (collectionGroup), which is safe.
+    const isMember = memberships.value.some((m) => m.teamId === teamId)
+    if (!isMember) return null
+
+    return getTeamMembershipsCollection(teamId)
+  })
 
   // VueFire reactive collection binding for team members
   const _vuefireTeamMembers = useCollection<IMembership>(teamMembersQueryRef)
@@ -218,6 +225,8 @@ export const useMembershipStore = defineStore("memberships", () => {
   // ============================================================================
   // Computed
   // ============================================================================
+
+  const isLoading = computed(() => _vuefireMemberships.pending.value)
 
   const isMembershipPending = computed(
     () => (id: string) => pendingMembershipIds.value.has(id)
@@ -693,6 +702,13 @@ export const useMembershipStore = defineStore("memberships", () => {
       }
 
       // Firestore operation: delete all membership docs in a transaction
+      if (isRemovingSelf) {
+        await updateDoc(getUserRef(currentUser.value.uid), {
+          currentTeamId: null,
+          updatedAt: serverTimestamp(),
+        })
+      }
+
       await runTransaction(firestore, async (transaction) => {
         for (const m of membershipsToRemove) {
           const ref = getMembershipRef(teamId, m.userId)
@@ -779,6 +795,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamMembers,
     currentTeamId,
     teamMemberCounts,
+    isLoading,
 
     // Pending state
     pendingMembershipIds,

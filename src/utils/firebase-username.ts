@@ -314,6 +314,7 @@ export const usernamesMatch = (
   username1: string | null | undefined,
   username2: string | null | undefined
 ): boolean => {
+  if (!username1 && !username2) return true
   if (!username1 || !username2) return false
   return normalizeUsername(username1) === normalizeUsername(username2)
 }

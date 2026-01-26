@@ -47,17 +47,32 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
 
-  const { currentUser, userProfile, pendingUserIds } = storeToRefs(authStore)
-  const { currentTeamId, canManageWorkspaces } = storeToRefs(membershipStore)
+  const {
+    currentUser,
+    userProfile,
+    pendingUserIds,
+    currentTeamId,
+    currentWorkspaceId,
+  } = storeToRefs(authStore)
+  const { canManageWorkspaces } = storeToRefs(membershipStore)
 
   // ============================================================================
   // VueFire Reactive Bindings
   // ============================================================================
 
   // Query for workspaces in current team - null when no team selected
-  const workspacesQueryRef = computed(() =>
-    currentTeamId.value ? createTeamWorkspacesQuery(currentTeamId.value) : null
-  )
+  const workspacesQueryRef = computed(() => {
+    const teamId = currentTeamId.value
+    if (!teamId) return null
+
+    // Guard: Ensure user is a member of the team before trying to list its workspaces.
+    const isMember = membershipStore.memberships.some(
+      (m) => m.teamId === teamId
+    )
+    if (!isMember) return null
+
+    return createTeamWorkspacesQuery(teamId)
+  })
 
   // VueFire reactive collection binding for workspaces
   const _vuefireWorkspaces = useCollection<IWorkspace>(workspacesQueryRef)
@@ -124,7 +139,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
   /** Current workspace based on user's selection */
   const currentWorkspace = computed(() => {
-    const workspaceId = userProfile.value?.currentWorkspaceId
+    const workspaceId = currentWorkspaceId.value
     if (!workspaceId) return null
     return workspaces.value.find((w) => w.id === workspaceId) ?? null
   })
@@ -158,6 +173,27 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     { immediate: true }
   )
 
+  // Handle stale currentWorkspaceId (e.g. workspace deleted)
+  watch(
+    [currentWorkspaceId, workspaces, isLoading],
+    ([workspaceId, workspaceList, loading]) => {
+      // If we are loading, or no workspace ID selected, ignore
+      if (!workspaceId || loading) return
+
+      // Check if the current workspace exists in the list
+      const exists = workspaceList.some((w) => w.id === workspaceId)
+
+      // If it doesn't exist and we don't have a pending operation for it
+      if (!exists && !pendingWorkspaceIds.value.has(workspaceId)) {
+        console.warn(
+          "[workspaceStore] Detected stale workspace ID, clearing...",
+          workspaceId
+        )
+        authStore.setCurrentWorkspaceId(null)
+      }
+    }
+  )
+
   // ============================================================================
   // Cleanup
   // ============================================================================
@@ -170,6 +206,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   watch(currentTeamId, (teamId) => {
     if (!teamId) {
       cleanup()
+      authStore.setCurrentWorkspaceId(null)
     }
   })
 
@@ -275,7 +312,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       throw new Error("Workspace not found")
     }
 
-    const previousWorkspaceId = userProfile.value.currentWorkspaceId
+    const previousWorkspaceId = currentWorkspaceId.value
 
     await withOptimisticUpdate(
       pendingUserIds.value,
@@ -391,8 +428,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const previousWorkspaces = cloneState(workspaces.value)
     const previousUserProfile = cloneState(userProfile.value)
 
-    const isCurrentWorkspace =
-      userProfile.value?.currentWorkspaceId === workspaceId
+    const isCurrentWorkspace = currentWorkspaceId.value === workspaceId
 
     await withOptimisticUpdate(
       pendingWorkspaceIds.value,

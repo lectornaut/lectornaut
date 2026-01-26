@@ -426,27 +426,28 @@
         "description": "Select the subscription plan that best fits your needs.",
         "personal": {
           "title": "Personal",
-          "description": "Perfect for individual users and personal projects."
+          "description": "Perfect for hobbyists and individuals with basic needs."
         },
         "professional": {
           "title": "Professional",
-          "description": "Ideal for freelancers and small teams with advanced features."
+          "description": "Ideal for freelancers, professionals and small teams."
         },
         "business": {
           "title": "Business",
-          "description": "Designed for growing businesses with collaboration tools."
+          "description": "Designed for growing businesses and companies."
         },
         "enterprise": {
           "title": "Enterprise",
-          "description": "Complete solution for large organizations with custom support."
+          "description": "Complete solutions for large organizations and enterprises."
         }
       },
       "subscriptionTerm": {
         "label": "Subscription Term",
-        "description": "Yearly and monthly terms offer significant savings.",
-        "yearly": "Yearly (Save 20%)",
+        "description": "Annually and monthly terms offer significant savings.",
+        "annually": "Annually (Save 25%)",
         "monthly": "Monthly"
-      }
+      },
+      "features": "Features"
     },
     "teams": {
       "memberCount": "{count} member | {count} members",

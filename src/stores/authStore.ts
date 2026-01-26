@@ -98,6 +98,11 @@ export const useAuthStore = defineStore("auth", () => {
 
   const isAuthenticated = computed(() => !!currentUser.value)
 
+  const currentTeamId = computed(() => userProfile.value?.currentTeamId ?? null)
+  const currentWorkspaceId = computed(
+    () => userProfile.value?.currentWorkspaceId ?? null
+  )
+
   // ============================================================================
   // Auto-create User Profile
   // ============================================================================
@@ -318,6 +323,8 @@ export const useAuthStore = defineStore("auth", () => {
     isUserPending,
     hasAnyPendingOperation,
     isAuthenticated,
+    currentTeamId,
+    currentWorkspaceId,
 
     // Actions
     setCurrentTeamId,
