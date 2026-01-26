@@ -3,6 +3,8 @@ import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconX } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types"
+import { validateImageFile } from "@/utils/imageFile"
+import { toast } from "vue-sonner"
 
 const props = defineProps<{
   open?: boolean
@@ -38,13 +40,20 @@ const {
 })
 
 watch(files, (newFiles) => {
-  if (newFiles && newFiles.length > 0) {
-    const file = newFiles.item(0)
-    if (file) {
-      photoFile.value = file
-      photoPreview.value = URL.createObjectURL(file)
-    }
+  if (!newFiles || newFiles.length === 0) return
+  const file = newFiles.item(0)
+  if (!file) return
+  const res = validateImageFile(file)
+  if (!res.ok) {
+    toast.error(res.message)
+    return
   }
+  // Revoke previous blob URL to avoid leaks
+  if (photoPreview.value?.startsWith("blob:")) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
+  photoFile.value = file
+  photoPreview.value = URL.createObjectURL(file)
 })
 
 const removePhoto = () => {

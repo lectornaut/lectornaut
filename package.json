@@ -11,8 +11,9 @@
     "tauri": "tauri",
     "lint:types": "vue-tsc --noEmit",
     "lint:code": "eslint './src/**/*.{js,ts,cjs,mjs,vue}' --fix",
-    "lint:format": "prettier . --write --ignore-path .gitignore",
     "lint:style": "stylelint './src/**/*.{css,scss}' --fix --ignore-path .gitignore",
+    "lint:format": "prettier . --write --ignore-path .gitignore",
+    "lint": "pnpm lint:types && pnpm lint:code && pnpm lint:style && pnpm lint:format",
     "prepare": "husky"
   },
   "lint-staged": {

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCirclePlus, IconLogOut, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
@@ -19,6 +20,8 @@ const computedTeams = computed(() =>
     original: m.team,
   }))
 )
+
+const { currentTeam } = useTeamActions()
 
 const switchTeam = async (teamId: AcceptableValue) => {
   if (typeof teamId !== "string") return
@@ -46,7 +49,11 @@ const switchTeam = async (teamId: AcceptableValue) => {
       <div v-if="isLoading" class="flex justify-center p-4">
         <Spinner />
       </div>
-      <Select v-else @update:model-value="switchTeam">
+      <Select
+        v-else
+        :model-value="currentTeam?.id"
+        @update:model-value="switchTeam"
+      >
         <SelectTrigger class="w-full">
           <SelectValue placeholder="Select team" />
         </SelectTrigger>
@@ -88,6 +95,6 @@ const switchTeam = async (teamId: AcceptableValue) => {
       <IconLogOut />
       Log out
     </Button>
+    <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
   </Empty>
-  <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
 </template>

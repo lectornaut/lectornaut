@@ -51,6 +51,7 @@ import {
   usernamesMatch,
   validateUsername,
 } from "@/utils/firebase-username"
+import { validateImageFile } from "@/utils/imageFile"
 import { DateFormatter } from "@internationalized/date"
 import {
   deleteUser,
@@ -621,19 +622,23 @@ watch(
 
 const uploadPicture = async () => {
   const data = files.value?.item(0)
-  if (data) {
-    try {
-      toast.info("Uploading profile picture", {
-        description: "Please wait while we upload your profile picture.",
-      })
-      filename.value = data.name
-      await upload(data)
-    } catch (error) {
-      console.error("Error uploading picture or updating profile:", error)
-      toast.error("Failed to upload profile picture", {
-        description: error as string,
-      })
-    }
+  if (!data) return
+  const res = validateImageFile(data)
+  if (!res.ok) {
+    toast.error(res.message)
+    return
+  }
+  try {
+    toast.info("Uploading profile picture", {
+      description: "Please wait while we upload your profile picture.",
+    })
+    filename.value = data.name
+    await upload(data)
+  } catch (error) {
+    console.error("Error uploading picture or updating profile:", error)
+    toast.error("Failed to upload profile picture", {
+      description: (error as Error).message,
+    })
   }
 }
 
@@ -659,12 +664,20 @@ const handleTeamAvatarClick = (membership: IMembership) => {
 }
 
 watch(teamFiles, async (newFiles) => {
-  if (newFiles && newFiles.length > 0 && teamIdToUpdate.value) {
-    const file = newFiles.item(0)
-    const teamId = teamIdToUpdate.value
-    if (file) {
-      await updateTeamPhoto(teamId, file)
-    }
+  if (!newFiles || newFiles.length === 0 || !teamIdToUpdate.value) return
+  const file = newFiles.item(0)
+  const teamId = teamIdToUpdate.value
+  if (!file) return
+  const res = validateImageFile(file)
+  if (!res.ok) {
+    toast.error(res.message)
+    resetTeamUpload()
+    teamIdToUpdate.value = null
+    return
+  }
+  try {
+    await updateTeamPhoto(teamId, file)
+  } finally {
     resetTeamUpload()
     teamIdToUpdate.value = null
   }
@@ -692,12 +705,20 @@ const handleWorkspaceAvatarClick = (workspace: IWorkspace) => {
 }
 
 watch(workspaceFiles, async (newFiles) => {
-  if (newFiles && newFiles.length > 0 && workspaceIdToUpdate.value) {
-    const file = newFiles.item(0)
-    const workspaceId = workspaceIdToUpdate.value
-    if (file) {
-      await updateWorkspacePhoto(workspaceId, file)
-    }
+  if (!newFiles || newFiles.length === 0 || !workspaceIdToUpdate.value) return
+  const file = newFiles.item(0)
+  const workspaceId = workspaceIdToUpdate.value
+  if (!file) return
+  const res = validateImageFile(file)
+  if (!res.ok) {
+    toast.error(res.message)
+    resetWorkspaceUpload()
+    workspaceIdToUpdate.value = null
+    return
+  }
+  try {
+    await updateWorkspacePhoto(workspaceId, file)
+  } finally {
     resetWorkspaceUpload()
     workspaceIdToUpdate.value = null
   }

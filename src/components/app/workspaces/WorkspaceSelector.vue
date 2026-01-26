@@ -8,7 +8,7 @@ import type { AcceptableValue } from "reka-ui"
 import { toast } from "vue-sonner"
 
 const workspaceStore = useWorkspaceStore()
-const { workspaces, isLoading } = storeToRefs(workspaceStore)
+const { workspaces, isLoading, currentWorkspace } = storeToRefs(workspaceStore)
 
 const teamStore = useTeamStore()
 const { currentTeam } = storeToRefs(teamStore)
@@ -59,6 +59,7 @@ const deselectTeam = async () => {
       </div>
       <Select
         v-else
+        :model-value="currentWorkspace?.id"
         :disabled="!currentTeam"
         @update:model-value="switchWorkspace"
       >
@@ -104,6 +105,9 @@ const deselectTeam = async () => {
       <IconUsers />
       Change team
     </Button>
+    <WorkspaceDialog
+      v-model:open="isCreatingWorkspaceDialogOpen"
+      mode="create"
+    />
   </Empty>
-  <WorkspaceDialog v-model:open="isCreatingWorkspaceDialogOpen" mode="create" />
 </template>

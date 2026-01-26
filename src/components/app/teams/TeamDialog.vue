@@ -5,6 +5,7 @@ import { defaultTeamRole } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole, ITeam } from "@/types"
+import { validateImageFile } from "@/utils/imageFile"
 import { toast } from "vue-sonner"
 
 /** Member pending invite or already on team */
@@ -70,10 +71,18 @@ const revokeBlobUrl = () => {
 
 watch(files, (newFiles) => {
   const file = newFiles?.item(0)
-  if (file) {
-    photoFile.value = file
-    photoPreview.value = URL.createObjectURL(file)
+  if (!file) return
+  const res = validateImageFile(file)
+  if (!res.ok) {
+    toast.error(res.message)
+    return
   }
+  // Revoke previous blob URL to avoid leaks
+  if (photoPreview.value?.startsWith("blob:")) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
+  photoFile.value = file
+  photoPreview.value = URL.createObjectURL(file)
 })
 
 const removePhoto = () => {
