@@ -3,15 +3,16 @@ import { useNotifications } from "@/composables/useNotifications"
 import {
   IconBell,
   IconBookmark,
-  IconBookmarkCheck,
   IconCheck,
-  IconCheckCheck,
-  IconCheckCircle,
   IconInbox,
   IconLoader2,
+  IconMoreHorizontal,
   IconPin,
   IconPinOff,
 } from "@/data/icons"
+import type { INotificationStatus } from "@/types"
+import { useIntersectionObserver } from "@vueuse/core"
+import { computed, ref } from "vue"
 
 defineProps<{
   iconDisplay?: "icon" | "text"
@@ -21,18 +22,26 @@ const {
   notifications,
   isLoading,
   unreadCount,
+  inboxUnreadCount,
+  savedUnreadCount,
+  doneUnreadCount,
   loadMore,
   markAsRead,
   markAsUnread,
-  markAsDone,
+  markAsInbox,
   markAsSaved,
+  markAsDone,
   markAllRead,
-  markAllDone,
+  markAllUnread,
+  markAllInbox,
   markAllSaved,
+  markAllDone,
+  deleteNotification,
+  deleteAllNotifications,
 } = useNotifications()
 
 const loadMoreTrigger = ref(null)
-const activeTab = ref("inbox")
+const activeTab = ref<INotificationStatus>("inbox")
 const isDocked = ref(false)
 
 const filteredNotifications = computed(() => {
@@ -61,6 +70,30 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
     loadMore()
   }
 })
+
+const bulkActionLabel = (status: INotificationStatus) => {
+  if (status === "inbox") {
+    return "Mark all saved"
+  }
+  if (status === "saved") {
+    return "Mark all done"
+  }
+  if (status === "done") {
+    return "Mark all inbox"
+  }
+}
+
+const bulkAction = (status: INotificationStatus) => {
+  if (status === "inbox") {
+    markAllSaved(status)
+  }
+  if (status === "saved") {
+    markAllDone(status)
+  }
+  if (status === "done") {
+    markAllInbox(status)
+  }
+}
 </script>
 
 <template>
@@ -99,14 +132,35 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
                 <TabsTrigger value="inbox">
                   <IconInbox />
                   Inbox
+                  <Badge
+                    v-if="inboxUnreadCount > 0"
+                    variant="secondary"
+                    class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square px-1"
+                  >
+                    {{ inboxUnreadCount }}
+                  </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="saved">
                   <IconBookmark />
                   Saved
+                  <Badge
+                    v-if="savedUnreadCount > 0"
+                    variant="secondary"
+                    class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square px-1"
+                  >
+                    {{ savedUnreadCount }}
+                  </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="done">
                   <IconCheck />
                   Done
+                  <Badge
+                    v-if="doneUnreadCount > 0"
+                    variant="secondary"
+                    class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square px-1"
+                  >
+                    {{ doneUnreadCount }}
+                  </Badge>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -136,8 +190,10 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
                     :notification="notification"
                     @mark-read="markAsRead"
                     @mark-unread="markAsUnread"
-                    @mark-done="markAsDone"
+                    @mark-inbox="markAsInbox"
                     @mark-saved="markAsSaved"
+                    @mark-done="markAsDone"
+                    @delete="deleteNotification"
                   />
                 </template>
                 <!-- Loading / Infinite Scroll Trigger -->
@@ -154,32 +210,72 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  :disabled="unreadCount === 0"
-                  @click="markAllRead"
+                  :disabled="
+                    (activeTab === 'inbox' && inboxUnreadCount === 0) ||
+                    (activeTab === 'saved' && savedUnreadCount === 0) ||
+                    (activeTab === 'done' && doneUnreadCount === 0)
+                  "
+                  @click="markAllRead(activeTab)"
                 >
-                  <IconCheckCircle />
                   Mark all read
                 </Button>
               </div>
               <div>
-                <TabsContent value="inbox">
-                  <Button variant="ghost" size="sm" @click="markAllDone">
-                    <IconCheckCheck />
-                    Mark all as done
+                <ButtonGroup>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    @click="bulkAction(activeTab)"
+                  >
+                    {{ bulkActionLabel(activeTab) }}
                   </Button>
-                </TabsContent>
-                <TabsContent value="saved">
-                  <Button variant="ghost" size="sm" @click="markAllDone">
-                    <IconCheckCheck />
-                    Mark all as done
-                  </Button>
-                </TabsContent>
-                <TabsContent value="done">
-                  <Button variant="ghost" size="sm" @click="markAllSaved">
-                    <IconBookmarkCheck />
-                    Mark all as saved
-                  </Button>
-                </TabsContent>
+                  <ButtonGroupSeparator />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="secondary" size="icon-sm">
+                        <IconMoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="top" class="w-52">
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          Move all to
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuItem @click="markAllInbox(activeTab)">
+                            Inbox
+                          </DropdownMenuItem>
+                          <DropdownMenuItem @click="markAllSaved(activeTab)">
+                            Saved
+                          </DropdownMenuItem>
+                          <DropdownMenuItem @click="markAllDone(activeTab)">
+                            Done
+                          </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          Mark all as
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuItem @click="markAllRead(activeTab)">
+                            Read
+                          </DropdownMenuItem>
+                          <DropdownMenuItem @click="markAllUnread(activeTab)">
+                            Unread
+                          </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        class="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                        @click="deleteAllNotifications(activeTab)"
+                      >
+                        Delete all
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </ButtonGroup>
               </div>
             </div>
           </Tabs>

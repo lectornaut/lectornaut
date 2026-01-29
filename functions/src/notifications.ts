@@ -11,13 +11,16 @@ if (!admin.apps.length) {
 
 const db = admin.firestore()
 
+type NotificationStatus = "inbox" | "saved" | "done"
+type NotificationType = "welcome" | "invitation"
+
 // Interface for Notification
 interface NotificationData {
-  type: "welcome" | "invitation"
+  type: NotificationType
   title: string
   description: string
   url: string
-  status: "inbox" | "saved" | "done"
+  status: NotificationStatus
   read: boolean
   source?: {
     entityType: string
@@ -136,14 +139,17 @@ export const markAllNotificationsRead = onCall(async (request) => {
     )
   }
   const uid = request.auth.uid
+  const status = request.data?.status as NotificationStatus | undefined
   const batch = db.batch()
 
   // Query unread notifications
-  const unreadSnap = await db
-    .collection(`users/${uid}/notifications`)
-    .where("read", "==", false)
-    .limit(500) // Batch limit
-    .get()
+  let q = db.collection(`users/${uid}/notifications`).where("read", "==", false)
+
+  if (status) {
+    q = q.where("status", "==", status)
+  }
+
+  const unreadSnap = await q.limit(500).get()
 
   if (unreadSnap.empty) {
     return { count: 0 }
@@ -158,6 +164,41 @@ export const markAllNotificationsRead = onCall(async (request) => {
 })
 
 /**
+ * Callable: Mark all notifications as unread
+ */
+export const markAllNotificationsUnread = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    )
+  }
+  const uid = request.auth.uid
+  const status = request.data?.status as NotificationStatus | undefined
+  const batch = db.batch()
+
+  // Query read notifications
+  let q = db.collection(`users/${uid}/notifications`).where("read", "==", true)
+
+  if (status) {
+    q = q.where("status", "==", status)
+  }
+
+  const readSnap = await q.limit(500).get()
+
+  if (readSnap.empty) {
+    return { count: 0 }
+  }
+
+  readSnap.docs.forEach((doc) => {
+    batch.update(doc.ref, { read: false })
+  })
+
+  await batch.commit()
+  return { count: readSnap.size }
+})
+
+/**
  * Callable: Mark all notifications as done
  */
 export const markAllNotificationsDone = onCall(async (request) => {
@@ -168,14 +209,19 @@ export const markAllNotificationsDone = onCall(async (request) => {
     )
   }
   const uid = request.auth.uid
+  const status = request.data?.status as NotificationStatus | undefined
   const batch = db.batch()
 
   // Query non-done notifications
-  const activeSnap = await db
+  let q = db
     .collection(`users/${uid}/notifications`)
     .where("status", "in", ["inbox", "saved"])
-    .limit(500)
-    .get()
+
+  if (status) {
+    q = q.where("status", "==", status)
+  }
+
+  const activeSnap = await q.limit(500).get()
 
   if (activeSnap.empty) {
     return { count: 0 }
@@ -187,4 +233,112 @@ export const markAllNotificationsDone = onCall(async (request) => {
 
   await batch.commit()
   return { count: activeSnap.size }
+})
+
+/**
+ * Callable: Mark all notifications as inbox
+ */
+export const markAllNotificationsInbox = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    )
+  }
+  const uid = request.auth.uid
+  const status = request.data?.status as NotificationStatus | undefined
+  const batch = db.batch()
+
+  // Query non-inbox notifications
+  let q = db
+    .collection(`users/${uid}/notifications`)
+    .where("status", "in", ["saved", "done"])
+
+  if (status) {
+    q = q.where("status", "==", status)
+  }
+
+  const activeSnap = await q.limit(500).get()
+
+  if (activeSnap.empty) {
+    return { count: 0 }
+  }
+
+  activeSnap.docs.forEach((doc) => {
+    batch.update(doc.ref, { status: "inbox" })
+  })
+
+  await batch.commit()
+  return { count: activeSnap.size }
+})
+
+/**
+ * Callable: Mark all notifications as saved
+ */
+export const markAllNotificationsSaved = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    )
+  }
+  const uid = request.auth.uid
+  const status = request.data?.status as NotificationStatus | undefined
+  const batch = db.batch()
+
+  // Query non-saved notifications
+  let q = db
+    .collection(`users/${uid}/notifications`)
+    .where("status", "in", ["inbox", "done"])
+
+  if (status) {
+    q = q.where("status", "==", status)
+  }
+
+  const activeSnap = await q.limit(500).get()
+
+  if (activeSnap.empty) {
+    return { count: 0 }
+  }
+
+  activeSnap.docs.forEach((doc) => {
+    batch.update(doc.ref, { status: "saved" })
+  })
+
+  await batch.commit()
+  return { count: activeSnap.size }
+})
+
+/**
+ * Callable: Delete all notifications
+ */
+export const deleteAllNotifications = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    )
+  }
+  const uid = request.auth.uid
+  const status = request.data?.status as NotificationStatus | undefined
+  const batch = db.batch()
+
+  let q: admin.firestore.Query = db.collection(`users/${uid}/notifications`)
+
+  if (status) {
+    q = q.where("status", "==", status)
+  }
+
+  const snap = await q.limit(500).get()
+
+  if (snap.empty) {
+    return { count: 0 }
+  }
+
+  snap.docs.forEach((doc) => {
+    batch.delete(doc.ref)
+  })
+
+  await batch.commit()
+  return { count: snap.size }
 })

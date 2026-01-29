@@ -1,6 +1,8 @@
 import { firestore as db, functions } from "@/modules/firebase"
+import { type INotification, type INotificationStatus } from "@/types"
 import {
   collection,
+  deleteDoc,
   doc,
   limit,
   onSnapshot,
@@ -13,32 +15,35 @@ import { httpsCallable } from "firebase/functions"
 import { computed, onUnmounted, ref, watch } from "vue"
 import { useCurrentUser } from "vuefire"
 
-export interface Notification {
-  id: string
-  type: "welcome" | "invitation"
-  title: string
-  description: string
-  url: string
-  status: "inbox" | "saved" | "done"
-  read: boolean
-  createdAt: Date
-  source?: {
-    entityType: string
-    entityId: string
-  }
-}
-
 export function useNotifications() {
   const user = useCurrentUser()
-  const notifications = ref<Notification[]>([])
+  const notifications = ref<INotification[]>([])
   const isLoading = ref(false)
   const limitCount = ref(20)
 
   let unsubscribe: (() => void) | null = null
 
   const unreadCount = computed(
+    () => notifications.value.filter((n) => n.read === false).length
+  )
+
+  const inboxUnreadCount = computed(
     () =>
-      notifications.value.filter((n) => n.read === false && n.status !== "done")
+      notifications.value.filter(
+        (n) => n.read === false && n.status === "inbox"
+      ).length
+  )
+
+  const savedUnreadCount = computed(
+    () =>
+      notifications.value.filter(
+        (n) => n.read === false && n.status === "saved"
+      ).length
+  )
+
+  const doneUnreadCount = computed(
+    () =>
+      notifications.value.filter((n) => n.read === false && n.status === "done")
         .length
   )
 
@@ -70,7 +75,7 @@ export function useNotifications() {
               data.createdAt instanceof Timestamp
                 ? data.createdAt.toDate()
                 : new Date(),
-          } as Notification
+          } as INotification
         })
         isLoading.value = false
       },
@@ -162,44 +167,113 @@ export function useNotifications() {
     }
   }
 
-  const markAllRead = async () => {
+  const markAsInbox = async (notificationId: string) => {
+    if (!user.value) return
+    // Optimistic update
+    const index = notifications.value.findIndex((n) => n.id === notificationId)
+    if (index !== -1 && notifications.value[index]) {
+      notifications.value[index].status = "inbox"
+    }
+
+    try {
+      await updateDoc(
+        doc(db, `users/${user.value!.uid}/notifications`, notificationId),
+        {
+          status: "inbox",
+        }
+      )
+    } catch (e) {
+      console.error("Failed to mark as inbox", e)
+    }
+  }
+
+  const markAllRead = async (status?: INotificationStatus) => {
     // Optimistic
     notifications.value.forEach((n) => {
-      if (n.read === false) n.read = true
+      if (n.read === false) {
+        if (!status || n.status === status) {
+          n.read = true
+        }
+      }
     })
 
     try {
       const fn = httpsCallable(functions, "markAllNotificationsRead")
-      await fn()
+      await fn({ status })
     } catch (e) {
       console.error("Failed to mark all read", e)
     }
   }
 
-  const markAllDone = async () => {
+  const markAllDone = async (status?: INotificationStatus) => {
     // Optimistic
     notifications.value.forEach((n) => {
-      if (n.status !== "done") n.status = "done"
+      if (n.status !== "done") {
+        if (!status || n.status === status) {
+          n.status = "done"
+        }
+      }
     })
 
     try {
       const fn = httpsCallable(functions, "markAllNotificationsDone")
-      await fn()
+      await fn({ status })
     } catch (e) {
       console.error("Failed to mark all done", e)
     }
   }
 
-  const markAllSaved = async () => {
+  const markAllSaved = async (status?: INotificationStatus) => {
     // Optimistic
     notifications.value.forEach((n) => {
-      if (n.status !== "saved") n.status = "saved"
+      if (n.status !== "saved") {
+        if (!status || n.status === status) {
+          n.status = "saved"
+        }
+      }
     })
 
     try {
-      console.warn("markAllNotificationsSaved is not implemented on backend")
+      const fn = httpsCallable(functions, "markAllNotificationsSaved")
+      await fn({ status })
     } catch (e) {
       console.error("Failed to mark all saved", e)
+    }
+  }
+
+  const markAllInbox = async (status?: INotificationStatus) => {
+    // Optimistic
+    notifications.value.forEach((n) => {
+      if (n.status !== "inbox") {
+        if (!status || n.status === status) {
+          n.status = "inbox"
+        }
+      }
+    })
+
+    try {
+      const fn = httpsCallable(functions, "markAllNotificationsInbox")
+      await fn({ status })
+    } catch (e) {
+      console.error("Failed to mark all inbox", e)
+    }
+  }
+
+  const markAllUnread = async (status?: INotificationStatus) => {
+    // Optimistic
+    notifications.value.forEach((n) => {
+      if (n.read === true) {
+        if (!status || n.status === status) {
+          n.read = false
+        }
+      }
+    })
+
+    try {
+      const fn = httpsCallable(functions, "markAllNotificationsUnread")
+      await fn({ status })
+    } catch (e) {
+      console.error("Failed to mark all unread", e)
     }
   }
 
@@ -226,17 +300,60 @@ export function useNotifications() {
     }
   }
 
+  const deleteNotification = async (notificationId: string) => {
+    if (!user.value) return
+    // Optimistic update
+    const index = notifications.value.findIndex((n) => n.id === notificationId)
+    if (index !== -1) {
+      notifications.value.splice(index, 1)
+    }
+
+    try {
+      await deleteDoc(
+        doc(db, `users/${user.value.uid}/notifications`, notificationId)
+      )
+    } catch (e) {
+      console.error("Failed to delete notification", e)
+    }
+  }
+
+  const deleteAllNotifications = async (status?: INotificationStatus) => {
+    // Optimistic update
+    if (status) {
+      notifications.value = notifications.value.filter(
+        (n) => n.status !== status
+      )
+    } else {
+      notifications.value = []
+    }
+
+    try {
+      const fn = httpsCallable(functions, "deleteAllNotifications")
+      await fn({ status })
+    } catch (e) {
+      console.error("Failed to delete all notifications", e)
+    }
+  }
+
   return {
     notifications,
     isLoading,
     unreadCount,
+    inboxUnreadCount,
+    savedUnreadCount,
+    doneUnreadCount,
     loadMore,
     markAsRead,
     markAsUnread,
+    markAsInbox,
     markAsDone,
     markAsSaved,
     markAllRead,
-    markAllDone,
+    markAllUnread,
+    markAllInbox,
     markAllSaved,
+    markAllDone,
+    deleteNotification,
+    deleteAllNotifications,
   }
 }

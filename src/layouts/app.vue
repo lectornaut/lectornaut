@@ -237,7 +237,7 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                    class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                     @dblclick="
                       leftPanel?.splitterPanel?.isCollapsed
                         ? leftPanel?.splitterPanel?.expand()
@@ -338,7 +338,7 @@ const closeTab = (id: string) => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <ResizableHandle
-                        class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 mx-13.5 w-auto! bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                        class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent mx-13.5 w-auto! bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                         :with-handle="topPanel?.splitterPanel?.isCollapsed"
                         @dblclick="
                           bottomPanel?.splitterPanel?.isCollapsed
@@ -594,7 +594,7 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent z-50 my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                    class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
                     @dblclick="
                       rightPanel?.splitterPanel?.isCollapsed
                         ? rightPanel?.splitterPanel?.expand()

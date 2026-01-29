@@ -53,6 +53,24 @@ export interface IMembership {
   updatedAt: Timestamp
 }
 
+export type INotificationStatus = "inbox" | "saved" | "done"
+export type INotificationType = "welcome" | "invitation"
+
+export interface INotification {
+  id: string
+  type: INotificationType
+  title: string
+  description: string
+  url: string
+  status: INotificationStatus
+  read: boolean
+  createdAt: Date
+  source?: {
+    entityType: string
+    entityId: string
+  }
+}
+
 // ============================================================================
 // Optimistic Update Types
 // ============================================================================
