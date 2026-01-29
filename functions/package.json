@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@10.28.2",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cpy \"src/**/*.mjml\" lib",
     "build:watch": "tsc --watch",
     "serve": "pnpm run build && firebase emulators:start --only functions",
     "shell": "pnpm run build && firebase functions:shell",
@@ -14,7 +14,7 @@
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": ">=20"
+    "node": "22"
   },
   "main": "lib/index.js",
   "dependencies": {
@@ -22,10 +22,15 @@
     "@genkit-ai/google-genai": "^1.28.0",
     "@google-cloud/functions-framework": "^5.0.0",
     "firebase-admin": "^13.6.0",
-    "firebase-functions": "^7.0.3",
-    "genkit": "^1.28.0"
+    "firebase-functions": "^7.0.4",
+    "genkit": "^1.28.0",
+    "handlebars": "^4.7.8",
+    "mjml": "^4.18.0",
+    "postmark": "^4.0.5"
   },
   "devDependencies": {
+    "@types/mjml": "^4.7.4",
+    "cpy-cli": "^6.0.0",
     "firebase-functions-test": "^3.4.1",
     "typescript": "^5.9.3"
   }

@@ -9,6 +9,8 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
+import { useMembershipStore } from "@/stores/membershipStore"
+import { useTeamStore } from "@/stores/teamStore"
 import type { IUser } from "@/types"
 import {
   getUserRef,
@@ -310,6 +312,64 @@ export const useAuthStore = defineStore("auth", () => {
     return uploadUserPhoto(currentUser.value.uid, file)
   }
 
+  /**
+   * Delete user account and cleanup resources
+   * - Deletes teams where user is sole owner
+   * - Removes memberships from other teams
+   * - Deletes user auth account (triggers Extension for profile cleanup)
+   */
+  async function deleteAccount(): Promise<void> {
+    if (!currentUser.value) return
+
+    const membershipStore = useMembershipStore()
+    const teamStore = useTeamStore()
+
+    try {
+      // 1. Fetch all memberships for this user
+      // We need to fetch fresh data to be sure
+      const allMemberships = await membershipStore.fetchUserMemberships()
+
+      // 2. Process each membership
+      for (const membership of allMemberships) {
+        // If owner, check if sole owner
+        if (membership.role === "owner") {
+          const teamMembers = await membershipStore.getMembersForTeam(
+            membership.teamId
+          )
+          const owners = teamMembers.filter((m) => m.role === "owner")
+
+          if (
+            owners.length === 1 &&
+            owners[0]?.userId === currentUser.value.uid
+          ) {
+            // Sole owner -> Delete team
+            await teamStore.deleteTeam(membership.teamId)
+          } else {
+            // Co-owner -> Leave team
+            await membershipStore.removeMember(
+              membership.teamId,
+              currentUser.value.uid
+            )
+          }
+        } else {
+          // Member -> Leave team
+          await membershipStore.removeMember(
+            membership.teamId,
+            currentUser.value.uid
+          )
+        }
+      }
+
+      // 3. Delete Auth Account
+      // This will trigger the "Delete User Data" extension to clean up 'users/{uid}'
+      await currentUser.value.delete()
+      cleanup()
+    } catch (error) {
+      console.error("[authStore] Error deleting account:", error)
+      throw error
+    }
+  }
+
   return {
     // State
     currentUser,
@@ -331,6 +391,7 @@ export const useAuthStore = defineStore("auth", () => {
     setCurrentWorkspaceId,
     updateUserProfile,
     uploadProfilePhoto,
+    deleteAccount,
 
     // Lifecycle
     cleanup,

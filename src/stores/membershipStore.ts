@@ -789,6 +789,27 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
   }
 
+  /**
+   * Fetch all memberships for the current user
+   */
+  async function fetchUserMemberships(): Promise<IMembership[]> {
+    if (!currentUser.value) return []
+    try {
+      const q = query(
+        getAllMembershipsGroup(),
+        where("userId", "==", currentUser.value.uid)
+      )
+      const snapshot = await getDocs(q)
+      return snapshot.docs.map((doc) => doc.data() as IMembership)
+    } catch (error) {
+      console.error(
+        "[membershipStore] Failed to fetch user memberships:",
+        error
+      )
+      return []
+    }
+  }
+
   return {
     // State
     memberships,
@@ -821,6 +842,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     createOwnerMembership,
     fetchTeamMemberCounts,
     getMembersForTeam,
+    fetchUserMemberships,
 
     // Internal helpers (for teamStore)
     addMembershipOptimistic,

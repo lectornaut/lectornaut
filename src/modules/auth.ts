@@ -4,7 +4,7 @@ import {
 } from "@/composables/useKeychain"
 import { isTauri } from "@/composables/usePlatform"
 import { generateRandomString } from "@/helpers/utilities"
-import { auth } from "@/modules/firebase"
+import { auth, functions } from "@/modules/firebase"
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { updateUserData } from "@/queries/updateUserData"
@@ -24,6 +24,7 @@ import {
   signInWithEmailLink,
   type UserCredential,
 } from "firebase/auth"
+import { httpsCallable } from "firebase/functions"
 import { toast } from "vue-sonner"
 
 // Type definitions for Tauri OAuth responses
@@ -70,9 +71,20 @@ export const sendAuthenticateEmail = async (email: string) => {
     magicLinkPromise = invoke<string>("listen_magic_link", { port })
   }
 
-  const url = isTauri.value
-    ? `http://localhost:${port}/verify`
-    : `${window.location.origin}/enter?target=web`
+  let urlObj: URL
+  if (isTauri.value) {
+    urlObj = new URL(`http://localhost:${port}/verify`)
+  } else {
+    urlObj = new URL(`${window.location.origin}/enter`)
+    urlObj.searchParams.append("target", "web")
+  }
+
+  const redirect = router.currentRoute.value.query.redirect
+  if (typeof redirect === "string") {
+    urlObj.searchParams.append("redirect", redirect)
+  }
+
+  const url = urlObj.toString()
 
   const actionCodeSettings = {
     url,
@@ -214,6 +226,23 @@ const finishAuthentication = async (result: UserCredential) => {
   }
 
   if (getAdditionalUserInfo(result)?.isNewUser) {
+    try {
+      // Send welcome email
+      const sendEmail = httpsCallable(functions, "sendEmail")
+
+      await sendEmail({
+        email: user.email,
+        subject: "Welcome to Lectornaut!",
+        template: "welcome",
+        data: {
+          displayName: user.displayName || "there",
+          ctaUrl: `${window.location.origin}/welcome`,
+        },
+      }).catch((error) => console.error("Failed to send welcome email:", error))
+    } catch (error) {
+      console.error("Error initiating welcome email:", error)
+    }
+
     setDefaultUserData()
     await router.push("/welcome")
   } else {

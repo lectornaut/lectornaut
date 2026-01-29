@@ -1,144 +1,193 @@
 <script lang="ts" setup>
-import { IconBell, IconBookmark, IconCheck } from "@/data/icons"
-const notifications = [
-  {
-    title: "Alert Dialog",
-    description:
-      "A modal dialog that interrupts the user with important content and expects a response.",
-    href: "",
-  },
-  {
-    title: "Hover Card",
-    description:
-      "For sighted users to preview content available behind a link.",
-    href: "",
-  },
-  {
-    title: "Progress",
-    description:
-      "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
-    href: "",
-  },
-  {
-    title: "Scroll-area",
-    description: "Visually or semantically separates content.",
-    href: "",
-  },
-  {
-    title: "Tabs",
-    description:
-      "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
-    href: "",
-  },
-  {
-    title: "Tooltip",
-    description:
-      "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
-    href: "",
-  },
-  {
-    title: "Visually Hidden",
-    description:
-      "Hides content visually but remains accessible to screen readers.",
-    href: "",
-  },
-  {
-    title: "Dialog",
-    description:
-      "A modal dialog that interrupts the user with important content and expects a response.",
-    href: "",
-  },
-  {
-    title: "Disclosure",
-    description:
-      "A disclosure is a button that controls visibility of a section of content.",
-    href: "",
-  },
-  {
-    title: "Menu",
-    description:
-      "A type of composite widget that functions as a group of menuitem elements.",
-    href: "",
-  },
-  {
-    title: "Menu Button",
-    description: "A button that controls the visibility of a menu.",
-    href: "",
-  },
-  {
-    title: "Radio Group",
-    description:
-      "A group of radio buttons that allows only one radio button to be selected.",
-    href: "",
-  },
-  {
-    title: "Switch",
-    description:
-      "A type of checkbox that represents on/off values, like a light switch.",
-    href: "",
-  },
-  {
-    title: "Tab",
-    description: "A single panel in a set of tab panels.",
-    href: "",
-  },
-  {
-    title: "Tab Group",
-    description: "A group of tabs that functions as a composite widget.",
-    href: "",
-  },
-  {
-    title: "Tooltip",
-    description:
-      "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
-    href: "",
-  },
-  {
-    title: "Visually Hidden",
-    description:
-      "Hides content visually but remains accessible to screen readers.",
-    href: "",
-  },
-  {
-    title: "Dialog",
-    description:
-      "A modal dialog that interrupts the user with important content and expects a response.",
-    href: "",
-  },
-]
+import { useNotifications } from "@/composables/useNotifications"
+import {
+  IconBell,
+  IconBookmark,
+  IconBookmarkCheck,
+  IconCheck,
+  IconCheckCheck,
+  IconCheckCircle,
+  IconInbox,
+  IconLoader2,
+  IconPin,
+  IconPinOff,
+} from "@/data/icons"
+
+defineProps<{
+  iconDisplay?: "icon" | "text"
+}>()
+
+const {
+  notifications,
+  isLoading,
+  unreadCount,
+  loadMore,
+  markAsRead,
+  markAsUnread,
+  markAsDone,
+  markAsSaved,
+  markAllRead,
+  markAllDone,
+  markAllSaved,
+} = useNotifications()
+
+const loadMoreTrigger = ref(null)
+const activeTab = ref("inbox")
+const isDocked = ref(false)
+
+const filteredNotifications = computed(() => {
+  return notifications.value.filter((n) => {
+    if (activeTab.value === "inbox") {
+      return n.status === "inbox"
+    }
+    if (activeTab.value === "saved") {
+      return n.status === "saved"
+    }
+    if (activeTab.value === "done") {
+      return n.status === "done"
+    }
+    return false
+  })
+})
+
+// Infinite scroll trigger
+useIntersectionObserver(loadMoreTrigger, (entries) => {
+  const entry = entries[0]
+  if (
+    entry?.isIntersecting &&
+    !isLoading.value &&
+    notifications.value.length >= 20
+  ) {
+    loadMore()
+  }
+})
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper>
-    <ItemGroup>
-      <template v-for="(component, index) in notifications" :key="index">
-        <Item size="sm" class="p-2">
-          <ItemMedia variant="icon">
-            <IconBell />
-          </ItemMedia>
-          <ItemContent class="gap-0.5 truncate">
-            <ItemTitle class="truncate">
-              {{ component.title }}
-            </ItemTitle>
-            <ItemDescription class="line-clamp-1 truncate text-xs">
-              {{ component.description }}
-            </ItemDescription>
-          </ItemContent>
-          <ItemActions>
-            <ToggleGroup type="single" variant="outline" size="sm">
-              <ToggleGroupItem value="saved">
-                <IconBookmark />
-                Save
-              </ToggleGroupItem>
-              <ToggleGroupItem value="done">
-                <IconCheck />
-                Done
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </ItemActions>
-        </Item>
-        <ItemSeparator v-if="index !== notifications.length - 1" />
-      </template>
-    </ItemGroup>
-  </OverlayScrollbarsWrapper>
+  <NavigationMenu id="tour-tasks-notifications">
+    <NavigationMenuList class="gap-2">
+      <NavigationMenuItem>
+        <NavigationMenuTrigger
+          class="h-8 bg-transparent px-3"
+          :class="{ 'gap-2': iconDisplay === 'text' || unreadCount > 0 }"
+        >
+          <IconBell />
+          <Badge
+            v-if="unreadCount > 0"
+            variant="secondary"
+            class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square px-1"
+          >
+            {{ unreadCount }}
+          </Badge>
+          <template v-if="iconDisplay === 'text'"> Notifications </template>
+        </NavigationMenuTrigger>
+        <NavigationMenuContent>
+          <Tabs v-model="activeTab" default-value="inbox">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  @click="isDocked = !isDocked"
+                >
+                  <IconPin v-if="!isDocked" />
+                  <IconPinOff v-else />
+                </Button>
+                <span class="font-semibold">Notifications</span>
+              </div>
+              <TabsList>
+                <TabsTrigger value="inbox">
+                  <IconInbox />
+                  Inbox
+                </TabsTrigger>
+                <TabsTrigger value="saved">
+                  <IconBookmark />
+                  Saved
+                </TabsTrigger>
+                <TabsTrigger value="done">
+                  <IconCheck />
+                  Done
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <OverlayScrollbarsWrapper
+              class="bg-secondary aspect-square w-md rounded-md p-2"
+            >
+              <Empty
+                v-if="filteredNotifications.length === 0 && !isLoading"
+                class="h-full"
+              >
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconBell class="text-muted-foreground size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle> No notifications </EmptyTitle>
+                  <EmptyDescription>
+                    You have no notifications at this time.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+              <ItemGroup v-else class="gap-2">
+                <template
+                  v-for="notification in filteredNotifications"
+                  :key="notification.id"
+                >
+                  <NotificationItem
+                    :notification="notification"
+                    @mark-read="markAsRead"
+                    @mark-unread="markAsUnread"
+                    @mark-done="markAsDone"
+                    @mark-saved="markAsSaved"
+                  />
+                </template>
+                <!-- Loading / Infinite Scroll Trigger -->
+                <div ref="loadMoreTrigger" class="flex justify-center p-4">
+                  <IconLoader2
+                    v-if="isLoading"
+                    class="text-muted-foreground animate-spin"
+                  />
+                </div>
+              </ItemGroup>
+            </OverlayScrollbarsWrapper>
+            <div class="flex items-center justify-between">
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  :disabled="unreadCount === 0"
+                  @click="markAllRead"
+                >
+                  <IconCheckCircle />
+                  Mark all read
+                </Button>
+              </div>
+              <div>
+                <TabsContent value="inbox">
+                  <Button variant="ghost" size="sm" @click="markAllDone">
+                    <IconCheckCheck />
+                    Mark all as done
+                  </Button>
+                </TabsContent>
+                <TabsContent value="saved">
+                  <Button variant="ghost" size="sm" @click="markAllDone">
+                    <IconCheckCheck />
+                    Mark all as done
+                  </Button>
+                </TabsContent>
+                <TabsContent value="done">
+                  <Button variant="ghost" size="sm" @click="markAllSaved">
+                    <IconBookmarkCheck />
+                    Mark all as saved
+                  </Button>
+                </TabsContent>
+              </div>
+            </div>
+          </Tabs>
+        </NavigationMenuContent>
+      </NavigationMenuItem>
+    </NavigationMenuList>
+  </NavigationMenu>
+  <Teleport v-if="isDocked" defer to="#left-dock" :disabled="!isDocked">
+    Coming Soon
+  </Teleport>
 </template>

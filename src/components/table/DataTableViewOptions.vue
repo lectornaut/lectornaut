@@ -38,7 +38,7 @@ const pageSizeString = computed({
   },
 })
 
-function onPageSizeChange(val: string) {
+function onPageSizeChange(val: unknown) {
   props.table.setPageSize(Number(val))
 }
 </script>

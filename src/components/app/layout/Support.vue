@@ -93,6 +93,16 @@ const productTour = driver({
       },
     },
     {
+      element: "#tour-workspace-switcher",
+      popover: {
+        title: "Switch workspaces",
+        description:
+          "You can switch between different workspaces using the workspace switcher. This is useful if you are part of multiple workspaces.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
       element: "#tour-search-bar",
       popover: {
         title: "Search and commands",

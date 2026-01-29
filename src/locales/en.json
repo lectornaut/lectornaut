@@ -1157,7 +1157,9 @@
       "toasts": {
         "invitedAll": "Invited {count} member | Invited {count} members",
         "inviteFailed": "Failed to invite members",
-        "invitePartial": "Invited {succeeded} member(s), {failed} failed"
+        "invitePartial": "Invited {succeeded} member(s), {failed} failed",
+        "inviteResent": "Resent invitation to {count} member(s)",
+        "resendFailed": "Failed to resend invitation to {count} member(s)"
       }
     },
     "subNavigation": {

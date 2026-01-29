@@ -138,6 +138,7 @@ import IconLucideListChecks from "~icons/lucide/list-checks"
 import IconLucideListCollapse from "~icons/lucide/list-collapse"
 import IconLucideListFilter from "~icons/lucide/list-filter"
 import IconLucideListOrdered from "~icons/lucide/list-ordered"
+import IconLucideLoader2 from "~icons/lucide/loader-2"
 import IconLucideLock from "~icons/lucide/lock"
 import IconLucideLogOut from "~icons/lucide/log-out"
 import IconLucideLogs from "~icons/lucide/logs"
@@ -415,6 +416,7 @@ export {
   IconLucideListCollapse as IconListCollapse,
   IconLucideListFilter as IconListFilter,
   IconLucideListOrdered as IconListOrdered,
+  IconLucideLoader2 as IconLoader2,
   IconLucideLock as IconLock,
   IconLogosDiscord,
   IconLogosGoogle,

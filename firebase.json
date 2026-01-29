@@ -18,6 +18,7 @@
   },
   "functions": [
     {
+      "runtime": "nodejs22",
       "source": "functions",
       "codebase": "default",
       "ignore": [

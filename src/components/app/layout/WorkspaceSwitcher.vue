@@ -33,7 +33,7 @@ const switchWorkspace = async (workspaceId: string) => {
 
 <template>
   <ContextMenu>
-    <ContextMenuTrigger>
+    <ContextMenuTrigger id="tour-workspace-switcher">
       <TooltipProvider>
         <Tooltip>
           <DropdownMenu>

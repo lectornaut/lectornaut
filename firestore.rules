@@ -6,6 +6,18 @@ service cloud.firestore {
       allow create: if request.auth.uid == userId;
       allow read: if request.auth.uid == userId || resource.data.isPublic == true;
       allow update, delete: if request.auth.uid == userId;
+
+      match /notifications/{notificationId} {
+        allow read: if request.auth.uid == userId;
+        // Only allow status updates from client
+        allow update: if request.auth.uid == userId && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+        allow create, delete: if false; // Only via Cloud Functions
+      }
+
+      match /notificationPreferences/{preferenceId} {
+        allow read, write: if request.auth.uid == userId;
+      }
     }
 
     match /usernames/{username} {

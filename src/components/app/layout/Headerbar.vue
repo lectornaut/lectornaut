@@ -35,7 +35,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
             <SidebarTrigger v-if="isMobile" class="size-8" />
             <Logo class="size-8 shrink-0 p-2" />
             <Separator orientation="vertical" class="max-h-4 min-h-4" />
-            <TasksNotifications :icon-display="iconDisplay" />
+            <Notifications :icon-display="iconDisplay" />
           </div>
           <div
             data-tauri-drag-region
