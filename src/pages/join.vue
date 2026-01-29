@@ -38,8 +38,8 @@ const code = computed(() => route.query.code as string)
 const pendingInvitations = computed(
   () => userInvitations.value?.filter((i) => i.status === "pending") || []
 )
-const rejectedInvitations = computed(
-  () => userInvitations.value?.filter((i) => i.status === "rejected") || []
+const declinedInvitations = computed(
+  () => userInvitations.value?.filter((i) => i.status === "declined") || []
 )
 
 // Watch code changes to reload main view
@@ -125,20 +125,20 @@ const handleAccept = async () => {
   }
 }
 
-const handleReject = async () => {
+const handleDecline = async () => {
   if (!invitation.value?.id) return
 
   isLoading.value = true
   try {
-    await invitationStore.rejectInvitation(invitation.value.id)
-    toast.info("Invitation rejected")
+    await invitationStore.declineInvitation(invitation.value.id)
+    toast.info("Invitation declined")
     // Update local state by reloading or re-fetching?
     // userInvitations is reactive via VueFire, so list updates auto.
     // Update current view:
-    if (invitation.value) invitation.value.status = "rejected"
+    if (invitation.value) invitation.value.status = "declined"
   } catch (e) {
     console.error(e)
-    toast.error("Failed to reject invitation")
+    toast.error("Failed to decline invitation")
   } finally {
     isLoading.value = false
   }
@@ -183,7 +183,7 @@ const selectInvitation = (code: string) => {
       <div
         v-if="
           isAuthenticated &&
-          (pendingInvitations.length > 0 || rejectedInvitations.length > 0)
+          (pendingInvitations.length > 0 || declinedInvitations.length > 0)
         "
         class="flex justify-end"
       >
@@ -214,7 +214,7 @@ const selectInvitation = (code: string) => {
           <div
             v-for="invite in pendingInvitations"
             :key="invite.id"
-            class="hover:bg-secondary/50 flex cursor-pointer items-center justify-between rounded-md border p-2"
+            class="hover:bg-secondary/50 group flex cursor-pointer items-center justify-between rounded-md border p-2"
             :class="{
               'border-primary ring-primary ring-1': invite.code === code,
             }"
@@ -226,22 +226,32 @@ const selectInvitation = (code: string) => {
                 >Invited by {{ invite.inviteeName }}</span
               >
             </div>
-            <div
-              class="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs uppercase"
-            >
-              Pending
+            <div class="flex items-center gap-2">
+              <div
+                class="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs uppercase"
+              >
+                Pending
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                @click.stop="handleDelete(invite.id!)"
+              >
+                <IconTrash class="h-3 w-3" />
+              </Button>
             </div>
           </div>
         </div>
 
-        <div v-if="rejectedInvitations.length > 0" class="space-y-2">
+        <div v-if="declinedInvitations.length > 0" class="space-y-2">
           <h3
             class="text-muted-foreground text-xs font-bold tracking-wider uppercase"
           >
-            Rejected
+            Declined
           </h3>
           <div
-            v-for="invite in rejectedInvitations"
+            v-for="invite in declinedInvitations"
             :key="invite.id"
             class="hover:bg-secondary/50 group flex cursor-pointer items-center justify-between rounded-md border p-2"
             :class="{
@@ -254,7 +264,7 @@ const selectInvitation = (code: string) => {
                 class="text-muted-foreground text-sm font-medium line-through"
                 >{{ invite.teamName }}</span
               >
-              <span class="text-muted-foreground text-xs">Rejected</span>
+              <span class="text-muted-foreground text-xs">Declined</span>
             </div>
             <Button
               variant="ghost"
@@ -310,7 +320,7 @@ const selectInvitation = (code: string) => {
                 {{
                   invitation.status === "pending"
                     ? "You have been invited to join"
-                    : "You rejected the invitation to"
+                    : "You declined the invitation to"
                 }}
               </p>
               <p class="text-lg font-bold">{{ invitation.teamName }}</p>
@@ -326,7 +336,7 @@ const selectInvitation = (code: string) => {
                 </p>
               </div>
               <div v-else class="mt-4">
-                <p class="text-destructive text-sm font-medium">Rejected</p>
+                <p class="text-destructive text-sm font-medium">Declined</p>
               </div>
             </div>
           </div>
@@ -339,8 +349,13 @@ const selectInvitation = (code: string) => {
               Accept Invitation
             </Button>
             <div class="grid grid-cols-2 gap-3">
-              <Button variant="outline" @click="handleReject">Reject</Button>
-              <Button variant="ghost" @click="handleIgnore">Ignore</Button>
+              <Button variant="outline" @click="handleDecline">Decline</Button>
+              <Button
+                variant="destructive"
+                @click="handleDelete(invitation.id!)"
+              >
+                Delete
+              </Button>
             </div>
           </div>
 

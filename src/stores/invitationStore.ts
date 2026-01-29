@@ -7,7 +7,7 @@
  * - Canceling/Deleting invitations
  * - Fetching invitations for a team
  * - Fetching invitations for the current user
- * - Accepting/Rejecting invitations
+ * - Accepting/Declining invitations
  *
  * Data Model:
  * collections/invitations/{invitationId}
@@ -18,7 +18,7 @@
  *   inviteeEmail: string
  *   email: string
  *   role: string
- *   status: "pending" | "rejected"
+ *   status: "pending" | "declined"
  *   code: string
  *   createdAt: Timestamp
  * }
@@ -53,7 +53,7 @@ export interface IInvitation {
   inviteeEmail: string
   email: string
   role: IMembershipRole
-  status: "pending" | "rejected"
+  status: "pending" | "declined"
   code: string
   createdAt: Timestamp
 }
@@ -321,12 +321,12 @@ export const useInvitationStore = defineStore("invitations", () => {
   }
 
   /**
-   * Reject an invitation
+   * Decline an invitation
    */
-  async function rejectInvitation(invitationId: string): Promise<void> {
+  async function declineInvitation(invitationId: string): Promise<void> {
     // Check if document exists first? Or just try update
     const invRef = doc(firestore, "invitations", invitationId)
-    await updateDoc(invRef, { status: "rejected" })
+    await updateDoc(invRef, { status: "declined" })
   }
 
   return {
@@ -340,6 +340,6 @@ export const useInvitationStore = defineStore("invitations", () => {
     cancelInvitation,
     getInvitationByCode,
     acceptInvitation,
-    rejectInvitation,
+    declineInvitation,
   }
 })

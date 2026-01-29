@@ -664,14 +664,14 @@ const handleSubmit = async () => {
                     disabled
                     :class="{
                       'border-destructive text-destructive opacity-100':
-                        invite.status === 'rejected',
+                        invite.status === 'declined',
                     }"
                   />
                   <span
-                    v-if="invite.status === 'rejected'"
+                    v-if="invite.status === 'declined'"
                     class="bg-destructive/10 text-destructive absolute top-1/2 right-3 -translate-y-1/2 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
                   >
-                    Rejected
+                    Declined
                   </span>
                   <span
                     v-else
@@ -684,7 +684,7 @@ const handleSubmit = async () => {
               <ButtonGroup>
                 <Select
                   v-model="invite.role"
-                  :disabled="invite.status === 'rejected'"
+                  :disabled="invite.status === 'declined'"
                   @update:model-value="
                     (val) =>
                       invitationStore.updateInvitationRole(
@@ -713,7 +713,7 @@ const handleSubmit = async () => {
                 </Select>
 
                 <Button
-                  v-if="invite.status !== 'rejected'"
+                  v-if="invite.status !== 'declined'"
                   variant="outline"
                   :disabled="isResending(invite.id!)"
                   @click="handleResendInvitation(invite)"
@@ -724,7 +724,7 @@ const handleSubmit = async () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  :title="invite.status === 'rejected' ? 'Delete' : 'Cancel'"
+                  :title="invite.status === 'declined' ? 'Delete' : 'Cancel'"
                   @click="invitationStore.cancelInvitation(invite.id!)"
                 >
                   <IconTrash />

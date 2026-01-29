@@ -3,7 +3,6 @@ import {
   IconBookmark,
   IconCheck,
   IconCheckCircle,
-  IconChevronRight,
   IconCircle,
   IconInbox,
   IconMail,
@@ -48,66 +47,42 @@ const handleClick = () => {
     router.push(props.notification.url)
   }
 }
-
-const computedVariant = computed(() => {
-  switch (props.notification.status) {
-    case "saved":
-      return "muted"
-    case "done":
-      return "muted"
-    default:
-      return "default"
-  }
-})
 </script>
 
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <Item size="sm" :variant="computedVariant" as-child>
-        <RouterLink
-          :to="notification.url"
-          target="_blank"
-          class="group relative flex w-full"
-        >
+      <Item
+        size="sm"
+        class="group w-full gap-2"
+        as-child
+        @click.stop="handleClick"
+      >
+        <RouterLink :to="notification.url" target="_blank">
           <ItemMedia variant="icon" class="text-muted-foreground relative">
             <Component :is="typeIcon" />
             <span
               v-if="notification.read === false"
-              class="bg-primary ring-accent absolute -top-1 -right-1 flex size-2 rounded-full ring-2"
+              class="bg-primary ring-accent absolute -top-1 -left-1 flex size-2.5 rounded-full ring-2"
             ></span>
           </ItemMedia>
           <ItemContent class="gap-0.5 truncate">
-            <ItemTitle v-if="notification.status === 'inbox'" class="truncate">
+            <ItemTitle class="line-clamp-1 truncate">
               {{ notification.title }}
             </ItemTitle>
-            <ItemDescription class="truncate text-xs">
+            <ItemDescription class="line-clamp-1 truncate text-xs">
               {{ notification.description }}
             </ItemDescription>
-            <span
-              v-if="notification.status !== 'inbox'"
-              class="text-muted-foreground text-[10px] tabular-nums"
-            >
-              {{
-                new Intl.DateTimeFormat("en-US", {
-                  hour: "numeric",
-                  minute: "numeric",
-                  month: "short",
-                  day: "numeric",
-                }).format(notification.createdAt)
-              }}
-            </span>
-            <!-- Hover Actions -->
-            <ButtonGroup
-              class="bg-background absolute top-1 right-1 hidden rounded-xl p-1 shadow-md group-hover:flex"
-            >
+          </ItemContent>
+          <ItemActions>
+            <ButtonGroup class="hidden group-hover:flex">
               <TooltipProvider>
                 <ButtonGroup>
                   <Tooltip v-if="notification.read === false">
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         @click.stop="emit('mark-read', notification.id)"
                       >
                         <IconCheckCircle />
@@ -119,7 +94,7 @@ const computedVariant = computed(() => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         @click.stop="emit('mark-unread', notification.id)"
                       >
                         <IconCircle />
@@ -133,7 +108,7 @@ const computedVariant = computed(() => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         @click.stop="emit('mark-inbox', notification.id)"
                       >
                         <IconInbox />
@@ -145,7 +120,7 @@ const computedVariant = computed(() => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         @click.stop="emit('mark-saved', notification.id)"
                       >
                         <IconBookmark />
@@ -157,7 +132,7 @@ const computedVariant = computed(() => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         @click.stop="emit('mark-done', notification.id)"
                       >
                         <IconCheck />
@@ -168,11 +143,18 @@ const computedVariant = computed(() => {
                 </ButtonGroup>
               </TooltipProvider>
             </ButtonGroup>
-          </ItemContent>
-          <ItemActions>
-            <Button variant="ghost" size="icon-sm" @click.stop="handleClick">
-              <IconChevronRight />
-            </Button>
+            <span
+              class="text-muted-foreground flex text-[10px] tabular-nums group-hover:hidden"
+            >
+              {{
+                new Intl.DateTimeFormat("en-US", {
+                  hour: "numeric",
+                  minute: "numeric",
+                  month: "short",
+                  day: "numeric",
+                }).format(notification.createdAt)
+              }}
+            </span>
           </ItemActions>
         </RouterLink>
       </Item>
@@ -212,10 +194,7 @@ const computedVariant = computed(() => {
         <ContextMenuRadioItem value="done"> Done </ContextMenuRadioItem>
       </ContextMenuRadioGroup>
       <ContextMenuSeparator />
-      <ContextMenuItem
-        class="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-        @click="emit('delete', notification.id)"
-      >
+      <ContextMenuItem @click="emit('delete', notification.id)">
         <IconTrash />
         Delete
       </ContextMenuItem>
