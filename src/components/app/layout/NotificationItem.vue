@@ -59,11 +59,11 @@ const handleClick = () => {
     <ContextMenuTrigger as-child>
       <Item
         size="sm"
-        class="group w-full gap-2"
+        class="group w-full gap-2 p-2"
         as-child
-        @click.stop="handleClick"
+        @click.prevent.stop="handleClick"
       >
-        <RouterLink :to="notification.url" target="_blank">
+        <RouterLink :to="notification.url">
           <ItemMedia variant="icon" class="text-muted-foreground relative">
             <Component :is="typeIcon" />
             <span
@@ -88,7 +88,7 @@ const handleClick = () => {
                       <Button
                         variant="outline"
                         size="icon-sm"
-                        @click.stop="
+                        @click.prevent.stop="
                           notification.read
                             ? emit('mark-unread', notification.id)
                             : emit('mark-read', notification.id)
@@ -107,7 +107,9 @@ const handleClick = () => {
                       <Button
                         variant="outline"
                         size="icon-sm"
-                        @click.stop="emit('mark-inbox', notification.id)"
+                        @click.prevent.stop="
+                          emit('mark-inbox', notification.id)
+                        "
                       >
                         <IconInbox />
                       </Button>
@@ -119,7 +121,9 @@ const handleClick = () => {
                       <Button
                         variant="outline"
                         size="icon-sm"
-                        @click.stop="emit('mark-saved', notification.id)"
+                        @click.prevent.stop="
+                          emit('mark-saved', notification.id)
+                        "
                       >
                         <IconBookmark />
                       </Button>
@@ -131,7 +135,7 @@ const handleClick = () => {
                       <Button
                         variant="outline"
                         size="icon-sm"
-                        @click.stop="emit('mark-done', notification.id)"
+                        @click.prevent.stop="emit('mark-done', notification.id)"
                       >
                         <IconCheck />
                       </Button>
