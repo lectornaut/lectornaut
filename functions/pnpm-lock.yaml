@@ -49,13 +49,6 @@ importers:
         version: 5.9.3
 
 packages:
-  "@babel/code-frame@7.27.1":
-    resolution:
-      {
-        integrity: sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg==,
-      }
-    engines: { node: ">=6.9.0" }
-
   "@babel/code-frame@7.28.6":
     resolution:
       {
@@ -1721,10 +1714,10 @@ packages:
         integrity: sha512-02S5fmqeoKzVZCHPZid4b8JH2eM5HzQLZWN2FohQEy/0eXTq8VXZfSN6Pcr3F6N9R/vNrj7cpgbhjie6m/1tCA==,
       }
 
-  "@types/express-serve-static-core@5.1.0":
+  "@types/express-serve-static-core@5.1.1":
     resolution:
       {
-        integrity: sha512-jnHMsrd0Mwa9Cf4IdOzbz543y4XJepXrbia2T4b6+spXC2We3t1y6K44D3mR8XMFSXMCf3/l7rCgddfx7UNVBA==,
+        integrity: sha512-v4zIMr/cX7/d2BpAEX3KNKL/JrT1s43s96lLvvdTmza1oEvDudCqK9aF/djc/SWgy8Yh0h30TZx5VpzqFCxk5A==,
       }
 
   "@types/express@4.17.25":
@@ -1775,10 +1768,10 @@ packages:
         integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==,
       }
 
-  "@types/lodash@4.17.21":
+  "@types/lodash@4.17.23":
     resolution:
       {
-        integrity: sha512-FOvQ0YPD5NOfPgMzJihoT+Za5pdkDJWcbpuj1DjaKZIr/gxodQjY/uWEFlTNqW2ugXHUiL8lRQgw63dzKHZdeQ==,
+        integrity: sha512-RDvF6wTulMPjrNdCoYRC8gNR880JNGT8uB+REUpC2Ns4pRqQJhGz90wh7rgdXDPpCczF3VGktDuFGVnz8zP7HA==,
       }
 
   "@types/long@4.0.2":
@@ -1829,22 +1822,10 @@ packages:
         integrity: sha512-WJtwWJu7UdlvzEAUm484QNg5eAoq5QR08KDNx7g45Usrs2NtOPiX8ugDqmKdXkyL03rBqU5dYNYVQetEpBHq2g==,
       }
 
-  "@types/node@22.19.3":
+  "@types/node@22.19.7":
     resolution:
       {
-        integrity: sha512-1N9SBnWYOJTrNZCdh/yJE+t910Y128BoyY+zBLWhL3r0TYzlTmFdXrPwHL9DyFZmlEXNQQolTZh3KHV31QDhyA==,
-      }
-
-  "@types/node@25.0.10":
-    resolution:
-      {
-        integrity: sha512-zWW5KPngR/yvakJgGOmZ5vTBemDoSqF3AcV/LrO5u5wTWyEAVVh+IT39G4gtyAkh3CtTZs8aX/yRM82OfzHJRg==,
-      }
-
-  "@types/node@25.0.3":
-    resolution:
-      {
-        integrity: sha512-W609buLVRVmeW693xKfzHeIV6nJGGz98uCPfeXI1ELMLXVeKYZ9m15fAMSaUPBHYLGFsVRcMmSCksQOrZV9BYA==,
+        integrity: sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw==,
       }
 
   "@types/node@25.1.0":
@@ -2411,10 +2392,10 @@ packages:
       }
     engines: { node: ">=18" }
 
-  body-parser@2.2.1:
+  body-parser@2.2.2:
     resolution:
       {
-        integrity: sha512-nfDwkulwiZYQIGwxdy0RUmowMhKcFVcYXUU7m4QlKYim1rUtg83xm2yjZ40QjDuc291AJjjeSc9b++AWHSgSHw==,
+        integrity: sha512-oP5VkATKlNwcgvxi0vM0p/D3n2C3EReYVX+DNYs5TjZFn/oQt2j+4sVJtSMr18pdRr8wjTcBl6LoV+FUwzPmNA==,
       }
     engines: { node: ">=18" }
 
@@ -2571,10 +2552,10 @@ packages:
       }
     engines: { node: ">= 8.10.0" }
 
-  ci-info@4.3.1:
+  ci-info@4.4.0:
     resolution:
       {
-        integrity: sha512-Wdy2Igu8OcBpI2pZePZ5oWjPC38tmDVx5WKUXKwlLYkA0ozo85sLsLvkBbBn/sZaSCMFOGZJ14fvW9t5/d7kdA==,
+        integrity: sha512-77PSwercCZU2Fc4sX94eF8k8Pxte6JAwL4/ICZLFjJLqegs7kCuAsqqj/70NQF6TvDpgFjkubQB2FW2ZZddvQg==,
       }
     engines: { node: ">=8" }
 
@@ -2998,10 +2979,10 @@ packages:
         integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==,
       }
 
-  electron-to-chromium@1.5.279:
+  electron-to-chromium@1.5.283:
     resolution:
       {
-        integrity: sha512-0bblUU5UNdOt5G7XqGiJtpZMONma6WAfq9vsFmtn9x1+joAObr6x1chfqyxFSDCAFwFhCQDrqeAr6MYdpwJ9Hg==,
+        integrity: sha512-3vifjt1HgrGW/h76UEeny+adYApveS9dH2h3p57JYzBSXJIKUJAvtmIytDKjcSCt9xHfrNCFJ7gts6vkhuq++w==,
       }
 
   emittery@0.13.1:
@@ -3801,10 +3782,10 @@ packages:
       }
     engines: { node: ">=0.10.0" }
 
-  iconv-lite@0.7.1:
+  iconv-lite@0.7.2:
     resolution:
       {
-        integrity: sha512-2Tth85cXwGFHfvRgZWszZSvdo+0Xsqmw8k8ZwxScfcBneNUraK+dxRxRm24nszx80Y0TVio8kKLt5sLE7ZCLlw==,
+        integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==,
       }
     engines: { node: ">=0.10.0" }
 
@@ -4353,10 +4334,10 @@ packages:
         integrity: sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg==,
       }
 
-  jwks-rsa@3.2.0:
+  jwks-rsa@3.2.2:
     resolution:
       {
-        integrity: sha512-PwchfHcQK/5PSydeKCs1ylNym0w/SSv8a62DgHJ//7x2ZclCoinlsjAfDxAAbpoTPybOum/Jgy+vkvMmKz89Ww==,
+        integrity: sha512-BqTyEDV+lS8F2trk3A+qJnxV5Q9EqKCBJOPti3W97r7qTympCZjb7h2X6f2kc+0K3rsSTY1/6YG2eaXKoj497w==,
       }
     engines: { node: ">=14" }
 
@@ -4464,10 +4445,10 @@ packages:
         integrity: sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==,
       }
 
-  lodash@4.17.21:
+  lodash@4.17.23:
     resolution:
       {
-        integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==,
+        integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==,
       }
 
   logform@2.7.0:
@@ -6251,10 +6232,10 @@ packages:
         integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==,
       }
 
-  which-typed-array@1.1.19:
+  which-typed-array@1.1.20:
     resolution:
       {
-        integrity: sha512-rEvr90Bck4WZt9HHFC4DJMsjvu7x+r6bImz0/BrbWb7A2djJ8hnZMrWnHo9F8ssv0OMErasDhftrfROTyqSDrw==,
+        integrity: sha512-LYfpUkmqwl0h9A2HL09Mms427Q1RZWuOHsukfVcKRq9q95iQxdw0ix1JQrqbcDR9PH1QDwf5Qo8OZb5lksZ8Xg==,
       }
     engines: { node: ">= 0.4" }
 
@@ -6389,12 +6370,6 @@ packages:
       }
 
 snapshots:
-  "@babel/code-frame@7.27.1":
-    dependencies:
-      "@babel/helper-validator-identifier": 7.28.5
-      js-tokens: 4.0.0
-      picocolors: 1.1.1
-
   "@babel/code-frame@7.28.6":
     dependencies:
       "@babel/helper-validator-identifier": 7.28.5
@@ -6959,7 +6934,7 @@ snapshots:
       "@types/node": 25.1.0
       ansi-escapes: 4.3.2
       chalk: 4.1.2
-      ci-info: 4.3.1
+      ci-info: 4.4.0
       exit-x: 0.2.2
       graceful-fs: 4.2.11
       jest-changed-files: 30.2.0
@@ -7877,21 +7852,21 @@ snapshots:
   "@types/body-parser@1.19.6":
     dependencies:
       "@types/connect": 3.4.38
-      "@types/node": 25.0.3
+      "@types/node": 25.1.0
 
   "@types/bunyan@1.8.9":
     dependencies:
-      "@types/node": 25.0.10
+      "@types/node": 25.1.0
 
   "@types/caseless@0.12.5": {}
 
   "@types/connect@3.4.36":
     dependencies:
-      "@types/node": 25.0.10
+      "@types/node": 25.1.0
 
   "@types/connect@3.4.38":
     dependencies:
-      "@types/node": 25.0.3
+      "@types/node": 25.1.0
 
   "@types/cors@2.8.19":
     dependencies:
@@ -7904,9 +7879,9 @@ snapshots:
       "@types/range-parser": 1.2.7
       "@types/send": 1.2.1
 
-  "@types/express-serve-static-core@5.1.0":
+  "@types/express-serve-static-core@5.1.1":
     dependencies:
-      "@types/node": 25.0.3
+      "@types/node": 25.1.0
       "@types/qs": 6.14.0
       "@types/range-parser": 1.2.7
       "@types/send": 1.2.1
@@ -7921,7 +7896,7 @@ snapshots:
   "@types/express@5.0.6":
     dependencies:
       "@types/body-parser": 1.19.6
-      "@types/express-serve-static-core": 5.1.0
+      "@types/express-serve-static-core": 5.1.1
       "@types/serve-static": 2.2.0
 
   "@types/http-errors@2.0.5": {}
@@ -7941,15 +7916,15 @@ snapshots:
   "@types/jsonwebtoken@9.0.10":
     dependencies:
       "@types/ms": 2.1.0
-      "@types/node": 22.19.3
+      "@types/node": 22.19.7
 
-  "@types/lodash@4.17.21": {}
+  "@types/lodash@4.17.23": {}
 
   "@types/long@4.0.2": {}
 
   "@types/memcached@2.2.10":
     dependencies:
-      "@types/node": 25.0.10
+      "@types/node": 25.1.0
 
   "@types/mime@1.3.5": {}
 
@@ -7963,23 +7938,15 @@ snapshots:
 
   "@types/mysql@2.15.22":
     dependencies:
-      "@types/node": 25.0.10
+      "@types/node": 25.1.0
 
   "@types/node@20.19.30":
     dependencies:
       undici-types: 6.21.0
 
-  "@types/node@22.19.3":
+  "@types/node@22.19.7":
     dependencies:
       undici-types: 6.21.0
-
-  "@types/node@25.0.10":
-    dependencies:
-      undici-types: 7.16.0
-
-  "@types/node@25.0.3":
-    dependencies:
-      undici-types: 7.16.0
 
   "@types/node@25.1.0":
     dependencies:
@@ -7993,7 +7960,7 @@ snapshots:
 
   "@types/pg@8.6.1":
     dependencies:
-      "@types/node": 25.0.10
+      "@types/node": 25.1.0
       pg-protocol: 1.11.0
       pg-types: 2.2.0
 
@@ -8004,7 +7971,7 @@ snapshots:
   "@types/request@2.48.13":
     dependencies:
       "@types/caseless": 0.12.5
-      "@types/node": 22.19.3
+      "@types/node": 22.19.7
       "@types/tough-cookie": 4.0.5
       form-data: 2.5.5
 
@@ -8015,7 +7982,7 @@ snapshots:
 
   "@types/send@1.2.1":
     dependencies:
-      "@types/node": 25.0.3
+      "@types/node": 25.1.0
 
   "@types/serve-static@1.15.10":
     dependencies:
@@ -8026,7 +7993,7 @@ snapshots:
   "@types/serve-static@2.2.0":
     dependencies:
       "@types/http-errors": 2.0.5
-      "@types/node": 25.0.3
+      "@types/node": 25.1.0
 
   "@types/shimmer@1.2.0": {}
 
@@ -8034,7 +8001,7 @@ snapshots:
 
   "@types/tedious@4.0.14":
     dependencies:
-      "@types/node": 25.0.10
+      "@types/node": 25.1.0
 
   "@types/tough-cookie@4.0.5": {}
 
@@ -8303,13 +8270,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  body-parser@2.2.1:
+  body-parser@2.2.2:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
       debug: 4.4.3
       http-errors: 2.0.1
-      iconv-lite: 0.7.1
+      iconv-lite: 0.7.2
       on-finished: 2.4.1
       qs: 6.14.1
       raw-body: 3.0.2
@@ -8336,7 +8303,7 @@ snapshots:
     dependencies:
       baseline-browser-mapping: 2.9.19
       caniuse-lite: 1.0.30001766
-      electron-to-chromium: 1.5.279
+      electron-to-chromium: 1.5.283
       node-releases: 2.0.27
       update-browserslist-db: 1.2.3(browserslist@4.28.1)
 
@@ -8425,7 +8392,7 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
-  ci-info@4.3.1: {}
+  ci-info@4.4.0: {}
 
   cjs-module-lexer@1.4.3: {}
 
@@ -8655,7 +8622,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-to-chromium@1.5.279: {}
+  electron-to-chromium@1.5.283: {}
 
   emittery@0.13.1: {}
 
@@ -8781,7 +8748,7 @@ snapshots:
   express@5.2.1:
     dependencies:
       accepts: 2.0.0
-      body-parser: 2.2.1
+      body-parser: 2.2.2
       content-disposition: 1.0.1
       content-type: 1.0.5
       cookie: 0.7.2
@@ -8892,12 +8859,12 @@ snapshots:
       "@fastify/busboy": 3.2.0
       "@firebase/database-compat": 2.1.0
       "@firebase/database-types": 1.0.16
-      "@types/node": 22.19.3
+      "@types/node": 22.19.7
       farmhash-modern: 1.1.0
       fast-deep-equal: 3.1.3
       google-auth-library: 9.15.1
       jsonwebtoken: 9.0.3
-      jwks-rsa: 3.2.0
+      jwks-rsa: 3.2.2
       node-forge: 1.3.3
       uuid: 11.1.0
     optionalDependencies:
@@ -8909,11 +8876,11 @@ snapshots:
 
   firebase-functions-test@3.4.1(firebase-admin@13.6.0)(firebase-functions@7.0.5(firebase-admin@13.6.0))(jest@30.2.0(@types/node@25.1.0)):
     dependencies:
-      "@types/lodash": 4.17.21
+      "@types/lodash": 4.17.23
       firebase-admin: 13.6.0
       firebase-functions: 7.0.5(firebase-admin@13.6.0)
       jest: 30.2.0(@types/node@25.1.0)
-      lodash: 4.17.21
+      lodash: 4.17.23
       ts-deepmerge: 2.0.7
 
   firebase-functions@7.0.5(firebase-admin@13.6.0):
@@ -9302,7 +9269,7 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  iconv-lite@0.7.1:
+  iconv-lite@0.7.2:
     dependencies:
       safer-buffer: 2.1.2
 
@@ -9387,7 +9354,7 @@ snapshots:
 
   is-typed-array@1.1.15:
     dependencies:
-      which-typed-array: 1.1.19
+      which-typed-array: 1.1.20
 
   isexe@2.0.0: {}
 
@@ -9496,7 +9463,7 @@ snapshots:
       "@jest/types": 30.2.0
       babel-jest: 30.2.0(@babel/core@7.28.6)
       chalk: 4.1.2
-      ci-info: 4.3.1
+      ci-info: 4.4.0
       deepmerge: 4.3.1
       glob: 10.5.0
       graceful-fs: 4.2.11
@@ -9702,7 +9669,7 @@ snapshots:
       "@jest/types": 30.2.0
       "@types/node": 25.1.0
       chalk: 4.1.2
-      ci-info: 4.3.1
+      ci-info: 4.4.0
       graceful-fs: 4.2.11
       picomatch: 4.0.3
 
@@ -9819,9 +9786,8 @@ snapshots:
       ecdsa-sig-formatter: 1.0.11
       safe-buffer: 5.2.1
 
-  jwks-rsa@3.2.0:
+  jwks-rsa@3.2.2:
     dependencies:
-      "@types/express": 4.17.25
       "@types/jsonwebtoken": 9.0.10
       debug: 4.4.3
       jose: 4.15.9
@@ -9869,7 +9835,7 @@ snapshots:
 
   lodash.once@4.1.1: {}
 
-  lodash@4.17.21: {}
+  lodash@4.17.23: {}
 
   logform@2.7.0:
     dependencies:
@@ -9974,7 +9940,7 @@ snapshots:
   mjml-accordion@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -9982,7 +9948,7 @@ snapshots:
   mjml-body@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -9990,7 +9956,7 @@ snapshots:
   mjml-button@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -9998,7 +9964,7 @@ snapshots:
   mjml-carousel@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10010,7 +9976,7 @@ snapshots:
       glob: 10.5.0
       html-minifier: 4.0.0
       js-beautify: 1.15.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       minimatch: 9.0.5
       mjml-core: 4.18.0
       mjml-migrate: 4.18.0
@@ -10023,7 +9989,7 @@ snapshots:
   mjml-column@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10036,7 +10002,7 @@ snapshots:
       html-minifier: 4.0.0
       js-beautify: 1.15.4
       juice: 10.0.1
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-migrate: 4.18.0
       mjml-parser-xml: 4.18.0
       mjml-validator: 4.18.0
@@ -10046,7 +10012,7 @@ snapshots:
   mjml-divider@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10054,7 +10020,7 @@ snapshots:
   mjml-group@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10062,7 +10028,7 @@ snapshots:
   mjml-head-attributes@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10070,7 +10036,7 @@ snapshots:
   mjml-head-breakpoint@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10078,7 +10044,7 @@ snapshots:
   mjml-head-font@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10086,7 +10052,7 @@ snapshots:
   mjml-head-html-attributes@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10094,7 +10060,7 @@ snapshots:
   mjml-head-preview@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10102,7 +10068,7 @@ snapshots:
   mjml-head-style@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10110,7 +10076,7 @@ snapshots:
   mjml-head-title@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10118,7 +10084,7 @@ snapshots:
   mjml-head@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10126,7 +10092,7 @@ snapshots:
   mjml-hero@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10134,7 +10100,7 @@ snapshots:
   mjml-image@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10143,7 +10109,7 @@ snapshots:
     dependencies:
       "@babel/runtime": 7.28.6
       js-beautify: 1.15.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
       mjml-parser-xml: 4.18.0
       yargs: 17.7.2
@@ -10153,7 +10119,7 @@ snapshots:
   mjml-navbar@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10163,7 +10129,7 @@ snapshots:
       "@babel/runtime": 7.28.6
       detect-node: 2.1.0
       htmlparser2: 9.1.0
-      lodash: 4.17.21
+      lodash: 4.17.23
 
   mjml-preset-core@4.18.0:
     dependencies:
@@ -10199,7 +10165,7 @@ snapshots:
   mjml-raw@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10207,7 +10173,7 @@ snapshots:
   mjml-section@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10215,7 +10181,7 @@ snapshots:
   mjml-social@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10223,7 +10189,7 @@ snapshots:
   mjml-spacer@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10231,7 +10197,7 @@ snapshots:
   mjml-table@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10239,7 +10205,7 @@ snapshots:
   mjml-text@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
     transitivePeerDependencies:
       - encoding
@@ -10251,7 +10217,7 @@ snapshots:
   mjml-wrapper@4.18.0:
     dependencies:
       "@babel/runtime": 7.28.6
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 4.18.0
       mjml-section: 4.18.0
     transitivePeerDependencies:
@@ -10391,7 +10357,7 @@ snapshots:
 
   parse-json@8.3.0:
     dependencies:
-      "@babel/code-frame": 7.27.1
+      "@babel/code-frame": 7.28.6
       index-to-position: 1.2.0
       type-fest: 4.41.0
 
@@ -10543,7 +10509,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       http-errors: 2.0.1
-      iconv-lite: 0.7.1
+      iconv-lite: 0.7.2
       unpipe: 1.0.0
 
   react-is@18.3.1: {}
@@ -10980,7 +10946,7 @@ snapshots:
       is-arguments: 1.2.0
       is-generator-function: 1.1.2
       is-typed-array: 1.1.15
-      which-typed-array: 1.1.19
+      which-typed-array: 1.1.20
 
   utils-merge@1.0.1: {}
 
@@ -11039,7 +11005,7 @@ snapshots:
       tr46: 0.0.3
       webidl-conversions: 3.0.1
 
-  which-typed-array@1.1.19:
+  which-typed-array@1.1.20:
     dependencies:
       available-typed-arrays: 1.0.7
       call-bind: 1.0.8
