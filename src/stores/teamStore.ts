@@ -236,7 +236,10 @@ export const useTeamStore = defineStore("teams", () => {
   /**
    * Create a new team with optimistic update
    */
-  async function createTeam(name: string, photoFile?: File): Promise<void> {
+  async function createTeam(
+    name: string,
+    photoFile?: File
+  ): Promise<string | undefined> {
     if (!currentUser.value || !userProfile.value) return
 
     const teamRef = doc(collection(firestore, "teams"))
@@ -312,6 +315,7 @@ export const useTeamStore = defineStore("teams", () => {
         }
       }
     )
+    return teamId
   }
 
   /**

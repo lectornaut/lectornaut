@@ -5,11 +5,16 @@ import {
   IconBookmark,
   IconCheck,
   IconCheckCheck,
+  IconEye,
+  IconEyeOff,
   IconInbox,
   IconLoader2,
   IconMoreHorizontal,
   IconPin,
   IconPinOff,
+  IconSquareDashedMousePointer,
+  IconSquareMousePointer,
+  IconTrash,
 } from "@/data/icons"
 import type { INotificationStatus } from "@/types"
 import { useIntersectionObserver } from "@vueuse/core"
@@ -188,38 +193,50 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
                     <IconMoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top" class="w-52">
+                <DropdownMenuContent align="start" side="top" class="w-40">
                   <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      Move all to
-                    </DropdownMenuSubTrigger>
+                    <DropdownMenuItem as-child>
+                      <DropdownMenuSubTrigger>
+                        <IconSquareMousePointer />
+                        Move all to
+                      </DropdownMenuSubTrigger>
+                    </DropdownMenuItem>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem @click="markAllInbox(activeTab)">
+                        <IconInbox />
                         Inbox
                       </DropdownMenuItem>
                       <DropdownMenuItem @click="markAllSaved(activeTab)">
+                        <IconBookmark />
                         Saved
                       </DropdownMenuItem>
                       <DropdownMenuItem @click="markAllDone(activeTab)">
+                        <IconCheck />
                         Done
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
                   <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      Mark all as
-                    </DropdownMenuSubTrigger>
+                    <DropdownMenuItem as-child>
+                      <DropdownMenuSubTrigger>
+                        <IconSquareDashedMousePointer />
+                        Mark all as
+                      </DropdownMenuSubTrigger>
+                    </DropdownMenuItem>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem @click="markAllRead(activeTab)">
+                        <IconEye />
                         Read
                       </DropdownMenuItem>
                       <DropdownMenuItem @click="markAllUnread(activeTab)">
+                        <IconEyeOff />
                         Unread
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem @click="deleteAllNotifications(activeTab)">
+                    <IconTrash />
                     Delete all
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -228,7 +245,7 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
           </div>
           <div>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               :disabled="
                 (activeTab === 'inbox' && inboxUnreadCount === 0) ||

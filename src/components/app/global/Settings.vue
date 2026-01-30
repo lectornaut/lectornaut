@@ -61,6 +61,7 @@ import {
   unlink,
   updatePassword,
   verifyBeforeUpdateEmail,
+  type UserInfo,
 } from "firebase/auth"
 import { collection, deleteDoc, doc, getDocs } from "firebase/firestore"
 import { deleteObject, ref as storageRef } from "firebase/storage"
@@ -1092,7 +1093,7 @@ const getComputedProviderName = (provider: string) => {
 
 const passwordExists = computed(() => {
   return user.value?.providerData.some(
-    (provider) => provider.providerId === "password"
+    (provider: UserInfo) => provider.providerId === "password"
   )
 })
 
@@ -2065,7 +2066,10 @@ const df = new DateFormatter("en-US", {
                           Manage your team members and their roles.
                         </FieldDescription>
                       </FieldContent>
-                      <Button v-if="isOwner" @click="openTeamDialog('invite')">
+                      <Button
+                        v-if="isOwner"
+                        @click="openTeamDialog('invite', currentTeam!)"
+                      >
                         <IconPlus />
                         Invite Member
                       </Button>

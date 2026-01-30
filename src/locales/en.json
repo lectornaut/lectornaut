@@ -1152,6 +1152,7 @@
       "errors": {
         "invalidEmail": "Please enter a valid email address",
         "emailAlreadyAdded": "This email has already been added",
+        "cannotInviteSelf": "You cannot invite yourself",
         "noTeam": "No team to invite to"
       },
       "toasts": {

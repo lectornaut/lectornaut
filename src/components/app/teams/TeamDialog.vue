@@ -3,12 +3,16 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import { IconPlus, IconTrash, IconX } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
-import { useInvitationStore, type IInvitation } from "@/stores/invitationStore"
+import {
+  useInvitationStore,
+  useTeamInvitations,
+  type IInvitation,
+} from "@/stores/invitationStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole, ITeam } from "@/types"
 import { validateImageFile } from "@/utils/imageFile"
-import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
+import { useCurrentUser } from "vuefire"
 
 /** Member pending invite or already on team */
 interface PendingMember {
@@ -37,10 +41,10 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { createTeam, updateTeam, currentTeam } = useTeamActions()
+const { createTeam, updateTeam } = useTeamActions()
 const membershipStore = useMembershipStore()
 const invitationStore = useInvitationStore()
-const { teamInvitations } = storeToRefs(invitationStore)
+const user = useCurrentUser()
 
 // State
 const isOpen = ref(props.open || false)
@@ -52,6 +56,14 @@ const inviteEmail = ref("")
 const inviteRole = ref<IMembershipRole>(defaultTeamRole)
 const members = ref<PendingMember[]>([])
 const removedMemberIds = ref<string[]>([])
+
+// Local Invitation Query
+const targetTeamId = computed(() => {
+  if (props.mode === "create") return null
+  return props.team?.id
+})
+
+const teamInvitations = useTeamInvitations(targetTeamId)
 
 // Computed
 const activeMembers = computed(() => {
@@ -247,6 +259,12 @@ const addMember = (e?: Event) => {
     return
   }
 
+  // Check if email is current user's email
+  if (user.value?.email === email) {
+    toast.error(t("components.teamDialog.errors.cannotInviteSelf"))
+    return
+  }
+
   members.value.push({
     email: email,
     role: inviteRole.value,
@@ -269,20 +287,23 @@ const handleSubmit = async () => {
   try {
     if (props.mode === "create") {
       // 1. Create Team (useTeamActions handles success toast)
-      await createTeam(teamName.value, photoFile.value || undefined)
+      const newTeamId = await createTeam(
+        teamName.value,
+        photoFile.value || undefined
+      )
 
       // 2. Invite Members to New Team
-      if (members.value.length > 0) {
-        const newTeam = currentTeam.value
-        if (newTeam) {
-          const results = await inviteMembers(
-            newTeam.id,
-            newTeam,
-            members.value
-          )
-          if (results.some((r) => !r.success)) {
-            showInviteResultToast(results)
-          }
+      if (newTeamId && members.value.length > 0) {
+        // Construct minimal team object for invitations
+        // We cast to ITeam because we know inviteMembers only needs name and id for sending invites
+        const newTeam = {
+          id: newTeamId,
+          name: teamName.value,
+        } as ITeam
+
+        const results = await inviteMembers(newTeam.id, newTeam, members.value)
+        if (results.some((r) => !r.success)) {
+          showInviteResultToast(results)
         }
       }
     } else if (props.mode === "edit" && props.team) {
@@ -337,8 +358,7 @@ const handleSubmit = async () => {
       }
     } else if (props.mode === "invite") {
       // Invite Mode
-      // Use props.team if available, otherwise fallback to currentTeam
-      const targetTeam = props.team || currentTeam.value
+      const targetTeam = props.team
       if (!targetTeam) throw new Error(t("components.teamDialog.errors.noTeam"))
 
       if (members.value.length > 0) {

@@ -72,7 +72,7 @@ const userInput = ref("")
           <AiChat />
           <Separator />
           <SheetFooter>
-            <InputGroup class="bg-secondary">
+            <InputGroup>
               <InputGroupTextarea
                 v-model="userInput"
                 placeholder="Ask, Search or Chat..."

@@ -2,11 +2,14 @@
 import {
   IconBookmark,
   IconCheck,
-  IconCheckCircle,
   IconCircle,
+  IconEye,
+  IconEyeOff,
   IconInbox,
   IconMail,
   IconSparkles,
+  IconSquareDashedMousePointer,
+  IconSquareMousePointer,
   IconTrash,
 } from "@/data/icons"
 import { type INotification } from "@/types"
@@ -27,6 +30,8 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+
+const timeAgo = useTimeAgo(() => props.notification.createdAt)
 
 const typeIcon = computed(() => {
   switch (props.notification.type) {
@@ -78,26 +83,19 @@ const handleClick = () => {
             <ButtonGroup class="hidden group-hover:flex">
               <TooltipProvider>
                 <ButtonGroup>
-                  <Tooltip v-if="notification.read === false">
+                  <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
                         size="icon-sm"
-                        @click.stop="emit('mark-read', notification.id)"
+                        @click.stop="
+                          notification.read
+                            ? emit('mark-unread', notification.id)
+                            : emit('mark-read', notification.id)
+                        "
                       >
-                        <IconCheckCircle />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent> Mark as read </TooltipContent>
-                  </Tooltip>
-                  <Tooltip v-if="notification.read === true">
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="outline"
-                        size="icon-sm"
-                        @click.stop="emit('mark-unread', notification.id)"
-                      >
-                        <IconCircle />
+                        <IconEyeOff v-if="notification.read" />
+                        <IconEye v-else />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent> Mark as unread </TooltipContent>
@@ -144,55 +142,55 @@ const handleClick = () => {
               </TooltipProvider>
             </ButtonGroup>
             <span
-              class="text-muted-foreground flex text-[10px] tabular-nums group-hover:hidden"
+              class="text-muted-foreground/50 flex text-xs group-hover:hidden"
             >
-              {{
-                new Intl.DateTimeFormat("en-US", {
-                  hour: "numeric",
-                  minute: "numeric",
-                  month: "short",
-                  day: "numeric",
-                }).format(notification.createdAt)
-              }}
+              {{ timeAgo }}
             </span>
           </ItemActions>
         </RouterLink>
       </Item>
     </ContextMenuTrigger>
     <ContextMenuContent align="start" side="bottom">
-      <ContextMenuLabel class="text-muted-foreground text-xs">
-        Mark as
-      </ContextMenuLabel>
-      <ContextMenuRadioGroup
-        :model-value="notification.read ? 'read' : 'unread'"
-        @update:model-value="
-          (val) => {
-            if (val === 'read') emit('mark-read', notification.id)
-            if (val === 'unread') emit('mark-unread', notification.id)
-          }
-        "
-      >
-        <ContextMenuRadioItem value="read"> Read </ContextMenuRadioItem>
-        <ContextMenuRadioItem value="unread"> Unread </ContextMenuRadioItem>
-      </ContextMenuRadioGroup>
-      <ContextMenuSeparator />
-      <ContextMenuLabel class="text-muted-foreground text-xs">
-        Move to
-      </ContextMenuLabel>
-      <ContextMenuRadioGroup
-        :model-value="notification.status"
-        @update:model-value="
-          (val) => {
-            if (val === 'inbox') emit('mark-inbox', notification.id)
-            if (val === 'saved') emit('mark-saved', notification.id)
-            if (val === 'done') emit('mark-done', notification.id)
-          }
-        "
-      >
-        <ContextMenuRadioItem value="inbox"> Inbox </ContextMenuRadioItem>
-        <ContextMenuRadioItem value="saved"> Save </ContextMenuRadioItem>
-        <ContextMenuRadioItem value="done"> Done </ContextMenuRadioItem>
-      </ContextMenuRadioGroup>
+      <ContextMenuSub>
+        <ContextMenuItem as-child>
+          <ContextMenuSubTrigger>
+            <IconSquareMousePointer />
+            Move to
+          </ContextMenuSubTrigger>
+        </ContextMenuItem>
+        <ContextMenuSubContent>
+          <ContextMenuItem @click="emit('mark-inbox', notification.id)">
+            <IconInbox />
+            Inbox
+          </ContextMenuItem>
+          <ContextMenuItem @click="emit('mark-saved', notification.id)">
+            <IconBookmark />
+            Saved
+          </ContextMenuItem>
+          <ContextMenuItem @click="emit('mark-done', notification.id)">
+            <IconCheck />
+            Done
+          </ContextMenuItem>
+        </ContextMenuSubContent>
+      </ContextMenuSub>
+      <ContextMenuSub>
+        <ContextMenuItem as-child>
+          <ContextMenuSubTrigger>
+            <IconSquareDashedMousePointer />
+            Mark as
+          </ContextMenuSubTrigger>
+        </ContextMenuItem>
+        <ContextMenuSubContent>
+          <ContextMenuItem @click="emit('mark-read', notification.id)">
+            <IconEye />
+            Read
+          </ContextMenuItem>
+          <ContextMenuItem @click="emit('mark-unread', notification.id)">
+            <IconEyeOff />
+            Unread
+          </ContextMenuItem>
+        </ContextMenuSubContent>
+      </ContextMenuSub>
       <ContextMenuSeparator />
       <ContextMenuItem @click="emit('delete', notification.id)">
         <IconTrash />

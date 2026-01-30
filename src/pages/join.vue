@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { IconTrash } from "@/data/icons"
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { IconArrowLeft } from "@/data/icons"
+import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { useAuthStore } from "@/stores/authStore"
 import { useInvitationStore, type IInvitation } from "@/stores/invitationStore"
@@ -17,6 +19,8 @@ definePage({
 useHead({
   title: "Join",
 })
+
+const isFullscreen = useIsFullscreen()
 
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +114,11 @@ const handleAccept = async () => {
 
   if (!invitation.value) return
 
+  if (invitation.value.status !== "pending") {
+    toast.error("Only pending invitations can be accepted.")
+    return
+  }
+
   isLoading.value = true
   try {
     await invitationStore.acceptInvitation(invitation.value)
@@ -175,62 +184,134 @@ const selectInvitation = (code: string) => {
 </script>
 
 <template>
-  <div
-    class="flex min-h-screen w-full flex-col items-center justify-center bg-gray-50 p-4 dark:bg-zinc-950"
-  >
-    <div class="w-full max-w-md space-y-4">
-      <!-- Toggle List Button -->
+  <div class="flex grow flex-col border border-lime-400">
+    <div
+      data-tauri-drag-region
+      class="grid grid-cols-2 gap-2 border border-lime-400 p-2"
+    >
       <div
-        v-if="
-          isAuthenticated &&
-          (pendingInvitations.length > 0 || declinedInvitations.length > 0)
-        "
-        class="flex justify-end"
+        data-tauri-drag-region
+        class="flex items-center justify-start border border-lime-400 transition-all"
+        :class="{ 'pl-20': isTauri && !isFullscreen }"
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="showInvitationsList = !showInvitationsList"
-        >
-          {{
-            showInvitationsList ? "Hide Invitations" : "Show All Invitations"
-          }}
+        <Button variant="ghost" size="icon-sm" as-child>
+          <RouterLink to="/">
+            <IconArrowLeft />
+          </RouterLink>
         </Button>
       </div>
-
-      <!-- Invitations List/Drawer -->
       <div
-        v-if="showInvitationsList"
-        class="bg-card animate-in slide-in-from-top-2 space-y-4 rounded-lg border p-4 shadow-sm"
+        data-tauri-drag-region
+        class="flex items-center justify-end border border-lime-400 transition-all"
       >
-        <h2 class="text-sm font-semibold">Your Invitations</h2>
+        <Button variant="ghost" size="sm">
+          <Avatar class="size-5 rounded-full">
+            <AvatarImage
+              class="rounded-fulld size-5"
+              :src="authStore.currentUser?.photoURL!"
+              :alt="authStore.currentUser?.displayName"
+              referrerpolicy="no-referrer"
+            />
+            <AvatarFallback class="size-5 rounded-full">
+              {{ getInitials(authStore.currentUser?.displayName!) }}
+            </AvatarFallback>
+          </Avatar>
+          {{ authStore.currentUser?.displayName }}
+        </Button>
+      </div>
+    </div>
+    <!-- <OverlayScrollbarsWrapper> -->
+    <OverlayScrollbarsWrapper
+      class="bg-sidebar m-auto aspect-square w-md rounded-md p-2"
+    >
+      <!-- <div class="m-2 flex grow flex-col"> -->
+      <div class="w-full max-w-md space-y-4">
+        <!-- Toggle List Button -->
+        <div
+          v-if="
+            isAuthenticated &&
+            (pendingInvitations.length > 0 || declinedInvitations.length > 0)
+          "
+          class="flex justify-end"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            @click="showInvitationsList = !showInvitationsList"
+          >
+            {{
+              showInvitationsList ? "Hide Invitations" : "Show All Invitations"
+            }}
+          </Button>
+        </div>
 
-        <div v-if="pendingInvitations.length > 0" class="space-y-2">
-          <h3
-            class="text-muted-foreground text-xs font-bold tracking-wider uppercase"
-          >
-            Pending
-          </h3>
-          <div
-            v-for="invite in pendingInvitations"
-            :key="invite.id"
-            class="hover:bg-secondary/50 group flex cursor-pointer items-center justify-between rounded-md border p-2"
-            :class="{
-              'border-primary ring-primary ring-1': invite.code === code,
-            }"
-            @click="selectInvitation(invite.code)"
-          >
-            <div class="flex flex-col">
-              <span class="text-sm font-medium">{{ invite.teamName }}</span>
-              <span class="text-muted-foreground text-xs"
-                >Invited by {{ invite.inviteeName }}</span
-              >
+        <!-- Invitations List/Drawer -->
+        <div
+          v-if="showInvitationsList"
+          class="bg-card animate-in slide-in-from-top-2 space-y-4 rounded-lg border p-4 shadow-sm"
+        >
+          <h2 class="text-sm font-semibold">Your Invitations</h2>
+
+          <div v-if="pendingInvitations.length > 0" class="space-y-2">
+            <h3
+              class="text-muted-foreground text-xs font-bold tracking-wider uppercase"
+            >
+              Pending
+            </h3>
+            <div
+              v-for="invite in pendingInvitations"
+              :key="invite.id"
+              class="hover:bg-secondary/50 group flex cursor-pointer items-center justify-between rounded-md border p-2"
+              :class="{
+                'border-primary ring-primary ring-1': invite.code === code,
+              }"
+              @click="selectInvitation(invite.code)"
+            >
+              <div class="flex flex-col">
+                <span class="text-sm font-medium">{{ invite.teamName }}</span>
+                <span class="text-muted-foreground text-xs"
+                  >Invited by {{ invite.inviteeName }}</span
+                >
+              </div>
+              <div class="flex items-center gap-2">
+                <div
+                  class="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs uppercase"
+                >
+                  Pending
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                  @click.stop="handleDelete(invite.id!)"
+                >
+                  <IconTrash class="h-3 w-3" />
+                </Button>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <div
-                class="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs uppercase"
-              >
-                Pending
+          </div>
+
+          <div v-if="declinedInvitations.length > 0" class="space-y-2">
+            <h3
+              class="text-muted-foreground text-xs font-bold tracking-wider uppercase"
+            >
+              Declined
+            </h3>
+            <div
+              v-for="invite in declinedInvitations"
+              :key="invite.id"
+              class="hover:bg-secondary/50 group flex cursor-pointer items-center justify-between rounded-md border p-2"
+              :class="{
+                'border-primary ring-primary ring-1': invite.code === code,
+              }"
+              @click="selectInvitation(invite.code)"
+            >
+              <div class="flex flex-col">
+                <span
+                  class="text-muted-foreground text-sm font-medium line-through"
+                  >{{ invite.teamName }}</span
+                >
+                <span class="text-muted-foreground text-xs">Declined</span>
               </div>
               <Button
                 variant="ghost"
@@ -244,132 +325,113 @@ const selectInvitation = (code: string) => {
           </div>
         </div>
 
-        <div v-if="declinedInvitations.length > 0" class="space-y-2">
-          <h3
-            class="text-muted-foreground text-xs font-bold tracking-wider uppercase"
-          >
-            Declined
-          </h3>
-          <div
-            v-for="invite in declinedInvitations"
-            :key="invite.id"
-            class="hover:bg-secondary/50 group flex cursor-pointer items-center justify-between rounded-md border p-2"
-            :class="{
-              'border-primary ring-primary ring-1': invite.code === code,
-            }"
-            @click="selectInvitation(invite.code)"
-          >
-            <div class="flex flex-col">
-              <span
-                class="text-muted-foreground text-sm font-medium line-through"
-                >{{ invite.teamName }}</span
-              >
-              <span class="text-muted-foreground text-xs">Declined</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-              @click.stop="handleDelete(invite.id!)"
+        <div
+          v-if="invitation || isLoading || error"
+          class="bg-card w-full max-w-md space-y-8 rounded-lg border p-8 shadow-sm"
+        >
+          <div class="flex flex-col items-center text-center">
+            <h1 class="text-2xl font-bold tracking-tight">Team Invitation</h1>
+            <p class="text-muted-foreground mt-2">
+              You have been invited to join a team.
+            </p>
+          </div>
+
+          <div v-if="isLoading" class="flex justify-center py-8">
+            <Spinner />
+          </div>
+
+          <div v-else-if="error" class="flex flex-col items-center gap-4 py-6">
+            <div
+              class="rounded-full bg-red-100 p-3 text-red-600 dark:bg-red-900/30 dark:text-red-400"
             >
-              <IconTrash class="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-if="invitation || isLoading || error"
-        class="bg-card w-full max-w-md space-y-8 rounded-lg border p-8 shadow-sm"
-      >
-        <div class="flex flex-col items-center text-center">
-          <h1 class="text-2xl font-bold tracking-tight">Team Invitation</h1>
-          <p class="text-muted-foreground mt-2">
-            You have been invited to join a team.
-          </p>
-        </div>
-
-        <div v-if="isLoading" class="flex justify-center py-8">
-          <Spinner />
-        </div>
-
-        <div v-else-if="error" class="flex flex-col items-center gap-4 py-6">
-          <div
-            class="rounded-full bg-red-100 p-3 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-          >
-            <!-- IconX / -->
-            <span class="text-xl">⚠️</span>
-          </div>
-          <p class="text-center font-medium">{{ error }}</p>
-          <div class="flex gap-2">
-            <Button variant="outline" @click="handleIgnore">Go Home</Button>
-            <Button
-              v-if="isEmailMismatch"
-              variant="default"
-              @click="handleLogout"
-            >
-              Log out
-            </Button>
-          </div>
-        </div>
-
-        <div v-else-if="invitation" class="space-y-6">
-          <div class="bg-secondary/50 rounded-md p-4">
-            <div class="grid gap-1 text-center">
-              <p class="text-muted-foreground text-sm">
-                {{
-                  invitation.status === "pending"
-                    ? "You have been invited to join"
-                    : "You declined the invitation to"
-                }}
-              </p>
-              <p class="text-lg font-bold">{{ invitation.teamName }}</p>
-              <div v-if="invitation.status === 'pending'">
-                <p class="text-muted-foreground mt-2 text-sm">Invited by</p>
-                <p class="font-medium">{{ invitation.inviteeName }}</p>
-                <p class="text-muted-foreground text-xs">
-                  ({{ invitation.inviteeEmail }})
-                </p>
-                <p class="text-muted-foreground mt-2 text-sm">Role</p>
-                <p class="font-medium capitalize">
-                  {{ invitation.role }}
-                </p>
-              </div>
-              <div v-else class="mt-4">
-                <p class="text-destructive text-sm font-medium">Declined</p>
-              </div>
+              <!-- IconX / -->
+              <span class="text-xl">⚠️</span>
             </div>
-          </div>
-
-          <div
-            v-if="invitation.status === 'pending'"
-            class="flex flex-col gap-3"
-          >
-            <Button class="w-full" size="lg" @click="handleAccept">
-              Accept Invitation
-            </Button>
-            <div class="grid grid-cols-2 gap-3">
-              <Button variant="outline" @click="handleDecline">Decline</Button>
+            <p class="text-center font-medium">{{ error }}</p>
+            <div class="flex gap-2">
+              <Button variant="outline" @click="handleIgnore">Go Home</Button>
               <Button
-                variant="destructive"
-                @click="handleDelete(invitation.id!)"
+                v-if="isEmailMismatch"
+                variant="default"
+                @click="handleLogout"
               >
-                Delete
+                Log out
               </Button>
             </div>
           </div>
 
-          <div v-else class="flex flex-col gap-3">
-            <Button
-              variant="destructive"
-              class="w-full"
-              @click="handleDelete(invitation.id!)"
+          <div v-else-if="invitation" class="space-y-6">
+            <div class="bg-secondary/50 rounded-md p-4">
+              <div class="grid gap-1 text-center">
+                <p class="text-muted-foreground text-sm">
+                  {{
+                    invitation.status === "pending"
+                      ? "You have been invited to join"
+                      : "You declined the invitation to"
+                  }}
+                </p>
+                <p class="text-lg font-bold">{{ invitation.teamName }}</p>
+                <div v-if="invitation.status === 'pending'">
+                  <p class="text-muted-foreground mt-2 text-sm">Invited by</p>
+                  <p class="font-medium">{{ invitation.inviteeName }}</p>
+                  <p class="text-muted-foreground text-xs">
+                    ({{ invitation.inviteeEmail }})
+                  </p>
+                  <p class="text-muted-foreground mt-2 text-sm">Role</p>
+                  <p class="font-medium capitalize">
+                    {{ invitation.role }}
+                  </p>
+                </div>
+                <div v-else class="mt-4">
+                  <p class="text-destructive text-sm font-medium">Declined</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-if="invitation.status === 'pending'"
+              class="flex flex-col gap-3"
             >
-              Delete Invitation
-            </Button>
-            <Button variant="ghost" @click="handleIgnore">Go Home</Button>
+              <Button class="w-full" size="lg" @click="handleAccept">
+                Accept Invitation
+              </Button>
+              <div class="grid grid-cols-2 gap-3">
+                <Button variant="outline" @click="handleDecline">
+                  Decline
+                </Button>
+                <Button
+                  variant="destructive"
+                  @click="handleDelete(invitation.id!)"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+
+            <div v-else class="flex flex-col gap-3">
+              <Button
+                variant="destructive"
+                class="w-full"
+                @click="handleDelete(invitation.id!)"
+              >
+                Delete Invitation
+              </Button>
+              <Button variant="ghost" @click="handleIgnore">Go Home</Button>
+            </div>
           </div>
         </div>
+      </div>
+      <!-- </div> -->
+    </OverlayScrollbarsWrapper>
+    <!-- </OverlayScrollbarsWrapper> -->
+    <div class="flex flex-col items-center gap-4 border border-lime-400 p-2">
+      <div class="flex flex-col items-center gap-2">
+        <span class="text-muted-foreground truncate text-xs">
+          {{ authStore.currentUser?.email }}
+        </span>
+        <Button variant="outline" size="sm" @click="handleLogout">
+          Use a different account
+        </Button>
       </div>
     </div>
   </div>

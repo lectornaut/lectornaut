@@ -42,7 +42,7 @@ import {
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
 import { defineStore, storeToRefs } from "pinia"
-import { computed } from "vue"
+import { computed, unref, type MaybeRef } from "vue"
 import { useCollection } from "vuefire"
 
 export interface IInvitation {
@@ -274,6 +274,9 @@ export const useInvitationStore = defineStore("invitations", () => {
   async function acceptInvitation(invitation: IInvitation): Promise<void> {
     const user = currentUser.value
     if (!user) throw new Error("Not authenticated")
+    if (invitation.status !== "pending") {
+      throw new Error("Only pending invitations can be accepted.")
+    }
     if (!invitation.id) throw new Error("Invalid invitation")
 
     const { teamId, id: invitationId, role } = invitation
@@ -343,3 +346,39 @@ export const useInvitationStore = defineStore("invitations", () => {
     declineInvitation,
   }
 })
+
+/**
+ * Composable to fetch invitations for a specific team.
+ * Intelligently reuses store data if the requested team is the current team.
+ */
+export function useTeamInvitations(
+  teamId: MaybeRef<string | undefined | null>
+) {
+  const store = useInvitationStore()
+  const authStore = useAuthStore()
+
+  const targetId = computed(() => unref(teamId))
+  const isCurrentTeam = computed(
+    () => targetId.value && targetId.value === authStore.currentTeamId
+  )
+
+  // Local query: active only if NOT the current team
+  const localQuery = computed(() => {
+    if (!targetId.value || isCurrentTeam.value) return null
+    return query(
+      collection(firestore, "invitations"),
+      where("teamId", "==", targetId.value)
+    )
+  })
+
+  // We rely on vuefire's automatic unsubscription when the component unmounts
+  // or when the query becomes null.
+  const { data: localInvitations } = useCollection<IInvitation>(localQuery)
+
+  return computed(() => {
+    if (isCurrentTeam.value) {
+      return store.teamInvitations || []
+    }
+    return localInvitations.value || []
+  })
+}
