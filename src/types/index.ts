@@ -54,7 +54,7 @@ export interface IMembership {
 }
 
 export type INotificationStatus = "inbox" | "saved" | "done"
-export type INotificationType = "welcome" | "invitation"
+export type INotificationType = "welcome" | "invitation" | "system"
 
 export interface INotification {
   id: string

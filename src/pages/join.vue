@@ -252,13 +252,13 @@ const handleLogout = async () => {
                           {{ invite.teamName }}
                           <span class="text-muted-foreground/50 text-xs">
                             [{{ invite.role }}] invited by
-                            {{ invite.inviteeName }}
+                            {{ invite.inviterName }}
                           </span>
                         </SelectText>
                       </SelectItem>
                     </TooltipTrigger>
                     <TooltipContent side="right">
-                      {{ invite.inviteeEmail }} on
+                      {{ invite.inviterEmail }} on
                       {{
                         new Intl.DateTimeFormat("en-US", {
                           hour: "numeric",
@@ -286,13 +286,13 @@ const handleLogout = async () => {
                           {{ invite.teamName }}
                           <span class="text-muted-foreground/50 text-xs">
                             [{{ invite.role }}] invited by
-                            {{ invite.inviteeName }}
+                            {{ invite.inviterName }}
                           </span>
                         </SelectText>
                       </SelectItem>
                     </TooltipTrigger>
                     <TooltipContent side="right">
-                      {{ invite.inviteeEmail }} on
+                      {{ invite.inviterEmail }} on
                       {{
                         new Intl.DateTimeFormat("en-US", {
                           hour: "numeric",
@@ -357,13 +357,13 @@ const handleLogout = async () => {
               </EmptyMedia>
               <EmptyTitle> Join {{ invitation.teamName }} </EmptyTitle>
               <EmptyDescription>
-                {{ invitation.inviteeName }} invited you to join as a
+                {{ invitation.inviterName }} invited you to join as a
                 {{ invitation.role }}
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <span class="text-muted-foreground text-xs">
-                {{ invitation.inviteeEmail }} sent this invitation on
+                {{ invitation.inviterEmail }} sent this invitation on
                 {{
                   new Intl.DateTimeFormat("en-US", {
                     hour: "numeric",

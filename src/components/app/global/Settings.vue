@@ -2020,21 +2020,6 @@ const df = new DateFormatter("en-US", {
                     </Field>
                     <Field orientation="horizontal">
                       <FieldContent>
-                        <FieldLabel for="push-notifications">
-                          {{ t("settings.notifications.channels.push.label") }}
-                        </FieldLabel>
-                        <FieldDescription>
-                          {{
-                            t(
-                              "settings.notifications.channels.push.description"
-                            )
-                          }}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch id="push-notifications" :model-value="true" />
-                    </Field>
-                    <Field orientation="horizontal">
-                      <FieldContent>
                         <FieldLabel for="inapp-notifications">
                           {{ t("settings.notifications.channels.inApp.label") }}
                         </FieldLabel>
@@ -2047,6 +2032,21 @@ const df = new DateFormatter("en-US", {
                         </FieldDescription>
                       </FieldContent>
                       <Switch id="inapp-notifications" :model-value="true" />
+                    </Field>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel for="push-notifications">
+                          {{ t("settings.notifications.channels.push.label") }}
+                        </FieldLabel>
+                        <FieldDescription>
+                          {{
+                            t(
+                              "settings.notifications.channels.push.description"
+                            )
+                          }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Switch id="push-notifications" :model-value="true" />
                     </Field>
                   </FieldSet>
                 </FieldGroup>

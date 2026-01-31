@@ -1,12 +1,10 @@
 import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
 import { googleAI } from "@genkit-ai/google-genai"
 import { onCallGenkit } from "firebase-functions/https"
-import { defineSecret } from "firebase-functions/params"
 import { genkit, z } from "genkit"
+import { geminiApiKey } from "./secrets.js"
 
 enableFirebaseTelemetry()
-
-const apiKey = defineSecret("GEMINI_API_KEY")
 
 /**
  * Genkit Initialization
@@ -44,7 +42,7 @@ const generatePoemStreamingFlow = ai.defineFlow(
 
 export const generateFlow = onCallGenkit(
   {
-    secrets: [apiKey],
+    secrets: [geminiApiKey],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },

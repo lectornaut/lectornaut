@@ -4,7 +4,7 @@ import {
 } from "@/composables/useKeychain"
 import { isTauri } from "@/composables/usePlatform"
 import { generateRandomString } from "@/helpers/utilities"
-import { auth, functions } from "@/modules/firebase"
+import { auth } from "@/modules/firebase"
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { updateUserData } from "@/queries/updateUserData"
@@ -24,7 +24,6 @@ import {
   signInWithEmailLink,
   type UserCredential,
 } from "firebase/auth"
-import { httpsCallable } from "firebase/functions"
 import { toast } from "vue-sonner"
 
 // Type definitions for Tauri OAuth responses
@@ -226,23 +225,6 @@ const finishAuthentication = async (result: UserCredential) => {
   }
 
   if (getAdditionalUserInfo(result)?.isNewUser) {
-    try {
-      // Send welcome email
-      const sendEmail = httpsCallable(functions, "sendEmail")
-
-      await sendEmail({
-        email: user.email,
-        subject: "Welcome to Lectornaut!",
-        template: "welcome",
-        data: {
-          displayName: user.displayName || "there",
-          ctaUrl: `${window.location.origin}/welcome`,
-        },
-      }).catch((error) => console.error("Failed to send welcome email:", error))
-    } catch (error) {
-      console.error("Error initiating welcome email:", error)
-    }
-
     setDefaultUserData()
     await router.push("/welcome")
   } else {

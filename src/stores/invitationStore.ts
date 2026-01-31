@@ -14,8 +14,8 @@
  * {
  *   teamId: string
  *   teamName: string
- *   inviteeName: string
- *   inviteeEmail: string
+ *   inviterName: string
+ *   inviterEmail: string
  *   email: string
  *   role: string
  *   status: "pending" | "declined"
@@ -24,9 +24,16 @@
  * }
  */
 
-import { firestore, functions } from "@/modules/firebase"
+import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import type { IMembershipRole } from "@/types"
+import { getMembershipRef, getTeamRef } from "@/utils/firebase-helpers"
+import {
+  cloneState,
+  createPendingSet,
+  generateOperationId,
+  withOptimisticUpdate,
+} from "@/utils/firebase-optimistic"
 import {
   addDoc,
   collection,
@@ -40,27 +47,37 @@ import {
   where,
   type Timestamp,
 } from "firebase/firestore"
-import { httpsCallable } from "firebase/functions"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, unref, type MaybeRef } from "vue"
+import { computed, ref, shallowRef, unref, type MaybeRef } from "vue"
 import { useCollection } from "vuefire"
 
 export interface IInvitation {
   id?: string
   teamId: string
   teamName: string
-  inviteeName: string
-  inviteeEmail: string
+  inviterName: string
+  inviterEmail: string
   email: string
   role: IMembershipRole
   status: "pending" | "declined"
   code: string
   createdAt: Timestamp
+  resentAt?: Timestamp
 }
 
 export const useInvitationStore = defineStore("invitations", () => {
   const authStore = useAuthStore()
   const { currentUser, userProfile, currentTeamId } = storeToRefs(authStore)
+
+  // ============================================================================
+  // Optimistic State
+  // ============================================================================
+
+  /** Local invitations that can be optimistically updated */
+  const optimisticInvitations = ref<IInvitation[]>([])
+
+  /** Pending operation tracking */
+  const pendingInvitationIds = shallowRef(createPendingSet())
 
   // ============================================================================
   // VueFire Reactive Bindings
@@ -76,7 +93,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     )
   })
 
-  const { data: teamInvitations, pending: isTeamInvitationsLoading } =
+  const { data: firestoreTeamInvitations, pending: isTeamInvitationsLoading } =
     useCollection<IInvitation>(teamInvitationsQuery)
 
   // 2. Invitations for the current user (Visible on Join Page / Dashboard)
@@ -88,8 +105,90 @@ export const useInvitationStore = defineStore("invitations", () => {
     )
   })
 
-  const { data: userInvitations, pending: isUserInvitationsLoading } =
+  const { data: firestoreUserInvitations, pending: isUserInvitationsLoading } =
     useCollection<IInvitation>(userInvitationsQuery)
+
+  // ============================================================================
+  // Computed - Merged State
+  // ============================================================================
+
+  /** Merged team invitations (live + optimistic) */
+  const teamInvitations = computed(() => {
+    const teamId = currentTeamId.value
+    if (!teamId) return []
+
+    const pending = pendingInvitationIds.value
+    if (pending.size === 0) return firestoreTeamInvitations.value || []
+
+    const result: IInvitation[] = []
+    const firestoreData = firestoreTeamInvitations.value || []
+
+    // Add Firestore data, replacing with optimistic if pending
+    firestoreData.forEach((inv) => {
+      if (inv.id && pending.has(inv.id)) {
+        const optimistic = optimisticInvitations.value.find(
+          (oi) => oi.id === inv.id
+        )
+        if (optimistic) {
+          result.push(optimistic)
+          return
+        }
+      }
+      result.push(inv)
+    })
+
+    // Add new optimistic invitations that haven't hit Firestore yet
+    optimisticInvitations.value.forEach((inv) => {
+      if (
+        inv.id &&
+        pending.has(inv.id) &&
+        inv.teamId === teamId &&
+        !result.some((r) => r.id === inv.id)
+      ) {
+        result.push(inv)
+      }
+    })
+
+    return result
+  })
+
+  /** Merged user invitations (live + optimistic) */
+  const userInvitations = computed(() => {
+    const email = currentUser.value?.email
+    if (!email) return []
+
+    const pending = pendingInvitationIds.value
+    if (pending.size === 0) return firestoreUserInvitations.value || []
+
+    const result: IInvitation[] = []
+    const firestoreData = firestoreUserInvitations.value || []
+
+    firestoreData.forEach((inv) => {
+      if (inv.id && pending.has(inv.id)) {
+        const optimistic = optimisticInvitations.value.find(
+          (oi) => oi.id === inv.id
+        )
+        if (optimistic) {
+          result.push(optimistic)
+          return
+        }
+      }
+      result.push(inv)
+    })
+
+    optimisticInvitations.value.forEach((inv) => {
+      if (
+        inv.id &&
+        pending.has(inv.id) &&
+        inv.email === email &&
+        !result.some((r) => r.id === inv.id)
+      ) {
+        result.push(inv)
+      }
+    })
+
+    return result
+  })
 
   // ============================================================================
   // Helpers
@@ -132,11 +231,13 @@ export const useInvitationStore = defineStore("invitations", () => {
       throw new Error("A pending invitation already exists for this user.")
     }
 
-    const invitation: Omit<IInvitation, "id"> = {
+    const opId = generateOperationId()
+    const invitation: IInvitation = {
+      id: opId, // temporary ID for optimistic tracking
       teamId,
       teamName,
-      inviteeName: profile.displayName || user.email || "Unknown",
-      inviteeEmail: user.email!,
+      inviterName: profile.displayName || user.email || "Unknown",
+      inviterEmail: user.email!,
       email,
       role,
       status: "pending",
@@ -144,90 +245,61 @@ export const useInvitationStore = defineStore("invitations", () => {
       createdAt: serverTimestamp() as Timestamp,
     }
 
-    await addDoc(collection(firestore, "invitations"), invitation)
+    const previousOptimistic = cloneState(optimisticInvitations.value)
 
-    try {
-      // Send email via Cloud Function
-      const sendEmail = httpsCallable(functions, "sendEmail")
-      const inviteUrl = `${window.location.origin}/join?code=${invitation.code}`
-
-      await sendEmail({
-        email: invitation.email,
-        subject: `You've been invited to join ${teamName} on Lectornaut`,
-        template: "invitation",
-        data: {
-          teamName: invitation.teamName,
-          inviteeName: invitation.inviteeName,
-          inviteeEmail: invitation.inviteeEmail,
-          role: invitation.role,
-          ctaUrl: inviteUrl,
-        },
-      }).catch((error) =>
-        console.error("Failed to send invitation email:", error)
-      )
-    } catch (error) {
-      console.error("Failed to send invitation email:", error)
-      // We don't throw here because the invitation was successfully created in Firestore
-      // The user can retry sending via "Resend" button if needed
-    }
+    await withOptimisticUpdate(
+      pendingInvitationIds.value,
+      opId,
+      () => {
+        optimisticInvitations.value = [
+          ...optimisticInvitations.value,
+          invitation,
+        ]
+      },
+      () => {
+        optimisticInvitations.value = previousOptimistic
+      },
+      async () => {
+        const { id, ...data } = invitation
+        await addDoc(collection(firestore, "invitations"), data)
+      }
+    )
   }
 
   /**
    * Resend an invitation (invalidate old, create new)
-   * This re-triggers the email extension
+   * This re-triggers the backend function via document creation
    */
   async function resendInvitation(invitation: IInvitation): Promise<void> {
     if (!invitation.id) return
 
-    const { teamId, teamName, inviteeName, inviteeEmail, email, role } =
-      invitation
+    const invRef = doc(firestore, "invitations", invitation.id)
+    const previousOptimistic = cloneState(optimisticInvitations.value)
 
-    const newInvitationCode = generateInvitationCode()
-
-    await runTransaction(firestore, async (transaction) => {
-      // 1. Delete old invitation
-      const oldRef = doc(firestore, "invitations", invitation.id!)
-      transaction.delete(oldRef)
-
-      // 2. Create new invitation with fresh details
-      const newInvitation: Omit<IInvitation, "id"> = {
-        teamId,
-        teamName,
-        inviteeName,
-        inviteeEmail,
-        email,
-        role,
-        status: "pending",
-        code: newInvitationCode,
-        createdAt: serverTimestamp() as Timestamp,
+    await withOptimisticUpdate(
+      pendingInvitationIds.value,
+      invitation.id,
+      () => {
+        optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
+          inv.id === invitation.id
+            ? {
+                ...inv,
+                status: "pending",
+                resentAt: serverTimestamp() as Timestamp,
+              }
+            : inv
+        )
+      },
+      () => {
+        optimisticInvitations.value = previousOptimistic
+      },
+      async () => {
+        await updateDoc(invRef, {
+          status: "pending",
+          resentAt: serverTimestamp(),
+        })
       }
-
-      const newRef = doc(collection(firestore, "invitations"))
-      transaction.set(newRef, newInvitation)
-    })
-
-    try {
-      // Send email via Cloud Function
-      const sendEmail = httpsCallable(functions, "sendEmail")
-      const inviteUrl = `${window.location.origin}/join?code=${newInvitationCode}`
-
-      await sendEmail({
-        email: email,
-        subject: `You've been invited to join ${teamName} on Lectornaut`,
-        template: "invitation",
-        data: {
-          teamName,
-          inviteeName,
-          inviteeEmail,
-          role: role,
-          ctaUrl: inviteUrl,
-        },
-      }).catch((error) =>
-        console.error("Failed to send invitation email:", error)
-      )
-    } catch (error) {
-      console.error("Failed to send invitation email:", error)
-    }
+    )
   }
 
   /**
@@ -238,14 +310,47 @@ export const useInvitationStore = defineStore("invitations", () => {
     role: IMembershipRole
   ): Promise<void> {
     const invRef = doc(firestore, "invitations", invitationId)
-    await updateDoc(invRef, { role })
+    const previousOptimistic = cloneState(optimisticInvitations.value)
+
+    await withOptimisticUpdate(
+      pendingInvitationIds.value,
+      invitationId,
+      () => {
+        optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
+          inv.id === invitationId ? { ...inv, role } : inv
+        )
+      },
+      () => {
+        optimisticInvitations.value = previousOptimistic
+      },
+      async () => {
+        await updateDoc(invRef, { role })
+      }
+    )
   }
 
   /**
    * Cancel/Delete an invitation
    */
   async function cancelInvitation(invitationId: string): Promise<void> {
-    await deleteDoc(doc(firestore, "invitations", invitationId))
+    const invRef = doc(firestore, "invitations", invitationId)
+    const previousOptimistic = cloneState(optimisticInvitations.value)
+
+    await withOptimisticUpdate(
+      pendingInvitationIds.value,
+      invitationId,
+      () => {
+        optimisticInvitations.value = optimisticInvitations.value.filter(
+          (inv) => inv.id !== invitationId
+        )
+      },
+      () => {
+        optimisticInvitations.value = previousOptimistic
+      },
+      async () => {
+        await deleteDoc(invRef)
+      }
+    )
   }
 
   /**
@@ -280,56 +385,89 @@ export const useInvitationStore = defineStore("invitations", () => {
     if (!invitation.id) throw new Error("Invalid invitation")
 
     const { teamId, id: invitationId, role } = invitation
+    const previousOptimistic = cloneState(optimisticInvitations.value)
 
-    await runTransaction(firestore, async (transaction) => {
-      // Double check invitation exists and is pending
-      const invRef = doc(firestore, "invitations", invitationId!)
-      const invSnap = await transaction.get(invRef)
+    // Note: We only handle invitation removal optimistically here.
+    // Membership addition happens in its own store if we wanted full coverage,
+    // but the invitation leaving the list is the most important immediate feedback.
+    await withOptimisticUpdate(
+      pendingInvitationIds.value,
+      invitationId,
+      () => {
+        optimisticInvitations.value = optimisticInvitations.value.filter(
+          (inv) => inv.id !== invitationId
+        )
+      },
+      () => {
+        optimisticInvitations.value = previousOptimistic
+      },
+      async () => {
+        await runTransaction(firestore, async (transaction) => {
+          // Double check invitation exists and is pending
+          const invRef = doc(firestore, "invitations", invitationId!)
+          const invSnap = await transaction.get(invRef)
 
-      if (!invSnap.exists()) throw new Error("Invitation no longer exists")
-      const invData = invSnap.data() as IInvitation
-      if (invData.status !== "pending")
-        throw new Error("Invitation is not pending")
+          if (!invSnap.exists()) throw new Error("Invitation no longer exists")
+          const invData = invSnap.data() as IInvitation
+          if (invData.status !== "pending")
+            throw new Error("Invitation is not pending")
 
-      // Create membership
-      const teamRef = doc(firestore, "teams", teamId)
-      const teamSnap = await transaction.get(teamRef)
-      if (!teamSnap.exists()) throw new Error("Team no longer exists")
+          // Create membership
+          const teamRef = getTeamRef(teamId)
+          const teamSnap = await transaction.get(teamRef)
+          if (!teamSnap.exists()) throw new Error("Team no longer exists")
 
-      // Add membership
-      const membershipRef = doc(firestore, "teams", teamId, "members", user.uid)
+          // Add membership
+          const membershipRef = getMembershipRef(teamId, user.uid)
 
-      transaction.set(membershipRef, {
-        userId: user.uid,
-        teamId,
-        role,
-        user: userProfile.value,
-        team: teamSnap.data(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
+          transaction.set(membershipRef, {
+            userId: user.uid,
+            teamId,
+            role,
+            user: userProfile.value,
+            team: teamSnap.data(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          })
 
-      // Delete invitation
-      transaction.delete(invRef)
+          // Delete invitation
+          transaction.delete(invRef)
 
-      // Update user profile currentTeamId if they don't have one
-      if (!userProfile.value?.currentTeamId) {
-        const userRef = doc(firestore, "users", user.uid)
-        transaction.update(userRef, {
-          currentTeamId: teamId,
-          updatedAt: serverTimestamp(),
+          // Update user profile currentTeamId if they don't have one
+          if (!userProfile.value?.currentTeamId) {
+            const userRef = doc(firestore, "users", user.uid)
+            transaction.update(userRef, {
+              currentTeamId: teamId,
+              updatedAt: serverTimestamp(),
+            })
+          }
         })
       }
-    })
+    )
   }
 
   /**
    * Decline an invitation
    */
   async function declineInvitation(invitationId: string): Promise<void> {
-    // Check if document exists first? Or just try update
     const invRef = doc(firestore, "invitations", invitationId)
-    await updateDoc(invRef, { status: "declined" })
+    const previousOptimistic = cloneState(optimisticInvitations.value)
+
+    await withOptimisticUpdate(
+      pendingInvitationIds.value,
+      invitationId,
+      () => {
+        optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
+          inv.id === invitationId ? { ...inv, status: "declined" } : inv
+        )
+      },
+      () => {
+        optimisticInvitations.value = previousOptimistic
+      },
+      async () => {
+        await updateDoc(invRef, { status: "declined" })
+      }
+    )
   }
 
   return {

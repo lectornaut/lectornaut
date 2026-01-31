@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useTeamActions } from "@/composables/useTeamActions"
-import { IconPlus, IconTrash, IconX } from "@/data/icons"
+import { IconPlus, IconSend, IconTrash, IconX } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
 import {
@@ -72,6 +72,19 @@ const activeMembers = computed(() => {
 
 const stagedInvites = computed(() => {
   return members.value.filter((m) => !m.id)
+})
+
+const userRole = computed(() => {
+  if (props.mode === "create") return "owner"
+  if (!props.team) return null
+  const membership = membershipStore.memberships.find(
+    (m) => m.teamId === props.team?.id
+  )
+  return membership?.role ?? null
+})
+
+const isPrivileged = computed(() => {
+  return userRole.value === "owner" || userRole.value === "admin"
 })
 
 // Photo Upload State
@@ -420,11 +433,11 @@ const handleSubmit = async () => {
 
       <div class="mt-4 grid gap-4">
         <!-- Team Profile Picture (Create/Edit Mode) -->
-        <div v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
+        <Field v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
           <div class="flex flex-col items-center gap-2">
-            <Label class="text-secondary-foreground text-xs">
+            <FieldLabel class="text-secondary-foreground text-xs">
               {{ t("components.teamDialog.labels.teamPhoto") }}
-            </Label>
+            </FieldLabel>
             <div class="group relative">
               <TooltipProvider>
                 <Tooltip>
@@ -474,10 +487,10 @@ const handleSubmit = async () => {
               }}
             </p>
           </div>
-        </div>
+        </Field>
 
         <!-- Team Name (Create/Edit Mode) -->
-        <Field v-if="mode === 'create' || mode === 'edit'">
+        <Field v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
           <FieldLabel class="text-secondary-foreground text-xs" for="name">
             {{ t("components.teamDialog.labels.teamName") }}
           </FieldLabel>
@@ -490,11 +503,10 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- 1. MEMBERS SECTION (Active) -->
-        <div v-if="mode === 'edit'" class="space-y-3">
-          <Label class="text-base font-semibold">
+        <Field v-if="mode === 'edit'" class="grid gap-2">
+          <FieldLabel class="text-secondary-foreground text-xs">
             {{ t("components.teamDialog.labels.members") }}
-          </Label>
-
+          </FieldLabel>
           <div class="space-y-2">
             <ButtonGroup
               v-for="member in activeMembers"
@@ -548,24 +560,16 @@ const handleSubmit = async () => {
               No active members found.
             </p>
           </div>
-        </div>
+        </Field>
 
         <!-- 2. INVITATIONS SECTION -->
-        <div class="space-y-4">
-          <Label class="text-base font-semibold">
-            {{
-              mode === "create"
-                ? t("components.teamDialog.labels.inviteMembers")
-                : "Invitations"
-            }}
-          </Label>
-
+        <!-- Invite -->
+        <Field class="grid gap-2">
           <!-- 2a. Invite Input + Staged List -->
-          <div class="space-y-2">
-            <Label
-              class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
-              >Invite via Email</Label
-            >
+          <div class="grid gap-2">
+            <FieldLabel class="text-secondary-foreground text-xs">
+              Invite
+            </FieldLabel>
 
             <!-- Input Form -->
             <form @submit="addMember">
@@ -604,115 +608,48 @@ const handleSubmit = async () => {
                 </ButtonGroup>
               </ButtonGroup>
             </form>
-
-            <!-- Staged Invites List (New, not yet sent/saved) -->
-            <div v-if="stagedInvites.length > 0" class="space-y-2 pt-2">
-              <ButtonGroup
-                v-for="(member, index) in stagedInvites"
-                :key="index"
-                class="w-full"
-              >
-                <ButtonGroup class="flex-1">
-                  <div class="relative w-full">
-                    <Input
-                      v-model="member.email"
-                      placeholder="Email"
-                      type="email"
-                    />
-                    <span
-                      class="bg-primary/10 text-primary absolute top-1/2 right-3 -translate-y-1/2 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
-                    >
-                      Draft
-                    </span>
-                  </div>
-                </ButtonGroup>
-                <ButtonGroup>
-                  <Select v-model="member.role">
-                    <SelectTrigger class="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="owner">{{
-                        t("components.teamDialog.roles.owner")
-                      }}</SelectItem>
-                      <SelectItem value="admin">{{
-                        t("components.teamDialog.roles.admin")
-                      }}</SelectItem>
-                      <SelectItem value="member">{{
-                        t("components.teamDialog.roles.member")
-                      }}</SelectItem>
-                      <SelectItem value="guest">{{
-                        t("components.teamDialog.roles.guest")
-                      }}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    @click="removeMember(member.email)"
-                  >
-                    <IconTrash />
-                  </Button>
-                </ButtonGroup>
-              </ButtonGroup>
-            </div>
           </div>
+        </Field>
 
-          <!-- 2b. Pending Invites List (From Store - Edit Mode Only) -->
+        <!-- Invitations -->
+        <Field class="grid gap-2">
+          <!-- 2b. Invitations List (Drafts + Sent) -->
           <div
             v-if="
-              mode === 'edit' &&
-              (membershipStore.isOwner || membershipStore.isAdmin) &&
-              teamInvitations &&
-              teamInvitations.length > 0
+              stagedInvites.length > 0 ||
+              (mode === 'edit' &&
+                isPrivileged &&
+                teamInvitations &&
+                teamInvitations.length > 0)
             "
-            class="space-y-2 pt-2"
+            class="grid gap-2"
           >
-            <Label
-              class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
-              >Pending Invitations</Label
-            >
+            <FieldLabel class="text-secondary-foreground text-xs">
+              Invitations
+            </FieldLabel>
+
+            <!-- Staged Invites (Drafts) -->
             <ButtonGroup
-              v-for="invite in teamInvitations"
-              :key="invite.id"
+              v-for="(member, index) in stagedInvites"
+              :key="`staged-${index}`"
               class="w-full"
             >
               <ButtonGroup class="flex-1">
                 <div class="relative w-full">
                   <Input
-                    :model-value="invite.email"
-                    disabled
-                    :class="{
-                      'border-destructive text-destructive opacity-100':
-                        invite.status === 'declined',
-                    }"
+                    v-model="member.email"
+                    placeholder="Email"
+                    type="email"
                   />
                   <span
-                    v-if="invite.status === 'declined'"
-                    class="bg-destructive/10 text-destructive absolute top-1/2 right-3 -translate-y-1/2 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
+                    class="bg-primary/10 text-primary absolute top-1/2 right-3 -translate-y-1/2 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
                   >
-                    Declined
-                  </span>
-                  <span
-                    v-else
-                    class="bg-muted text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded-full px-2 py-0.5 text-[10px] uppercase"
-                  >
-                    Pending
+                    Draft
                   </span>
                 </div>
               </ButtonGroup>
               <ButtonGroup>
-                <Select
-                  v-model="invite.role"
-                  :disabled="invite.status === 'declined'"
-                  @update:model-value="
-                    (val) =>
-                      invitationStore.updateInvitationRole(
-                        invite.id!,
-                        val as IMembershipRole
-                      )
-                  "
-                >
+                <Select v-model="member.role">
                   <SelectTrigger class="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -731,28 +668,101 @@ const handleSubmit = async () => {
                     }}</SelectItem>
                   </SelectContent>
                 </Select>
-
-                <Button
-                  v-if="invite.status !== 'declined'"
-                  variant="outline"
-                  :disabled="isResending(invite.id!)"
-                  @click="handleResendInvitation(invite)"
-                >
-                  <Spinner v-if="isResending(invite.id!)" class="mr-2 size-3" />
-                  {{ isResending(invite.id!) ? "Sending..." : "Resend" }}
-                </Button>
                 <Button
                   variant="outline"
                   size="icon"
-                  :title="invite.status === 'declined' ? 'Delete' : 'Cancel'"
-                  @click="invitationStore.cancelInvitation(invite.id!)"
+                  @click="removeMember(member.email)"
                 >
                   <IconTrash />
                 </Button>
               </ButtonGroup>
             </ButtonGroup>
+
+            <!-- Sent Invitations (Edit Mode Only) -->
+            <template v-if="mode === 'edit' && isPrivileged">
+              <ButtonGroup
+                v-for="invite in teamInvitations"
+                :key="invite.id"
+                class="w-full"
+              >
+                <ButtonGroup class="flex-1">
+                  <div class="relative w-full">
+                    <Input
+                      :model-value="invite.email"
+                      disabled
+                      :class="{
+                        'border-destructive text-destructive opacity-100':
+                          invite.status === 'declined',
+                      }"
+                    />
+                    <span
+                      v-if="invite.status === 'declined'"
+                      class="bg-destructive/10 text-destructive absolute top-1/2 right-3 -translate-y-1/2 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
+                    >
+                      Declined
+                    </span>
+                    <span
+                      v-else
+                      class="bg-muted text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded-full px-2 py-0.5 text-[10px] uppercase"
+                    >
+                      Pending
+                    </span>
+                  </div>
+                </ButtonGroup>
+                <ButtonGroup>
+                  <Select
+                    v-model="invite.role"
+                    :disabled="invite.status === 'declined'"
+                    @update:model-value="
+                      (val) =>
+                        invitationStore.updateInvitationRole(
+                          invite.id!,
+                          val as IMembershipRole
+                        )
+                    "
+                  >
+                    <SelectTrigger class="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owner">{{
+                        t("components.teamDialog.roles.owner")
+                      }}</SelectItem>
+                      <SelectItem value="admin">{{
+                        t("components.teamDialog.roles.admin")
+                      }}</SelectItem>
+                      <SelectItem value="member">{{
+                        t("components.teamDialog.roles.member")
+                      }}</SelectItem>
+                      <SelectItem value="guest">{{
+                        t("components.teamDialog.roles.guest")
+                      }}</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    v-if="invite.status !== 'declined'"
+                    variant="outline"
+                    size="icon"
+                    :disabled="isResending(invite.id!)"
+                    @click="handleResendInvitation(invite)"
+                  >
+                    <Spinner v-if="isResending(invite.id!)" />
+                    <IconSend v-else />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    :title="invite.status === 'declined' ? 'Delete' : 'Cancel'"
+                    @click="invitationStore.cancelInvitation(invite.id!)"
+                  >
+                    <IconTrash />
+                  </Button>
+                </ButtonGroup>
+              </ButtonGroup>
+            </template>
           </div>
-        </div>
+        </Field>
       </div>
 
       <DialogFooter>

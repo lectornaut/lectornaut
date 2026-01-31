@@ -1,6 +1,11 @@
 import { firestore as db, functions } from "@/modules/firebase"
 import { type INotification, type INotificationStatus } from "@/types"
 import {
+  cloneState,
+  createPendingSet,
+  withOptimisticUpdate,
+} from "@/utils/firebase-optimistic"
+import {
   collection,
   deleteDoc,
   doc,
@@ -12,45 +17,137 @@ import {
   updateDoc,
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
-import { computed, onUnmounted, ref, watch } from "vue"
+import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
 import { useCurrentUser } from "vuefire"
 
 export function useNotifications() {
   const user = useCurrentUser()
-  const notifications = ref<INotification[]>([])
+  const firestoreNotifications = ref<INotification[]>([])
+  const optimisticNotifications = ref<INotification[]>([])
+  const pendingNotificationIds = shallowRef(createPendingSet())
   const isLoading = ref(false)
   const limitCount = ref(20)
 
+  // Merged state
+  const notifications = computed(() => {
+    const pending = pendingNotificationIds.value
+    if (pending.size === 0) return firestoreNotifications.value
+
+    const result: INotification[] = []
+    const firestoreData = firestoreNotifications.value
+
+    firestoreData.forEach((n) => {
+      // If notification is pending, check if it was updated or deleted
+      if (n.id && pending.has(n.id)) {
+        const optimistic = optimisticNotifications.value.find(
+          (on) => on.id === n.id
+        )
+        // If found in optimistic, use that version (handles updates)
+        if (optimistic) {
+          result.push(optimistic)
+        }
+        // If NOT found in optimistic, it means it's pending deletion -> skip it
+        return
+      }
+      result.push(n)
+    })
+
+    return result
+  })
+
   let unsubscribe: (() => void) | null = null
 
+  // derived state
   const unreadCount = computed(
-    () => notifications.value.filter((n) => n.read === false).length
+    () => notifications.value.filter((n) => !n.read).length
   )
 
-  const inboxUnreadCount = computed(
-    () =>
-      notifications.value.filter(
-        (n) => n.read === false && n.status === "inbox"
-      ).length
-  )
+  const getUnreadCountByStatus = (status: INotificationStatus) =>
+    computed(
+      () =>
+        notifications.value.filter((n) => !n.read && n.status === status).length
+    )
 
-  const savedUnreadCount = computed(
-    () =>
-      notifications.value.filter(
-        (n) => n.read === false && n.status === "saved"
-      ).length
-  )
+  const inboxUnreadCount = getUnreadCountByStatus("inbox")
+  const savedUnreadCount = getUnreadCountByStatus("saved")
+  const doneUnreadCount = getUnreadCountByStatus("done")
 
-  const doneUnreadCount = computed(
-    () =>
-      notifications.value.filter((n) => n.read === false && n.status === "done")
-        .length
-  )
+  const updateNotification = async (
+    notificationId: string,
+    updates: Partial<INotification>
+  ) => {
+    if (!user.value) return
+
+    const previousOptimistic = cloneState(optimisticNotifications.value)
+
+    await withOptimisticUpdate(
+      pendingNotificationIds.value,
+      notificationId,
+      () => {
+        // Special case: if we have it in optimistic list, update it.
+        // If not, we found it in firestore list, so add to optimistic.
+        const existingIndex = optimisticNotifications.value.findIndex(
+          (n) => n.id === notificationId
+        )
+        if (existingIndex !== -1) {
+          optimisticNotifications.value[existingIndex] = {
+            ...optimisticNotifications.value[existingIndex],
+            ...updates,
+          } as INotification
+        } else {
+          const fsIndex = firestoreNotifications.value.findIndex(
+            (n) => n.id === notificationId
+          )
+          if (fsIndex !== -1) {
+            optimisticNotifications.value = [
+              ...optimisticNotifications.value,
+              {
+                ...firestoreNotifications.value[fsIndex],
+                ...updates,
+              } as INotification,
+            ]
+          }
+        }
+      },
+      () => {
+        optimisticNotifications.value = previousOptimistic
+      },
+      async () => {
+        await updateDoc(
+          doc(db, `users/${user.value!.uid}/notifications`, notificationId),
+          updates
+        )
+      }
+    )
+  }
+
+  // Private helper for batch actions
+  const performBatchAction = async (
+    actionName: string,
+    status?: INotificationStatus,
+    optimisticUpdate?: (n: INotification) => void
+  ) => {
+    if (optimisticUpdate) {
+      notifications.value.forEach((n) => {
+        if (!status || n.status === status) {
+          optimisticUpdate(n)
+        }
+      })
+    }
+
+    try {
+      const fn = httpsCallable(functions, actionName)
+      await fn({ status })
+    } catch (e) {
+      console.error(`Failed to perform batch action ${actionName}`, e)
+    }
+  }
 
   const setupListener = () => {
     if (unsubscribe) unsubscribe()
     if (!user.value) {
-      notifications.value = []
+      firestoreNotifications.value = []
+      isLoading.value = false
       return
     }
 
@@ -64,13 +161,11 @@ export function useNotifications() {
     unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        notifications.value = snapshot.docs.map((doc) => {
+        firestoreNotifications.value = snapshot.docs.map((doc) => {
           const data = doc.data()
           return {
             id: doc.id,
             ...data,
-            status: data.status,
-            read: data.read,
             createdAt:
               data.createdAt instanceof Timestamp
                 ? data.createdAt.toDate()
@@ -87,252 +182,97 @@ export function useNotifications() {
   }
 
   // Watch for user changes or limit changes
-  watch(
-    [user, limitCount],
-    () => {
-      setupListener()
-    },
-    { immediate: true }
-  )
+  watch([user, limitCount], () => setupListener(), { immediate: true })
+
+  // Sync optimistic state
+  watch(firestoreNotifications, (data) => {
+    if (data && pendingNotificationIds.value.size === 0) {
+      optimisticNotifications.value = cloneState(data)
+    }
+  })
 
   onUnmounted(() => {
     if (unsubscribe) unsubscribe()
   })
 
-  const loadMore = () => {
-    limitCount.value += 20
-  }
+  // Public Actions
+  const loadMore = () => (limitCount.value += 20)
 
-  const markAsRead = async (notificationId: string) => {
-    if (!user.value) return
-    // Optimistic update
-    const index = notifications.value.findIndex((n) => n.id === notificationId)
-    if (index !== -1 && notifications.value[index]) {
-      const notification = notifications.value[index]
-      if (notification.read === false) {
-        notification.read = true
-      }
-    }
+  const markAsRead = (id: string) => updateNotification(id, { read: true })
+  const markAsUnread = (id: string) => updateNotification(id, { read: false })
+  const markAsInbox = (id: string) =>
+    updateNotification(id, { status: "inbox" })
+  const markAsDone = (id: string) => updateNotification(id, { status: "done" })
+  const markAsSaved = (id: string) =>
+    updateNotification(id, { status: "saved" })
 
-    try {
-      await updateDoc(
-        doc(db, `users/${user.value!.uid}/notifications`, notificationId),
-        {
-          read: true,
-        }
-      )
-    } catch (e) {
-      console.error("Failed to mark as read", e)
-      // Revert optimistic if needed, but snapshots usually fix consistency
-    }
-  }
+  const markAllRead = (status?: INotificationStatus) =>
+    performBatchAction(
+      "markAllNotificationsRead",
+      status,
+      (n) => (n.read = true)
+    )
 
-  const markAsDone = async (notificationId: string) => {
-    if (!user.value) return
-    // Optimistic update
-    const index = notifications.value.findIndex((n) => n.id === notificationId)
-    if (index !== -1 && notifications.value[index]) {
-      notifications.value[index].status = "done"
-    }
+  const markAllUnread = (status?: INotificationStatus) =>
+    performBatchAction(
+      "markAllNotificationsUnread",
+      status,
+      (n) => (n.read = false)
+    )
 
-    try {
-      await updateDoc(
-        doc(db, `users/${user.value!.uid}/notifications`, notificationId),
-        {
-          status: "done",
-        }
-      )
-    } catch (e) {
-      console.error("Failed to mark as done", e)
-    }
-  }
+  const markAllDone = (status?: INotificationStatus) =>
+    performBatchAction(
+      "markAllNotificationsDone",
+      status,
+      (n) => (n.status = "done")
+    )
 
-  const markAsSaved = async (notificationId: string) => {
-    if (!user.value) return
-    // Optimistic update
-    const index = notifications.value.findIndex((n) => n.id === notificationId)
-    if (index !== -1 && notifications.value[index]) {
-      notifications.value[index].status = "saved"
-    }
+  const markAllSaved = (status?: INotificationStatus) =>
+    performBatchAction(
+      "markAllNotificationsSaved",
+      status,
+      (n) => (n.status = "saved")
+    )
 
-    try {
-      await updateDoc(
-        doc(db, `users/${user.value!.uid}/notifications`, notificationId),
-        {
-          status: "saved",
-        }
-      )
-    } catch (e) {
-      console.error("Failed to mark as saved", e)
-    }
-  }
-
-  const markAsInbox = async (notificationId: string) => {
-    if (!user.value) return
-    // Optimistic update
-    const index = notifications.value.findIndex((n) => n.id === notificationId)
-    if (index !== -1 && notifications.value[index]) {
-      notifications.value[index].status = "inbox"
-    }
-
-    try {
-      await updateDoc(
-        doc(db, `users/${user.value!.uid}/notifications`, notificationId),
-        {
-          status: "inbox",
-        }
-      )
-    } catch (e) {
-      console.error("Failed to mark as inbox", e)
-    }
-  }
-
-  const markAllRead = async (status?: INotificationStatus) => {
-    // Optimistic
-    notifications.value.forEach((n) => {
-      if (n.read === false) {
-        if (!status || n.status === status) {
-          n.read = true
-        }
-      }
-    })
-
-    try {
-      const fn = httpsCallable(functions, "markAllNotificationsRead")
-      await fn({ status })
-    } catch (e) {
-      console.error("Failed to mark all read", e)
-    }
-  }
-
-  const markAllDone = async (status?: INotificationStatus) => {
-    // Optimistic
-    notifications.value.forEach((n) => {
-      if (n.status !== "done") {
-        if (!status || n.status === status) {
-          n.status = "done"
-        }
-      }
-    })
-
-    try {
-      const fn = httpsCallable(functions, "markAllNotificationsDone")
-      await fn({ status })
-    } catch (e) {
-      console.error("Failed to mark all done", e)
-    }
-  }
-
-  const markAllSaved = async (status?: INotificationStatus) => {
-    // Optimistic
-    notifications.value.forEach((n) => {
-      if (n.status !== "saved") {
-        if (!status || n.status === status) {
-          n.status = "saved"
-        }
-      }
-    })
-
-    try {
-      const fn = httpsCallable(functions, "markAllNotificationsSaved")
-      await fn({ status })
-    } catch (e) {
-      console.error("Failed to mark all saved", e)
-    }
-  }
-
-  const markAllInbox = async (status?: INotificationStatus) => {
-    // Optimistic
-    notifications.value.forEach((n) => {
-      if (n.status !== "inbox") {
-        if (!status || n.status === status) {
-          n.status = "inbox"
-        }
-      }
-    })
-
-    try {
-      const fn = httpsCallable(functions, "markAllNotificationsInbox")
-      await fn({ status })
-    } catch (e) {
-      console.error("Failed to mark all inbox", e)
-    }
-  }
-
-  const markAllUnread = async (status?: INotificationStatus) => {
-    // Optimistic
-    notifications.value.forEach((n) => {
-      if (n.read === true) {
-        if (!status || n.status === status) {
-          n.read = false
-        }
-      }
-    })
-
-    try {
-      const fn = httpsCallable(functions, "markAllNotificationsUnread")
-      await fn({ status })
-    } catch (e) {
-      console.error("Failed to mark all unread", e)
-    }
-  }
-
-  const markAsUnread = async (notificationId: string) => {
-    if (!user.value) return
-    // Optimistic update
-    const index = notifications.value.findIndex((n) => n.id === notificationId)
-    if (index !== -1 && notifications.value[index]) {
-      const notification = notifications.value[index]
-      if (notification.read === true) {
-        notification.read = false
-      }
-    }
-
-    try {
-      await updateDoc(
-        doc(db, `users/${user.value!.uid}/notifications`, notificationId),
-        {
-          read: false,
-        }
-      )
-    } catch (e) {
-      console.error("Failed to mark as unread", e)
-    }
-  }
+  const markAllInbox = (status?: INotificationStatus) =>
+    performBatchAction(
+      "markAllNotificationsInbox",
+      status,
+      (n) => (n.status = "inbox")
+    )
 
   const deleteNotification = async (notificationId: string) => {
     if (!user.value) return
-    // Optimistic update
-    const index = notifications.value.findIndex((n) => n.id === notificationId)
-    if (index !== -1) {
-      notifications.value.splice(index, 1)
-    }
 
-    try {
-      await deleteDoc(
-        doc(db, `users/${user.value.uid}/notifications`, notificationId)
-      )
-    } catch (e) {
-      console.error("Failed to delete notification", e)
-    }
+    const previousOptimistic = cloneState(optimisticNotifications.value)
+
+    await withOptimisticUpdate(
+      pendingNotificationIds.value,
+      notificationId,
+      () => {
+        // If it was optimistic, remove from optimistic
+        optimisticNotifications.value = optimisticNotifications.value.filter(
+          (n) => n.id !== notificationId
+        )
+        // Also ensure it's not "visible" in merged state if it was only in firestore
+        // The merged logic needs to handle this.
+      },
+      () => {
+        optimisticNotifications.value = previousOptimistic
+      },
+      async () => {
+        await deleteDoc(
+          doc(db, `users/${user.value!.uid}/notifications`, notificationId)
+        )
+      }
+    )
   }
 
-  const deleteAllNotifications = async (status?: INotificationStatus) => {
-    // Optimistic update
-    if (status) {
-      notifications.value = notifications.value.filter(
-        (n) => n.status !== status
-      )
-    } else {
-      notifications.value = []
-    }
-
-    try {
-      const fn = httpsCallable(functions, "deleteAllNotifications")
-      await fn({ status })
-    } catch (e) {
-      console.error("Failed to delete all notifications", e)
-    }
+  const deleteAllNotifications = (status?: INotificationStatus) => {
+    // For batch actions, we can't easily use withOptimisticUpdate per-ID without IDs.
+    // However, we can update the firestoreNotifications locally if we want a "fake" optimistic felt.
+    // But since performBatchAction has its own optimistic update helper, let's use that.
+    performBatchAction("deleteAllNotifications", status)
   }
 
   return {

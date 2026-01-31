@@ -27,7 +27,7 @@
         <mj-text>Hello,</mj-text>
 
         <mj-text>
-          <strong>{{ inviteeName }}</strong> ({{ inviteeEmail }}) invited you to
+          <strong>{{ inviterName }}</strong> ({{ inviterEmail }}) invited you to
           join <strong>{{ teamName }}</strong> as a <strong>{{ role }}</strong
           >.
         </mj-text>
