@@ -238,13 +238,7 @@ const handleLogout = async () => {
             <SelectValue placeholder="Select an invitation" />
           </SelectTrigger>
           <SelectContent class="w-full">
-            <div
-              v-if="
-                isAuthenticated &&
-                (pendingInvitations.length > 0 ||
-                  declinedInvitations.length > 0)
-              "
-            >
+            <template v-if="isAuthenticated">
               <SelectGroup v-if="pendingInvitations.length > 0">
                 <SelectLabel>Pending</SelectLabel>
                 <TooltipProvider>
@@ -277,7 +271,8 @@ const handleLogout = async () => {
                   </Tooltip>
                 </TooltipProvider>
               </SelectGroup>
-              <SelectSeparator />
+              <SelectLabel v-else> No pending invitations </SelectLabel>
+              <SelectSeparator v-if="declinedInvitations.length > 0" />
               <SelectGroup v-if="declinedInvitations.length > 0">
                 <SelectLabel>Declined</SelectLabel>
                 <TooltipProvider>
@@ -310,13 +305,14 @@ const handleLogout = async () => {
                   </Tooltip>
                 </TooltipProvider>
               </SelectGroup>
-            </div>
+              <SelectLabel v-else> No declined invitations </SelectLabel>
+            </template>
           </SelectContent>
         </Select>
       </div>
     </div>
     <OverlayScrollbarsWrapper
-      class="w-full max-w-md items-center justify-between p-2"
+      class="w-full max-w-md items-center justify-between px-2"
     >
       <div
         class="bg-sidebar flex size-full flex-col items-center justify-between rounded-md p-2"

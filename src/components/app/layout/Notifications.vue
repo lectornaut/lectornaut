@@ -17,8 +17,6 @@ import {
   IconTrash,
 } from "@/data/icons"
 import type { INotificationStatus } from "@/types"
-import { useIntersectionObserver } from "@vueuse/core"
-import { computed, ref } from "vue"
 
 defineProps<{
   iconDisplay?: "icon" | "text"
@@ -46,7 +44,9 @@ const {
   deleteAllNotifications,
 } = useNotifications()
 
-const loadMoreTrigger = ref(null)
+const scrollableContainer = useTemplateRef<ComponentPublicInstance>(
+  "scrollableContainer"
+)
 const activeTab = ref<INotificationStatus>("inbox")
 const isDocked = ref(false)
 
@@ -65,17 +65,17 @@ const filteredNotifications = computed(() => {
   })
 })
 
-// Infinite scroll trigger
-useIntersectionObserver(loadMoreTrigger, (entries) => {
-  const entry = entries[0]
-  if (
-    entry?.isIntersecting &&
-    !isLoading.value &&
-    notifications.value.length >= 20
-  ) {
+// Infinite scroll
+useInfiniteScroll(
+  () => scrollableContainer.value?.$el as HTMLElement,
+  () => {
     loadMore()
+  },
+  {
+    distance: 10,
+    canLoadMore: () => !isLoading.value && notifications.value.length >= 20,
   }
-})
+)
 </script>
 
 <template>
@@ -147,6 +147,7 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
           </TabsList>
         </div>
         <OverlayScrollbarsWrapper
+          ref="scrollableContainer"
           class="bg-sidebar aspect-square w-md rounded-md p-2"
         >
           <Empty
@@ -176,7 +177,7 @@ useIntersectionObserver(loadMoreTrigger, (entries) => {
               @delete="deleteNotification"
             />
             <!-- Loading / Infinite Scroll Trigger -->
-            <div ref="loadMoreTrigger" class="flex justify-center p-4">
+            <div class="flex justify-center p-4">
               <IconLoader2
                 v-if="isLoading"
                 class="text-muted-foreground animate-spin"

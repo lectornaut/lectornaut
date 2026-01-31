@@ -13,8 +13,6 @@ import {
   IconTrash,
 } from "@/data/icons"
 import { type INotification } from "@/types"
-import { computed } from "vue"
-import { useRouter } from "vue-router"
 
 const props = defineProps<{
   notification: INotification
