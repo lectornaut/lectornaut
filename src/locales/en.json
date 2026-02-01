@@ -195,7 +195,10 @@
     "select": "Select",
     "none": "None",
     "unsavedChanges": "Unsaved changes",
-    "discard": "Discard"
+    "discard": "Discard",
+    "actions": {
+      "cancel": "Cancel"
+    }
   },
   "settings": {
     "titles": {
@@ -419,7 +422,8 @@
         "label": "Upgrade plan",
         "description": "Explore and upgrade to a different subscription plan.",
         "button": "Upgrade plan"
-      }
+      },
+      "noPermission": "No permission"
     },
     "plans": {
       "subscriptionPlan": {
@@ -1261,6 +1265,11 @@
         "invitePartial": "Invited {succeeded} member(s), {failed} failed",
         "inviteResent": "Resent invitation",
         "resendFailed": "Failed to resend invitation"
+      },
+      "actions": {
+        "create": "Create",
+        "save": "Save",
+        "invite": "Invite"
       }
     },
     "subNavigation": {

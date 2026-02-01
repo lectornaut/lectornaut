@@ -26,6 +26,7 @@
 
 import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
+import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembershipRole } from "@/types"
 import { getMembershipRef, getTeamRef } from "@/utils/firebase-helpers"
 import {
@@ -34,6 +35,7 @@ import {
   generateOperationId,
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
+import { can, Capabilities } from "@/utils/permissions"
 import {
   addDoc,
   collection,
@@ -219,6 +221,22 @@ export const useInvitationStore = defineStore("invitations", () => {
 
     if (!user || !profile) throw new Error("Not authenticated")
 
+    // Use current user's role from membership store if available
+    // Note: We can only check permissions if they are already a member of the team
+    const membershipStore = useMembershipStore()
+    const membership = membershipStore.memberships.find(
+      (m) => m.teamId === teamId
+    )
+    if (
+      !membership ||
+      !can(user, Capabilities.INVITE_MEMBER, {
+        scope: "team",
+        teamRole: membership.role,
+      })
+    ) {
+      throw new Error("You do not have permission to send invitations")
+    }
+
     // Check for existing pending invitation
     const q = query(
       collection(firestore, "invitations"),
@@ -273,6 +291,20 @@ export const useInvitationStore = defineStore("invitations", () => {
   async function resendInvitation(invitation: IInvitation): Promise<void> {
     if (!invitation.id) return
 
+    const membershipStore = useMembershipStore()
+    const membership = membershipStore.memberships.find(
+      (m) => m.teamId === invitation.teamId
+    )
+    if (
+      !membership ||
+      !can(currentUser.value, Capabilities.INVITE_MEMBER, {
+        scope: "team",
+        teamRole: membership.role,
+      })
+    ) {
+      throw new Error("You do not have permission to resend invitations")
+    }
+
     const invRef = doc(firestore, "invitations", invitation.id)
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
@@ -310,6 +342,30 @@ export const useInvitationStore = defineStore("invitations", () => {
     role: IMembershipRole
   ): Promise<void> {
     const invRef = doc(firestore, "invitations", invitationId)
+
+    // Need to fetch invitation to get teamId for permission check if not passed
+    // But for optimistically we need to look it up or rely on caller context.
+    // Optimistic store has the invite
+    const invite = optimisticInvitations.value.find(
+      (i) => i.id === invitationId
+    )
+    // Fallback to firestore check handled by rules, but we want UI feedback
+
+    if (invite) {
+      const membershipStore = useMembershipStore()
+      const membership = membershipStore.memberships.find(
+        (m) => m.teamId === invite.teamId
+      )
+      if (
+        !membership ||
+        !can(currentUser.value, Capabilities.UPDATE_MEMBER_ROLE, {
+          scope: "team",
+          teamRole: membership.role,
+        })
+      ) {
+        throw new Error("You do not have permission to update invitations")
+      }
+    }
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
@@ -334,6 +390,25 @@ export const useInvitationStore = defineStore("invitations", () => {
    */
   async function cancelInvitation(invitationId: string): Promise<void> {
     const invRef = doc(firestore, "invitations", invitationId)
+
+    const invite = optimisticInvitations.value.find(
+      (i) => i.id === invitationId
+    )
+    if (invite) {
+      const membershipStore = useMembershipStore()
+      const membership = membershipStore.memberships.find(
+        (m) => m.teamId === invite.teamId
+      )
+      if (
+        !membership ||
+        !can(currentUser.value, Capabilities.INVITE_MEMBER, {
+          scope: "team",
+          teamRole: membership.role,
+        })
+      ) {
+        throw new Error("You do not have permission to cancel invitations")
+      }
+    }
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(

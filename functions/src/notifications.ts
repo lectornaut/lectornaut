@@ -11,6 +11,7 @@ import {
   onCall,
 } from "firebase-functions/v2/https"
 import { sendEmailInternal } from "./email.js"
+import { Capabilities, IMembershipRole, roleCan } from "./permissions.js"
 import { postmarkApiKey } from "./secrets.js"
 import {
   InvitationData,
@@ -238,7 +239,9 @@ export const onInvitationUpdated = onDocumentUpdated(
         .get()
       const adminsAndOwners = membersSnap.docs
         .map((doc) => doc.data())
-        .filter((m) => m.role === "owner" || m.role === "admin")
+        .filter((m) =>
+          roleCan(m.role as IMembershipRole, Capabilities.INVITE_MEMBER)
+        )
 
       await Promise.all(
         adminsAndOwners.map((admin) =>
@@ -289,7 +292,9 @@ export const onMembershipCreated = onDocumentCreated(
     const adminsAndOwners = membersSnap.docs
       .map((doc) => doc.data())
       .filter(
-        (m) => (m.role === "owner" || m.role === "admin") && m.userId !== userId
+        (m) =>
+          roleCan(m.role as IMembershipRole, Capabilities.INVITE_MEMBER) &&
+          m.userId !== userId
       )
 
     await Promise.all(

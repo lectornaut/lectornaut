@@ -18,7 +18,14 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { createWorkspace, updateWorkspace } = useWorkspaceActions()
+const {
+  createWorkspace,
+  updateWorkspace,
+  canCreateWorkspace,
+  getCannotCreateWorkspaceReason,
+  canUpdateWorkspace,
+  getCannotUpdateWorkspaceReason,
+} = useWorkspaceActions()
 
 const isOpen = ref(props.open || false)
 const isLoading = ref(false)
@@ -168,25 +175,60 @@ const handleSubmit = async () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Avatar
-                      class="size-16 rounded-md"
-                      @click="
-                        openFileDialog({ accept: 'image/*', multiple: false })
-                      "
+                    <div
+                      :class="{
+                        'cursor-not-allowed opacity-50':
+                          (!canCreateWorkspace && mode === 'create') ||
+                          (!canUpdateWorkspace && mode === 'edit'),
+                      }"
                     >
-                      <AvatarImage
+                      <Avatar
                         class="size-16 rounded-md"
-                        :src="photoPreview!"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback class="size-16 rounded-md">
-                        {{ getInitials(workspaceName) }}
-                      </AvatarFallback>
-                    </Avatar>
+                        :class="{
+                          'cursor-pointer':
+                            (canCreateWorkspace && mode === 'create') ||
+                            (canUpdateWorkspace && mode === 'edit'),
+                        }"
+                        @click="
+                          ((canCreateWorkspace && mode === 'create') ||
+                            (canUpdateWorkspace && mode === 'edit')) &&
+                          openFileDialog({ accept: 'image/*', multiple: false })
+                        "
+                      >
+                        <AvatarImage
+                          class="size-16 rounded-md"
+                          :src="photoPreview!"
+                          referrerpolicy="no-referrer"
+                        />
+                        <AvatarFallback class="size-16 rounded-md">
+                          {{ getInitials(workspaceName) }}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
                   </TooltipTrigger>
-                  <TooltipContent> Upload workspace photo </TooltipContent>
+                  <TooltipContent
+                    v-if="
+                      (!canCreateWorkspace && mode === 'create') ||
+                      (!canUpdateWorkspace && mode === 'edit')
+                    "
+                  >
+                    {{
+                      mode === "create"
+                        ? t(getCannotCreateWorkspaceReason || "")
+                        : t(getCannotUpdateWorkspaceReason || "")
+                    }}
+                  </TooltipContent>
+                  <TooltipContent v-else>
+                    Upload workspace photo
+                  </TooltipContent>
                 </Tooltip>
-                <Tooltip v-if="photoPreview">
+                <Tooltip
+                  v-if="
+                    photoPreview &&
+                    ((canCreateWorkspace && mode === 'create') ||
+                      (canUpdateWorkspace && mode === 'edit'))
+                  "
+                >
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
@@ -212,12 +254,36 @@ const handleSubmit = async () => {
           <FieldLabel class="text-secondary-foreground text-xs" for="name">
             Workspace Name
           </FieldLabel>
-          <Input
-            id="name"
-            v-model="workspaceName"
-            placeholder="My Workspace"
-            @keyup.enter="handleSubmit"
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <Input
+                    id="name"
+                    v-model="workspaceName"
+                    placeholder="My Workspace"
+                    :disabled="
+                      (!canCreateWorkspace && mode === 'create') ||
+                      (!canUpdateWorkspace && mode === 'edit')
+                    "
+                    @keyup.enter="handleSubmit"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent
+                v-if="
+                  (!canCreateWorkspace && mode === 'create') ||
+                  (!canUpdateWorkspace && mode === 'edit')
+                "
+              >
+                {{
+                  mode === "create"
+                    ? t(getCannotCreateWorkspaceReason || "")
+                    : t(getCannotUpdateWorkspaceReason || "")
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Field>
 
         <!-- Workspace Description -->
@@ -228,21 +294,52 @@ const handleSubmit = async () => {
           >
             Description
           </FieldLabel>
-          <Textarea
-            id="description"
-            v-model="workspaceDescription"
-            placeholder="A brief description of this workspace..."
-            rows="3"
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <Textarea
+                    id="description"
+                    v-model="workspaceDescription"
+                    placeholder="A brief description of this workspace..."
+                    rows="3"
+                    :disabled="
+                      (!canCreateWorkspace && mode === 'create') ||
+                      (!canUpdateWorkspace && mode === 'edit')
+                    "
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent
+                v-if="
+                  (!canCreateWorkspace && mode === 'create') ||
+                  (!canUpdateWorkspace && mode === 'edit')
+                "
+              >
+                {{
+                  mode === "create"
+                    ? t(getCannotCreateWorkspaceReason || "")
+                    : t(getCannotUpdateWorkspaceReason || "")
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Field>
       </div>
 
       <DialogFooter>
         <DialogClose as-child>
-          <Button variant="outline">{{ t("actions.cancel") }}</Button>
+          <Button variant="ghost" :disabled="isLoading">
+            {{ t("common.actions.cancel") }}
+          </Button>
         </DialogClose>
         <Button
-          :disabled="isLoading || !workspaceName.trim()"
+          :disabled="
+            isLoading ||
+            !workspaceName.trim() ||
+            (!canCreateWorkspace && mode === 'create') ||
+            (!canUpdateWorkspace && mode === 'edit')
+          "
           @click="handleSubmit"
         >
           <Spinner v-if="isLoading" />

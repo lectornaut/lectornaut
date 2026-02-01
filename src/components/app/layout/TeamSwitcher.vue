@@ -20,6 +20,8 @@ const {
   isLoading,
   switchTeam,
   getTeamMemberCount,
+  canCreateTeam,
+  getCannotCreateTeamReason,
 } = useTeamActions()
 
 const isCreatingTeamDialogOpen = ref(false)
@@ -205,12 +207,28 @@ const teams = computed(() =>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        @click="isCreatingTeamDialogOpen = true"
-                      >
-                        <IconCirclePlus />
-                        {{ t("components.teamSwitcher.createTeam") }}
-                      </DropdownMenuItem>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <!-- Wrapper div to capture hover when disabled -->
+                            <div>
+                              <DropdownMenuItem
+                                :disabled="!canCreateTeam"
+                                @click="
+                                  canCreateTeam &&
+                                  (isCreatingTeamDialogOpen = true)
+                                "
+                              >
+                                <IconCirclePlus />
+                                {{ t("components.teamSwitcher.createTeam") }}
+                              </DropdownMenuItem>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent v-if="!canCreateTeam">
+                            {{ t(getCannotCreateTeamReason || "") }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </DropdownMenuGroup>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>

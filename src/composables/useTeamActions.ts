@@ -3,7 +3,7 @@ import { defaultTeamRole } from "@/helpers/defaults"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership } from "@/types"
-import { hasExactRole } from "@/utils/permissions"
+import { can, Capabilities, roleCan } from "@/utils/permissions"
 import { withToast } from "@/utils/toast-helpers"
 import { storeToRefs } from "pinia"
 import { useCurrentUser } from "vuefire"
@@ -17,7 +17,7 @@ export function useTeamActions() {
   const user = useCurrentUser()
   const { teamMembers, memberships, currentTeam, isLoading } =
     storeToRefs(teamStore)
-  const { isOwner, ownerCount, canManageMembers } = storeToRefs(membershipStore)
+  const { isOwner, ownerCount } = storeToRefs(membershipStore)
 
   // Unified loading state for all team operations
   const loading = {
@@ -37,19 +37,43 @@ export function useTeamActions() {
 
   // Permission checks
   const canChangeRole = (member: IMembership) => {
-    if (!isOwner.value) return false
+    // 1. Basic permission check using capability
     if (
-      member.userId === user.value?.uid &&
-      ownerCount.value <= 1 &&
-      member.role === "owner"
+      !roleCan(currentUserRole.value, Capabilities.UPDATE_MEMBER_ROLE) &&
+      !isOwner.value
     ) {
+      // Note: isOwner check is redundant if roleCan works correctly for owner,
+      // but keeping strict check for safety if needed, or rely on can().
+      // Let's use can() logic which we have in store, but here we might not have full user context easily accessible if we just use roleCan.
+      // Actually we have 'user' from useCurrentUser().
+      if (
+        !can(user.value, Capabilities.UPDATE_MEMBER_ROLE, {
+          scope: "team",
+          teamRole: currentUserRole.value,
+        })
+      ) {
+        return false
+      }
+    }
+
+    // 2. Business logic constraints (e.g. last owner)
+    // These are NOT pure permissions, but business rules.
+    // Changing TO/FROM owner requires owner. (This rule might be part of the capability or separate)
+    // The previous logic had: member.role === 'owner' && ownerCount <= 1
+    if (member.role === "owner" && ownerCount.value <= 1) {
       return false
     }
     return true
   }
 
   const getCannotChangeRoleReason = (member: IMembership): string | null => {
-    if (!isOwner.value) return "settings.teams.members.noPermissionToChangeRole"
+    if (
+      !can(user.value, Capabilities.UPDATE_MEMBER_ROLE, {
+        scope: "team",
+        teamRole: currentUserRole.value,
+      })
+    )
+      return "settings.teams.members.noPermissionToChangeRole"
     if (
       member.userId === user.value?.uid &&
       ownerCount.value <= 1 &&
@@ -61,7 +85,14 @@ export function useTeamActions() {
   }
 
   const canRemoveMember = (member: IMembership) => {
-    if (!isOwner.value && member.userId !== user.value?.uid) return false
+    if (
+      !can(user.value, Capabilities.REMOVE_MEMBER, {
+        scope: "team",
+        teamRole: currentUserRole.value,
+      }) &&
+      member.userId !== user.value?.uid
+    )
+      return false
     if (teamMembers.value.length <= 1) return false
     if (member.role === "owner" && ownerCount.value <= 1) return false
     return true
@@ -93,8 +124,44 @@ export function useTeamActions() {
   }
 
   const canDeleteTeam = (membership: IMembership) =>
-    hasExactRole(membership.role, "owner")
-  const canInviteMembers = () => canManageMembers.value
+    roleCan(membership.role, Capabilities.DELETE_TEAM)
+
+  const canUpdateTeam = computed(() =>
+    can(user.value, Capabilities.EDIT_TEAM, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
+  )
+  const getCannotUpdateTeamReason = computed(() =>
+    !canUpdateTeam.value ? "Only team owners can update team settings" : null
+  )
+
+  const canCreateTeam = computed(() =>
+    can(user.value, Capabilities.CREATE_TEAM, { scope: "global" })
+  )
+  const getCannotCreateTeamReason = computed(() =>
+    !canCreateTeam.value ? "Only team owners can create new teams" : null
+  )
+
+  const canEditTeam = (membership: IMembership) =>
+    roleCan(membership.role, Capabilities.EDIT_TEAM)
+
+  const canManageBilling = computed(() =>
+    can(user.value, Capabilities.MANAGE_BILLING, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
+  )
+
+  const canInviteMembers = computed(() =>
+    can(user.value, Capabilities.INVITE_MEMBER, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
+  )
+  const getCannotInviteMembersReason = computed(() =>
+    !canInviteMembers.value ? "Only admins and owners can invite members" : null
+  )
 
   // Actions using withToast utility
   const changeRole = async (userId: string, newRole: IMembership["role"]) =>
@@ -244,11 +311,18 @@ export function useTeamActions() {
     canRemoveMember,
     canExitTeam,
     canDeleteTeam,
+    canUpdateTeam,
+    canCreateTeam,
+    canEditTeam,
     canInviteMembers,
+    canManageBilling,
 
     // Disabled state reasons
     getCannotChangeRoleReason,
     getCannotRemoveMemberReason,
+    getCannotUpdateTeamReason,
+    getCannotCreateTeamReason,
+    getCannotInviteMembersReason,
 
     // Member counts
     getTeamMemberCount: membershipStore.getTeamMemberCount,

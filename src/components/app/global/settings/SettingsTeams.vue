@@ -34,6 +34,7 @@ const {
   canExitTeam,
   canDeleteTeam,
   getTeamMemberCount,
+  canEditTeam,
   switchTeam,
   exitTeam,
   deleteTeam,
@@ -66,7 +67,7 @@ const teamPhotoUpload = usePhotoUpload({
 })
 
 const handleTeamAvatarClick = (membership: IMembership) => {
-  if (membership.role !== "owner") return
+  if (!canEditTeam(membership)) return
   teamPhotoUpload.triggerUpload(membership.teamId)
 }
 
@@ -227,9 +228,7 @@ const sortedMemberships = computed(() => {
                                   </template>
                                 </Avatar>
                               </TooltipTrigger>
-                              <TooltipContent
-                                v-if="membership.role === 'owner'"
-                              >
+                              <TooltipContent v-if="canEditTeam(membership)">
                                 {{
                                   teamLoading.team.isLoading(
                                     `photo-${membership.teamId}`
@@ -328,7 +327,7 @@ const sortedMemberships = computed(() => {
                                       Exit
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator
-                                      v-if="membership.role === 'owner'"
+                                      v-if="canEditTeam(membership)"
                                     />
                                     <DropdownMenuItem
                                       v-if="canDeleteTeam(membership)"

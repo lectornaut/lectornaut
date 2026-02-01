@@ -1,11 +1,14 @@
 <script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
+
 const { t } = useI18n()
+const { canManageBilling } = useTeamActions()
 </script>
 
 <template>
   <div class="p-6">
     <FieldGroup>
-      <FieldSet>
+      <FieldSet v-if="canManageBilling">
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="current-plan">
@@ -72,6 +75,9 @@ const { t } = useI18n()
           </Button>
         </Field>
       </FieldSet>
+      <div v-else class="text-muted-foreground py-8 text-center">
+        {{ t("settings.billing.noPermission") }}
+      </div>
     </FieldGroup>
   </div>
 </template>

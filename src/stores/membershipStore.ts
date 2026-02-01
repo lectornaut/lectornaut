@@ -13,7 +13,7 @@
 import { defaultTeamRole } from "@/helpers/defaults"
 import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
-import type { IMembership, ITeam, IUser } from "@/types"
+import type { IMembership, IMembershipRole, ITeam, IUser } from "@/types"
 import {
   getAllMembershipsGroup,
   getMembershipRef,
@@ -26,11 +26,7 @@ import {
   createPendingSet,
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
-import {
-  canPerformMemberAction,
-  canPerformWorkspaceAction,
-  hasExactRole,
-} from "@/utils/permissions"
+import { can, Capabilities, hasExactRole } from "@/utils/permissions"
 import {
   getDoc,
   getDocs,
@@ -261,12 +257,18 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** Check if current user can manage workspaces (member or higher) */
   const canManageWorkspaces = computed(() =>
-    canPerformWorkspaceAction(currentUserRole.value, "create")
+    can(currentUser.value, Capabilities.CREATE_WORKSPACE, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
   )
 
   /** Check if current user can manage team members (admin or higher) */
   const canManageMembers = computed(() =>
-    canPerformMemberAction(currentUserRole.value, "create")
+    can(currentUser.value, Capabilities.INVITE_MEMBER, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
   )
 
   /** Count of owners in the current team */
@@ -490,8 +492,16 @@ export const useMembershipStore = defineStore("memberships", () => {
   async function changeRole(
     teamId: string,
     userId: string,
-    newRole: IMembership["role"]
+    newRole: IMembershipRole
   ): Promise<void> {
+    if (
+      !can(currentUser.value, Capabilities.UPDATE_MEMBER_ROLE, {
+        scope: "team",
+        teamRole: currentUserRole.value,
+      })
+    ) {
+      throw new Error("You do not have permission to change member roles")
+    }
     const membershipRef = getMembershipRef(teamId, userId)
     const membershipSnap = await getDoc(membershipRef)
 
@@ -550,6 +560,18 @@ export const useMembershipStore = defineStore("memberships", () => {
    */
   async function removeMember(teamId: string, userId: string): Promise<void> {
     if (!currentUser.value) return
+
+    // If removing someone else, check permissions
+    if (userId !== currentUser.value.uid) {
+      if (
+        !can(currentUser.value, Capabilities.REMOVE_MEMBER, {
+          scope: "team",
+          teamRole: currentUserRole.value,
+        })
+      ) {
+        throw new Error("You do not have permission to remove members")
+      }
+    }
 
     const membershipRef = getMembershipRef(teamId, userId)
     const membershipSnap = await getDoc(membershipRef)
@@ -632,6 +654,15 @@ export const useMembershipStore = defineStore("memberships", () => {
     userIds: string[]
   ): Promise<void> {
     if (!currentUser.value) return
+
+    if (
+      !can(currentUser.value, Capabilities.REMOVE_MEMBER, {
+        scope: "team",
+        teamRole: currentUserRole.value,
+      })
+    ) {
+      throw new Error("You do not have permission to remove members")
+    }
 
     if (!userIds || userIds.length === 0) return
 

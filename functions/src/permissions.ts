@@ -1,16 +1,16 @@
 /**
  * Centralized Permission System (Capability-Based)
  *
- * This module defines the capability-based permission rules.
- * Permissions are derived from the context (scope) and the user's role in that context.
- *
- * Scopes:
- * - Global: Actions that don't depend on a team (e.g., create team)
- * - Team: Actions within a specific team (e.g., edit team, invite members)
- * - Workspace: Actions within a specific workspace (e.g., create workspace)
+ * This module defines the capability-based permission rules for the backend.
+ * It mirrors the frontend logic to ensure consistency.
  */
 
-import type { IMembershipRole } from "@/types"
+// We don't have access to frontend types directly if they are not in a shared package.
+// We'll define minimal types or import if shared.
+// Looking at functions/src/types.ts might help, or we redefine.
+// Assuming we need to redefine IMembershipRole for now as it's simple.
+
+export type IMembershipRole = "owner" | "admin" | "member" | "guest"
 
 // ============================================================================
 // Core Types
@@ -28,8 +28,7 @@ export const Capabilities = {
   INVITE_MEMBER: "invite_member",
   UPDATE_MEMBER_ROLE: "update_member_role",
   REMOVE_MEMBER: "remove_member",
-  READ_TEAM: "read_team", // Usually implicit, but good to have
-  MANAGE_BILLING: "manage_billing",
+  READ_TEAM: "read_team",
 
   // Workspace Scope
   CREATE_WORKSPACE: "create_workspace",
@@ -44,11 +43,6 @@ export type Capability = (typeof Capabilities)[keyof typeof Capabilities]
 // Role & Permission Definitions
 // ============================================================================
 
-/**
- * Defines which roles have which capabilities in a specific scope.
- * Global actions are usually allowed for everyone (authenticated),
- * so they might not need a specific role mapping, but we structure it primarily for Team/Workspace scopes.
- */
 const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
   owner: new Set([
     Capabilities.EDIT_TEAM,
@@ -61,7 +55,6 @@ const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
-    Capabilities.MANAGE_BILLING,
   ]),
   admin: new Set([
     Capabilities.INVITE_MEMBER,
@@ -72,7 +65,6 @@ const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
-    Capabilities.MANAGE_BILLING,
   ]),
   member: new Set([Capabilities.READ_TEAM, Capabilities.READ_WORKSPACE]),
   guest: new Set([Capabilities.READ_TEAM, Capabilities.READ_WORKSPACE]),
@@ -84,40 +76,31 @@ const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
 
 export interface PermissionContext {
   scope: Scope
-  // Required for 'team' and 'workspace' scopes
   teamRole?: IMembershipRole | null
 }
 
 /**
- * Check if a user has a specific capability.
- *
- * @param user The user object (mostly to check if authenticated)
- * @param action The capability to check
- * @param context Context providing scope and role information
+ * Check if a user (or role) has a specific capability.
+ * context.teamRole is required for team/workspace scopes.
  */
 export function can(
-  user: { uid?: string } | null | undefined,
+  _userId: string | null | undefined, // Not strictly used for role check, but kept for signature consistency
   action: Capability,
   context: PermissionContext
 ): boolean {
-  if (!user) return false
-
   // 1. Global Scope
   if (context.scope === "global") {
     switch (action) {
       case Capabilities.CREATE_TEAM:
-        return true // Any authenticated user can create a team
+        return !!_userId // Authenticated users can create teams
       default:
         return false
     }
   }
 
-  // 2. Team & Workspace Scopes (Depend on Team Role)
+  // 2. Team & Workspace Scopes
   if (context.scope === "team" || context.scope === "workspace") {
-    // If no role is provided (e.g. user not in team), they usually have no access,
-    // unless the action implies public access (not the case here yet).
     if (!context.teamRole) return false
-
     const allowedCapabilities = TEAM_SCOPED_PERMISSIONS[context.teamRole]
     return allowedCapabilities ? allowedCapabilities.has(action) : false
   }
@@ -125,28 +108,11 @@ export function can(
   return false
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
-/**
- * Check if a specific role allows an action (mostly for UI checks where we only know the role).
- * Assumes the action is for the scope where this role applies (Team/Workspace).
- */
+// Helpers for role-only checks (often used in backend triggers where we have the role data)
 export function roleCan(
   role: IMembershipRole | null | undefined,
   action: Capability
 ): boolean {
   if (!role) return false
   return TEAM_SCOPED_PERMISSIONS[role]?.has(action) ?? false
-}
-
-/**
- * Helper to check exact role match (sometimes needed for specific business logic like "only owners can be last owner").
- */
-export function hasExactRole(
-  userRole: IMembershipRole | null | undefined,
-  exactRole: IMembershipRole
-): boolean {
-  return userRole === exactRole
 }

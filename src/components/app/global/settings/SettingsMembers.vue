@@ -25,7 +25,7 @@ const {
   currentTeam,
   teamMembers,
   isLoading,
-  isOwner,
+  canInviteMembers,
   loading: teamLoading,
   getCannotChangeRoleReason,
   getCannotRemoveMemberReason,
@@ -107,7 +107,7 @@ const handleRemoveMember = (userId: string) => {
               Manage your team members and their roles.
             </FieldDescription>
           </FieldContent>
-          <Button v-if="isOwner" @click="openInviteDialog">
+          <Button v-if="canInviteMembers" @click="openInviteDialog">
             <IconPlus />
             Invite Member
           </Button>

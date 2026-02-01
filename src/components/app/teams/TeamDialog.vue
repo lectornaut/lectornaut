@@ -19,6 +19,7 @@ import {
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole, ITeam } from "@/types"
 import { validateImageFile } from "@/utils/imageFile"
+import { Capabilities, roleCan } from "@/utils/permissions"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
@@ -49,7 +50,14 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { createTeam, updateTeam } = useTeamActions()
+const {
+  createTeam,
+  updateTeam,
+  canUpdateTeam,
+  getCannotUpdateTeamReason,
+  canInviteMembers,
+  getCannotInviteMembersReason,
+} = useTeamActions()
 const membershipStore = useMembershipStore()
 const invitationStore = useInvitationStore()
 const user = useCurrentUser()
@@ -92,7 +100,7 @@ const userRole = computed(() => {
 })
 
 const isPrivileged = computed(() => {
-  return userRole.value === "owner" || userRole.value === "admin"
+  return roleCan(userRole.value, Capabilities.INVITE_MEMBER)
 })
 
 // Photo Upload State
@@ -450,27 +458,43 @@ const handleSubmit = async () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Avatar
-                      class="size-16 rounded-md"
-                      @click="
-                        openFileDialog({ accept: 'image/*', multiple: false })
-                      "
+                    <div
+                      :class="{
+                        'cursor-not-allowed opacity-50':
+                          !canUpdateTeam && mode === 'edit',
+                      }"
                     >
-                      <AvatarImage
+                      <Avatar
                         class="size-16 rounded-md"
-                        :src="photoPreview!"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback class="size-16 rounded-md">
-                        {{ getInitials(teamName) }}
-                      </AvatarFallback>
-                    </Avatar>
+                        :class="{
+                          'cursor-pointer': canUpdateTeam || mode === 'create',
+                        }"
+                        @click="
+                          (canUpdateTeam || mode === 'create') &&
+                          openFileDialog({ accept: 'image/*', multiple: false })
+                        "
+                      >
+                        <AvatarImage
+                          class="size-16 rounded-md"
+                          :src="photoPreview!"
+                          referrerpolicy="no-referrer"
+                        />
+                        <AvatarFallback class="size-16 rounded-md">
+                          {{ getInitials(teamName) }}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent v-if="!canUpdateTeam && mode === 'edit'">
+                    {{ t(getCannotUpdateTeamReason || "") }}
+                  </TooltipContent>
+                  <TooltipContent v-else>
                     {{ t("components.teamDialog.tooltips.uploadPhoto") }}
                   </TooltipContent>
                 </Tooltip>
-                <Tooltip v-if="photoPreview">
+                <Tooltip
+                  v-if="photoPreview && (canUpdateTeam || mode === 'create')"
+                >
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
@@ -502,12 +526,26 @@ const handleSubmit = async () => {
           <FieldLabel class="text-secondary-foreground text-xs" for="name">
             {{ t("components.teamDialog.labels.teamName") }}
           </FieldLabel>
-          <Input
-            id="name"
-            v-model="teamName"
-            :placeholder="$t('components.teamDialog.placeholders.teamName')"
-            @keyup.enter="handleSubmit"
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <Input
+                    id="name"
+                    v-model="teamName"
+                    :placeholder="
+                      $t('components.teamDialog.placeholders.teamName')
+                    "
+                    :disabled="!canUpdateTeam && mode === 'edit'"
+                    @keyup.enter="handleSubmit"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canUpdateTeam && mode === 'edit'">
+                {{ t(getCannotUpdateTeamReason || "") }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Field>
 
         <!-- 1. MEMBERS SECTION (Active) -->
@@ -586,17 +624,36 @@ const handleSubmit = async () => {
           <ButtonGroup class="flex-1">
             <ButtonGroup class="flex-1">
               <InputGroup>
-                <InputGroupInput
-                  id="invite"
-                  v-model="inviteEmail"
-                  :placeholder="$t('components.teamDialog.placeholders.email')"
-                  type="email"
-                />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <div class="w-full">
+                        <InputGroupInput
+                          id="invite"
+                          v-model="inviteEmail"
+                          :placeholder="
+                            $t('components.teamDialog.placeholders.email')
+                          "
+                          type="email"
+                          :disabled="!canInviteMembers && mode !== 'create'"
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      v-if="!canInviteMembers && mode !== 'create'"
+                    >
+                      {{ t(getCannotInviteMembersReason || "") }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </InputGroup>
             </ButtonGroup>
             <ButtonGroup>
               <ButtonGroup>
-                <Select v-model="inviteRole">
+                <Select
+                  v-model="inviteRole"
+                  :disabled="!canInviteMembers && mode !== 'create'"
+                >
                   <SelectTrigger class="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -620,7 +677,12 @@ const handleSubmit = async () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <Button variant="outline" size="icon" @click="addMember">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        :disabled="!canInviteMembers && mode !== 'create'"
+                        @click="addMember"
+                      >
                         <IconPlus />
                       </Button>
                     </TooltipTrigger>
@@ -843,27 +905,21 @@ const handleSubmit = async () => {
 
       <DialogFooter>
         <DialogClose as-child>
-          <Button variant="outline">
-            {{ t("actions.cancel") }}
+          <Button variant="ghost" :disabled="isLoading">
+            {{ t("common.actions.cancel") }}
           </Button>
         </DialogClose>
         <Button
-          :disabled="
-            isLoading ||
-            (mode !== 'invite' && !teamName.trim()) ||
-            (mode === 'invite' && members.length === 0)
-          "
+          :disabled="isLoading || (!canUpdateTeam && mode === 'edit')"
           @click="handleSubmit"
         >
           <Spinner v-if="isLoading" />
           {{
             mode === "create"
-              ? t("components.teamDialog.buttons.createTeam")
+              ? t("components.teamDialog.actions.create")
               : mode === "edit"
-                ? t("components.teamDialog.buttons.saveChanges")
-                : t("components.teamDialog.buttons.inviteMembers", {
-                    count: members.length,
-                  })
+                ? t("components.teamDialog.actions.save")
+                : t("components.teamDialog.actions.invite")
           }}
         </Button>
       </DialogFooter>

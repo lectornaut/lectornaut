@@ -1,6 +1,8 @@
 import { useLoadingState } from "@/composables/useLoadingState"
+import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
+import { can, Capabilities } from "@/utils/permissions"
 import { withToast } from "@/utils/toast-helpers"
 import { storeToRefs } from "pinia"
 
@@ -14,11 +16,47 @@ export function useWorkspaceActions() {
 
   const { workspaces, currentWorkspace, isLoading } =
     storeToRefs(workspaceStore)
-  const { isOwner, canManageWorkspaces } = storeToRefs(membershipStore)
+  const { isOwner, currentUserRole } = storeToRefs(membershipStore)
+  const { currentUser } = storeToRefs(useAuthStore()) // We need user for can()
   const loading = useLoadingState<string>()
 
-  /** Permission check for workspace management (create, edit, delete) */
-  const canManage = () => canManageWorkspaces.value
+  const canManageWorkspaces = computed(() =>
+    can(currentUser.value, Capabilities.CREATE_WORKSPACE, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
+  )
+
+  const canCreateWorkspace = computed(() => canManageWorkspaces.value)
+  const getCannotCreateWorkspaceReason = computed(() =>
+    !canManageWorkspaces.value
+      ? "Only members and above can create workspaces"
+      : null
+  )
+
+  const canUpdateWorkspace = computed(() =>
+    can(currentUser.value, Capabilities.EDIT_WORKSPACE, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
+  )
+  const getCannotUpdateWorkspaceReason = computed(() =>
+    !canUpdateWorkspace.value
+      ? "Only members and above can update workspaces"
+      : null
+  )
+
+  const canDeleteWorkspace = computed(() =>
+    can(currentUser.value, Capabilities.DELETE_WORKSPACE, {
+      scope: "team",
+      teamRole: currentUserRole.value,
+    })
+  )
+  const getCannotDeleteWorkspaceReason = computed(() =>
+    !canDeleteWorkspace.value
+      ? "Only members and above can delete workspaces"
+      : null
+  )
 
   /** Switch to a different workspace */
   const switchWorkspace = async (workspaceId: string) => {
@@ -109,7 +147,15 @@ export function useWorkspaceActions() {
     loading,
 
     // Permission
-    canManageWorkspace: canManage,
+    canManageWorkspace: canManageWorkspaces,
+    canCreateWorkspace,
+    canUpdateWorkspace,
+    canDeleteWorkspace,
+
+    // Reasons
+    getCannotCreateWorkspaceReason,
+    getCannotUpdateWorkspaceReason,
+    getCannotDeleteWorkspaceReason,
 
     // Actions
     switchWorkspace,

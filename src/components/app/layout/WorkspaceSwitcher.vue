@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconBlocks,
   IconCheck,
@@ -16,6 +17,8 @@ const { t } = useI18n()
 
 const workspaceStore = useWorkspaceStore()
 const { workspaces, currentWorkspace, isLoading } = storeToRefs(workspaceStore)
+const { canCreateWorkspace, getCannotCreateWorkspaceReason } =
+  useWorkspaceActions()
 
 const teamStore = useTeamStore()
 const { currentTeam } = storeToRefs(teamStore)
@@ -112,10 +115,27 @@ const switchWorkspace = async (workspaceId: string) => {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem @click="isCreatingWorkspaceDialogOpen = true">
-                  <IconCirclePlus />
-                  {{ t("components.workspaceSwitcher.createWorkspace") }}
-                </DropdownMenuItem>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <!-- Wrapper div to capture hover when disabled -->
+                      <div>
+                        <DropdownMenuItem
+                          :disabled="!canCreateWorkspace"
+                          @click="isCreatingWorkspaceDialogOpen = true"
+                        >
+                          <IconCirclePlus />
+                          {{
+                            t("components.workspaceSwitcher.createWorkspace")
+                          }}
+                        </DropdownMenuItem>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent v-if="!canCreateWorkspace">
+                      {{ t(getCannotCreateWorkspaceReason || "") }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCheck, IconChevronDown, IconMinus } from "@/data/icons"
 
 const { t } = useI18n()
+const { canManageBilling } = useTeamActions()
 
 // Subscription Plans Logic
 const billingCycle = ref<"annually" | "monthly">("annually")
@@ -219,6 +221,7 @@ const getButtonLabel = (planId: string) => {
           <RadioGroup
             :model-value="currentPlanId"
             class="grid grid-cols-4 gap-2"
+            :disabled="!canManageBilling"
             @update:model-value="(val) => (currentPlanId = val)"
           >
             <FieldLabel
@@ -376,7 +379,10 @@ const getButtonLabel = (planId: string) => {
                             size="sm"
                             class="w-full shadow-none"
                             :variant="getButtonVariant(plan.id)"
-                            :disabled="getPlanStatus(plan.id) === 'current'"
+                            :disabled="
+                              getPlanStatus(plan.id) === 'current' ||
+                              !canManageBilling
+                            "
                           >
                             {{ getButtonLabel(plan.id) }}
                           </Button>
