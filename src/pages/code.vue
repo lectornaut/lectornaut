@@ -3,13 +3,13 @@ definePage({
   meta: {
     requiresUser: true,
     layout: "app",
-    sidebar: "Teams",
-    breadcrumb: "Teams",
+    sidebar: "Code",
+    breadcrumb: "Code",
   },
 })
 
 useHead({
-  title: "Teams",
+  title: "Code",
 })
 </script>
 

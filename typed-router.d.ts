@@ -73,6 +73,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/code': RouteRecordInfo<
+      '/code',
+      '/code',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/create': RouteRecordInfo<
       '/create',
       '/create',
@@ -164,11 +171,18 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/teams': RouteRecordInfo<
-      '/teams',
+    '/teams/': RouteRecordInfo<
+      '/teams/',
       '/teams',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/teams/[teamId]': RouteRecordInfo<
+      '/teams/[teamId]',
+      '/teams/:teamId',
+      { teamId: ParamValue<true> },
+      { teamId: ParamValue<false> },
       | never
     >,
     '/test': RouteRecordInfo<
@@ -246,6 +260,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/changelog.vue': {
       routes:
         | '/changelog'
+      views:
+        | never
+    }
+    'src/pages/code.vue': {
+      routes:
+        | '/code'
       views:
         | never
     }
@@ -327,9 +347,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/teams.vue': {
+    'src/pages/teams/index.vue': {
       routes:
-        | '/teams'
+        | '/teams/'
+      views:
+        | never
+    }
+    'src/pages/teams/[teamId].vue': {
+      routes:
+        | '/teams/[teamId]'
       views:
         | never
     }

@@ -233,6 +233,21 @@ export const defaultMenu = [
     },
     shortcut: "⌘R",
   },
+  // code
+  {
+    title: "Code",
+    action: "Create a Code",
+    description: "A place to write and organize your code.",
+    url: "/code",
+    id: "code",
+    icon: IconFileText,
+    style: {
+      text: "text-teal-700/90 dark:text-teal-300/90",
+      bg: "bg-teal-50 dark:bg-teal-950/40",
+      grid: "",
+    },
+    shortcut: "⌘C",
+  },
   {
     title: "Teams",
     action: "Create a Spreadsheet",

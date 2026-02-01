@@ -476,6 +476,7 @@
       "runs": "Runs",
       "teams": "Teams",
       "create": "Create",
+      "code": "Code",
       "profile": "Profile"
     },
     "showMore": "Show more options",
@@ -1019,6 +1020,21 @@
       "public": "Public",
       "private": "Private",
       "settings": "Settings"
+    },
+    "teams": {
+      "title": "Teams",
+      "description": "Manage and collaborate with your teams",
+      "memberCount": "{count} member | {count} members",
+      "createTeam": "Create Team",
+      "active": "Active",
+      "you": "You",
+      "empty": {
+        "title": "No teams yet",
+        "description": "Create a team to start collaborating with others"
+      },
+      "members": {
+        "title": "Members"
+      }
     },
     "welcome": {
       "steps": {

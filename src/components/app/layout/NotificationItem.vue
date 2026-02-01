@@ -25,6 +25,7 @@ const emit = defineEmits<{
   (e: "mark-saved", id: string): void
   (e: "mark-inbox", id: string): void
   (e: "delete", id: string): void
+  (e: "click"): void
 }>()
 
 const router = useRouter()
@@ -49,6 +50,7 @@ const handleClick = () => {
   if (props.notification.url) {
     router.push(props.notification.url)
   }
+  emit("click")
 }
 </script>
 

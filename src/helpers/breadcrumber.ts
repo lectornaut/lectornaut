@@ -1,4 +1,8 @@
-import type { RouteLocationRaw } from "vue-router"
+import { resolveRouteName } from "@/helpers/route"
+import type {
+  RouteLocationNormalizedLoaded,
+  RouteLocationRaw,
+} from "vue-router"
 
 export interface BreadcrumbItem {
   breadcrumb: string
@@ -24,12 +28,9 @@ export const useRouteBreadcrumbs = () => {
     return matchedRoutes
       .filter((r) => r.meta.breadcrumb)
       .map((r, _idx) => {
-        let breadcrumb: string
-        if (typeof r.meta.breadcrumb === "function") {
-          breadcrumb = r.meta.breadcrumb(route)
-        } else {
-          breadcrumb = String(r.meta.breadcrumb)
-        }
+        const breadcrumb = resolveRouteName(
+          r as unknown as RouteLocationNormalizedLoaded
+        )
         return {
           route: r.path,
           breadcrumb,

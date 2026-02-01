@@ -49,6 +49,7 @@ const scrollableContainer = useTemplateRef<ComponentPublicInstance>(
 )
 const activeTab = ref<INotificationStatus>("inbox")
 const isDocked = ref(false)
+const isPopoverOpen = ref(false)
 
 const filteredNotifications = computed(() => {
   return notifications.value.filter((n) => {
@@ -79,7 +80,7 @@ useInfiniteScroll(
 </script>
 
 <template>
-  <Popover id="tour-tasks-notifications" :modal="false">
+  <Popover id="tour-tasks-notifications" v-model:open="isPopoverOpen">
     <PopoverTrigger as-child>
       <Button
         variant="ghost"
@@ -175,6 +176,7 @@ useInfiniteScroll(
               @mark-saved="markAsSaved"
               @mark-done="markAsDone"
               @delete="deleteNotification"
+              @click="isPopoverOpen = false"
             />
             <!-- Loading / Infinite Scroll Trigger -->
             <div class="flex justify-center p-4">
@@ -188,7 +190,7 @@ useInfiniteScroll(
         <div class="flex items-center justify-between">
           <div>
             <ButtonGroup>
-              <DropdownMenu :modal="false">
+              <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                   <Button variant="secondary" size="icon-sm">
                     <IconMoreHorizontal />
