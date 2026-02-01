@@ -157,6 +157,7 @@ declare global {
   const useCountdown: typeof import("@vueuse/core").useCountdown
   const useCounter: typeof import("@vueuse/core").useCounter
   const useCssModule: typeof import("vue").useCssModule
+  const useCssSupports: typeof import("@vueuse/core").useCssSupports
   const useCssVar: typeof import("@vueuse/core").useCssVar
   const useCssVars: typeof import("vue").useCssVars
   const useCurrentElement: typeof import("@vueuse/core").useCurrentElement
@@ -680,6 +681,9 @@ declare module "vue" {
       (typeof import("@vueuse/core"))["useCounter"]
     >
     readonly useCssModule: UnwrapRef<(typeof import("vue"))["useCssModule"]>
+    readonly useCssSupports: UnwrapRef<
+      (typeof import("@vueuse/core"))["useCssSupports"]
+    >
     readonly useCssVar: UnwrapRef<(typeof import("@vueuse/core"))["useCssVar"]>
     readonly useCssVars: UnwrapRef<(typeof import("vue"))["useCssVars"]>
     readonly useCurrentElement: UnwrapRef<

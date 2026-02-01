@@ -18,7 +18,9 @@ import { store } from "@/modules/theme"
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent> Change theme </TooltipContent>
+        <TooltipContent>
+          {{ $t("components.colorMode.tooltip") }}
+        </TooltipContent>
         <DropdownMenuContent align="start">
           <DropdownMenuRadioGroup v-model="store">
             <DropdownMenuRadioItem

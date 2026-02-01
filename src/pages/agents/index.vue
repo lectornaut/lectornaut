@@ -171,7 +171,7 @@ const route = useRoute()
             </span>
             <Button variant="ghost">
               <IconPlus />
-              <span>New</span>
+              <span>{{ $t("pages.agents.buttons.new") }}</span>
             </Button>
           </div>
         </SidebarHeader>
@@ -186,7 +186,10 @@ const route = useRoute()
               >
                 <IconSearch />
               </span>
-              <SidebarInput class="pl-9" placeholder="Search" />
+              <SidebarInput
+                class="pl-9"
+                :placeholder="$t('pages.agents.search')"
+              />
             </div>
             <TooltipProvider>
               <Tooltip>
@@ -195,7 +198,7 @@ const route = useRoute()
                     <IconListFilter />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent> Filter </TooltipContent>
+                <TooltipContent> {{ $t("actions.filter") }} </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -252,31 +255,28 @@ const route = useRoute()
       <div class="flex max-w-6xl flex-col gap-16 p-16">
         <div class="mx-auto grid max-w-lg gap-8">
           <h1 class="text-center text-5xl font-semibold tracking-tight">
-            Agent Network
+            {{ $t("pages.agents.title") }}
           </h1>
-          <p class="text-muted-foreground text-center">
-            From data analysis to content creation, these agents are equipped
-            with advanced capabilities to enhance your productivity.
-          </p>
+          {{ $t("pages.agents.description") }}
           <Command class="bg-card rounded-md border">
             <CommandInput
-              placeholder="Search agents, functionalities, or categories..."
+              :placeholder="$t('pages.agents.searchPlaceholder')"
               class="border-none p-0 focus:border-inherit focus:ring-0"
             />
             <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup heading="Trending Agents">
+              <CommandEmpty>{{ $t("pages.agents.empty") }}</CommandEmpty>
+              <CommandGroup :heading="$t('pages.agents.trending')">
                 <CommandItem value="calendar" class="py-2">
                   <IconCalendar />
-                  <span>Calendar</span>
+                  <span>{{ $t("pages.agents.categories.calendar") }}</span>
                 </CommandItem>
                 <CommandItem value="search" class="py-2">
                   <IconSmile />
-                  <span>Search Emoji</span>
+                  <span>{{ $t("pages.agents.categories.searchEmoji") }}</span>
                 </CommandItem>
                 <CommandItem value="calculator" class="py-2">
                   <IconCalculator />
-                  <span>Calculator</span>
+                  <span>{{ $t("pages.agents.categories.calculator") }}</span>
                 </CommandItem>
               </CommandGroup>
             </CommandList>
@@ -309,10 +309,11 @@ const route = useRoute()
           </div>
           <TabsContent value="featured" class="grid gap-16">
             <div>
-              <h3 class="text-2xl font-bold tracking-tight">Featured</h3>
+              <h3 class="text-2xl font-bold tracking-tight">
+                {{ $t("pages.agents.sections.featured") }}
+              </h3>
               <p class="text-muted-foreground">
-                Explore our featured agents, showcasing their capabilities and
-                functionalities.
+                {{ $t("pages.agents.sections.featuredDescription") }}
               </p>
             </div>
             <div>
@@ -404,10 +405,12 @@ const route = useRoute()
                       </CardContent>
                       <CardFooter class="grid grid-cols-2 gap-2">
                         <Button variant="outline">
-                          <IconBriefcase /> Recruit
+                          <IconBriefcase />
+                          {{ $t("pages.agents.buttons.recruit") }}
                         </Button>
                         <Button variant="secondary">
-                          <IconUserRoundPlus /> Add to Team
+                          <IconUserRoundPlus />
+                          {{ $t("pages.agents.buttons.addToTeam") }}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -418,10 +421,11 @@ const route = useRoute()
               </Carousel>
             </div>
             <div>
-              <h3 class="text-2xl font-bold tracking-tight">Trending</h3>
+              <h3 class="text-2xl font-bold tracking-tight">
+                {{ $t("pages.agents.sections.trending") }}
+              </h3>
               <p class="text-muted-foreground">
-                Discover the most popular agents in our network, each with
-                unique functionalities and capabilities.
+                {{ $t("pages.agents.sections.trendingDescription") }}
               </p>
             </div>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -462,20 +466,21 @@ const route = useRoute()
                   </div>
                 </CardHeader>
                 <CardFooter class="grid grid-cols-2 gap-2">
-                  <Button variant="outline"> <IconBriefcase /> Recruit </Button>
+                  <Button variant="outline">
+                    <IconBriefcase /> {{ $t("pages.agents.buttons.recruit") }}
+                  </Button>
                   <Button variant="secondary">
-                    <IconUserRoundPlus /> Add to Team
+                    <IconUserRoundPlus />
+                    {{ $t("pages.agents.buttons.addToTeam") }}
                   </Button>
                 </CardFooter>
               </Card>
             </div>
             <div>
               <h3 class="text-2xl font-bold tracking-tight">
-                By Agent Network
+                {{ $t("pages.agents.sections.byAgentNetwork") }}
               </h3>
-              <p class="text-muted-foreground">
-                Agents created by the Agent Network team.
-              </p>
+              {{ $t("pages.agents.sections.byAgentNetworkDescription") }}
             </div>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               <Card v-for="index in 6" :key="index" class="h-full shadow-none">
@@ -514,9 +519,12 @@ const route = useRoute()
                   </div>
                 </CardHeader>
                 <CardFooter class="grid grid-cols-2 gap-2">
-                  <Button variant="outline"> <IconBriefcase /> Recruit </Button>
+                  <Button variant="outline">
+                    <IconBriefcase /> {{ $t("pages.agents.buttons.recruit") }}
+                  </Button>
                   <Button variant="secondary">
-                    <IconUserRoundPlus /> Add to Team
+                    <IconUserRoundPlus />
+                    {{ $t("pages.agents.buttons.addToTeam") }}
                   </Button>
                 </CardFooter>
               </Card>

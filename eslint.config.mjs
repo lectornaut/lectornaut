@@ -25,6 +25,14 @@ export default defineConfig([
   ...eslintPluginVue.configs["flat/recommended"],
   ...vueI18n.configs["flat/recommended"],
   {
+    settings: {
+      "vue-i18n": {
+        localeDir: "./src/locales/*.{json}",
+        messageSyntaxVersion: "^11.2.8",
+      },
+    },
+  },
+  {
     files: ["**/*.{js,ts,cjs,mjs,vue}"],
     languageOptions: {
       parser: vueParser,
@@ -50,12 +58,6 @@ export default defineConfig([
         },
       ],
       "@intlify/vue-i18n/no-raw-text": "off",
-    },
-    settings: {
-      "vue-i18n": {
-        localeDir: "./src/locales/**/*.{json}",
-        messageSyntaxVersion: "^11.1.11",
-      },
     },
   },
   eslintPluginPrettierRecommended,

@@ -96,7 +96,11 @@ const handleClick = () => {
                         <IconEye v-else />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent> Mark as unread </TooltipContent>
+                    <TooltipContent>
+                      {{
+                        $t("components.notificationItem.tooltips.markUnread")
+                      }}
+                    </TooltipContent>
                   </Tooltip>
                 </ButtonGroup>
                 <ButtonGroup>
@@ -112,7 +116,11 @@ const handleClick = () => {
                         <IconInbox />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent> Move to Inbox </TooltipContent>
+                    <TooltipContent>
+                      {{
+                        $t("components.notificationItem.tooltips.moveToInbox")
+                      }}
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip v-if="notification.status !== 'saved'">
                     <TooltipTrigger as-child>
@@ -126,7 +134,9 @@ const handleClick = () => {
                         <IconBookmark />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent> Save </TooltipContent>
+                    <TooltipContent>
+                      {{ $t("components.notificationItem.tooltips.save") }}
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip v-if="notification.status !== 'done'">
                     <TooltipTrigger as-child>
@@ -138,7 +148,9 @@ const handleClick = () => {
                         <IconCheck />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent> Mark as done </TooltipContent>
+                    <TooltipContent>
+                      {{ $t("components.notificationItem.tooltips.markDone") }}
+                    </TooltipContent>
                   </Tooltip>
                 </ButtonGroup>
               </TooltipProvider>
@@ -157,21 +169,21 @@ const handleClick = () => {
         <ContextMenuItem as-child>
           <ContextMenuSubTrigger>
             <IconSquareMousePointer />
-            Move to
+            {{ $t("components.notificationItem.contextMenu.moveTo") }}
           </ContextMenuSubTrigger>
         </ContextMenuItem>
         <ContextMenuSubContent>
           <ContextMenuItem @click="emit('mark-inbox', notification.id)">
             <IconInbox />
-            Inbox
+            {{ $t("components.notificationItem.contextMenu.inbox") }}
           </ContextMenuItem>
           <ContextMenuItem @click="emit('mark-saved', notification.id)">
             <IconBookmark />
-            Saved
+            {{ $t("components.notificationItem.contextMenu.saved") }}
           </ContextMenuItem>
           <ContextMenuItem @click="emit('mark-done', notification.id)">
             <IconCheck />
-            Done
+            {{ $t("components.notificationItem.contextMenu.done") }}
           </ContextMenuItem>
         </ContextMenuSubContent>
       </ContextMenuSub>
@@ -179,24 +191,24 @@ const handleClick = () => {
         <ContextMenuItem as-child>
           <ContextMenuSubTrigger>
             <IconSquareDashedMousePointer />
-            Mark as
+            {{ $t("components.notificationItem.contextMenu.markAs") }}
           </ContextMenuSubTrigger>
         </ContextMenuItem>
         <ContextMenuSubContent>
           <ContextMenuItem @click="emit('mark-read', notification.id)">
             <IconEye />
-            Read
+            {{ $t("components.notificationItem.contextMenu.read") }}
           </ContextMenuItem>
           <ContextMenuItem @click="emit('mark-unread', notification.id)">
             <IconEyeOff />
-            Unread
+            {{ $t("components.notificationItem.contextMenu.unread") }}
           </ContextMenuItem>
         </ContextMenuSubContent>
       </ContextMenuSub>
       <ContextMenuSeparator />
       <ContextMenuItem @click="emit('delete', notification.id)">
         <IconTrash />
-        Delete
+        {{ $t("components.notificationItem.contextMenu.delete") }}
       </ContextMenuItem>
     </ContextMenuContent>
   </ContextMenu>

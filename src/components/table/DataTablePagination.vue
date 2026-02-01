@@ -23,13 +23,14 @@ defineProps<DataTablePaginationProps>()
         class="border-dashed"
       >
         {{ table.getFilteredSelectedRowModel().rows.length }} /
-        {{ table.getFilteredRowModel().rows.length }} selected
+        {{ table.getFilteredRowModel().rows.length }}
+        {{ $t("components.dataTable.selected") }}
       </Button>
     </div>
     <div class="flex grow items-center justify-center gap-2">
       <span class="text-muted-foreground font-mono text-xs">
         {{ table.getState().pagination.pageIndex + 1 }} /
-        {{ table.getPageCount() }} pages
+        {{ table.getPageCount() }} {{ $t("components.dataTable.pages") }}
       </span>
     </div>
     <div class="flex grow items-center justify-end gap-2">
@@ -55,7 +56,9 @@ defineProps<DataTablePaginationProps>()
                 </SelectItem>
               </SelectContent>
             </TooltipTrigger>
-            <TooltipContent>Rows per page</TooltipContent>
+            <TooltipContent>{{
+              $t("components.dataTable.rowsPerPage")
+            }}</TooltipContent>
           </Select>
         </Tooltip>
         <Tooltip>
@@ -69,7 +72,9 @@ defineProps<DataTablePaginationProps>()
               <IconArrowLeftToLine />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Go to first page</TooltipContent>
+          <TooltipContent>{{
+            $t("components.dataTable.goToFirstPage")
+          }}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -82,7 +87,9 @@ defineProps<DataTablePaginationProps>()
               <IconChevronLeft />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Go to previous page</TooltipContent>
+          <TooltipContent>{{
+            $t("components.dataTable.goToPreviousPage")
+          }}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -95,7 +102,9 @@ defineProps<DataTablePaginationProps>()
               <IconChevronRight />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Go to next page</TooltipContent>
+          <TooltipContent>{{
+            $t("components.dataTable.goToNextPage")
+          }}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -108,7 +117,9 @@ defineProps<DataTablePaginationProps>()
               <IconArrowRightToLine />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Go to last page</TooltipContent>
+          <TooltipContent>{{
+            $t("components.dataTable.goToLastPage")
+          }}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </div>

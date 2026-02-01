@@ -398,10 +398,10 @@ const handleSubmit = async () => {
     console.error(error)
     toast.error(
       props.mode === "create"
-        ? "Failed to create team"
+        ? t("components.teamDialog.errors.failedToCreate")
         : props.mode === "edit"
-          ? "Failed to update team"
-          : "Failed to invite members",
+          ? t("components.teamDialog.errors.failedToUpdate")
+          : t("components.teamDialog.errors.failedToInvite"),
       {
         description: (error as Error).message,
       }
@@ -505,7 +505,7 @@ const handleSubmit = async () => {
           <Input
             id="name"
             v-model="teamName"
-            placeholder="Acme Inc."
+            :placeholder="$t('components.teamDialog.placeholders.teamName')"
             @keyup.enter="handleSubmit"
           />
         </Field>
@@ -571,7 +571,7 @@ const handleSubmit = async () => {
             v-if="activeMembers.length === 0"
             class="text-muted-foreground text-xs"
           >
-            No active members found.
+            {{ t("components.teamDialog.labels.noActiveMembers") }}
           </p>
         </Field>
 
@@ -580,7 +580,7 @@ const handleSubmit = async () => {
         <Field class="grid gap-2">
           <!-- 2a. Invite Input + Staged List -->
           <FieldLabel class="text-secondary-foreground text-xs">
-            Invite
+            {{ t("components.teamDialog.labels.invite") }}
           </FieldLabel>
           <!-- Input Form -->
           <ButtonGroup class="flex-1">
@@ -589,7 +589,7 @@ const handleSubmit = async () => {
                 <InputGroupInput
                   id="invite"
                   v-model="inviteEmail"
-                  placeholder="user@example.com"
+                  :placeholder="$t('components.teamDialog.placeholders.email')"
                   type="email"
                 />
               </InputGroup>
@@ -647,7 +647,7 @@ const handleSubmit = async () => {
         >
           <!-- 2b. Invitations List (Drafts + Sent) -->
           <FieldLabel class="text-secondary-foreground text-xs">
-            Invitations
+            {{ t("components.teamDialog.labels.invitations") }}
           </FieldLabel>
           <!-- Staged Invites (Drafts) -->
           <ButtonGroup
@@ -659,7 +659,7 @@ const handleSubmit = async () => {
               <InputGroup>
                 <InputGroupInput
                   v-model="member.email"
-                  placeholder="Email"
+                  :placeholder="$t('components.teamDialog.placeholders.email')"
                   type="email"
                 />
                 <InputGroupAddon align="inline-end">
@@ -735,7 +735,9 @@ const handleSubmit = async () => {
                 <InputGroup>
                   <InputGroupInput
                     :model-value="invite.email"
-                    placeholder="Email"
+                    :placeholder="
+                      $t('components.teamDialog.placeholders.email')
+                    "
                     type="email"
                     disabled
                   />

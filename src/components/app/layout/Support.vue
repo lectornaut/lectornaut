@@ -215,58 +215,61 @@ const startOnboarding = () => {
           <DropdownMenuTrigger as-child>
             <SidebarMenuButton
               class="data-[state=open]:bg-accent"
-              tooltip="Help and Support"
+              :tooltip="$t('components.support.tooltip')"
             >
               <IconCircleHelp />
-              Help
+              {{ $t("components.support.help") }}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="right">
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconMessageCircle />
-                Get support
+                {{ $t("components.support.getSupport") }}
               </DropdownMenuItem>
               <DialogTrigger as-child>
                 <DropdownMenuItem>
                   <IconBadgeCheck />
-                  Contact sales
+                  {{ $t("components.support.contactSales") }}
                 </DropdownMenuItem>
               </DialogTrigger>
               <DropdownMenuItem @click="productTour.drive()">
                 <IconCirclePlay />
-                Product tour
+                {{ $t("components.support.productTour") }}
               </DropdownMenuItem>
               <DropdownMenuItem @click="startOnboarding">
                 <IconGift />
-                Onboarding tour
+                {{ $t("components.support.onboardingTour") }}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <IconBookOpen />
-                Documentation <IconArrowUpRight />
+                {{ $t("components.support.documentation") }}
+                <IconArrowUpRight />
               </DropdownMenuItem>
               <DropdownMenuItem @click="emitter.emit('Dialog.Shortcuts.Open')">
                 <IconKeyboard />
-                Shortcuts
+                {{ $t("components.support.shortcuts") }}
                 <DropdownMenuShortcut>⌘ /</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuItem as-child>
                   <DropdownMenuSubTrigger>
                     <IconEllipsis />
-                    More
+                    {{ $t("components.support.more") }}
                   </DropdownMenuSubTrigger>
                 </DropdownMenuItem>
                 <DropdownMenuSubContent>
                   <DropdownMenuGroup>
                     <DropdownMenuItem>
-                      Status <IconArrowUpRight />
+                      {{ $t("components.support.status") }} <IconArrowUpRight />
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      Terms of service <IconArrowUpRight />
+                      {{ $t("components.support.termsOfService") }}
+                      <IconArrowUpRight />
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      Privacy policy <IconArrowUpRight />
+                      {{ $t("components.support.privacyPolicy") }}
+                      <IconArrowUpRight />
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -280,7 +283,7 @@ const startOnboarding = () => {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuLabel class="text-muted-foreground text-xs">
-              What's new
+              {{ $t("components.support.whatsNew") }}
             </DropdownMenuLabel>
             <DropdownMenuGroup>
               <DropdownMenuItem
@@ -293,17 +296,18 @@ const startOnboarding = () => {
               </DropdownMenuItem>
               <DropdownMenuItem @click="emitter.emit('Dialog.Changelog.Open')">
                 <IconCalendar />
-                Full changelog
+                {{ $t("components.support.fullChangelog") }}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
         <DialogContent class="w-sm max-w-fit">
           <DialogHeader>
-            <DialogTitle> Contact sales </DialogTitle>
+            <DialogTitle>
+              {{ $t("components.support.contactSalesTitle") }}
+            </DialogTitle>
             <DialogDescription>
-              Fill out the form below to contact our sales team. We will get
-              back to you as soon as possible.
+              {{ $t("components.support.contactSalesDesc") }}
             </DialogDescription>
             <div class="mt-4 grid gap-4">
               <div class="grid grid-cols-2 gap-4">
@@ -312,36 +316,56 @@ const startOnboarding = () => {
                     class="text-secondary-foreground text-xs"
                     for="first-name"
                   >
-                    First name
+                    {{ $t("components.support.firstName") }}
                   </Label>
-                  <Input id="first-name" type="text" placeholder="Ada" />
+                  <Input
+                    id="first-name"
+                    type="text"
+                    :placeholder="
+                      $t('components.support.placeholders.firstName')
+                    "
+                  />
                 </div>
                 <div class="grid gap-2">
                   <Label
                     class="text-secondary-foreground text-xs"
                     for="last-name"
                   >
-                    Last name
+                    {{ $t("components.support.lastName") }}
                   </Label>
-                  <Input id="last-name" type="text" placeholder="Lovelace" />
+                  <Input
+                    id="last-name"
+                    type="text"
+                    :placeholder="
+                      $t('components.support.placeholders.lastName')
+                    "
+                  />
                 </div>
               </div>
               <div class="grid gap-2">
                 <Label class="text-secondary-foreground text-xs" for="email">
-                  Work email
+                  {{ $t("components.support.workEmail") }}
                 </Label>
-                <Input id="email" type="email" placeholder="ada@lovelace.com" />
+                <Input
+                  id="email"
+                  type="email"
+                  :placeholder="$t('components.support.placeholders.email')"
+                />
               </div>
               <div class="grid gap-2">
                 <Label
                   class="text-secondary-foreground text-xs"
                   for="company-size"
                 >
-                  Company size
+                  {{ $t("components.support.companySize") }}
                 </Label>
                 <Select v-model="selectedCompanySize">
                   <SelectTrigger class="w-full">
-                    <SelectValue placeholder="Number of employees" />
+                    <SelectValue
+                      :placeholder="
+                        $t('components.support.placeholders.employees')
+                      "
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem
@@ -356,11 +380,15 @@ const startOnboarding = () => {
               </div>
               <div class="grid gap-2">
                 <Label class="text-secondary-foreground text-xs" for="category">
-                  Category
+                  {{ $t("components.support.category") }}
                 </Label>
                 <Select v-model="selectedCategory">
                   <SelectTrigger class="w-full">
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue
+                      :placeholder="
+                        $t('components.support.placeholders.category')
+                      "
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem
@@ -374,12 +402,16 @@ const startOnboarding = () => {
                 </Select>
               </div>
               <div v-if="selectedCategory === 'other'" class="grid gap-2">
-                <Label class="text-secondary-foreground text-xs" for="message"
-                  >Message</Label
+                <Label
+                  class="text-secondary-foreground text-xs"
+                  for="message"
+                  >{{ $t("components.support.message") }}</Label
                 >
                 <Textarea
                   id="message"
-                  placeholder="How can we help you?"
+                  :placeholder="
+                    $t('components.support.placeholders.howCanWeHelp')
+                  "
                   class="resize-none"
                 />
               </div>
@@ -387,7 +419,7 @@ const startOnboarding = () => {
           </DialogHeader>
           <DialogFooter class="grid grid-cols-1 gap-2">
             <DialogClose as-child>
-              <Button> Send request </Button>
+              <Button> {{ $t("components.support.sendRequest") }} </Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>

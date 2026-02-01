@@ -408,7 +408,7 @@ const randomIndex = () => {
                       type="file"
                       accept=".jpg, .png"
                       class="bg-muted rounded-full shadow-none"
-                      placeholder="Upload a picture"
+                      :placeholder="$t('components.hyper.uploadPicture')"
                       @change="handleFileChange"
                     />
                   </Label>
@@ -417,7 +417,7 @@ const randomIndex = () => {
                   >
                     <Badge class="rounded-full" variant="secondary">
                       <IconDotsCircle />
-                      <span>Try sample image</span>
+                      <span>{{ $t("components.hyper.trySampleImage") }}</span>
                     </Badge>
                   </span>
                 </div>
@@ -445,7 +445,7 @@ const randomIndex = () => {
                       id="link"
                       type="text"
                       class="bg-muted rounded-full shadow-none"
-                      placeholder="Paste your link here..."
+                      :placeholder="$t('components.hyper.pasteLink')"
                     />
                   </Label>
                   <span
@@ -453,7 +453,7 @@ const randomIndex = () => {
                   >
                     <Badge class="rounded-full" variant="secondary">
                       <IconDotsCircle />
-                      <span>Try sample link</span>
+                      <span>{{ $t("components.hyper.trySampleLink") }}</span>
                     </Badge>
                   </span>
                 </div>
@@ -473,7 +473,7 @@ const randomIndex = () => {
                     data-gramm="false"
                     class="bg-background h-32 resize-none rounded-3xl p-4 shadow-none"
                     cols="10"
-                    placeholder="Ask AI what you want to find..."
+                    :placeholder="$t('components.hyper.askAi')"
                   />
                 </Label>
                 <span class="absolute end-0 top-0 flex gap-2 p-4">
@@ -485,7 +485,9 @@ const randomIndex = () => {
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent side="top">
-                        <span>Try sample prompt</span>
+                        <span>{{
+                          $t("components.hyper.trySamplePrompt")
+                        }}</span>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -508,42 +510,51 @@ const randomIndex = () => {
                               </Button>
                             </DropdownMenuTrigger>
                           </TooltipTrigger>
-                          <TooltipContent side="top">Attach</TooltipContent>
+                          <TooltipContent side="top">{{
+                            $t("components.hyper.attach")
+                          }}</TooltipContent>
                           <DropdownMenuContent align="start" side="top">
                             <DropdownMenuLabel>
-                              Attach to your prompt
+                              {{ $t("components.hyper.attachToPrompt") }}
                             </DropdownMenuLabel>
                             <DropdownMenuGroup>
                               <DropdownMenuItem>
                                 <IconUpload />
-                                <span>Upload image</span>
+                                <span>{{
+                                  $t("components.hyper.uploadImage")
+                                }}</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem>
                                 <IconCamera />
-                                <span>Take photo</span>
+                                <span>{{
+                                  $t("components.hyper.takePhoto")
+                                }}</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem>
                                 <IconGlobe />
-                                <span>Image URL</span>
+                                <span>{{
+                                  $t("components.hyper.imageUrl")
+                                }}</span>
                               </DropdownMenuItem>
                             </DropdownMenuGroup>
                             <DropdownMenuLabel
                               class="text-muted-foreground text-xs"
                             >
-                              JPEG, PNG, GIF, WEBP, AVIF supported. Max 5MB.
+                              {{ $t("components.hyper.supportedFormats") }}
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
                               <DropdownMenuItem>
                                 <IconLink2 />
-                                <span>Product Link</span>
+                                <span>{{
+                                  $t("components.hyper.productLink")
+                                }}</span>
                               </DropdownMenuItem>
                             </DropdownMenuGroup>
                             <DropdownMenuLabel
                               class="text-muted-foreground text-xs"
                             >
-                              Amazon, Shopify, Etsy, eBay, Rakuten, Walmart
-                              supported.
+                              {{ $t("components.hyper.supportedPlatforms") }}
                             </DropdownMenuLabel>
                           </DropdownMenuContent>
                         </DropdownMenu>

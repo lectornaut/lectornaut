@@ -48,18 +48,24 @@ function onPageSizeChange(val: unknown) {
     <DropdownMenuTrigger as-child>
       <Button variant="outline" class="data-[state=open]:bg-accent">
         <IconSettings2 />
-        View
+        {{ $t("components.dataTable.view") }}
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
-      <DropdownMenuLabel> Options </DropdownMenuLabel>
+      <DropdownMenuLabel>
+        {{ $t("components.dataTable.options") }}
+      </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuSub>
         <DropdownMenuItem as-child>
-          <DropdownMenuSubTrigger> Display </DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            {{ $t("components.dataTable.display") }}
+          </DropdownMenuSubTrigger>
         </DropdownMenuItem>
         <DropdownMenuSubContent>
-          <DropdownMenuLabel>Columns</DropdownMenuLabel>
+          <DropdownMenuLabel>{{
+            $t("components.dataTable.columns")
+          }}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuCheckboxItem
@@ -76,39 +82,43 @@ function onPageSizeChange(val: unknown) {
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.resetColumnVisibility">
               <IconRotateCcw />
-              Reset
+              {{ $t("actions.reset") }}
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
         <DropdownMenuItem as-child>
-          <DropdownMenuSubTrigger> Select </DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            {{ $t("actions.select") }}
+          </DropdownMenuSubTrigger>
         </DropdownMenuItem>
         <DropdownMenuSubContent>
-          <DropdownMenuLabel> Rows </DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {{ $t("components.dataTable.rows") }}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             @click="props.table.toggleAllPageRowsSelected(true)"
           >
             <IconSquareDashedMousePointer />
-            Select all on page
+            {{ $t("components.dataTable.selectAllOnPage") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="props.table.toggleAllPageRowsSelected(false)"
           >
             <IconSquareDashed />
-            Clear selection on page
+            {{ $t("components.dataTable.clearSelectionOnPage") }}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.toggleAllRowsSelected(true)">
               <IconSquareMousePointer />
-              Select all
+              {{ $t("components.dataTable.selectAll") }}
             </DropdownMenuItem>
             <DropdownMenuItem @click="props.table.toggleAllRowsSelected(false)">
               <IconSquare />
-              Clear selection
+              {{ $t("components.dataTable.clearSelection") }}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem @click="props.table.resetRowSelection()">
@@ -120,19 +130,23 @@ function onPageSizeChange(val: unknown) {
       </DropdownMenuSub>
       <DropdownMenuSub>
         <DropdownMenuItem as-child>
-          <DropdownMenuSubTrigger> Expand </DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            {{ $t("actions.expand") }}
+          </DropdownMenuSubTrigger>
         </DropdownMenuItem>
         <DropdownMenuSubContent>
-          <DropdownMenuLabel> Rows </DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {{ $t("components.dataTable.rows") }}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.toggleAllRowsExpanded(true)">
               <IconChevronsUpDown />
-              Expand all
+              {{ $t("components.dataTable.expandAll") }}
             </DropdownMenuItem>
             <DropdownMenuItem @click="props.table.toggleAllRowsExpanded(false)">
               <IconChevronsDownUp />
-              Collapse all
+              {{ $t("components.dataTable.collapseAll") }}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
@@ -144,10 +158,14 @@ function onPageSizeChange(val: unknown) {
       </DropdownMenuSub>
       <DropdownMenuSub>
         <DropdownMenuItem as-child>
-          <DropdownMenuSubTrigger> Pagination </DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            {{ $t("components.dataTable.pagination") }}
+          </DropdownMenuSubTrigger>
         </DropdownMenuItem>
         <DropdownMenuSubContent>
-          <DropdownMenuLabel> Page size </DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {{ $t("components.dataTable.pageSize") }}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuRadioGroup
@@ -172,10 +190,14 @@ function onPageSizeChange(val: unknown) {
       </DropdownMenuSub>
       <DropdownMenuSub>
         <DropdownMenuItem as-child>
-          <DropdownMenuSubTrigger> Navigation </DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            {{ $t("components.dataTable.navigation") }}
+          </DropdownMenuSubTrigger>
         </DropdownMenuItem>
         <DropdownMenuSubContent>
-          <DropdownMenuLabel> Go to </DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {{ $t("components.dataTable.goTo") }}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem
@@ -183,14 +205,14 @@ function onPageSizeChange(val: unknown) {
               @click="props.table.previousPage()"
             >
               <IconChevronLeft />
-              Previous page
+              {{ $t("components.dataTable.previousPage") }}
             </DropdownMenuItem>
             <DropdownMenuItem
               :disabled="!props.table.getCanNextPage()"
               @click="props.table.nextPage()"
             >
               <IconChevronRight />
-              Next page
+              {{ $t("components.dataTable.nextPage") }}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
@@ -200,14 +222,14 @@ function onPageSizeChange(val: unknown) {
               @click="props.table.setPageIndex(0)"
             >
               <IconArrowLeftToLine />
-              First page
+              {{ $t("components.dataTable.firstPage") }}
             </DropdownMenuItem>
             <DropdownMenuItem
               :disabled="!props.table.getCanNextPage()"
               @click="props.table.setPageIndex(props.table.getPageCount() - 1)"
             >
               <IconArrowRightToLine />
-              Last page
+              {{ $t("components.dataTable.lastPage") }}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
@@ -219,10 +241,14 @@ function onPageSizeChange(val: unknown) {
       </DropdownMenuSub>
       <DropdownMenuSub>
         <DropdownMenuItem as-child>
-          <DropdownMenuSubTrigger> Filter </DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            {{ $t("actions.filter") }}
+          </DropdownMenuSubTrigger>
         </DropdownMenuItem>
         <DropdownMenuSubContent>
-          <DropdownMenuLabel> Column </DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {{ $t("components.dataTable.column") }}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.resetColumnFilters()">
@@ -234,10 +260,14 @@ function onPageSizeChange(val: unknown) {
       </DropdownMenuSub>
       <DropdownMenuSub>
         <DropdownMenuItem as-child>
-          <DropdownMenuSubTrigger> Sorting </DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            {{ $t("components.dataTable.sorting") }}
+          </DropdownMenuSubTrigger>
         </DropdownMenuItem>
         <DropdownMenuSubContent>
-          <DropdownMenuLabel> Column </DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {{ $t("components.dataTable.column") }}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="props.table.resetSorting()">

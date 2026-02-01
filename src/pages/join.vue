@@ -32,8 +32,8 @@ useHead({
   title: "Join",
 })
 
+const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
-
 const route = useRoute()
 const router = useRouter()
 const invitationStore = useInvitationStore()
@@ -85,7 +85,7 @@ onMounted(async () => {
     if (userInvitations.value?.length) {
       error.value = null
     } else {
-      error.value = "Invalid invitation link."
+      error.value = t("pages.join.errors.invalidLink")
     }
   }
 })
@@ -97,12 +97,14 @@ const loadInvitation = async (invitationCode: string) => {
   try {
     const invite = await invitationStore.getInvitationByCode(invitationCode)
     if (!invite) {
-      error.value = "Invitation not found or has expired."
+      error.value = t("pages.join.errors.notFoundOrExpired")
     } else {
       // Check if the current user is the intended recipient
       const currentUserEmail = authStore.currentUser?.email
       if (currentUserEmail && invite.email !== currentUserEmail) {
-        error.value = `Invalid invitation, you are logged in as ${currentUserEmail}.`
+        error.value = t("pages.join.errors.emailMismatch", {
+          email: currentUserEmail,
+        })
         isEmailMismatch.value = true
         // Ensure we don't show the erroneous invitation
         invitation.value = null
@@ -112,7 +114,7 @@ const loadInvitation = async (invitationCode: string) => {
     }
   } catch (e) {
     console.error(e)
-    error.value = "Failed to load invitation."
+    error.value = t("pages.join.errors.loadFailed")
   } finally {
     isLoading.value = false
   }
@@ -130,18 +132,18 @@ const handleAccept = async () => {
   if (!invitation.value) return
 
   if (invitation.value.status !== "pending") {
-    toast.error("Only pending invitations can be accepted.")
+    toast.error(t("pages.join.errors.onlyPending"))
     return
   }
 
   isLoading.value = true
   try {
     await invitationStore.acceptInvitation(invitation.value)
-    toast.success("Joined team successfully!")
+    toast.success(t("pages.join.success.joined"))
     router.push("/")
   } catch (e) {
     console.error(e)
-    toast.error("Failed to join team", {
+    toast.error(t("pages.join.errors.joinFailed"), {
       description: (e as Error).message,
     })
   } finally {
@@ -155,33 +157,33 @@ const handleDecline = async () => {
   isLoading.value = true
   try {
     await invitationStore.declineInvitation(invitation.value.id)
-    toast.info("Invitation declined")
+    toast.info(t("pages.join.info.declined"))
     // Update local state by reloading or re-fetching?
     // userInvitations is reactive via VueFire, so list updates auto.
     // Update current view:
     if (invitation.value) invitation.value.status = "declined"
   } catch (e) {
     console.error(e)
-    toast.error("Failed to decline invitation")
+    toast.error(t("pages.join.errors.declineFailed"))
   } finally {
     isLoading.value = false
   }
 }
 
 const handleDelete = async (inviteId: string) => {
-  if (!confirm("Delete this invitation notification?")) return
+  if (!confirm(t("pages.join.confirm.delete"))) return
 
   try {
     await invitationStore.cancelInvitation(inviteId) // Reuse delete logic
-    toast.success("Invitation removed")
+    toast.success(t("pages.join.success.removed"))
     if (invitation.value?.id === inviteId) {
       invitation.value = null
-      error.value = "Invitation deleted."
+      error.value = t("pages.join.info.deleted")
       router.replace({ query: {} }) // Clear URL
     }
   } catch (e) {
     console.error(e)
-    toast.error("Failed to delete invitation")
+    toast.error(t("pages.join.errors.deleteFailed"))
   }
 }
 
@@ -231,16 +233,18 @@ const handleLogout = async () => {
     <div class="w-full max-w-md p-2">
       <div class="grid gap-2">
         <Label for="team-select" class="text-muted-foreground text-xs">
-          Let's find a team for you to join
+          {{ $t("pages.join.labels.findTeam") }}
         </Label>
         <Select id="team-select" v-model="selectedCode">
           <SelectTrigger class="w-full truncate **:data-desc:hidden">
-            <SelectValue placeholder="Select an invitation" />
+            <SelectValue
+              :placeholder="$t('pages.join.placeholders.selectInvitation')"
+            />
           </SelectTrigger>
           <SelectContent class="w-full">
             <template v-if="isAuthenticated">
               <SelectGroup v-if="pendingInvitations.length > 0">
-                <SelectLabel>Pending</SelectLabel>
+                <SelectLabel>{{ $t("pages.join.labels.pending") }}</SelectLabel>
                 <TooltipProvider>
                   <Tooltip
                     v-for="invite in pendingInvitations"
@@ -251,7 +255,8 @@ const handleLogout = async () => {
                         <SelectText class="font-semibold">
                           {{ invite.teamName }}
                           <span class="text-muted-foreground/50 text-xs">
-                            [{{ invite.role }}] invited by
+                            [{{ invite.role }}]
+                            {{ $t("pages.join.labels.invitedBy") }}
                             {{ invite.inviterName }}
                           </span>
                         </SelectText>
@@ -271,10 +276,14 @@ const handleLogout = async () => {
                   </Tooltip>
                 </TooltipProvider>
               </SelectGroup>
-              <SelectLabel v-else> No pending invitations </SelectLabel>
+              <SelectLabel v-else>
+                {{ $t("pages.join.empty.noPending") }}
+              </SelectLabel>
               <SelectSeparator v-if="declinedInvitations.length > 0" />
               <SelectGroup v-if="declinedInvitations.length > 0">
-                <SelectLabel>Declined</SelectLabel>
+                <SelectLabel>{{
+                  $t("pages.join.labels.declined")
+                }}</SelectLabel>
                 <TooltipProvider>
                   <Tooltip
                     v-for="invite in declinedInvitations"
@@ -305,7 +314,9 @@ const handleLogout = async () => {
                   </Tooltip>
                 </TooltipProvider>
               </SelectGroup>
-              <SelectLabel v-else> No declined invitations </SelectLabel>
+              <SelectLabel v-else>
+                {{ $t("pages.join.empty.noDeclined") }}
+              </SelectLabel>
             </template>
           </SelectContent>
         </Select>
@@ -326,7 +337,7 @@ const handleLogout = async () => {
               <EmptyMedia variant="icon">
                 <Spinner />
               </EmptyMedia>
-              <EmptyTitle>Loading invitation...</EmptyTitle>
+              <EmptyTitle>{{ $t("pages.join.states.loading") }}</EmptyTitle>
             </EmptyHeader>
           </Empty>
           <Empty v-else-if="error">
@@ -334,7 +345,7 @@ const handleLogout = async () => {
               <EmptyMedia variant="icon">
                 <IconAlertTriangle />
               </EmptyMedia>
-              <EmptyTitle>Error</EmptyTitle>
+              <EmptyTitle>{{ $t("pages.join.states.error") }}</EmptyTitle>
               <EmptyDescription>{{ error }}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
@@ -344,9 +355,11 @@ const handleLogout = async () => {
                   variant="default"
                   @click="handleLogout"
                 >
-                  Log out
+                  {{ $t("actions.logout") }}
                 </Button>
-                <Button variant="outline" @click="handleIgnore">Go Home</Button>
+                <Button variant="outline" @click="handleIgnore">{{
+                  $t("pages.join.buttons.goHome")
+                }}</Button>
               </div>
             </EmptyContent>
           </Empty>
@@ -355,10 +368,20 @@ const handleLogout = async () => {
               <EmptyMedia variant="icon">
                 <IconUserRoundPlus />
               </EmptyMedia>
-              <EmptyTitle> Join {{ invitation.teamName }} </EmptyTitle>
+              <EmptyTitle>
+                {{
+                  $t("pages.join.labels.joinTeam", {
+                    teamName: invitation.teamName,
+                  })
+                }}
+              </EmptyTitle>
               <EmptyDescription>
-                {{ invitation.inviterName }} invited you to join as a
-                {{ invitation.role }}
+                {{
+                  $t("pages.join.labels.invitedAs", {
+                    inviterName: invitation.inviterName,
+                    role: invitation.role,
+                  })
+                }}
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
@@ -377,7 +400,7 @@ const handleLogout = async () => {
                 v-if="invitation.status === 'declined'"
                 variant="secondary"
               >
-                You have declined this invitation
+                {{ $t("pages.join.labels.hasDeclined") }}
               </Badge>
             </EmptyContent>
           </Empty>
@@ -389,14 +412,14 @@ const handleLogout = async () => {
           <div class="grid w-full gap-2">
             <template v-if="invitation.status === 'pending'">
               <Button size="lg" @click="handleAccept">
-                Accept Invitation
+                {{ $t("pages.join.buttons.accept") }}
               </Button>
               <Button
                 variant="outline"
                 class="shadow-none"
                 @click="handleDecline"
               >
-                Decline
+                {{ $t("pages.join.buttons.decline") }}
               </Button>
             </template>
             <Button
@@ -404,7 +427,7 @@ const handleLogout = async () => {
               variant="secondary"
               @click="handleDelete(invitation.id!)"
             >
-              Delete
+              {{ $t("actions.delete") }}
             </Button>
           </div>
         </div>
@@ -415,7 +438,7 @@ const handleLogout = async () => {
         {{ authStore.currentUser?.email }}
       </span>
       <Button variant="outline" size="sm" @click="handleLogout">
-        Use a different account
+        {{ $t("pages.join.buttons.useDifferentAccount") }}
       </Button>
     </div>
   </div>

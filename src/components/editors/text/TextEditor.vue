@@ -359,7 +359,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().toggleBulletList().run()"
                   >
-                    <IconList /> Bulleted list
+                    <IconList /> {{ $t("components.textEditor.bulletedList") }}
                     <DropdownMenuShortcut v-if="editor?.isActive('bulletList')">
                       <IconCheck />
                     </DropdownMenuShortcut>
@@ -367,7 +367,8 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().toggleOrderedList().run()"
                   >
-                    <IconListOrdered /> Numbered list
+                    <IconListOrdered />
+                    {{ $t("components.textEditor.numberedList") }}
                     <DropdownMenuShortcut
                       v-if="editor?.isActive('orderedList')"
                     >
@@ -377,7 +378,8 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().toggleTaskList().run()"
                   >
-                    <IconListChecks /> To-do list
+                    <IconListChecks />
+                    {{ $t("components.textEditor.todoList") }}
                     <DropdownMenuShortcut v-if="editor?.isActive('taskList')">
                       <IconCheck />
                     </DropdownMenuShortcut>
@@ -385,7 +387,8 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().setDetails().run()"
                   >
-                    <IconListCollapse /> Toggle list
+                    <IconListCollapse />
+                    {{ $t("components.textEditor.toggleList") }}
                     <DropdownMenuShortcut v-if="editor?.isActive('details')">
                       <IconCheck />
                     </DropdownMenuShortcut>
@@ -396,7 +399,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().toggleCodeBlock().run()"
                   >
-                    <IconCode /> Code block
+                    <IconCode /> {{ $t("components.textEditor.codeBlock") }}
                     <DropdownMenuShortcut v-if="editor?.isActive('codeBlock')">
                       <IconCheck />
                     </DropdownMenuShortcut>
@@ -404,7 +407,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   <DropdownMenuItem
                     @click="editor?.chain().focus().toggleBlockquote().run()"
                   >
-                    <IconQuote /> Blockquote
+                    <IconQuote /> {{ $t("components.textEditor.blockquote") }}
                     <DropdownMenuShortcut v-if="editor?.isActive('blockquote')">
                       <IconCheck />
                     </DropdownMenuShortcut>
@@ -425,7 +428,9 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <IconBold />
             </Toggle>
           </TooltipTrigger>
-          <TooltipContent>Bold</TooltipContent>
+          <TooltipContent>{{
+            $t("components.textEditor.bold")
+          }}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -437,7 +442,9 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <IconItalic />
             </Toggle>
           </TooltipTrigger>
-          <TooltipContent>Italic</TooltipContent>
+          <TooltipContent>{{
+            $t("components.textEditor.italic")
+          }}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -449,7 +456,9 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <IconUnderline />
             </Toggle>
           </TooltipTrigger>
-          <TooltipContent>Underline</TooltipContent>
+          <TooltipContent>{{
+            $t("components.textEditor.underline")
+          }}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -461,7 +470,9 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <IconStrikethrough />
             </Toggle>
           </TooltipTrigger>
-          <TooltipContent>Strike</TooltipContent>
+          <TooltipContent>{{
+            $t("components.textEditor.strike")
+          }}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -473,7 +484,9 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <IconBraces />
             </Toggle>
           </TooltipTrigger>
-          <TooltipContent>Code</TooltipContent>
+          <TooltipContent>{{
+            $t("components.textEditor.code")
+          }}</TooltipContent>
         </Tooltip>
 
         <ButtonGroup>
@@ -490,10 +503,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>Text Color</TooltipContent>
+              <TooltipContent>{{
+                $t("components.textEditor.textColor")
+              }}</TooltipContent>
               <DropdownMenuContent>
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Text Color
+                  {{ $t("components.textEditor.textColor") }}
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
@@ -514,7 +529,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                 <DropdownMenuItem
                   @click="editor?.chain().focus().unsetColor().run()"
                 >
-                  <IconX /> Remove Color
+                  <IconX /> {{ $t("components.textEditor.removeColor") }}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -532,10 +547,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>Highlight Color</TooltipContent>
+              <TooltipContent>{{
+                $t("components.textEditor.highlightColor")
+              }}</TooltipContent>
               <DropdownMenuContent>
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Highlight Color
+                  {{ $t("components.textEditor.highlightColor") }}
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
@@ -817,10 +834,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>Table</TooltipContent>
+              <TooltipContent>{{
+                $t("components.textEditor.table")
+              }}</TooltipContent>
               <DropdownMenuContent>
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Table
+                  {{ $t("components.textEditor.table") }}
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
@@ -836,70 +855,74 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                         .run()
                     "
                   >
-                    <IconPlus /> Insert Table
+                    <IconPlus /> {{ $t("components.textEditor.insertTable") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().deleteTable().run()"
                   >
-                    <IconTrash /> Delete Table
+                    <IconTrash /> {{ $t("components.textEditor.deleteTable") }}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Columns
+                  {{ $t("components.textEditor.columns") }}
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().addColumnBefore().run()"
                   >
-                    <IconArrowLeft /> Add Column Before
+                    <IconArrowLeft />
+                    {{ $t("components.textEditor.addColumnBefore") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().addColumnAfter().run()"
                   >
-                    <IconArrowRight /> Add Column After
+                    <IconArrowRight />
+                    {{ $t("components.textEditor.addColumnAfter") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().deleteColumn().run()"
                   >
-                    <IconTrash /> Delete Column
+                    <IconTrash /> {{ $t("components.textEditor.deleteColumn") }}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Rows
+                  {{ $t("components.textEditor.rows") }}
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().addRowBefore().run()"
                   >
-                    <IconArrowUp /> Add Row Before
+                    <IconArrowUp />
+                    {{ $t("components.textEditor.addRowBefore") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().addRowAfter().run()"
                   >
-                    <IconArrowDown /> Add Row After
+                    <IconArrowDown />
+                    {{ $t("components.textEditor.addRowAfter") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().deleteRow().run()"
                   >
-                    <IconTrash /> Delete Row
+                    <IconTrash /> {{ $t("components.textEditor.deleteRow") }}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Cells
+                  {{ $t("components.textEditor.cells") }}
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().mergeCells().run()"
                   >
-                    <IconCombine /> Merge Cells
+                    <IconCombine /> {{ $t("components.textEditor.mergeCells") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().splitCell().run()"
                   >
-                    <IconSplit /> Split Cell
+                    <IconSplit /> {{ $t("components.textEditor.splitCell") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     @click="editor?.chain().focus().mergeOrSplit().run()"

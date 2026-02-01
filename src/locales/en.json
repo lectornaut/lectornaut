@@ -1092,12 +1092,93 @@
         "userEmail": "User Email",
         "teamName": "Team Name"
       }
+    },
+    "join": {
+      "title": "Join",
+      "labels": {
+        "findTeam": "Let's find a team for you to join",
+        "pending": "Pending",
+        "declined": "Declined",
+        "joinTeam": "Join {teamName}",
+        "invitedAs": "{inviterName} invited you to join as a {role}",
+        "sentOn": "{inviterEmail} sent this invitation on {date}",
+        "hasDeclined": "You have declined this invitation",
+        "invitedBy": "invited by"
+      },
+      "placeholders": {
+        "selectInvitation": "Select an invitation"
+      },
+      "buttons": {
+        "goHome": "Go Home",
+        "accept": "Accept Invitation",
+        "decline": "Decline",
+        "useDifferentAccount": "Use a different account"
+      },
+      "empty": {
+        "noPending": "No pending invitations",
+        "noDeclined": "No declined invitations"
+      },
+      "states": {
+        "loading": "Loading invitation...",
+        "error": "Error"
+      },
+      "errors": {
+        "invalidLink": "Invalid invitation link.",
+        "notFoundOrExpired": "Invitation not found or has expired.",
+        "emailMismatch": "Invalid invitation, you are logged in as {email}.",
+        "loadFailed": "Failed to load invitation.",
+        "onlyPending": "Only pending invitations can be accepted.",
+        "joinFailed": "Failed to join team",
+        "declineFailed": "Failed to decline invitation",
+        "deleteFailed": "Failed to delete invitation"
+      },
+      "success": {
+        "joined": "Joined team successfully!",
+        "removed": "Invitation removed"
+      },
+      "info": {
+        "declined": "Invitation declined",
+        "deleted": "Invitation deleted."
+      },
+      "confirm": {
+        "delete": "Delete this invitation notification?"
+      }
     }
   },
   "components": {
     "dataTable": {
       "labels": "Labels",
-      "actions": "Actions"
+      "actions": "Actions",
+      "view": "View",
+      "options": "Options",
+      "display": "Display",
+      "columns": "Columns",
+      "rows": "Rows",
+      "selected": "selected",
+      "pages": "pages",
+      "pagination": "Pagination",
+      "pageSize": "Page size",
+      "rowsPerPage": "Rows per page",
+      "navigation": "Navigation",
+      "goTo": "Go to",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "firstPage": "First page",
+      "lastPage": "Last page",
+      "goToFirstPage": "Go to first page",
+      "goToPreviousPage": "Go to previous page",
+      "goToNextPage": "Go to next page",
+      "goToLastPage": "Go to last page",
+      "selectAllOnPage": "Select all on page",
+      "clearSelectionOnPage": "Clear selection on page",
+      "selectAll": "Select all",
+      "clearSelection": "Clear selection",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "column": "Column",
+      "sorting": "Sorting",
+      "groupBy": "Group by",
+      "sortBy": "Sort by"
     },
     "teamSwitcher": {
       "switchTeam": "Switch team",
@@ -1124,7 +1205,14 @@
       },
       "tooltips": {
         "uploadPhoto": "Upload team photo",
-        "removePhoto": "Remove team photo"
+        "removePhoto": "Remove team photo",
+        "removeMember": "Remove member",
+        "addMember": "Add member",
+        "cancelInvitation": "Cancel invitation",
+        "draft": "Draft",
+        "resendInvitation": "Resend invitation",
+        "declined": "Declined",
+        "pending": "Pending"
       },
       "labels": {
         "clickToChange": "Click to change",
@@ -1134,7 +1222,14 @@
         "emailAddress": "Email address",
         "members": "Members",
         "sendInvites": "Send invites",
-        "teamPhoto": "Team photo"
+        "teamPhoto": "Team photo",
+        "invite": "Invite",
+        "invitations": "Invitations",
+        "noActiveMembers": "No active members found."
+      },
+      "placeholders": {
+        "teamName": "Acme Inc.",
+        "email": "user{'@'}example.com"
       },
       "roles": {
         "owner": "Owner",
@@ -1153,14 +1248,17 @@
         "invalidEmail": "Please enter a valid email address",
         "emailAlreadyAdded": "This email has already been added",
         "cannotInviteSelf": "You cannot invite yourself",
-        "noTeam": "No team to invite to"
+        "noTeam": "No team to invite to",
+        "failedToCreate": "Failed to create team",
+        "failedToUpdate": "Failed to update team",
+        "failedToInvite": "Failed to invite members"
       },
       "toasts": {
         "invitedAll": "Invited {count} member | Invited {count} members",
         "inviteFailed": "Failed to invite members",
         "invitePartial": "Invited {succeeded} member(s), {failed} failed",
-        "inviteResent": "Resent invitation to {count} member(s)",
-        "resendFailed": "Failed to resend invitation to {count} member(s)"
+        "inviteResent": "Resent invitation",
+        "resendFailed": "Failed to resend invitation"
       }
     },
     "subNavigation": {
@@ -1169,6 +1267,12 @@
         "goBack": "Go back",
         "goForward": "Go forward"
       }
+    },
+    "colorMode": {
+      "tooltip": "Change theme"
+    },
+    "languageSwitcher": {
+      "tooltip": "Change language"
     },
     "settingsMenu": {
       "settings": "Settings",
@@ -1188,6 +1292,24 @@
         "newTask": "New task",
         "markAllDone": "Mark all as done",
         "markAllSaved": "Mark all as saved"
+      }
+    },
+    "notificationItem": {
+      "tooltips": {
+        "markUnread": "Mark as unread",
+        "moveToInbox": "Move to Inbox",
+        "save": "Save",
+        "markDone": "Mark as done"
+      },
+      "contextMenu": {
+        "moveTo": "Move to",
+        "inbox": "Inbox",
+        "saved": "Saved",
+        "done": "Done",
+        "markAs": "Mark as",
+        "read": "Read",
+        "unread": "Unread",
+        "delete": "Delete"
       }
     },
     "mainSidebar": {
@@ -1222,6 +1344,66 @@
       "status": {
         "used": "{percent}% used"
       }
+    },
+    "textEditor": {
+      "summary": "Summary",
+      "typeForCommands": "Type '/' for commands",
+      "turnInto": "Turn into",
+      "paragraph": "Paragraph",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "heading3": "Heading 3",
+      "bulletedList": "Bulleted list",
+      "numberedList": "Numbered list",
+      "todoList": "To-do list",
+      "toggleList": "Toggle list",
+      "codeBlock": "Code block",
+      "blockquote": "Blockquote",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "strike": "Strike",
+      "code": "Code",
+      "textColor": "Text Color",
+      "removeColor": "Remove Color",
+      "highlightColor": "Highlight Color",
+      "removeHighlight": "Remove Highlight",
+      "fontSize": "Font Size",
+      "removeFontSize": "Remove Font Size",
+      "fontFamily": "Font Family",
+      "removeFontFamily": "Remove Font Family",
+      "comicSans": "Comic Sans",
+      "cursive": "Cursive",
+      "textAlign": "Text Align",
+      "textAlignment": "Text Alignment",
+      "textStyle": "Text Style",
+      "alignLeft": "Left",
+      "alignCenter": "Center",
+      "alignRight": "Right",
+      "alignJustify": "Justify",
+      "removeAlignment": "Remove Alignment",
+      "subscript": "Subscript",
+      "superscript": "Superscript",
+      "table": "Table",
+      "insertTable": "Insert Table",
+      "deleteTable": "Delete Table",
+      "columns": "Columns",
+      "addColumnBefore": "Add Column Before",
+      "addColumnAfter": "Add Column After",
+      "deleteColumn": "Delete Column",
+      "rows": "Rows",
+      "addRowBefore": "Add Row Before",
+      "addRowAfter": "Add Row After",
+      "deleteRow": "Delete Row",
+      "cells": "Cells",
+      "mergeCells": "Merge Cells",
+      "splitCell": "Split Cell",
+      "link": "Link",
+      "setLink": "Set Link",
+      "removeLink": "Remove Link",
+      "openLink": "Open Link",
+      "editLink": "Edit Link",
+      "linkPlaceholder": "Enter URL"
     },
     "flow": {
       "title": "Flow",
@@ -1347,10 +1529,128 @@
         }
       }
     },
+    "support": {
+      "tooltip": "Help and Support",
+      "help": "Help",
+      "getSupport": "Get support",
+      "contactSales": "Contact sales",
+      "productTour": "Product tour",
+      "onboardingTour": "Onboarding tour",
+      "documentation": "Documentation",
+      "shortcuts": "Shortcuts",
+      "more": "More",
+      "status": "Status",
+      "termsOfService": "Terms of service",
+      "privacyPolicy": "Privacy policy",
+      "whatsNew": "What's new",
+      "fullChangelog": "Full changelog",
+      "contactSalesTitle": "Contact sales",
+      "contactSalesDesc": "Fill out the form below to contact our sales team. We will get back to you as soon as possible.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "workEmail": "Work email",
+      "companySize": "Company size",
+      "category": "Category",
+      "message": "Message",
+      "sendRequest": "Send request",
+      "placeholders": {
+        "firstName": "Ada",
+        "lastName": "Lovelace",
+        "email": "ada{'@'}lovelace.com",
+        "employees": "Number of employees",
+        "category": "Select a category",
+        "howCanWeHelp": "How can we help you?"
+      },
+      "categories": {
+        "demo": "Request a demo",
+        "pricing": "Pricing information",
+        "support": "Support inquiry",
+        "feedback": "Feedback or suggestions",
+        "other": "Other"
+      },
+      "companySizes": {
+        "1-99": "1-99 employees",
+        "100-299": "100-299 employees",
+        "300-1999": "300-1,999 employees",
+        "2000+": "2,000+ employees"
+      },
+      "tour": {
+        "next": "Next",
+        "previous": "Previous",
+        "finish": "Finish",
+        "steps": {
+          "welcome": {
+            "title": "Welcome to Lectornaut",
+            "description": "This is a product tour to help you get started with Lectornaut."
+          },
+          "tasksNotifications": {
+            "title": "Tasks and notifications",
+            "description": "You can manage your tasks and notifications here. This is useful to keep track of your work."
+          },
+          "workspaceSwitcher": {
+            "title": "Switch workspaces",
+            "description": "You can switch between different workspaces using the workspace switcher. This is useful if you are part of multiple workspaces."
+          },
+          "searchBar": {
+            "title": "Search and commands",
+            "description": "You can search for anything using the search bar. This is useful if you want to quickly find something."
+          },
+          "aiAssistant": {
+            "title": "AI Assistant",
+            "description": "You can interact with the AI assistant from here. This is useful if you need help with your tasks."
+          },
+          "teamSwitcher": {
+            "title": "Select your team",
+            "description": "You can switch between teams using the team switcher. This is useful if you are part of multiple teams."
+          },
+          "primaryNavigation": {
+            "title": "Primary navigation",
+            "description": "This is the primary navigation. You can use it to navigate between different sections of the application."
+          },
+          "teamMembers": {
+            "title": "Team members",
+            "description": "You can see your team members here. This is useful to know who is working with you."
+          },
+          "helpSupport": {
+            "title": "Help and support",
+            "description": "You can access help and support from here. This is useful if you need assistance with the application."
+          },
+          "accountMenu": {
+            "title": "Account menu",
+            "description": "You can manage your account settings from here. This is useful if you want to change your account settings."
+          },
+          "happyCoding": {
+            "title": "Happy Coding",
+            "description": "And that is all, go ahead and start adding tours to your applications."
+          }
+        }
+      }
+    },
     "hyper": {
       "uploadPicture": "Upload a picture",
       "pasteLink": "Paste your link here...",
-      "askAi": "Ask AI what you want to find..."
+      "askAi": "Ask AI what you want to find...",
+      "nav": {
+        "home": "Home",
+        "camera": "Camera",
+        "image": "Image",
+        "link": "Link",
+        "ai": "AI"
+      },
+      "trySampleImage": "Try sample image",
+      "trySampleLink": "Try sample link",
+      "trySamplePrompt": "Try sample prompt",
+      "attach": "Attach",
+      "attachToPrompt": "Attach to your prompt",
+      "uploadImage": "Upload image",
+      "takePhoto": "Take photo",
+      "imageUrl": "Image URL",
+      "productLink": "Product Link",
+      "supportedFormats": "JPEG, PNG, GIF, WEBP, AVIF supported. Max 5MB.",
+      "supportedPlatforms": "Amazon, Shopify, Etsy, eBay, Rakuten, Walmart supported.",
+      "errors": {
+        "cameraAccess": "Allow access to the camera in your browser settings."
+      }
     },
     "landing": {
       "cta": {
