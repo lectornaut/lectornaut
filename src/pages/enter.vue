@@ -38,6 +38,7 @@ onMounted(async () => {
   <OverlayScrollbarsWrapper class="bg-background">
     <div
       v-if="authenticateInProgress"
+      data-tauri-drag-region
       class="grid size-full grow place-items-center"
     >
       <div class="mx-auto flex flex-col justify-center">
@@ -46,6 +47,7 @@ onMounted(async () => {
     </div>
     <div
       v-else-if="authenticateError"
+      data-tauri-drag-region
       class="grid size-full grow place-items-center"
     >
       <div
@@ -61,7 +63,11 @@ onMounted(async () => {
         </Button>
       </div>
     </div>
-    <div v-else class="grid size-full grow place-items-center">
+    <div
+      v-else
+      data-tauri-drag-region
+      class="grid size-full grow place-items-center"
+    >
       <div
         class="mx-auto flex w-full max-w-sm flex-col justify-center gap-8 p-4"
       >

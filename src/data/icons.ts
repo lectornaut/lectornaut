@@ -101,6 +101,7 @@ import IconLucideEyeOff from "~icons/lucide/eye-off"
 import IconLucideFile from "~icons/lucide/file"
 import IconLucideFileText from "~icons/lucide/file-text"
 import IconLucideFolder from "~icons/lucide/folder"
+import IconLucideForward from "~icons/lucide/forward"
 import IconLucideGalleryHorizontalEnd from "~icons/lucide/gallery-horizontal-end"
 import IconLucideGift from "~icons/lucide/gift"
 import IconLucideGlobe from "~icons/lucide/globe"
@@ -374,6 +375,7 @@ export {
   IconRiFontMono as IconFontMono,
   IconRiFontSans as IconFontSans,
   IconRiFontSansSerif as IconFontSansSerif,
+  IconLucideForward as IconForward,
   IconLucideGalleryHorizontalEnd as IconGalleryHorizontalEnd,
   IconLucideGift as IconGift,
   IconLucideGlobe as IconGlobe,

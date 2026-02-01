@@ -114,6 +114,14 @@ watch(accounts, (newAccounts) => {
   }
 })
 
+watch(authMode, (newMode) => {
+  if (newMode === "sign-up") {
+    isShowAllOptionsOpen.value = true
+  } else if (accounts.value.length > 0) {
+    isShowAllOptionsOpen.value = false
+  }
+})
+
 onMounted(() => {
   const pendingUid = sessionStorage.getItem("pendingAccountSwitch")
   if (pendingUid) {
@@ -602,7 +610,11 @@ onMounted(() => {
           </Button>
         </div>
       </CollapsibleContent>
-      <CollapsibleTrigger v-if="accounts.length > 0" as-child class="mx-auto">
+      <CollapsibleTrigger
+        v-if="accounts.length > 0 && authMode === 'sign-in'"
+        as-child
+        class="mx-auto"
+      >
         <Badge variant="outline">
           <IconCircleUser v-if="isShowAllOptionsOpen" />
           <IconLock v-else />
