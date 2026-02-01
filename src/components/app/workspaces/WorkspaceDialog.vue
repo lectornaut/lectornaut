@@ -226,7 +226,7 @@ const handleSubmit = async () => {
             class="text-secondary-foreground text-xs"
             for="description"
           >
-            Description (Optional)
+            Description
           </FieldLabel>
           <Textarea
             id="description"

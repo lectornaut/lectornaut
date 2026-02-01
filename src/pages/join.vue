@@ -1,12 +1,4 @@
 <script lang="ts" setup>
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
   IconAlertTriangle,

@@ -194,7 +194,8 @@
     "backToHome": "Back to Home",
     "select": "Select",
     "none": "None",
-    "unsavedChanges": "Unsaved changes"
+    "unsavedChanges": "Unsaved changes",
+    "discard": "Discard"
   },
   "settings": {
     "titles": {
@@ -458,7 +459,8 @@
         "lastMemberCannotBeRemoved": "Cannot remove the last member",
         "lastOwnerCannotBeRemoved": "Cannot remove the last owner"
       }
-    }
+    },
+    "unsavedChanges": "Unsaved changes"
   },
   "navigation": {
     "menu": {
