@@ -2,7 +2,7 @@
   <mj-column width="100%">
     <mj-image
       width="32px"
-      src="https://lectornaut.com/icon.svg"
+      src="https://lectornaut.com/logo.png"
       alt="Lectornaut Logo"
       align="left"
     ></mj-image>
