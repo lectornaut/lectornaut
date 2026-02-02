@@ -225,6 +225,7 @@ import IconLucideUnderline from "~icons/lucide/underline"
 import IconLucideUnlink from "~icons/lucide/unlink"
 import IconLucideUpload from "~icons/lucide/upload"
 import IconLucideUserRound from "~icons/lucide/user-round"
+import IconLucideUserRoundMinus from "~icons/lucide/user-round-minus"
 import IconLucideUserRoundPlus from "~icons/lucide/user-round-plus"
 import IconLucideUsers from "~icons/lucide/users"
 import IconLucideUsersRound from "~icons/lucide/users-round"
@@ -522,6 +523,7 @@ export {
   IconLucideUpload as IconUpload,
   IconUSA,
   IconLucideUserRound as IconUserRound,
+  IconLucideUserRoundMinus as IconUserRoundMinus,
   IconLucideUserRoundPlus as IconUserRoundPlus,
   IconLucideUsers as IconUsers,
   IconLucideUsersRound as IconUsersRound,

@@ -499,8 +499,8 @@ export const useInvitationStore = defineStore("invitations", () => {
             userId: user.uid,
             teamId,
             role,
-            user: userProfile.value,
-            team: teamSnap.data(),
+            user: userProfile.value ?? {},
+            team: teamSnap.data() ?? {},
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           })

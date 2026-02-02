@@ -49,7 +49,9 @@ export type Capability = (typeof Capabilities)[keyof typeof Capabilities]
  * Global actions are usually allowed for everyone (authenticated),
  * so they might not need a specific role mapping, but we structure it primarily for Team/Workspace scopes.
  */
-const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
+const TEAM_SCOPED_PERMISSIONS: Readonly<
+  Record<IMembershipRole, ReadonlySet<Capability>>
+> = {
   owner: new Set([
     Capabilities.EDIT_TEAM,
     Capabilities.DELETE_TEAM,

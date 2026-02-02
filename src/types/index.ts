@@ -5,7 +5,7 @@ import { Timestamp } from "firebase/firestore"
 // ============================================================================
 
 export interface ITodo {
-  id: string
+  readonly id: string
   title: string
   completed: boolean
   createdAt: Timestamp
@@ -13,7 +13,7 @@ export interface ITodo {
 }
 
 export interface ITeam {
-  id: string
+  readonly id: string
   name: string
   photoURL?: string | null
   createdAt: Timestamp
@@ -21,8 +21,8 @@ export interface ITeam {
 }
 
 export interface IWorkspace {
-  id: string
-  teamId: string
+  readonly id: string
+  readonly teamId: string
   name: string
   description?: string | null
   photoURL?: string | null
@@ -31,7 +31,7 @@ export interface IWorkspace {
 }
 
 export interface IUser {
-  uid: string
+  readonly uid: string
   email: string | null
   displayName: string | null
   photoURL: string | null
@@ -44,8 +44,8 @@ export interface IUser {
 export type IMembershipRole = "owner" | "admin" | "member" | "guest"
 
 export interface IMembership {
-  userId: string
-  teamId: string
+  readonly userId: string
+  readonly teamId: string
   role: IMembershipRole
   user: IUser // Snapshot of user data
   team: ITeam // Snapshot of team data
@@ -53,11 +53,30 @@ export interface IMembership {
   updatedAt: Timestamp
 }
 
+/**
+ * Firestore document data for membership updates.
+ * Used in batch operations and helpers to replace Record<string, unknown>.
+ */
+export interface IMembershipDocData {
+  userId: string
+  teamId: string
+  role: IMembershipRole
+  user: Partial<IUser>
+  team: Partial<ITeam>
+  createdAt?: Timestamp
+  updatedAt?: Timestamp
+}
+
 export type INotificationStatus = "inbox" | "saved" | "done"
-export type INotificationType = "welcome" | "invitation" | "system"
+export type INotificationType =
+  | "user.welcome"
+  | "invitation.received"
+  | "invitation.declined"
+  | "member.joined"
+  | "member.removed"
 
 export interface INotification {
-  id: string
+  readonly id: string
   type: INotificationType
   title: string
   description: string
@@ -72,6 +91,32 @@ export interface INotification {
 }
 
 // ============================================================================
+// Utility Types
+// ============================================================================
+
+/**
+ * Generic result type for operations that can succeed or fail.
+ * Provides type-safe error handling with discriminated union.
+ */
+export type Result<T, E = Error> =
+  | { readonly success: true; readonly data: T }
+  | { readonly success: false; readonly error: E }
+
+/**
+ * Helper to create a success result
+ */
+export function success<T>(data: T): Result<T, never> {
+  return { success: true, data }
+}
+
+/**
+ * Helper to create a failure result
+ */
+export function failure<E = Error>(error: E): Result<never, E> {
+  return { success: false, error }
+}
+
+// ============================================================================
 // Optimistic Update Types
 // ============================================================================
 
@@ -79,7 +124,7 @@ export interface INotification {
  * Generic interface for entities with an ID
  */
 export interface IEntity {
-  id: string
+  readonly id: string
 }
 
 /**
@@ -87,13 +132,13 @@ export interface IEntity {
  */
 export interface IOptimisticOptions {
   /** Whether to show success toast notification */
-  showSuccessToast?: boolean
+  readonly showSuccessToast?: boolean
   /** Whether to show error toast notification */
-  showErrorToast?: boolean
+  readonly showErrorToast?: boolean
   /** Custom success message */
-  successMessage?: string
+  readonly successMessage?: string
   /** Custom error message */
-  errorMessage?: string
+  readonly errorMessage?: string
 }
 
 /**
@@ -101,14 +146,5 @@ export interface IOptimisticOptions {
  */
 export interface IPendingState {
   /** Set of IDs for operations currently in-flight */
-  pendingIds: Set<string>
-}
-
-/**
- * Result of an optimistic operation
- */
-export interface IOptimisticResult<T = void> {
-  success: boolean
-  data?: T
-  error?: Error
+  readonly pendingIds: ReadonlySet<string>
 }

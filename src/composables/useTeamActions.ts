@@ -6,12 +6,16 @@ import type { IMembership } from "@/types"
 import { can, Capabilities, roleCan } from "@/utils/permissions"
 import { withToast } from "@/utils/toast-helpers"
 import { storeToRefs } from "pinia"
+import type { Ref } from "vue"
 import { useCurrentUser } from "vuefire"
 
 /**
  * Team actions composable with unified loading states and toast notifications.
+ * @param targetTeamId - Optional ref to a team ID. When provided, permission checks
+ *                       (canInviteMembers, canUpdateTeam, etc.) will use the user's
+ *                       role in that team instead of the currently selected team.
  */
-export function useTeamActions() {
+export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
   const teamStore = useTeamStore()
   const membershipStore = useMembershipStore()
   const user = useCurrentUser()
@@ -26,11 +30,17 @@ export function useTeamActions() {
     team: useLoadingState<string>(),
   }
 
-  // Current user's role in the current team
+  // The effective team for permission checks - uses targetTeamId if provided, otherwise currentTeam
+  const effectiveTeamId = computed(
+    () => targetTeamId?.value ?? currentTeam.value?.id
+  )
+
+  // Current user's role in the effective team (target team or current team)
   const currentUserRole = computed(() => {
-    if (!user.value || !currentTeam.value) return null
-    const membership = teamMembers.value.find(
-      (m) => m.userId === user.value?.uid
+    if (!user.value || !effectiveTeamId.value) return null
+    // If we have a target team ID, look up role from memberships
+    const membership = memberships.value.find(
+      (m) => m.teamId === effectiveTeamId.value && m.userId === user.value?.uid
     )
     return membership?.role || null
   })

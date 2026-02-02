@@ -1,0 +1,49 @@
+<mjml>
+  <mj-head>
+    <mj-title>New team member joined {{ teamName }}</mj-title>
+    <mj-preview>{{ memberName }} has joined your team.</mj-preview>
+    <mj-attributes>
+      <mj-all
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+      ></mj-all>
+      <mj-text
+        font-weight="400"
+        font-size="16px"
+        color="#333333"
+        line-height="24px"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+      ></mj-text>
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f0f0f0">
+    <mj-include path="../partials/header.mjml" />
+
+    <mj-section background-color="#ffffff" padding-bottom="0px" padding-top="0">
+      <mj-column width="100%">
+        <mj-text font-size="20px" font-weight="bold" align="center"
+          >New Team Member</mj-text
+        >
+
+        <mj-text>Hello,</mj-text>
+
+        <mj-text>
+          <strong>{{ memberName }}</strong> has joined
+          <strong>{{ teamName }}</strong
+          >.
+        </mj-text>
+
+        <mj-button
+          background-color="#2c3e50"
+          href="{{ctaUrl}}"
+          color="#ffffff"
+          font-weight="bold"
+          border-radius="20px"
+        >
+          View Team
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../partials/footer.mjml" />
+  </mj-body>
+</mjml>

@@ -50,6 +50,13 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+// Local Invitation Query (moved up for permissions)
+const targetTeamId = computed(() => {
+  if (props.mode === "create") return null
+  return props.team?.id
+})
+
 const {
   createTeam,
   updateTeam,
@@ -57,7 +64,8 @@ const {
   getCannotUpdateTeamReason,
   canInviteMembers,
   getCannotInviteMembersReason,
-} = useTeamActions()
+} = useTeamActions(targetTeamId)
+
 const membershipStore = useMembershipStore()
 const invitationStore = useInvitationStore()
 const user = useCurrentUser()
@@ -72,12 +80,6 @@ const inviteEmail = ref("")
 const inviteRole = ref<IMembershipRole>(defaultTeamRole)
 const members = ref<PendingMember[]>([])
 const removedMemberIds = ref<string[]>([])
-
-// Local Invitation Query
-const targetTeamId = computed(() => {
-  if (props.mode === "create") return null
-  return props.team?.id
-})
 
 const teamInvitations = useTeamInvitations(targetTeamId)
 

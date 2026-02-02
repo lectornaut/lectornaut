@@ -380,29 +380,29 @@ const deleteAccount = async () => {
       await membershipStore.removeMember(membership.teamId, user.value!.uid)
     }
 
-    // 4. Release username
+    // 3. Release username
     if (userData.value?.username) {
       await releaseUsername(userData.value.username)
     }
 
-    // 5. Cleanup Storage (Profile Photos)
+    // 4. Cleanup Storage (Profile Photos)
     await Promise.allSettled([
       deleteObject(
         storageRef(storage, `users/${user.value!.uid}/profilePhoto`)
       ),
     ])
 
-    // 6. Cleanup Firestore User Document
+    // 5. Cleanup Firestore User Document
     if (userDocRef.value) {
       await deleteDoc(userDocRef.value)
     }
 
-    // 7. Local Cleanup: Remove from keychain
+    // 6. Local Cleanup: Remove from keychain
     if (user.value?.uid) {
       useKeychain().removeAccount(user.value.uid)
     }
 
-    // 8. Delete User Account
+    // 7. Delete User Account
     await deleteUser(user.value!)
     toast.success("Account deleted", {
       description: "Your account has been successfully deleted.",

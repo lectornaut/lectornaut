@@ -287,7 +287,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
 <template>
   <EditorContent :editor="editor" />
   <BubbleMenu v-if="editor" :editor="editor">
-    <div class="bg-card flex rounded-lg border p-1 shadow-lg">
+    <div class="bg-card flex gap-1 rounded-lg border p-1 shadow-lg">
       <TooltipProvider>
         <ButtonGroup>
           <Tooltip>
@@ -295,7 +295,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -421,6 +421,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <Tooltip>
           <TooltipTrigger as-child>
             <Toggle
+              variant="outline"
               :value="'bold'"
               :pressed="editor?.isActive('bold')"
               @click="editor?.chain().focus().toggleBold().run()"
@@ -435,6 +436,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <Tooltip>
           <TooltipTrigger as-child>
             <Toggle
+              variant="outline"
               :value="'italic'"
               :pressed="editor?.isActive('italic')"
               @click="editor?.chain().focus().toggleItalic().run()"
@@ -449,6 +451,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <Tooltip>
           <TooltipTrigger as-child>
             <Toggle
+              variant="outline"
               :value="'underline'"
               :pressed="editor?.isActive('underline')"
               @click="editor?.chain().focus().toggleUnderline().run()"
@@ -463,6 +466,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <Tooltip>
           <TooltipTrigger as-child>
             <Toggle
+              variant="outline"
               :value="'strike'"
               :pressed="editor?.isActive('strike')"
               @click="editor?.chain().focus().toggleStrike().run()"
@@ -477,6 +481,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <Tooltip>
           <TooltipTrigger as-child>
             <Toggle
+              variant="outline"
               :value="'code'"
               :pressed="editor?.isActive('code')"
               @click="editor?.chain().focus().toggleCode().run()"
@@ -495,7 +500,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -539,7 +544,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -592,7 +597,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -636,7 +641,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -726,7 +731,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -826,7 +831,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -1000,7 +1005,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
                   >
@@ -1077,7 +1082,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
       class="bg-card flex items-center gap-1 rounded-lg border p-1 shadow-lg"
     >
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         :class="{ 'bg-accent': editor?.isActive('heading', { level: 1 }) }"
         @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
@@ -1085,7 +1090,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <IconHeading1 />
       </Button>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         :class="{ 'bg-accent': editor?.isActive('heading', { level: 2 }) }"
         @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
@@ -1093,7 +1098,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <IconHeading2 />
       </Button>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         :class="{ 'bg-accent': editor?.isActive('bulletList') }"
         @click="editor?.chain().focus().toggleBulletList().run()"
@@ -1101,7 +1106,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <IconList />
       </Button>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         :class="{ 'bg-accent': editor?.isActive('orderedList') }"
         @click="editor?.chain().focus().toggleOrderedList().run()"
@@ -1109,7 +1114,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <IconListOrdered />
       </Button>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         :class="{ 'bg-accent': editor?.isActive('taskList') }"
         @click="editor?.chain().focus().toggleTaskList().run()"
@@ -1117,7 +1122,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <IconListChecks />
       </Button>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         :class="{ 'bg-accent': editor?.isActive('codeBlock') }"
         @click="editor?.chain().focus().toggleCodeBlock().run()"
@@ -1127,7 +1132,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
     </div>
   </FloatingMenu>
   <DragHandle v-if="editor" :editor="editor">
-    <Button variant="ghost" size="icon-sm" class="mr-2 size-6">
+    <Button variant="outline" size="icon-sm" class="mr-2 size-6">
       <IconGripVertical />
     </Button>
   </DragHandle>
@@ -1141,7 +1146,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
         <Checkbox id="readOnly" v-model="readOnly" />
         <Label for="readOnly" class="text-xs">Read-only</Label>
       </div>
-      <Button variant="ghost" size="icon-sm" @click="copy(source)">
+      <Button variant="outline" size="icon-sm" @click="copy(source)">
         <IconCopy v-if="!copied" />
         <IconCheck v-else />
       </Button>

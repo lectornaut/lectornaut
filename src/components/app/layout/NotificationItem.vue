@@ -6,11 +6,14 @@ import {
   IconEye,
   IconEyeOff,
   IconInbox,
+  IconInfo,
   IconMail,
   IconSparkles,
   IconSquareDashedMousePointer,
   IconSquareMousePointer,
   IconTrash,
+  IconUserRoundMinus,
+  IconUserRoundPlus,
 } from "@/data/icons"
 import { type INotification } from "@/types"
 
@@ -34,10 +37,16 @@ const timeAgo = useTimeAgo(() => props.notification.createdAt)
 
 const typeIcon = computed(() => {
   switch (props.notification.type) {
-    case "welcome":
+    case "user.welcome":
       return IconSparkles
-    case "invitation":
+    case "invitation.received":
       return IconMail
+    case "invitation.declined":
+      return IconInfo
+    case "member.joined":
+      return IconUserRoundPlus
+    case "member.removed":
+      return IconUserRoundMinus
     default:
       return IconCircle
   }

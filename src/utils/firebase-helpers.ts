@@ -6,6 +6,13 @@
  */
 
 import { firestore, storage } from "@/modules/firebase"
+import type {
+  IMembershipDocData,
+  ITeam,
+  ITodo,
+  IUser,
+  IWorkspace,
+} from "@/types"
 import {
   collection,
   collectionGroup,
@@ -38,29 +45,42 @@ export const BATCH_SIZE = 450
 // ============================================================================
 
 /** Get a reference to a user document */
-export const getUserRef = (userId: string): DocumentReference =>
-  doc(firestore, "users", userId)
+export const getUserRef = (userId: string): DocumentReference<IUser> =>
+  doc(firestore, "users", userId) as DocumentReference<IUser>
 
 /** Get a reference to a team document */
-export const getTeamRef = (teamId: string): DocumentReference =>
-  doc(firestore, "teams", teamId)
+export const getTeamRef = (teamId: string): DocumentReference<ITeam> =>
+  doc(firestore, "teams", teamId) as DocumentReference<ITeam>
 
 /** Get a reference to a membership document */
 export const getMembershipRef = (
   teamId: string,
   userId: string
-): DocumentReference => doc(firestore, "teams", teamId, "memberships", userId)
+): DocumentReference<IMembershipDocData> =>
+  doc(
+    firestore,
+    "teams",
+    teamId,
+    "memberships",
+    userId
+  ) as DocumentReference<IMembershipDocData>
 
 /** Get a reference to a workspace document */
 export const getWorkspaceRef = (
   teamId: string,
   workspaceId: string
-): DocumentReference =>
-  doc(firestore, "teams", teamId, "workspaces", workspaceId)
+): DocumentReference<IWorkspace> =>
+  doc(
+    firestore,
+    "teams",
+    teamId,
+    "workspaces",
+    workspaceId
+  ) as DocumentReference<IWorkspace>
 
 /** Get a reference to a todo document */
-export const getTodoRef = (todoId: string): DocumentReference =>
-  doc(firestore, "todos", todoId)
+export const getTodoRef = (todoId: string): DocumentReference<ITodo> =>
+  doc(firestore, "todos", todoId) as DocumentReference<ITodo>
 
 // ============================================================================
 // Collection References
@@ -140,8 +160,8 @@ export async function queryAndProcessInBatches(
 // ============================================================================
 
 type MembershipUpdateFn = (
-  membershipData: Record<string, unknown>
-) => Record<string, unknown>
+  membershipData: IMembershipDocData
+) => Partial<IMembershipDocData>
 
 /**
  * Update all memberships matching a query with a transformation function
@@ -155,7 +175,7 @@ export async function updateMemberships(
   updateFn: MembershipUpdateFn
 ): Promise<number> {
   return queryAndProcessInBatches(queryRef, (docSnap, batch) => {
-    const membershipData = docSnap.data() as Record<string, unknown>
+    const membershipData = docSnap.data() as IMembershipDocData
     batch.update(docSnap.ref, {
       ...updateFn(membershipData),
       updatedAt: serverTimestamp(),
@@ -176,7 +196,7 @@ export async function updateUserInMemberships(
   )
 
   return updateMemberships(membershipsQuery, (membershipData) => {
-    const existingUser = (membershipData.user as Record<string, unknown>) || {}
+    const existingUser = membershipData.user ?? {}
     return {
       user: {
         ...existingUser,
@@ -199,15 +219,19 @@ export async function updateTeamInAllMemberships(
   )
 
   return updateMemberships(membershipsQuery, (membershipData) => {
-    const existingTeam = (membershipData.team as Record<string, unknown>) || {}
-    const updatedTeam: Record<string, unknown> = {
+    const existingTeam = membershipData.team ?? {}
+    const updatedTeam: Partial<ITeam> = {
       ...existingTeam,
       ...teamUpdates,
     }
-    // Remove undefined values
-    Object.keys(updatedTeam).forEach(
-      (key) => updatedTeam[key] === undefined && delete updatedTeam[key]
-    )
+    // Remove undefined values using type-safe key access
+    for (const key of Object.keys(updatedTeam) as Array<
+      keyof typeof updatedTeam
+    >) {
+      if (updatedTeam[key] === undefined) {
+        delete updatedTeam[key]
+      }
+    }
     return { team: updatedTeam }
   })
 }
