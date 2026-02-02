@@ -1,8 +1,12 @@
-<mj-section background-color="#f0f0f0" padding-top="20px">
+<mj-section>
   <mj-column width="100%">
-    <mj-text font-size="12px" color="#999999" align="center">
-      © {{ year }} Lectornaut Inc. All rights reserved.<br />
-      123 Reading St, Booktown, BK 12345
+    <mj-divider
+      border-color="lightgray"
+      border-width="1px"
+      border-style="dashed"
+    ></mj-divider>
+    <mj-text font-size="12px" color="gray">
+      © {{ year }} Lectornaut Inc. All rights reserved.
     </mj-text>
   </mj-column>
 </mj-section>

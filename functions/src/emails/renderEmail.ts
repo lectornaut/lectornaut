@@ -24,10 +24,16 @@ export const renderEmail = (
 
   const templateContent = fs.readFileSync(templatePath, "utf8")
 
+  // Add global variables
+  const templateData = {
+    year: new Date().getFullYear(),
+    ...data,
+  }
+
   // Compile the MJML with Handlebars first to inject variables
   // We use Handlebars to replace {{variables}} inside the MJML structure
   const compiledTemplate = Handlebars.compile(templateContent)
-  const mjmlContent = compiledTemplate(data)
+  const mjmlContent = compiledTemplate(templateData)
 
   const { html, errors } = mjml2html(mjmlContent, {
     filePath: path.dirname(templatePath),
@@ -37,5 +43,7 @@ export const renderEmail = (
     throw new Error(`MJML compilation failed for ${templateName}`)
   }
 
-  return html
+  // Final Handlebars pass to catch variables inside included partials
+  const finalTemplate = Handlebars.compile(html)
+  return finalTemplate(templateData)
 }

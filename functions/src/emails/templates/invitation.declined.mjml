@@ -6,32 +6,25 @@
       <mj-all
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
       ></mj-all>
-      <mj-text
-        font-weight="400"
-        font-size="16px"
-        color="#333333"
-        line-height="24px"
-        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
-      ></mj-text>
+      <mj-text line-height="24px"></mj-text>
     </mj-attributes>
   </mj-head>
-  <mj-body background-color="#f0f0f0">
+  <mj-body>
     <mj-include path="../partials/header.mjml" />
 
-    <mj-section background-color="#ffffff" padding-bottom="0px" padding-top="0">
+    <mj-section>
       <mj-column width="100%">
-        <mj-text font-size="20px" font-weight="bold" align="center">{{
-          title
-        }}</mj-text>
+        <mj-text font-size="16px" font-weight="bold">{{ title }}</mj-text>
 
         <mj-text>{{ description }}</mj-text>
 
         <mj-button
-          background-color="#2c3e50"
+          background-color="black"
           href="{{ctaUrl}}"
-          color="#ffffff"
           font-weight="bold"
-          border-radius="20px"
+          color="white"
+          border-radius="8px"
+          align="left"
         >
           View Details
         </mj-button>

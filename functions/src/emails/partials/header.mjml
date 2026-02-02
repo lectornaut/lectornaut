@@ -1,16 +1,10 @@
-<mj-section background-color="#ffffff" padding-bottom="0px">
+<mj-section>
   <mj-column width="100%">
     <mj-image
-      width="150px"
+      width="32px"
       src="https://lectornaut.com/icon.svg"
       alt="Lectornaut Logo"
+      align="left"
     ></mj-image>
-    <mj-divider
-      border-color="#f0f0f0"
-      border-width="1px"
-      border-style="solid"
-      padding-top="20px"
-      padding-bottom="20px"
-    ></mj-divider>
   </mj-column>
 </mj-section>
