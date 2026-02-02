@@ -1,39 +1,37 @@
 <mjml>
   <mj-head>
-    <mj-title>New team member joined {{ teamName }}</mj-title>
+    <mj-title>New member joined {{ teamName }}</mj-title>
     <mj-preview>{{ memberName }} has joined your team.</mj-preview>
     <mj-attributes>
       <mj-all
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
       ></mj-all>
-      <mj-text line-height="24px"></mj-text>
+      <mj-text font-size="14px" line-height="24px" color="black"></mj-text>
+      <mj-button
+        font-size="14px"
+        color="white"
+        background-color="black"
+        border-radius="8px"
+        font-weight="bold"
+      ></mj-button>
     </mj-attributes>
   </mj-head>
   <mj-body>
     <mj-include path="../partials/header.mjml" />
 
-    <mj-section>
-      <mj-column width="100%">
-        <mj-text font-size="16px" font-weight="bold">New Team Member</mj-text>
+    <mj-section padding="0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold"> New Team Member </mj-text>
 
-        <mj-text>Hello,</mj-text>
+        <mj-text> Hello, </mj-text>
 
         <mj-text>
           <strong>{{ memberName }}</strong> has joined
           <strong>{{ teamName }}</strong
-          >.
+          >. Welcome them to the team and start collaborating!
         </mj-text>
 
-        <mj-button
-          background-color="black"
-          href="{{ctaUrl}}"
-          font-weight="bold"
-          color="white"
-          border-radius="8px"
-          align="left"
-        >
-          View Team
-        </mj-button>
+        <mj-button href="{{ ctaUrl }}" align="left"> View Team </mj-button>
       </mj-column>
     </mj-section>
 

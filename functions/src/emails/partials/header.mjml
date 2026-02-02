@@ -1,10 +1,11 @@
 <mj-section>
-  <mj-column width="100%">
+  <mj-column>
     <mj-image
-      width="32px"
+      width="64px"
       src="https://lectornaut.com/logo.png"
       alt="Lectornaut Logo"
       align="left"
+      padding-bottom="0"
     ></mj-image>
   </mj-column>
 </mj-section>

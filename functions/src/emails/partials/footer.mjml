@@ -1,10 +1,6 @@
 <mj-section>
-  <mj-column width="100%">
-    <mj-divider
-      border-color="lightgray"
-      border-width="1px"
-      border-style="dashed"
-    ></mj-divider>
+  <mj-column>
+    <mj-divider border-color="lightgray" border-width="1px"></mj-divider>
     <mj-text font-size="12px" color="gray">
       © {{ year }} Lectornaut Inc. All rights reserved.
     </mj-text>

@@ -62,7 +62,7 @@ async function sendInvitationNotification(
       type: "invitation.received",
       title: `Join ${invitation.teamName}`,
       description: `${invitation.inviterName} invited you to join ${invitation.teamName} as a ${invitation.role}.`,
-      url: `/join?code=${invitation.code}`,
+      url: `/invitations?code=${invitation.code}`,
       source: {
         entityType: "invitation",
         entityId: invitationId,
@@ -82,7 +82,7 @@ async function sendInvitationNotification(
         template: "invitation.received",
         data: {
           ...templateData,
-          ctaUrl: `https://lectornaut.com/join?code=${invitation.code}`,
+          ctaUrl: `https://lectornaut.com/invitations?code=${invitation.code}`,
         },
       })
     } catch (error) {
@@ -117,6 +117,7 @@ async function notifyTeamMembers(
     title: string
     description: string
     source: { entityType: string; entityId: string }
+    templateData?: Record<string, unknown>
   },
   excludeUserId?: string
 ) {
@@ -131,6 +132,9 @@ async function notifyTeamMembers(
       description: notification.description,
       url: `/teams/${teamId}`,
       source: notification.source,
+      emailData: {
+        templateData: notification.templateData,
+      },
     }))
   )
 }
@@ -209,6 +213,10 @@ export const onInvitationUpdated = onDocumentUpdated(
           entityType: "invitation",
           entityId: event.params.invitationId,
         },
+        templateData: {
+          email: after.email,
+          teamName: after.teamName,
+        },
       })
     }
 
@@ -254,6 +262,10 @@ export const onMembershipCreated = onDocumentCreated(
         title: "New Team Member",
         description: `${userName} has joined ${membership.team?.name || "your team"}.`,
         source: { entityType: "team", entityId: teamId },
+        templateData: {
+          memberName: userName,
+          teamName: membership.team?.name || "your team",
+        },
       },
       userId // Exclude the joining user from notifications
     )

@@ -1,19 +1,28 @@
 <mjml>
   <mj-head>
     <mj-title>Welcome to Lectornaut</mj-title>
-    <mj-preview>Welcome to your new workspace.</mj-preview>
+    <mj-preview
+      >We're thrilled to have you on board! Let's get you started.</mj-preview
+    >
     <mj-attributes>
       <mj-all
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
       ></mj-all>
-      <mj-text line-height="24px"></mj-text>
+      <mj-text font-size="14px" line-height="24px" color="black"></mj-text>
+      <mj-button
+        font-size="14px"
+        color="white"
+        background-color="black"
+        border-radius="8px"
+        font-weight="bold"
+      ></mj-button>
     </mj-attributes>
   </mj-head>
   <mj-body>
     <mj-include path="../partials/header.mjml" />
 
-    <mj-section>
-      <mj-column width="100%">
+    <mj-section padding="0">
+      <mj-column>
         <mj-text font-size="16px" font-weight="bold">
           Welcome to Lectornaut
         </mj-text>
@@ -21,19 +30,13 @@
         <mj-text>Hi {{ displayName }},</mj-text>
 
         <mj-text>
-          We are thrilled to have you on board. Lectornaut is designed to help
-          you organize your reading and sharing efficiently.
+          We're thrilled to have you on board. Lectornaut is designed to help
+          you and your team organize your reading, capture insights, and share
+          knowledge efficiently.
         </mj-text>
 
-        <mj-button
-          background-color="black"
-          href="{{ctaUrl}}"
-          font-weight="bold"
-          color="white"
-          border-radius="8px"
-          align="left"
-        >
-          Get Started
+        <mj-button href="{{ ctaUrl }}" align="left">
+          Start Exploring
         </mj-button>
       </mj-column>
     </mj-section>

@@ -1,37 +1,39 @@
 <mjml>
   <mj-head>
-    <mj-title>You've been removed from {{ teamName }}</mj-title>
-    <mj-preview>Your membership in {{ teamName }} has ended.</mj-preview>
+    <mj-title>Membership Update</mj-title>
+    <mj-preview>You have been removed from {{ teamName }}.</mj-preview>
     <mj-attributes>
       <mj-all
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
       ></mj-all>
-      <mj-text line-height="24px"></mj-text>
+      <mj-text font-size="14px" line-height="24px" color="black"></mj-text>
+      <mj-button
+        font-size="14px"
+        color="white"
+        background-color="black"
+        border-radius="8px"
+        font-weight="bold"
+      ></mj-button>
     </mj-attributes>
   </mj-head>
   <mj-body>
     <mj-include path="../partials/header.mjml" />
 
-    <mj-section>
-      <mj-column width="100%">
-        <mj-text font-size="16px" font-weight="bold">Membership Update</mj-text>
+    <mj-section padding="0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          Membership Update
+        </mj-text>
 
-        <mj-text>Hello,</mj-text>
+        <mj-text> Hello, </mj-text>
 
         <mj-text>
           You have been removed from <strong>{{ teamName }}</strong
-          >. If you believe this was a mistake, please contact the team
+          >. If you believe this was a mistake, please contact your team
           administrator.
         </mj-text>
 
-        <mj-button
-          background-color="black"
-          href="{{ctaUrl}}"
-          font-weight="bold"
-          color="white"
-          border-radius="8px"
-          align="left"
-        >
+        <mj-button href="{{ ctaUrl }}" align="left">
           View Your Teams
         </mj-button>
       </mj-column>

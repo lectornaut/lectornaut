@@ -1,33 +1,41 @@
 <mjml>
   <mj-head>
-    <mj-title>{{ title }}</mj-title>
-    <mj-preview>{{ description }}</mj-preview>
+    <mj-title>Invitation Declined</mj-title>
+    <mj-preview
+      >{{ email }} declined the invitation to join {{ teamName }}.</mj-preview
+    >
     <mj-attributes>
       <mj-all
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
       ></mj-all>
-      <mj-text line-height="24px"></mj-text>
+      <mj-text font-size="14px" line-height="24px" color="black"></mj-text>
+      <mj-button
+        font-size="14px"
+        color="white"
+        background-color="black"
+        border-radius="8px"
+        font-weight="bold"
+      ></mj-button>
     </mj-attributes>
   </mj-head>
   <mj-body>
     <mj-include path="../partials/header.mjml" />
 
-    <mj-section>
-      <mj-column width="100%">
-        <mj-text font-size="16px" font-weight="bold">{{ title }}</mj-text>
+    <mj-section padding="0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          Invitation Declined
+        </mj-text>
 
-        <mj-text>{{ description }}</mj-text>
+        <mj-text> Hello, </mj-text>
 
-        <mj-button
-          background-color="black"
-          href="{{ctaUrl}}"
-          font-weight="bold"
-          color="white"
-          border-radius="8px"
-          align="left"
-        >
-          View Details
-        </mj-button>
+        <mj-text>
+          <strong>{{ email }}</strong> has declined the invitation to join
+          <strong>{{ teamName }}</strong
+          >. You can invite someone else or manage your team settings.
+        </mj-text>
+
+        <mj-button href="{{ ctaUrl }}" align="left"> View Team </mj-button>
       </mj-column>
     </mj-section>
 

@@ -1,44 +1,46 @@
 <mjml>
   <mj-head>
-    <mj-title>You've been invited to join a team on Lectornaut</mj-title>
-    <mj-preview>Join {{ teamName }} on Lectornaut.</mj-preview>
+    <mj-title>You've been invited to join {{ teamName }}</mj-title>
+    <mj-preview>Join your team on Lectornaut.</mj-preview>
     <mj-attributes>
       <mj-all
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
       ></mj-all>
-      <mj-text line-height="24px"></mj-text>
+      <mj-text font-size="14px" line-height="24px" color="black"></mj-text>
+      <mj-button
+        font-size="14px"
+        color="white"
+        background-color="black"
+        border-radius="8px"
+        font-weight="bold"
+      ></mj-button>
     </mj-attributes>
   </mj-head>
   <mj-body>
     <mj-include path="../partials/header.mjml" />
 
-    <mj-section>
-      <mj-column width="100%">
-        <mj-text font-size="16px" font-weight="bold"
-          >Join {{ teamName }}</mj-text
-        >
-
-        <mj-text>Hello,</mj-text>
-
-        <mj-text>
-          <strong>{{ inviterName }}</strong> ({{ inviterEmail }}) invited you to
-          join <strong>{{ teamName }}</strong> as a <strong>{{ role }}</strong
-          >.
+    <mj-section padding="0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          Join {{ teamName }}
         </mj-text>
 
-        <mj-button
-          background-color="black"
-          href="{{ctaUrl}}"
-          font-weight="bold"
-          color="white"
-          border-radius="8px"
-          align="left"
-        >
+        <mj-text> Hello, </mj-text>
+
+        <mj-text>
+          <strong>{{ inviterName }}</strong> ({{ inviterEmail }}) has invited
+          you to join <strong>{{ teamName }}</strong> as a
+          <strong>{{ role }}</strong
+          >. Collaborate, share insights, and organize your knowledge together.
+        </mj-text>
+
+        <mj-button href="{{ ctaUrl }}" align="left">
           Accept Invitation
         </mj-button>
 
-        <mj-text font-size="12px" color="#999">
-          If you did not expect this invitation, you can ignore this email.
+        <mj-text font-size="12px" color="gray">
+          If you did not expect this invitation, you can safely ignore this
+          email.
         </mj-text>
       </mj-column>
     </mj-section>
