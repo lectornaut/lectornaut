@@ -5,6 +5,7 @@ import {
   createPendingSet,
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
+import { withToast } from "@/utils/toast-helpers"
 import {
   collection,
   deleteDoc,
@@ -81,7 +82,7 @@ export function useNotifications() {
     const previousOptimistic = cloneState(optimisticNotifications.value)
 
     await withOptimisticUpdate(
-      pendingNotificationIds.value,
+      pendingNotificationIds,
       notificationId,
       () => {
         // Special case: if we have it in optimistic list, update it.
@@ -127,6 +128,13 @@ export function useNotifications() {
     status?: INotificationStatus,
     optimisticUpdate?: (n: INotification) => void
   ) => {
+    const previousFirestore = optimisticUpdate
+      ? new Map(firestoreNotifications.value.map((n) => [n.id, cloneState(n)]))
+      : null
+    const previousOptimistic = optimisticUpdate
+      ? new Map(optimisticNotifications.value.map((n) => [n.id, cloneState(n)]))
+      : null
+
     if (optimisticUpdate) {
       notifications.value.forEach((n) => {
         if (!status || n.status === status) {
@@ -137,10 +145,111 @@ export function useNotifications() {
 
     try {
       const fn = httpsCallable(functions, actionName)
-      await fn({ status })
+      return await fn({ status })
     } catch (e) {
+      if (optimisticUpdate) {
+        if (previousFirestore) {
+          firestoreNotifications.value = firestoreNotifications.value.map(
+            (n) => previousFirestore.get(n.id) ?? n
+          )
+        }
+        if (previousOptimistic) {
+          optimisticNotifications.value = optimisticNotifications.value.map(
+            (n) => previousOptimistic.get(n.id) ?? n
+          )
+        }
+      }
       console.error(`Failed to perform batch action ${actionName}`, e)
+      throw e
     }
+  }
+
+  const getNotificationSnapshot = (notificationId: string) => {
+    const notification = notifications.value.find(
+      (n) => n.id === notificationId
+    )
+    if (!notification) return null
+    return {
+      id: notification.id,
+      read: notification.read,
+      status: notification.status,
+    }
+  }
+
+  const restoreNotification = async (snapshot: {
+    id: string
+    read: boolean
+    status: INotificationStatus
+  }) => {
+    await updateNotification(snapshot.id, {
+      read: snapshot.read,
+      status: snapshot.status,
+    })
+  }
+
+  const restoreNotifications = async (
+    snapshots: Array<{
+      id: string
+      read: boolean
+      status: INotificationStatus
+    }>
+  ) => {
+    await Promise.all(
+      snapshots.map((snapshot) => restoreNotification(snapshot))
+    )
+  }
+
+  const updateNotificationWithToast = async (
+    notificationId: string,
+    updates: Partial<INotification>,
+    options: {
+      success: string
+      error: string
+      undoSuccessMessage?: string
+      undoErrorMessage?: string
+    }
+  ) => {
+    const snapshot = getNotificationSnapshot(notificationId)
+    return withToast(() => updateNotification(notificationId, updates), {
+      success: options.success,
+      error: options.error,
+      onUndo: snapshot ? () => restoreNotification(snapshot) : undefined,
+      undoSuccessMessage: options.undoSuccessMessage ?? "Restored notification",
+      undoErrorMessage:
+        options.undoErrorMessage ?? "Failed to restore notification",
+    })
+  }
+
+  const performBatchActionWithToast = async (
+    actionName: string,
+    status: INotificationStatus | undefined,
+    optimisticUpdate: (n: INotification) => void,
+    options: {
+      success: string
+      error: string
+      undoSuccessMessage?: string
+      undoErrorMessage?: string
+    }
+  ) => {
+    const snapshots = notifications.value
+      .filter((n) => !status || n.status === status)
+      .map((n) => ({ id: n.id, read: n.read, status: n.status }))
+
+    return withToast(
+      () => performBatchAction(actionName, status, optimisticUpdate),
+      {
+        success: options.success,
+        error: options.error,
+        onUndo:
+          snapshots.length > 0
+            ? () => restoreNotifications(snapshots)
+            : undefined,
+        undoSuccessMessage:
+          options.undoSuccessMessage ?? "Restored notifications",
+        undoErrorMessage:
+          options.undoErrorMessage ?? "Failed to restore notifications",
+      }
+    )
   }
 
   const setupListener = () => {
@@ -198,47 +307,105 @@ export function useNotifications() {
   // Public Actions
   const loadMore = () => (limitCount.value += 20)
 
-  const markAsRead = (id: string) => updateNotification(id, { read: true })
-  const markAsUnread = (id: string) => updateNotification(id, { read: false })
+  const markAsRead = (id: string) =>
+    updateNotificationWithToast(
+      id,
+      { read: true },
+      {
+        success: "Marked as read",
+        error: "Failed to mark as read",
+      }
+    )
+  const markAsUnread = (id: string) =>
+    updateNotificationWithToast(
+      id,
+      { read: false },
+      {
+        success: "Marked as unread",
+        error: "Failed to mark as unread",
+      }
+    )
   const markAsInbox = (id: string) =>
-    updateNotification(id, { status: "inbox" })
-  const markAsDone = (id: string) => updateNotification(id, { status: "done" })
+    updateNotificationWithToast(
+      id,
+      { status: "inbox" },
+      {
+        success: "Moved to inbox",
+        error: "Failed to move to inbox",
+      }
+    )
+  const markAsDone = (id: string) =>
+    updateNotificationWithToast(
+      id,
+      { status: "done" },
+      {
+        success: "Marked as done",
+        error: "Failed to mark as done",
+      }
+    )
   const markAsSaved = (id: string) =>
-    updateNotification(id, { status: "saved" })
+    updateNotificationWithToast(
+      id,
+      { status: "saved" },
+      {
+        success: "Saved notification",
+        error: "Failed to save notification",
+      }
+    )
 
   const markAllRead = (status?: INotificationStatus) =>
-    performBatchAction(
+    performBatchActionWithToast(
       "markAllNotificationsRead",
       status,
-      (n) => (n.read = true)
+      (n) => (n.read = true),
+      {
+        success: "Marked all as read",
+        error: "Failed to mark all as read",
+      }
     )
 
   const markAllUnread = (status?: INotificationStatus) =>
-    performBatchAction(
+    performBatchActionWithToast(
       "markAllNotificationsUnread",
       status,
-      (n) => (n.read = false)
+      (n) => (n.read = false),
+      {
+        success: "Marked all as unread",
+        error: "Failed to mark all as unread",
+      }
     )
 
   const markAllDone = (status?: INotificationStatus) =>
-    performBatchAction(
+    performBatchActionWithToast(
       "markAllNotificationsDone",
       status,
-      (n) => (n.status = "done")
+      (n) => (n.status = "done"),
+      {
+        success: "Moved all to done",
+        error: "Failed to move all to done",
+      }
     )
 
   const markAllSaved = (status?: INotificationStatus) =>
-    performBatchAction(
+    performBatchActionWithToast(
       "markAllNotificationsSaved",
       status,
-      (n) => (n.status = "saved")
+      (n) => (n.status = "saved"),
+      {
+        success: "Moved all to saved",
+        error: "Failed to move all to saved",
+      }
     )
 
   const markAllInbox = (status?: INotificationStatus) =>
-    performBatchAction(
+    performBatchActionWithToast(
       "markAllNotificationsInbox",
       status,
-      (n) => (n.status = "inbox")
+      (n) => (n.status = "inbox"),
+      {
+        success: "Moved all to inbox",
+        error: "Failed to move all to inbox",
+      }
     )
 
   const deleteNotification = async (notificationId: string) => {
@@ -247,7 +414,7 @@ export function useNotifications() {
     const previousOptimistic = cloneState(optimisticNotifications.value)
 
     await withOptimisticUpdate(
-      pendingNotificationIds.value,
+      pendingNotificationIds,
       notificationId,
       () => {
         // If it was optimistic, remove from optimistic
@@ -272,7 +439,9 @@ export function useNotifications() {
     // For batch actions, we can't easily use withOptimisticUpdate per-ID without IDs.
     // However, we can update the firestoreNotifications locally if we want a "fake" optimistic felt.
     // But since performBatchAction has its own optimistic update helper, let's use that.
-    performBatchAction("deleteAllNotifications", status)
+    performBatchAction("deleteAllNotifications", status).catch(() => {
+      // Errors already logged in performBatchAction
+    })
   }
 
   return {

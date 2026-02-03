@@ -72,7 +72,7 @@ const users = [
       Powering the world's best teams, from startups to Fortune 500 companies.
     </p>
     <Carousel
-      class="before:from-background after:from-background relative w-full before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-16 before:bg-gradient-to-r after:absolute after:inset-y-0 after:right-0 after:z-10 after:w-16 after:bg-gradient-to-l focus-visible:outline-none"
+      class="before:from-background after:from-background relative w-full before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-16 before:bg-linear-to-r after:absolute after:inset-y-0 after:right-0 after:z-10 after:w-16 after:bg-linear-to-l focus-visible:outline-none"
       :opts="{
         align: 'start',
         loop: true,

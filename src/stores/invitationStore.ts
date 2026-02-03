@@ -24,11 +24,11 @@
  * }
  */
 
-import { firestore } from "@/modules/firebase"
+import { firestore, functions } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IMembershipRole } from "@/types"
-import { getMembershipRef, getTeamRef } from "@/utils/firebase-helpers"
+import type { IMembership, IMembershipRole } from "@/types"
+import { getMembershipRef } from "@/utils/firebase-helpers"
 import {
   cloneState,
   createPendingSet,
@@ -41,14 +41,15 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
-  runTransaction,
   serverTimestamp,
+  Timestamp,
   updateDoc,
   where,
-  type Timestamp,
 } from "firebase/firestore"
+import { httpsCallable } from "firebase/functions"
 import { defineStore, storeToRefs } from "pinia"
 import { computed, ref, shallowRef, unref, type MaybeRef } from "vue"
 import { useCollection } from "vuefire"
@@ -224,9 +225,17 @@ export const useInvitationStore = defineStore("invitations", () => {
     // Use current user's role from membership store if available
     // Note: We can only check permissions if they are already a member of the team
     const membershipStore = useMembershipStore()
-    const membership = membershipStore.memberships.find(
+    let membership = membershipStore.memberships.find(
       (m) => m.teamId === teamId
     )
+
+    // Fallback: membership might not be synced yet right after team creation.
+    if (!membership) {
+      const membershipSnap = await getDoc(getMembershipRef(teamId, user.uid))
+      if (membershipSnap.exists()) {
+        membership = membershipSnap.data() as IMembership
+      }
+    }
     if (
       !membership ||
       !can(user, Capabilities.INVITE_MEMBER, {
@@ -250,6 +259,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     }
 
     const opId = generateOperationId()
+    const code = generateInvitationCode()
     const invitation: IInvitation = {
       id: opId, // temporary ID for optimistic tracking
       teamId,
@@ -259,8 +269,19 @@ export const useInvitationStore = defineStore("invitations", () => {
       email,
       role,
       status: "pending",
-      code: generateInvitationCode(),
-      createdAt: serverTimestamp() as Timestamp,
+      code,
+      createdAt: Timestamp.now(),
+    }
+    const invitationData = {
+      teamId,
+      teamName,
+      inviterName: profile.displayName || user.email || "Unknown",
+      inviterEmail: user.email!,
+      email,
+      role,
+      status: "pending" as const,
+      code,
+      createdAt: serverTimestamp(),
     }
 
     const previousOptimistic = cloneState(optimisticInvitations.value)
@@ -278,8 +299,7 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        const { id, ...data } = invitation
-        await addDoc(collection(firestore, "invitations"), data)
+        await addDoc(collection(firestore, "invitations"), invitationData)
       }
     )
   }
@@ -317,7 +337,7 @@ export const useInvitationStore = defineStore("invitations", () => {
             ? {
                 ...inv,
                 status: "pending",
-                resentAt: serverTimestamp() as Timestamp,
+                resentAt: Timestamp.now(),
               }
             : inv
         )
@@ -459,7 +479,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     }
     if (!invitation.id) throw new Error("Invalid invitation")
 
-    const { teamId, id: invitationId, role } = invitation
+    const { id: invitationId } = invitation
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     // Note: We only handle invitation removal optimistically here.
@@ -477,46 +497,8 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        await runTransaction(firestore, async (transaction) => {
-          // Double check invitation exists and is pending
-          const invRef = doc(firestore, "invitations", invitationId!)
-          const invSnap = await transaction.get(invRef)
-
-          if (!invSnap.exists()) throw new Error("Invitation no longer exists")
-          const invData = invSnap.data() as IInvitation
-          if (invData.status !== "pending")
-            throw new Error("Invitation is not pending")
-
-          // Create membership
-          const teamRef = getTeamRef(teamId)
-          const teamSnap = await transaction.get(teamRef)
-          if (!teamSnap.exists()) throw new Error("Team no longer exists")
-
-          // Add membership
-          const membershipRef = getMembershipRef(teamId, user.uid)
-
-          transaction.set(membershipRef, {
-            userId: user.uid,
-            teamId,
-            role,
-            user: userProfile.value ?? {},
-            team: teamSnap.data() ?? {},
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          })
-
-          // Delete invitation
-          transaction.delete(invRef)
-
-          // Update user profile currentTeamId if they don't have one
-          if (!userProfile.value?.currentTeamId) {
-            const userRef = doc(firestore, "users", user.uid)
-            transaction.update(userRef, {
-              currentTeamId: teamId,
-              updatedAt: serverTimestamp(),
-            })
-          }
-        })
+        const acceptInvitationFn = httpsCallable(functions, "acceptInvitation")
+        await acceptInvitationFn({ invitationId })
       }
     )
   }

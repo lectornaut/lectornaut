@@ -13,6 +13,7 @@
 
 import { isRetryableFirebaseError } from "@/utils/firebase-errors"
 import type { Ref, ShallowRef } from "vue"
+import { isRef } from "vue"
 
 // ============================================================================
 // State Cloning
@@ -189,7 +190,7 @@ export function getBackoffDelay(attempt: number, baseDelay: number): number {
  * Wraps a Firestore write operation with optimistic update logic
  * Includes optional retry support with exponential backoff
  *
- * @param pendingIds - Set tracking in-flight operations
+ * @param pendingIds - Set (or shallow ref to set) tracking in-flight operations
  * @param id - Unique identifier for this operation
  * @param applyOptimistic - Function to apply the optimistic update to local state
  * @param rollback - Function to revert to previous state on failure
@@ -197,7 +198,7 @@ export function getBackoffDelay(attempt: number, baseDelay: number): number {
  * @param options - Optional configuration for retries
  */
 export async function withOptimisticUpdate<T>(
-  pendingIds: Set<string>,
+  pendingIds: Set<string> | ShallowRef<Set<string>>,
   id: string,
   applyOptimistic: () => void,
   rollback: () => void,
@@ -205,9 +206,26 @@ export async function withOptimisticUpdate<T>(
   options: OptimisticOptions = {}
 ): Promise<T> {
   const { maxRetries = 0, retryBaseDelay = 1000 } = options
+  const pendingRef = isRef(pendingIds)
+    ? (pendingIds as ShallowRef<Set<string>>)
+    : null
+  const addPendingId = () => {
+    if (pendingRef) {
+      addPending(pendingRef, id)
+      return
+    }
+    ;(pendingIds as Set<string>).add(id)
+  }
+  const removePendingId = () => {
+    if (pendingRef) {
+      removePending(pendingRef, id)
+      return
+    }
+    ;(pendingIds as Set<string>).delete(id)
+  }
 
   // Add to pending set
-  pendingIds.add(id)
+  addPendingId()
 
   try {
     // Apply optimistic update immediately
@@ -241,7 +259,7 @@ export async function withOptimisticUpdate<T>(
     throw lastError ?? new Error("Operation failed after retries")
   } finally {
     // Always clean up pending state
-    pendingIds.delete(id)
+    removePendingId()
   }
 }
 

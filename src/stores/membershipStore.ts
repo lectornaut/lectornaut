@@ -22,8 +22,10 @@ import {
   getUsersCollection,
 } from "@/utils/firebase-helpers"
 import {
+  addPending,
   cloneState,
   createPendingSet,
+  removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
 import { can, Capabilities, hasExactRole } from "@/utils/permissions"
@@ -434,6 +436,19 @@ export const useMembershipStore = defineStore("memberships", () => {
   ): Promise<void> {
     if (!currentUser.value) return
 
+    const membership = memberships.value.find(
+      (m) => m.teamId === teamId && m.userId === currentUser.value?.uid
+    )
+    if (
+      !membership ||
+      !can(currentUser.value, Capabilities.INVITE_MEMBER, {
+        scope: "team",
+        teamRole: membership.role,
+      })
+    ) {
+      throw new Error("You do not have permission to invite members")
+    }
+
     // Find user by email and check membership in parallel
     const usersQuery = query(getUsersCollection(), where("email", "==", email))
     const querySnapshot = await getDocs(usersQuery)
@@ -469,7 +484,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     const previousTeamMembers = cloneState(teamMembers.value)
 
     await withOptimisticUpdate(
-      pendingMembershipIds.value,
+      pendingMembershipIds,
       membershipKey,
       // Apply optimistic update
       () => {
@@ -528,7 +543,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     const previousTeamMembers = cloneState(teamMembers.value)
 
     await withOptimisticUpdate(
-      pendingMembershipIds.value,
+      pendingMembershipIds,
       membershipKey,
       // Apply optimistic update
       () => {
@@ -598,7 +613,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     const isRemovingSelf = userId === currentUser.value.uid
 
     await withOptimisticUpdate(
-      pendingMembershipIds.value,
+      pendingMembershipIds,
       membershipKey,
       // Apply optimistic update
       () => {
@@ -715,7 +730,7 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     try {
       // Mark all membership keys as pending
-      membershipKeys.forEach((k) => pendingMembershipIds.value.add(k))
+      membershipKeys.forEach((k) => addPending(pendingMembershipIds, k))
 
       // Apply optimistic updates
       optimisticTeamMembers.value = teamMembers.value.filter(
@@ -759,7 +774,7 @@ export const useMembershipStore = defineStore("memberships", () => {
       if (isRemovingSelf) {
         pendingUserIds.value.delete(currentUser.value.uid)
       }
-      membershipKeys.forEach((k) => pendingMembershipIds.value.delete(k))
+      membershipKeys.forEach((k) => removePending(pendingMembershipIds, k))
     }
   }
 
@@ -792,14 +807,14 @@ export const useMembershipStore = defineStore("memberships", () => {
    * Mark a membership as pending
    */
   function markPending(key: string) {
-    pendingMembershipIds.value.add(key)
+    addPending(pendingMembershipIds, key)
   }
 
   /**
    * Clear pending status for a membership
    */
   function clearPending(key: string) {
-    pendingMembershipIds.value.delete(key)
+    removePending(pendingMembershipIds, key)
   }
 
   /**

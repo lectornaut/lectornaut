@@ -4,7 +4,7 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
-import { NotificationStatus } from "./types.js"
+import { InvitationData, NotificationStatus } from "./types.js"
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
@@ -123,3 +123,103 @@ export const deleteAllNotifications = onCall((request) =>
     null // null means delete
   )
 )
+
+// ============================================================================
+// Invitation Helpers
+// ============================================================================
+
+/**
+ * Accept an invitation by ID.
+ * Runs server-side to validate email, create membership, and clean up.
+ */
+export const acceptInvitation = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    )
+  }
+
+  const auth = request.auth
+  const uid = auth.uid
+  const authedEmail = auth.token.email ?? null
+
+  const invitationId = request.data?.invitationId
+  if (!invitationId || typeof invitationId !== "string") {
+    throw new HttpsError("invalid-argument", "Invitation ID is required.")
+  }
+
+  await db.runTransaction(async (transaction) => {
+    const invRef = db.doc(`invitations/${invitationId}`)
+    const invSnap = await transaction.get(invRef)
+
+    if (!invSnap.exists) {
+      throw new HttpsError("not-found", "Invitation not found.")
+    }
+
+    const invitation = invSnap.data() as InvitationData
+
+    if (invitation.status !== "pending") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Only pending invitations can be accepted."
+      )
+    }
+
+    if (!authedEmail || invitation.email !== authedEmail) {
+      throw new HttpsError(
+        "permission-denied",
+        "Invitation does not match authenticated user."
+      )
+    }
+
+    const teamRef = db.doc(`teams/${invitation.teamId}`)
+    const teamSnap = await transaction.get(teamRef)
+    if (!teamSnap.exists) {
+      throw new HttpsError("not-found", "Team no longer exists.")
+    }
+
+    const membershipRef = db.doc(
+      `teams/${invitation.teamId}/memberships/${uid}`
+    )
+    const membershipSnap = await transaction.get(membershipRef)
+    if (membershipSnap.exists) {
+      throw new HttpsError("already-exists", "User is already a member.")
+    }
+
+    const userRef = db.doc(`users/${uid}`)
+    const userSnap = await transaction.get(userRef)
+    const userData = userSnap.exists
+      ? userSnap.data()
+      : {
+          uid,
+          email: authedEmail,
+          displayName: auth.token.name ?? null,
+          photoURL: auth.token.picture ?? null,
+        }
+
+    transaction.set(membershipRef, {
+      userId: uid,
+      teamId: invitation.teamId,
+      role: invitation.role,
+      user: userData,
+      team: teamSnap.data() ?? {},
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    transaction.delete(invRef)
+
+    if (userSnap.exists) {
+      const currentTeamId = userSnap.data()?.currentTeamId ?? null
+      if (!currentTeamId) {
+        transaction.update(userRef, {
+          currentTeamId: invitation.teamId,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        })
+      }
+    }
+  })
+
+  return { success: true }
+})
