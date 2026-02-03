@@ -7,18 +7,22 @@
  * - Role management (owner, admin, member)
  * - Invite/remove members
  *
- * Uses VueFire composables for reactive Firestore bindings
+ * Uses VueFire composables for reactive Firestore bindings.
+ * All mutations go through Cloud Functions for automatic audit logging.
  */
 
+import {
+  assignRoleToUser as assignRoleToUserFn,
+  removeMember as removeMemberFn,
+  removeMembers as removeMembersFn,
+} from "@/composables/useFunctions"
 import { defaultTeamRole } from "@/helpers/defaults"
-import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import type { IMembership, IMembershipRole, ITeam, IUser } from "@/types"
 import {
   getAllMembershipsGroup,
   getMembershipRef,
   getTeamMembershipsCollection,
-  getUserRef,
   getUsersCollection,
 } from "@/utils/firebase-helpers"
 import {
@@ -33,10 +37,8 @@ import {
   getDoc,
   getDocs,
   query,
-  runTransaction,
   serverTimestamp,
   setDoc,
-  updateDoc,
   where,
   type Timestamp,
 } from "firebase/firestore"
@@ -44,26 +46,9 @@ import { defineStore, storeToRefs } from "pinia"
 import { computed, ref, shallowRef } from "vue"
 import { useCollection } from "vuefire"
 
-// Helper to get ownership count
+// Helper to get ownership count (used for ownerCount computed property)
 const getOwnerCount = (members: IMembership[]) =>
   members.filter((m) => m.role === "owner").length
-
-// Helper to validate member can be removed
-function validateMemberRemoval(
-  membershipData: IMembership,
-  teamMembers: IMembership[]
-) {
-  if (teamMembers.length <= 1) {
-    throw new Error(
-      "Cannot remove the last member. Every team must have at least one member."
-    )
-  }
-  if (membershipData.role === "owner" && getOwnerCount(teamMembers) <= 1) {
-    throw new Error(
-      "Cannot remove the last owner. Please assign another owner first."
-    )
-  }
-}
 
 export const useMembershipStore = defineStore("memberships", () => {
   const authStore = useAuthStore()
@@ -502,7 +487,8 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   /**
-   * Change a member's role with optimistic update
+   * Change a member's role with optimistic update.
+   * Uses Cloud Function for automatic audit logging.
    */
   async function changeRole(
     teamId: string,
@@ -516,27 +502,6 @@ export const useMembershipStore = defineStore("memberships", () => {
       })
     ) {
       throw new Error("You do not have permission to change member roles")
-    }
-    const membershipRef = getMembershipRef(teamId, userId)
-    const membershipSnap = await getDoc(membershipRef)
-
-    if (!membershipSnap.exists()) {
-      throw new Error("Membership not found")
-    }
-
-    const currentMembership = membershipSnap.data() as IMembership
-
-    // Prevent changing role if this is the last owner
-    if (currentMembership.role === "owner" && newRole !== "owner") {
-      // If teamId is not the current team, we need to fetch its members to validate owner count
-      let membersToValidate = teamMembers.value
-      if (teamId !== currentTeamId.value) {
-        membersToValidate = await getMembersForTeam(teamId)
-      }
-
-      if (getOwnerCount(membersToValidate) <= 1) {
-        throw new Error("Cannot change role: Team must have at least one owner")
-      }
     }
 
     const membershipKey = `${teamId}-${userId}`
@@ -555,23 +520,20 @@ export const useMembershipStore = defineStore("memberships", () => {
       () => {
         optimisticTeamMembers.value = previousTeamMembers
       },
-      // Firestore operation
+      // Cloud Function call
       async () => {
-        try {
-          await updateDoc(membershipRef, {
-            role: newRole,
-            updatedAt: serverTimestamp(),
-          })
-        } catch (error) {
-          console.error("[membershipStore] Error changing role:", error)
-          throw new Error(`Failed to update role: ${(error as Error).message}`)
-        }
+        await assignRoleToUserFn({
+          teamId,
+          userId,
+          role: newRole,
+        })
       }
     )
   }
 
   /**
-   * Remove a member from the team with optimistic update
+   * Remove a member from the team with optimistic update.
+   * Uses Cloud Function for automatic audit logging.
    */
   async function removeMember(teamId: string, userId: string): Promise<void> {
     if (!currentUser.value) return
@@ -587,23 +549,6 @@ export const useMembershipStore = defineStore("memberships", () => {
         throw new Error("You do not have permission to remove members")
       }
     }
-
-    const membershipRef = getMembershipRef(teamId, userId)
-    const membershipSnap = await getDoc(membershipRef)
-
-    if (!membershipSnap.exists()) {
-      throw new Error("Membership not found")
-    }
-
-    const membershipData = membershipSnap.data() as IMembership
-
-    // If teamId is not the current team, we need to fetch its members to validate removal
-    let membersToValidate = teamMembers.value
-    if (teamId !== currentTeamId.value) {
-      membersToValidate = await getMembersForTeam(teamId)
-    }
-
-    validateMemberRemoval(membershipData, membersToValidate)
 
     const membershipKey = `${teamId}-${userId}`
     const previousTeamMembers = cloneState(teamMembers.value)
@@ -639,19 +584,10 @@ export const useMembershipStore = defineStore("memberships", () => {
           authStore.setCurrentTeamId(previousUserProfile.currentTeamId)
         }
       },
-      // Firestore operation
+      // Cloud Function call
       async () => {
         try {
-          if (isRemovingSelf) {
-            await updateDoc(getUserRef(userId), {
-              currentTeamId: null,
-              updatedAt: serverTimestamp(),
-            })
-          }
-
-          await runTransaction(firestore, async (transaction) => {
-            transaction.delete(membershipRef)
-          })
+          await removeMemberFn({ teamId, userId })
         } finally {
           if (isRemovingSelf) {
             pendingUserIds.value.delete(userId)
@@ -662,7 +598,8 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   /**
-   * Remove multiple members from a team with optimistic update
+   * Remove multiple members from a team with optimistic update.
+   * Uses Cloud Function for automatic audit logging.
    */
   async function removeMembers(
     teamId: string,
@@ -681,47 +618,8 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     if (!userIds || userIds.length === 0) return
 
-    // Resolve membership docs for all provided userIds
-    const membershipDocs = await Promise.all(
-      userIds.map((userId) => getDoc(getMembershipRef(teamId, userId)))
-    )
-
-    const membershipsToRemove: IMembership[] = []
-    for (const snap of membershipDocs) {
-      if (!snap.exists()) {
-        throw new Error("Membership not found for one or more users")
-      }
-      membershipsToRemove.push(snap.data() as IMembership)
-    }
-
-    // Compute resulting members after removal to validate constraints
     const userIdSet = new Set(userIds)
-
-    // If teamId is not the current team, we need to fetch its members to validate removal
-    let membersToValidate = teamMembers.value
-    if (teamId !== currentTeamId.value) {
-      membersToValidate = await getMembersForTeam(teamId)
-    }
-
-    const remainingMembers = membersToValidate.filter(
-      (m) => !userIdSet.has(m.userId)
-    )
-
-    if (remainingMembers.length <= 0) {
-      throw new Error(
-        "Cannot remove all members. Every team must have at least one member."
-      )
-    }
-
-    if (getOwnerCount(remainingMembers) <= 0) {
-      throw new Error(
-        "Cannot remove owners leaving team without an owner. Assign another owner first."
-      )
-    }
-
-    const membershipKeys = membershipsToRemove.map(
-      (m) => `${m.teamId}-${m.userId}`
-    )
+    const membershipKeys = userIds.map((userId) => `${teamId}-${userId}`)
     const previousTeamMembers = cloneState(teamMembers.value)
     const previousMemberships = cloneState(memberships.value)
     const previousUserProfile = cloneState(userProfile.value)
@@ -747,20 +645,8 @@ export const useMembershipStore = defineStore("memberships", () => {
         }
       }
 
-      // Firestore operation: delete all membership docs in a transaction
-      if (isRemovingSelf) {
-        await updateDoc(getUserRef(currentUser.value.uid), {
-          currentTeamId: null,
-          updatedAt: serverTimestamp(),
-        })
-      }
-
-      await runTransaction(firestore, async (transaction) => {
-        for (const m of membershipsToRemove) {
-          const ref = getMembershipRef(teamId, m.userId)
-          transaction.delete(ref)
-        }
-      })
+      // Cloud Function call
+      await removeMembersFn({ teamId, userIds })
     } catch (error) {
       // Rollback optimistic state on error
       optimisticTeamMembers.value = previousTeamMembers

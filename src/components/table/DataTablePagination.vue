@@ -1,17 +1,15 @@
-<script lang="ts" setup>
+<script lang="ts" setup generic="TData">
 import {
   IconArrowLeftToLine,
   IconArrowRightToLine,
   IconChevronLeft,
   IconChevronRight,
 } from "@/data/icons"
-import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
-interface DataTablePaginationProps {
-  table: Table<Task>
-}
-defineProps<DataTablePaginationProps>()
+defineProps<{
+  table: Table<TData>
+}>()
 </script>
 
 <template>
@@ -48,7 +46,7 @@ defineProps<DataTablePaginationProps>()
               </SelectTrigger>
               <SelectContent side="top">
                 <SelectItem
-                  v-for="pageSize in [10, 20, 30, 40, 50]"
+                  v-for="pageSize in [5, 10, 20, 30, 40, 50]"
                   :key="pageSize"
                   :value="pageSize"
                 >

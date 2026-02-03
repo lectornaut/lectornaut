@@ -1,19 +1,16 @@
-<script lang="ts" setup>
+<script lang="ts" setup generic="TData">
 import {
   IconArrowDown,
   IconArrowUp,
   IconChevronsUpDown,
   IconEyeOff,
 } from "@/data/icons"
-import type { Task } from "@/data/schema"
 import type { Column } from "@tanstack/vue-table"
 
-export interface DataTableColumnHeaderProps {
-  column: Column<Task, unknown>
+defineProps<{
+  column: Column<TData, unknown>
   title: string
-}
-
-defineProps<DataTableColumnHeaderProps>()
+}>()
 
 defineOptions({
   inheritAttrs: false,

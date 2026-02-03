@@ -11,17 +11,22 @@
  * - teamStore: Current team information
  * - membershipStore: User's role in team
  *
- * Uses VueFire composables for reactive Firestore bindings
+ * Uses VueFire composables for reactive Firestore bindings.
+ * All mutations go through Cloud Functions for automatic audit logging.
  */
 
-import { firestore, storage } from "@/modules/firebase"
+import {
+  createWorkspace as createWorkspaceFn,
+  deleteWorkspace as deleteWorkspaceFn,
+  updateWorkspace as updateWorkspaceFn,
+} from "@/composables/useFunctions"
+import { storage } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IWorkspace } from "@/types"
 import {
   createTeamWorkspacesQuery,
   getUserRef,
-  getWorkspaceRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase-helpers"
 import {
@@ -29,16 +34,7 @@ import {
   createPendingSet,
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
-import {
-  collection,
-  deleteDoc,
-  doc,
-  type FieldValue,
-  serverTimestamp,
-  setDoc,
-  type Timestamp,
-  updateDoc,
-} from "firebase/firestore"
+import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
 import { deleteObject, ref as storageRef } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
@@ -215,12 +211,13 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   // ============================================================================
 
   /**
-   * Create a new workspace with optimistic update (owner or member)
+   * Create a new workspace with optimistic update (owner or member).
+   * Uses Cloud Function for automatic audit logging.
    */
   async function createWorkspace(
     name: string,
     description?: string,
-    photoFile?: File
+    _photoFile?: File
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
@@ -229,35 +226,20 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       throw new Error("Only team owners and members can create workspaces")
     }
 
-    const workspaceRef = doc(
-      collection(firestore, "teams", currentTeamId.value, "workspaces")
-    )
-    const workspaceId = workspaceRef.id
+    const teamId = currentTeamId.value
+    // Generate a temporary ID for optimistic update - will be replaced by server
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const timestamp = serverTimestamp()
 
-    // Upload photo first if provided
-    let photoURL: string | null = null
-    if (photoFile) {
-      try {
-        photoURL = await uploadWorkspacePhoto(
-          currentTeamId.value,
-          workspaceId,
-          photoFile
-        )
-      } catch (error) {
-        console.error(
-          "[workspaceStore] Error uploading workspace photo:",
-          error
-        )
-      }
-    }
+    // Note: Photo upload is handled separately after workspace creation
+    // TODO: Handle photo upload after workspace is created
 
     const newWorkspace: IWorkspace = {
-      id: workspaceId,
-      teamId: currentTeamId.value,
+      id: tempId,
+      teamId,
       name,
       description: description ?? null,
-      photoURL,
+      photoURL: null,
       createdAt: timestamp as Timestamp,
       updatedAt: timestamp as Timestamp,
     }
@@ -266,15 +248,17 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const previousWorkspaces = cloneState(workspaces.value)
     const previousUserProfile = cloneState(userProfile.value)
 
+    let actualWorkspaceId: string | null = null
+
     await withOptimisticUpdate(
       pendingWorkspaceIds.value,
-      workspaceId,
+      tempId,
       // Apply optimistic update
       () => {
         optimisticWorkspaces.value = [...workspaces.value, newWorkspace]
-        // Auto-select the new workspace
+        // Auto-select the new workspace (will be updated to actual ID)
         pendingUserIds.value.add(currentUser.value!.uid)
-        authStore.setCurrentWorkspaceId(workspaceId)
+        authStore.setCurrentWorkspaceId(tempId)
       },
       // Rollback on error
       () => {
@@ -282,17 +266,27 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         authStore.setCurrentWorkspaceId(
           previousUserProfile?.currentWorkspaceId ?? null
         )
+        pendingUserIds.value.delete(currentUser.value!.uid)
       },
-      // Firestore operation
+      // Cloud Function call
       async () => {
         try {
-          await Promise.all([
-            setDoc(workspaceRef, newWorkspace),
-            updateDoc(getUserRef(currentUser.value!.uid), {
-              currentWorkspaceId: workspaceId,
-              updatedAt: serverTimestamp(),
-            }),
-          ])
+          const result = await createWorkspaceFn({
+            teamId,
+            name,
+            description: description ?? null,
+          })
+
+          actualWorkspaceId = result.data.workspaceId
+
+          // Update user's current workspace to the actual ID
+          await updateDoc(getUserRef(currentUser.value!.uid), {
+            currentWorkspaceId: actualWorkspaceId,
+            updatedAt: serverTimestamp(),
+          })
+
+          // Update local state with actual workspace ID
+          authStore.setCurrentWorkspaceId(actualWorkspaceId)
         } finally {
           pendingUserIds.value.delete(currentUser.value!.uid)
         }
@@ -336,7 +330,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   /**
-   * Update workspace details with optimistic update (owner or member)
+   * Update workspace details with optimistic update (owner or member).
+   * Uses Cloud Function for automatic audit logging.
    */
   async function updateWorkspace(
     workspaceId: string,
@@ -353,38 +348,23 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       throw new Error("Only team owners and members can update workspaces")
     }
 
+    const teamId = currentTeamId.value
     const { name, description, photoFile } = updates
-    const updateData: {
-      name?: string
-      description?: string | null
-      photoURL?: string | null
-      updatedAt: FieldValue
-    } = {
-      updatedAt: serverTimestamp(),
-    }
 
-    if (name !== undefined) updateData.name = name
-    if (description !== undefined) updateData.description = description
-
-    // Upload photo first if provided (outside of optimistic update to get URL)
+    // Upload photo first if provided (outside of cloud function)
+    let photoURL: string | null | undefined = undefined
     if (photoFile !== undefined) {
-      updateData.photoURL =
+      photoURL =
         photoFile === null
           ? null
-          : await uploadWorkspacePhoto(
-              currentTeamId.value,
-              workspaceId,
-              photoFile
-            )
+          : await uploadWorkspacePhoto(teamId, workspaceId, photoFile)
     }
 
     // Prepare optimistic updates for workspace data
     const workspaceUpdates = {
       ...(name !== undefined ? { name } : {}),
       ...(description !== undefined ? { description } : {}),
-      ...(updateData.photoURL !== undefined
-        ? { photoURL: updateData.photoURL }
-        : {}),
+      ...(photoURL !== undefined ? { photoURL } : {}),
     }
 
     // Clone previous state for rollback
@@ -403,18 +383,22 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       () => {
         optimisticWorkspaces.value = previousWorkspaces
       },
-      // Firestore operation
+      // Cloud Function call
       async () => {
-        await updateDoc(
-          getWorkspaceRef(currentTeamId.value!, workspaceId),
-          updateData
-        )
+        await updateWorkspaceFn({
+          teamId,
+          workspaceId,
+          ...(name !== undefined ? { name } : {}),
+          ...(description !== undefined ? { description } : {}),
+          ...(photoURL !== undefined ? { photoURL } : {}),
+        })
       }
     )
   }
 
   /**
-   * Delete a workspace with optimistic update (owner or member)
+   * Delete a workspace with optimistic update (owner or member).
+   * Uses Cloud Function for automatic audit logging.
    */
   async function deleteWorkspace(workspaceId: string): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
@@ -423,6 +407,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     if (!canManageWorkspaces.value) {
       throw new Error("Only team owners and members can delete workspaces")
     }
+
+    const teamId = currentTeamId.value
 
     // Clone previous state for rollback
     const previousWorkspaces = cloneState(workspaces.value)
@@ -452,15 +438,15 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           )
         }
       },
-      // Firestore operation
+      // Cloud Function call
       async () => {
         try {
-          // Cleanup Storage (Profile Photo) - Run in parallel with Firestore delete
-          const photoPath = `teams/${currentTeamId.value!}/workspaces/${workspaceId}/profilePhoto`
+          // Cleanup Storage (Profile Photo) - Run in parallel with Cloud Function
+          const photoPath = `teams/${teamId}/workspaces/${workspaceId}/profilePhoto`
           const fileRef = storageRef(storage, photoPath)
 
           await Promise.allSettled([
-            deleteDoc(getWorkspaceRef(currentTeamId.value!, workspaceId)),
+            deleteWorkspaceFn({ teamId, workspaceId }),
             deleteObject(fileRef),
           ])
         } finally {

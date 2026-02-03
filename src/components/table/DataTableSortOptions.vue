@@ -1,13 +1,10 @@
-<script lang="ts" setup>
+<script lang="ts" setup generic="TData">
 import { IconArrowDown, IconArrowUp, IconArrowUpDown } from "@/data/icons"
-import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
-interface DataTableViewOptionsProps {
-  table: Table<Task>
-}
-
-const props = defineProps<DataTableViewOptionsProps>()
+const props = defineProps<{
+  table: Table<TData>
+}>()
 
 const columns = computed(() =>
   props.table

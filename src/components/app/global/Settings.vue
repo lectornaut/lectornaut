@@ -138,6 +138,10 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
             <TabsContent :class="tabContentClass" value="plans">
               <SettingsPlans />
             </TabsContent>
+
+            <TabsContent :class="tabContentClass" value="logs">
+              <SettingsLogs />
+            </TabsContent>
           </div>
         </SidebarProvider>
       </Tabs>

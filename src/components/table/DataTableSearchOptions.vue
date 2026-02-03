@@ -1,17 +1,20 @@
-<script lang="ts" setup>
+<script lang="ts" setup generic="TData">
 import { IconSearch } from "@/data/icons"
-import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
+import { computed } from "vue"
 
-interface DataTableViewOptionsProps {
-  table: Table<Task>
-}
+const props = defineProps<{
+  table: Table<TData>
+  columnId?: string
+}>()
 
-const props = defineProps<DataTableViewOptionsProps>()
+const activeColumn = computed(() =>
+  props.table.getColumn(props.columnId ?? "title")
+)
 </script>
 
 <template>
-  <div class="relative">
+  <div v-if="activeColumn" class="relative">
     <span
       class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
     >
@@ -19,12 +22,10 @@ const props = defineProps<DataTableViewOptionsProps>()
     </span>
     <Input
       placeholder="Search"
-      :model-value="
-        (props.table.getColumn('title')?.getFilterValue() as string) ?? ''
-      "
+      :model-value="(activeColumn.getFilterValue() as string) ?? ''"
       class="pl-9"
       @input="
-        props.table.getColumn('title')?.setFilterValue($event.target.value)
+        activeColumn.setFilterValue(($event.target as HTMLInputElement).value)
       "
     />
   </div>

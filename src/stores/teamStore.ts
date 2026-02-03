@@ -10,21 +10,22 @@
  * - authStore: User authentication and profile
  * - membershipStore: Team memberships and members
  *
- * Uses VueFire composables for reactive Firestore bindings
+ * Uses VueFire composables for reactive Firestore bindings.
+ * All mutations go through Cloud Functions for automatic audit logging.
  */
 
-import { firestore, storage } from "@/modules/firebase"
+import {
+  createTeam as createTeamFn,
+  deleteTeam as deleteTeamFn,
+  updateTeam as updateTeamFn,
+} from "@/composables/useFunctions"
+import { storage } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { ITeam } from "@/types"
 import {
-  createTeamMembershipsQuery,
-  createTeamWorkspacesQuery,
-  getMembershipRef,
   getTeamRef,
   getUserRef,
-  processInBatches,
-  updateTeamInAllMemberships,
   uploadTeamPhoto,
 } from "@/utils/firebase-helpers"
 import {
@@ -33,17 +34,7 @@ import {
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
 import { Capabilities, roleCan } from "@/utils/permissions"
-import {
-  collection,
-  deleteDoc,
-  doc,
-  type FieldValue,
-  getDocs,
-  runTransaction,
-  serverTimestamp,
-  type Timestamp,
-  updateDoc,
-} from "firebase/firestore"
+import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
 import { deleteObject, ref as storageRef } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"
@@ -234,7 +225,8 @@ export const useTeamStore = defineStore("teams", () => {
   // ============================================================================
 
   /**
-   * Create a new team with optimistic update
+   * Create a new team with optimistic update.
+   * Uses Cloud Function for automatic audit logging.
    */
   async function createTeam(
     name: string,
@@ -242,9 +234,21 @@ export const useTeamStore = defineStore("teams", () => {
   ): Promise<string | undefined> {
     if (!currentUser.value || !userProfile.value) return
 
-    const teamRef = doc(collection(firestore, "teams"))
-    const teamId = teamRef.id
+    // Generate a temporary ID for optimistic update - will be replaced by server
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const timestamp = serverTimestamp()
+
+    // Photo upload will happen after team creation since we need the real team ID
+    // For now, we'll handle this in a follow-up update if photoFile is provided
+    const photoURL: string | null = null
+
+    const newTeam: ITeam = {
+      id: tempId,
+      name,
+      photoURL,
+      createdAt: timestamp as Timestamp,
+      updatedAt: timestamp as Timestamp,
+    }
 
     // Clone previous state for rollback
     const previousUserProfile = cloneState(userProfile.value)
@@ -252,41 +256,18 @@ export const useTeamStore = defineStore("teams", () => {
     const previousMemberships = cloneState(memberships.value)
     const previousTeamMembers = cloneState(teamMembers.value)
 
-    let photoURL: string | null = null
-    if (photoFile) {
-      try {
-        photoURL = await uploadTeamPhoto(teamId, photoFile)
-      } catch (error) {
-        console.error("[teamStore] Error uploading team photo:", error)
-      }
-    }
-
-    const newTeam: ITeam = {
-      id: teamId,
-      name,
-      photoURL,
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
-    }
-
-    const newMembership = await membershipStore.createOwnerMembership(
-      teamId,
-      newTeam
-    )
-    const membershipKey = `${teamId}-${currentUser.value.uid}`
+    let actualTeamId: string | undefined
 
     await withOptimisticUpdate(
       pendingTeamIds.value,
-      teamId,
+      tempId,
       // Apply optimistic updates
       () => {
         pendingUserIds.value.add(currentUser.value!.uid)
-        membershipStore.markPending(membershipKey)
 
         // Update user profile through authStore (optimistically)
-        authStore.setCurrentTeamId(teamId)
+        authStore.setCurrentTeamId(tempId)
         optimisticCurrentTeam.value = newTeam
-        membershipStore.addMembershipOptimistic(newMembership)
       },
       // Rollback on error
       () => {
@@ -294,28 +275,44 @@ export const useTeamStore = defineStore("teams", () => {
         optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
         membershipStore.rollbackTeamMembers(previousTeamMembers)
+        pendingUserIds.value.delete(currentUser.value!.uid)
       },
-      // Firestore operation
+      // Cloud Function call
       async () => {
         try {
-          await runTransaction(firestore, async (transaction) => {
-            transaction.set(teamRef, newTeam)
-            transaction.set(
-              getMembershipRef(teamId, currentUser.value!.uid),
-              newMembership
-            )
-            transaction.update(getUserRef(currentUser.value!.uid), {
-              currentTeamId: teamId,
-              updatedAt: serverTimestamp(),
-            })
-          })
+          const result = await createTeamFn({ name, photoURL })
+          actualTeamId = result.data.teamId
+
+          // If photo was provided, upload it now and update the team
+          if (photoFile && actualTeamId) {
+            try {
+              const uploadedPhotoURL = await uploadTeamPhoto(
+                actualTeamId,
+                photoFile
+              )
+              // Update team with photo URL using cloud function
+              await updateTeamFn({
+                teamId: actualTeamId,
+                photoURL: uploadedPhotoURL,
+              })
+            } catch (error) {
+              console.error("[teamStore] Error uploading team photo:", error)
+            }
+          }
+
+          // Update local state with actual team ID
+          optimisticCurrentTeam.value = {
+            ...newTeam,
+            id: actualTeamId,
+          }
+          authStore.setCurrentTeamId(actualTeamId)
         } finally {
           pendingUserIds.value.delete(currentUser.value!.uid)
-          membershipStore.clearPending(membershipKey)
         }
       }
     )
-    return teamId
+
+    return actualTeamId
   }
 
   /**
@@ -346,7 +343,7 @@ export const useTeamStore = defineStore("teams", () => {
         )
         optimisticCurrentTeam.value = previousCurrentTeam
       },
-      // Firestore operation
+      // Firestore operation (no audit log needed for switching)
       async () => {
         await updateDoc(getUserRef(currentUser.value!.uid), {
           currentTeamId: teamId,
@@ -357,7 +354,8 @@ export const useTeamStore = defineStore("teams", () => {
   }
 
   /**
-   * Update team details with optimistic update
+   * Update team details with optimistic update.
+   * Uses Cloud Function for automatic audit logging.
    */
   async function updateTeam(
     teamId: string,
@@ -372,28 +370,18 @@ export const useTeamStore = defineStore("teams", () => {
     }
 
     const { name, photoFile } = updates
-    const updateData: {
-      name?: string
-      photoURL?: string | null
-      updatedAt: FieldValue
-    } = {
-      updatedAt: serverTimestamp(),
-    }
 
-    if (name) updateData.name = name
-
-    // Upload photo first if provided (outside of optimistic update to get URL)
+    // Upload photo first if provided (outside of cloud function)
+    let photoURL: string | null | undefined = undefined
     if (photoFile !== undefined) {
-      updateData.photoURL =
+      photoURL =
         photoFile === null ? null : await uploadTeamPhoto(teamId, photoFile)
     }
 
     // Prepare optimistic updates for team data
     const teamUpdates = {
       ...(name ? { name } : {}),
-      ...(updateData.photoURL !== undefined
-        ? { photoURL: updateData.photoURL }
-        : {}),
+      ...(photoURL !== undefined ? { photoURL } : {}),
     }
 
     // Clone previous state for rollback
@@ -418,18 +406,20 @@ export const useTeamStore = defineStore("teams", () => {
         optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
       },
-      // Firestore operation - run in parallel
+      // Cloud Function call
       async () => {
-        await Promise.all([
-          updateDoc(getTeamRef(teamId), updateData),
-          updateTeamInAllMemberships(teamId, updateData),
-        ])
+        await updateTeamFn({
+          teamId,
+          ...(name ? { name } : {}),
+          ...(photoURL !== undefined ? { photoURL } : {}),
+        })
       }
     )
   }
 
   /**
-   * Delete a team with optimistic update
+   * Delete a team with optimistic update.
+   * Uses Cloud Function for automatic audit logging.
    */
   async function deleteTeam(teamId: string): Promise<void> {
     if (!currentUser.value) return
@@ -462,26 +452,10 @@ export const useTeamStore = defineStore("teams", () => {
         optimisticCurrentTeam.value = previousCurrentTeam
         authStore.setCurrentTeamId(previousUserProfile?.currentTeamId ?? null)
       },
-      // Firestore operation
+      // Cloud Function call + Storage cleanup
       async () => {
-        // Fetch all related documents
-        // We do this first to ensure we have references before we start deleting
-        const [membershipDocs, workspaceDocs] = await Promise.all([
-          getDocs(createTeamMembershipsQuery(teamId)),
-          getDocs(createTeamWorkspacesQuery(teamId)),
-        ])
-
-        // Identify current user's membership to delete LAST
-        const otherMemberDocs = membershipDocs.docs.filter(
-          (d) => d.id !== currentUser.value!.uid
-        )
-        const currentUserMemberDoc = membershipDocs.docs.find(
-          (d) => d.id === currentUser.value!.uid
-        )
-
-        // 1. Cleanup Storage (Images)
-        // These operations rely on "storage.rules" checking Firestore membership
-        // So we MUST validity/existence of the membership during these calls.
+        // Delete storage files before calling cloud function
+        // (cloud function may revoke permission before storage cleanup)
         const storagePromises: Promise<void>[] = []
 
         // Team Photo
@@ -491,57 +465,11 @@ export const useTeamStore = defineStore("teams", () => {
           ).catch(() => {}) // Ignore if not exists
         )
 
-        // Workspace Photos
-        workspaceDocs.docs.forEach((doc) => {
-          storagePromises.push(
-            deleteObject(
-              storageRef(
-                storage,
-                `teams/${teamId}/workspaces/${doc.id}/profilePhoto`
-              )
-            ).catch(() => {}) // Ignore if not exists
-          )
-        })
-
-        // Wait for storage cleanup to finish before removing permissions (membership)
+        // Wait for storage cleanup
         await Promise.all(storagePromises)
 
-        // 2. Delete Workspaces
-        // Rule: allow write: if hasRole(...)
-        if (!workspaceDocs.empty) {
-          await processInBatches(workspaceDocs.docs, (docSnap, batch) =>
-            batch.delete(docSnap.ref)
-          )
-        }
-
-        // 3. Delete Other Memberships
-        // Rule: allow delete: if hasRole(...)
-        if (otherMemberDocs.length > 0) {
-          await processInBatches(otherMemberDocs, (docSnap, batch) =>
-            batch.delete(docSnap.ref)
-          )
-        }
-
-        // 4. Delete Team Document
-        // Rule: allow delete: if hasRole(...)
-        await deleteDoc(getTeamRef(teamId))
-
-        // 5. Delete Current User Membership
-        // We do this last because "hasRole" checks existence of THIS document
-        if (currentUserMemberDoc) {
-          await deleteDoc(currentUserMemberDoc.ref)
-        }
-
-        // 6. Update Current User Profile
-        // We CANNOT update other users' profiles (rule: allow update: if isUser(userId))
-        // They will have a stale currentTeamId, which the app must handle gracefully
-        if (userProfile.value?.currentTeamId === teamId) {
-          await updateDoc(getUserRef(currentUser.value!.uid), {
-            currentTeamId: null,
-            currentWorkspaceId: null,
-            updatedAt: serverTimestamp(),
-          })
-        }
+        // Call cloud function to delete team, workspaces, and memberships
+        await deleteTeamFn({ teamId })
       }
     )
   }

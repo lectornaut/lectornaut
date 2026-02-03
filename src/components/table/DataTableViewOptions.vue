@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script lang="ts" setup generic="TData">
 import {
   IconArrowLeftToLine,
   IconArrowRightToLine,
@@ -13,14 +13,11 @@ import {
   IconSquareDashedMousePointer,
   IconSquareMousePointer,
 } from "@/data/icons"
-import type { Task } from "@/data/schema"
 import type { Table } from "@tanstack/vue-table"
 
-interface DataTableViewOptionsProps {
-  table: Table<Task>
-}
-
-const props = defineProps<DataTableViewOptionsProps>()
+const props = defineProps<{
+  table: Table<TData>
+}>()
 
 const columns = computed(() =>
   props.table
@@ -173,7 +170,7 @@ function onPageSizeChange(val: unknown) {
               @update:model-value="onPageSizeChange"
             >
               <DropdownMenuRadioItem
-                v-for="pageSize in [10, 20, 30, 40, 50]"
+                v-for="pageSize in [5, 10, 20, 30, 40, 50]"
                 :key="pageSize"
                 :value="String(pageSize)"
               >

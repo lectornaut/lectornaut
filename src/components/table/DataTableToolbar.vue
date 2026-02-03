@@ -1,24 +1,40 @@
-<script lang="ts" setup>
-import type { Task } from "@/data/schema"
+<script lang="ts" setup generic="TData">
 import type { Table } from "@tanstack/vue-table"
 
-interface DataTableToolbarProps {
-  table: Table<Task>
-}
-
-defineProps<DataTableToolbarProps>()
+const props = withDefaults(
+  defineProps<{
+    table: Table<TData>
+    searchColumnId?: string
+    showSearch?: boolean
+    showFilters?: boolean
+    showGrouping?: boolean
+    showSorting?: boolean
+    showViewOptions?: boolean
+  }>(),
+  {
+    showSearch: true,
+    showFilters: true,
+    showGrouping: true,
+    showSorting: true,
+    showViewOptions: true,
+  }
+)
 </script>
 
 <template>
   <div class="flex items-center justify-between gap-2 p-2">
     <div class="flex items-center gap-2">
-      <DataTableSearchOptions :table="table" />
-      <DataTableFilterOptions :table="table" />
+      <DataTableSearchOptions
+        v-if="props.showSearch"
+        :table="table"
+        :column-id="props.searchColumnId"
+      />
+      <DataTableFilterOptions v-if="props.showFilters" :table="table" />
     </div>
     <div class="flex items-center gap-2">
-      <DataTableGroupOptions :table="table" />
-      <DataTableSortOptions :table="table" />
-      <DataTableViewOptions :table="table" />
+      <DataTableGroupOptions v-if="props.showGrouping" :table="table" />
+      <DataTableSortOptions v-if="props.showSorting" :table="table" />
+      <DataTableViewOptions v-if="props.showViewOptions" :table="table" />
     </div>
   </div>
 </template>

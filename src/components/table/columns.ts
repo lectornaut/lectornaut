@@ -4,7 +4,10 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { labels, priorities, statuses } from "@/data/constants"
 import type { Task } from "@/data/schema"
-import type { ColumnDef } from "@tanstack/vue-table"
+import type { Column, ColumnDef } from "@tanstack/vue-table"
+
+const toUnknownColumn = (column: Column<Task, unknown>) =>
+  column as Column<unknown, unknown>
 
 export const columns: ColumnDef<Task>[] = [
   {
@@ -33,7 +36,11 @@ export const columns: ColumnDef<Task>[] = [
   },
   {
     accessorKey: "id",
-    header: ({ column }) => h(DataTableColumnHeader, { column, title: "Task" }),
+    header: ({ column }) =>
+      h(DataTableColumnHeader, {
+        column: toUnknownColumn(column),
+        title: "Task",
+      }),
     cell: ({ row }) => h("div", { class: "" }, row.getValue("id")),
     enablePinning: false,
     enableSorting: true,
@@ -43,7 +50,10 @@ export const columns: ColumnDef<Task>[] = [
   {
     accessorKey: "title",
     header: ({ column }) =>
-      h(DataTableColumnHeader, { column, title: "Title" }),
+      h(DataTableColumnHeader, {
+        column: toUnknownColumn(column),
+        title: "Title",
+      }),
     cell: ({ row }) => {
       const label = labels.find((label) => label.value === row.original.label)
       if (!label) return null
@@ -61,7 +71,10 @@ export const columns: ColumnDef<Task>[] = [
   {
     accessorKey: "status",
     header: ({ column }) =>
-      h(DataTableColumnHeader, { column, title: "Status" }),
+      h(DataTableColumnHeader, {
+        column: toUnknownColumn(column),
+        title: "Status",
+      }),
     cell: ({ row }) => {
       const status = statuses.find(
         (status) => status.value === row.getValue("status")
@@ -75,6 +88,10 @@ export const columns: ColumnDef<Task>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
+    meta: {
+      filterTitle: "Status",
+      filterOptions: statuses,
+    },
     enablePinning: false,
     enableSorting: true,
     enableGrouping: true,
@@ -83,7 +100,10 @@ export const columns: ColumnDef<Task>[] = [
   {
     accessorKey: "priority",
     header: ({ column }) =>
-      h(DataTableColumnHeader, { column, title: "Priority" }),
+      h(DataTableColumnHeader, {
+        column: toUnknownColumn(column),
+        title: "Priority",
+      }),
     cell: ({ row }) => {
       const priority = priorities.find(
         (priority) => priority.value === row.getValue("priority")
@@ -96,6 +116,10 @@ export const columns: ColumnDef<Task>[] = [
     },
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
+    },
+    meta: {
+      filterTitle: "Priority",
+      filterOptions: priorities,
     },
     enablePinning: false,
     enableSorting: true,

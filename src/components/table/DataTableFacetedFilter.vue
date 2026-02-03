@@ -1,20 +1,17 @@
-<script lang="ts" setup>
+<script lang="ts" setup generic="TData">
 import { IconCirclePlus } from "@/data/icons"
-import type { Task } from "@/data/schema"
 import type { Column } from "@tanstack/vue-table"
 import type { Component } from "vue"
 
-interface DataTableFacetedFilter {
-  column?: Column<Task, unknown>
+const props = defineProps<{
+  column?: Column<TData, unknown>
   title?: string
   options: {
     label: string
     value: string
     icon?: Component
   }[]
-}
-
-const props = defineProps<DataTableFacetedFilter>()
+}>()
 
 const facets = computed(() => props.column?.getFacetedUniqueValues())
 const selectedValues = computed(

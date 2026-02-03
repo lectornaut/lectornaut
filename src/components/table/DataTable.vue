@@ -1,6 +1,5 @@
-<script lang="ts" setup>
+<script lang="ts" setup generic="TData">
 import { IconChevronRight } from "@/data/icons"
-import type { Task } from "@/data/schema"
 import { valueUpdater } from "@/lib/utils"
 import type {
   ColumnDef,
@@ -23,11 +22,26 @@ import {
   useVueTable,
 } from "@tanstack/vue-table"
 
-interface DataTableProps {
-  columns: ColumnDef<Task, unknown>[]
-  data: Task[]
-}
-const props = defineProps<DataTableProps>()
+const props = withDefaults(
+  defineProps<{
+    columns: ColumnDef<TData, unknown>[]
+    data: TData[]
+    showToolbar?: boolean
+    showPagination?: boolean
+    searchColumnId?: string
+    paginate?: boolean
+    showSearch?: boolean
+    showFilters?: boolean
+    showGrouping?: boolean
+    showSorting?: boolean
+    showViewOptions?: boolean
+  }>(),
+  {
+    showToolbar: true,
+    showPagination: true,
+    paginate: true,
+  }
+)
 
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
@@ -79,7 +93,7 @@ const table = useVueTable({
   onGroupingChange: (updaterOrValue) => valueUpdater(updaterOrValue, grouping),
   getCoreRowModel: getCoreRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
+  getPaginationRowModel: props.paginate ? getPaginationRowModel() : undefined,
   getSortedRowModel: getSortedRowModel(),
   getFacetedRowModel: getFacetedRowModel(),
   getFacetedUniqueValues: getFacetedUniqueValues(),
@@ -89,7 +103,16 @@ const table = useVueTable({
 </script>
 
 <template>
-  <DataTableToolbar :table="table" />
+  <DataTableToolbar
+    v-if="props.showToolbar"
+    :table="table"
+    :search-column-id="props.searchColumnId"
+    :show-search="props.showSearch"
+    :show-filters="props.showFilters"
+    :show-grouping="props.showGrouping"
+    :show-sorting="props.showSorting"
+    :show-view-options="props.showViewOptions"
+  />
   <div
     class="bg-card flex grow flex-col overflow-auto overscroll-none scroll-smooth border-y"
   >
@@ -109,8 +132,8 @@ const table = useVueTable({
                   'from-card/50 sticky from-50%': header.column.getIsPinned(),
                 },
                 header.column.getIsPinned() === 'left'
-                  ? 'left-0 bg-gradient-to-r'
-                  : 'right-0 bg-gradient-to-l',
+                  ? 'left-0 bg-linear-to-r'
+                  : 'right-0 bg-linear-to-l',
               ]"
             >
               <FlexRender
@@ -142,8 +165,8 @@ const table = useVueTable({
                       'from-card/50 sticky from-50%': cell.column.getIsPinned(),
                     },
                     cell.column.getIsPinned() === 'left'
-                      ? 'left-0 bg-gradient-to-r'
-                      : 'right-0 bg-gradient-to-l',
+                      ? 'left-0 bg-linear-to-r'
+                      : 'right-0 bg-linear-to-l',
                   ]"
                 >
                   <template v-if="cell.getIsGrouped()">
@@ -200,5 +223,5 @@ const table = useVueTable({
       </Table>
     </OverlayScrollbarsWrapper>
   </div>
-  <DataTablePagination :table="table" />
+  <DataTablePagination v-if="props.showPagination" :table="table" />
 </template>
