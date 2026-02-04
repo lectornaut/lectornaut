@@ -49,7 +49,7 @@ const selectedValues = computed(
         </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="w-48 p-0" align="start" side="bottom">
+    <PopoverContent class="p-0" align="start" side="bottom">
       <Command>
         <CommandInput
           :placeholder="title"

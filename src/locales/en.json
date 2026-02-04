@@ -1177,7 +1177,7 @@
       "columns": "Columns",
       "rows": "Rows",
       "selected": "selected",
-      "pages": "pages",
+      "page": "Page {page} of {pages}",
       "pagination": "Pagination",
       "pageSize": "Page size",
       "rowsPerPage": "Rows per page",

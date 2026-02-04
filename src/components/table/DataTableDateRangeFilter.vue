@@ -1,8 +1,9 @@
 <script lang="ts" setup generic="TData">
-import { Badge } from "@/components/ui/badge"
 import { IconCalendar } from "@/data/icons"
+import { parseDate } from "@internationalized/date"
 import type { Column } from "@tanstack/vue-table"
-import { computed } from "vue"
+import type { DateRange } from "reka-ui"
+import { computed, ref } from "vue"
 
 interface DateRangeValue {
   start?: string
@@ -14,20 +15,51 @@ const props = defineProps<{
   title?: string
 }>()
 
+const updateFilter = (start: string, end: string) => {
+  if (!props.column) return
+  const normalizedStart = start || undefined
+  const normalizedEnd = end || undefined
+  if (!normalizedStart && !normalizedEnd) {
+    props.column.setFilterValue(undefined)
+    return
+  }
+  props.column.setFilterValue({
+    start: normalizedStart,
+    end: normalizedEnd,
+  })
+}
+
 const filterValue = computed<DateRangeValue>(() => {
   const value = props.column?.getFilterValue()
   if (!value || typeof value !== "object") return {}
   return value as DateRangeValue
 })
 
-const startValue = computed({
-  get: () => filterValue.value.start ?? "",
-  set: (value: string) => updateFilter(value, filterValue.value.end ?? ""),
-})
-
-const endValue = computed({
-  get: () => filterValue.value.end ?? "",
-  set: (value: string) => updateFilter(filterValue.value.start ?? "", value),
+const range = computed<DateRange | undefined>({
+  get: () => {
+    if (!filterValue.value.start && !filterValue.value.end) return undefined
+    try {
+      return {
+        start: filterValue.value.start
+          ? parseDate(filterValue.value.start)
+          : undefined,
+        end: filterValue.value.end
+          ? parseDate(filterValue.value.end)
+          : undefined,
+      } as DateRange
+    } catch {
+      return undefined
+    }
+  },
+  set: (val) => {
+    if (!val) {
+      updateFilter("", "")
+      return
+    }
+    const start = val.start ? val.start.toString() : ""
+    const end = val.end ? val.end.toString() : ""
+    updateFilter(start, end)
+  },
 })
 
 const hasRange = computed(
@@ -47,23 +79,16 @@ const summary = computed(() => {
   return ""
 })
 
-const updateFilter = (start: string, end: string) => {
-  if (!props.column) return
-  const normalizedStart = start || undefined
-  const normalizedEnd = end || undefined
-  if (!normalizedStart && !normalizedEnd) {
-    props.column.setFilterValue(undefined)
-    return
-  }
-  props.column.setFilterValue({
-    start: normalizedStart,
-    end: normalizedEnd,
-  })
+const isOpen = ref(false)
+
+const clearFilter = () => {
+  updateFilter("", "")
+  isOpen.value = false
 }
 </script>
 
 <template>
-  <Popover>
+  <Popover v-model:open="isOpen">
     <PopoverTrigger as-child>
       <Button variant="outline" class="data-[state=open]:bg-accent">
         <IconCalendar />
@@ -74,21 +99,10 @@ const updateFilter = (start: string, end: string) => {
         </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="w-64 p-3" align="start" side="bottom">
-      <div class="grid gap-3">
-        <div class="space-y-1">
-          <p class="text-muted-foreground text-xs">Start</p>
-          <Input v-model="startValue" type="date" />
-        </div>
-        <div class="space-y-1">
-          <p class="text-muted-foreground text-xs">End</p>
-          <Input v-model="endValue" type="date" />
-        </div>
-        <div class="flex justify-end">
-          <Button variant="ghost" size="sm" @click="updateFilter('', '')">
-            Clear
-          </Button>
-        </div>
+    <PopoverContent class="w-auto p-0" align="start" side="bottom">
+      <RangeCalendar v-model="range" initial-focus />
+      <div class="flex justify-end p-3 pt-0">
+        <Button variant="ghost" size="sm" @click="clearFilter"> Clear </Button>
       </div>
     </PopoverContent>
   </Popover>

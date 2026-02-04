@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
+import { Badge } from "@/components/ui/badge"
 import { useAuditLogs } from "@/composables/useAuditLogs"
-import { IconRefreshCw } from "@/data/icons"
+import { IconAlertTriangle, IconRefreshCw } from "@/data/icons"
 import type { ILogEntry } from "@/types"
 import { DateFormatter } from "@internationalized/date"
 import type { Column, ColumnDef } from "@tanstack/vue-table"
@@ -49,11 +50,7 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
         title: "Timestamp",
       }),
     cell: ({ row }) =>
-      h(
-        "span",
-        { class: "text-xs text-muted-foreground" },
-        formatTimestamp(row.original)
-      ),
+      h("span", { class: "truncate" }, formatTimestamp(row.original)),
     filterFn: (row, id, value) => {
       if (!value || typeof value !== "object") return true
       const { start, end } = value as { start?: string; end?: string }
@@ -85,6 +82,7 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
     },
     enableSorting: true,
     enableHiding: false,
+    enablePinning: false,
   },
   {
     id: "actor",
@@ -95,14 +93,15 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
         title: "Actor",
       }),
     cell: ({ row }) =>
-      h("span", { class: "text-sm" }, formatActor(row.original)),
+      h("span", { class: "truncate" }, formatActor(row.original)),
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     meta: {
       filterTitle: "Actor",
       filterOptions: actorOptions.value,
     },
     enableSorting: false,
-    enableHiding: false,
+    enableHiding: true,
+    enablePinning: false,
   },
   {
     accessorKey: "action",
@@ -112,9 +111,10 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
         title: "Action",
       }),
     cell: ({ row }) =>
-      h("span", { class: "font-mono text-sm" }, String(row.getValue("action"))),
+      h(Badge, { variant: "outline" }, () => String(row.getValue("action"))),
     enableSorting: false,
-    enableHiding: false,
+    enableHiding: true,
+    enablePinning: false,
   },
   {
     id: "resource",
@@ -125,9 +125,10 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
         title: "Resource",
       }),
     cell: ({ row }) =>
-      h("span", { class: "text-sm" }, formatResource(row.original)),
+      h("span", { class: "truncate" }, formatResource(row.original)),
     enableSorting: false,
-    enableHiding: false,
+    enableHiding: true,
+    enablePinning: false,
   },
 ])
 const refreshLogs = () => fetchLogs(true)
@@ -162,33 +163,38 @@ const loadMore = () => fetchLogs(false)
         <template v-else>
           <Field orientation="horizontal">
             <FieldContent>
-              <div v-if="loading" class="flex justify-center py-8">
-                <Spinner />
-              </div>
-              <div
-                v-else-if="error"
-                class="border-destructive/30 bg-destructive/5 text-destructive rounded-md border p-4 text-sm"
-              >
-                {{ error }}
-              </div>
-              <div v-else-if="logs.length === 0" class="py-8 text-sm">
-                No logs found.
-              </div>
-              <div v-else class="rounded-md border">
-                <DataTable
-                  :data="logs"
-                  :columns="columns"
-                  :show-search="true"
-                  :show-filters="true"
-                  :show-sorting="true"
-                  :show-grouping="true"
-                  :show-toolbar="true"
-                  :show-view-options="true"
-                  :paginate="true"
-                  :show-pagination="true"
-                  search-column-id="action"
-                />
-              </div>
+              <Empty v-if="loading">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Spinner />
+                  </EmptyMedia>
+                  <EmptyTitle>{{ $t("common.loading") }}</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+              <Empty v-else-if="error">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconAlertTriangle />
+                  </EmptyMedia>
+                  <EmptyTitle>{{ $t("pages.join.states.error") }}</EmptyTitle>
+                  <EmptyDescription>{{ error }}</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+              <DataTable
+                v-else
+                :data="logs"
+                :columns="columns"
+                :show-search="true"
+                :show-filters="true"
+                :show-sorting="true"
+                :show-grouping="true"
+                :show-toolbar="true"
+                :show-view-options="true"
+                :paginate="true"
+                :show-pagination="true"
+                search-column-id="action"
+                class="rounded-md border"
+              />
             </FieldContent>
           </Field>
 

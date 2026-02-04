@@ -119,9 +119,18 @@ const calendars = computed(() => [
       </SidebarFooter>
     </Sidebar>
   </Teleport>
-  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
-    <DataTable :data="tasks" :columns="columns" />
-  </div>
+  <DataTable
+    :data="tasks"
+    :columns="columns"
+    :show-search="true"
+    :show-filters="true"
+    :show-sorting="true"
+    :show-grouping="true"
+    :show-toolbar="true"
+    :show-view-options="true"
+    :paginate="true"
+    :show-pagination="true"
+  />
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>

@@ -13,7 +13,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="bg-background grid grid-cols-3 items-center gap-2 p-2">
+  <div class="bg-background flex items-center justify-between gap-2 p-2">
     <div class="flex grow items-center justify-start gap-2">
       <Button
         v-if="table.getFilteredSelectedRowModel().rows.length"
@@ -25,14 +25,11 @@ defineProps<{
         {{ $t("components.dataTable.selected") }}
       </Button>
     </div>
-    <div class="flex grow items-center justify-center gap-2">
-      <span class="text-muted-foreground font-mono text-xs">
-        {{ table.getState().pagination.pageIndex + 1 }} /
-        {{ table.getPageCount() }} {{ $t("components.dataTable.pages") }}
-      </span>
-    </div>
     <div class="flex grow items-center justify-end gap-2">
       <TooltipProvider>
+        <span>
+          {{ $t("components.dataTable.rowsPerPage") }}
+        </span>
         <Tooltip>
           <Select
             v-model="table.getState().pagination.pageSize"
@@ -59,6 +56,14 @@ defineProps<{
             }}</TooltipContent>
           </Select>
         </Tooltip>
+        <span>
+          {{
+            $t("components.dataTable.page", {
+              page: table.getState().pagination.pageIndex + 1,
+              pages: table.getPageCount(),
+            })
+          }}
+        </span>
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
