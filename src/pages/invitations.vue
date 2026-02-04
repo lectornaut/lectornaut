@@ -197,7 +197,7 @@ const handleLogout = async () => {
         :class="{ 'pl-20': isTauri && !isFullscreen }"
       >
         <Button variant="ghost" size="icon-sm" as-child>
-          <RouterLink to="/">
+          <RouterLink to="/start">
             <IconArrowLeft />
           </RouterLink>
         </Button>
