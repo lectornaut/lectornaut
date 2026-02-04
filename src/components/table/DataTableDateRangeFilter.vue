@@ -1,6 +1,6 @@
 <script lang="ts" setup generic="TData">
 import { IconCalendar } from "@/data/icons"
-import { parseDate } from "@internationalized/date"
+import { getLocalTimeZone, parseDate, today } from "@internationalized/date"
 import type { Column } from "@tanstack/vue-table"
 import type { DateRange } from "reka-ui"
 import { computed, ref } from "vue"
@@ -100,9 +100,16 @@ const clearFilter = () => {
       </Button>
     </PopoverTrigger>
     <PopoverContent class="w-auto p-0" align="start" side="bottom">
-      <RangeCalendar v-model="range" initial-focus />
-      <div class="flex justify-end p-3 pt-0">
-        <Button variant="ghost" size="sm" @click="clearFilter"> Clear </Button>
+      <RangeCalendar
+        v-model="range"
+        :max-value="today(getLocalTimeZone())"
+        initial-focus
+      />
+      <Separator />
+      <div class="grid p-3">
+        <Button variant="secondary" size="sm" @click="clearFilter">
+          Clear
+        </Button>
       </div>
     </PopoverContent>
   </Popover>

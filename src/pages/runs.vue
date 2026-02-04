@@ -85,18 +85,7 @@ const tree = [
       </SidebarContent>
     </Sidebar>
   </Teleport>
-  <DataTable
-    :data="runs"
-    :columns="columns"
-    :show-search="true"
-    :show-filters="true"
-    :show-sorting="true"
-    :show-grouping="true"
-    :show-toolbar="true"
-    :show-view-options="true"
-    :paginate="true"
-    :show-pagination="true"
-  />
+  <DataTable :data="runs" :columns="columns" />
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>

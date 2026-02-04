@@ -1481,7 +1481,8 @@
           "last3months": "Last 3 months",
           "last6months": "Last 6 months",
           "lastYear": "Last 1 year"
-        }
+        },
+        "select": "Select"
       },
       "settings": {
         "general": {

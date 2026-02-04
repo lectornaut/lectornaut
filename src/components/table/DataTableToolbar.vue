@@ -4,7 +4,6 @@ import type { Table } from "@tanstack/vue-table"
 const props = withDefaults(
   defineProps<{
     table: Table<TData>
-    searchColumnId?: string
     showSearch?: boolean
     showFilters?: boolean
     showGrouping?: boolean
@@ -24,11 +23,7 @@ const props = withDefaults(
 <template>
   <div class="flex items-center justify-between gap-2 p-2">
     <div class="flex items-center gap-2">
-      <DataTableSearchOptions
-        v-if="props.showSearch"
-        :table="table"
-        :column-id="props.searchColumnId"
-      />
+      <DataTableSearchOptions v-if="props.showSearch" :table="table" />
       <DataTableFilterOptions v-if="props.showFilters" :table="table" />
     </div>
     <div class="flex items-center gap-2">

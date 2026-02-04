@@ -28,7 +28,6 @@ const props = withDefaults(
     data: TData[]
     showToolbar?: boolean
     showPagination?: boolean
-    searchColumnId?: string
     paginate?: boolean
     showSearch?: boolean
     showFilters?: boolean
@@ -40,6 +39,11 @@ const props = withDefaults(
     showToolbar: true,
     showPagination: true,
     paginate: true,
+    showSearch: true,
+    showFilters: true,
+    showGrouping: true,
+    showSorting: true,
+    showViewOptions: true,
   }
 )
 
@@ -103,22 +107,24 @@ const table = useVueTable({
 </script>
 
 <template>
-  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
+  <div
+    class="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden overscroll-none scroll-smooth **:data-[slot=table]:w-max **:data-[slot=table]:min-w-full **:data-[slot=table-container]:max-w-full **:data-[slot=table-container]:min-w-0 **:data-[slot=table-container]:overflow-x-auto"
+  >
     <DataTableToolbar
       v-if="props.showToolbar"
       :table="table"
-      :search-column-id="props.searchColumnId"
       :show-search="props.showSearch"
       :show-filters="props.showFilters"
       :show-grouping="props.showGrouping"
       :show-sorting="props.showSorting"
       :show-view-options="props.showViewOptions"
+      class="min-w-0 flex-wrap gap-y-2 [&>div]:min-w-0 [&>div]:flex-wrap [&>div]:gap-y-2"
     />
     <div
-      class="bg-card flex grow flex-col overflow-auto overscroll-none scroll-smooth border-y"
+      class="bg-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden overscroll-none scroll-smooth border-y"
     >
-      <OverlayScrollbarsWrapper>
-        <Table>
+      <OverlayScrollbarsWrapper class="min-h-0 min-w-0">
+        <Table class="w-max min-w-full">
           <TableHeader>
             <TableRow
               v-for="headerGroup in table.getHeaderGroups()"

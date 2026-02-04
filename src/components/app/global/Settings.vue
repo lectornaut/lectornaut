@@ -84,9 +84,7 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
           <Separator orientation="vertical" />
 
           <!-- Main Content Area -->
-          <div
-            class="flex flex-1 flex-col overflow-auto overscroll-none scroll-smooth"
-          >
+          <div class="grid grow">
             <!-- Header -->
             <DialogHeader class="m-6">
               <DialogTitle>{{ t(activeTabConfig?.name!) }}</DialogTitle>
@@ -94,19 +92,10 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 t(activeTabConfig?.description!)
               }}</DialogDescription>
             </DialogHeader>
+
             <Separator />
 
             <!-- Tab Contents (Fully Self-Contained) -->
-            <TabsContent :class="tabContentClass" value="preferences">
-              <div class="p-6">
-                <div class="flex items-center gap-4">
-                  <div
-                    class="group relative flex flex-col items-center gap-2"
-                  ></div>
-                </div>
-              </div>
-            </TabsContent>
-
             <TabsContent :class="tabContentClass" value="account">
               <SettingsAccount />
             </TabsContent>

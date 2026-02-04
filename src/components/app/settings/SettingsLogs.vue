@@ -6,7 +6,7 @@ import { IconAlertTriangle, IconRefreshCw } from "@/data/icons"
 import type { ILogEntry } from "@/types"
 import { DateFormatter } from "@internationalized/date"
 import type { Column, ColumnDef } from "@tanstack/vue-table"
-import { computed, h } from "vue"
+import { computed, h, onMounted } from "vue"
 
 const df = new DateFormatter("en-US", {
   dateStyle: "medium",
@@ -133,6 +133,10 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
 ])
 const refreshLogs = () => fetchLogs(true)
 const loadMore = () => fetchLogs(false)
+
+onMounted(() => {
+  fetchLogs(true)
+})
 </script>
 
 <template>
@@ -184,15 +188,6 @@ const loadMore = () => fetchLogs(false)
                 v-else
                 :data="logs"
                 :columns="columns"
-                :show-search="true"
-                :show-filters="true"
-                :show-sorting="true"
-                :show-grouping="true"
-                :show-toolbar="true"
-                :show-view-options="true"
-                :paginate="true"
-                :show-pagination="true"
-                search-column-id="action"
                 class="rounded-md border"
               />
             </FieldContent>
