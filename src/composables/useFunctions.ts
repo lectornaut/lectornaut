@@ -129,6 +129,53 @@ export interface RemoveMembersResponse {
 }
 
 // =============================================================================
+// Invitation Request/Response Types
+// =============================================================================
+
+export interface SendInvitationRequest {
+  teamId: string
+  email: string
+  role: IMembershipRole
+}
+
+export interface SendInvitationResponse {
+  invitationId: string
+}
+
+export interface ResendInvitationRequest {
+  invitationId: string
+}
+
+export interface ResendInvitationResponse {
+  success: boolean
+}
+
+export interface UpdateInvitationRoleRequest {
+  invitationId: string
+  role: IMembershipRole
+}
+
+export interface UpdateInvitationRoleResponse {
+  updated: boolean
+}
+
+export interface CancelInvitationRequest {
+  invitationId: string
+}
+
+export interface CancelInvitationResponse {
+  deleted: boolean
+}
+
+export interface DeclineInvitationRequest {
+  invitationId: string
+}
+
+export interface DeclineInvitationResponse {
+  declined: boolean
+}
+
+// =============================================================================
 // Typed Function Callers
 // =============================================================================
 
@@ -237,6 +284,35 @@ export const removeMembers = createTypedCallable<
 >("removeMembers")
 
 // =============================================================================
+// Invitation Functions
+// =============================================================================
+
+export const sendInvitation = createTypedCallable<
+  SendInvitationRequest,
+  SendInvitationResponse
+>("sendInvitation")
+
+export const resendInvitation = createTypedCallable<
+  ResendInvitationRequest,
+  ResendInvitationResponse
+>("resendInvitation")
+
+export const updateInvitationRole = createTypedCallable<
+  UpdateInvitationRoleRequest,
+  UpdateInvitationRoleResponse
+>("updateInvitationRole")
+
+export const cancelInvitation = createTypedCallable<
+  CancelInvitationRequest,
+  CancelInvitationResponse
+>("cancelInvitation")
+
+export const declineInvitation = createTypedCallable<
+  DeclineInvitationRequest,
+  DeclineInvitationResponse
+>("declineInvitation")
+
+// =============================================================================
 // Composable Hook
 // =============================================================================
 
@@ -286,5 +362,12 @@ export function useFunctions() {
     assignRoleToUser,
     removeMember,
     removeMembers,
+
+    // Invitation operations
+    sendInvitation,
+    resendInvitation,
+    updateInvitationRole,
+    cancelInvitation,
+    declineInvitation,
   }
 }

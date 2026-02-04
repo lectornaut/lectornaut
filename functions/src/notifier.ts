@@ -3,8 +3,8 @@ import * as logger from "firebase-functions/logger"
 import { sendEmailInternal } from "./email.js"
 import {
   NotificationData,
+  NotificationPayload,
   NotificationPreferences,
-  NotificationType,
   NotificationTypeConfig,
 } from "./types.js"
 
@@ -14,38 +14,6 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore()
-
-/**
- * Payload for sending a notification through all configured channels
- */
-export interface NotificationPayload {
-  /** Target user's UID */
-  userId: string
-  /** Target user's email (required for email channel) */
-  userEmail?: string
-  /** Type of notification - determines which channels are used */
-  type: NotificationType
-  /** Notification title */
-  title: string
-  /** Notification description/body */
-  description: string
-  /** URL to navigate to when notification is clicked */
-  url: string
-  /** Optional source entity information */
-  source?: {
-    entityType: string
-    entityId: string
-  }
-  /** Optional email-specific data (overrides for email channel) */
-  emailData?: {
-    /** Custom email subject (defaults to title) */
-    subject?: string
-    /** Custom template name (defaults to notification type) */
-    template?: string
-    /** Additional template data */
-    templateData?: Record<string, unknown>
-  }
-}
 
 /**
  * Check user's notification preferences

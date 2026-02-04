@@ -4,7 +4,17 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
-import { can, Capabilities, IMembershipRole } from "./permissions.js"
+import { can } from "./permissions.js"
+import {
+  Actor,
+  Capabilities,
+  Changes,
+  Context,
+  IMembershipRole,
+  InvitationData,
+  LogEntry,
+  LogEventParams,
+} from "./types.js"
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -15,54 +25,6 @@ const db = admin.firestore()
 // =============================================================================
 // Audit Log Types
 // =============================================================================
-
-export type LogResourceType = "team" | "workspace" | "content" | "membership"
-
-export interface Actor {
-  userId: string
-  email?: string
-  role?: string
-}
-
-export interface Resource {
-  type: LogResourceType
-  id: string
-  parentId?: string
-}
-
-export interface Context {
-  ip?: string
-  userAgent?: string
-  authType?: "password" | "sso" | "api"
-}
-
-export interface Changes {
-  before?: Record<string, unknown>
-  after?: Record<string, unknown>
-  fields?: string[]
-}
-
-export interface LogEntry {
-  id: string
-  timestamp: admin.firestore.FieldValue | admin.firestore.Timestamp
-  teamId: string
-  workspaceId?: string
-  actor: Actor
-  action: string
-  resource: Resource
-  context?: Context
-  changes?: Changes
-}
-
-export interface LogEventParams {
-  teamId: string
-  workspaceId?: string
-  actor: Actor
-  action: string
-  resource: Resource
-  context?: Context
-  changes?: Changes
-}
 
 // =============================================================================
 // Audit Log Utilities
@@ -191,6 +153,28 @@ async function requireTeamRole(
 ): Promise<IMembershipRole> {
   const membershipRef = db.doc(`teams/${teamId}/memberships/${userId}`)
   const membershipSnap = await transaction.get(membershipRef)
+
+  if (!membershipSnap.exists) {
+    throw new HttpsError("permission-denied", "User is not a team member.")
+  }
+
+  const role = membershipSnap.data()?.role as IMembershipRole | undefined
+  if (!role) {
+    throw new HttpsError(
+      "permission-denied",
+      "Team membership role is missing."
+    )
+  }
+
+  return role
+}
+
+async function getTeamRole(
+  teamId: string,
+  userId: string
+): Promise<IMembershipRole> {
+  const membershipRef = db.doc(`teams/${teamId}/memberships/${userId}`)
+  const membershipSnap = await membershipRef.get()
 
   if (!membershipSnap.exists) {
     throw new HttpsError("permission-denied", "User is not a team member.")
@@ -1096,5 +1080,325 @@ export const removeMembers = onCall(async (request) => {
       count: userIds.length,
       logIds,
     }
+  })
+})
+
+// =============================================================================
+// Invitation Operations
+// =============================================================================
+
+/**
+ * Send a new invitation to join a team.
+ */
+export const sendInvitation = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const teamId = assertString(request.data?.teamId, "teamId")
+  const email = assertString(request.data?.email, "email").toLowerCase()
+  const role = assertString(request.data?.role, "role") as IMembershipRole
+
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  // 1. Check Permissions
+  const actorRole = await getTeamRole(teamId, actorId)
+  if (
+    !can(actorId, Capabilities.INVITE_MEMBER, {
+      scope: "team",
+      teamRole: actorRole,
+    })
+  ) {
+    throw new HttpsError(
+      "permission-denied",
+      "You do not have permission to invite members."
+    )
+  }
+
+  // 2. Check if user is already a member
+  // querying by email to find userId
+  const usersRef = db.collection("users")
+  const userQuery = await usersRef.where("email", "==", email).get()
+
+  if (!userQuery.empty) {
+    const targetUserId = userQuery.docs[0].id
+    const membershipRef = db.doc(`teams/${teamId}/memberships/${targetUserId}`)
+    const membershipSnap = await membershipRef.get()
+
+    if (membershipSnap.exists) {
+      throw new HttpsError(
+        "already-exists",
+        "User is already a member of this team."
+      )
+    }
+  }
+
+  // 3. Check for existing pending invitation
+  const invitationsRef = db.collection("invitations")
+  const existingInvites = await invitationsRef
+    .where("teamId", "==", teamId)
+    .where("email", "==", email)
+    .where("status", "==", "pending")
+    .get()
+
+  if (!existingInvites.empty) {
+    throw new HttpsError(
+      "already-exists",
+      "A pending invitation already exists for this email."
+    )
+  }
+
+  // 4. Create Invitation
+  const teamRef = db.doc(`teams/${teamId}`)
+  const teamSnap = await teamRef.get()
+  if (!teamSnap.exists) {
+    throw new HttpsError("not-found", "Team not found.")
+  }
+  const teamName = teamSnap.data()?.name || "Team"
+
+  const inviterName =
+    request.auth.token.name || request.auth.token.email || "Someone"
+
+  const code = Array.from(crypto.getRandomValues(new Uint8Array(24)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+
+  const now = admin.firestore.FieldValue.serverTimestamp()
+  const invitationRef = invitationsRef.doc()
+
+  const invitationData: InvitationData = {
+    teamId,
+    teamName,
+    inviterName,
+    inviterEmail: actorEmail || "",
+    email,
+    role,
+    status: "pending",
+    code,
+    createdAt: now,
+  }
+
+  await invitationRef.set(invitationData)
+
+  // 5. Audit Log
+  // Using 'content' type as invitation is a content-like resource in this context, or maybe 'membership' related
+  await logEvent({
+    teamId,
+    actor: { userId: actorId, email: actorEmail, role: actorRole },
+    action: "invitation.create",
+    resource: { type: "membership", id: invitationRef.id, parentId: teamId }, // It leads to membership
+    context: buildContext(request),
+    changes: {
+      after: { email, role, code },
+    },
+  })
+
+  return { invitationId: invitationRef.id }
+})
+
+/**
+ * Resend an existing invitation.
+ */
+export const resendInvitation = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const invitationId = assertString(request.data?.invitationId, "invitationId")
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  const invRef = db.doc(`invitations/${invitationId}`)
+  const invSnap = await invRef.get()
+
+  if (!invSnap.exists) {
+    throw new HttpsError("not-found", "Invitation not found.")
+  }
+
+  const invitation = invSnap.data() as InvitationData
+  const teamId = invitation.teamId
+
+  // Check Permissions
+  const actorRole = await getTeamRole(teamId, actorId)
+  if (
+    !can(actorId, Capabilities.INVITE_MEMBER, {
+      scope: "team",
+      teamRole: actorRole,
+    })
+  ) {
+    throw new HttpsError(
+      "permission-denied",
+      "You do not have permission to resend invitations."
+    )
+  }
+
+  // Update invitation
+  await invRef.update({
+    resentAt: admin.firestore.FieldValue.serverTimestamp(),
+    status: "pending", // Reset status if it was declined? Usually yes.
+  })
+
+  // Audit Log
+  await logEvent({
+    teamId,
+    actor: { userId: actorId, email: actorEmail, role: actorRole },
+    action: "invitation.resend",
+    resource: { type: "membership", id: invitationId, parentId: teamId },
+    context: buildContext(request),
+  })
+
+  return { success: true }
+})
+
+/**
+ * Update the role of a pending invitation.
+ */
+export const updateInvitationRole = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const invitationId = assertString(request.data?.invitationId, "invitationId")
+  const role = assertString(request.data?.role, "role") as IMembershipRole
+
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  const invRef = db.doc(`invitations/${invitationId}`)
+
+  return db.runTransaction(async (transaction) => {
+    const invSnap = await transaction.get(invRef)
+    if (!invSnap.exists) {
+      throw new HttpsError("not-found", "Invitation not found.")
+    }
+    const invitation = invSnap.data() as InvitationData
+    const teamId = invitation.teamId
+
+    // Check Permissions
+    const actorRole = await requireTeamRole(transaction, teamId, actorId)
+    // Using UPDATE_MEMBER_ROLE capability as proxy for updating invitation role
+    if (
+      !can(actorId, Capabilities.UPDATE_MEMBER_ROLE, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to update invitations."
+      )
+    }
+
+    transaction.update(invRef, { role })
+
+    await logEvent(
+      {
+        teamId,
+        actor: { userId: actorId, email: actorEmail, role: actorRole },
+        action: "invitation.update",
+        resource: { type: "membership", id: invitationId, parentId: teamId },
+        context: buildContext(request),
+        changes: {
+          before: { role: invitation.role },
+          after: { role },
+        },
+      },
+      { transaction }
+    )
+  })
+})
+
+/**
+ * Cancel/Delete an invitation.
+ */
+export const cancelInvitation = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const invitationId = assertString(request.data?.invitationId, "invitationId")
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  const invRef = db.doc(`invitations/${invitationId}`)
+
+  return db.runTransaction(async (transaction) => {
+    const invSnap = await transaction.get(invRef)
+    if (!invSnap.exists) {
+      throw new HttpsError("not-found", "Invitation not found.")
+    }
+    const invitation = invSnap.data() as InvitationData
+    const teamId = invitation.teamId
+
+    // Check Permissions
+    const actorRole = await requireTeamRole(transaction, teamId, actorId)
+    if (
+      !can(actorId, Capabilities.INVITE_MEMBER, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to delete invitations."
+      )
+    }
+
+    transaction.delete(invRef)
+
+    await logEvent(
+      {
+        teamId,
+        actor: { userId: actorId, email: actorEmail, role: actorRole },
+        action: "invitation.delete",
+        resource: { type: "membership", id: invitationId, parentId: teamId },
+        context: buildContext(request),
+        changes: {
+          before: { email: invitation.email, role: invitation.role },
+        },
+      },
+      { transaction }
+    )
+  })
+})
+
+/**
+ * Decline an invitation (called by the user who was invited).
+ */
+export const declineInvitation = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const invitationId = assertString(request.data?.invitationId, "invitationId")
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email
+
+  const invRef = db.doc(`invitations/${invitationId}`)
+
+  return db.runTransaction(async (transaction) => {
+    const invSnap = await transaction.get(invRef)
+    if (!invSnap.exists) {
+      throw new HttpsError("not-found", "Invitation not found.")
+    }
+    const invitation = invSnap.data() as InvitationData
+
+    // Verify the user declining is the one invited
+    if (invitation.email !== actorEmail) {
+      throw new HttpsError(
+        "permission-denied",
+        "This invitation is not for you."
+      )
+    }
+
+    transaction.update(invRef, { status: "declined" })
+
+    // No audit log needed for decline? Or maybe yes.
+    // We'll log it as a membership event
+    await logEvent(
+      {
+        teamId: invitation.teamId,
+        actor: { userId: actorId, email: actorEmail ?? undefined },
+        action: "invitation.decline",
+        resource: {
+          type: "membership",
+          id: invitationId,
+          parentId: invitation.teamId,
+        },
+        context: buildContext(request),
+      },
+      { transaction }
+    )
   })
 })

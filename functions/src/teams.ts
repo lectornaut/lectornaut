@@ -1,5 +1,5 @@
 import admin from "firebase-admin"
-import { IMembershipRole } from "./permissions.js"
+import { IMembershipRole, RoleGroups, TeamMember } from "./types.js"
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
@@ -7,46 +7,6 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore()
-
-/**
- * All available membership roles for filtering
- */
-export const MembershipRoles = {
-  OWNER: "owner" as IMembershipRole,
-  ADMIN: "admin" as IMembershipRole,
-  MEMBER: "member" as IMembershipRole,
-  GUEST: "guest" as IMembershipRole,
-} as const
-
-/**
- * Preset role groups for common notification targets
- */
-export const RoleGroups = {
-  /** Owners and admins - users with administrative capabilities */
-  ADMINS: [MembershipRoles.OWNER, MembershipRoles.ADMIN],
-  /** All full members (excludes guests) */
-  MEMBERS: [
-    MembershipRoles.OWNER,
-    MembershipRoles.ADMIN,
-    MembershipRoles.MEMBER,
-  ],
-  /** Everyone including guests */
-  ALL: [
-    MembershipRoles.OWNER,
-    MembershipRoles.ADMIN,
-    MembershipRoles.MEMBER,
-    MembershipRoles.GUEST,
-  ],
-} as const
-
-/**
- * Represents a team member with notification-relevant data
- */
-export interface TeamMember {
-  userId: string
-  email?: string
-  role: IMembershipRole
-}
 
 /**
  * Get team members filtered by specific roles.

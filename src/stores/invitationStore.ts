@@ -24,6 +24,13 @@
  * }
  */
 
+import {
+  cancelInvitation as cancelInvitationFn,
+  declineInvitation as declineInvitationFn,
+  resendInvitation as resendInvitationFn,
+  sendInvitation as sendInvitationFn,
+  updateInvitationRole as updateInvitationRoleFn,
+} from "@/composables/useFunctions"
 import { firestore, functions } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -37,16 +44,11 @@ import {
 } from "@/utils/firebase-optimistic"
 import { can, Capabilities } from "@/utils/permissions"
 import {
-  addDoc,
   collection,
-  deleteDoc,
-  doc,
   getDoc,
   getDocs,
   query,
-  serverTimestamp,
   Timestamp,
-  updateDoc,
   where,
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
@@ -272,17 +274,6 @@ export const useInvitationStore = defineStore("invitations", () => {
       code,
       createdAt: Timestamp.now(),
     }
-    const invitationData = {
-      teamId,
-      teamName,
-      inviterName: profile.displayName || user.email || "Unknown",
-      inviterEmail: user.email!,
-      email,
-      role,
-      status: "pending" as const,
-      code,
-      createdAt: serverTimestamp(),
-    }
 
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
@@ -299,7 +290,7 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        await addDoc(collection(firestore, "invitations"), invitationData)
+        await sendInvitationFn({ teamId, email, role })
       }
     )
   }
@@ -325,7 +316,6 @@ export const useInvitationStore = defineStore("invitations", () => {
       throw new Error("You do not have permission to resend invitations")
     }
 
-    const invRef = doc(firestore, "invitations", invitation.id)
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
@@ -346,10 +336,7 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        await updateDoc(invRef, {
-          status: "pending",
-          resentAt: serverTimestamp(),
-        })
+        await resendInvitationFn({ invitationId: invitation.id! })
       }
     )
   }
@@ -361,8 +348,6 @@ export const useInvitationStore = defineStore("invitations", () => {
     invitationId: string,
     role: IMembershipRole
   ): Promise<void> {
-    const invRef = doc(firestore, "invitations", invitationId)
-
     // Need to fetch invitation to get teamId for permission check if not passed
     // But for optimistically we need to look it up or rely on caller context.
     // Optimistic store has the invite
@@ -400,7 +385,7 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        await updateDoc(invRef, { role })
+        await updateInvitationRoleFn({ invitationId, role })
       }
     )
   }
@@ -409,8 +394,6 @@ export const useInvitationStore = defineStore("invitations", () => {
    * Cancel/Delete an invitation
    */
   async function cancelInvitation(invitationId: string): Promise<void> {
-    const invRef = doc(firestore, "invitations", invitationId)
-
     const invite = optimisticInvitations.value.find(
       (i) => i.id === invitationId
     )
@@ -443,7 +426,7 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        await deleteDoc(invRef)
+        await cancelInvitationFn({ invitationId })
       }
     )
   }
@@ -507,7 +490,6 @@ export const useInvitationStore = defineStore("invitations", () => {
    * Decline an invitation
    */
   async function declineInvitation(invitationId: string): Promise<void> {
-    const invRef = doc(firestore, "invitations", invitationId)
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
@@ -522,7 +504,7 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        await updateDoc(invRef, { status: "declined" })
+        await declineInvitationFn({ invitationId })
       }
     )
   }

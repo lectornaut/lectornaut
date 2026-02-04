@@ -6,10 +6,14 @@ import {
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore"
 import { sendNotification, sendNotificationToMany } from "./notifier.js"
-import { IMembershipRole } from "./permissions.js"
 import { postmarkApiKey } from "./secrets.js"
-import { getTeamMembersByRoles, RoleGroups } from "./teams.js"
-import { InvitationData, NotificationType } from "./types.js"
+import { getTeamMembersByRoles } from "./teams.js"
+import {
+  IMembershipRole,
+  InvitationData,
+  NotificationType,
+  RoleGroups,
+} from "./types.js"
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {

@@ -1,3 +1,10 @@
+import {
+  Capabilities,
+  Capability,
+  IMembershipRole,
+  PermissionContext,
+} from "./types.js"
+
 /**
  * Centralized Permission System (Capability-Based)
  *
@@ -10,34 +17,9 @@
 // Looking at functions/src/types.ts might help, or we redefine.
 // Assuming we need to redefine IMembershipRole for now as it's simple.
 
-export type IMembershipRole = "owner" | "admin" | "member" | "guest"
-
 // ============================================================================
 // Core Types
 // ============================================================================
-
-export type Scope = "global" | "team" | "workspace"
-
-export const Capabilities = {
-  // Global Scope
-  CREATE_TEAM: "create_team",
-
-  // Team Scope
-  EDIT_TEAM: "edit_team",
-  DELETE_TEAM: "delete_team",
-  INVITE_MEMBER: "invite_member",
-  UPDATE_MEMBER_ROLE: "update_member_role",
-  REMOVE_MEMBER: "remove_member",
-  READ_TEAM: "read_team",
-
-  // Workspace Scope
-  CREATE_WORKSPACE: "create_workspace",
-  EDIT_WORKSPACE: "edit_workspace",
-  DELETE_WORKSPACE: "delete_workspace",
-  READ_WORKSPACE: "read_workspace",
-} as const
-
-export type Capability = (typeof Capabilities)[keyof typeof Capabilities]
 
 // ============================================================================
 // Role & Permission Definitions
@@ -73,11 +55,6 @@ const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
 // ============================================================================
 // Permission Resolver
 // ============================================================================
-
-export interface PermissionContext {
-  scope: Scope
-  teamRole?: IMembershipRole | null
-}
 
 /**
  * Check if a user (or role) has a specific capability.
