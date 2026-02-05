@@ -24,7 +24,7 @@ const formatActor = (entry: ILogEntry) =>
   entry.actor?.email || entry.actor?.userId || "Unknown"
 
 const formatResource = (entry: ILogEntry) =>
-  `${entry.resource.type}:${entry.resource.id}`
+  `${entry.resource.type}: ${entry.resource.id}`
 
 const toUnknownColumn = (column: Column<ILogEntry, unknown>) =>
   column as Column<unknown, unknown>

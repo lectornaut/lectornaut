@@ -17,15 +17,17 @@
       class="flex size-full overflow-auto overscroll-none scroll-smooth"
     >
       <div
+        data-tauri-drag-region
         style="
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          mix-blend-mode: difference;
+          position: fixed;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          line-height: 0;
         "
       >
-        <svg
+        <img src="/logo.png" alt="Lectornaut Logo" width="64" height="64" />
+        <!-- <svg
           xmlns="http://www.w3.org/2000/svg"
           width="36"
           height="36"
@@ -48,7 +50,7 @@
             }
           </style>
           <circle class="spinner" cx="12" cy="12" r="0" />
-        </svg>
+        </svg> -->
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

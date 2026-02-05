@@ -185,7 +185,7 @@ const closeTab = (id: string) => {
 
 <template>
   <SidebarProvider>
-    <SidebarInset class="bg-secondary">
+    <SidebarInset class="bg-transparent">
       <Headerbar />
       <div data-tauri-drag-region class="grid min-h-0 min-w-0 grow">
         <Spinner v-if="isLoading" class="m-auto" />
@@ -198,7 +198,7 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div id="left-dock" class="flex max-w-80 shrink-0 empty:hidden"></div>
           <ResizablePanelGroup
-            class="min-w-0 overflow-clip!"
+            class="min-w-0 overflow-clip rounded-2xl border"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -212,17 +212,14 @@ const closeTab = (id: string) => {
                   :max-size="25"
                   :collapsed-size="0"
                   as-child
-                  :class="{
-                    'pointer-events-none hidden':
-                      leftPanel?.splitterPanel?.isCollapsed,
-                  }"
+                  class="transition-all"
                   :inert="leftPanel?.splitterPanel?.isCollapsed"
                 >
-                  <div class="h-full pr-2">
+                  <div class="h-full">
                     <div
                       id="left-sidebar"
                       ref="leftSidebarEl"
-                      class="h-full grow overflow-clip rounded-2xl border"
+                      class="h-full grow overflow-clip"
                     ></div>
                   </div>
                 </ResizablePanel>
@@ -237,7 +234,11 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                    class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-sidebar-accent focus-visible:bg-primary z-20 w-0! bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px"
+                    :class="{
+                      'data-resize-handle:after:bg-border':
+                        !leftPanel?.splitterPanel?.isCollapsed,
+                    }"
                     @dblclick="
                       leftPanel?.splitterPanel?.isCollapsed
                         ? leftPanel?.splitterPanel?.expand()
@@ -271,9 +272,9 @@ const closeTab = (id: string) => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <ResizablePanel>
+            <ResizablePanel :class="'transition-all'">
               <ResizablePanelGroup
-                class="min-w-0 overflow-clip!"
+                class="min-w-0 overflow-clip"
                 direction="vertical"
                 auto-save-id="app-vertical-layout"
               >
@@ -287,15 +288,12 @@ const closeTab = (id: string) => {
                       :max-size="100"
                       :collapsed-size="0"
                       as-child
-                      :class="{
-                        'pointer-events-none hidden':
-                          topPanel?.splitterPanel?.isCollapsed,
-                      }"
+                      class="transition-all"
                       :inert="topPanel?.splitterPanel?.isCollapsed"
                     >
                       <div class="flex min-h-0 flex-1 flex-col gap-2">
                         <div
-                          class="bg-background flex min-h-0 flex-1 flex-col overflow-clip rounded-2xl border"
+                          class="bg-background flex min-h-0 flex-1 flex-col overflow-clip"
                         >
                           <!-- Non-scrollable header -->
                           <div class="flex shrink-0 flex-col">
@@ -338,8 +336,12 @@ const closeTab = (id: string) => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <ResizableHandle
-                        class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent mx-13.5 w-auto! bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
-                        :with-handle="topPanel?.splitterPanel?.isCollapsed"
+                        class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-sidebar-accent focus-visible:bg-primary z-10 h-0! w-auto! bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:h-px!"
+                        :class="{
+                          'data-resize-handle:after:bg-border':
+                            !bottomPanel?.splitterPanel?.isCollapsed &&
+                            !topPanel?.splitterPanel?.isCollapsed,
+                        }"
                         @dblclick="
                           bottomPanel?.splitterPanel?.isCollapsed
                             ? bottomPanel?.splitterPanel?.expand()
@@ -389,17 +391,14 @@ const closeTab = (id: string) => {
                       :max-size="100"
                       :collapsed-size="0"
                       as-child
-                      :class="{
-                        'pointer-events-none hidden':
-                          bottomPanel?.splitterPanel?.isCollapsed,
-                      }"
+                      class="transition-all"
                       :inert="bottomPanel?.splitterPanel?.isCollapsed"
                     >
                       <Tabs v-model="activeTab">
-                        <div class="h-full pt-2">
+                        <div class="h-full">
                           <div
                             id="bottom-sidebar"
-                            class="bg-background flex h-full flex-col overflow-hidden overscroll-none rounded-2xl border"
+                            class="bg-background flex h-full flex-col overflow-clip overscroll-none"
                           >
                             <div
                               class="flex items-stretch gap-2 p-2 transition-all"
@@ -452,7 +451,7 @@ const closeTab = (id: string) => {
                                   </TabsTrigger>
                                 </TabsList>
                                 <div
-                                  class="bg-background after:bg-border sticky right-0 z-30 flex shrink-0 items-center"
+                                  class="bg-background sticky right-0 z-30 flex shrink-0 items-center"
                                 >
                                   <TooltipProvider>
                                     <Tooltip>
@@ -594,7 +593,11 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=hover]:after:bg-sidebar-accent data-[resize-handle-state=drag]:after:bg-sidebar-accent data-[resize-handle-state=hover]:bg-sidebar-accent data-[resize-handle-state=drag]:bg-sidebar-accent focus-visible:ring-sidebar-accent focus-visible:bg-sidebar-accent my-13.5 bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none"
+                    class="data-[resize-handle-state=hover]:after:bg-primary data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-sidebar-accent focus-visible:bg-primary z-20 w-0! bg-transparent transition focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px"
+                    :class="{
+                      'data-resize-handle:after:bg-border':
+                        !rightPanel?.splitterPanel?.isCollapsed,
+                    }"
                     @dblclick="
                       rightPanel?.splitterPanel?.isCollapsed
                         ? rightPanel?.splitterPanel?.expand()
@@ -639,17 +642,14 @@ const closeTab = (id: string) => {
                   :max-size="25"
                   :collapsed-size="0"
                   as-child
-                  :class="{
-                    'pointer-events-none hidden':
-                      rightPanel?.splitterPanel?.isCollapsed,
-                  }"
+                  class="transition-all"
                   :inert="rightPanel?.splitterPanel?.isCollapsed"
                 >
-                  <div class="h-full pl-2">
+                  <div class="h-full">
                     <div
                       id="right-sidebar"
                       ref="rightSidebarEl"
-                      class="h-full grow overflow-clip rounded-2xl border"
+                      class="h-full grow overflow-clip"
                     ></div>
                   </div>
                 </ResizablePanel>

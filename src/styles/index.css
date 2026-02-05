@@ -34,10 +34,9 @@
     @apply selection:bg-primary/25;
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-background;
     @apply bg-linear-to-b;
-    @apply from-background;
-    @apply to-background/95;
+    @apply from-background/95;
+    @apply to-background/90;
     @apply text-foreground;
     @apply select-none;
     @apply overflow-auto;

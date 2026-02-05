@@ -46,28 +46,6 @@
      ============================================ */
   :root[data-theme="light"] {
     color-scheme: light;
-
-    --background: var(--color-white);
-    --foreground: var(--color-neutral-800);
-    --card: var(--color-neutral-50);
-    --card-foreground: var(--color-neutral-900);
-    --popover: var(--background);
-    --popover-foreground: var(--foreground);
-    --secondary: var(--color-neutral-200);
-    --secondary-foreground: var(--foreground);
-    --muted: var(--color-neutral-800);
-    --muted-foreground: var(--color-neutral-600);
-    --accent: var(--muted);
-    --accent-foreground: var(--card-foreground);
-    --border: var(--muted);
-    --input: var(--muted);
-    --sidebar: var(--card);
-    --sidebar-foreground: var(--card-foreground);
-    --sidebar-primary: var(--foreground);
-    --sidebar-primary-foreground: var(--card);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--card-foreground);
-    --sidebar-border: var(--muted);
   }
 
   /* ============================================
@@ -439,28 +417,6 @@
      ============================================ */
   :root[data-theme="dark"] {
     color-scheme: dark;
-
-    --background: var(--color-black);
-    --foreground: var(--color-neutral-200);
-    --card: var(--color-neutral-950);
-    --card-foreground: var(--color-neutral-100);
-    --popover: var(--background);
-    --popover-foreground: var(--foreground);
-    --secondary: var(--color-neutral-900);
-    --secondary-foreground: var(--foreground);
-    --muted: var(--color-neutral-800);
-    --muted-foreground: var(--color-neutral-400);
-    --accent: var(--muted);
-    --accent-foreground: var(--card-foreground);
-    --border: var(--muted);
-    --input: var(--muted);
-    --sidebar: var(--card);
-    --sidebar-foreground: var(--card-foreground);
-    --sidebar-primary: var(--foreground);
-    --sidebar-primary-foreground: var(--card);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--card-foreground);
-    --sidebar-border: var(--muted);
   }
 
   /* ============================================

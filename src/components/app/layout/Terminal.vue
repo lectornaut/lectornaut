@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="terminalEl" class="size-full" />
+  <div ref="terminalEl" class="size-full pl-2" />
 </template>
 
 <style lang="scss">
@@ -103,6 +103,5 @@ onBeforeUnmount(() => {
   --xt-fg: var(--foreground);
   --xt-font-size: var(--text-xs);
   --xt-font-family: var(--font-mono);
-  --xt-padding: var(--size);
 }
 </style>

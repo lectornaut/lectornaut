@@ -80,9 +80,10 @@ useInfiniteScroll(
 </script>
 
 <template>
-  <Popover id="tour-tasks-notifications" v-model:open="isPopoverOpen">
+  <Popover v-model:open="isPopoverOpen">
     <PopoverTrigger as-child>
       <Button
+        id="tour-tasks-notifications"
         variant="ghost"
         :size="iconDisplay === 'text' || unreadCount > 0 ? 'sm' : 'icon-sm'"
       >

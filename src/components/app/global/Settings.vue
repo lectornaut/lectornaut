@@ -84,7 +84,7 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
           <Separator orientation="vertical" />
 
           <!-- Main Content Area -->
-          <div class="grid grow">
+          <div class="flex grow flex-col">
             <!-- Header -->
             <DialogHeader class="m-6">
               <DialogTitle>{{ t(activeTabConfig?.name!) }}</DialogTitle>
