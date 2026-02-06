@@ -291,7 +291,7 @@ onBeforeUnmount(() => {
         <SidebarGroupContent
           class="rounded-md transition-colors"
           :class="{
-            'bg-sidebar-accent/50 ring-sidebar-ring ring': isRootDragOver,
+            'bg-sidebar-accent/50 ring-sidebar-ring ring-2': isRootDragOver,
           }"
           @dragenter="handleRootDragEnter"
           @dragover="handleRootDragOver"
@@ -312,19 +312,16 @@ onBeforeUnmount(() => {
               @restore="handleRestore"
             />
           </SidebarMenu>
-          <div
-            v-if="rootLoading"
-            class="text-muted-foreground px-4 py-2 text-xs"
-          >
+          <div v-if="rootLoading" class="text-muted-foreground p-2 text-xs">
             Loading...
           </div>
           <div
             v-else-if="rootChildren.length === 0"
-            class="text-muted-foreground px-4 py-2 text-xs"
+            class="text-muted-foreground p-2 text-xs"
           >
             No files yet.
           </div>
-          <div v-if="rootPagination.hasMore" class="px-2 pb-2">
+          <div v-if="rootPagination.hasMore" class="p-2">
             <Button
               variant="ghost"
               size="sm"
@@ -389,8 +386,10 @@ onBeforeUnmount(() => {
         <DialogDescription>Update the name of this item.</DialogDescription>
       </DialogHeader>
       <form class="space-y-4" @submit.prevent="handleRenameSubmit">
-        <div class="space-y-2">
-          <Label for="rename-name">Name</Label>
+        <div class="grid gap-2">
+          <Label class="text-secondary-foreground text-xs" for="rename-name">
+            Name
+          </Label>
           <Input
             id="rename-name"
             v-model="renameName"

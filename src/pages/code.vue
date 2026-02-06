@@ -96,7 +96,9 @@ const saveContent = async () => {
       </SidebarContent>
     </Sidebar>
   </Teleport>
-  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
+  <div
+    class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded-2xl border"
+  >
     <CodeEditor
       v-if="teamId && workspaceId && selectedFile"
       v-model="editorContent"
@@ -111,12 +113,12 @@ const saveContent = async () => {
     >
       Select a workspace to view or edit documents.
     </div>
-    <Teleport defer to="#cta-dock">
-      <Button :disabled="!selectedFile || !isDirty" @click="saveContent">
-        Save
-      </Button>
-    </Teleport>
   </div>
+  <Teleport defer to="#cta-dock">
+    <Button :disabled="!selectedFile || !isDirty" @click="saveContent">
+      Save
+    </Button>
+  </Teleport>
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
   </Teleport>

@@ -234,5 +234,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="editorContainer"></div>
+  <div ref="editorContainer" class="code-editor"></div>
 </template>
+
+<style scoped>
+.code-editor {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.code-editor :deep(.cm-editor) {
+  width: 100%;
+  height: 100%;
+}
+
+.code-editor :deep(.cm-scroller) {
+  height: 100%;
+}
+</style>

@@ -392,7 +392,7 @@ declare module 'vue' {
     TooltipContent: typeof import('./src/components/ui/tooltip/TooltipContent.vue')['default']
     TooltipProvider: typeof import('./src/components/ui/tooltip/TooltipProvider.vue')['default']
     TooltipTrigger: typeof import('./src/components/ui/tooltip/TooltipTrigger.vue')['default']
-    Tree: typeof import('./src/components/filetree/Tree.vue')['default']
+    Tree: typeof import('./src/components/smart/Tree.vue')['default']
     TreeNode: typeof import('./src/components/filetree/TreeNode.vue')['default']
     Users: typeof import('./src/components/landing/Users.vue')['default']
     WallOfLove: typeof import('./src/components/landing/WallOfLove.vue')['default']

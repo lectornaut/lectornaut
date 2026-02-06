@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,
@@ -21,11 +20,12 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import {
   IconFile,
+  IconFilePlus,
   IconFolder,
   IconFolderOpen,
+  IconFolderPlus,
   IconMoreHorizontal,
   IconPencil,
-  IconPlus,
   IconRefreshCcw,
   IconTrash,
 } from "@/data/icons"
@@ -189,78 +189,81 @@ const showEmptyState = computed(
 </script>
 
 <template>
-  <SidebarMenuItem v-if="node">
+  <template v-if="node">
     <template v-if="isFolder">
       <Collapsible :open="isExpanded" @update:open="handleToggle">
-        <CollapsibleTrigger as-child>
-          <SidebarMenuButton
-            :is-active="selectedId === node.id"
-            :draggable="!node.isDeleted"
-            :class="{
-              'bg-sidebar-accent/50 text-sidebar-accent-foreground ring-sidebar-ring ring':
-                isDragOver,
-            }"
-            @click="handleSelect"
-            @dragstart="handleDragStart"
-            @dragenter="handleDragEnter"
-            @dragover="handleDragOver"
-            @dragleave="handleDragLeave"
-            @drop="handleDrop"
-          >
-            <Spinner v-if="isLoading" />
-            <IconFolderOpen v-else-if="isExpanded" />
-            <IconFolder v-else />
-            <span
-              class="truncate"
-              :class="
-                node.isDeleted ? 'text-muted-foreground line-through' : ''
-              "
+        <SidebarMenuItem>
+          <CollapsibleTrigger as-child>
+            <SidebarMenuButton
+              :is-active="selectedId === node.id"
+              :draggable="!node.isDeleted"
+              :class="{
+                'bg-sidebar-accent/50 text-sidebar-accent-foreground ring-sidebar-ring ring-2':
+                  isDragOver,
+              }"
+              @click="handleSelect"
+              @dragstart="handleDragStart"
+              @dragenter="handleDragEnter"
+              @dragover="handleDragOver"
+              @dragleave="handleDragLeave"
+              @drop="handleDrop"
             >
-              {{ node.name }}
-            </span>
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <SidebarMenuAction show-on-hover as-child>
-              <Button variant="ghost" size="icon" class="h-6 w-6" @click.stop>
+              <Spinner v-if="isLoading" />
+              <IconFolderOpen v-else-if="isExpanded" />
+              <IconFolder v-else />
+              <span
+                class="truncate"
+                :class="{
+                  'text-muted-foreground line-through': node.isDeleted,
+                }"
+              >
+                {{ node.name }}
+              </span>
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <SidebarMenuAction
+                show-on-hover
+                class="data-[state=open]:bg-accent"
+              >
                 <IconMoreHorizontal />
-              </Button>
-            </SidebarMenuAction>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <template v-if="!node.isDeleted">
-              <DropdownMenuItem @click="emit('create-folder', node)">
-                <IconPlus />
-                New Folder
-              </DropdownMenuItem>
-              <DropdownMenuItem @click="emit('create-file', node)">
-                <IconPlus />
-                New File
+              </SidebarMenuAction>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <template v-if="!node.isDeleted">
+                <DropdownMenuItem @click="emit('create-folder', node)">
+                  <IconFolderPlus />
+                  New Folder
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="emit('create-file', node)">
+                  <IconFilePlus />
+                  New File
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </template>
+              <DropdownMenuItem
+                :disabled="node.isDeleted"
+                @click="emit('rename', node)"
+              >
+                <IconPencil />
+                Rename
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-            </template>
-            <DropdownMenuItem
-              :disabled="node.isDeleted"
-              @click="emit('rename', node)"
-            >
-              <IconPencil />
-              Rename
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              v-if="!node.isDeleted"
-              @click="emit('delete', node)"
-            >
-              <IconTrash />
-              Delete
-            </DropdownMenuItem>
-            <DropdownMenuItem v-else @click="emit('restore', node)">
-              <IconRefreshCcw />
-              Restore
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem
+                v-if="!node.isDeleted"
+                @click="emit('delete', node)"
+              >
+                <IconTrash />
+                Delete
+              </DropdownMenuItem>
+              <DropdownMenuItem v-else @click="emit('restore', node)">
+                <IconRefreshCcw />
+                Restore
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
         <CollapsibleContent>
           <SidebarMenuSub class="mr-0 pr-0">
             <TreeNode
@@ -301,50 +304,53 @@ const showEmptyState = computed(
     </template>
 
     <template v-else>
-      <SidebarMenuButton
-        :is-active="selectedId === node.id"
-        :draggable="!node.isDeleted"
-        @click="handleSelect"
-        @dragstart="handleDragStart"
-      >
-        <IconFile />
-        <span
-          class="truncate"
-          :class="node.isDeleted ? 'text-muted-foreground line-through' : ''"
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          :is-active="selectedId === node.id"
+          :draggable="!node.isDeleted"
+          @click="handleSelect"
+          @dragstart="handleDragStart"
         >
-          {{ node.name }}
-        </span>
-      </SidebarMenuButton>
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <SidebarMenuAction show-on-hover as-child>
-            <Button variant="ghost" size="icon" class="h-6 w-6" @click.stop>
+          <IconFile />
+          <span
+            class="truncate"
+            :class="{ 'text-muted-foreground line-through': node.isDeleted }"
+          >
+            {{ node.name }}
+          </span>
+        </SidebarMenuButton>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <SidebarMenuAction
+              show-on-hover
+              class="data-[state=open]:bg-accent"
+            >
               <IconMoreHorizontal />
-            </Button>
-          </SidebarMenuAction>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            :disabled="node.isDeleted"
-            @click="emit('rename', node)"
-          >
-            <IconPencil />
-            Rename
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            v-if="!node.isDeleted"
-            @click="emit('delete', node)"
-          >
-            <IconTrash />
-            Delete
-          </DropdownMenuItem>
-          <DropdownMenuItem v-else @click="emit('restore', node)">
-            <IconRefreshCcw />
-            Restore
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            </SidebarMenuAction>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              :disabled="node.isDeleted"
+              @click="emit('rename', node)"
+            >
+              <IconPencil />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              v-if="!node.isDeleted"
+              @click="emit('delete', node)"
+            >
+              <IconTrash />
+              Delete
+            </DropdownMenuItem>
+            <DropdownMenuItem v-else @click="emit('restore', node)">
+              <IconRefreshCcw />
+              Restore
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
     </template>
-  </SidebarMenuItem>
+  </template>
 </template>

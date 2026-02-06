@@ -2,6 +2,8 @@
 import { dailyActivity } from "@/data/chart"
 import { IconCircleMedium } from "@/data/icons"
 
+const { t } = useI18n()
+
 const stats = [
   {
     name: "Total minutes",
@@ -90,7 +92,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
         <Card class="shadow-none">
           <CardHeader>
             <CardTitle>
-              <span> Runs </span>
+              <span> {{ t("settings.titles.runs") }} </span>
             </CardTitle>
             <CardDescription>
               <div class="flex gap-2">
@@ -247,29 +249,39 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
         <Card class="shadow-none">
           <CardHeader class="gap-4">
             <CardTitle>
-              <span> Information </span>
+              <span> {{ t("labels.information") }} </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <dl class="flex flex-col gap-3">
               <div class="flex justify-between">
-                <dt class="text-muted-foreground">Created by</dt>
+                <dt class="text-muted-foreground">
+                  {{ t("labels.createdBy") }}
+                </dt>
                 <dd>Marie Culver</dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-muted-foreground">Created on</dt>
+                <dt class="text-muted-foreground">
+                  {{ t("labels.createdOn") }}
+                </dt>
                 <dd>June 8, 2020</dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-muted-foreground">Last modified</dt>
+                <dt class="text-muted-foreground">
+                  {{ t("labels.lastModified") }}
+                </dt>
                 <dd>June 8, 2020</dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-muted-foreground">Dimensions</dt>
+                <dt class="text-muted-foreground">
+                  {{ t("labels.dimensions") }}
+                </dt>
                 <dd>4032 x 3024</dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-muted-foreground">Resolution</dt>
+                <dt class="text-muted-foreground">
+                  {{ t("labels.resolution") }}
+                </dt>
                 <dd>72 x 72</dd>
               </div>
             </dl>
@@ -282,7 +294,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
         <Card class="shadow-none">
           <CardHeader class="gap-4">
             <CardTitle>
-              <span>Description</span>
+              <span>{{ t("labels.description") }}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -303,7 +315,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
         <Card class="shadow-none">
           <CardHeader class="gap-4">
             <CardTitle>
-              <span>Shared with</span>
+              <span>{{ t("labels.sharedWith") }}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -317,9 +329,9 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   />
                   <p class="font-medium">Aimee Douglas</p>
                 </div>
-                <span class="text-muted-foreground truncate text-xs"
-                  >Owner</span
-                >
+                <span class="text-muted-foreground truncate text-xs">{{
+                  t("labels.owner")
+                }}</span>
               </li>
               <li class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -330,9 +342,9 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   />
                   <p class="font-medium">Andrea McMillan</p>
                 </div>
-                <span class="text-muted-foreground truncate text-xs"
-                  >Viewer</span
-                >
+                <span class="text-muted-foreground truncate text-xs">{{
+                  t("labels.viewer")
+                }}</span>
               </li>
             </ul>
           </CardContent>

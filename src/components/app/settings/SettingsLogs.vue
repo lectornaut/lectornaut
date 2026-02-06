@@ -188,7 +188,7 @@ onMounted(() => {
                 v-else
                 :data="logs"
                 :columns="columns"
-                class="rounded-md border"
+                class="overflow-clip rounded-md border"
               />
             </FieldContent>
           </Field>

@@ -218,9 +218,9 @@ const table = useVueTable({
                     <EmptyMedia variant="icon">
                       <IconDatabase class="text-muted-foreground size-6" />
                     </EmptyMedia>
-                    <EmptyTitle>No data</EmptyTitle>
+                    <EmptyTitle>{{ $t("empty.noData") }}</EmptyTitle>
                     <EmptyDescription>
-                      There are no records to display.
+                      {{ $t("empty.noResults") }}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -229,16 +229,16 @@ const table = useVueTable({
                     <EmptyMedia variant="icon">
                       <IconListFilter class="text-muted-foreground size-6" />
                     </EmptyMedia>
-                    <EmptyTitle>No filtered data</EmptyTitle>
+                    <EmptyTitle>{{ $t("empty.noFilteredData") }}</EmptyTitle>
                     <EmptyDescription>
-                      Reset filters to view results.
+                      {{ $t("empty.resetFilters") }}
                     </EmptyDescription>
                     <Button
                       variant="outline"
                       class="mt-4"
                       @click="table.resetColumnFilters()"
                     >
-                      Reset filters
+                      {{ $t("actions.resetFilters") }}
                     </Button>
                   </EmptyHeader>
                 </Empty>

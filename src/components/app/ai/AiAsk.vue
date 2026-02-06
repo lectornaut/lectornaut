@@ -24,6 +24,8 @@ emitter.on("Dialog.AiAsk.Toggle", () => {
   openAiAsk.value = !openAiAsk.value
 })
 
+const { t } = useI18n()
+
 const userInput = ref("")
 </script>
 
@@ -40,14 +42,16 @@ const userInput = ref("")
               :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
             >
               <IconAiFill />
-              <template v-if="iconDisplay === 'text'"> Ask AI </template>
+              <template v-if="iconDisplay === 'text'">
+                {{ t("pages.start.askAi") }}
+              </template>
             </Button>
           </TooltipTrigger>
           <TooltipContent class="flex items-center gap-2 px-2">
             <Badge variant="secondary" @click="isDocked = !isDocked">
               <IconPin v-if="!isDocked" />
               <IconPinOff v-else />
-              Ask AI
+              {{ t("pages.start.askAi") }}
             </Badge>
             <KbdGroup>
               <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
@@ -63,7 +67,7 @@ const userInput = ref("")
           :class="{ 'mt-12': isTauri && !isFullscreen }"
         >
           <SheetHeader>
-            <SheetTitle> Ask AI </SheetTitle>
+            <SheetTitle> {{ t("pages.start.askAi") }} </SheetTitle>
             <SheetDescription>
               Chat with our AI assistant to get help with your tasks.
             </SheetDescription>
@@ -75,7 +79,7 @@ const userInput = ref("")
             <InputGroup>
               <InputGroupTextarea
                 v-model="userInput"
-                placeholder="Ask, Search or Chat..."
+                :placeholder="t('ai.placeholder')"
               />
               <InputGroupAddon align="block-end">
                 <InputGroupButton variant="outline" size="icon-xs">
@@ -84,13 +88,13 @@ const userInput = ref("")
                 <Select>
                   <InputGroupButton variant="ghost" as-child>
                     <SelectTrigger>
-                      <SelectValue placeholder="Mode" />
+                      <SelectValue :placeholder="t('ai.mode')" />
                     </SelectTrigger>
                   </InputGroupButton>
                   <SelectContent side="top" align="start">
-                    <SelectItem value="auto">Auto</SelectItem>
-                    <SelectItem value="agent">Agent</SelectItem>
-                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="auto">{{ t("ai.auto") }}</SelectItem>
+                    <SelectItem value="agent">{{ t("ai.agent") }}</SelectItem>
+                    <SelectItem value="manual">{{ t("ai.manual") }}</SelectItem>
                   </SelectContent>
                 </Select>
                 <InputGroupText class="ml-auto text-xs">
@@ -103,7 +107,7 @@ const userInput = ref("")
                   :disabled="userInput.trim().length === 0"
                 >
                   <IconArrowUp />
-                  <span class="sr-only">Send</span>
+                  <span class="sr-only">{{ t("actions.send") }}</span>
                 </InputGroupButton>
               </InputGroupAddon>
             </InputGroup>

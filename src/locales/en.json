@@ -1,5 +1,12 @@
 {
   "hello": "Hello",
+  "ai": {
+    "placeholder": "Ask, Search or Chat...",
+    "mode": "Mode",
+    "auto": "Auto",
+    "agent": "Agent",
+    "manual": "Manual"
+  },
   "actions": {
     "add": "Add",
     "cancel": "Cancel",
@@ -127,7 +134,10 @@
   },
   "empty": {
     "noResults": "No results found.",
-    "noActiveSessions": "No active terminal sessions. Create a new terminal to get started."
+    "noActiveSessions": "No active terminal sessions. Create a new terminal to get started.",
+    "noData": "No data",
+    "noFilteredData": "No filtered data",
+    "resetFilters": "Reset filters to view results."
   },
   "enter": {
     "title": "Enter",
@@ -197,7 +207,8 @@
     "unsavedChanges": "Unsaved changes",
     "discard": "Discard",
     "actions": {
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "resetFilters": "Reset filters"
     }
   },
   "settings": {

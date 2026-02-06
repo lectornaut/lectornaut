@@ -545,10 +545,12 @@ onMounted(() => {
                     tabindex="-1"
                     class="absolute -top-3 right-3"
                   >
-                    <IconDisc /> Recent
+                    <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent side="top"> Last used </TooltipContent>
+                <TooltipContent side="top">
+                  {{ t("enter.magicLink.lastUsed") }}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Button>
@@ -573,10 +575,12 @@ onMounted(() => {
                     tabindex="-1"
                     class="absolute -top-3 right-3"
                   >
-                    <IconDisc /> Recent
+                    <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent side="top"> Last used </TooltipContent>
+                <TooltipContent side="top">
+                  {{ t("enter.magicLink.lastUsed") }}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Button>
@@ -601,10 +605,12 @@ onMounted(() => {
                     tabindex="-1"
                     class="absolute -top-3 right-3"
                   >
-                    <IconDisc /> Recent
+                    <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent side="top"> Last used </TooltipContent>
+                <TooltipContent side="top">
+                  {{ t("enter.magicLink.lastUsed") }}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Button>
