@@ -9,6 +9,7 @@ import {
   IconPencil,
   IconRefreshCcw,
   IconTrash,
+  IconTrash2,
 } from "@/data/icons"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import type { WorkspaceNode } from "@/types"
@@ -29,8 +30,9 @@ const emit = defineEmits<{
   (e: "create-folder", node: WorkspaceNode): void
   (e: "create-file", node: WorkspaceNode): void
   (e: "rename", node: WorkspaceNode): void
+  (e: "archive", node: WorkspaceNode): void
+  (e: "unarchive", node: WorkspaceNode): void
   (e: "delete", node: WorkspaceNode): void
-  (e: "restore", node: WorkspaceNode): void
 }>()
 
 const store = useFileTreeStore()
@@ -89,7 +91,7 @@ const handleSelect = () => {
 }
 
 const handleDragStart = (event: DragEvent) => {
-  if (!node.value || node.value.isDeleted) return
+  if (!node.value || node.value.isArchived) return
   if (event.dataTransfer) {
     event.dataTransfer.setData("application/x-lectornaut-node", node.value.id)
     event.dataTransfer.setData("text/plain", node.value.id)
@@ -98,14 +100,14 @@ const handleDragStart = (event: DragEvent) => {
 }
 
 const handleDragEnter = (event: DragEvent) => {
-  if (!node.value || node.value.type !== "folder" || node.value.isDeleted)
+  if (!node.value || node.value.type !== "folder" || node.value.isArchived)
     return
   if (!isValidDropEvent(event)) return
   isDragOver.value = true
 }
 
 const handleDragOver = (event: DragEvent) => {
-  if (!node.value || node.value.type !== "folder" || node.value.isDeleted)
+  if (!node.value || node.value.type !== "folder" || node.value.isArchived)
     return
   if (!isValidDropEvent(event)) return
   event.preventDefault()
@@ -117,7 +119,7 @@ const handleDragOver = (event: DragEvent) => {
 }
 
 const handleDragLeave = (event: DragEvent) => {
-  if (!node.value || node.value.type !== "folder" || node.value.isDeleted)
+  if (!node.value || node.value.type !== "folder" || node.value.isArchived)
     return
   const currentTarget = event.currentTarget as HTMLElement | null
   const relatedTarget = event.relatedTarget as Node | null
@@ -131,7 +133,7 @@ const handleDragLeave = (event: DragEvent) => {
 }
 
 const handleDrop = async (event: DragEvent) => {
-  if (!node.value || node.value.type !== "folder" || node.value.isDeleted)
+  if (!node.value || node.value.type !== "folder" || node.value.isArchived)
     return
   event.preventDefault()
   event.stopPropagation()
@@ -177,7 +179,7 @@ const showEmptyState = computed(
           <CollapsibleTrigger as-child>
             <SidebarMenuButton
               :is-active="selectedId === node.id"
-              :draggable="!node.isDeleted"
+              :draggable="!node.isArchived"
               :class="{
                 'bg-sidebar-accent/50 text-sidebar-accent-foreground ring-sidebar-ring ring-2':
                   isDragOver,
@@ -195,7 +197,7 @@ const showEmptyState = computed(
               <span
                 class="truncate"
                 :class="{
-                  'text-muted-foreground line-through': node.isDeleted,
+                  'text-muted-foreground line-through': node.isArchived,
                 }"
               >
                 {{ node.name }}
@@ -212,7 +214,7 @@ const showEmptyState = computed(
               </SidebarMenuAction>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <template v-if="!node.isDeleted">
+              <template v-if="!node.isArchived">
                 <DropdownMenuItem @click="emit('create-folder', node)">
                   <IconFolderPlus />
                   New Folder
@@ -224,7 +226,7 @@ const showEmptyState = computed(
                 <DropdownMenuSeparator />
               </template>
               <DropdownMenuItem
-                :disabled="node.isDeleted"
+                :disabled="node.isArchived"
                 @click="emit('rename', node)"
               >
                 <IconPencil />
@@ -232,16 +234,23 @@ const showEmptyState = computed(
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                v-if="!node.isDeleted"
-                @click="emit('delete', node)"
+                v-if="!node.isArchived"
+                @click="emit('archive', node)"
               >
                 <IconTrash />
-                Delete
+                Archive
               </DropdownMenuItem>
-              <DropdownMenuItem v-else @click="emit('restore', node)">
-                <IconRefreshCcw />
-                Restore
-              </DropdownMenuItem>
+              <template v-else>
+                <DropdownMenuItem @click="emit('unarchive', node)">
+                  <IconRefreshCcw />
+                  Unarchive
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem @click="emit('delete', node)">
+                  <IconTrash2 />
+                  Delete
+                </DropdownMenuItem>
+              </template>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>
@@ -256,8 +265,9 @@ const showEmptyState = computed(
               @create-folder="emit('create-folder', $event)"
               @create-file="emit('create-file', $event)"
               @rename="emit('rename', $event)"
+              @archive="emit('archive', $event)"
+              @unarchive="emit('unarchive', $event)"
               @delete="emit('delete', $event)"
-              @restore="emit('restore', $event)"
             />
             <SidebarMenuItem v-if="showEmptyState">
               <SidebarMenuButton
@@ -288,14 +298,14 @@ const showEmptyState = computed(
       <SidebarMenuItem>
         <SidebarMenuButton
           :is-active="selectedId === node.id"
-          :draggable="!node.isDeleted"
+          :draggable="!node.isArchived"
           @click="handleSelect"
           @dragstart="handleDragStart"
         >
           <IconFile />
           <span
             class="truncate"
-            :class="{ 'text-muted-foreground line-through': node.isDeleted }"
+            :class="{ 'text-muted-foreground line-through': node.isArchived }"
           >
             {{ node.name }}
           </span>
@@ -311,7 +321,7 @@ const showEmptyState = computed(
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              :disabled="node.isDeleted"
+              :disabled="node.isArchived"
               @click="emit('rename', node)"
             >
               <IconPencil />
@@ -319,16 +329,23 @@ const showEmptyState = computed(
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              v-if="!node.isDeleted"
-              @click="emit('delete', node)"
+              v-if="!node.isArchived"
+              @click="emit('archive', node)"
             >
               <IconTrash />
-              Delete
+              Archive
             </DropdownMenuItem>
-            <DropdownMenuItem v-else @click="emit('restore', node)">
-              <IconRefreshCcw />
-              Restore
-            </DropdownMenuItem>
+            <template v-else>
+              <DropdownMenuItem @click="emit('unarchive', node)">
+                <IconRefreshCcw />
+                Unarchive
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem @click="emit('delete', node)">
+                <IconTrash2 />
+                Delete
+              </DropdownMenuItem>
+            </template>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

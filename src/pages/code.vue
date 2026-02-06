@@ -51,7 +51,7 @@ useHead(() => ({
 const selectedFile = computed(() => {
   if (!selectedNode.value) return null
   if (selectedNode.value.type !== "file") return null
-  if (selectedNode.value.isDeleted) return null
+  if (selectedNode.value.isArchived) return null
   return selectedNode.value
 })
 
@@ -95,7 +95,7 @@ watch(
         nodeIdFromRoute
       )
 
-      if (!node || node.isDeleted) {
+      if (!node || node.isArchived) {
         fileTreeStore.setSelectedNode(currentTeamId, currentWorkspaceId, null)
         await router.replace("/code")
         return

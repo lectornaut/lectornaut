@@ -48,9 +48,9 @@ export interface NodeBase {
   name: string
   nameLower: string
   parentId: string
-  isDeleted: boolean
-  deletedAt?: Timestamp
-  deletedBy?: string
+  isArchived: boolean
+  archivedAt?: Timestamp
+  archivedBy?: string
   createdAt: Timestamp
   createdBy: string
   updatedAt: Timestamp

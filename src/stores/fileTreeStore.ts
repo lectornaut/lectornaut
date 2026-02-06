@@ -23,7 +23,7 @@ interface PaginationState {
   loadingMore: boolean
 }
 
-const INCLUDE_DELETED = true
+const INCLUDE_ARCHIVED = true
 
 const workspaceKey = (teamId: string, workspaceId: string) =>
   `${teamId}:${workspaceId}`
@@ -40,8 +40,9 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     createFile,
     renameNode,
     moveNode: moveNodeService,
-    softDeleteNode: softDeleteNodeService,
-    restoreNode: restoreNodeService,
+    archiveNode: archiveNodeService,
+    unarchiveNode: unarchiveNodeService,
+    deleteNode: deleteNodeService,
     updateFileContent,
   } = useNodes()
 
@@ -365,7 +366,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         })
       },
       {
-        includeDeleted: INCLUDE_DELETED,
+        includeArchived: INCLUDE_ARCHIVED,
         limit: DEFAULT_CHILDREN_PAGE_SIZE,
         onError: (error) => {
           console.error(
@@ -431,7 +432,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
     try {
       const result = await listChildren(teamId, workspaceId, parentId, {
-        includeDeleted: INCLUDE_DELETED,
+        includeArchived: INCLUDE_ARCHIVED,
         limit: DEFAULT_CHILDREN_PAGE_SIZE,
         startAfter: pagination.lastDoc ?? undefined,
       })
@@ -509,7 +510,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       name: normalizedName,
       nameLower,
       parentId,
-      isDeleted: false,
+      isArchived: false,
       createdAt: now,
       createdBy: "local",
       updatedAt: now,
@@ -575,7 +576,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       name: normalizedName,
       nameLower,
       parentId,
-      isDeleted: false,
+      isArchived: false,
       createdAt: now,
       createdBy: "local",
       updatedAt: now,
@@ -677,7 +678,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     )
   }
 
-  const softDeleteNodeAction = async (
+  const archiveNodeAction = async (
     teamId: string,
     workspaceId: string,
     nodeId: string
@@ -697,21 +698,21 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       nodeId,
       () => {
         updateNode(teamId, workspaceId, nodeId, {
-          isDeleted: true,
-          deletedAt: now,
-          deletedBy: "local",
+          isArchived: true,
+          archivedAt: now,
+          archivedBy: "local",
         })
       },
       () => {
         upsertNodes(teamId, workspaceId, [previousNode])
       },
       async () => {
-        await softDeleteNodeService(teamId, workspaceId, nodeId)
+        await archiveNodeService(teamId, workspaceId, nodeId)
       }
     )
   }
 
-  const restoreNodeAction = async (
+  const unarchiveNodeAction = async (
     teamId: string,
     workspaceId: string,
     nodeId: string
@@ -730,16 +731,115 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       nodeId,
       () => {
         updateNode(teamId, workspaceId, nodeId, {
-          isDeleted: false,
-          deletedAt: undefined,
-          deletedBy: undefined,
+          isArchived: false,
+          archivedAt: undefined,
+          archivedBy: undefined,
         })
       },
       () => {
         upsertNodes(teamId, workspaceId, [previousNode])
       },
       async () => {
-        await restoreNodeService(teamId, workspaceId, nodeId)
+        await unarchiveNodeService(teamId, workspaceId, nodeId)
+      }
+    )
+  }
+
+  const collectLoadedSubtreeIds = (
+    teamId: string,
+    workspaceId: string,
+    rootNodeId: string
+  ): string[] => {
+    const key = workspaceKey(teamId, workspaceId)
+    const nodes = nodesByWorkspace[key] ?? {}
+    if (!nodes[rootNodeId]) return []
+
+    const parentToChildren: Record<string, string[]> = {}
+    Object.values(nodes).forEach((node) => {
+      ;(parentToChildren[node.parentId] ??= []).push(node.id)
+    })
+
+    const ids: string[] = []
+    const visited = new Set<string>()
+    const stack = [rootNodeId]
+
+    while (stack.length) {
+      const currentId = stack.pop()
+      if (!currentId || visited.has(currentId)) continue
+      visited.add(currentId)
+      ids.push(currentId)
+
+      const childrenIds = parentToChildren[currentId] ?? []
+      childrenIds.forEach((childId) => {
+        if (!visited.has(childId)) {
+          stack.push(childId)
+        }
+      })
+    }
+
+    return ids
+  }
+
+  const deleteNodeAction = async (
+    teamId: string,
+    workspaceId: string,
+    nodeId: string
+  ) => {
+    const existing =
+      getNode(teamId, workspaceId, nodeId) ??
+      (await fetchNode(teamId, workspaceId, nodeId))
+    if (!existing) {
+      throw new Error("Node not found")
+    }
+    if (!existing.isArchived) {
+      throw new Error("Archive the node before deleting it permanently")
+    }
+
+    const key = workspaceKey(teamId, workspaceId)
+    const { nodes, children } = getWorkspaceBuckets(key)
+    const idsToRemove = collectLoadedSubtreeIds(teamId, workspaceId, nodeId)
+    const loadedIds = idsToRemove.length ? idsToRemove : [nodeId]
+    const idsToRemoveSet = new Set(loadedIds)
+    const previousNodes = loadedIds
+      .map((id) => nodes[id])
+      .filter((node): node is WorkspaceNode => Boolean(node))
+      .map((node) => cloneState(node))
+    const previousChildren = cloneState(children)
+    const previousSelectedId = selectedByWorkspace[key] ?? null
+
+    await withOptimisticUpdate(
+      pendingNodeIds,
+      nodeId,
+      () => {
+        loadedIds.forEach((id) => {
+          delete nodes[id]
+          delete children[id]
+        })
+
+        Object.keys(children).forEach((parentId) => {
+          children[parentId] = (children[parentId] ?? []).filter(
+            (id) => !idsToRemoveSet.has(id)
+          )
+        })
+
+        if (previousSelectedId && idsToRemoveSet.has(previousSelectedId)) {
+          selectedByWorkspace[key] = null
+        }
+      },
+      () => {
+        previousNodes.forEach((node) => {
+          nodes[node.id] = node
+        })
+        Object.keys(children).forEach((parentId) => {
+          delete children[parentId]
+        })
+        Object.entries(previousChildren).forEach(([parentId, ids]) => {
+          children[parentId] = ids
+        })
+        selectedByWorkspace[key] = previousSelectedId
+      },
+      async () => {
+        await deleteNodeService(teamId, workspaceId, nodeId)
       }
     )
   }
@@ -887,7 +987,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const nodes = Object.values(nodesByWorkspace[key] ?? {})
 
     return nodes
-      .filter((node) => node.type === "folder" && !node.isDeleted)
+      .filter((node) => node.type === "folder" && !node.isArchived)
       .sort((a, b) => {
         if (a.typeOrder !== b.typeOrder) {
           return a.typeOrder - b.typeOrder
@@ -942,8 +1042,9 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     createFileNode,
     renameNodeAction,
     moveNodeAction,
-    softDeleteNodeAction,
-    restoreNodeAction,
+    archiveNodeAction,
+    unarchiveNodeAction,
+    deleteNodeAction,
     saveFileContent,
     getFolderOptions,
     getFolderPath,

@@ -1,9 +1,10 @@
 import {
+  archiveWorkspaceNode,
   createWorkspaceNode,
   deleteWorkspaceNode,
   moveWorkspaceNode,
   renameWorkspaceNode,
-  restoreWorkspaceNode,
+  unarchiveWorkspaceNode,
   updateWorkspaceNodeContent,
 } from "@/composables/useFunctions"
 import { firestore } from "@/modules/firebase"
@@ -36,7 +37,7 @@ export const DEFAULT_CHILDREN_PAGE_SIZE = 50
 export interface ListChildrenOptions {
   limit?: number
   startAfter?: QueryDocumentSnapshot<DocumentData>
-  includeDeleted?: boolean
+  includeArchived?: boolean
 }
 
 export interface SubscribeChildrenOptions extends ListChildrenOptions {
@@ -72,8 +73,8 @@ const buildChildrenQuery = (
     orderBy("nameLower"),
   ]
 
-  if (!options.includeDeleted) {
-    clauses.unshift(where("isDeleted", "==", false))
+  if (!options.includeArchived) {
+    clauses.unshift(where("isArchived", "==", false))
   }
 
   if (options.startAfter) {
@@ -233,24 +234,36 @@ export function useNodes() {
     })
   }
 
-  const softDeleteNode = async (
+  const archiveNode = async (
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): Promise<void> => {
-    await deleteWorkspaceNode({
+    await archiveWorkspaceNode({
       teamId,
       workspaceId,
       nodeId,
     })
   }
 
-  const restoreNode = async (
+  const unarchiveNode = async (
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): Promise<void> => {
-    await restoreWorkspaceNode({
+    await unarchiveWorkspaceNode({
+      teamId,
+      workspaceId,
+      nodeId,
+    })
+  }
+
+  const deleteNode = async (
+    teamId: string,
+    workspaceId: string,
+    nodeId: string
+  ): Promise<void> => {
+    await deleteWorkspaceNode({
       teamId,
       workspaceId,
       nodeId,
@@ -279,8 +292,9 @@ export function useNodes() {
     createFile,
     renameNode,
     moveNode,
-    softDeleteNode,
-    restoreNode,
+    archiveNode,
+    unarchiveNode,
+    deleteNode,
     updateFileContent,
   }
 }

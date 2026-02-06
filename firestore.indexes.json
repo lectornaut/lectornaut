@@ -119,7 +119,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "isDeleted",
+          "fieldPath": "isArchived",
           "order": "ASCENDING"
         },
         {

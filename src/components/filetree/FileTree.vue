@@ -35,6 +35,10 @@ const dialogs = reactive({
     open: false,
     node: null as WorkspaceNode | null,
   },
+  archive: {
+    open: false,
+    node: null as WorkspaceNode | null,
+  },
   delete: {
     open: false,
     node: null as WorkspaceNode | null,
@@ -45,6 +49,7 @@ const createName = ref("")
 const isCreating = ref(false)
 const renameName = ref("")
 const isRenaming = ref(false)
+const isArchiving = ref(false)
 const isDeleting = ref(false)
 
 const openCreateDialog = (type: "folder" | "file", parentId: string) => {
@@ -56,6 +61,11 @@ const openCreateDialog = (type: "folder" | "file", parentId: string) => {
 const openRenameDialog = (node: WorkspaceNode) => {
   dialogs.rename.node = node
   dialogs.rename.open = true
+}
+
+const openArchiveDialog = (node: WorkspaceNode) => {
+  dialogs.archive.node = node
+  dialogs.archive.open = true
 }
 
 const openDeleteDialog = (node: WorkspaceNode) => {
@@ -81,12 +91,12 @@ watch(
   }
 )
 
-const handleRestore = async (node: WorkspaceNode) => {
+const handleUnarchive = async (node: WorkspaceNode) => {
   try {
-    await store.restoreNodeAction(props.teamId, props.workspaceId, node.id)
-    showSuccessToast("Restored")
+    await store.unarchiveNodeAction(props.teamId, props.workspaceId, node.id)
+    showSuccessToast("Unarchived")
   } catch (error) {
-    showErrorToast("Failed to restore", (error as Error).message)
+    showErrorToast("Failed to unarchive", (error as Error).message)
   }
 }
 
@@ -204,12 +214,31 @@ const handleRootDrop = async (event: DragEvent) => {
   }
 }
 
+const handleArchiveConfirm = async () => {
+  if (!dialogs.archive.node) return
+
+  isArchiving.value = true
+  try {
+    await store.archiveNodeAction(
+      props.teamId,
+      props.workspaceId,
+      dialogs.archive.node.id
+    )
+    showSuccessToast("Archived")
+    dialogs.archive.open = false
+  } catch (error) {
+    showErrorToast("Failed to archive", (error as Error).message)
+  } finally {
+    isArchiving.value = false
+  }
+}
+
 const handleDeleteConfirm = async () => {
   if (!dialogs.delete.node) return
 
   isDeleting.value = true
   try {
-    await store.softDeleteNodeAction(
+    await store.deleteNodeAction(
       props.teamId,
       props.workspaceId,
       dialogs.delete.node.id
@@ -308,8 +337,9 @@ onBeforeUnmount(() => {
               @create-folder="openCreateDialog('folder', $event.id)"
               @create-file="openCreateDialog('file', $event.id)"
               @rename="openRenameDialog"
+              @archive="openArchiveDialog"
+              @unarchive="handleUnarchive"
               @delete="openDeleteDialog"
-              @restore="handleRestore"
             />
           </SidebarMenu>
           <div v-if="rootLoading" class="text-muted-foreground p-2 text-xs">
@@ -414,6 +444,38 @@ onBeforeUnmount(() => {
   </Dialog>
 
   <AlertDialog
+    :open="dialogs.archive.open"
+    @update:open="(value) => (dialogs.archive.open = value)"
+  >
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Archive</AlertDialogTitle>
+        <AlertDialogDescription>
+          This will archive
+          <span class="font-medium">
+            {{ dialogs.archive.node?.name }}
+          </span>
+          . You can unarchive it later.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel @click="dialogs.archive.open = false">
+          Cancel
+        </AlertDialogCancel>
+        <AlertDialogAction as-child>
+          <Button
+            variant="destructive"
+            :disabled="isArchiving"
+            @click="handleArchiveConfirm"
+          >
+            {{ isArchiving ? "Archiving..." : "Archive" }}
+          </Button>
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog
     :open="dialogs.delete.open"
     @update:open="(value) => (dialogs.delete.open = value)"
   >
@@ -421,11 +483,11 @@ onBeforeUnmount(() => {
       <AlertDialogHeader>
         <AlertDialogTitle>Delete</AlertDialogTitle>
         <AlertDialogDescription>
-          This will soft-delete
+          This will permanently delete
           <span class="font-medium">
             {{ dialogs.delete.node?.name }}
           </span>
-          . You can restore it later.
+          . This action cannot be undone.
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

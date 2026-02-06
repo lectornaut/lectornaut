@@ -242,6 +242,19 @@ function assertNodeName(value: unknown, field: string): string {
   return normalized
 }
 
+const IN_QUERY_CHUNK_SIZE = 10
+const DELETE_BATCH_SIZE = 450
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (size <= 0) return [items]
+
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
+}
+
 // =============================================================================
 // Team CRUD Operations
 // =============================================================================
@@ -803,8 +816,11 @@ export const createWorkspaceNode = onCall(async (request) => {
       if (parentData.type !== "folder") {
         throw new HttpsError("failed-precondition", "Parent must be a folder.")
       }
-      if (parentData.isDeleted) {
-        throw new HttpsError("failed-precondition", "Parent folder is deleted.")
+      if (parentData.isArchived) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Parent folder is archived."
+        )
       }
     }
 
@@ -821,7 +837,7 @@ export const createWorkspaceNode = onCall(async (request) => {
       name,
       nameLower,
       parentId,
-      isDeleted: false,
+      isArchived: false,
       createdAt: now,
       createdBy: actorId,
       updatedAt: now,
@@ -894,10 +910,10 @@ export const renameWorkspaceNode = onCall(async (request) => {
     }
 
     const before = nodeSnap.data() ?? {}
-    if (before.isDeleted) {
+    if (before.isArchived) {
       throw new HttpsError(
         "failed-precondition",
-        "Cannot rename a deleted node."
+        "Cannot rename an archived node."
       )
     }
 
@@ -977,8 +993,11 @@ export const moveWorkspaceNode = onCall(async (request) => {
     }
 
     const before = nodeSnap.data() ?? {}
-    if (before.isDeleted) {
-      throw new HttpsError("failed-precondition", "Cannot move a deleted node.")
+    if (before.isArchived) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Cannot move an archived node."
+      )
     }
 
     if (parentId !== ROOT_PARENT_ID) {
@@ -993,8 +1012,11 @@ export const moveWorkspaceNode = onCall(async (request) => {
       if (parentData.type !== "folder") {
         throw new HttpsError("failed-precondition", "Parent must be a folder.")
       }
-      if (parentData.isDeleted) {
-        throw new HttpsError("failed-precondition", "Parent folder is deleted.")
+      if (parentData.isArchived) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Parent folder is archived."
+        )
       }
     }
 
@@ -1027,6 +1049,144 @@ export const moveWorkspaceNode = onCall(async (request) => {
   })
 })
 
+export const archiveWorkspaceNode = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const teamId = assertString(request.data?.teamId, "teamId")
+  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const nodeId = assertString(request.data?.nodeId, "nodeId")
+
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  return db.runTransaction(async (transaction) => {
+    const role = await requireTeamRole(transaction, teamId, actorId)
+
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage workspace content."
+      )
+    }
+
+    const nodeRef = db.doc(
+      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+    )
+    const nodeSnap = await transaction.get(nodeRef)
+    if (!nodeSnap.exists) {
+      throw new HttpsError("not-found", "Node not found.")
+    }
+
+    const before = nodeSnap.data() ?? {}
+    if (before.isArchived) {
+      throw new HttpsError("failed-precondition", "Node is already archived.")
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp()
+    transaction.update(nodeRef, {
+      isArchived: true,
+      archivedAt: now,
+      archivedBy: actorId,
+      updatedAt: now,
+      updatedBy: actorId,
+    })
+
+    const changes = buildChanges(before, { isArchived: true })
+    const logRef = await logEvent(
+      {
+        teamId,
+        workspaceId,
+        actor: { userId: actorId, email: actorEmail, role },
+        action: "content.archive",
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        context: buildContext(request),
+        changes,
+      },
+      { transaction }
+    )
+
+    return {
+      nodeId,
+      archived: true,
+      logId: logRef.id,
+    }
+  })
+})
+
+export const unarchiveWorkspaceNode = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const teamId = assertString(request.data?.teamId, "teamId")
+  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const nodeId = assertString(request.data?.nodeId, "nodeId")
+
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  return db.runTransaction(async (transaction) => {
+    const role = await requireTeamRole(transaction, teamId, actorId)
+
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage workspace content."
+      )
+    }
+
+    const nodeRef = db.doc(
+      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+    )
+    const nodeSnap = await transaction.get(nodeRef)
+    if (!nodeSnap.exists) {
+      throw new HttpsError("not-found", "Node not found.")
+    }
+
+    const before = nodeSnap.data() ?? {}
+    if (!before.isArchived) {
+      throw new HttpsError("failed-precondition", "Node is not archived.")
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp()
+    transaction.update(nodeRef, {
+      isArchived: false,
+      archivedAt: admin.firestore.FieldValue.delete(),
+      archivedBy: admin.firestore.FieldValue.delete(),
+      updatedAt: now,
+      updatedBy: actorId,
+    })
+
+    const changes = buildChanges(before, { isArchived: false })
+    const logRef = await logEvent(
+      {
+        teamId,
+        workspaceId,
+        actor: { userId: actorId, email: actorEmail, role },
+        action: "content.unarchive",
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        context: buildContext(request),
+        changes,
+      },
+      { transaction }
+    )
+
+    return {
+      nodeId,
+      unarchived: true,
+      logId: logRef.id,
+    }
+  })
+})
+
 export const deleteWorkspaceNode = onCall(async (request) => {
   assertAuthenticated(request)
 
@@ -1036,133 +1196,90 @@ export const deleteWorkspaceNode = onCall(async (request) => {
 
   const actorId = request.auth.uid
   const actorEmail = request.auth.token.email ?? undefined
+  const role = await getTeamRole(teamId, actorId)
 
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to manage workspace content."
-      )
-    }
-
-    const nodeRef = db.doc(
-      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
-    )
-    const nodeSnap = await transaction.get(nodeRef)
-    if (!nodeSnap.exists) {
-      throw new HttpsError("not-found", "Node not found.")
-    }
-
-    const before = nodeSnap.data() ?? {}
-    if (before.isDeleted) {
-      throw new HttpsError("failed-precondition", "Node is already deleted.")
-    }
-
-    const now = admin.firestore.FieldValue.serverTimestamp()
-    transaction.update(nodeRef, {
-      isDeleted: true,
-      deletedAt: now,
-      deletedBy: actorId,
-      updatedAt: now,
-      updatedBy: actorId,
+  if (
+    !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+      scope: "workspace",
+      teamRole: role,
     })
-
-    const changes = buildChanges(before, { isDeleted: true })
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.delete",
-        resource: { type: "content", id: nodeId, parentId: workspaceId },
-        context: buildContext(request),
-        changes,
-      },
-      { transaction }
+  ) {
+    throw new HttpsError(
+      "permission-denied",
+      "You do not have permission to manage workspace content."
     )
+  }
 
-    return {
-      nodeId,
-      deleted: true,
-      logId: logRef.id,
-    }
-  })
-})
+  const nodesCollection = db.collection(
+    `teams/${teamId}/workspaces/${workspaceId}/nodes`
+  )
+  const nodeRef = nodesCollection.doc(nodeId)
+  const nodeSnap = await nodeRef.get()
 
-export const restoreWorkspaceNode = onCall(async (request) => {
-  assertAuthenticated(request)
+  if (!nodeSnap.exists) {
+    throw new HttpsError("not-found", "Node not found.")
+  }
 
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const nodeId = assertString(request.data?.nodeId, "nodeId")
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to manage workspace content."
-      )
-    }
-
-    const nodeRef = db.doc(
-      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+  const before = nodeSnap.data() ?? {}
+  if (!before.isArchived) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Node must be archived before permanent deletion."
     )
-    const nodeSnap = await transaction.get(nodeRef)
-    if (!nodeSnap.exists) {
-      throw new HttpsError("not-found", "Node not found.")
-    }
+  }
 
-    const before = nodeSnap.data() ?? {}
-    if (!before.isDeleted) {
-      throw new HttpsError("failed-precondition", "Node is not deleted.")
-    }
+  const idsToDelete = new Set<string>([nodeId])
+  const queue: string[] = [nodeId]
 
-    const now = admin.firestore.FieldValue.serverTimestamp()
-    transaction.update(nodeRef, {
-      isDeleted: false,
-      deletedAt: admin.firestore.FieldValue.delete(),
-      deletedBy: admin.firestore.FieldValue.delete(),
-      updatedAt: now,
-      updatedBy: actorId,
+  while (queue.length) {
+    const parentIds = queue.splice(0, IN_QUERY_CHUNK_SIZE)
+    const descendantsSnap = await nodesCollection
+      .where("parentId", "in", parentIds)
+      .get()
+
+    descendantsSnap.docs.forEach((docSnap) => {
+      if (idsToDelete.has(docSnap.id)) return
+      idsToDelete.add(docSnap.id)
+      queue.push(docSnap.id)
     })
+  }
 
-    const changes = buildChanges(before, { isDeleted: false })
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.restore",
-        resource: { type: "content", id: nodeId, parentId: workspaceId },
-        context: buildContext(request),
-        changes,
+  const deleteIds = [...idsToDelete]
+  const batches = chunkArray(deleteIds, DELETE_BATCH_SIZE)
+  for (const batchIds of batches) {
+    const batch = db.batch()
+    batchIds.forEach((id) => {
+      batch.delete(nodesCollection.doc(id))
+    })
+    await batch.commit()
+  }
+
+  const logRef = await logEvent({
+    teamId,
+    workspaceId,
+    actor: { userId: actorId, email: actorEmail, role },
+    action: "content.delete",
+    resource: { type: "content", id: nodeId, parentId: workspaceId },
+    context: buildContext(request),
+    changes: {
+      fields: ["deleted", "deletedCount"],
+      before: {
+        name: before.name ?? null,
+        isArchived: before.isArchived ?? false,
       },
-      { transaction }
-    )
-
-    return {
-      nodeId,
-      restored: true,
-      logId: logRef.id,
-    }
+      after: {
+        deleted: true,
+        deletedCount: deleteIds.length,
+      },
+    },
   })
+
+  return {
+    nodeId,
+    deleted: true,
+    deletedCount: deleteIds.length,
+    logId: logRef.id,
+  }
 })
 
 export const updateWorkspaceNodeContent = onCall(async (request) => {
@@ -1204,8 +1321,11 @@ export const updateWorkspaceNodeContent = onCall(async (request) => {
     if (before.type !== "file") {
       throw new HttpsError("failed-precondition", "Only files can be updated.")
     }
-    if (before.isDeleted) {
-      throw new HttpsError("failed-precondition", "Cannot edit a deleted file.")
+    if (before.isArchived) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Cannot edit an archived file."
+      )
     }
 
     const now = admin.firestore.FieldValue.serverTimestamp()

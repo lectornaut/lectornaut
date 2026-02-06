@@ -128,6 +128,30 @@ export interface MoveWorkspaceNodeResponse {
   logId: string
 }
 
+export interface ArchiveWorkspaceNodeRequest {
+  teamId: string
+  workspaceId: string
+  nodeId: string
+}
+
+export interface ArchiveWorkspaceNodeResponse {
+  nodeId: string
+  archived: boolean
+  logId: string
+}
+
+export interface UnarchiveWorkspaceNodeRequest {
+  teamId: string
+  workspaceId: string
+  nodeId: string
+}
+
+export interface UnarchiveWorkspaceNodeResponse {
+  nodeId: string
+  unarchived: boolean
+  logId: string
+}
+
 export interface DeleteWorkspaceNodeRequest {
   teamId: string
   workspaceId: string
@@ -137,18 +161,7 @@ export interface DeleteWorkspaceNodeRequest {
 export interface DeleteWorkspaceNodeResponse {
   nodeId: string
   deleted: boolean
-  logId: string
-}
-
-export interface RestoreWorkspaceNodeRequest {
-  teamId: string
-  workspaceId: string
-  nodeId: string
-}
-
-export interface RestoreWorkspaceNodeResponse {
-  nodeId: string
-  restored: boolean
+  deletedCount: number
   logId: string
 }
 
@@ -351,15 +364,20 @@ export const moveWorkspaceNode = createTypedCallable<
   MoveWorkspaceNodeResponse
 >("moveWorkspaceNode")
 
+export const archiveWorkspaceNode = createTypedCallable<
+  ArchiveWorkspaceNodeRequest,
+  ArchiveWorkspaceNodeResponse
+>("archiveWorkspaceNode")
+
+export const unarchiveWorkspaceNode = createTypedCallable<
+  UnarchiveWorkspaceNodeRequest,
+  UnarchiveWorkspaceNodeResponse
+>("unarchiveWorkspaceNode")
+
 export const deleteWorkspaceNode = createTypedCallable<
   DeleteWorkspaceNodeRequest,
   DeleteWorkspaceNodeResponse
 >("deleteWorkspaceNode")
-
-export const restoreWorkspaceNode = createTypedCallable<
-  RestoreWorkspaceNodeRequest,
-  RestoreWorkspaceNodeResponse
->("restoreWorkspaceNode")
 
 export const updateWorkspaceNodeContent = createTypedCallable<
   UpdateWorkspaceNodeContentRequest,
@@ -476,8 +494,9 @@ export function useFunctions() {
     createWorkspaceNode,
     renameWorkspaceNode,
     moveWorkspaceNode,
+    archiveWorkspaceNode,
+    unarchiveWorkspaceNode,
     deleteWorkspaceNode,
-    restoreWorkspaceNode,
     updateWorkspaceNodeContent,
 
     // Membership operations
