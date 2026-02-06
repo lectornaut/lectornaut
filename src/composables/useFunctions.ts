@@ -86,6 +86,86 @@ export interface DeleteWorkspaceResponse {
 }
 
 // =============================================================================
+// Workspace Node Request/Response Types
+// =============================================================================
+
+export interface CreateWorkspaceNodeRequest {
+  teamId: string
+  workspaceId: string
+  parentId: string
+  name: string
+  type: "folder" | "file"
+}
+
+export interface CreateWorkspaceNodeResponse {
+  nodeId: string
+  logId: string
+}
+
+export interface RenameWorkspaceNodeRequest {
+  teamId: string
+  workspaceId: string
+  nodeId: string
+  name: string
+}
+
+export interface RenameWorkspaceNodeResponse {
+  nodeId: string
+  updated: boolean
+  logId: string
+}
+
+export interface MoveWorkspaceNodeRequest {
+  teamId: string
+  workspaceId: string
+  nodeId: string
+  parentId: string
+}
+
+export interface MoveWorkspaceNodeResponse {
+  nodeId: string
+  updated: boolean
+  logId: string
+}
+
+export interface DeleteWorkspaceNodeRequest {
+  teamId: string
+  workspaceId: string
+  nodeId: string
+}
+
+export interface DeleteWorkspaceNodeResponse {
+  nodeId: string
+  deleted: boolean
+  logId: string
+}
+
+export interface RestoreWorkspaceNodeRequest {
+  teamId: string
+  workspaceId: string
+  nodeId: string
+}
+
+export interface RestoreWorkspaceNodeResponse {
+  nodeId: string
+  restored: boolean
+  logId: string
+}
+
+export interface UpdateWorkspaceNodeContentRequest {
+  teamId: string
+  workspaceId: string
+  nodeId: string
+  content: string
+}
+
+export interface UpdateWorkspaceNodeContentResponse {
+  nodeId: string
+  updated: boolean
+  logId: string
+}
+
+// =============================================================================
 // Membership Request/Response Types
 // =============================================================================
 
@@ -253,6 +333,40 @@ export const deleteWorkspace = createTypedCallable<
 >("deleteWorkspace")
 
 // =============================================================================
+// Workspace Node Functions
+// =============================================================================
+
+export const createWorkspaceNode = createTypedCallable<
+  CreateWorkspaceNodeRequest,
+  CreateWorkspaceNodeResponse
+>("createWorkspaceNode")
+
+export const renameWorkspaceNode = createTypedCallable<
+  RenameWorkspaceNodeRequest,
+  RenameWorkspaceNodeResponse
+>("renameWorkspaceNode")
+
+export const moveWorkspaceNode = createTypedCallable<
+  MoveWorkspaceNodeRequest,
+  MoveWorkspaceNodeResponse
+>("moveWorkspaceNode")
+
+export const deleteWorkspaceNode = createTypedCallable<
+  DeleteWorkspaceNodeRequest,
+  DeleteWorkspaceNodeResponse
+>("deleteWorkspaceNode")
+
+export const restoreWorkspaceNode = createTypedCallable<
+  RestoreWorkspaceNodeRequest,
+  RestoreWorkspaceNodeResponse
+>("restoreWorkspaceNode")
+
+export const updateWorkspaceNodeContent = createTypedCallable<
+  UpdateWorkspaceNodeContentRequest,
+  UpdateWorkspaceNodeContentResponse
+>("updateWorkspaceNodeContent")
+
+// =============================================================================
 // Membership Functions
 // =============================================================================
 
@@ -357,6 +471,14 @@ export function useFunctions() {
     createWorkspace,
     updateWorkspace,
     deleteWorkspace,
+
+    // Workspace node operations
+    createWorkspaceNode,
+    renameWorkspaceNode,
+    moveWorkspaceNode,
+    deleteWorkspaceNode,
+    restoreWorkspaceNode,
+    updateWorkspaceNodeContent,
 
     // Membership operations
     assignRoleToUser,

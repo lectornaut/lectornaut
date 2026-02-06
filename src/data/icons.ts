@@ -99,8 +99,11 @@ import IconLucideExternalLink from "~icons/lucide/external-link"
 import IconLucideEye from "~icons/lucide/eye"
 import IconLucideEyeOff from "~icons/lucide/eye-off"
 import IconLucideFile from "~icons/lucide/file"
+import IconLucideFilePlus from "~icons/lucide/file-plus"
 import IconLucideFileText from "~icons/lucide/file-text"
 import IconLucideFolder from "~icons/lucide/folder"
+import IconLucideFolderOpen from "~icons/lucide/folder-open"
+import IconLucideFolderPlus from "~icons/lucide/folder-plus"
 import IconLucideForward from "~icons/lucide/forward"
 import IconLucideGalleryHorizontalEnd from "~icons/lucide/gallery-horizontal-end"
 import IconLucideGift from "~icons/lucide/gift"
@@ -370,9 +373,12 @@ export {
   IconLucideEye as IconEye,
   IconLucideEyeOff as IconEyeOff,
   IconLucideFile as IconFile,
+  IconLucideFilePlus as IconFilePlus,
   IconLucideFileText as IconFileText,
   IconSimpleIconsFlathub as IconFlathub,
   IconLucideFolder as IconFolder,
+  IconLucideFolderOpen as IconFolderOpen,
+  IconLucideFolderPlus as IconFolderPlus,
   IconRiFontMono as IconFontMono,
   IconRiFontSans as IconFontSans,
   IconRiFontSansSerif as IconFontSansSerif,

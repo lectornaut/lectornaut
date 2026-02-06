@@ -37,6 +37,7 @@ const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
   ]),
   admin: new Set([
     Capabilities.INVITE_MEMBER,
@@ -47,8 +48,13 @@ const TEAM_SCOPED_PERMISSIONS: Record<IMembershipRole, Set<Capability>> = {
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
   ]),
-  member: new Set([Capabilities.READ_TEAM, Capabilities.READ_WORKSPACE]),
+  member: new Set([
+    Capabilities.READ_TEAM,
+    Capabilities.READ_WORKSPACE,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
+  ]),
   guest: new Set([Capabilities.READ_TEAM, Capabilities.READ_WORKSPACE]),
 }
 

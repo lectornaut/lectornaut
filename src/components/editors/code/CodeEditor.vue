@@ -22,8 +22,9 @@ import {
 } from "@codemirror/language"
 import { lintKeymap } from "@codemirror/lint"
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
-import { EditorState } from "@codemirror/state"
+import { Compartment, EditorState } from "@codemirror/state"
 import {
+  placeholder as cmPlaceholder,
   crosshairCursor,
   drawSelection,
   dropCursor,
@@ -33,21 +34,45 @@ import {
   highlightSpecialChars,
   keymap,
   lineNumbers,
-  placeholder,
   rectangularSelection,
 } from "@codemirror/view"
 
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string
+    readOnly?: boolean
+    placeholder?: string
+  }>(),
+  {
+    modelValue: "",
+    readOnly: false,
+    placeholder: "Start document",
+  }
+)
+
+const emit = defineEmits<{
+  (e: "update:modelValue", value: string): void
+}>()
+
 const editorContainer = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
+const editableCompartment = new Compartment()
+const placeholderCompartment = new Compartment()
+
+const updateListener = EditorView.updateListener.of((update) => {
+  if (!update.docChanged) return
+  emit("update:modelValue", update.state.doc.toString())
+})
 
 onMounted(() => {
   if (editorContainer.value) {
     view = new EditorView({
-      doc: "",
+      doc: props.modelValue ?? "",
       parent: editorContainer.value,
       extensions: [
+        editableCompartment.of(EditorView.editable.of(!props.readOnly)),
         // Placeholder text
-        placeholder("Start document"),
+        placeholderCompartment.of(cmPlaceholder(props.placeholder)),
         // A line number gutter
         lineNumbers(),
         // A gutter with code folding markers
@@ -84,6 +109,8 @@ onMounted(() => {
         highlightActiveLineGutter(),
         // Highlight text that matches the selected text
         highlightSelectionMatches(),
+        // Emit updates
+        updateListener,
         keymap.of([
           // Closed-brackets aware backspace
           ...closeBracketsKeymap,
@@ -165,6 +192,38 @@ onMounted(() => {
     })
   }
 })
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (!view) return
+    const current = view.state.doc.toString()
+    if ((value ?? "") === current) return
+    view.dispatch({
+      changes: { from: 0, to: current.length, insert: value ?? "" },
+    })
+  }
+)
+
+watch(
+  () => props.readOnly,
+  (value) => {
+    if (!view) return
+    view.dispatch({
+      effects: editableCompartment.reconfigure(EditorView.editable.of(!value)),
+    })
+  }
+)
+
+watch(
+  () => props.placeholder,
+  (value) => {
+    if (!view) return
+    view.dispatch({
+      effects: placeholderCompartment.reconfigure(cmPlaceholder(value ?? "")),
+    })
+  }
+)
 
 onBeforeUnmount(() => {
   if (view) {

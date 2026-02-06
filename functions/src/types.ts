@@ -69,6 +69,7 @@ export interface InvitationData {
 // ============================================================================
 
 export type IMembershipRole = "owner" | "admin" | "member" | "guest"
+export type NodeType = "folder" | "file"
 
 export type Scope = "global" | "team" | "workspace"
 
@@ -89,6 +90,7 @@ export const Capabilities = {
   EDIT_WORKSPACE: "edit_workspace",
   DELETE_WORKSPACE: "delete_workspace",
   READ_WORKSPACE: "read_workspace",
+  MANAGE_WORKSPACE_CONTENT: "manage_workspace_content",
 } as const
 
 export type Capability = (typeof Capabilities)[keyof typeof Capabilities]

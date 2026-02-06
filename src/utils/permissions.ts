@@ -36,6 +36,7 @@ export const Capabilities = {
   EDIT_WORKSPACE: "edit_workspace",
   DELETE_WORKSPACE: "delete_workspace",
   READ_WORKSPACE: "read_workspace",
+  MANAGE_WORKSPACE_CONTENT: "manage_workspace_content",
 } as const
 
 export type Capability = (typeof Capabilities)[keyof typeof Capabilities]
@@ -64,6 +65,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
     Capabilities.MANAGE_BILLING,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
   ]),
   admin: new Set([
     Capabilities.INVITE_MEMBER,
@@ -75,8 +77,13 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
     Capabilities.MANAGE_BILLING,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
   ]),
-  member: new Set([Capabilities.READ_TEAM, Capabilities.READ_WORKSPACE]),
+  member: new Set([
+    Capabilities.READ_TEAM,
+    Capabilities.READ_WORKSPACE,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
+  ]),
   guest: new Set([Capabilities.READ_TEAM, Capabilities.READ_WORKSPACE]),
 }
 

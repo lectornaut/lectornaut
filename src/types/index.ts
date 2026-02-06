@@ -30,6 +30,71 @@ export interface IWorkspace {
   updatedAt: Timestamp
 }
 
+// ============================================================================
+// Workspace Nodes (Files/Folders)
+// ============================================================================
+
+export const ROOT_PARENT_ID = "root"
+export const NODE_NAME_MAX_LENGTH = 128
+
+export type NodeType = "folder" | "file"
+
+export interface NodeBase {
+  readonly id: string
+  readonly workspaceId: string
+  type: NodeType
+  /** Folders first, then files */
+  typeOrder: number
+  name: string
+  nameLower: string
+  parentId: string
+  isDeleted: boolean
+  deletedAt?: Timestamp
+  deletedBy?: string
+  createdAt: Timestamp
+  createdBy: string
+  updatedAt: Timestamp
+  updatedBy: string
+  sortKey?: string
+}
+
+export interface FolderNode extends NodeBase {
+  type: "folder"
+}
+
+export interface FileNode extends NodeBase {
+  type: "file"
+  content?: string
+  mimeType?: string
+  size?: number
+}
+
+export type WorkspaceNode = FolderNode | FileNode
+
+export function normalizeName(name: string): string {
+  return name.trim().replace(/\s+/g, " ")
+}
+
+export function toNameLower(name: string): string {
+  return normalizeName(name).toLowerCase()
+}
+
+export function getTypeOrder(type: NodeType): number {
+  return type === "folder" ? 0 : 1
+}
+
+export function isFolder(
+  node: WorkspaceNode | null | undefined
+): node is FolderNode {
+  return !!node && node.type === "folder"
+}
+
+export function isFile(
+  node: WorkspaceNode | null | undefined
+): node is FileNode {
+  return !!node && node.type === "file"
+}
+
 export interface IUser {
   readonly uid: string
   email: string | null
