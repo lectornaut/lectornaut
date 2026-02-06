@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { createYjsCollab, type YjsCollabSession } from "@/collab/yjsBinding"
+import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
@@ -19,8 +21,10 @@ useHead({
 
 const workspaceStore = useWorkspaceStore()
 const fileTreeStore = useFileTreeStore()
+const authStore = useAuthStore()
 
 const { currentWorkspace } = storeToRefs(workspaceStore)
+const { currentUser, userProfile } = storeToRefs(authStore)
 
 const teamId = computed(() => currentWorkspace.value?.teamId ?? null)
 const workspaceId = computed(() => currentWorkspace.value?.id ?? null)
@@ -39,12 +43,86 @@ const selectedFile = computed(() => {
 
 const editorContent = ref("")
 const isDirty = ref(false)
+const collabSession = shallowRef<YjsCollabSession | null>(null)
+const collabRole = ref<"editor" | "viewer" | null>(null)
+const collabError = ref<string | null>(null)
+const collabReady = ref(false)
+const collabExtensions = computed(
+  () => collabSession.value?.getExtensions() ?? []
+)
+const collabAwareness = computed(() => collabSession.value?.awareness ?? null)
+
+const editorReadOnly = computed(() => {
+  if (!selectedFile.value) return true
+  return collabRole.value !== "editor"
+})
 
 watch(
-  selectedFile,
-  (file) => {
+  [selectedFile, teamId, workspaceId, currentUser],
+  async (
+    [file, currentTeamId, currentWorkspaceId, user],
+    _oldValue,
+    onCleanup
+  ) => {
+    let cancelled = false
+    onCleanup(() => {
+      cancelled = true
+    })
+
+    collabError.value = null
+    collabReady.value = false
+    collabRole.value = null
     editorContent.value = file?.content ?? ""
     isDirty.value = false
+
+    const previousSession = collabSession.value
+    collabSession.value = null
+
+    if (previousSession) {
+      await previousSession.destroy().catch((error) => {
+        console.error("[collab] Failed to destroy previous session", error)
+      })
+    }
+
+    if (!file || !currentTeamId || !currentWorkspaceId || !user) {
+      return
+    }
+
+    collabReady.value = false
+
+    try {
+      const session = await createYjsCollab({
+        contentId: file.id,
+        teamId: currentTeamId,
+        workspaceId: currentWorkspaceId,
+        initialContent: file.content ?? "",
+        user: {
+          uid: user.uid,
+          displayName: userProfile.value?.displayName ?? user.displayName,
+          photoURL: userProfile.value?.photoURL ?? user.photoURL,
+        },
+      })
+
+      if (cancelled) {
+        await session.destroy()
+        return
+      }
+
+      collabSession.value = session
+      collabRole.value = session.role
+      editorContent.value = session.getText()
+      collabReady.value = true
+    } catch (error) {
+      if (cancelled) {
+        return
+      }
+
+      const message =
+        (error as Error).message || "Unable to join collaboration room."
+      collabError.value = message
+      collabReady.value = false
+      showErrorToast("Collaboration unavailable", message)
+    }
   },
   { immediate: true }
 )
@@ -59,6 +137,11 @@ watch(editorContent, (value) => {
 
 const saveContent = async () => {
   if (!selectedFile.value || !teamId.value || !workspaceId.value) return
+  if (editorReadOnly.value) {
+    showErrorToast("Read-only", "You do not have permission to edit this file.")
+    return
+  }
+
   try {
     await fileTreeStore.saveFileContent(
       teamId.value,
@@ -72,6 +155,16 @@ const saveContent = async () => {
     showErrorToast("Failed to save", (error as Error).message)
   }
 }
+
+onBeforeUnmount(() => {
+  const session = collabSession.value
+  collabSession.value = null
+  if (!session) return
+
+  void session.destroy().catch((error) => {
+    console.error("[collab] Failed to destroy session on unmount", error)
+  })
+})
 </script>
 
 <template>
@@ -99,10 +192,28 @@ const saveContent = async () => {
   <div
     class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded-2xl border"
   >
+    <div
+      v-if="teamId && workspaceId && selectedFile"
+      class="bg-card flex items-center justify-between border-b p-2"
+    >
+      <div class="flex min-w-0 items-center gap-2">
+        <span class="truncate text-sm font-medium">
+          {{ selectedFile.name }}
+        </span>
+        <Badge v-if="collabRole" variant="outline">
+          {{ collabRole }}
+        </Badge>
+      </div>
+      <div class="flex items-center gap-2">
+        <Spinner v-if="!collabReady && !collabError" />
+        <CollabPresence :awareness="collabAwareness" />
+      </div>
+    </div>
     <CodeEditor
       v-if="teamId && workspaceId && selectedFile"
       v-model="editorContent"
-      :read-only="!selectedFile"
+      :read-only="editorReadOnly"
+      :extensions="collabExtensions"
       :placeholder="
         selectedFile ? 'Start coding...' : 'Select a file to view or edit.'
       "
@@ -115,7 +226,10 @@ const saveContent = async () => {
     </div>
   </div>
   <Teleport defer to="#cta-dock">
-    <Button :disabled="!selectedFile || !isDirty" @click="saveContent">
+    <Button
+      :disabled="!selectedFile || !isDirty || editorReadOnly"
+      @click="saveContent"
+    >
       Save
     </Button>
   </Teleport>

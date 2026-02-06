@@ -22,7 +22,7 @@ import {
 } from "@codemirror/language"
 import { lintKeymap } from "@codemirror/lint"
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
-import { Compartment, EditorState } from "@codemirror/state"
+import { Compartment, EditorState, type Extension } from "@codemirror/state"
 import {
   placeholder as cmPlaceholder,
   crosshairCursor,
@@ -42,11 +42,13 @@ const props = withDefaults(
     modelValue?: string
     readOnly?: boolean
     placeholder?: string
+    extensions?: Extension[]
   }>(),
   {
     modelValue: "",
     readOnly: false,
     placeholder: "Start document",
+    extensions: () => [],
   }
 )
 
@@ -58,6 +60,7 @@ const editorContainer = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
 const editableCompartment = new Compartment()
 const placeholderCompartment = new Compartment()
+const extensionsCompartment = new Compartment()
 
 const updateListener = EditorView.updateListener.of((update) => {
   if (!update.docChanged) return
@@ -111,6 +114,8 @@ onMounted(() => {
         highlightSelectionMatches(),
         // Emit updates
         updateListener,
+        // External extensions (ex: collaborative editing)
+        extensionsCompartment.of(props.extensions ?? []),
         keymap.of([
           // Closed-brackets aware backspace
           ...closeBracketsKeymap,
@@ -187,6 +192,12 @@ onMounted(() => {
               color: "var(--foreground)",
             },
           },
+          ".cm-ySelectionInfo": {
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--size)",
+            fontWeight: "600",
+            borderRadius: "4px 4px 4px 0",
+          },
         }),
       ],
     })
@@ -221,6 +232,16 @@ watch(
     if (!view) return
     view.dispatch({
       effects: placeholderCompartment.reconfigure(cmPlaceholder(value ?? "")),
+    })
+  }
+)
+
+watch(
+  () => props.extensions,
+  (value) => {
+    if (!view) return
+    view.dispatch({
+      effects: extensionsCompartment.reconfigure(value ?? []),
     })
   }
 )

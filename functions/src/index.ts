@@ -1,5 +1,6 @@
 export * from "./audit.js"
 export * from "./callables.js"
+export * from "./collab.js"
 export * from "./email.js"
 export * from "./genkit.js"
 export * from "./notifier.js"

@@ -2,6 +2,60 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function membershipDoc(teamId) {
+      return get(
+        /databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)
+      );
+    }
+
+    function isTeamMember(teamId) {
+      return isSignedIn() && membershipDoc(teamId).exists();
+    }
+
+    function canViewTeam(teamId) {
+      return isTeamMember(teamId);
+    }
+
+    function canEditTeam(teamId) {
+      return isTeamMember(teamId)
+        && membershipDoc(teamId).data.role in ["owner", "admin", "member"];
+    }
+
+    function roomDoc(contentId) {
+      return get(/databases/$(database)/documents/content_signaling/$(contentId));
+    }
+
+    function canViewRoom(contentId) {
+      return isSignedIn()
+        && roomDoc(contentId).exists()
+        && canViewTeam(roomDoc(contentId).data.teamId);
+    }
+
+    match /content_snapshots/{contentId} {
+      allow read: if canViewTeam(resource.data.teamId);
+      allow create, update: if canEditTeam(request.resource.data.teamId);
+      allow delete: if false;
+    }
+
+    match /content_signaling/{contentId} {
+      allow read: if canViewTeam(resource.data.teamId);
+      allow write: if false;
+
+      match /peers/{peerId} {
+        allow read: if canViewRoom(contentId);
+        allow write: if false;
+      }
+
+      match /signals/{signalId} {
+        allow read: if canViewRoom(contentId);
+        allow write: if false;
+      }
+    }
+
     match /users/{userId} {
       allow create: if request.auth.uid == userId;
       allow read: if request.auth.uid == userId || resource.data.isPublic == true;
@@ -10,7 +64,7 @@ service cloud.firestore {
       match /notifications/{notificationId} {
         allow read: if request.auth.uid == userId;
         // Only allow status updates from client
-        allow update: if request.auth.uid == userId && 
+        allow update: if request.auth.uid == userId &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
         allow create, delete: if false; // Only via Cloud Functions
       }
@@ -26,8 +80,10 @@ service cloud.firestore {
     }
 
     // Default rules for other collections
-    match /{document=**} {
-      allow read, write: if request.auth.uid != null;
+    match /{collection}/{document=**} {
+      allow read, write: if isSignedIn()
+        && collection != "content_signaling"
+        && collection != "content_snapshots";
     }
   }
 }
