@@ -78,6 +78,13 @@ declare module 'vue-router/auto-routes' {
       '/code',
       Record<never, never>,
       Record<never, never>,
+      | '/code/[nodeId]'
+    >,
+    '/code/[nodeId]': RouteRecordInfo<
+      '/code/[nodeId]',
+      '/code/:nodeId',
+      { nodeId: ParamValue<true> },
+      { nodeId: ParamValue<false> },
       | never
     >,
     '/create': RouteRecordInfo<
@@ -266,6 +273,13 @@ declare module 'vue-router/auto-routes' {
     'src/pages/code.vue': {
       routes:
         | '/code'
+        | '/code/[nodeId]'
+      views:
+        | 'default'
+    }
+    'src/pages/code/[nodeId].vue': {
+      routes:
+        | '/code/[nodeId]'
       views:
         | never
     }

@@ -6,9 +6,44 @@ import {
   IconRefreshCcw,
 } from "@/data/icons"
 import { useRouteBreadcrumbs } from "@/helpers/breadcrumber"
+import { useFileTreeStore } from "@/stores/fileTreeStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
+import { storeToRefs } from "pinia"
 
 const breadcrumbs = useRouteBreadcrumbs()
 const router = useRouter()
+const route = useRoute()
+const workspaceStore = useWorkspaceStore()
+const fileTreeStore = useFileTreeStore()
+const { currentWorkspace } = storeToRefs(workspaceStore)
+
+const selectedCodeNodeName = computed(() => {
+  if (!route.path.startsWith("/code/")) return null
+
+  const nodeId = route.params.nodeId
+  if (typeof nodeId !== "string" || !nodeId.length) return null
+
+  const teamId = currentWorkspace.value?.teamId
+  const workspaceId = currentWorkspace.value?.id
+  if (!teamId || !workspaceId) return null
+
+  return fileTreeStore.getNode(teamId, workspaceId, nodeId)?.name ?? null
+})
+
+const displayBreadcrumbs = computed(() => {
+  const items = breadcrumbs.value
+  if (!selectedCodeNodeName.value || !items.length) return items
+
+  const lastIndex = items.length - 1
+  return items.map((item, index) =>
+    index === lastIndex
+      ? {
+          ...item,
+          breadcrumb: selectedCodeNodeName.value,
+        }
+      : item
+  )
+})
 </script>
 
 <template>
@@ -28,22 +63,17 @@ const router = useRouter()
             </BreadcrumbPage>
           </BreadcrumbItem>
           <BreadcrumbSeparator class="text-muted-foreground/50" />
-          <template v-for="(item, index) in breadcrumbs" :key="index">
+          <template v-for="(item, index) in displayBreadcrumbs" :key="index">
             <BreadcrumbItem>
-              <BreadcrumbPage
-                v-if="index === breadcrumbs.length - 1"
-                class="text-muted-foreground"
-              >
+              <BreadcrumbPage v-if="item.isCurrent">
                 {{ item.breadcrumb }}
               </BreadcrumbPage>
               <template v-else>
                 <BreadcrumbPage as-child>
                   <BreadcrumbLink as-child>
-                    <Button variant="ghost" size="sm" as-child>
-                      <RouterLink :to="item.route">
-                        {{ item.breadcrumb }}
-                      </RouterLink>
-                    </Button>
+                    <RouterLink :to="item.route">
+                      {{ item.breadcrumb }}
+                    </RouterLink>
                   </BreadcrumbLink>
                 </BreadcrumbPage>
                 <BreadcrumbSeparator class="text-muted-foreground/50" />

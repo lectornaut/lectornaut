@@ -32,8 +32,8 @@ const iconDisplay = ref<"icon" | "text">("icon")
             class="flex grow items-center justify-start gap-2 transition-all"
             :class="{ 'pl-20': isTauri && !isFullscreen }"
           >
-            <SidebarTrigger v-if="isMobile" class="size-8" />
             <Logo class="size-8 shrink-0 p-2" />
+            <SidebarTrigger v-if="isMobile" class="size-8" />
             <Separator orientation="vertical" class="max-h-4 min-h-4" />
             <Notifications :icon-display="iconDisplay" />
           </div>

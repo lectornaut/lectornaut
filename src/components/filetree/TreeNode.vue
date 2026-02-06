@@ -1,24 +1,5 @@
 <script lang="ts" setup>
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-} from "@/components/ui/sidebar"
-import { Spinner } from "@/components/ui/spinner"
-import {
   IconFile,
   IconFilePlus,
   IconFolder,

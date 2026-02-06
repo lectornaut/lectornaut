@@ -5,6 +5,7 @@ import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
 import { storeToRefs } from "pinia"
+import { useRoute, useRouter } from "vue-router"
 
 definePage({
   meta: {
@@ -15,24 +16,37 @@ definePage({
   },
 })
 
-useHead({
-  title: "Code",
-})
-
 const workspaceStore = useWorkspaceStore()
 const fileTreeStore = useFileTreeStore()
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
 const { currentWorkspace } = storeToRefs(workspaceStore)
 const { currentUser, userProfile } = storeToRefs(authStore)
 
 const teamId = computed(() => currentWorkspace.value?.teamId ?? null)
 const workspaceId = computed(() => currentWorkspace.value?.id ?? null)
+const routeNodeId = computed(() => {
+  const raw = route.params.nodeId
+  return typeof raw === "string" && raw.length ? raw : null
+})
+const selectedNodeId = computed(() => {
+  if (!teamId.value || !workspaceId.value) return null
+  return fileTreeStore.getSelectedNodeId(teamId.value, workspaceId.value)
+})
+const isSyncingSelectionAndRoute = ref(false)
 
 const selectedNode = computed(() => {
   if (!teamId.value || !workspaceId.value) return null
   return fileTreeStore.getSelectedNode(teamId.value, workspaceId.value)
 })
+
+useHead(() => ({
+  title: selectedNode.value?.name
+    ? `${selectedNode.value.name} · Code`
+    : "Code",
+}))
 
 const selectedFile = computed(() => {
   if (!selectedNode.value) return null
@@ -56,6 +70,73 @@ const editorReadOnly = computed(() => {
   if (!selectedFile.value) return true
   return collabRole.value !== "editor"
 })
+
+watch(
+  [routeNodeId, teamId, workspaceId],
+  async ([nodeIdFromRoute, currentTeamId, currentWorkspaceId]) => {
+    if (
+      !currentTeamId ||
+      !currentWorkspaceId ||
+      isSyncingSelectionAndRoute.value
+    ) {
+      return
+    }
+
+    isSyncingSelectionAndRoute.value = true
+    try {
+      if (!nodeIdFromRoute) {
+        fileTreeStore.setSelectedNode(currentTeamId, currentWorkspaceId, null)
+        return
+      }
+
+      const node = await fileTreeStore.ensureNodeLoaded(
+        currentTeamId,
+        currentWorkspaceId,
+        nodeIdFromRoute
+      )
+
+      if (!node || node.isDeleted) {
+        fileTreeStore.setSelectedNode(currentTeamId, currentWorkspaceId, null)
+        await router.replace("/code")
+        return
+      }
+
+      fileTreeStore.setSelectedNode(
+        currentTeamId,
+        currentWorkspaceId,
+        nodeIdFromRoute
+      )
+    } finally {
+      isSyncingSelectionAndRoute.value = false
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  [selectedNodeId, teamId, workspaceId],
+  async ([nodeId, currentTeamId, currentWorkspaceId]) => {
+    if (
+      !currentTeamId ||
+      !currentWorkspaceId ||
+      isSyncingSelectionAndRoute.value
+    ) {
+      return
+    }
+
+    const targetPath = nodeId ? `/code/${nodeId}` : "/code"
+    if (route.path === targetPath) {
+      return
+    }
+
+    isSyncingSelectionAndRoute.value = true
+    try {
+      await router.replace(targetPath)
+    } finally {
+      isSyncingSelectionAndRoute.value = false
+    }
+  }
+)
 
 watch(
   [selectedFile, teamId, workspaceId, currentUser],
@@ -197,12 +278,12 @@ onBeforeUnmount(() => {
       class="bg-card flex items-center justify-between border-b p-2"
     >
       <div class="flex min-w-0 items-center gap-2">
+        <Badge v-if="collabRole" variant="secondary" class="uppercase">
+          {{ collabRole }}
+        </Badge>
         <span class="truncate text-sm font-medium">
           {{ selectedFile.name }}
         </span>
-        <Badge v-if="collabRole" variant="outline">
-          {{ collabRole }}
-        </Badge>
       </div>
       <div class="flex items-center gap-2">
         <Spinner v-if="!collabReady && !collabError" />

@@ -142,7 +142,6 @@ onMounted(() => {
           },
           ".cm-scroller": {
             fontFamily: "var(--font-mono)",
-            fontSize: "var(--size)",
           },
           ".cm-content": {
             caretColor: "var(--foreground)",
@@ -194,9 +193,9 @@ onMounted(() => {
           },
           ".cm-ySelectionInfo": {
             fontFamily: "var(--font-sans)",
-            fontSize: "var(--size)",
             fontWeight: "600",
-            borderRadius: "4px 4px 4px 0",
+            borderRadius: "2px 2px 2px 0",
+            padding: "2px 4px",
           },
         }),
       ],

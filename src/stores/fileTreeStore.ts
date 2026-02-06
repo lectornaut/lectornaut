@@ -282,6 +282,25 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     return getNode(teamId, workspaceId, selectedId)
   }
 
+  const ensureNodeLoaded = async (
+    teamId: string,
+    workspaceId: string,
+    nodeId: string
+  ): Promise<WorkspaceNode | null> => {
+    const cachedNode = getNode(teamId, workspaceId, nodeId)
+    if (cachedNode) {
+      return cachedNode
+    }
+
+    const fetchedNode = await fetchNode(teamId, workspaceId, nodeId)
+    if (!fetchedNode) {
+      return null
+    }
+
+    upsertNodes(teamId, workspaceId, [fetchedNode])
+    return fetchedNode
+  }
+
   const subscribeChildren = (
     teamId: string,
     workspaceId: string,
@@ -911,6 +930,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     getSelectedNodeId,
     getSelectedNode,
     setSelectedNode,
+    ensureNodeLoaded,
     ensureRootSubscribed,
     subscribeChildren,
     unsubscribeChildren,
