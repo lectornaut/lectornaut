@@ -19,11 +19,11 @@ import {
   deleteTeam as deleteTeamFn,
   updateTeam as updateTeamFn,
 } from "@/composables/useFunctions"
-import { storage } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { ITeam } from "@/types"
 import {
+  deleteTeamPhotoFile,
   getTeamRef,
   getUserRef,
   uploadTeamPhoto,
@@ -35,7 +35,6 @@ import {
 } from "@/utils/firebase-optimistic"
 import { Capabilities, roleCan } from "@/utils/permissions"
 import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
-import { deleteObject, ref as storageRef } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"
 
@@ -238,8 +237,7 @@ export const useTeamStore = defineStore("teams", () => {
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const timestamp = serverTimestamp()
 
-    // Photo upload will happen after team creation since we need the real team ID
-    // For now, we'll handle this in a follow-up update if photoFile is provided
+    // Photo upload happens after team creation since we need the real team ID.
     const photoURL: string | null = null
 
     const newTeam: ITeam = {
@@ -413,6 +411,11 @@ export const useTeamStore = defineStore("teams", () => {
           ...(name ? { name } : {}),
           ...(photoURL !== undefined ? { photoURL } : {}),
         })
+
+        // Cleanup photo object when profile picture is explicitly removed.
+        if (photoURL === null) {
+          await deleteTeamPhotoFile(teamId)
+        }
       }
     )
   }
@@ -456,17 +459,7 @@ export const useTeamStore = defineStore("teams", () => {
       async () => {
         // Delete storage files before calling cloud function
         // (cloud function may revoke permission before storage cleanup)
-        const storagePromises: Promise<void>[] = []
-
-        // Team Photo
-        storagePromises.push(
-          deleteObject(
-            storageRef(storage, `teams/${teamId}/profilePhoto`)
-          ).catch(() => {}) // Ignore if not exists
-        )
-
-        // Wait for storage cleanup
-        await Promise.all(storagePromises)
+        await deleteTeamPhotoFile(teamId)
 
         // Call cloud function to delete team, workspaces, and memberships
         await deleteTeamFn({ teamId })

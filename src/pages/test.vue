@@ -37,11 +37,7 @@ const handleInvite = async () => {
 
   try {
     if (!currentTeam.value) throw new Error("No current team")
-    await membershipStore.inviteMember(
-      currentTeam.value.id,
-      currentTeam.value,
-      inviteEmail.value
-    )
+    await membershipStore.inviteMember(currentTeam.value.id, inviteEmail.value)
     inviteSuccess.value = true
     inviteEmail.value = ""
   } catch (e: unknown) {

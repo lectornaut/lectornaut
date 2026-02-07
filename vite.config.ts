@@ -87,7 +87,8 @@ export default defineConfig({
         navigateFallback: "/index.html",
         runtimeCaching: [
           {
-            urlPattern: ({ request }) => request.mode === "navigate",
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.mode === "navigate",
             handler: "NetworkFirst",
             options: {
               cacheName: "html",
@@ -102,7 +103,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ request }) => request.destination === "document",
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.destination === "document",
             handler: "NetworkFirst",
             options: {
               cacheName: "documents",
@@ -117,7 +119,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ request }) => request.destination === "script",
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.destination === "script",
             handler: "NetworkFirst",
             options: {
               cacheName: "scripts",
@@ -131,7 +134,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ request }) => request.destination === "style",
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.destination === "style",
             handler: "CacheFirst",
             options: {
               cacheName: "styles",
@@ -145,7 +149,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ request }) => request.destination === "image",
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.destination === "image",
             handler: "CacheFirst",
             options: {
               cacheName: "images",
@@ -159,7 +164,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ request }) => request.destination === "font",
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.destination === "font",
             handler: "CacheFirst",
             options: {
               cacheName: "fonts",
@@ -173,7 +179,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ request }) => request.destination === "manifest",
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.destination === "manifest",
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "manifest",

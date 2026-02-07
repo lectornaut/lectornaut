@@ -20,12 +20,12 @@ import {
   deleteWorkspace as deleteWorkspaceFn,
   updateWorkspace as updateWorkspaceFn,
 } from "@/composables/useFunctions"
-import { storage } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IWorkspace } from "@/types"
 import {
   createTeamWorkspacesQuery,
+  deleteWorkspacePhotoFile,
   getUserRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase-helpers"
@@ -35,7 +35,6 @@ import {
   withOptimisticUpdate,
 } from "@/utils/firebase-optimistic"
 import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
-import { deleteObject, ref as storageRef } from "firebase/storage"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
 
@@ -217,7 +216,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   async function createWorkspace(
     name: string,
     description?: string,
-    _photoFile?: File
+    photoFile?: File
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
@@ -230,9 +229,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     // Generate a temporary ID for optimistic update - will be replaced by server
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const timestamp = serverTimestamp()
-
-    // Note: Photo upload is handled separately after workspace creation
-    // TODO: Handle photo upload after workspace is created
 
     const newWorkspace: IWorkspace = {
       id: tempId,
@@ -278,6 +274,28 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           })
 
           actualWorkspaceId = result.data.workspaceId
+
+          // Best-effort photo upload after workspace exists.
+          // Do not fail workspace creation if photo upload/update fails.
+          if (photoFile) {
+            try {
+              const photoURL = await uploadWorkspacePhoto(
+                teamId,
+                actualWorkspaceId,
+                photoFile
+              )
+              await updateWorkspaceFn({
+                teamId,
+                workspaceId: actualWorkspaceId,
+                photoURL,
+              })
+            } catch (error) {
+              console.error(
+                "[workspaceStore] Failed to attach workspace photo after create",
+                error
+              )
+            }
+          }
 
           // Update user's current workspace to the actual ID
           await updateDoc(getUserRef(currentUser.value!.uid), {
@@ -392,6 +410,11 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           ...(description !== undefined ? { description } : {}),
           ...(photoURL !== undefined ? { photoURL } : {}),
         })
+
+        // Cleanup photo object when profile picture is explicitly removed.
+        if (photoURL === null) {
+          await deleteWorkspacePhotoFile(teamId, workspaceId)
+        }
       }
     )
   }
@@ -442,12 +465,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       async () => {
         try {
           // Cleanup Storage (Profile Photo) - Run in parallel with Cloud Function
-          const photoPath = `teams/${teamId}/workspaces/${workspaceId}/profilePhoto`
-          const fileRef = storageRef(storage, photoPath)
-
           await Promise.allSettled([
             deleteWorkspaceFn({ teamId, workspaceId }),
-            deleteObject(fileRef),
+            deleteWorkspacePhotoFile(teamId, workspaceId),
           ])
         } finally {
           if (isCurrentWorkspace) {

@@ -28,9 +28,11 @@ import {
   type QueryDocumentSnapshot,
 } from "firebase/firestore"
 import {
+  deleteObject,
   getDownloadURL,
   ref as storageRef,
   uploadBytes,
+  type StorageReference,
 } from "firebase/storage"
 
 // ============================================================================
@@ -241,11 +243,39 @@ export async function updateTeamInAllMemberships(
 // ============================================================================
 
 /**
+ * Prefix a storage path under the shared profile images root.
+ */
+const withImagesRoot = (path: string) => `images/${path.replace(/^\/+/, "")}`
+
+/**
+ * Canonical storage path for user profile photos.
+ * Stored under /images/<current-path>.
+ */
+export const getUserPhotoPath = (userId: string) =>
+  withImagesRoot(`users/${userId}/profilePhoto`)
+
+/** Canonical storage path for team profile photos. */
+export const getTeamPhotoPath = (teamId: string) =>
+  withImagesRoot(`teams/${teamId}/profilePhoto`)
+
+/** Canonical storage path for workspace profile photos. */
+export const getWorkspacePhotoPath = (teamId: string, workspaceId: string) =>
+  withImagesRoot(`teams/${teamId}/workspaces/${workspaceId}/profilePhoto`)
+
+/** Create a typed storage reference for any storage path. */
+export const getStorageFileRef = (path: string): StorageReference =>
+  storageRef(storage, path)
+
+/** Create a storage reference for a user profile photo. */
+export const getUserPhotoStorageRef = (userId: string): StorageReference =>
+  getStorageFileRef(getUserPhotoPath(userId))
+
+/**
  * Upload a file and get its download URL
  * @returns Download URL of the uploaded file
  */
 export async function uploadFile(path: string, file: File): Promise<string> {
-  const fileRef = storageRef(storage, path)
+  const fileRef = getStorageFileRef(path)
   await uploadBytes(fileRef, file)
   return getDownloadURL(fileRef)
 }
@@ -257,7 +287,7 @@ export async function uploadUserPhoto(
   userId: string,
   file: File
 ): Promise<string> {
-  return uploadFile(`users/${userId}/profilePhoto`, file)
+  return uploadFile(getUserPhotoPath(userId), file)
 }
 
 /**
@@ -267,7 +297,7 @@ export async function uploadTeamPhoto(
   teamId: string,
   file: File
 ): Promise<string> {
-  return uploadFile(`teams/${teamId}/profilePhoto`, file)
+  return uploadFile(getTeamPhotoPath(teamId), file)
 }
 
 /**
@@ -278,11 +308,29 @@ export async function uploadWorkspacePhoto(
   workspaceId: string,
   file: File
 ): Promise<string> {
-  return uploadFile(
-    `teams/${teamId}/workspaces/${workspaceId}/profilePhoto`,
-    file
-  )
+  return uploadFile(getWorkspacePhotoPath(teamId, workspaceId), file)
 }
+
+/**
+ * Best-effort storage delete helper.
+ * No-op if the object is missing or cannot be deleted.
+ */
+export async function deleteStorageFile(path: string): Promise<void> {
+  try {
+    await deleteObject(getStorageFileRef(path))
+  } catch {
+    // Intentionally ignore cleanup failures.
+  }
+}
+
+export const deleteUserPhotoFile = (userId: string) =>
+  deleteStorageFile(getUserPhotoPath(userId))
+
+export const deleteTeamPhotoFile = (teamId: string) =>
+  deleteStorageFile(getTeamPhotoPath(teamId))
+
+export const deleteWorkspacePhotoFile = (teamId: string, workspaceId: string) =>
+  deleteStorageFile(getWorkspacePhotoPath(teamId, workspaceId))
 
 // ============================================================================
 // Query Helpers

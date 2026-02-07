@@ -15,15 +15,14 @@ import {
   assignRoleToUser as assignRoleToUserFn,
   removeMember as removeMemberFn,
   removeMembers as removeMembersFn,
+  sendInvitation as sendInvitationFn,
 } from "@/composables/useFunctions"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { useAuthStore } from "@/stores/authStore"
-import type { IMembership, IMembershipRole, ITeam, IUser } from "@/types"
+import type { IMembership, IMembershipRole, ITeam } from "@/types"
 import {
   getAllMembershipsGroup,
-  getMembershipRef,
   getTeamMembershipsCollection,
-  getUsersCollection,
 } from "@/utils/firebase-helpers"
 import {
   addPending,
@@ -34,11 +33,9 @@ import {
 } from "@/utils/firebase-optimistic"
 import { can, Capabilities, hasExactRole } from "@/utils/permissions"
 import {
-  getDoc,
   getDocs,
   query,
   serverTimestamp,
-  setDoc,
   where,
   type Timestamp,
 } from "firebase/firestore"
@@ -411,11 +408,10 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   /**
-   * Invite a member to the current team with optimistic update
+   * Invite a member to the current team.
    */
   async function inviteMember(
     teamId: string,
-    team: ITeam,
     email: string,
     role: IMembership["role"] = defaultTeamRole
   ): Promise<void> {
@@ -434,56 +430,11 @@ export const useMembershipStore = defineStore("memberships", () => {
       throw new Error("You do not have permission to invite members")
     }
 
-    // Find user by email and check membership in parallel
-    const usersQuery = query(getUsersCollection(), where("email", "==", email))
-    const querySnapshot = await getDocs(usersQuery)
-
-    if (querySnapshot.empty) {
-      throw new Error("User not found")
-    }
-
-    const userDoc = querySnapshot.docs[0]!
-    const userData = userDoc.data() as IUser
-    const userId = userDoc.id
-
-    // Check if already a member
-    const membershipRef = getMembershipRef(teamId, userId)
-    const membershipSnap = await getDoc(membershipRef)
-
-    if (membershipSnap.exists()) {
-      throw new Error("User is already a member")
-    }
-
-    const timestamp = serverTimestamp()
-    const newMembership: IMembership = {
-      userId,
+    await sendInvitationFn({
       teamId,
+      email,
       role,
-      user: userData,
-      team: cloneState(team),
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
-    }
-
-    const membershipKey = `${teamId}-${userId}`
-    const previousTeamMembers = cloneState(teamMembers.value)
-
-    await withOptimisticUpdate(
-      pendingMembershipIds,
-      membershipKey,
-      // Apply optimistic update
-      () => {
-        optimisticTeamMembers.value = [...teamMembers.value, newMembership]
-      },
-      // Rollback on error
-      () => {
-        optimisticTeamMembers.value = previousTeamMembers
-      },
-      // Firestore operation
-      async () => {
-        await setDoc(membershipRef, newMembership)
-      }
-    )
+    })
   }
 
   /**

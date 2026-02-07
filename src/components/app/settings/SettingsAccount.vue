@@ -21,7 +21,11 @@ import {
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership } from "@/types"
-import { createUserMembershipsQuery } from "@/utils/firebase-helpers"
+import {
+  createUserMembershipsQuery,
+  deleteUserPhotoFile,
+  getUserPhotoStorageRef,
+} from "@/utils/firebase-helpers"
 import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
@@ -38,12 +42,10 @@ import {
   type UserInfo,
 } from "firebase/auth"
 import { collection, deleteDoc, doc, getDocs } from "firebase/firestore"
-import { deleteObject, ref as storageRef } from "firebase/storage"
 import { toast } from "vue-sonner"
 import {
   useCurrentUser,
   useDocument,
-  useFirebaseStorage,
   useFirestore,
   useStorageFile,
 } from "vuefire"
@@ -324,8 +326,6 @@ const isDeleteAccountInputValid = computed(
   () => deleteAccountInput.value.trim().toLowerCase() === "delete my account"
 )
 
-const storage = useFirebaseStorage()
-
 const deleteAccount = async () => {
   if (!isDeleteAccountInputValid.value) {
     toast.error("Please type 'delete my account' to confirm.")
@@ -386,11 +386,7 @@ const deleteAccount = async () => {
     }
 
     // 4. Cleanup Storage (Profile Photos)
-    await Promise.allSettled([
-      deleteObject(
-        storageRef(storage, `users/${user.value!.uid}/profilePhoto`)
-      ),
-    ])
+    await Promise.allSettled([deleteUserPhotoFile(user.value!.uid)])
 
     // 5. Cleanup Firestore User Document
     if (userDocRef.value) {
@@ -442,9 +438,10 @@ const unlinkProvider = async (providerId: string) => {
     })
 }
 
-const profilePhotoFileRef = computed(() =>
-  storageRef(storage, `${user.value?.uid}/images/profilePhoto.jpg`)
-)
+const profilePhotoFileRef = computed(() => {
+  if (!user.value?.uid) return null
+  return getUserPhotoStorageRef(user.value.uid)
+})
 
 const { url, uploadProgress, uploadError, uploadTask, upload } =
   useStorageFile(profilePhotoFileRef)
@@ -499,9 +496,11 @@ const uploadPicture = async () => {
 watch(files, uploadPicture)
 
 const handleRemoveProfilePicture = async () => {
+  if (!user.value?.uid) return
+
   try {
-    // Explicitly pass null to remove the profile picture
     await authStore.updateUserProfile({ photoURL: null })
+    await deleteUserPhotoFile(user.value.uid)
     toast.success("Profile picture removed")
   } catch (error) {
     console.error("Error removing profile picture:", error)

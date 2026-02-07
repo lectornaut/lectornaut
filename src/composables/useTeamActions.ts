@@ -289,13 +289,7 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     loading.member.withLoading(`invite-${email}`, async () => {
       if (!currentTeam.value) return
       await withToast(
-        () =>
-          membershipStore.inviteMember(
-            currentTeam.value!.id,
-            currentTeam.value!,
-            email,
-            role
-          ),
+        () => membershipStore.inviteMember(currentTeam.value!.id, email, role),
         {
           success: "Member invited successfully",
           error: "Failed to invite member",

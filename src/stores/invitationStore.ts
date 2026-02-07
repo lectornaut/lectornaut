@@ -72,7 +72,9 @@ export interface IInvitation {
 
 export const useInvitationStore = defineStore("invitations", () => {
   const authStore = useAuthStore()
+  const membershipStore = useMembershipStore()
   const { currentUser, userProfile, currentTeamId } = storeToRefs(authStore)
+  const { memberships } = storeToRefs(membershipStore)
 
   // ============================================================================
   // Optimistic State
@@ -92,6 +94,20 @@ export const useInvitationStore = defineStore("invitations", () => {
   const teamInvitationsQuery = computed(() => {
     const teamId = currentTeamId.value
     if (!teamId) return null
+
+    const membership = memberships.value.find(
+      (m) => m.teamId === teamId && m.userId === currentUser.value?.uid
+    )
+    if (
+      !membership ||
+      !can(currentUser.value, Capabilities.INVITE_MEMBER, {
+        scope: "team",
+        teamRole: membership.role,
+      })
+    ) {
+      return null
+    }
+
     return query(
       collection(firestore, "invitations"),
       where("teamId", "==", teamId)
@@ -103,10 +119,11 @@ export const useInvitationStore = defineStore("invitations", () => {
 
   // 2. Invitations for the current user (Visible on Join Page / Dashboard)
   const userInvitationsQuery = computed(() => {
-    if (!currentUser.value?.email) return null
+    const email = currentUser.value?.email?.toLowerCase()
+    if (!email) return null
     return query(
       collection(firestore, "invitations"),
-      where("email", "==", currentUser.value.email)
+      where("email", "==", email)
     )
   })
 
@@ -219,6 +236,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     role: IMembershipRole
   }): Promise<void> {
     const { teamId, teamName, email, role } = payload
+    const normalizedEmail = email.trim().toLowerCase()
     const user = currentUser.value
     const profile = userProfile.value
 
@@ -226,7 +244,6 @@ export const useInvitationStore = defineStore("invitations", () => {
 
     // Use current user's role from membership store if available
     // Note: We can only check permissions if they are already a member of the team
-    const membershipStore = useMembershipStore()
     let membership = membershipStore.memberships.find(
       (m) => m.teamId === teamId
     )
@@ -252,7 +269,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     const q = query(
       collection(firestore, "invitations"),
       where("teamId", "==", teamId),
-      where("email", "==", email),
+      where("email", "==", normalizedEmail),
       where("status", "==", "pending")
     )
     const snapshot = await getDocs(q)
@@ -268,7 +285,7 @@ export const useInvitationStore = defineStore("invitations", () => {
       teamName,
       inviterName: profile.displayName || user.email || "Unknown",
       inviterEmail: user.email!,
-      email,
+      email: normalizedEmail,
       role,
       status: "pending",
       code,
@@ -290,7 +307,7 @@ export const useInvitationStore = defineStore("invitations", () => {
         optimisticInvitations.value = previousOptimistic
       },
       async () => {
-        await sendInvitationFn({ teamId, email, role })
+        await sendInvitationFn({ teamId, email: normalizedEmail, role })
       }
     )
   }
@@ -302,7 +319,6 @@ export const useInvitationStore = defineStore("invitations", () => {
   async function resendInvitation(invitation: IInvitation): Promise<void> {
     if (!invitation.id) return
 
-    const membershipStore = useMembershipStore()
     const membership = membershipStore.memberships.find(
       (m) => m.teamId === invitation.teamId
     )
@@ -357,7 +373,6 @@ export const useInvitationStore = defineStore("invitations", () => {
     // Fallback to firestore check handled by rules, but we want UI feedback
 
     if (invite) {
-      const membershipStore = useMembershipStore()
       const membership = membershipStore.memberships.find(
         (m) => m.teamId === invite.teamId
       )
@@ -398,7 +413,6 @@ export const useInvitationStore = defineStore("invitations", () => {
       (i) => i.id === invitationId
     )
     if (invite) {
-      const membershipStore = useMembershipStore()
       const membership = membershipStore.memberships.find(
         (m) => m.teamId === invite.teamId
       )
@@ -437,9 +451,13 @@ export const useInvitationStore = defineStore("invitations", () => {
   async function getInvitationByCode(
     code: string
   ): Promise<IInvitation | null> {
+    const userEmail = currentUser.value?.email?.toLowerCase()
+    if (!userEmail) return null
+
     const q = query(
       collection(firestore, "invitations"),
-      where("code", "==", code)
+      where("code", "==", code),
+      where("email", "==", userEmail)
     )
     const snapshot = await getDocs(q)
 

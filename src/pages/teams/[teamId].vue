@@ -4,7 +4,7 @@ import { IconSettings, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { ITeam } from "@/types"
+import type { IMembership, ITeam } from "@/types"
 import { useCurrentUser } from "vuefire"
 
 const route = useRoute()
@@ -35,11 +35,7 @@ const { canUpdateTeam } = useTeamActions()
 const team = ref<ITeam | null>(null)
 const isLoading = ref(true)
 const isMember = ref(false)
-
-// Get team members for this specific team
-const teamMembers = computed(() => {
-  return membershipStore.memberships.filter((m) => m.teamId === teamId.value)
-})
+const teamMembers = ref<IMembership[]>([])
 
 // Check if current user is a member of this team
 onMounted(async () => {
@@ -60,8 +56,8 @@ onMounted(async () => {
     isMember.value = true
     team.value = membership.team
 
-    // Load team members if not already loaded
-    await membershipStore.getMembersForTeam(teamId.value)
+    // Load all members for this specific team
+    teamMembers.value = await membershipStore.getMembersForTeam(teamId.value)
   } catch (error) {
     console.error("Failed to load team:", error)
     router.push("/teams")
