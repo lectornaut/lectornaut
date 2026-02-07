@@ -13,6 +13,7 @@ import {
   normalizeName,
   type NodeType,
   type WorkspaceNode,
+  type WorkspaceNodeScope,
 } from "@/types"
 import {
   collection,
@@ -50,8 +51,11 @@ export interface ChildrenResult {
   hasMore: boolean
 }
 
-const getNodesCollection = (teamId: string, workspaceId: string) =>
-  collection(firestore, "teams", teamId, "workspaces", workspaceId, "nodes")
+const getNodesCollection = (
+  scope: WorkspaceNodeScope,
+  teamId: string,
+  workspaceId: string
+) => collection(firestore, "teams", teamId, "workspaces", workspaceId, scope)
 
 const toNode = (docSnap: QueryDocumentSnapshot<DocumentData>): WorkspaceNode =>
   ({
@@ -60,12 +64,13 @@ const toNode = (docSnap: QueryDocumentSnapshot<DocumentData>): WorkspaceNode =>
   }) as WorkspaceNode
 
 const buildChildrenQuery = (
+  scope: WorkspaceNodeScope,
   teamId: string,
   workspaceId: string,
   parentId: string,
   options: ListChildrenOptions = {}
 ): Query => {
-  const nodesRef = getNodesCollection(teamId, workspaceId)
+  const nodesRef = getNodesCollection(scope, teamId, workspaceId)
   const clauses: QueryConstraint[] = [
     where("parentId", "==", parentId),
     orderBy("typeOrder"),
@@ -98,6 +103,7 @@ const assertValidName = (name: string) => {
 
 export function useNodes() {
   const listChildren = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
@@ -105,7 +111,7 @@ export function useNodes() {
   ): Promise<ChildrenResult> => {
     const limit = options.limit ?? DEFAULT_CHILDREN_PAGE_SIZE
     const snapshot = await getDocs(
-      buildChildrenQuery(teamId, workspaceId, parentId, {
+      buildChildrenQuery(scope, teamId, workspaceId, parentId, {
         ...options,
         limit,
       })
@@ -122,6 +128,7 @@ export function useNodes() {
   }
 
   const subscribeChildren = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
@@ -131,7 +138,7 @@ export function useNodes() {
     const limit = options.limit ?? DEFAULT_CHILDREN_PAGE_SIZE
 
     return onSnapshot(
-      buildChildrenQuery(teamId, workspaceId, parentId, {
+      buildChildrenQuery(scope, teamId, workspaceId, parentId, {
         ...options,
         limit,
       }),
@@ -152,12 +159,13 @@ export function useNodes() {
   }
 
   const getNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): Promise<WorkspaceNode | null> => {
     const nodeSnap = await getDoc(
-      doc(getNodesCollection(teamId, workspaceId), nodeId)
+      doc(getNodesCollection(scope, teamId, workspaceId), nodeId)
     )
 
     if (!nodeSnap.exists()) return null
@@ -169,6 +177,7 @@ export function useNodes() {
   }
 
   const createNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
@@ -177,6 +186,7 @@ export function useNodes() {
   ): Promise<string> => {
     const normalizedName = assertValidName(name)
     const { data } = await createWorkspaceNode({
+      scope,
       teamId,
       workspaceId,
       parentId,
@@ -188,21 +198,25 @@ export function useNodes() {
   }
 
   const createFolder = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
     name: string
   ): Promise<string> =>
-    createNode(teamId, workspaceId, parentId, name, "folder")
+    createNode(scope, teamId, workspaceId, parentId, name, "folder")
 
   const createFile = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
     name: string
-  ): Promise<string> => createNode(teamId, workspaceId, parentId, name, "file")
+  ): Promise<string> =>
+    createNode(scope, teamId, workspaceId, parentId, name, "file")
 
   const renameNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
@@ -210,6 +224,7 @@ export function useNodes() {
   ): Promise<void> => {
     const normalizedName = assertValidName(newName)
     await renameWorkspaceNode({
+      scope,
       teamId,
       workspaceId,
       nodeId,
@@ -218,6 +233,7 @@ export function useNodes() {
   }
 
   const moveNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
@@ -227,6 +243,7 @@ export function useNodes() {
       throw new Error("A node cannot be its own parent")
     }
     await moveWorkspaceNode({
+      scope,
       teamId,
       workspaceId,
       nodeId,
@@ -235,11 +252,13 @@ export function useNodes() {
   }
 
   const archiveNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): Promise<void> => {
     await archiveWorkspaceNode({
+      scope,
       teamId,
       workspaceId,
       nodeId,
@@ -247,11 +266,13 @@ export function useNodes() {
   }
 
   const unarchiveNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): Promise<void> => {
     await unarchiveWorkspaceNode({
+      scope,
       teamId,
       workspaceId,
       nodeId,
@@ -259,11 +280,13 @@ export function useNodes() {
   }
 
   const deleteNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): Promise<void> => {
     await deleteWorkspaceNode({
+      scope,
       teamId,
       workspaceId,
       nodeId,
@@ -271,12 +294,14 @@ export function useNodes() {
   }
 
   const updateFileContent = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
     content: string
   ): Promise<void> => {
     await updateWorkspaceNodeContent({
+      scope,
       teamId,
       workspaceId,
       nodeId,

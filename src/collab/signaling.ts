@@ -1,4 +1,5 @@
 import { firestore, functions } from "@/modules/firebase"
+import type { WorkspaceNodeScope } from "@/types"
 import {
   collection,
   onSnapshot,
@@ -16,12 +17,14 @@ export interface JoinCollabRoomRequest {
   contentId: string
   teamId: string
   workspaceId: string
+  scope: WorkspaceNodeScope
 }
 
 export interface JoinCollabRoomResponse {
   role: CollabRole
   teamId: string
   workspaceId: string
+  scope: WorkspaceNodeScope
   displayName: string
   userId: string
   joinToken: string

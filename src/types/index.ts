@@ -38,6 +38,7 @@ export const ROOT_PARENT_ID = "root"
 export const NODE_NAME_MAX_LENGTH = 128
 
 export type NodeType = "folder" | "file"
+export type WorkspaceNodeScope = "code" | "write"
 
 export interface NodeBase {
   readonly id: string

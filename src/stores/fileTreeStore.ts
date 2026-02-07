@@ -6,6 +6,7 @@ import {
   normalizeName,
   toNameLower,
   type WorkspaceNode,
+  type WorkspaceNodeScope,
 } from "@/types"
 import {
   cloneState,
@@ -25,11 +26,18 @@ interface PaginationState {
 
 const INCLUDE_ARCHIVED = true
 
-const workspaceKey = (teamId: string, workspaceId: string) =>
-  `${teamId}:${workspaceId}`
+const workspaceKey = (
+  scope: WorkspaceNodeScope,
+  teamId: string,
+  workspaceId: string
+) => `${scope}:${teamId}:${workspaceId}`
 
-const parentKey = (teamId: string, workspaceId: string, parentId: string) =>
-  `${workspaceKey(teamId, workspaceId)}:${parentId}`
+const parentKey = (
+  scope: WorkspaceNodeScope,
+  teamId: string,
+  workspaceId: string,
+  parentId: string
+) => `${workspaceKey(scope, teamId, workspaceId)}:${parentId}`
 
 export const useFileTreeStore = defineStore("fileTree", () => {
   const {
@@ -85,8 +93,13 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   const isProtectedNode = (nodeId: string) =>
     pendingNodeIds.value.has(nodeId) || optimisticCreatedIds.has(nodeId)
 
-  const sortChildIds = (teamId: string, workspaceId: string, ids: string[]) => {
-    const key = workspaceKey(teamId, workspaceId)
+  const sortChildIds = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string,
+    ids: string[]
+  ) => {
+    const key = workspaceKey(scope, teamId, workspaceId)
     const nodes = nodesByWorkspace[key] ?? {}
 
     return [...ids].sort((a, b) => {
@@ -106,22 +119,24 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const setChildren = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
     ids: string[]
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { children } = getWorkspaceBuckets(key)
     children[parentId] = ids
   }
 
   const upsertNodes = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodes: WorkspaceNode[]
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes: bucket } = getWorkspaceBuckets(key)
 
     nodes.forEach((node) => {
@@ -130,31 +145,38 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const updateNode = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
     updates: Partial<WorkspaceNode>
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes: bucket } = getWorkspaceBuckets(key)
     const current = bucket[nodeId]
     if (!current) return
     bucket[nodeId] = { ...current, ...updates }
   }
 
-  const removeNode = (teamId: string, workspaceId: string, nodeId: string) => {
-    const key = workspaceKey(teamId, workspaceId)
+  const removeNode = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string,
+    nodeId: string
+  ) => {
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes } = getWorkspaceBuckets(key)
     delete nodes[nodeId]
   }
 
   const replaceNodeId = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     tempId: string,
     actualId: string
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes, children } = getWorkspaceBuckets(key)
     const tempNode = nodes[tempId]
     if (!tempNode) return
@@ -178,12 +200,13 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const updatePagination = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
     next: Partial<PaginationState>
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { pagination } = getWorkspaceBuckets(key)
     const existing = pagination[parentId] ?? {
       lastDoc: null,
@@ -194,33 +217,40 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const getChildrenIds = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string
   ): string[] => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     return childrenByWorkspace[key]?.[parentId] ?? []
   }
 
   const getNode = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): WorkspaceNode | null => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     return nodesByWorkspace[key]?.[nodeId] ?? null
   }
 
-  const isExpanded = (teamId: string, workspaceId: string, nodeId: string) =>
-    expanded.has(parentKey(teamId, workspaceId, nodeId))
+  const isExpanded = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string,
+    nodeId: string
+  ) => expanded.has(parentKey(scope, teamId, workspaceId, nodeId))
 
   const setExpanded = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
     value: boolean
   ) => {
-    const key = parentKey(teamId, workspaceId, nodeId)
+    const key = parentKey(scope, teamId, workspaceId, nodeId)
     if (value) {
       expanded.add(key)
     } else {
@@ -229,18 +259,20 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const isParentLoading = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string
-  ) => loadingParents.has(parentKey(teamId, workspaceId, parentId))
+  ) => loadingParents.has(parentKey(scope, teamId, workspaceId, parentId))
 
   const setParentLoading = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
     value: boolean
   ) => {
-    const key = parentKey(teamId, workspaceId, parentId)
+    const key = parentKey(scope, teamId, workspaceId, parentId)
     if (value) {
       loadingParents.add(key)
     } else {
@@ -249,11 +281,12 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const getPagination = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string
   ): PaginationState => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     return (
       paginationByWorkspace[key]?.[parentId] ?? {
         lastDoc: null,
@@ -264,62 +297,74 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const setSelectedNode = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string | null
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     selectedByWorkspace[key] = nodeId
   }
 
-  const getSelectedNodeId = (teamId: string, workspaceId: string) => {
-    const key = workspaceKey(teamId, workspaceId)
+  const getSelectedNodeId = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string
+  ) => {
+    const key = workspaceKey(scope, teamId, workspaceId)
     return selectedByWorkspace[key] ?? null
   }
 
-  const getSelectedNode = (teamId: string, workspaceId: string) => {
-    const selectedId = getSelectedNodeId(teamId, workspaceId)
+  const getSelectedNode = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string
+  ) => {
+    const selectedId = getSelectedNodeId(scope, teamId, workspaceId)
     if (!selectedId) return null
-    return getNode(teamId, workspaceId, selectedId)
+    return getNode(scope, teamId, workspaceId, selectedId)
   }
 
   const ensureNodeLoaded = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ): Promise<WorkspaceNode | null> => {
-    const cachedNode = getNode(teamId, workspaceId, nodeId)
+    const cachedNode = getNode(scope, teamId, workspaceId, nodeId)
     if (cachedNode) {
       return cachedNode
     }
 
-    const fetchedNode = await fetchNode(teamId, workspaceId, nodeId)
+    const fetchedNode = await fetchNode(scope, teamId, workspaceId, nodeId)
     if (!fetchedNode) {
       return null
     }
 
-    upsertNodes(teamId, workspaceId, [fetchedNode])
+    upsertNodes(scope, teamId, workspaceId, [fetchedNode])
     return fetchedNode
   }
 
   const subscribeChildren = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { subs } = getWorkspaceBuckets(key)
 
     if (subs[parentId]) return
 
-    setParentLoading(teamId, workspaceId, parentId, true)
+    setParentLoading(scope, teamId, workspaceId, parentId, true)
 
     const unsubscribe = subscribeChildrenService(
+      scope,
       teamId,
       workspaceId,
       parentId,
       (result) => {
-        setParentLoading(teamId, workspaceId, parentId, false)
+        setParentLoading(scope, teamId, workspaceId, parentId, false)
         const { nodes: bucket } = getWorkspaceBuckets(key)
         const mergedNodes: WorkspaceNode[] = []
         let mergedChildIds: string[] = []
@@ -345,12 +390,17 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           mergedChildIds.push(local.id)
         })
 
-        upsertNodes(teamId, workspaceId, mergedNodes)
+        upsertNodes(scope, teamId, workspaceId, mergedNodes)
 
         if (mergedChildIds.some((id) => isProtectedNode(id))) {
-          mergedChildIds = sortChildIds(teamId, workspaceId, mergedChildIds)
+          mergedChildIds = sortChildIds(
+            scope,
+            teamId,
+            workspaceId,
+            mergedChildIds
+          )
         }
-        setChildren(teamId, workspaceId, parentId, mergedChildIds)
+        setChildren(scope, teamId, workspaceId, parentId, mergedChildIds)
 
         if (optimisticCreatedIds.size) {
           result.nodes.forEach((node) => {
@@ -360,7 +410,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           })
         }
 
-        updatePagination(teamId, workspaceId, parentId, {
+        updatePagination(scope, teamId, workspaceId, parentId, {
           lastDoc: result.lastDoc,
           hasMore: result.hasMore,
         })
@@ -373,8 +423,8 @@ export const useFileTreeStore = defineStore("fileTree", () => {
             "[fileTreeStore] Failed to subscribe to children:",
             error
           )
-          setParentLoading(teamId, workspaceId, parentId, false)
-          updatePagination(teamId, workspaceId, parentId, {
+          setParentLoading(scope, teamId, workspaceId, parentId, false)
+          updatePagination(scope, teamId, workspaceId, parentId, {
             hasMore: false,
           })
         },
@@ -385,11 +435,12 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const unsubscribeChildren = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string
   ) => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const subs = subscriptions[key]
     const existing = subs?.[parentId]
     if (existing && subs) {
@@ -399,39 +450,48 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const expandFolder = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ) => {
-    setExpanded(teamId, workspaceId, nodeId, true)
-    subscribeChildren(teamId, workspaceId, nodeId)
+    setExpanded(scope, teamId, workspaceId, nodeId, true)
+    subscribeChildren(scope, teamId, workspaceId, nodeId)
   }
 
   const collapseFolder = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ) => {
-    setExpanded(teamId, workspaceId, nodeId, false)
-    unsubscribeChildren(teamId, workspaceId, nodeId)
+    setExpanded(scope, teamId, workspaceId, nodeId, false)
+    unsubscribeChildren(scope, teamId, workspaceId, nodeId)
   }
 
-  const ensureRootSubscribed = (teamId: string, workspaceId: string) => {
-    subscribeChildren(teamId, workspaceId, ROOT_PARENT_ID)
+  const ensureRootSubscribed = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string
+  ) => {
+    subscribeChildren(scope, teamId, workspaceId, ROOT_PARENT_ID)
   }
 
   const loadMore = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string
   ) => {
-    const pagination = getPagination(teamId, workspaceId, parentId)
+    const pagination = getPagination(scope, teamId, workspaceId, parentId)
     if (!pagination.hasMore || pagination.loadingMore) return
 
-    updatePagination(teamId, workspaceId, parentId, { loadingMore: true })
+    updatePagination(scope, teamId, workspaceId, parentId, {
+      loadingMore: true,
+    })
 
     try {
-      const result = await listChildren(teamId, workspaceId, parentId, {
+      const result = await listChildren(scope, teamId, workspaceId, parentId, {
         includeArchived: INCLUDE_ARCHIVED,
         limit: DEFAULT_CHILDREN_PAGE_SIZE,
         startAfter: pagination.lastDoc ?? undefined,
@@ -439,14 +499,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
       const mergedNodes = result.nodes.map((node) => {
         if (isProtectedNode(node.id)) {
-          const local = getNode(teamId, workspaceId, node.id)
+          const local = getNode(scope, teamId, workspaceId, node.id)
           if (local) return local
         }
         return node
       })
 
-      upsertNodes(teamId, workspaceId, mergedNodes)
-      const current = getChildrenIds(teamId, workspaceId, parentId)
+      upsertNodes(scope, teamId, workspaceId, mergedNodes)
+      const current = getChildrenIds(scope, teamId, workspaceId, parentId)
       const merged = [...current]
 
       mergedNodes.forEach((node) => {
@@ -456,20 +516,26 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       })
 
       const sorted = merged.some((id) => isProtectedNode(id))
-        ? sortChildIds(teamId, workspaceId, merged)
+        ? sortChildIds(scope, teamId, workspaceId, merged)
         : merged
-      setChildren(teamId, workspaceId, parentId, sorted)
-      updatePagination(teamId, workspaceId, parentId, {
+      setChildren(scope, teamId, workspaceId, parentId, sorted)
+      updatePagination(scope, teamId, workspaceId, parentId, {
         lastDoc: result.lastDoc,
         hasMore: result.hasMore,
       })
     } finally {
-      updatePagination(teamId, workspaceId, parentId, { loadingMore: false })
+      updatePagination(scope, teamId, workspaceId, parentId, {
+        loadingMore: false,
+      })
     }
   }
 
-  const cleanupWorkspace = (teamId: string, workspaceId: string) => {
-    const key = workspaceKey(teamId, workspaceId)
+  const cleanupWorkspace = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string
+  ) => {
+    const key = workspaceKey(scope, teamId, workspaceId)
 
     Object.values(subscriptions[key] ?? {}).forEach((unsubscribe) => {
       unsubscribe()
@@ -493,6 +559,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const createFolderNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
@@ -518,7 +585,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       sortKey: nameLower,
     }
 
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes, children } = getWorkspaceBuckets(key)
     const hadParent = Object.prototype.hasOwnProperty.call(children, parentId)
     const previousChildren = cloneState(children[parentId] ?? [])
@@ -532,10 +599,10 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         if (!next.includes(tempId)) {
           next.push(tempId)
         }
-        children[parentId] = sortChildIds(teamId, workspaceId, next)
+        children[parentId] = sortChildIds(scope, teamId, workspaceId, next)
       },
       () => {
-        removeNode(teamId, workspaceId, tempId)
+        removeNode(scope, teamId, workspaceId, tempId)
         if (hadParent) {
           children[parentId] = previousChildren
         } else {
@@ -544,12 +611,13 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       },
       async () => {
         const actualId = await createFolder(
+          scope,
           teamId,
           workspaceId,
           parentId,
           normalizedName
         )
-        replaceNodeId(teamId, workspaceId, tempId, actualId)
+        replaceNodeId(scope, teamId, workspaceId, tempId, actualId)
         optimisticCreatedIds.add(actualId)
         return actualId
       }
@@ -559,6 +627,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const createFileNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     parentId: string,
@@ -585,7 +654,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       content: "",
     }
 
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes, children } = getWorkspaceBuckets(key)
     const hadParent = Object.prototype.hasOwnProperty.call(children, parentId)
     const previousChildren = cloneState(children[parentId] ?? [])
@@ -599,10 +668,10 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         if (!next.includes(tempId)) {
           next.push(tempId)
         }
-        children[parentId] = sortChildIds(teamId, workspaceId, next)
+        children[parentId] = sortChildIds(scope, teamId, workspaceId, next)
       },
       () => {
-        removeNode(teamId, workspaceId, tempId)
+        removeNode(scope, teamId, workspaceId, tempId)
         if (hadParent) {
           children[parentId] = previousChildren
         } else {
@@ -611,12 +680,13 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       },
       async () => {
         const actualId = await createFile(
+          scope,
           teamId,
           workspaceId,
           parentId,
           normalizedName
         )
-        replaceNodeId(teamId, workspaceId, tempId, actualId)
+        replaceNodeId(scope, teamId, workspaceId, tempId, actualId)
         optimisticCreatedIds.add(actualId)
         return actualId
       }
@@ -626,6 +696,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const renameNodeAction = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
@@ -633,14 +704,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   ) => {
     const normalizedName = assertValidName(name)
     const existing =
-      getNode(teamId, workspaceId, nodeId) ??
-      (await fetchNode(teamId, workspaceId, nodeId))
+      getNode(scope, teamId, workspaceId, nodeId) ??
+      (await fetchNode(scope, teamId, workspaceId, nodeId))
     if (!existing) {
       throw new Error("Node not found")
     }
 
     const nameLower = toNameLower(normalizedName)
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { children } = getWorkspaceBuckets(key)
     const parentId = existing.parentId
     const hadParent = Object.prototype.hasOwnProperty.call(children, parentId)
@@ -651,13 +722,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       pendingNodeIds,
       nodeId,
       () => {
-        updateNode(teamId, workspaceId, nodeId, {
+        updateNode(scope, teamId, workspaceId, nodeId, {
           name: normalizedName,
           nameLower,
           sortKey: nameLower,
         })
         if (hadParent) {
           children[parentId] = sortChildIds(
+            scope,
             teamId,
             workspaceId,
             children[parentId] ?? []
@@ -665,7 +737,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         }
       },
       () => {
-        upsertNodes(teamId, workspaceId, [previousNode])
+        upsertNodes(scope, teamId, workspaceId, [previousNode])
         if (hadParent) {
           children[parentId] = previousChildren
         } else {
@@ -673,19 +745,20 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         }
       },
       async () => {
-        await renameNode(teamId, workspaceId, nodeId, normalizedName)
+        await renameNode(scope, teamId, workspaceId, nodeId, normalizedName)
       }
     )
   }
 
   const archiveNodeAction = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ) => {
     const existing =
-      getNode(teamId, workspaceId, nodeId) ??
-      (await fetchNode(teamId, workspaceId, nodeId))
+      getNode(scope, teamId, workspaceId, nodeId) ??
+      (await fetchNode(scope, teamId, workspaceId, nodeId))
     if (!existing) {
       throw new Error("Node not found")
     }
@@ -697,29 +770,30 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       pendingNodeIds,
       nodeId,
       () => {
-        updateNode(teamId, workspaceId, nodeId, {
+        updateNode(scope, teamId, workspaceId, nodeId, {
           isArchived: true,
           archivedAt: now,
           archivedBy: "local",
         })
       },
       () => {
-        upsertNodes(teamId, workspaceId, [previousNode])
+        upsertNodes(scope, teamId, workspaceId, [previousNode])
       },
       async () => {
-        await archiveNodeService(teamId, workspaceId, nodeId)
+        await archiveNodeService(scope, teamId, workspaceId, nodeId)
       }
     )
   }
 
   const unarchiveNodeAction = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ) => {
     const existing =
-      getNode(teamId, workspaceId, nodeId) ??
-      (await fetchNode(teamId, workspaceId, nodeId))
+      getNode(scope, teamId, workspaceId, nodeId) ??
+      (await fetchNode(scope, teamId, workspaceId, nodeId))
     if (!existing) {
       throw new Error("Node not found")
     }
@@ -730,27 +804,28 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       pendingNodeIds,
       nodeId,
       () => {
-        updateNode(teamId, workspaceId, nodeId, {
+        updateNode(scope, teamId, workspaceId, nodeId, {
           isArchived: false,
           archivedAt: undefined,
           archivedBy: undefined,
         })
       },
       () => {
-        upsertNodes(teamId, workspaceId, [previousNode])
+        upsertNodes(scope, teamId, workspaceId, [previousNode])
       },
       async () => {
-        await unarchiveNodeService(teamId, workspaceId, nodeId)
+        await unarchiveNodeService(scope, teamId, workspaceId, nodeId)
       }
     )
   }
 
   const collectLoadedSubtreeIds = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     rootNodeId: string
   ): string[] => {
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const nodes = nodesByWorkspace[key] ?? {}
     if (!nodes[rootNodeId]) return []
 
@@ -781,13 +856,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const deleteNodeAction = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
   ) => {
     const existing =
-      getNode(teamId, workspaceId, nodeId) ??
-      (await fetchNode(teamId, workspaceId, nodeId))
+      getNode(scope, teamId, workspaceId, nodeId) ??
+      (await fetchNode(scope, teamId, workspaceId, nodeId))
     if (!existing) {
       throw new Error("Node not found")
     }
@@ -795,9 +871,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       throw new Error("Archive the node before deleting it permanently")
     }
 
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes, children } = getWorkspaceBuckets(key)
-    const idsToRemove = collectLoadedSubtreeIds(teamId, workspaceId, nodeId)
+    const idsToRemove = collectLoadedSubtreeIds(
+      scope,
+      teamId,
+      workspaceId,
+      nodeId
+    )
     const loadedIds = idsToRemove.length ? idsToRemove : [nodeId]
     const idsToRemoveSet = new Set(loadedIds)
     const previousNodes = loadedIds
@@ -839,20 +920,21 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         selectedByWorkspace[key] = previousSelectedId
       },
       async () => {
-        await deleteNodeService(teamId, workspaceId, nodeId)
+        await deleteNodeService(scope, teamId, workspaceId, nodeId)
       }
     )
   }
 
   const saveFileContent = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
     content: string
   ) => {
     const existing =
-      getNode(teamId, workspaceId, nodeId) ??
-      (await fetchNode(teamId, workspaceId, nodeId))
+      getNode(scope, teamId, workspaceId, nodeId) ??
+      (await fetchNode(scope, teamId, workspaceId, nodeId))
     if (!existing) {
       throw new Error("File not found")
     }
@@ -863,18 +945,19 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       pendingNodeIds,
       nodeId,
       () => {
-        updateNode(teamId, workspaceId, nodeId, { content })
+        updateNode(scope, teamId, workspaceId, nodeId, { content })
       },
       () => {
-        upsertNodes(teamId, workspaceId, [previousNode])
+        upsertNodes(scope, teamId, workspaceId, [previousNode])
       },
       async () => {
-        await updateFileContent(teamId, workspaceId, nodeId, content)
+        await updateFileContent(scope, teamId, workspaceId, nodeId, content)
       }
     )
   }
 
   const canMoveNode = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
@@ -891,16 +974,16 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       if (visited.has(cursorId)) break
       visited.add(cursorId)
 
-      const cached = getNode(teamId, workspaceId, cursorId)
+      const cached = getNode(scope, teamId, workspaceId, cursorId)
       if (cached) {
         cursorId = cached.parentId
         continue
       }
 
-      const fetched = await fetchNode(teamId, workspaceId, cursorId)
+      const fetched = await fetchNode(scope, teamId, workspaceId, cursorId)
       if (!fetched) break
 
-      upsertNodes(teamId, workspaceId, [fetched])
+      upsertNodes(scope, teamId, workspaceId, [fetched])
       cursorId = fetched.parentId
     }
 
@@ -908,18 +991,19 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const moveNodeAction = async (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string,
     newParentId: string
   ) => {
-    if (!(await canMoveNode(teamId, workspaceId, nodeId, newParentId))) {
+    if (!(await canMoveNode(scope, teamId, workspaceId, nodeId, newParentId))) {
       throw new Error("Cannot move a folder into itself or its descendants")
     }
 
     const existing =
-      getNode(teamId, workspaceId, nodeId) ??
-      (await fetchNode(teamId, workspaceId, nodeId))
+      getNode(scope, teamId, workspaceId, nodeId) ??
+      (await fetchNode(scope, teamId, workspaceId, nodeId))
     if (!existing) {
       throw new Error("Node not found")
     }
@@ -927,7 +1011,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const currentParentId = existing.parentId
     if (currentParentId === newParentId) return
 
-    const key = workspaceKey(teamId, workspaceId)
+    const key = workspaceKey(scope, teamId, workspaceId)
     const { children } = getWorkspaceBuckets(key)
     const hadOldParent = Object.prototype.hasOwnProperty.call(
       children,
@@ -945,7 +1029,9 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       pendingNodeIds,
       nodeId,
       () => {
-        updateNode(teamId, workspaceId, nodeId, { parentId: newParentId })
+        updateNode(scope, teamId, workspaceId, nodeId, {
+          parentId: newParentId,
+        })
         if (hadOldParent) {
           children[currentParentId] = (children[currentParentId] ?? []).filter(
             (id) => id !== nodeId
@@ -958,13 +1044,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           nextNewChildren.push(nodeId)
         }
         children[newParentId] = sortChildIds(
+          scope,
           teamId,
           workspaceId,
           nextNewChildren
         )
       },
       () => {
-        upsertNodes(teamId, workspaceId, [previousNode])
+        upsertNodes(scope, teamId, workspaceId, [previousNode])
         if (hadOldParent) {
           children[currentParentId] = previousOldChildren
         } else {
@@ -977,13 +1064,17 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         }
       },
       async () => {
-        await moveNodeService(teamId, workspaceId, nodeId, newParentId)
+        await moveNodeService(scope, teamId, workspaceId, nodeId, newParentId)
       }
     )
   }
 
-  const getFolderOptions = (teamId: string, workspaceId: string) => {
-    const key = workspaceKey(teamId, workspaceId)
+  const getFolderOptions = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string
+  ) => {
+    const key = workspaceKey(scope, teamId, workspaceId)
     const nodes = Object.values(nodesByWorkspace[key] ?? {})
 
     return nodes
@@ -997,6 +1088,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   }
 
   const getFolderPath = (
+    scope: WorkspaceNodeScope,
     teamId: string,
     workspaceId: string,
     nodeId: string
@@ -1008,7 +1100,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     while (currentId && currentId !== ROOT_PARENT_ID) {
       if (visited.has(currentId)) break
       visited.add(currentId)
-      const node = getNode(teamId, workspaceId, currentId)
+      const node = getNode(scope, teamId, workspaceId, currentId)
       if (!node) break
       parts.unshift(node.name)
       currentId = node.parentId

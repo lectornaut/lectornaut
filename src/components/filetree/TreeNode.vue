@@ -12,7 +12,7 @@ import {
   IconTrash2,
 } from "@/data/icons"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
-import type { WorkspaceNode } from "@/types"
+import type { WorkspaceNode, WorkspaceNodeScope } from "@/types"
 import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
 import { computed, ref } from "vue"
 
@@ -21,6 +21,7 @@ defineOptions({
 })
 
 const props = defineProps<{
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -38,35 +39,55 @@ const emit = defineEmits<{
 const store = useFileTreeStore()
 
 const node = computed(() =>
-  store.getNode(props.teamId, props.workspaceId, props.nodeId)
+  store.getNode(props.scope, props.teamId, props.workspaceId, props.nodeId)
 )
 
 const isFolder = computed(() => node.value?.type === "folder")
 
 const isExpanded = computed(() =>
   isFolder.value
-    ? store.isExpanded(props.teamId, props.workspaceId, props.nodeId)
+    ? store.isExpanded(
+        props.scope,
+        props.teamId,
+        props.workspaceId,
+        props.nodeId
+      )
     : false
 )
 
 const isLoading = computed(() =>
   isFolder.value
-    ? store.isParentLoading(props.teamId, props.workspaceId, props.nodeId)
+    ? store.isParentLoading(
+        props.scope,
+        props.teamId,
+        props.workspaceId,
+        props.nodeId
+      )
     : false
 )
 
 const childrenIds = computed(() =>
   isFolder.value
-    ? store.getChildrenIds(props.teamId, props.workspaceId, props.nodeId)
+    ? store.getChildrenIds(
+        props.scope,
+        props.teamId,
+        props.workspaceId,
+        props.nodeId
+      )
     : []
 )
 
 const pagination = computed(() =>
-  store.getPagination(props.teamId, props.workspaceId, props.nodeId)
+  store.getPagination(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    props.nodeId
+  )
 )
 
 const selectedId = computed(() =>
-  store.getSelectedNodeId(props.teamId, props.workspaceId)
+  store.getSelectedNodeId(props.scope, props.teamId, props.workspaceId)
 )
 
 const isDragOver = ref(false)
@@ -79,15 +100,30 @@ const isValidDropEvent = (event: DragEvent) => {
 const handleToggle = (open: boolean) => {
   if (!node.value || node.value.type !== "folder") return
   if (open) {
-    store.expandFolder(props.teamId, props.workspaceId, props.nodeId)
+    store.expandFolder(
+      props.scope,
+      props.teamId,
+      props.workspaceId,
+      props.nodeId
+    )
   } else {
-    store.collapseFolder(props.teamId, props.workspaceId, props.nodeId)
+    store.collapseFolder(
+      props.scope,
+      props.teamId,
+      props.workspaceId,
+      props.nodeId
+    )
   }
 }
 
 const handleSelect = () => {
   if (!node.value) return
-  store.setSelectedNode(props.teamId, props.workspaceId, node.value.id)
+  store.setSelectedNode(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    node.value.id
+  )
 }
 
 const handleDragStart = (event: DragEvent) => {
@@ -145,6 +181,7 @@ const handleDrop = async (event: DragEvent) => {
 
   try {
     await store.moveNodeAction(
+      props.scope,
       props.teamId,
       props.workspaceId,
       draggedId,
@@ -159,7 +196,12 @@ const handleDrop = async (event: DragEvent) => {
 }
 
 const loadMore = async () => {
-  await store.loadMore(props.teamId, props.workspaceId, props.nodeId)
+  await store.loadMore(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    props.nodeId
+  )
 }
 
 const showEmptyState = computed(
@@ -259,6 +301,7 @@ const showEmptyState = computed(
             <TreeNode
               v-for="childId in childrenIds"
               :key="childId"
+              :scope="props.scope"
               :team-id="props.teamId"
               :workspace-id="props.workspaceId"
               :node-id="childId"

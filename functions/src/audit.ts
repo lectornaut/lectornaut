@@ -15,6 +15,7 @@ import {
   LogEntry,
   LogEventParams,
   NodeType,
+  WorkspaceNodeScope,
 } from "./types.js"
 
 if (!admin.apps.length) {
@@ -231,6 +232,16 @@ function assertNodeType(value: unknown): NodeType {
   return value
 }
 
+function assertWorkspaceNodeScope(value: unknown): WorkspaceNodeScope {
+  if (value !== "code" && value !== "write") {
+    throw new HttpsError(
+      "invalid-argument",
+      "scope must be either code or write."
+    )
+  }
+  return value
+}
+
 function assertNodeName(value: unknown, field: string): string {
   const normalized = normalizeNodeName(assertString(value, field))
   if (!normalized.length || normalized.length > NODE_NAME_MAX_LENGTH) {
@@ -240,6 +251,14 @@ function assertNodeName(value: unknown, field: string): string {
     )
   }
   return normalized
+}
+
+function workspaceNodesCollectionPath(
+  teamId: string,
+  workspaceId: string,
+  scope: WorkspaceNodeScope
+): string {
+  return `teams/${teamId}/workspaces/${workspaceId}/${scope}`
 }
 
 const IN_QUERY_CHUNK_SIZE = 10
@@ -772,6 +791,7 @@ export const createWorkspaceNode = onCall(async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
   const parentIdRaw = request.data?.parentId
   const parentId =
     typeof parentIdRaw === "string" && parentIdRaw.trim()
@@ -806,7 +826,7 @@ export const createWorkspaceNode = onCall(async (request) => {
 
     if (parentId !== ROOT_PARENT_ID) {
       const parentRef = db.doc(
-        `teams/${teamId}/workspaces/${workspaceId}/nodes/${parentId}`
+        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
       )
       const parentSnap = await transaction.get(parentRef)
       if (!parentSnap.exists) {
@@ -825,7 +845,7 @@ export const createWorkspaceNode = onCall(async (request) => {
     }
 
     const nodeRef = db
-      .collection(`teams/${teamId}/workspaces/${workspaceId}/nodes`)
+      .collection(workspaceNodesCollectionPath(teamId, workspaceId, scope))
       .doc()
     const now = admin.firestore.FieldValue.serverTimestamp()
     const nameLower = toNameLower(name)
@@ -880,6 +900,7 @@ export const renameWorkspaceNode = onCall(async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
   const nodeId = assertString(request.data?.nodeId, "nodeId")
   const name = assertNodeName(request.data?.name, "name")
 
@@ -902,7 +923,7 @@ export const renameWorkspaceNode = onCall(async (request) => {
     }
 
     const nodeRef = db.doc(
-      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
     const nodeSnap = await transaction.get(nodeRef)
     if (!nodeSnap.exists) {
@@ -955,6 +976,7 @@ export const moveWorkspaceNode = onCall(async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
   const nodeId = assertString(request.data?.nodeId, "nodeId")
   const parentIdRaw = request.data?.parentId
   const parentId =
@@ -985,7 +1007,7 @@ export const moveWorkspaceNode = onCall(async (request) => {
     }
 
     const nodeRef = db.doc(
-      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
     const nodeSnap = await transaction.get(nodeRef)
     if (!nodeSnap.exists) {
@@ -1002,7 +1024,7 @@ export const moveWorkspaceNode = onCall(async (request) => {
 
     if (parentId !== ROOT_PARENT_ID) {
       const parentRef = db.doc(
-        `teams/${teamId}/workspaces/${workspaceId}/nodes/${parentId}`
+        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
       )
       const parentSnap = await transaction.get(parentRef)
       if (!parentSnap.exists) {
@@ -1054,6 +1076,7 @@ export const archiveWorkspaceNode = onCall(async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
   const nodeId = assertString(request.data?.nodeId, "nodeId")
 
   const actorId = request.auth.uid
@@ -1075,7 +1098,7 @@ export const archiveWorkspaceNode = onCall(async (request) => {
     }
 
     const nodeRef = db.doc(
-      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
     const nodeSnap = await transaction.get(nodeRef)
     if (!nodeSnap.exists) {
@@ -1123,6 +1146,7 @@ export const unarchiveWorkspaceNode = onCall(async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
   const nodeId = assertString(request.data?.nodeId, "nodeId")
 
   const actorId = request.auth.uid
@@ -1144,7 +1168,7 @@ export const unarchiveWorkspaceNode = onCall(async (request) => {
     }
 
     const nodeRef = db.doc(
-      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
     const nodeSnap = await transaction.get(nodeRef)
     if (!nodeSnap.exists) {
@@ -1192,6 +1216,7 @@ export const deleteWorkspaceNode = onCall(async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
   const nodeId = assertString(request.data?.nodeId, "nodeId")
 
   const actorId = request.auth.uid
@@ -1211,7 +1236,7 @@ export const deleteWorkspaceNode = onCall(async (request) => {
   }
 
   const nodesCollection = db.collection(
-    `teams/${teamId}/workspaces/${workspaceId}/nodes`
+    workspaceNodesCollectionPath(teamId, workspaceId, scope)
   )
   const nodeRef = nodesCollection.doc(nodeId)
   const nodeSnap = await nodeRef.get()
@@ -1287,6 +1312,7 @@ export const updateWorkspaceNodeContent = onCall(async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
   const nodeId = assertString(request.data?.nodeId, "nodeId")
   const contentRaw = request.data?.content
   const content = typeof contentRaw === "string" ? contentRaw : ""
@@ -1310,7 +1336,7 @@ export const updateWorkspaceNodeContent = onCall(async (request) => {
     }
 
     const nodeRef = db.doc(
-      `teams/${teamId}/workspaces/${workspaceId}/nodes/${nodeId}`
+      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
     const nodeSnap = await transaction.get(nodeRef)
     if (!nodeSnap.exists) {

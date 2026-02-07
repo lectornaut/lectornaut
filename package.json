@@ -60,6 +60,8 @@
     "@tiptap/extension-bubble-menu": "^3.19.0",
     "@tiptap/extension-code": "^3.19.0",
     "@tiptap/extension-code-block-lowlight": "^3.19.0",
+    "@tiptap/extension-collaboration": "^3.19.0",
+    "@tiptap/extension-collaboration-caret": "^3.19.0",
     "@tiptap/extension-details": "^3.19.0",
     "@tiptap/extension-document": "^3.19.0",
     "@tiptap/extension-drag-handle": "^3.19.0",

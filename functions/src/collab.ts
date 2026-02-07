@@ -7,7 +7,7 @@ import {
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { randomUUID } from "node:crypto"
 import { can } from "./permissions.js"
-import { Capabilities, IMembershipRole } from "./types.js"
+import { Capabilities, IMembershipRole, WorkspaceNodeScope } from "./types.js"
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -27,6 +27,7 @@ interface RoomContext {
   contentId: string
   teamId: string
   workspaceId: string
+  scope: WorkspaceNodeScope
   roomRef: admin.firestore.DocumentReference
 }
 
@@ -109,6 +110,17 @@ function assertSignalType(value: unknown): SignalType {
   return value
 }
 
+function assertWorkspaceNodeScope(value: unknown): WorkspaceNodeScope {
+  if (value !== "code" && value !== "write") {
+    throw new HttpsError(
+      "invalid-argument",
+      "scope must be either code or write."
+    )
+  }
+
+  return value
+}
+
 function mintJoinToken(): string {
   return `${Date.now().toString(36)}.${randomUUID().replace(/-/g, "")}`
 }
@@ -116,10 +128,11 @@ function mintJoinToken(): string {
 async function ensureContentExists(
   contentId: string,
   teamId: string,
-  workspaceId: string
+  workspaceId: string,
+  scope: WorkspaceNodeScope
 ): Promise<void> {
   const contentRef = db.doc(
-    `teams/${teamId}/workspaces/${workspaceId}/nodes/${contentId}`
+    `teams/${teamId}/workspaces/${workspaceId}/${scope}/${contentId}`
   )
 
   const contentSnap = await contentRef.get()
@@ -201,12 +214,14 @@ async function getRoomContext(contentId: string): Promise<RoomContext> {
     teamId?: unknown
     workspaceId?: unknown
     contentId?: unknown
+    scope?: unknown
   }
 
   if (
     typeof data.teamId !== "string" ||
     typeof data.workspaceId !== "string" ||
-    typeof data.contentId !== "string"
+    typeof data.contentId !== "string" ||
+    (data.scope !== "code" && data.scope !== "write")
   ) {
     throw new HttpsError(
       "failed-precondition",
@@ -219,6 +234,7 @@ async function getRoomContext(contentId: string): Promise<RoomContext> {
     contentId: data.contentId,
     teamId: data.teamId,
     workspaceId: data.workspaceId,
+    scope: data.scope,
   }
 }
 
@@ -323,8 +339,9 @@ export const joinCollabRoom = onCall(async (request) => {
   const contentId = assertString(request.data?.contentId, "contentId")
   const teamId = assertString(request.data?.teamId, "teamId")
   const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const scope = assertWorkspaceNodeScope(request.data?.scope)
 
-  await ensureContentExists(contentId, teamId, workspaceId)
+  await ensureContentExists(contentId, teamId, workspaceId, scope)
 
   const membershipRole = await resolveRole(
     request.auth.uid,
@@ -344,6 +361,7 @@ export const joinCollabRoom = onCall(async (request) => {
       contentId,
       teamId,
       workspaceId,
+      scope,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -353,6 +371,7 @@ export const joinCollabRoom = onCall(async (request) => {
     role,
     teamId,
     workspaceId,
+    scope,
     displayName,
     userId: request.auth.uid,
     joinToken,

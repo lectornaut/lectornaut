@@ -1,5 +1,5 @@
 import { auth, firestore } from "@/modules/firebase"
-import type { IMembershipRole } from "@/types"
+import type { IMembershipRole, WorkspaceNodeScope } from "@/types"
 import { Capabilities, roleCan } from "@/utils/permissions"
 import { doc, getDoc } from "firebase/firestore"
 
@@ -16,6 +16,7 @@ export interface ContentAccessInput {
   contentId: string
   teamId: string
   workspaceId: string
+  scope: WorkspaceNodeScope
   userId?: string
 }
 
@@ -40,7 +41,7 @@ async function resolveRole(
     input.teamId,
     "workspaces",
     input.workspaceId,
-    "nodes",
+    input.scope,
     input.contentId
   )
   const contentSnap = await getDoc(contentRef)

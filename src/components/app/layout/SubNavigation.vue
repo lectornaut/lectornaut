@@ -27,7 +27,9 @@ const selectedCodeNodeName = computed(() => {
   const workspaceId = currentWorkspace.value?.id
   if (!teamId || !workspaceId) return null
 
-  return fileTreeStore.getNode(teamId, workspaceId, nodeId)?.name ?? null
+  return (
+    fileTreeStore.getNode("code", teamId, workspaceId, nodeId)?.name ?? null
+  )
 })
 
 const displayBreadcrumbs = computed(() => {

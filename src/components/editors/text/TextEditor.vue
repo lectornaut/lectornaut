@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import content from "@/data/content.json"
 import {
   IconAlignCenter,
   IconAlignJustify,
@@ -51,11 +50,13 @@ import {
   IconX,
 } from "@/data/icons"
 import { accents, fonts, sizes } from "@/helpers/defaults"
-import type { JSONContent } from "@tiptap/core"
+import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
 import Blockquote from "@tiptap/extension-blockquote"
 import Bold from "@tiptap/extension-bold"
 import Code from "@tiptap/extension-code"
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
+import Collaboration from "@tiptap/extension-collaboration"
+import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import {
   Details,
   DetailsContent,
@@ -110,183 +111,385 @@ import { UndoRedo } from "@tiptap/extensions/undo-redo"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
 import { BubbleMenu, FloatingMenu } from "@tiptap/vue-3/menus"
 import { common, createLowlight } from "lowlight"
+import type { Awareness } from "y-protocols/awareness"
+import type { Doc as YDoc } from "yjs"
 
-const readOnly = ref(false)
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string
+    readOnly?: boolean
+    collaborationDoc?: YDoc | null
+    collaborationAwareness?: Awareness | null
+  }>(),
+  {
+    modelValue: "",
+    readOnly: false,
+    collaborationDoc: null,
+    collaborationAwareness: null,
+  }
+)
 
-const json = ref<JSONContent | null>(null)
+const emit = defineEmits<{
+  (e: "update:modelValue", value: string): void
+}>()
+
+const createEmptyDoc = (): JSONContent => ({
+  type: "doc",
+  content: [{ type: "paragraph" }],
+})
+
+const isJSONDoc = (value: unknown): value is JSONContent =>
+  typeof value === "object" &&
+  value !== null &&
+  (value as { type?: unknown }).type === "doc"
+
+const parseModelValue = (raw: string | undefined): JSONContent => {
+  const trimmed = raw?.trim() ?? ""
+  if (!trimmed.length) {
+    return createEmptyDoc()
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown
+    if (isJSONDoc(parsed)) {
+      return parsed
+    }
+  } catch {
+    // Fallback to plain-text content.
+  }
+
+  return {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: raw ?? "",
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const isEmptyDoc = (value: JSONContent | null | undefined): boolean => {
+  if (!value || value.type !== "doc") {
+    return false
+  }
+
+  const nodes = value.content ?? []
+  if (!nodes.length) {
+    return true
+  }
+
+  if (nodes.length > 1) {
+    return false
+  }
+
+  const [node] = nodes
+  if (!node || node.type !== "paragraph") {
+    return false
+  }
+
+  return !node.content?.length
+}
+
+const serializeModelValue = (value: JSONContent | null | undefined): string => {
+  if (!value || isEmptyDoc(value)) {
+    return ""
+  }
+
+  return JSON.stringify(value)
+}
+
+const isReadOnly = computed(() => props.readOnly)
+const json = ref<JSONContent>(parseModelValue(props.modelValue))
+
+const sharedLowlight = createLowlight(common)
+
+const getCollaborationUser = () => {
+  const localState = props.collaborationAwareness?.getLocalState() as {
+    user?: {
+      [key: string]: unknown
+      name?: unknown
+      color?: unknown
+    }
+  } | null
+  const currentUser = localState?.user ?? {}
+
+  const name =
+    typeof localState?.user?.name === "string" &&
+    localState.user.name.trim().length
+      ? localState.user.name.trim()
+      : "Anonymous"
+
+  const color =
+    typeof localState?.user?.color === "string" &&
+    localState.user.color.trim().length
+      ? localState.user.color
+      : "#3b82f6"
+
+  return {
+    ...currentUser,
+    name,
+    color,
+  }
+}
+
+const extensions = [
+  Document,
+  Paragraph,
+  Text,
+  Blockquote,
+  BulletList,
+  OrderedList,
+  TaskList,
+  ListItem,
+  TaskItem.configure({
+    nested: true,
+  }),
+  ListKeymap,
+  CodeBlockLowlight.configure({
+    lowlight: sharedLowlight,
+  }),
+  Details.configure({
+    persist: true,
+  }),
+  DetailsSummary,
+  DetailsContent,
+  Placeholder.configure({
+    includeChildren: true,
+    placeholder: ({ node }) => {
+      if (node.type.name === "detailsSummary") {
+        return "Summary"
+      }
+      return "Type '/' for commands"
+    },
+  }),
+  Selection,
+  TrailingNode,
+  Emoji.configure({
+    enableEmoticons: true,
+  }),
+  HardBreak,
+  Heading.configure({
+    levels: [1, 2, 3],
+  }),
+  TextAlign.configure({
+    types: ["heading", "paragraph"],
+  }),
+  HorizontalRule,
+  Image,
+  Dropcursor,
+  Gapcursor,
+  Bold,
+  Italic,
+  Underline,
+  Code,
+  Highlight.configure({ multicolor: true }),
+  Link.configure({
+    openOnClick: false,
+    defaultProtocol: "https",
+  }),
+  Strike,
+  Subscript,
+  Superscript,
+  TextStyle,
+  Color,
+  BackgroundColor,
+  Table.configure({
+    resizable: true,
+    allowTableNodeSelection: true,
+  }),
+  TableRow,
+  TableHeader,
+  TableCell,
+  CharacterCount,
+  Typography,
+  Focus,
+  FileHandler.configure({
+    allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+    onDrop: (currentEditor, files, pos) => {
+      files.forEach((file) => {
+        const fileReader = new FileReader()
+
+        fileReader.readAsDataURL(file)
+        fileReader.onload = () => {
+          currentEditor
+            .chain()
+            .insertContentAt(pos, {
+              type: "image",
+              attrs: {
+                src: fileReader.result,
+              },
+            })
+            .focus()
+            .run()
+        }
+      })
+    },
+    onPaste: (currentEditor, files) => {
+      files.forEach((file) => {
+        const fileReader = new FileReader()
+
+        fileReader.readAsDataURL(file)
+        fileReader.onload = () => {
+          currentEditor
+            .chain()
+            .insertContentAt(currentEditor?.state.selection.anchor, {
+              type: "image",
+              attrs: {
+                src: fileReader.result,
+              },
+            })
+            .focus()
+            .run()
+        }
+      })
+    },
+  }),
+  FontFamily,
+  FontSize,
+  LineHeight,
+  InvisibleCharacters.configure({
+    visible: false, // Hide invisible characters by default
+  }),
+  Mathematics.configure({
+    inlineOptions: {
+      // optional options for the inline math node
+    },
+    blockOptions: {
+      // optional options for the block math node
+    },
+    katexOptions: {
+      // optional options for the KaTeX renderer
+    },
+  }),
+  UniqueID.configure({
+    types: ["heading", "paragraph"],
+  }),
+]
+
+if (props.collaborationDoc) {
+  extensions.push(
+    Collaboration.configure({
+      document: props.collaborationDoc,
+      field: "tiptap",
+    })
+  )
+
+  if (props.collaborationAwareness) {
+    extensions.push(
+      CollaborationCaret.configure({
+        provider: {
+          awareness: props.collaborationAwareness,
+        },
+        user: getCollaborationUser(),
+      })
+    )
+  }
+} else {
+  extensions.push(UndoRedo)
+}
+
+const syncModelFromEditor = (currentEditor: TiptapEditor) => {
+  const nextJson = currentEditor.getJSON()
+  const serialized = serializeModelValue(nextJson)
+
+  json.value = nextJson
+  emit("update:modelValue", serialized)
+}
 
 const editor = useEditor({
-  editable: !readOnly.value,
-  content: content,
+  editable: !props.readOnly,
+  content: props.collaborationDoc
+    ? undefined
+    : parseModelValue(props.modelValue),
   editorProps: {
     attributes: {
       class:
         "focus:outline-none size-full pl-10 pr-2 py-8 prose prose-sm max-w-none prose-neutral dark:prose-invert",
     },
   },
-  extensions: [
-    Document,
-    Paragraph,
-    Text,
-    Blockquote,
-    BulletList,
-    OrderedList,
-    TaskList,
-    ListItem,
-    TaskItem.configure({
-      nested: true,
-    }),
-    ListKeymap,
-    CodeBlockLowlight.configure({
-      lowlight: createLowlight(common),
-    }),
-    Details.configure({
-      persist: true,
-    }),
-    DetailsSummary,
-    DetailsContent,
-    Placeholder.configure({
-      includeChildren: true,
-      placeholder: ({ node }) => {
-        if (node.type.name === "detailsSummary") {
-          return "Summary"
-        }
-        return "Type '/' for commands"
-      },
-    }),
-    Selection,
-    TrailingNode,
-    Emoji.configure({
-      enableEmoticons: true,
-    }),
-    HardBreak,
-    Heading.configure({
-      levels: [1, 2, 3],
-    }),
-    TextAlign.configure({
-      types: ["heading", "paragraph"],
-    }),
-    HorizontalRule,
-    Image,
-    Dropcursor,
-    Gapcursor,
-    Bold,
-    Italic,
-    Underline,
-    Code,
-    Highlight.configure({ multicolor: true }),
-    Link.configure({
-      openOnClick: false,
-      defaultProtocol: "https",
-    }),
-    Strike,
-    Subscript,
-    Superscript,
-    TextStyle,
-    Color,
-    BackgroundColor,
-    Table.configure({
-      resizable: true,
-      allowTableNodeSelection: true,
-    }),
-    TableRow,
-    TableHeader,
-    TableCell,
-    CharacterCount,
-    Typography,
-    UndoRedo,
-    Focus,
-    FileHandler.configure({
-      allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
-      onDrop: (currentEditor, files, pos) => {
-        files.forEach((file) => {
-          const fileReader = new FileReader()
-
-          fileReader.readAsDataURL(file)
-          fileReader.onload = () => {
-            currentEditor
-              .chain()
-              .insertContentAt(pos, {
-                type: "image",
-                attrs: {
-                  src: fileReader.result,
-                },
-              })
-              .focus()
-              .run()
-          }
-        })
-      },
-      onPaste: (currentEditor, files) => {
-        files.forEach((file) => {
-          const fileReader = new FileReader()
-
-          fileReader.readAsDataURL(file)
-          fileReader.onload = () => {
-            currentEditor
-              .chain()
-              .insertContentAt(currentEditor?.state.selection.anchor, {
-                type: "image",
-                attrs: {
-                  src: fileReader.result,
-                },
-              })
-              .focus()
-              .run()
-          }
-        })
-      },
-    }),
-    FontFamily,
-    FontSize,
-    LineHeight,
-    InvisibleCharacters.configure({
-      visible: false, // Hide invisible characters by default
-    }),
-    Mathematics.configure({
-      inlineOptions: {
-        // optional options for the inline math node
-      },
-      blockOptions: {
-        // optional options for the block math node
-      },
-      katexOptions: {
-        // optional options for the KaTeX renderer
-      },
-    }),
-    UniqueID.configure({
-      types: ["heading", "paragraph"],
-    }),
-  ],
+  extensions,
   onCreate: ({ editor: currentEditor }) => {
     migrateMathStrings(currentEditor)
-    json.value = currentEditor.getJSON()
+
+    if (
+      props.collaborationDoc &&
+      currentEditor.isEmpty &&
+      (props.modelValue ?? "").trim().length
+    ) {
+      currentEditor.commands.setContent(parseModelValue(props.modelValue), {
+        emitUpdate: true,
+      })
+      migrateMathStrings(currentEditor)
+    }
+
+    syncModelFromEditor(currentEditor)
   },
   onUpdate: ({ editor: currentEditor }) => {
-    json.value = currentEditor.getJSON()
+    syncModelFromEditor(currentEditor)
   },
 })
 
-watch(readOnly, (newValue) => {
-  editor.value?.setEditable(!newValue)
-})
+watch(
+  () => props.modelValue,
+  (value) => {
+    const currentEditor = editor.value
+    if (!currentEditor) {
+      return
+    }
+
+    const nextJson = parseModelValue(value)
+    const nextSerialized = serializeModelValue(nextJson)
+    const currentSerialized = serializeModelValue(currentEditor.getJSON())
+    if (nextSerialized === currentSerialized) {
+      return
+    }
+
+    currentEditor.commands.setContent(nextJson, {
+      emitUpdate: false,
+    })
+    json.value = currentEditor.getJSON()
+  }
+)
+
+watch(
+  () => props.readOnly,
+  (newValue) => {
+    editor.value?.setEditable(!newValue)
+  }
+)
 
 onBeforeUnmount(() => {
   editor.value?.destroy()
 })
 
-const source = ref(JSON.stringify(json.value, null, 2))
-
-watch(json, (newValue) => {
-  source.value = JSON.stringify(newValue, null, 2)
-})
-
+const source = computed(() => JSON.stringify(json.value, null, 2))
 const { copy, copied } = useClipboard({ source, legacy: true })
 </script>
 
 <template>
   <EditorContent :editor="editor" />
-  <BubbleMenu v-if="editor" :editor="editor">
+  <div
+    class="text-muted-foreground sticky bottom-0 mt-auto flex items-center justify-between gap-2 p-2 text-xs"
+  >
+    {{ editor?.storage.characterCount.characters() }} characters /
+    {{ editor?.storage.characterCount.words() }} words /
+    {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
+    read
+    <Badge v-if="isReadOnly" variant="secondary" class="uppercase">
+      Read-only
+    </Badge>
+    <Button variant="outline" size="icon-sm" @click="copy(source)">
+      <IconCopy v-if="!copied" />
+      <IconCheck v-else />
+    </Button>
+  </div>
+  <BubbleMenu v-if="editor && !isReadOnly" :editor="editor">
     <div class="bg-card flex gap-1 rounded-lg border p-1 shadow-lg">
       <TooltipProvider>
         <ButtonGroup>
@@ -1074,7 +1277,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
     </div>
   </BubbleMenu>
   <FloatingMenu
-    v-if="editor"
+    v-if="editor && !isReadOnly"
     :editor="editor"
     :tippy-options="{ duration: 100 }"
   >
@@ -1131,27 +1334,11 @@ const { copy, copied } = useClipboard({ source, legacy: true })
       </Button>
     </div>
   </FloatingMenu>
-  <DragHandle v-if="editor" :editor="editor">
+  <DragHandle v-if="editor && !isReadOnly" :editor="editor">
     <Button variant="outline" size="icon-sm" class="mr-2 size-6">
       <IconGripVertical />
     </Button>
   </DragHandle>
-  <Teleport defer to="#cta-dock">
-    <div class="text-muted-foreground flex items-center gap-2 text-xs">
-      {{ editor?.storage.characterCount.characters() }} characters /
-      {{ editor?.storage.characterCount.words() }} words /
-      {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
-      read
-      <div class="flex items-center gap-2">
-        <Checkbox id="readOnly" v-model="readOnly" />
-        <Label for="readOnly" class="text-xs">Read-only</Label>
-      </div>
-      <Button variant="outline" size="icon-sm" @click="copy(source)">
-        <IconCopy v-if="!copied" />
-        <IconCheck v-else />
-      </Button>
-    </div>
-  </Teleport>
 </template>
 
 <style lang="scss">
@@ -1260,6 +1447,33 @@ const { copy, copied } = useClipboard({ source, legacy: true })
   &[contenteditable="false"] {
     color: #999;
     opacity: 0.6;
+  }
+
+  /* Give a remote user a caret */
+  .collaboration-carets__caret {
+    border-left: 1px solid #0d0d0d;
+    border-right: 1px solid #0d0d0d;
+    margin-left: -1px;
+    margin-right: -1px;
+    pointer-events: none;
+    position: relative;
+    word-break: normal;
+  }
+
+  /* Render the username above the caret */
+  .collaboration-carets__label {
+    border-radius: 2px 2px 2px 0;
+    color: #fff;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 600;
+    left: -1px;
+    line-height: normal;
+    padding: 2px 4px;
+    position: absolute;
+    top: -1.4em;
+    user-select: none;
+    white-space: nowrap;
   }
 }
 </style>

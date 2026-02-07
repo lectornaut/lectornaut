@@ -6,7 +6,7 @@
  */
 
 import { functions } from "@/modules/firebase"
-import type { IMembershipRole } from "@/types"
+import type { IMembershipRole, WorkspaceNodeScope } from "@/types"
 import { httpsCallable, type HttpsCallableResult } from "firebase/functions"
 
 // =============================================================================
@@ -90,6 +90,7 @@ export interface DeleteWorkspaceResponse {
 // =============================================================================
 
 export interface CreateWorkspaceNodeRequest {
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   parentId: string
@@ -103,6 +104,7 @@ export interface CreateWorkspaceNodeResponse {
 }
 
 export interface RenameWorkspaceNodeRequest {
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -116,6 +118,7 @@ export interface RenameWorkspaceNodeResponse {
 }
 
 export interface MoveWorkspaceNodeRequest {
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -129,6 +132,7 @@ export interface MoveWorkspaceNodeResponse {
 }
 
 export interface ArchiveWorkspaceNodeRequest {
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -141,6 +145,7 @@ export interface ArchiveWorkspaceNodeResponse {
 }
 
 export interface UnarchiveWorkspaceNodeRequest {
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -153,6 +158,7 @@ export interface UnarchiveWorkspaceNodeResponse {
 }
 
 export interface DeleteWorkspaceNodeRequest {
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -166,6 +172,7 @@ export interface DeleteWorkspaceNodeResponse {
 }
 
 export interface UpdateWorkspaceNodeContentRequest {
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string

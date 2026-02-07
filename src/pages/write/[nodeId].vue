@@ -1,18 +1,18 @@
 <script lang="ts" setup>
 import { useNodeBreadcrumb } from "@/composables/useNodeBreadcrumb"
 
-const breadcrumb = useNodeBreadcrumb("Code", "code")
+const breadcrumb = useNodeBreadcrumb("Write", "write")
 
 definePage({
   meta: {
     requiresUser: true,
     layout: "app",
-    sidebar: "Code",
+    sidebar: "Write",
     breadcrumb,
   },
 })
 </script>
 
 <template>
-  <Code />
+  <Write />
 </template>

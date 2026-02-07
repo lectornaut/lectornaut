@@ -1,7 +1,11 @@
 <script lang="ts" setup>
 import { IconChevronRight, IconFilePlus, IconFolderPlus } from "@/data/icons"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
-import { ROOT_PARENT_ID, type WorkspaceNode } from "@/types"
+import {
+  ROOT_PARENT_ID,
+  type WorkspaceNode,
+  type WorkspaceNodeScope,
+} from "@/types"
 import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue"
 import TreeNode from "./TreeNode.vue"
@@ -9,20 +13,36 @@ import TreeNode from "./TreeNode.vue"
 const props = defineProps<{
   teamId: string
   workspaceId: string
+  scope: WorkspaceNodeScope
 }>()
 
 const store = useFileTreeStore()
 
 const rootChildren = computed(() =>
-  store.getChildrenIds(props.teamId, props.workspaceId, ROOT_PARENT_ID)
+  store.getChildrenIds(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    ROOT_PARENT_ID
+  )
 )
 
 const rootLoading = computed(() =>
-  store.isParentLoading(props.teamId, props.workspaceId, ROOT_PARENT_ID)
+  store.isParentLoading(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    ROOT_PARENT_ID
+  )
 )
 
 const rootPagination = computed(() =>
-  store.getPagination(props.teamId, props.workspaceId, ROOT_PARENT_ID)
+  store.getPagination(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    ROOT_PARENT_ID
+  )
 )
 
 const dialogs = reactive({
@@ -93,7 +113,12 @@ watch(
 
 const handleUnarchive = async (node: WorkspaceNode) => {
   try {
-    await store.unarchiveNodeAction(props.teamId, props.workspaceId, node.id)
+    await store.unarchiveNodeAction(
+      props.scope,
+      props.teamId,
+      props.workspaceId,
+      node.id
+    )
     showSuccessToast("Unarchived")
   } catch (error) {
     showErrorToast("Failed to unarchive", (error as Error).message)
@@ -102,10 +127,15 @@ const handleUnarchive = async (node: WorkspaceNode) => {
 
 const handleCreated = (nodeId: string) => {
   if (dialogs.create.type === "file") {
-    store.setSelectedNode(props.teamId, props.workspaceId, nodeId)
+    store.setSelectedNode(props.scope, props.teamId, props.workspaceId, nodeId)
   }
   if (dialogs.create.parentId !== ROOT_PARENT_ID) {
-    store.expandFolder(props.teamId, props.workspaceId, dialogs.create.parentId)
+    store.expandFolder(
+      props.scope,
+      props.teamId,
+      props.workspaceId,
+      dialogs.create.parentId
+    )
   }
 }
 
@@ -117,12 +147,14 @@ const handleCreateSubmit = async () => {
     const nodeId =
       dialogs.create.type === "folder"
         ? await store.createFolderNode(
+            props.scope,
             props.teamId,
             props.workspaceId,
             dialogs.create.parentId,
             createName.value
           )
         : await store.createFileNode(
+            props.scope,
             props.teamId,
             props.workspaceId,
             dialogs.create.parentId,
@@ -148,6 +180,7 @@ const handleRenameSubmit = async () => {
   isRenaming.value = true
   try {
     await store.renameNodeAction(
+      props.scope,
       props.teamId,
       props.workspaceId,
       dialogs.rename.node.id,
@@ -203,6 +236,7 @@ const handleRootDrop = async (event: DragEvent) => {
 
   try {
     await store.moveNodeAction(
+      props.scope,
       props.teamId,
       props.workspaceId,
       draggedId,
@@ -220,6 +254,7 @@ const handleArchiveConfirm = async () => {
   isArchiving.value = true
   try {
     await store.archiveNodeAction(
+      props.scope,
       props.teamId,
       props.workspaceId,
       dialogs.archive.node.id
@@ -239,6 +274,7 @@ const handleDeleteConfirm = async () => {
   isDeleting.value = true
   try {
     await store.deleteNodeAction(
+      props.scope,
       props.teamId,
       props.workspaceId,
       dialogs.delete.node.id
@@ -253,7 +289,12 @@ const handleDeleteConfirm = async () => {
 }
 
 const loadMoreRoot = async () => {
-  await store.loadMore(props.teamId, props.workspaceId, ROOT_PARENT_ID)
+  await store.loadMore(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    ROOT_PARENT_ID
+  )
 }
 
 watch(
@@ -261,17 +302,17 @@ watch(
   ([teamId, workspaceId], previous) => {
     const [prevTeamId, prevWorkspaceId] = previous ?? []
     if (prevTeamId && prevWorkspaceId) {
-      store.cleanupWorkspace(prevTeamId, prevWorkspaceId)
+      store.cleanupWorkspace(props.scope, prevTeamId, prevWorkspaceId)
     }
     if (teamId && workspaceId) {
-      store.ensureRootSubscribed(teamId, workspaceId)
+      store.ensureRootSubscribed(props.scope, teamId, workspaceId)
     }
   },
   { immediate: true }
 )
 
 onBeforeUnmount(() => {
-  store.cleanupWorkspace(props.teamId, props.workspaceId)
+  store.cleanupWorkspace(props.scope, props.teamId, props.workspaceId)
 })
 </script>
 
@@ -331,6 +372,7 @@ onBeforeUnmount(() => {
             <TreeNode
               v-for="childId in rootChildren"
               :key="childId"
+              :scope="props.scope"
               :team-id="props.teamId"
               :workspace-id="props.workspaceId"
               :node-id="childId"

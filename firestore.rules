@@ -32,6 +32,10 @@ service cloud.firestore {
         && teamRole(teamId) in ["owner", "admin", "member"];
     }
 
+    function isWorkspaceNodeScope(scope) {
+      return scope in ["code", "write"];
+    }
+
     function roomPath(contentId) {
       return /databases/$(database)/documents/content_signaling/$(contentId);
     }
@@ -189,8 +193,8 @@ service cloud.firestore {
         allow read: if isTeamMember(teamId);
         allow write: if false;
 
-        match /nodes/{nodeId} {
-          allow read: if isTeamMember(teamId);
+        match /{scope}/{nodeId} {
+          allow read: if isWorkspaceNodeScope(scope) && isTeamMember(teamId);
           allow write: if false;
         }
 

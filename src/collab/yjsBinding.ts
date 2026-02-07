@@ -14,6 +14,7 @@ import {
 } from "@/collab/signaling"
 import { createSnapshotManager, loadSnapshot } from "@/collab/snapshots"
 import { WebRtcMesh } from "@/collab/webrtcMesh"
+import type { WorkspaceNodeScope } from "@/types"
 import type { Extension } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { yCollab } from "y-codemirror.next"
@@ -35,6 +36,7 @@ export interface CreateYjsCollabOptions {
   contentId: string
   teamId: string
   workspaceId: string
+  scope: WorkspaceNodeScope
   initialContent?: string
   user: CollabUser
 }
@@ -43,6 +45,7 @@ export interface YjsCollabSession {
   role: CollabRole
   peerId: string
   awareness: Awareness
+  ydoc: Y.Doc
   getExtensions: () => Extension[]
   getText: () => string
   destroy: () => Promise<void>
@@ -57,6 +60,7 @@ export async function createYjsCollab(
     contentId: options.contentId,
     teamId: options.teamId,
     workspaceId: options.workspaceId,
+    scope: options.scope,
   })
 
   const ydoc = new Y.Doc()
@@ -313,6 +317,7 @@ export async function createYjsCollab(
     role: join.role,
     peerId,
     awareness,
+    ydoc,
     getExtensions: () => extensions,
     getText: () => ytext.toString(),
     destroy,

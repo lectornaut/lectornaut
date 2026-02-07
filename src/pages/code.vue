@@ -24,6 +24,7 @@ const router = useRouter()
 
 const { currentWorkspace } = storeToRefs(workspaceStore)
 const { currentUser, userProfile } = storeToRefs(authStore)
+const nodeScope = "code" as const
 
 const teamId = computed(() => currentWorkspace.value?.teamId ?? null)
 const workspaceId = computed(() => currentWorkspace.value?.id ?? null)
@@ -33,13 +34,21 @@ const routeNodeId = computed(() => {
 })
 const selectedNodeId = computed(() => {
   if (!teamId.value || !workspaceId.value) return null
-  return fileTreeStore.getSelectedNodeId(teamId.value, workspaceId.value)
+  return fileTreeStore.getSelectedNodeId(
+    nodeScope,
+    teamId.value,
+    workspaceId.value
+  )
 })
 const isSyncingSelectionAndRoute = ref(false)
 
 const selectedNode = computed(() => {
   if (!teamId.value || !workspaceId.value) return null
-  return fileTreeStore.getSelectedNode(teamId.value, workspaceId.value)
+  return fileTreeStore.getSelectedNode(
+    nodeScope,
+    teamId.value,
+    workspaceId.value
+  )
 })
 
 useHead(() => ({
@@ -85,23 +94,35 @@ watch(
     isSyncingSelectionAndRoute.value = true
     try {
       if (!nodeIdFromRoute) {
-        fileTreeStore.setSelectedNode(currentTeamId, currentWorkspaceId, null)
+        fileTreeStore.setSelectedNode(
+          nodeScope,
+          currentTeamId,
+          currentWorkspaceId,
+          null
+        )
         return
       }
 
       const node = await fileTreeStore.ensureNodeLoaded(
+        nodeScope,
         currentTeamId,
         currentWorkspaceId,
         nodeIdFromRoute
       )
 
       if (!node || node.isArchived) {
-        fileTreeStore.setSelectedNode(currentTeamId, currentWorkspaceId, null)
+        fileTreeStore.setSelectedNode(
+          nodeScope,
+          currentTeamId,
+          currentWorkspaceId,
+          null
+        )
         await router.replace("/code")
         return
       }
 
       fileTreeStore.setSelectedNode(
+        nodeScope,
         currentTeamId,
         currentWorkspaceId,
         nodeIdFromRoute
@@ -176,6 +197,7 @@ watch(
         contentId: file.id,
         teamId: currentTeamId,
         workspaceId: currentWorkspaceId,
+        scope: nodeScope,
         initialContent: file.content ?? "",
         user: {
           uid: user.uid,
@@ -225,6 +247,7 @@ const saveContent = async () => {
 
   try {
     await fileTreeStore.saveFileContent(
+      nodeScope,
       teamId.value,
       workspaceId.value,
       selectedFile.value.id,
@@ -257,6 +280,7 @@ onBeforeUnmount(() => {
             v-if="teamId && workspaceId"
             :team-id="teamId"
             :workspace-id="workspaceId"
+            :scope="nodeScope"
           />
           <SidebarGroup v-else>
             <SidebarGroupLabel>Documents</SidebarGroupLabel>

@@ -70,6 +70,7 @@ export interface InvitationData {
 
 export type IMembershipRole = "owner" | "admin" | "member" | "guest"
 export type NodeType = "folder" | "file"
+export type WorkspaceNodeScope = "code" | "write"
 
 export type Scope = "global" | "team" | "workspace"
 
