@@ -308,6 +308,7 @@ onBeforeUnmount(() => {
   </div>
   <Teleport defer to="#cta-dock">
     <Button
+      size="sm"
       :disabled="!selectedFile || !isDirty || editorReadOnly"
       @click="saveContent"
     >

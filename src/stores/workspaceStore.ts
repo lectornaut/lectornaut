@@ -49,7 +49,11 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     currentTeamId,
     currentWorkspaceId,
   } = storeToRefs(authStore)
-  const { canManageWorkspaces } = storeToRefs(membershipStore)
+  const {
+    canManageWorkspaces,
+    memberships,
+    isLoading: isMembershipLoading,
+  } = storeToRefs(membershipStore)
 
   // ============================================================================
   // VueFire Reactive Bindings
@@ -87,6 +91,18 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
   // Pending operation tracking
   const pendingWorkspaceIds = shallowRef(createPendingSet())
+  const isPersistingWorkspaceSelection = ref(false)
+
+  async function persistWorkspaceSelection(
+    workspaceId: string | null
+  ): Promise<void> {
+    if (!currentUser.value) return
+
+    await updateDoc(getUserRef(currentUser.value.uid), {
+      currentWorkspaceId: workspaceId,
+      updatedAt: serverTimestamp(),
+    })
+  }
 
   // ============================================================================
   // Computed - Merged State
@@ -170,21 +186,51 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
   // Handle stale currentWorkspaceId (e.g. workspace deleted)
   watch(
-    [currentWorkspaceId, workspaces, isLoading],
-    ([workspaceId, workspaceList, loading]) => {
+    [
+      currentWorkspaceId,
+      workspaces,
+      isLoading,
+      currentTeamId,
+      isMembershipLoading,
+    ],
+    async ([
+      workspaceId,
+      workspaceList,
+      loading,
+      teamId,
+      membershipLoading,
+    ]) => {
       // If we are loading, or no workspace ID selected, ignore
-      if (!workspaceId || loading) return
+      if (!workspaceId || loading || !teamId || membershipLoading) return
+
+      // Don't clear during startup before membership resolution is ready.
+      const isMember = memberships.value.some((m) => m.teamId === teamId)
+      if (!isMember) return
 
       // Check if the current workspace exists in the list
       const exists = workspaceList.some((w) => w.id === workspaceId)
 
       // If it doesn't exist and we don't have a pending operation for it
-      if (!exists && !pendingWorkspaceIds.value.has(workspaceId)) {
+      if (
+        !exists &&
+        !pendingWorkspaceIds.value.has(workspaceId) &&
+        !isPersistingWorkspaceSelection.value
+      ) {
         console.warn(
           "[workspaceStore] Detected stale workspace ID, clearing...",
           workspaceId
         )
-        authStore.setCurrentWorkspaceId(null)
+        isPersistingWorkspaceSelection.value = true
+        try {
+          await persistWorkspaceSelection(null)
+        } catch (error) {
+          console.error(
+            "[workspaceStore] Failed to persist stale workspace cleanup:",
+            error
+          )
+        } finally {
+          isPersistingWorkspaceSelection.value = false
+        }
       }
     }
   )
@@ -198,10 +244,21 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   // Watch for team change to cleanup
-  watch(currentTeamId, (teamId) => {
+  watch(currentTeamId, async (teamId) => {
     if (!teamId) {
       cleanup()
-      authStore.setCurrentWorkspaceId(null)
+      if (isPersistingWorkspaceSelection.value) return
+      isPersistingWorkspaceSelection.value = true
+      try {
+        await persistWorkspaceSelection(null)
+      } catch (error) {
+        console.error(
+          "[workspaceStore] Failed to clear workspace after team reset:",
+          error
+        )
+      } finally {
+        isPersistingWorkspaceSelection.value = false
+      }
     }
   })
 

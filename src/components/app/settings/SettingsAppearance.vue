@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { IconCircleFilled } from "@/data/icons"
+import { IconCircleDot } from "@/data/icons"
 import {
   accents,
   bases,
@@ -61,7 +61,7 @@ const { locale, t } = useI18n()
                 :key="color.id"
                 :value="color.id"
               >
-                <IconCircleFilled :class="color.style" />
+                <IconCircleDot :class="color.style" />
                 {{ color.name }}
               </SelectItem>
             </SelectContent>
@@ -88,7 +88,7 @@ const { locale, t } = useI18n()
                 :key="color.id"
                 :value="color.id"
               >
-                <IconCircleFilled :class="color.style" />
+                <IconCircleDot :class="color.style" />
                 {{ color.name }}
               </SelectItem>
             </SelectContent>

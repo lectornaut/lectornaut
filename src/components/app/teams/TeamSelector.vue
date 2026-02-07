@@ -2,7 +2,7 @@
 import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCirclePlus, IconLogOut, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { logout } from "@/modules/auth"
+import { emitter } from "@/modules/mitt"
 import { useTeamStore } from "@/stores/teamStore"
 import { storeToRefs } from "pinia"
 import type { AcceptableValue } from "reka-ui"
@@ -91,7 +91,11 @@ const switchTeam = async (teamId: AcceptableValue) => {
         Create team
       </Button>
     </EmptyContent>
-    <Button variant="outline" size="sm" @click="logout()">
+    <Button
+      variant="outline"
+      size="sm"
+      @click="emitter.emit('Dialog.Exit.Open')"
+    >
       <IconLogOut />
       Log out
     </Button>

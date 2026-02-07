@@ -15,6 +15,79 @@ const props = defineProps<{
   title?: string
 }>()
 
+const presets = computed(() => [
+  {
+    id: 0,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 0,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Today",
+  },
+  {
+    id: 7,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 7,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 7 days",
+  },
+  {
+    id: 14,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 14,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 14 days",
+  },
+  {
+    id: 30,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 30,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 30 days",
+  },
+  {
+    id: 90,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 90,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 3 months",
+  },
+  {
+    id: 180,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 180,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 6 months",
+  },
+  {
+    id: 365,
+    value: {
+      start: today(getLocalTimeZone()).subtract({
+        days: 365,
+      }),
+      end: today(getLocalTimeZone()),
+    },
+    label: "Last 1 year",
+  },
+])
+
 const updateFilter = (start: string, end: string) => {
   if (!props.column) return
   const normalizedStart = start || undefined
@@ -99,16 +172,34 @@ const clearFilter = () => {
         </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="w-auto p-0" align="start" side="bottom">
+    <PopoverContent class="grid w-full p-0" align="start" side="bottom">
+      <div class="p-2">
+        <Select v-model="range">
+          <SelectTrigger class="w-full">
+            <SelectValue placeholder="Select range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              v-for="preset in presets"
+              :key="preset.id"
+              :value="preset.value"
+            >
+              {{ preset.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
       <RangeCalendar
         v-model="range"
         :max-value="today(getLocalTimeZone())"
         initial-focus
+        class="p-2"
       />
       <Separator />
-      <div class="grid p-3">
-        <Button variant="secondary" size="sm" @click="clearFilter">
-          Clear
+      <div class="grid p-2">
+        <Button variant="ghost" size="sm" @click="clearFilter">
+          Clear filters
         </Button>
       </div>
     </PopoverContent>

@@ -6,43 +6,108 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function membershipDoc(teamId) {
-      return get(
-        /databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)
-      );
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function membershipPath(teamId, userId) {
+      return /databases/$(database)/documents/teams/$(teamId)/memberships/$(userId);
     }
 
     function isTeamMember(teamId) {
-      return isSignedIn() && membershipDoc(teamId).exists();
+      return isSignedIn() && exists(membershipPath(teamId, request.auth.uid));
     }
 
-    function canViewTeam(teamId) {
-      return isTeamMember(teamId);
+    function teamRole(teamId) {
+      return get(membershipPath(teamId, request.auth.uid)).data.role;
     }
 
-    function canEditTeam(teamId) {
+    function isTeamAdmin(teamId) {
       return isTeamMember(teamId)
-        && membershipDoc(teamId).data.role in ["owner", "admin", "member"];
+        && teamRole(teamId) in ["owner", "admin"];
     }
 
-    function roomDoc(contentId) {
-      return get(/databases/$(database)/documents/content_signaling/$(contentId));
+    function canManageWorkspaceContent(teamId) {
+      return isTeamMember(teamId)
+        && teamRole(teamId) in ["owner", "admin", "member"];
+    }
+
+    function roomPath(contentId) {
+      return /databases/$(database)/documents/content_signaling/$(contentId);
     }
 
     function canViewRoom(contentId) {
       return isSignedIn()
-        && roomDoc(contentId).exists()
-        && canViewTeam(roomDoc(contentId).data.teamId);
+        && exists(roomPath(contentId))
+        && get(roomPath(contentId)).data.teamId is string
+        && isTeamMember(get(roomPath(contentId)).data.teamId);
+    }
+
+    function isInvitationRecipient(invitationEmail) {
+      return isSignedIn()
+        && request.auth.token.email is string
+        && invitationEmail is string
+        && invitationEmail == request.auth.token.email;
+    }
+
+    function isValidNotificationStatus(status) {
+      return status in ["inbox", "saved", "done"];
+    }
+
+    function canUpdateOwnMembershipProfile(teamId, userId) {
+      return isSelf(userId)
+        && isTeamMember(teamId)
+        && request.resource.data.userId == userId
+        && request.resource.data.teamId == teamId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+             "user",
+             "updatedAt"
+           ]);
+    }
+
+    // Supports collectionGroup("memberships").where("userId", "==", request.auth.uid)
+    // used to render the signed-in user's team list.
+    function isOwnMembershipDoc() {
+      return isSignedIn()
+        && resource.data.userId is string
+        && resource.data.userId == request.auth.uid;
+    }
+
+    function hasValidSnapshotPayload(contentId) {
+      return isSignedIn()
+        && request.resource.data.contentId == contentId
+        && request.resource.data.teamId is string
+        && request.resource.data.workspaceId is string
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.ydocBase64 is string;
+    }
+
+    function canCreateSnapshot(contentId) {
+      return hasValidSnapshotPayload(contentId)
+        && canManageWorkspaceContent(request.resource.data.teamId);
+    }
+
+    function canUpdateSnapshot(contentId) {
+      return hasValidSnapshotPayload(contentId)
+        && resource.data.teamId is string
+        && resource.data.workspaceId is string
+        && request.resource.data.teamId == resource.data.teamId
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.contentId == resource.data.contentId
+        && canManageWorkspaceContent(resource.data.teamId);
     }
 
     match /content_snapshots/{contentId} {
-      allow read: if canViewTeam(resource.data.teamId);
-      allow create, update: if canEditTeam(request.resource.data.teamId);
+      allow read: if resource.data.teamId is string
+                  && isTeamMember(resource.data.teamId);
+      allow create: if canCreateSnapshot(contentId);
+      allow update: if canUpdateSnapshot(contentId);
       allow delete: if false;
     }
 
     match /content_signaling/{contentId} {
-      allow read: if canViewTeam(resource.data.teamId);
+      allow read: if resource.data.teamId is string
+                  && isTeamMember(resource.data.teamId);
       allow write: if false;
 
       match /peers/{peerId} {
@@ -57,33 +122,119 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if request.auth.uid == userId;
-      allow read: if request.auth.uid == userId || resource.data.isPublic == true;
-      allow update, delete: if request.auth.uid == userId;
+      allow create: if isSelf(userId) && request.resource.data.uid == userId;
+      allow read: if isSelf(userId) || resource.data.isPublic == true;
+      allow update, delete: if isSelf(userId);
 
       match /notifications/{notificationId} {
-        allow read: if request.auth.uid == userId;
-        // Only allow status updates from client
-        allow update: if request.auth.uid == userId &&
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
-        allow create, delete: if false; // Only via Cloud Functions
+        allow read: if isSelf(userId);
+        allow update: if isSelf(userId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                           "read",
+                           "status"
+                         ])
+                      && request.resource.data.read is bool
+                      && isValidNotificationStatus(request.resource.data.status);
+        allow create: if false;
+        allow delete: if isSelf(userId);
       }
 
       match /notificationPreferences/{preferenceId} {
-        allow read, write: if request.auth.uid == userId;
+        allow read, write: if isSelf(userId);
+      }
+
+      match /layout/{layoutId} {
+        allow read, write: if isSelf(userId)
+          && layoutId in ["navigation", "theme"];
       }
     }
 
     match /usernames/{username} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn()
+                    && request.resource.data.keys().hasOnly(["uid", "createdAt"])
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn()
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.keys().hasOnly(["uid", "createdAt"])
+                    && request.resource.data.uid == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
-    // Default rules for other collections
-    match /{collection}/{document=**} {
-      allow read, write: if isSignedIn()
-        && collection != "content_signaling"
-        && collection != "content_snapshots";
+    match /teams/{teamId} {
+      allow read: if isTeamMember(teamId);
+      allow write: if false;
+
+      match /memberships/{userId} {
+        allow read: if isTeamMember(teamId) || isOwnMembershipDoc();
+        // Create is handled by Cloud Functions (invite/accept flow)
+        allow create: if false;
+        // Update is allowed only for syncing user profile data (name, photo)
+        allow update: if canUpdateOwnMembershipProfile(teamId, userId);
+        allow delete: if false;
+
+        match /workspaces/{workspaceId} {
+          allow read: if isSelf(userId) && isTeamMember(teamId);
+          allow write: if false;
+
+          match /layout/{layoutId} {
+            allow read, write: if isSelf(userId)
+              && isTeamMember(teamId)
+              && layoutId == "tabs";
+          }
+        }
+      }
+
+      match /workspaces/{workspaceId} {
+        allow read: if isTeamMember(teamId);
+        allow write: if false;
+
+        match /nodes/{nodeId} {
+          allow read: if isTeamMember(teamId);
+          allow write: if false;
+        }
+
+        match /memberships/{userId} {
+          // Supports collectionGroup("memberships").where("userId", "==", request.auth.uid)
+          // which may include workspace-level memberships alongside team-level memberships.
+          allow read: if (isSelf(userId) && isTeamMember(teamId)) || isOwnMembershipDoc();
+          allow write: if false;
+        }
+      }
+    }
+
+    match /invitations/{invitationId} {
+      allow read: if isSignedIn()
+                  && resource.data.teamId is string
+                  && (
+                    isInvitationRecipient(resource.data.email)
+                    || isTeamAdmin(resource.data.teamId)
+                  );
+      allow write: if false;
+    }
+
+    match /logs/{logId} {
+      allow read: if resource.data.teamId is string
+                  && isTeamAdmin(resource.data.teamId);
+      allow write: if false;
+    }
+
+    // Global fallback for collectionGroup("memberships") queries.
+    // If the queried membership document belongs to the signed-in user,
+    // allow read even when the document lives under another memberships path.
+    match /{path=**}/memberships/{membershipId} {
+      allow read: if isOwnMembershipDoc();
+      allow write: if false;
+    }
+
+    // Deny by default; todos are not used by the current product paths.
+    match /todos/{todoId} {
+      allow read, write: if false;
+    }
+
+    // Default deny for all non-explicit collections.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

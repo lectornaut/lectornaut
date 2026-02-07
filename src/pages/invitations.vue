@@ -6,7 +6,7 @@ import {
   IconUserRoundPlus,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { logout } from "@/modules/auth"
+import { emitter } from "@/modules/mitt"
 import { useAuthStore } from "@/stores/authStore"
 import { useInvitationStore, type IInvitation } from "@/stores/invitationStore"
 import { storeToRefs } from "pinia"
@@ -183,8 +183,8 @@ const handleIgnore = () => {
   router.push("/")
 }
 
-const handleLogout = async () => {
-  await logout()
+const handleLogout = () => {
+  emitter.emit("Dialog.Exit.Open")
 }
 </script>
 

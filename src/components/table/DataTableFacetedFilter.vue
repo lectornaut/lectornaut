@@ -98,7 +98,7 @@ const selectedValues = computed(
             <CommandGroup>
               <CommandItem
                 :value="{ label: 'Clear filters' }"
-                class="justify-center py-2"
+                class="justify-center"
                 @select="column?.setFilterValue(undefined)"
               >
                 Clear filters

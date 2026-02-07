@@ -11,7 +11,7 @@ import {
   IconUserRound,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { logout, switchAccount } from "@/modules/auth"
+import { switchAccount } from "@/modules/auth"
 import { emitter } from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
@@ -23,8 +23,8 @@ const otherAccounts = computed(() =>
   accounts.value.filter((account) => account.uid !== user.value?.uid)
 )
 
-const handleAddAccount = async () => {
-  await logout()
+const handleAddAccount = () => {
+  emitter.emit("Dialog.Exit.Open")
 }
 
 const handleSwitchAccount = async (uid: string) => {
