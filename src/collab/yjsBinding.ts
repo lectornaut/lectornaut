@@ -10,6 +10,7 @@ import {
   subscribePeers,
   type CollabRole,
   type JoinCollabRoomResponse,
+  type SendSignalRequest,
 } from "@/collab/signaling"
 import { createSnapshotManager, loadSnapshot } from "@/collab/snapshots"
 import { WebRtcMesh } from "@/collab/webrtcMesh"
@@ -23,10 +24,15 @@ import * as Y from "yjs"
 
 const REMOTE_DOC_ORIGIN = Symbol("remote-doc")
 const REMOTE_AWARENESS_ORIGIN = Symbol("remote-awareness")
-const HEARTBEAT_INTERVAL_ACTIVE_MS = 90_000
-const HEARTBEAT_INTERVAL_HIDDEN_MS = 180_000
-const SIGNAL_DELETE_DEBOUNCE_MS = 1_000
-const SIGNAL_DELETE_MAX_BATCH_SIZE = 50
+const HEARTBEAT_INTERVAL_ACTIVE_MS = 30_000 // 30s for faster stale detection
+const HEARTBEAT_INTERVAL_HIDDEN_MS = 60_000 // 60s when tab is hidden
+const SIGNAL_DELETE_DEBOUNCE_MS = 500 // Faster cleanup
+const SIGNAL_DELETE_MAX_BATCH_SIZE = 100 // Larger batches = fewer writes
+const SIGNAL_SEND_MAX_ATTEMPTS = 3
+const SIGNAL_SEND_RETRY_BASE_DELAY_MS = 100
+const PEER_RECONNECT_BASE_DELAY_MS = 1_000
+const PEER_RECONNECT_MAX_DELAY_MS = 30_000
+const PEER_RECONNECT_JITTER_MS = 500
 
 export interface CollabUser {
   uid: string
@@ -119,11 +125,63 @@ export async function createYjsCollab(
 
   const pendingSignalDeleteIds = new Set<string>()
   let signalDeleteTimer: ReturnType<typeof setTimeout> | null = null
+  const knownPeerIds = new Set<string>()
+  const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  const reconnectAttempts = new Map<string, number>()
+
+  const clearReconnectTimer = (targetPeerId: string) => {
+    const timer = reconnectTimers.get(targetPeerId)
+    if (timer) {
+      clearTimeout(timer)
+      reconnectTimers.delete(targetPeerId)
+    }
+    reconnectAttempts.delete(targetPeerId)
+  }
+
+  const calculateReconnectDelay = (targetPeerId: string): number => {
+    const attempts = reconnectAttempts.get(targetPeerId) ?? 0
+    const exponentialDelay = Math.min(
+      PEER_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempts),
+      PEER_RECONNECT_MAX_DELAY_MS
+    )
+    // Add jitter to prevent thundering herd
+    const jitter = Math.random() * PEER_RECONNECT_JITTER_MS
+    return exponentialDelay + jitter
+  }
+
+  const schedulePeerReconnect = (targetPeerId: string) => {
+    if (
+      isDestroyed ||
+      !knownPeerIds.has(targetPeerId) ||
+      reconnectTimers.has(targetPeerId)
+    ) {
+      return
+    }
+
+    const delay = calculateReconnectDelay(targetPeerId)
+    reconnectAttempts.set(
+      targetPeerId,
+      (reconnectAttempts.get(targetPeerId) ?? 0) + 1
+    )
+
+    const timer = setTimeout(() => {
+      reconnectTimers.delete(targetPeerId)
+
+      if (isDestroyed || !knownPeerIds.has(targetPeerId)) {
+        reconnectAttempts.delete(targetPeerId)
+        return
+      }
+
+      mesh?.ensurePeer(targetPeerId)
+    }, delay)
+
+    reconnectTimers.set(targetPeerId, timer)
+  }
 
   mesh = new WebRtcMesh({
     myPeerId: peerId,
     sendSignal: async (toPeerId, type, payload) => {
-      await sendSignal({
+      await sendSignalWithRetry({
         contentId: options.contentId,
         fromPeerId: peerId,
         toPeerId,
@@ -147,6 +205,7 @@ export async function createYjsCollab(
         return
       }
 
+      clearReconnectTimer(connectedPeerId)
       mesh.sendYUpdate(Y.encodeStateAsUpdate(ydoc), connectedPeerId)
 
       const currentClients = [...awareness.getStates().keys()]
@@ -159,6 +218,9 @@ export async function createYjsCollab(
         currentClients
       )
       mesh.sendAwareness(encodedAwareness, connectedPeerId)
+    },
+    onPeerDisconnected: (disconnectedPeerId) => {
+      schedulePeerReconnect(disconnectedPeerId)
     },
   })
 
@@ -274,20 +336,24 @@ export async function createYjsCollab(
   const unsubscribePeers = subscribePeers(
     options.contentId,
     (peers) => {
-      const currentPeerIds = new Set(peers.map((peer) => peer.peerId))
-
+      const currentPeerIds = new Set<string>()
       peers.forEach((peer) => {
-        if (peer.peerId === peerId) {
-          return
+        if (peer.peerId !== peerId) {
+          currentPeerIds.add(peer.peerId)
         }
+      })
 
-        mesh?.ensurePeer(peer.peerId)
+      knownPeerIds.clear()
+      currentPeerIds.forEach((currentPeerId) => {
+        knownPeerIds.add(currentPeerId)
+        mesh?.ensurePeer(currentPeerId)
       })
 
       mesh?.getPeerIds().forEach((existingPeerId) => {
         if (currentPeerIds.has(existingPeerId)) {
           return
         }
+        clearReconnectTimer(existingPeerId)
         mesh?.removePeer(existingPeerId)
       })
     },
@@ -379,6 +445,12 @@ export async function createYjsCollab(
       clearTimeout(signalDeleteTimer)
       signalDeleteTimer = null
     }
+    reconnectTimers.forEach((timer) => {
+      clearTimeout(timer)
+    })
+    reconnectTimers.clear()
+    reconnectAttempts.clear()
+    knownPeerIds.clear()
     await flushSignalDeletes()
 
     ydoc.off("update", handleYdocUpdate)
@@ -427,4 +499,31 @@ function resolveDisplayName(
   }
 
   return "Anonymous"
+}
+
+const sleep = (delayMs: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, delayMs)
+  })
+
+async function sendSignalWithRetry(payload: SendSignalRequest): Promise<void> {
+  let lastError: unknown = null
+
+  for (let attempt = 1; attempt <= SIGNAL_SEND_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      await sendSignal(payload)
+      return
+    } catch (error) {
+      lastError = error
+      if (attempt >= SIGNAL_SEND_MAX_ATTEMPTS) {
+        break
+      }
+
+      const retryDelay =
+        SIGNAL_SEND_RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1)
+      await sleep(retryDelay)
+    }
+  }
+
+  throw lastError ?? new Error("[collab] Failed to send signaling payload.")
 }

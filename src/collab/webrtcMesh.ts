@@ -1,4 +1,3 @@
-import { base64ToBytes, bytesToBase64 } from "@/collab/base64"
 import type { SignalType } from "@/collab/signaling"
 
 export interface IncomingSignal {
@@ -22,27 +21,40 @@ export interface WebRtcMeshOptions {
   rtcConfig?: RTCConfiguration
 }
 
-type MeshEnvelope =
-  | {
-      t: "y-update"
-      data: string
-    }
-  | {
-      t: "awareness"
-      data: string
-    }
+// Binary message type prefixes (1 byte overhead vs ~33% with JSON+Base64)
+const MSG_TYPE_Y_UPDATE = 0x01
+const MSG_TYPE_AWARENESS = 0x02
 
 const DEFAULT_RTC_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 }
+const ICE_SIGNAL_FLUSH_MS = 20
+const DISCONNECT_GRACE_PERIOD_MS = 10_000
+const ICE_RESTART_DELAY_MS = 2_000
 
 export class WebRtcMesh {
   private readonly options: WebRtcMeshOptions
   private readonly peerConnections = new Map<string, RTCPeerConnection>()
   private readonly dataChannels = new Map<string, RTCDataChannel>()
+  private readonly pendingOutgoingIceSignals = new Map<
+    string,
+    RTCIceCandidateInit[]
+  >()
+  private readonly pendingOutgoingIceTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >()
   private readonly pendingIceCandidates = new Map<
     string,
     RTCIceCandidateInit[]
+  >()
+  private readonly disconnectTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >()
+  private readonly iceRestartTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
   >()
 
   constructor(options: WebRtcMeshOptions) {
@@ -78,31 +90,33 @@ export class WebRtcMesh {
   }
 
   sendYUpdate(update: Uint8Array, targetPeerId?: string): void {
-    const serializedEnvelope = JSON.stringify({
-      t: "y-update",
-      data: bytesToBase64(update),
-    } satisfies MeshEnvelope)
+    const message = this.createBinaryMessage(MSG_TYPE_Y_UPDATE, update)
 
     if (targetPeerId) {
-      this.sendSerializedEnvelope(targetPeerId, serializedEnvelope)
+      this.sendBinaryMessage(targetPeerId, message)
       return
     }
 
-    this.broadcastSerializedEnvelope(serializedEnvelope)
+    this.broadcastBinaryMessage(message)
   }
 
   sendAwareness(update: Uint8Array, targetPeerId?: string): void {
-    const serializedEnvelope = JSON.stringify({
-      t: "awareness",
-      data: bytesToBase64(update),
-    } satisfies MeshEnvelope)
+    const message = this.createBinaryMessage(MSG_TYPE_AWARENESS, update)
 
     if (targetPeerId) {
-      this.sendSerializedEnvelope(targetPeerId, serializedEnvelope)
+      this.sendBinaryMessage(targetPeerId, message)
       return
     }
 
-    this.broadcastSerializedEnvelope(serializedEnvelope)
+    this.broadcastBinaryMessage(message)
+  }
+
+  private createBinaryMessage(type: number, payload: Uint8Array): ArrayBuffer {
+    const message = new ArrayBuffer(1 + payload.length)
+    const view = new Uint8Array(message)
+    view[0] = type
+    view.set(payload, 1)
+    return message
   }
 
   async handleSignal(signal: IncomingSignal): Promise<void> {
@@ -139,6 +153,12 @@ export class WebRtcMesh {
   }
 
   removePeer(peerId: string): void {
+    const hadConnection = this.peerConnections.has(peerId)
+    const hadDataChannel = this.dataChannels.has(peerId)
+
+    this.clearDisconnectTimer(peerId)
+    this.clearQueuedIceSignals(peerId)
+
     const connection = this.peerConnections.get(peerId)
     if (connection) {
       connection.onicecandidate = null
@@ -156,13 +176,30 @@ export class WebRtcMesh {
       channel.onerror = null
       channel.close()
       this.dataChannels.delete(peerId)
-      this.options.onPeerDisconnected?.(peerId)
     }
 
     this.pendingIceCandidates.delete(peerId)
+
+    if (hadConnection || hadDataChannel) {
+      this.options.onPeerDisconnected?.(peerId)
+    }
   }
 
   destroy(): void {
+    this.pendingOutgoingIceTimers.forEach((timer) => {
+      clearTimeout(timer)
+    })
+    this.pendingOutgoingIceTimers.clear()
+    this.pendingOutgoingIceSignals.clear()
+    this.disconnectTimers.forEach((timer) => {
+      clearTimeout(timer)
+    })
+    this.disconnectTimers.clear()
+    this.iceRestartTimers.forEach((timer) => {
+      clearTimeout(timer)
+    })
+    this.iceRestartTimers.clear()
+
     this.getPeerIds().forEach((peerId) => {
       this.removePeer(peerId)
     })
@@ -183,16 +220,29 @@ export class WebRtcMesh {
         return
       }
 
-      void this.options.sendSignal(peerId, "ice", event.candidate.toJSON())
+      this.queueIceSignal(peerId, event.candidate.toJSON())
     }
 
     connection.onconnectionstatechange = () => {
-      if (
-        connection.connectionState === "failed" ||
-        connection.connectionState === "disconnected" ||
-        connection.connectionState === "closed"
-      ) {
+      if (connection.connectionState === "failed") {
+        // Try ICE restart before giving up
+        this.scheduleIceRestart(peerId, connection)
+        return
+      }
+
+      if (connection.connectionState === "closed") {
         this.removePeer(peerId)
+        return
+      }
+
+      if (connection.connectionState === "disconnected") {
+        this.scheduleDisconnectCheck(peerId, connection)
+        return
+      }
+
+      if (connection.connectionState === "connected") {
+        this.clearDisconnectTimer(peerId)
+        this.clearIceRestartTimer(peerId)
       }
     }
 
@@ -206,7 +256,11 @@ export class WebRtcMesh {
   }
 
   private attachDataChannel(peerId: string, channel: RTCDataChannel): void {
+    // Use binary mode for better performance
+    channel.binaryType = "arraybuffer"
+
     channel.onopen = () => {
+      this.clearDisconnectTimer(peerId)
       this.dataChannels.set(peerId, channel)
       this.options.onPeerConnected?.(peerId)
     }
@@ -272,19 +326,23 @@ export class WebRtcMesh {
     connection: RTCPeerConnection,
     payload: unknown
   ): Promise<void> {
-    const candidate = this.toIceCandidate(payload)
-    if (!candidate) {
+    const candidates = this.toIceCandidates(payload)
+    if (!candidates.length) {
       return
     }
 
     if (!connection.remoteDescription) {
       const queued = this.pendingIceCandidates.get(peerId) ?? []
-      queued.push(candidate)
+      queued.push(...candidates)
       this.pendingIceCandidates.set(peerId, queued)
       return
     }
 
-    await connection.addIceCandidate(new RTCIceCandidate(candidate))
+    await Promise.all(
+      candidates.map((candidate) =>
+        connection.addIceCandidate(new RTCIceCandidate(candidate))
+      )
+    )
   }
 
   private async flushPendingIce(
@@ -306,49 +364,180 @@ export class WebRtcMesh {
   }
 
   private handleDataChannelMessage(peerId: string, rawData: unknown): void {
-    if (typeof rawData !== "string") {
+    if (!(rawData instanceof ArrayBuffer) || rawData.byteLength < 2) {
       return
     }
 
-    let envelope: MeshEnvelope | null = null
+    const view = new Uint8Array(rawData)
+    const messageType = view[0]
+    const payload = view.slice(1)
 
-    try {
-      envelope = JSON.parse(rawData) as MeshEnvelope
-    } catch {
+    if (messageType === MSG_TYPE_Y_UPDATE) {
+      this.options.onYUpdate(payload, peerId)
       return
     }
 
-    if (!envelope || typeof envelope.data !== "string") {
-      return
-    }
-
-    if (envelope.t === "y-update") {
-      this.options.onYUpdate(base64ToBytes(envelope.data), peerId)
-      return
-    }
-
-    if (envelope.t === "awareness") {
-      this.options.onAwarenessUpdate(base64ToBytes(envelope.data), peerId)
+    if (messageType === MSG_TYPE_AWARENESS) {
+      this.options.onAwarenessUpdate(payload, peerId)
     }
   }
 
-  private sendSerializedEnvelope(peerId: string, envelope: string): void {
+  private sendBinaryMessage(peerId: string, message: ArrayBuffer): void {
     const channel = this.dataChannels.get(peerId)
     if (!channel || channel.readyState !== "open") {
       return
     }
 
-    channel.send(envelope)
+    channel.send(message)
   }
 
-  private broadcastSerializedEnvelope(envelope: string): void {
+  private broadcastBinaryMessage(message: ArrayBuffer): void {
     this.dataChannels.forEach((channel) => {
       if (channel.readyState !== "open") {
         return
       }
 
-      channel.send(envelope)
+      channel.send(message)
     })
+  }
+
+  private queueIceSignal(peerId: string, candidate: RTCIceCandidateInit): void {
+    const queued = this.pendingOutgoingIceSignals.get(peerId) ?? []
+    queued.push(candidate)
+    this.pendingOutgoingIceSignals.set(peerId, queued)
+
+    if (this.pendingOutgoingIceTimers.has(peerId)) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      this.pendingOutgoingIceTimers.delete(peerId)
+      void this.flushQueuedIceSignals(peerId)
+    }, ICE_SIGNAL_FLUSH_MS)
+
+    this.pendingOutgoingIceTimers.set(peerId, timer)
+  }
+
+  private async flushQueuedIceSignals(peerId: string): Promise<void> {
+    const queued = this.pendingOutgoingIceSignals.get(peerId)
+    if (!queued?.length) {
+      return
+    }
+
+    this.pendingOutgoingIceSignals.delete(peerId)
+
+    const payload =
+      queued.length === 1 ? queued[0] : ({ candidates: queued } as const)
+
+    try {
+      await this.options.sendSignal(peerId, "ice", payload)
+    } catch {
+      if (!this.peerConnections.has(peerId)) {
+        return
+      }
+
+      const currentQueue = this.pendingOutgoingIceSignals.get(peerId) ?? []
+      this.pendingOutgoingIceSignals.set(peerId, [...queued, ...currentQueue])
+
+      if (this.pendingOutgoingIceTimers.has(peerId)) {
+        return
+      }
+
+      const timer = setTimeout(() => {
+        this.pendingOutgoingIceTimers.delete(peerId)
+        void this.flushQueuedIceSignals(peerId)
+      }, ICE_SIGNAL_FLUSH_MS)
+
+      this.pendingOutgoingIceTimers.set(peerId, timer)
+    }
+  }
+
+  private clearQueuedIceSignals(peerId: string): void {
+    const timer = this.pendingOutgoingIceTimers.get(peerId)
+    if (timer) {
+      clearTimeout(timer)
+      this.pendingOutgoingIceTimers.delete(peerId)
+    }
+    this.pendingOutgoingIceSignals.delete(peerId)
+  }
+
+  private scheduleDisconnectCheck(
+    peerId: string,
+    connection: RTCPeerConnection
+  ): void {
+    if (this.disconnectTimers.has(peerId)) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      this.disconnectTimers.delete(peerId)
+
+      const current = this.peerConnections.get(peerId)
+      if (!current || current !== connection) {
+        return
+      }
+
+      if (
+        current.connectionState === "disconnected" ||
+        current.connectionState === "failed" ||
+        current.connectionState === "closed"
+      ) {
+        this.removePeer(peerId)
+      }
+    }, DISCONNECT_GRACE_PERIOD_MS)
+
+    this.disconnectTimers.set(peerId, timer)
+  }
+
+  private clearDisconnectTimer(peerId: string): void {
+    const timer = this.disconnectTimers.get(peerId)
+    if (!timer) {
+      return
+    }
+
+    clearTimeout(timer)
+    this.disconnectTimers.delete(peerId)
+  }
+
+  private scheduleIceRestart(
+    peerId: string,
+    connection: RTCPeerConnection
+  ): void {
+    if (this.iceRestartTimers.has(peerId)) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      this.iceRestartTimers.delete(peerId)
+
+      const current = this.peerConnections.get(peerId)
+      if (!current || current !== connection) {
+        return
+      }
+
+      if (current.connectionState === "failed") {
+        try {
+          // Attempt ICE restart to recover the connection
+          current.restartIce()
+          void this.createOffer(peerId, current)
+        } catch {
+          // ICE restart failed, remove peer and let reconnection logic handle it
+          this.removePeer(peerId)
+        }
+      }
+    }, ICE_RESTART_DELAY_MS)
+
+    this.iceRestartTimers.set(peerId, timer)
+  }
+
+  private clearIceRestartTimer(peerId: string): void {
+    const timer = this.iceRestartTimers.get(peerId)
+    if (!timer) {
+      return
+    }
+
+    clearTimeout(timer)
+    this.iceRestartTimers.delete(peerId)
   }
 
   private toSessionDescription(
@@ -369,7 +558,28 @@ export class WebRtcMesh {
     }
   }
 
-  private toIceCandidate(payload: unknown): RTCIceCandidateInit | null {
+  private toIceCandidates(payload: unknown): RTCIceCandidateInit[] {
+    if (Array.isArray(payload)) {
+      return payload
+        .map((entry) => this.toSingleIceCandidate(entry))
+        .filter((entry): entry is RTCIceCandidateInit => entry !== null)
+    }
+
+    if (
+      payload &&
+      typeof payload === "object" &&
+      Array.isArray((payload as { candidates?: unknown }).candidates)
+    ) {
+      return (payload as { candidates: unknown[] }).candidates
+        .map((entry) => this.toSingleIceCandidate(entry))
+        .filter((entry): entry is RTCIceCandidateInit => entry !== null)
+    }
+
+    const single = this.toSingleIceCandidate(payload)
+    return single ? [single] : []
+  }
+
+  private toSingleIceCandidate(payload: unknown): RTCIceCandidateInit | null {
     if (!payload || typeof payload !== "object") {
       return null
     }

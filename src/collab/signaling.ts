@@ -166,12 +166,7 @@ export function subscribePeers(
   callback: (peers: CollabPeer[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const peersRef = collection(
-    firestore,
-    "content_signaling",
-    contentId,
-    "peers"
-  )
+  const peersRef = collection(firestore, "signaling", contentId, "peers")
 
   return onSnapshot(
     peersRef,
@@ -215,12 +210,7 @@ export function subscribeIncomingSignals(
   onSignal: (signal: CollabSignal) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const signalsRef = collection(
-    firestore,
-    "content_signaling",
-    contentId,
-    "signals"
-  )
+  const signalsRef = collection(firestore, "signaling", contentId, "signals")
 
   const incomingSignalsQuery = query(
     signalsRef,

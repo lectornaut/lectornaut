@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore"
 import * as Y from "yjs"
 
-const DEFAULT_SNAPSHOT_DEBOUNCE_MS = 30_000
+const DEFAULT_SNAPSHOT_DEBOUNCE_MS = 10_000 // 10s - balance between cost and data safety
 
 interface SnapshotDoc {
   contentId: string
@@ -23,7 +23,7 @@ interface SnapshotDoc {
 export async function loadSnapshot(
   contentId: string
 ): Promise<Uint8Array | null> {
-  const snapshotRef = doc(firestore, "content_snapshots", contentId)
+  const snapshotRef = doc(firestore, "snapshots", contentId)
   const snapshot = await getDoc(snapshotRef)
 
   if (!snapshot.exists()) {
@@ -48,7 +48,7 @@ export async function saveSnapshot(
   const ydocBase64 = bytesToBase64(Y.encodeStateAsUpdate(ydoc))
 
   await setDoc(
-    doc(firestore, "content_snapshots", contentId),
+    doc(firestore, "snapshots", contentId),
     {
       contentId,
       teamId,

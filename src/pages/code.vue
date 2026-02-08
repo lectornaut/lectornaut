@@ -64,6 +64,7 @@ const selectedFile = computed(() => {
   if (selectedNode.value.isArchived) return null
   return selectedNode.value
 })
+const selectedFileId = computed(() => selectedFile.value?.id ?? null)
 
 const editorContent = ref("")
 const isDirty = ref(false)
@@ -161,12 +162,13 @@ watch(
 )
 
 watch(
-  [selectedFile, teamId, workspaceId, currentUser],
+  [selectedFileId, teamId, workspaceId, currentUser],
   async (
-    [file, currentTeamId, currentWorkspaceId, user],
+    [fileId, currentTeamId, currentWorkspaceId, user],
     _oldValue,
     onCleanup
   ) => {
+    const file = selectedFile.value
     let cancelled = false
     onCleanup(() => {
       cancelled = true
@@ -187,7 +189,7 @@ watch(
       })
     }
 
-    if (!file || !currentTeamId || !currentWorkspaceId || !user) {
+    if (!fileId || !file || !currentTeamId || !currentWorkspaceId || !user) {
       return
     }
 

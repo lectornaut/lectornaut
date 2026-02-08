@@ -16,9 +16,9 @@ if (!admin.apps.length) {
 const db = admin.firestore()
 
 const JOIN_TOKEN_TTL_MS = 10 * 60 * 1000
-const STALE_SIGNAL_MAX_AGE_MS = 5 * 60 * 1000
-const STALE_PEER_MAX_AGE_MS = 5 * 60 * 1000
-const CLEANUP_BATCH_SIZE = 200
+const STALE_SIGNAL_MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - signals are cleaned by clients, this is fallback
+const STALE_PEER_MAX_AGE_MS = 10 * 60 * 1000 // 10 minutes - accounts for missed heartbeats
+const CLEANUP_BATCH_SIZE = 500 // Firestore batch limit
 
 type CollabRole = "editor" | "viewer"
 type SignalType = "offer" | "answer" | "ice"
@@ -225,7 +225,7 @@ function assertCanViewWorkspace(userId: string, role: IMembershipRole): void {
 }
 
 async function getRoomContext(contentId: string): Promise<RoomContext> {
-  const roomRef = db.doc(`content_signaling/${contentId}`)
+  const roomRef = db.doc(`signaling/${contentId}`)
   const roomSnap = await roomRef.get()
 
   if (!roomSnap.exists) {
@@ -270,7 +270,7 @@ async function getPeerSession(
   peerRef: admin.firestore.DocumentReference
   data: PeerSession
 }> {
-  const peerRef = db.doc(`content_signaling/${contentId}/peers/${peerId}`)
+  const peerRef = db.doc(`signaling/${contentId}/peers/${peerId}`)
   const peerSnap = await peerRef.get()
 
   if (!peerSnap.exists) {
@@ -381,16 +381,19 @@ export const joinCollabRoom = onCall(async (request) => {
   const displayName =
     request.auth.token.name ?? request.auth.token.email ?? request.auth.uid
 
-  await db.doc(`content_signaling/${contentId}`).set(
-    {
+  // Optimized: Only create room if it doesn't exist - avoids unnecessary writes
+  const roomRef = db.doc(`signaling/${contentId}`)
+  const roomSnap = await roomRef.get()
+
+  if (!roomSnap.exists) {
+    await roomRef.set({
       contentId,
       teamId,
       workspaceId,
       scope,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  )
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+  }
 
   return {
     role,
@@ -454,20 +457,16 @@ export const heartbeatPeer = onCall(async (request) => {
   const peerId = assertString(request.data?.peerId, "peerId")
   const joinToken = assertString(request.data?.joinToken, "joinToken")
 
-  const room = await getRoomContext(contentId)
-  const membershipRole = await resolveRole(
-    request.auth.uid,
-    room.teamId,
-    room.workspaceId
-  )
-  assertCanViewWorkspace(request.auth.uid, membershipRole)
+  // Optimized: Only fetch peer session, skip room context and role check
+  // Role was already validated at peer creation time, and peer ownership check
+  // ensures this is the same authenticated user
+  const peerSession = await getPeerSession(contentId, peerId)
 
-  const { peerRef, data } = await getPeerSession(contentId, peerId)
-  assertPeerOwnership(data, request.auth.uid, joinToken, {
+  assertPeerOwnership(peerSession.data, request.auth.uid, joinToken, {
     requireUnexpiredToken: true,
   })
 
-  await peerRef.update({
+  await peerSession.peerRef.update({
     lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
     tokenExpiresAt: Date.now() + JOIN_TOKEN_TTL_MS,
   })
@@ -484,21 +483,22 @@ export const sendSignal = onCall(async (request) => {
   const joinToken = assertString(request.data?.joinToken, "joinToken")
   const type = assertSignalType(request.data?.type)
 
-  const room = await getRoomContext(contentId)
+  const [room, fromPeer, toPeerSnap] = await Promise.all([
+    getRoomContext(contentId),
+    getPeerSession(contentId, fromPeerId),
+    db.doc(`signaling/${contentId}/peers/${toPeerId}`).get(),
+  ])
   const membershipRole = await resolveRole(
     request.auth.uid,
     room.teamId,
     room.workspaceId
   )
+
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
-  const fromPeer = await getPeerSession(contentId, fromPeerId)
   assertPeerOwnership(fromPeer.data, request.auth.uid, joinToken, {
     requireUnexpiredToken: true,
   })
-
-  const toPeerRef = db.doc(`content_signaling/${contentId}/peers/${toPeerId}`)
-  const toPeerSnap = await toPeerRef.get()
 
   if (!toPeerSnap.exists) {
     throw new HttpsError("not-found", "Target peer does not exist.")
@@ -522,20 +522,15 @@ export const deletePeer = onCall(async (request) => {
   const peerId = assertString(request.data?.peerId, "peerId")
   const joinToken = assertString(request.data?.joinToken, "joinToken")
 
-  const room = await getRoomContext(contentId)
-  const membershipRole = await resolveRole(
-    request.auth.uid,
-    room.teamId,
-    room.workspaceId
-  )
-  assertCanViewWorkspace(request.auth.uid, membershipRole)
+  // Optimized: Only fetch peer session, skip room context and role check
+  // Users can only delete their own peer sessions (verified by ownership check)
+  const peerSession = await getPeerSession(contentId, peerId)
 
-  const { peerRef, data } = await getPeerSession(contentId, peerId)
-  assertPeerOwnership(data, request.auth.uid, joinToken, {
+  assertPeerOwnership(peerSession.data, request.auth.uid, joinToken, {
     requireUnexpiredToken: false,
   })
 
-  await peerRef.delete()
+  await peerSession.peerRef.delete()
   return { ok: true }
 })
 
@@ -587,7 +582,7 @@ export const deleteSignals = onCall(async (request) => {
 })
 
 export const cleanupCollabSignaling = onSchedule(
-  "every 10 minutes",
+  "every 1 hours", // Reduced from 10 minutes - clients clean up signals, this is fallback
   async () => {
     const [signalsDeleted, peersDeleted] = await Promise.all([
       cleanupCollectionGroup("signals", "createdAt", STALE_SIGNAL_MAX_AGE_MS),

@@ -37,7 +37,7 @@ service cloud.firestore {
     }
 
     function roomPath(contentId) {
-      return /databases/$(database)/documents/content_signaling/$(contentId);
+      return /databases/$(database)/documents/signaling/$(contentId);
     }
 
     function canViewRoom(contentId) {
@@ -101,7 +101,7 @@ service cloud.firestore {
         && canManageWorkspaceContent(resource.data.teamId);
     }
 
-    match /content_snapshots/{contentId} {
+    match /snapshots/{contentId} {
       allow read: if resource.data.teamId is string
                   && isTeamMember(resource.data.teamId);
       allow create: if canCreateSnapshot(contentId);
@@ -109,7 +109,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /content_signaling/{contentId} {
+    match /signaling/{contentId} {
       allow read: if resource.data.teamId is string
                   && isTeamMember(resource.data.teamId);
       allow write: if false;

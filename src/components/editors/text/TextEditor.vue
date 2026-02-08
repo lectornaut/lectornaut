@@ -204,13 +204,74 @@ const serializeModelValue = (value: JSONContent | null | undefined): string => {
   return JSON.stringify(value)
 }
 
-const isReadOnly = computed(() => props.readOnly)
-const json = ref<JSONContent>(parseModelValue(props.modelValue))
+const normalizeIncomingModelValue = (value: string | undefined): string => {
+  const normalized = value ?? ""
+  return normalized.trim().length ? normalized : ""
+}
+
+const READING_WORDS_PER_MINUTE = 200
 const MODEL_EMIT_DEBOUNCE_MS = 120
+const MAX_IMAGE_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
+const IMAGE_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+] as const
+
+const isReadOnly = computed(() => props.readOnly)
+const initialContent = parseModelValue(props.modelValue)
+let currentSerializedModelValue = serializeModelValue(initialContent)
+const editorStats = ref({
+  characters: 0,
+  words: 0,
+  readingMinutes: 0,
+})
 let modelEmitTimer: ReturnType<typeof setTimeout> | null = null
 let pendingModelValue: string | null = null
 
 const sharedLowlight = createLowlight(common)
+
+type CollaborationProvider = {
+  awareness: Awareness
+  on: (event: string, listener: () => void) => void
+  off: (event: string, listener: () => void) => void
+}
+
+const createCollaborationProvider = (
+  awareness: Awareness
+): CollaborationProvider => {
+  const syncedListeners = new Set<() => void>()
+
+  const scheduleSynced = (listener: () => void) => {
+    queueMicrotask(() => {
+      if (syncedListeners.has(listener)) {
+        listener()
+      }
+    })
+  }
+
+  return {
+    awareness,
+    on: (event, listener) => {
+      if (event !== "synced") {
+        return
+      }
+      syncedListeners.add(listener)
+      scheduleSynced(listener)
+    },
+    off: (event, listener) => {
+      if (event !== "synced") {
+        return
+      }
+      syncedListeners.delete(listener)
+    },
+  }
+}
+
+const collaborationProvider = props.collaborationAwareness
+  ? createCollaborationProvider(props.collaborationAwareness)
+  : null
 
 const getCollaborationUser = () => {
   const localState = props.collaborationAwareness?.getLocalState() as {
@@ -239,6 +300,141 @@ const getCollaborationUser = () => {
     name,
     color,
   }
+}
+
+const updateEditorStats = (currentEditor: TiptapEditor) => {
+  const characterCountStorage = currentEditor.storage.characterCount as
+    | {
+        characters: () => number
+        words: () => number
+      }
+    | undefined
+
+  const characters = characterCountStorage?.characters?.() ?? 0
+  const words = characterCountStorage?.words?.() ?? 0
+
+  editorStats.value = {
+    characters,
+    words,
+    readingMinutes: Math.ceil(words / READING_WORDS_PER_MINUTE),
+  }
+}
+
+const readImageFileAsDataURL = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const fileReader = new FileReader()
+
+    fileReader.onload = () => {
+      if (typeof fileReader.result === "string") {
+        resolve(fileReader.result)
+        return
+      }
+      reject(new Error("Unable to read image file"))
+    }
+
+    fileReader.onerror = () => {
+      reject(fileReader.error ?? new Error("Unable to read image file"))
+    }
+
+    fileReader.onabort = () => {
+      reject(new Error("Image file read was aborted"))
+    }
+
+    fileReader.readAsDataURL(file)
+  })
+
+const insertImageFiles = async (
+  currentEditor: TiptapEditor,
+  files: File[],
+  position?: number
+) => {
+  const imageNodes = (
+    await Promise.all(
+      files.map(async (file) => {
+        if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
+          console.warn(
+            `[TextEditor] Skipping "${file.name}" because it exceeds ${MAX_IMAGE_FILE_SIZE_BYTES} bytes.`
+          )
+          return null
+        }
+
+        try {
+          const src = await readImageFileAsDataURL(file)
+          return {
+            type: "image",
+            attrs: { src },
+          } as JSONContent
+        } catch (error) {
+          console.error(`[TextEditor] Failed to insert "${file.name}":`, error)
+          return null
+        }
+      })
+    )
+  ).flatMap((node) => (node ? [node] : []))
+
+  if (!imageNodes.length) {
+    return
+  }
+
+  const chain = currentEditor.chain().focus()
+  if (typeof position === "number") {
+    chain.insertContentAt(position, imageNodes).run()
+    return
+  }
+
+  chain.insertContent(imageNodes).run()
+}
+
+const normalizeLinkHref = (href: string): string | null => {
+  const trimmed = href.trim()
+  if (!trimmed.length) {
+    return ""
+  }
+
+  if (/^(mailto:|tel:)/i.test(trimmed)) {
+    return trimmed
+  }
+
+  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+
+  try {
+    return new URL(withProtocol).toString()
+  } catch {
+    return null
+  }
+}
+
+const setLinkFromPrompt = () => {
+  const currentEditor = editor.value
+  if (!currentEditor || typeof window === "undefined") {
+    return
+  }
+
+  const currentHref = currentEditor.getAttributes("link").href
+  const nextHref = window.prompt(
+    "Enter URL",
+    typeof currentHref === "string" ? currentHref : "https://"
+  )
+
+  if (nextHref === null) {
+    return
+  }
+
+  const normalizedHref = normalizeLinkHref(nextHref)
+  if (normalizedHref === null) {
+    console.warn("[TextEditor] Ignoring invalid URL input")
+    return
+  }
+
+  const chain = currentEditor.chain().focus().extendMarkRange("link")
+  if (!normalizedHref.length) {
+    chain.unsetLink().run()
+    return
+  }
+
+  chain.setLink({ href: normalizedHref }).run()
 }
 
 const extensions = [
@@ -313,44 +509,18 @@ const extensions = [
   Typography,
   Focus,
   FileHandler.configure({
-    allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+    allowedMimeTypes: [...IMAGE_MIME_TYPES],
     onDrop: (currentEditor, files, pos) => {
-      files.forEach((file) => {
-        const fileReader = new FileReader()
-
-        fileReader.readAsDataURL(file)
-        fileReader.onload = () => {
-          currentEditor
-            .chain()
-            .insertContentAt(pos, {
-              type: "image",
-              attrs: {
-                src: fileReader.result,
-              },
-            })
-            .focus()
-            .run()
-        }
-      })
+      void insertImageFiles(currentEditor, files, pos)
     },
-    onPaste: (currentEditor, files) => {
-      files.forEach((file) => {
-        const fileReader = new FileReader()
+    onPaste: (currentEditor, files, pasteContent) => {
+      if (pasteContent?.length) {
+        return
+      }
 
-        fileReader.readAsDataURL(file)
-        fileReader.onload = () => {
-          currentEditor
-            .chain()
-            .insertContentAt(currentEditor?.state.selection.anchor, {
-              type: "image",
-              attrs: {
-                src: fileReader.result,
-              },
-            })
-            .focus()
-            .run()
-        }
-      })
+      // Snapshot the original selection before async file reads complete.
+      const insertPosition = currentEditor.state.selection.anchor
+      void insertImageFiles(currentEditor, files, insertPosition)
     },
   }),
   FontFamily,
@@ -380,15 +550,14 @@ if (props.collaborationDoc) {
     Collaboration.configure({
       document: props.collaborationDoc,
       field: "tiptap",
+      provider: collaborationProvider,
     })
   )
 
-  if (props.collaborationAwareness) {
+  if (collaborationProvider) {
     extensions.push(
       CollaborationCaret.configure({
-        provider: {
-          awareness: props.collaborationAwareness,
-        },
+        provider: collaborationProvider,
         user: getCollaborationUser(),
       })
     )
@@ -444,15 +613,14 @@ const syncModelFromEditor = (
   const nextJson = currentEditor.getJSON()
   const serialized = serializeModelValue(nextJson)
 
-  json.value = nextJson
+  currentSerializedModelValue = serialized
+  updateEditorStats(currentEditor)
   scheduleModelEmit(serialized, options?.immediate ?? false)
 }
 
 const editor = useEditor({
   editable: !props.readOnly,
-  content: props.collaborationDoc
-    ? undefined
-    : parseModelValue(props.modelValue),
+  content: props.collaborationDoc ? undefined : initialContent,
   editorProps: {
     attributes: {
       class:
@@ -468,9 +636,16 @@ const editor = useEditor({
       currentEditor.isEmpty &&
       (props.modelValue ?? "").trim().length
     ) {
-      currentEditor.commands.setContent(parseModelValue(props.modelValue), {
-        emitUpdate: true,
-      })
+      try {
+        currentEditor.commands.setContent(parseModelValue(props.modelValue), {
+          emitUpdate: true,
+        })
+      } catch (error) {
+        console.error(
+          "[TextEditor] Failed to hydrate collaborative content:",
+          error
+        )
+      }
       migrateMathStrings(currentEditor)
     }
 
@@ -489,25 +664,38 @@ watch(
       return
     }
 
+    const normalizedIncomingValue = normalizeIncomingModelValue(value)
+    if (normalizedIncomingValue === currentSerializedModelValue) {
+      return
+    }
+
     const nextJson = parseModelValue(value)
     const nextSerialized = serializeModelValue(nextJson)
-    const currentSerialized = serializeModelValue(currentEditor.getJSON())
-    if (nextSerialized === currentSerialized) {
+    if (nextSerialized === currentSerializedModelValue) {
       return
     }
 
     clearPendingModelEmit()
-    currentEditor.commands.setContent(nextJson, {
-      emitUpdate: false,
-    })
-    json.value = currentEditor.getJSON()
+    try {
+      currentEditor.commands.setContent(nextJson, {
+        emitUpdate: false,
+      })
+    } catch (error) {
+      console.error("[TextEditor] Failed to sync model value:", error)
+      currentEditor.commands.setContent(createEmptyDoc(), {
+        emitUpdate: false,
+      })
+    }
+
+    currentSerializedModelValue = serializeModelValue(currentEditor.getJSON())
+    updateEditorStats(currentEditor)
   }
 )
 
 watch(
   () => props.readOnly,
   (newValue) => {
-    editor.value?.setEditable(!newValue)
+    editor.value?.setEditable(!newValue, false)
   }
 )
 
@@ -521,8 +709,15 @@ onBeforeUnmount(() => {
   editor.value?.destroy()
 })
 
-const source = computed(() => JSON.stringify(json.value, null, 2))
-const { copy, copied } = useClipboard({ source, legacy: true })
+const { copy, copied } = useClipboard({ legacy: true })
+
+const copySource = async () => {
+  if (!editor.value) {
+    return
+  }
+
+  await copy(JSON.stringify(editor.value.getJSON(), null, 2))
+}
 </script>
 
 <template>
@@ -530,12 +725,10 @@ const { copy, copied } = useClipboard({ source, legacy: true })
     class="bg-background/50 sticky top-2 m-2 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
   >
     <p class="text-muted-foreground mr-auto ml-2 text-xs">
-      {{ editor?.storage.characterCount.characters() }} characters /
-      {{ editor?.storage.characterCount.words() }} words /
-      {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
-      read
+      {{ editorStats.characters }} characters / {{ editorStats.words }} words /
+      {{ editorStats.readingMinutes }} min read
     </p>
-    <Button variant="outline" size="icon-sm" @click="copy(source)">
+    <Button variant="outline" size="icon-sm" @click="copySource">
       <IconCopy v-if="!copied" />
       <IconCheck v-else />
     </Button>
@@ -1274,45 +1467,12 @@ const { copy, copied } = useClipboard({ source, legacy: true })
                   Link Management
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="
-                      editor
-                        ?.chain()
-                        .focus()
-                        .toggleLink({ href: 'https://example.com' })
-                        .run()
-                    "
-                  >
-                    <IconLink /> Toggle Link
+                  <DropdownMenuItem @click="setLinkFromPrompt">
+                    <IconExternalLink />
+                    {{ editor?.isActive("link") ? "Edit Link" : "Add Link" }}
                     <DropdownMenuShortcut v-if="editor?.isActive('link')">
                       <IconCheck />
                     </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor?.getAttributes('link').href !== null
-                        ? editor?.getAttributes('link').href === ''
-                          ? editor
-                              ?.chain()
-                              .focus()
-                              .extendMarkRange('link')
-                              .unsetLink()
-                              .run()
-                          : editor
-                              ?.chain()
-                              .focus()
-                              .extendMarkRange('link')
-                              .setLink({ href: 'https://example.com' })
-                              .run()
-                        : editor
-                            ?.chain()
-                            .focus()
-                            .extendMarkRange('link')
-                            .setLink({ href: 'https://example.com' })
-                            .run()
-                    "
-                  >
-                    <IconExternalLink /> Set Link
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     :disabled="!editor?.isActive('link')"
