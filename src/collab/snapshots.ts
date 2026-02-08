@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore"
 import * as Y from "yjs"
 
-const DEFAULT_SNAPSHOT_DEBOUNCE_MS = 15_000
+const DEFAULT_SNAPSHOT_DEBOUNCE_MS = 30_000
 
 interface SnapshotDoc {
   contentId: string
@@ -155,13 +155,35 @@ export function createSnapshotManager(
     void runSave()
   }
 
+  const handleVisibilityChange = () => {
+    if (typeof document === "undefined") {
+      return
+    }
+
+    if (document.visibilityState === "hidden") {
+      void flush()
+    }
+  }
+
+  const handlePageHide = () => {
+    void flush()
+  }
+
   if (typeof window !== "undefined") {
     window.addEventListener("beforeunload", handleBeforeUnload)
+    window.addEventListener("pagehide", handlePageHide)
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", handleVisibilityChange)
   }
 
   const destroy = async () => {
     if (typeof window !== "undefined") {
       window.removeEventListener("beforeunload", handleBeforeUnload)
+      window.removeEventListener("pagehide", handlePageHide)
+    }
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
 
     await flush()

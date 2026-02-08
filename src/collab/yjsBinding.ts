@@ -2,13 +2,12 @@ import { colorFromUserId } from "@/collab/colors"
 import {
   createPeer,
   deletePeer,
-  deleteSignal,
+  deleteSignals,
   heartbeatPeer,
   joinCollabRoom,
   sendSignal,
   subscribeIncomingSignals,
   subscribePeers,
-  type CollabPeer,
   type CollabRole,
   type JoinCollabRoomResponse,
 } from "@/collab/signaling"
@@ -24,7 +23,10 @@ import * as Y from "yjs"
 
 const REMOTE_DOC_ORIGIN = Symbol("remote-doc")
 const REMOTE_AWARENESS_ORIGIN = Symbol("remote-awareness")
-const HEARTBEAT_INTERVAL_MS = 25_000
+const HEARTBEAT_INTERVAL_ACTIVE_MS = 90_000
+const HEARTBEAT_INTERVAL_HIDDEN_MS = 180_000
+const SIGNAL_DELETE_DEBOUNCE_MS = 1_000
+const SIGNAL_DELETE_MAX_BATCH_SIZE = 50
 
 export interface CollabUser {
   uid: string
@@ -113,8 +115,10 @@ export async function createYjsCollab(
   })
 
   let mesh: WebRtcMesh | null = null
+  let isDestroyed = false
 
-  const knownPeers = new Map<string, CollabPeer>()
+  const pendingSignalDeleteIds = new Set<string>()
+  let signalDeleteTimer: ReturnType<typeof setTimeout> | null = null
 
   mesh = new WebRtcMesh({
     myPeerId: peerId,
@@ -166,26 +170,110 @@ export async function createYjsCollab(
     joinToken: join.joinToken,
   })
 
-  const heartbeatTimer =
-    typeof window !== "undefined"
-      ? window.setInterval(() => {
-          void heartbeatPeer({
-            contentId: options.contentId,
-            peerId,
-            joinToken: join.joinToken,
-          }).catch((error) => {
-            console.error("[collab] Failed to heartbeat peer", error)
-          })
-        }, HEARTBEAT_INTERVAL_MS)
-      : null
+  const flushSignalDeletes = async () => {
+    while (pendingSignalDeleteIds.size) {
+      const signalIds = [...pendingSignalDeleteIds].slice(
+        0,
+        SIGNAL_DELETE_MAX_BATCH_SIZE
+      )
+
+      signalIds.forEach((signalId) => {
+        pendingSignalDeleteIds.delete(signalId)
+      })
+
+      try {
+        await deleteSignals({
+          contentId: options.contentId,
+          signalIds,
+        })
+      } catch (error) {
+        signalIds.forEach((signalId) => {
+          pendingSignalDeleteIds.add(signalId)
+        })
+        console.error("[collab] Failed to delete signals", error)
+        break
+      }
+    }
+
+    if (!isDestroyed && pendingSignalDeleteIds.size) {
+      scheduleSignalDeleteFlush()
+    }
+  }
+
+  const scheduleSignalDeleteFlush = () => {
+    if (signalDeleteTimer !== null || !pendingSignalDeleteIds.size) {
+      return
+    }
+
+    signalDeleteTimer = setTimeout(() => {
+      signalDeleteTimer = null
+      void flushSignalDeletes()
+    }, SIGNAL_DELETE_DEBOUNCE_MS)
+  }
+
+  const queueSignalDelete = (signalId: string) => {
+    pendingSignalDeleteIds.add(signalId)
+
+    if (pendingSignalDeleteIds.size >= SIGNAL_DELETE_MAX_BATCH_SIZE) {
+      if (signalDeleteTimer !== null) {
+        clearTimeout(signalDeleteTimer)
+        signalDeleteTimer = null
+      }
+      void flushSignalDeletes()
+      return
+    }
+
+    scheduleSignalDeleteFlush()
+  }
+
+  const sendHeartbeat = () => {
+    void heartbeatPeer({
+      contentId: options.contentId,
+      peerId,
+      joinToken: join.joinToken,
+    }).catch((error) => {
+      console.error("[collab] Failed to heartbeat peer", error)
+    })
+  }
+
+  let heartbeatTimer: number | null = null
+
+  const restartHeartbeatTimer = () => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    if (heartbeatTimer !== null) {
+      window.clearInterval(heartbeatTimer)
+    }
+
+    const intervalMs = document.hidden
+      ? HEARTBEAT_INTERVAL_HIDDEN_MS
+      : HEARTBEAT_INTERVAL_ACTIVE_MS
+
+    heartbeatTimer = window.setInterval(() => {
+      sendHeartbeat()
+    }, intervalMs)
+  }
+
+  const handleVisibilityChange = () => {
+    if (isDestroyed) {
+      return
+    }
+
+    restartHeartbeatTimer()
+  }
+
+  if (typeof window !== "undefined") {
+    restartHeartbeatTimer()
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+  }
 
   const unsubscribePeers = subscribePeers(
     options.contentId,
     (peers) => {
-      peers.forEach((peer) => {
-        knownPeers.set(peer.peerId, peer)
-      })
-
       const currentPeerIds = new Set(peers.map((peer) => peer.peerId))
 
       peers.forEach((peer) => {
@@ -201,7 +289,6 @@ export async function createYjsCollab(
           return
         }
         mesh?.removePeer(existingPeerId)
-        knownPeers.delete(existingPeerId)
       })
     },
     (error) => {
@@ -224,12 +311,7 @@ export async function createYjsCollab(
           console.error("[collab] Failed to process signal", error)
         })
         .finally(() => {
-          void deleteSignal({
-            contentId: options.contentId,
-            signalId: signal.id,
-          }).catch((error) => {
-            console.error("[collab] Failed to delete signal", error)
-          })
+          queueSignalDelete(signal.id)
         })
     },
     (error) => {
@@ -276,8 +358,6 @@ export async function createYjsCollab(
   ydoc.on("update", handleYdocUpdate)
   awareness.on("update", handleAwarenessUpdate)
 
-  let isDestroyed = false
-
   const destroy = async () => {
     if (isDestroyed) {
       return
@@ -291,6 +371,15 @@ export async function createYjsCollab(
     if (heartbeatTimer !== null && typeof window !== "undefined") {
       window.clearInterval(heartbeatTimer)
     }
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+
+    if (signalDeleteTimer !== null) {
+      clearTimeout(signalDeleteTimer)
+      signalDeleteTimer = null
+    }
+    await flushSignalDeletes()
 
     ydoc.off("update", handleYdocUpdate)
     awareness.off("update", handleAwarenessUpdate)

@@ -61,10 +61,36 @@ let view: EditorView | null = null
 const editableCompartment = new Compartment()
 const placeholderCompartment = new Compartment()
 const extensionsCompartment = new Compartment()
+const MODEL_EMIT_DEBOUNCE_MS = 100
+let modelEmitTimer: ReturnType<typeof setTimeout> | null = null
+let pendingModelValue: string | null = null
+
+const flushModelEmit = () => {
+  if (pendingModelValue === null) {
+    return
+  }
+
+  const value = pendingModelValue
+  pendingModelValue = null
+  emit("update:modelValue", value)
+}
+
+const scheduleModelEmit = (value: string) => {
+  pendingModelValue = value
+
+  if (modelEmitTimer !== null) {
+    return
+  }
+
+  modelEmitTimer = setTimeout(() => {
+    modelEmitTimer = null
+    flushModelEmit()
+  }, MODEL_EMIT_DEBOUNCE_MS)
+}
 
 const updateListener = EditorView.updateListener.of((update) => {
   if (!update.docChanged) return
-  emit("update:modelValue", update.state.doc.toString())
+  scheduleModelEmit(update.state.doc.toString())
 })
 
 onMounted(() => {
@@ -246,6 +272,12 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (modelEmitTimer !== null) {
+    clearTimeout(modelEmitTimer)
+    modelEmitTimer = null
+  }
+  flushModelEmit()
+
   if (view) {
     view.destroy()
     view = null

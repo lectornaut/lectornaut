@@ -17,8 +17,14 @@ const workspaceStore = useWorkspaceStore()
 const fileTreeStore = useFileTreeStore()
 const { currentWorkspace } = storeToRefs(workspaceStore)
 
-const selectedCodeNodeName = computed(() => {
-  if (!route.path.startsWith("/code/")) return null
+const selectedRouteNodeName = computed(() => {
+  let scope: "code" | "write" | null = null
+  if (route.path.startsWith("/code/")) {
+    scope = "code"
+  } else if (route.path.startsWith("/write/")) {
+    scope = "write"
+  }
+  if (!scope) return null
 
   const nodeId = route.params.nodeId
   if (typeof nodeId !== "string" || !nodeId.length) return null
@@ -27,21 +33,19 @@ const selectedCodeNodeName = computed(() => {
   const workspaceId = currentWorkspace.value?.id
   if (!teamId || !workspaceId) return null
 
-  return (
-    fileTreeStore.getNode("code", teamId, workspaceId, nodeId)?.name ?? null
-  )
+  return fileTreeStore.getNode(scope, teamId, workspaceId, nodeId)?.name ?? null
 })
 
 const displayBreadcrumbs = computed(() => {
   const items = breadcrumbs.value
-  if (!selectedCodeNodeName.value || !items.length) return items
+  if (!selectedRouteNodeName.value || !items.length) return items
 
   const lastIndex = items.length - 1
   return items.map((item, index) =>
     index === lastIndex
       ? {
           ...item,
-          breadcrumb: selectedCodeNodeName.value,
+          breadcrumb: selectedRouteNodeName.value,
         }
       : item
   )

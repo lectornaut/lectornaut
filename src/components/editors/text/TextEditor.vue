@@ -206,6 +206,9 @@ const serializeModelValue = (value: JSONContent | null | undefined): string => {
 
 const isReadOnly = computed(() => props.readOnly)
 const json = ref<JSONContent>(parseModelValue(props.modelValue))
+const MODEL_EMIT_DEBOUNCE_MS = 120
+let modelEmitTimer: ReturnType<typeof setTimeout> | null = null
+let pendingModelValue: string | null = null
 
 const sharedLowlight = createLowlight(common)
 
@@ -394,12 +397,55 @@ if (props.collaborationDoc) {
   extensions.push(UndoRedo)
 }
 
-const syncModelFromEditor = (currentEditor: TiptapEditor) => {
+const clearPendingModelEmit = () => {
+  if (modelEmitTimer !== null) {
+    clearTimeout(modelEmitTimer)
+    modelEmitTimer = null
+  }
+  pendingModelValue = null
+}
+
+const flushPendingModelEmit = () => {
+  if (pendingModelValue === null) {
+    return
+  }
+
+  const nextValue = pendingModelValue
+  pendingModelValue = null
+  emit("update:modelValue", nextValue)
+}
+
+const scheduleModelEmit = (value: string, immediate = false) => {
+  pendingModelValue = value
+
+  if (immediate) {
+    if (modelEmitTimer !== null) {
+      clearTimeout(modelEmitTimer)
+      modelEmitTimer = null
+    }
+    flushPendingModelEmit()
+    return
+  }
+
+  if (modelEmitTimer !== null) {
+    return
+  }
+
+  modelEmitTimer = setTimeout(() => {
+    modelEmitTimer = null
+    flushPendingModelEmit()
+  }, MODEL_EMIT_DEBOUNCE_MS)
+}
+
+const syncModelFromEditor = (
+  currentEditor: TiptapEditor,
+  options?: { immediate?: boolean }
+) => {
   const nextJson = currentEditor.getJSON()
   const serialized = serializeModelValue(nextJson)
 
   json.value = nextJson
-  emit("update:modelValue", serialized)
+  scheduleModelEmit(serialized, options?.immediate ?? false)
 }
 
 const editor = useEditor({
@@ -428,7 +474,7 @@ const editor = useEditor({
       migrateMathStrings(currentEditor)
     }
 
-    syncModelFromEditor(currentEditor)
+    syncModelFromEditor(currentEditor, { immediate: true })
   },
   onUpdate: ({ editor: currentEditor }) => {
     syncModelFromEditor(currentEditor)
@@ -450,6 +496,7 @@ watch(
       return
     }
 
+    clearPendingModelEmit()
     currentEditor.commands.setContent(nextJson, {
       emitUpdate: false,
     })
@@ -465,6 +512,12 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (modelEmitTimer !== null) {
+    clearTimeout(modelEmitTimer)
+    modelEmitTimer = null
+  }
+  flushPendingModelEmit()
+
   editor.value?.destroy()
 })
 
@@ -475,7 +528,7 @@ const { copy, copied } = useClipboard({ source, legacy: true })
 <template>
   <EditorContent :editor="editor" />
   <div
-    class="text-muted-foreground sticky bottom-0 mt-auto flex items-center justify-between gap-2 p-2 text-xs"
+    class="text-muted-foreground sticky bottom-0 mt-auto flex items-center justify-between gap-2 p-2 pl-4 text-xs"
   >
     {{ editor?.storage.characterCount.characters() }} characters /
     {{ editor?.storage.characterCount.words() }} words /

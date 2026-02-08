@@ -67,6 +67,31 @@ function assertString(value: unknown, field: string): string {
   return trimmed
 }
 
+function assertStringArray(
+  value: unknown,
+  field: string,
+  options: { maxLength: number }
+): string[] {
+  if (!Array.isArray(value)) {
+    throw new HttpsError("invalid-argument", `${field} must be an array.`)
+  }
+
+  if (!value.length) {
+    return []
+  }
+
+  if (value.length > options.maxLength) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} cannot contain more than ${options.maxLength} items.`
+    )
+  }
+
+  return value.map((entry, index) => {
+    return assertString(entry, `${field}[${index}]`)
+  })
+}
+
 function sanitizeDisplayName(value: unknown, fallback: string): string {
   if (typeof value !== "string") {
     return fallback
@@ -484,7 +509,6 @@ export const sendSignal = onCall(async (request) => {
     toPeerId,
     type,
     payload: request.data?.payload ?? null,
-    joinToken,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   })
 
@@ -530,6 +554,35 @@ export const deleteSignal = onCall(async (request) => {
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
   await room.roomRef.collection("signals").doc(signalId).delete()
+  return { ok: true }
+})
+
+export const deleteSignals = onCall(async (request) => {
+  assertAuthenticated(request)
+
+  const contentId = assertString(request.data?.contentId, "contentId")
+  const signalIds = assertStringArray(request.data?.signalIds, "signalIds", {
+    maxLength: 100,
+  })
+
+  if (!signalIds.length) {
+    return { ok: true }
+  }
+
+  const room = await getRoomContext(contentId)
+  const membershipRole = await resolveRole(
+    request.auth.uid,
+    room.teamId,
+    room.workspaceId
+  )
+  assertCanViewWorkspace(request.auth.uid, membershipRole)
+
+  const batch = db.batch()
+  signalIds.forEach((signalId) => {
+    batch.delete(room.roomRef.collection("signals").doc(signalId))
+  })
+  await batch.commit()
+
   return { ok: true }
 })
 

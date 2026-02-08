@@ -65,6 +65,11 @@ export interface DeleteSignalRequest {
   signalId: string
 }
 
+export interface DeleteSignalsRequest {
+  contentId: string
+  signalIds: string[]
+}
+
 export interface CollabPeer {
   peerId: string
   userId: string
@@ -114,6 +119,11 @@ const deleteSignalCallable = httpsCallable<DeleteSignalRequest, { ok: true }>(
   "deleteSignal"
 )
 
+const deleteSignalsCallable = httpsCallable<DeleteSignalsRequest, { ok: true }>(
+  functions,
+  "deleteSignals"
+)
+
 export async function joinCollabRoom(
   payload: JoinCollabRoomRequest
 ): Promise<JoinCollabRoomResponse> {
@@ -143,6 +153,12 @@ export async function deleteSignal(
   payload: DeleteSignalRequest
 ): Promise<void> {
   await deleteSignalCallable(payload)
+}
+
+export async function deleteSignals(
+  payload: DeleteSignalsRequest
+): Promise<void> {
+  await deleteSignalsCallable(payload)
 }
 
 export function subscribePeers(

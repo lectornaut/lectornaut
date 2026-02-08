@@ -78,31 +78,31 @@ export class WebRtcMesh {
   }
 
   sendYUpdate(update: Uint8Array, targetPeerId?: string): void {
-    const envelope: MeshEnvelope = {
+    const serializedEnvelope = JSON.stringify({
       t: "y-update",
       data: bytesToBase64(update),
-    }
+    } satisfies MeshEnvelope)
 
     if (targetPeerId) {
-      this.sendEnvelope(targetPeerId, envelope)
+      this.sendSerializedEnvelope(targetPeerId, serializedEnvelope)
       return
     }
 
-    this.broadcastEnvelope(envelope)
+    this.broadcastSerializedEnvelope(serializedEnvelope)
   }
 
   sendAwareness(update: Uint8Array, targetPeerId?: string): void {
-    const envelope: MeshEnvelope = {
+    const serializedEnvelope = JSON.stringify({
       t: "awareness",
       data: bytesToBase64(update),
-    }
+    } satisfies MeshEnvelope)
 
     if (targetPeerId) {
-      this.sendEnvelope(targetPeerId, envelope)
+      this.sendSerializedEnvelope(targetPeerId, serializedEnvelope)
       return
     }
 
-    this.broadcastEnvelope(envelope)
+    this.broadcastSerializedEnvelope(serializedEnvelope)
   }
 
   async handleSignal(signal: IncomingSignal): Promise<void> {
@@ -332,22 +332,22 @@ export class WebRtcMesh {
     }
   }
 
-  private sendEnvelope(peerId: string, envelope: MeshEnvelope): void {
+  private sendSerializedEnvelope(peerId: string, envelope: string): void {
     const channel = this.dataChannels.get(peerId)
     if (!channel || channel.readyState !== "open") {
       return
     }
 
-    channel.send(JSON.stringify(envelope))
+    channel.send(envelope)
   }
 
-  private broadcastEnvelope(envelope: MeshEnvelope): void {
+  private broadcastSerializedEnvelope(envelope: string): void {
     this.dataChannels.forEach((channel) => {
       if (channel.readyState !== "open") {
         return
       }
 
-      channel.send(JSON.stringify(envelope))
+      channel.send(envelope)
     })
   }
 
