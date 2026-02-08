@@ -163,7 +163,7 @@ onMounted(() => {
         // Theme
         EditorView.theme({
           "&": {
-            backgroundColor: "var(--background)",
+            background: "var(--background)",
             color: "var(--foreground)",
           },
           ".cm-scroller": {
@@ -179,49 +179,161 @@ onMounted(() => {
             borderLeftColor: "var(--primary)",
           },
           ".cm-selectionBackground, .cm-content ::selection": {
-            backgroundColor:
-              "color-mix(in srgb, var(--primary) 24%, transparent)",
+            background: "color-mix(in srgb, var(--primary) 24%, transparent)",
           },
           ".cm-gutters": {
-            backgroundColor: "var(--card)",
+            background: "var(--card)",
             color: "var(--muted-foreground)",
             borderRight: "1px solid var(--border)",
           },
           ".cm-activeLineGutter": {
-            backgroundColor:
-              "color-mix(in srgb, var(--accent) 40%, transparent)",
+            background: "color-mix(in srgb, var(--accent) 40%, transparent)",
             color: "var(--foreground)",
           },
           ".cm-activeLine": {
-            backgroundColor:
-              "color-mix(in srgb, var(--accent) 35%, transparent)",
+            background: "color-mix(in srgb, var(--accent) 35%, transparent)",
           },
           ".cm-panels": {
-            backgroundColor: "var(--popover)",
+            background: "var(--popover)",
             color: "var(--popover-foreground)",
             borderTop: "1px solid var(--border)",
           },
+          ".cm-panel.cm-search": {
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.375rem",
+            padding: "0.5rem",
+            "& br": {
+              flexBasis: "100%",
+              height: "0",
+            },
+            "& input, & button, & label": {
+              margin: "0",
+            },
+            "& .cm-textfield": {
+              flex: "1 1 12rem",
+              height: "2.25rem",
+              minWidth: "10rem",
+              borderRadius: "var(--radius)",
+              border: "1px solid var(--input)",
+              background:
+                "color-mix(in srgb, var(--background) 92%, transparent)",
+              color: "var(--foreground)",
+              padding: "0 0.75rem",
+              fontFamily: "var(--font-sans)",
+              fontSize: "0.875rem",
+              lineHeight: "1.25rem",
+              outline: "none",
+              transition: "border-color 120ms ease, box-shadow 120ms ease",
+              "&::placeholder": {
+                color: "var(--muted-foreground)",
+              },
+              "&:focus": {
+                borderColor: "var(--ring)",
+                boxShadow:
+                  "0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent)",
+              },
+            },
+            "& label": {
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.375rem",
+              color: "var(--muted-foreground)",
+              whiteSpace: "nowrap",
+              fontFamily: "var(--font-sans)",
+              fontSize: "0.75rem",
+              lineHeight: "1",
+            },
+            "& input[type=checkbox]": {
+              width: "0.875rem",
+              height: "0.875rem",
+              margin: "0",
+              accentColor: "var(--primary)",
+            },
+            "& .cm-button": {
+              textTransform: "capitalize",
+              height: "2.25rem",
+              borderRadius: "var(--radius)",
+              border: "1px solid var(--border)",
+              background: "var(--background)",
+              color: "var(--foreground)",
+              padding: "0 0.75rem",
+              fontFamily: "var(--font-sans)",
+              fontSize: "0.8125rem",
+              fontWeight: "500",
+              lineHeight: "1",
+              cursor: "pointer",
+              transition:
+                "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+              "&:hover": {
+                background: "var(--accent)",
+                color: "var(--accent-foreground)",
+              },
+              "&:focus-visible": {
+                outline: "none",
+                borderColor: "var(--ring)",
+                boxShadow:
+                  "0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent)",
+              },
+            },
+            "& [name=close]": {
+              position: "static",
+              marginLeft: "auto",
+              width: "2rem",
+              height: "2rem",
+              borderRadius: "var(--radius)",
+              border: "1px solid transparent",
+              background: "transparent",
+              color: "var(--muted-foreground)",
+              fontFamily: "var(--font-sans)",
+              fontSize: "1rem",
+              lineHeight: "1",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition:
+                "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+              "&:hover": {
+                background: "var(--accent)",
+                color: "var(--accent-foreground)",
+              },
+              "&:focus-visible": {
+                outline: "none",
+                borderColor: "var(--ring)",
+                boxShadow:
+                  "0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent)",
+              },
+            },
+          },
           ".cm-searchMatch": {
-            backgroundColor: "color-mix(in srgb, var(--ring) 25%, transparent)",
+            background: "color-mix(in srgb, var(--ring) 25%, transparent)",
             outline: "1px solid var(--ring)",
           },
+          ".cm-searchMatch.cm-searchMatch-selected": {
+            background: "color-mix(in srgb, var(--primary) 30%, transparent)",
+          },
           ".cm-tooltip": {
-            backgroundColor: "var(--popover)",
+            background: "var(--popover)",
             color: "var(--popover-foreground)",
             border: "1px solid var(--border)",
           },
           ".cm-tooltip-autocomplete": {
             "& > ul > li[aria-selected]": {
-              backgroundColor:
-                "color-mix(in srgb, var(--accent) 35%, transparent)",
+              background: "color-mix(in srgb, var(--accent) 35%, transparent)",
               color: "var(--foreground)",
             },
           },
           ".cm-ySelectionInfo": {
+            opacity: "1",
             fontFamily: "var(--font-sans)",
             fontWeight: "600",
             borderRadius: "2px 2px 2px 0",
             padding: "2px 4px",
+          },
+          ".cm-ySelectionCaretDot": {
+            opacity: "0",
           },
         }),
       ],

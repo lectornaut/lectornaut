@@ -526,22 +526,21 @@ const { copy, copied } = useClipboard({ source, legacy: true })
 </script>
 
 <template>
-  <EditorContent :editor="editor" />
   <div
-    class="text-muted-foreground sticky bottom-0 mt-auto flex items-center justify-between gap-2 p-2 pl-4 text-xs"
+    class="bg-background/50 sticky top-2 m-2 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
   >
-    {{ editor?.storage.characterCount.characters() }} characters /
-    {{ editor?.storage.characterCount.words() }} words /
-    {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
-    read
-    <Badge v-if="isReadOnly" variant="secondary" class="uppercase">
-      Read-only
-    </Badge>
+    <p class="text-muted-foreground mr-auto ml-2 text-xs">
+      {{ editor?.storage.characterCount.characters() }} characters /
+      {{ editor?.storage.characterCount.words() }} words /
+      {{ Math.ceil((editor?.storage.characterCount.words() || 0) / 200) }} min
+      read
+    </p>
     <Button variant="outline" size="icon-sm" @click="copy(source)">
       <IconCopy v-if="!copied" />
       <IconCheck v-else />
     </Button>
   </div>
+  <EditorContent :editor="editor" />
   <BubbleMenu v-if="editor && !isReadOnly" :editor="editor">
     <div class="bg-card flex gap-1 rounded-lg border p-1 shadow-lg">
       <TooltipProvider>

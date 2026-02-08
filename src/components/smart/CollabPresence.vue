@@ -7,6 +7,7 @@ interface PresenceUser {
   userId: string
   name: string
   photoURL: string | null
+  color: string
 }
 
 const props = withDefaults(
@@ -36,6 +37,7 @@ const syncUsers = () => {
         userId?: unknown
         name?: unknown
         photoURL?: unknown
+        color?: unknown
       }
     }
 
@@ -59,6 +61,10 @@ const syncUsers = () => {
         typeof state.user.photoURL === "string" && state.user.photoURL
           ? state.user.photoURL
           : null,
+      color:
+        typeof state.user.color === "string" && state.user.color.trim().length
+          ? state.user.color
+          : "#3b82f6",
     })
   })
 
@@ -105,25 +111,26 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="users.length" class="flex items-center gap-2">
     <TooltipProvider>
-      <div class="flex items-center">
-        <Tooltip v-for="participant in visibleUsers" :key="participant.peerId">
-          <TooltipTrigger as-child>
-            <Avatar class="ring-background -ml-2 size-5 ring-2 first:ml-0">
-              <AvatarImage
-                :src="participant.photoURL || ''"
-                :alt="participant.name"
-                referrerpolicy="no-referrer"
-              />
-              <AvatarFallback class="text-[10px] font-semibold">
-                {{ getInitials(participant.name) }}
-              </AvatarFallback>
-            </Avatar>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            {{ participant.name }}
-          </TooltipContent>
-        </Tooltip>
-      </div>
+      <Tooltip v-for="participant in visibleUsers" :key="participant.peerId">
+        <TooltipTrigger as-child>
+          <Avatar
+            class="ring-offset-sidebar -ml-2 size-5 ring-2 ring-offset-2 first:ml-0"
+            :style="{ '--tw-ring-color': participant.color }"
+          >
+            <AvatarImage
+              :src="participant.photoURL || ''"
+              :alt="participant.name"
+              referrerpolicy="no-referrer"
+            />
+            <AvatarFallback>
+              {{ getInitials(participant.name) }}
+            </AvatarFallback>
+          </Avatar>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          {{ participant.name }}
+        </TooltipContent>
+      </Tooltip>
     </TooltipProvider>
     <span v-if="overflowCount > 0" class="text-muted-foreground text-xs">
       +{{ overflowCount }}

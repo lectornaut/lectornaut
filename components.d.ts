@@ -84,7 +84,7 @@ declare module 'vue' {
     ChartTooltipContent: typeof import('./src/components/ui/chart/ChartTooltipContent.vue')['default']
     Checkbox: typeof import('./src/components/ui/checkbox/Checkbox.vue')['default']
     CodeEditor: typeof import('./src/components/editors/code/CodeEditor.vue')['default']
-    CollabPresence: typeof import('./src/components/CollabPresence.vue')['default']
+    CollabPresence: typeof import('./src/components/smart/CollabPresence.vue')['default']
     Collapsible: typeof import('./src/components/ui/collapsible/Collapsible.vue')['default']
     CollapsibleContent: typeof import('./src/components/ui/collapsible/CollapsibleContent.vue')['default']
     CollapsibleTrigger: typeof import('./src/components/ui/collapsible/CollapsibleTrigger.vue')['default']

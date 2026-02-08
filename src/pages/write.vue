@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { createYjsCollab, type YjsCollabSession } from "@/collab/yjsBinding"
+import { IconFileText } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
@@ -349,42 +350,42 @@ onBeforeUnmount(() => {
   <div
     class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded-2xl border"
   >
-    <div
-      v-if="teamId && workspaceId && selectedFile"
-      class="bg-card flex items-center justify-between border-b p-2"
-    >
-      <div class="flex min-w-0 items-center gap-2">
-        <Badge v-if="collabRole" variant="secondary" class="uppercase">
-          {{ collabRole }}
-        </Badge>
-        <span class="truncate text-sm font-medium">
-          {{ selectedFile.name }}
-        </span>
-      </div>
-      <div class="flex items-center gap-2">
-        <Spinner v-if="!collabReady && !collabError" />
-        <CollabPresence :awareness="collabAwareness" />
-      </div>
-    </div>
-    <TextEditor
-      v-if="teamId && workspaceId && selectedFile"
-      :key="`${selectedFile.id}:${collabDoc ? 'collab' : 'local'}:${collabAwareness ? 'aware' : 'noaware'}`"
-      v-model="editorContent"
-      :read-only="editorReadOnly"
-      :collaboration-doc="collabDoc"
-      :collaboration-awareness="collabAwareness"
-    />
-    <div
-      v-else
-      class="text-muted-foreground flex grow items-center justify-center px-4 text-center"
-    >
-      Select a workspace to view or edit documents.
-    </div>
+    <OverlayScrollbarsWrapper v-if="teamId && workspaceId && selectedFile">
+      <TextEditor
+        :key="`${selectedFile.id}:${collabDoc ? 'collab' : 'local'}:${collabAwareness ? 'aware' : 'noaware'}`"
+        v-model="editorContent"
+        :read-only="editorReadOnly"
+        :collaboration-doc="collabDoc"
+        :collaboration-awareness="collabAwareness"
+      />
+    </OverlayScrollbarsWrapper>
+    <Empty v-else>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <IconFileText class="text-muted-foreground size-6" />
+        </EmptyMedia>
+        <EmptyTitle>No document selected</EmptyTitle>
+        <EmptyDescription>
+          Select a workspace to view or edit documents.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   </div>
   <Teleport defer to="#cta-dock">
+    <div
+      v-if="teamId && workspaceId && selectedFile"
+      class="flex items-center gap-2"
+    >
+      <Badge v-if="collabRole" variant="outline" class="capitalize">
+        {{ collabRole }}
+      </Badge>
+      <Spinner v-if="!collabReady && !collabError" />
+      <CollabPresence v-else :awareness="collabAwareness" />
+    </div>
     <Button
+      v-if="teamId && workspaceId && selectedFile"
       size="sm"
-      :disabled="!selectedFile || !isDirty || editorReadOnly"
+      :disabled="editorReadOnly || !isDirty"
       @click="saveContent"
     >
       Save

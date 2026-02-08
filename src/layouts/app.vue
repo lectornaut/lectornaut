@@ -310,7 +310,7 @@ const closeTab = (id: string) => {
                               <SubNavigation />
                               <div
                                 id="cta-dock"
-                                class="flex shrink-0 empty:hidden"
+                                class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
                               ></div>
                             </div>
                             <RouterView />
