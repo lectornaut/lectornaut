@@ -1,59 +1,40 @@
 <script lang="ts" setup>
+import { type ColorOption } from "@/components/editors/text/components/TextEditorColorPicker.vue"
+import { EmojiReplacer } from "@/components/editors/text/extensions/emojiReplacer"
+import { RichImage } from "@/components/editors/text/extensions/richImage"
 import {
-  IconAlignCenter,
-  IconAlignJustify,
-  IconAlignLeft,
-  IconAlignRight,
-  IconArrowDown,
-  IconArrowLeft,
-  IconArrowRight,
-  IconArrowUp,
+  createSlashCommandExtension,
+  type SlashCommandItem,
+  type SlashCommandPanelState,
+} from "@/components/editors/text/extensions/slashCommand"
+import {
   IconBold,
   IconBraces,
-  IconCheck,
-  IconCircleFilled,
+  IconChevronDown,
   IconCode,
-  IconColumns,
-  IconCombine,
-  IconCopy,
-  IconExternalLink,
   IconGripVertical,
   IconHeading1,
   IconHeading2,
   IconHeading3,
   IconHighlighter,
+  IconImage,
   IconItalic,
   IconLink,
   IconList,
   IconListChecks,
-  IconListCollapse,
   IconListOrdered,
   IconPalette,
-  IconPlus,
   IconQuote,
-  IconRefreshCcw,
-  IconRows,
-  IconSettings,
-  IconSplit,
-  IconSplitSquareHorizontal,
-  IconSquare,
+  IconRefreshCw,
+  IconRotateCcw,
   IconStrikethrough,
-  IconSubscript,
-  IconSuperscript,
   IconTable,
-  IconText,
-  IconTrash,
-  IconType,
   IconUnderline,
   IconUnlink,
-  IconWrench,
-  IconX,
 } from "@/data/icons"
-import { accents, fonts, sizes } from "@/helpers/defaults"
+import { accents } from "@/helpers/defaults"
+import { showErrorToast } from "@/utils/toast-helpers"
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
-import Blockquote from "@tiptap/extension-blockquote"
-import Bold from "@tiptap/extension-bold"
-import Code from "@tiptap/extension-code"
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
 import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
@@ -62,55 +43,54 @@ import {
   DetailsContent,
   DetailsSummary,
 } from "@tiptap/extension-details"
-import Document from "@tiptap/extension-document"
 import { DragHandle } from "@tiptap/extension-drag-handle-vue-3"
-import Emoji from "@tiptap/extension-emoji"
-import FileHandler from "@tiptap/extension-file-handler"
-import HardBreak from "@tiptap/extension-hard-break"
-import Heading from "@tiptap/extension-heading"
 import Highlight from "@tiptap/extension-highlight"
-import HorizontalRule from "@tiptap/extension-horizontal-rule"
-import Image from "@tiptap/extension-image"
-import InvisibleCharacters from "@tiptap/extension-invisible-characters"
-import Italic from "@tiptap/extension-italic"
-import Link from "@tiptap/extension-link"
-import { BulletList } from "@tiptap/extension-list/bullet-list"
-import { ListItem } from "@tiptap/extension-list/item"
-import { ListKeymap } from "@tiptap/extension-list/keymap"
-import { OrderedList } from "@tiptap/extension-list/ordered-list"
 import { TaskItem } from "@tiptap/extension-list/task-item"
 import { TaskList } from "@tiptap/extension-list/task-list"
 import { Mathematics, migrateMathStrings } from "@tiptap/extension-mathematics"
-import Paragraph from "@tiptap/extension-paragraph"
-import Strike from "@tiptap/extension-strike"
 import Subscript from "@tiptap/extension-subscript"
 import Superscript from "@tiptap/extension-superscript"
+import {
+  TableOfContents,
+  getHierarchicalIndexes,
+  type TableOfContentData,
+  type TableOfContentDataItem,
+  type TableOfContentsStorage,
+} from "@tiptap/extension-table-of-contents"
 import { TableCell } from "@tiptap/extension-table/cell"
 import { TableHeader } from "@tiptap/extension-table/header"
 import { TableRow } from "@tiptap/extension-table/row"
 import { Table } from "@tiptap/extension-table/table"
-import Text from "@tiptap/extension-text"
-import TextAlign from "@tiptap/extension-text-align"
 import { TextStyle } from "@tiptap/extension-text-style"
-import { BackgroundColor } from "@tiptap/extension-text-style/background-color"
 import { Color } from "@tiptap/extension-text-style/color"
-import { FontFamily } from "@tiptap/extension-text-style/font-family"
-import { FontSize } from "@tiptap/extension-text-style/font-size"
-import { LineHeight } from "@tiptap/extension-text-style/line-height"
 import Typography from "@tiptap/extension-typography"
 import Underline from "@tiptap/extension-underline"
-import UniqueID from "@tiptap/extension-unique-id"
 import { CharacterCount } from "@tiptap/extensions/character-count"
-import { Dropcursor } from "@tiptap/extensions/drop-cursor"
-import { Focus } from "@tiptap/extensions/focus"
-import { Gapcursor } from "@tiptap/extensions/gap-cursor"
 import { Placeholder } from "@tiptap/extensions/placeholder"
-import { Selection } from "@tiptap/extensions/selection"
-import { TrailingNode } from "@tiptap/extensions/trailing-node"
-import { UndoRedo } from "@tiptap/extensions/undo-redo"
+import StarterKit from "@tiptap/starter-kit"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
-import { BubbleMenu, FloatingMenu } from "@tiptap/vue-3/menus"
-import { common, createLowlight } from "lowlight"
+import { BubbleMenu } from "@tiptap/vue-3/menus"
+import bash from "highlight.js/lib/languages/bash"
+import c from "highlight.js/lib/languages/c"
+import cpp from "highlight.js/lib/languages/cpp"
+import csharp from "highlight.js/lib/languages/csharp"
+import css from "highlight.js/lib/languages/css"
+import dockerfile from "highlight.js/lib/languages/dockerfile"
+import go from "highlight.js/lib/languages/go"
+import graphql from "highlight.js/lib/languages/graphql"
+import java from "highlight.js/lib/languages/java"
+import javascript from "highlight.js/lib/languages/javascript"
+import json from "highlight.js/lib/languages/json"
+import markdown from "highlight.js/lib/languages/markdown"
+import php from "highlight.js/lib/languages/php"
+import python from "highlight.js/lib/languages/python"
+import ruby from "highlight.js/lib/languages/ruby"
+import rust from "highlight.js/lib/languages/rust"
+import sql from "highlight.js/lib/languages/sql"
+import typescript from "highlight.js/lib/languages/typescript"
+import xml from "highlight.js/lib/languages/xml"
+import yaml from "highlight.js/lib/languages/yaml"
+import { createLowlight } from "lowlight"
 import type { Awareness } from "y-protocols/awareness"
 import type { Doc as YDoc } from "yjs"
 
@@ -133,6 +113,94 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string): void
 }>()
 
+const TEXT_COLORS: ColorOption[] = accents.map((accent) => ({
+  id: accent.id,
+  name: accent.name,
+  value: `var(--color-${accent.id}-500)`,
+}))
+
+const HIGHLIGHT_COLORS: ColorOption[] = accents.map((accent) => ({
+  id: accent.id,
+  name: accent.name,
+  value: `var(--color-${accent.id}-300)`,
+}))
+
+const DEFAULT_TEXT_COLOR =
+  TEXT_COLORS.find((color) => color.id === "blue")?.value ??
+  TEXT_COLORS[0]!.value
+const DEFAULT_HIGHLIGHT_COLOR =
+  HIGHLIGHT_COLORS.find((color) => color.id === "yellow")?.value ??
+  HIGHLIGHT_COLORS[0]!.value
+
+const CODE_BLOCK_LANGUAGES = [
+  "javascript",
+  "typescript",
+  "json",
+  "html",
+  "css",
+  "markdown",
+  "bash",
+  "yaml",
+  "python",
+  "go",
+  "rust",
+  "java",
+  "c",
+  "cpp",
+  "csharp",
+  "php",
+  "ruby",
+  "sql",
+  "graphql",
+  "dockerfile",
+]
+
+const TABLE_PICKER_MAX_ROWS = 8
+const TABLE_PICKER_MAX_COLS = 8
+const TABLE_PICKER_ROWS = Array.from(
+  { length: TABLE_PICKER_MAX_ROWS },
+  (_, index) => index + 1
+)
+const TABLE_PICKER_COLS = Array.from(
+  { length: TABLE_PICKER_MAX_COLS },
+  (_, index) => index + 1
+)
+
+const sharedLowlight = createLowlight()
+sharedLowlight.register({
+  bash,
+  c,
+  cpp,
+  csharp,
+  css,
+  dockerfile,
+  go,
+  graphql,
+  java,
+  javascript,
+  json,
+  markdown,
+  php,
+  python,
+  ruby,
+  rust,
+  sql,
+  typescript,
+  xml,
+  yaml,
+})
+sharedLowlight.registerAlias({
+  javascript: ["js"],
+  typescript: ["ts"],
+  xml: ["html"],
+  csharp: ["cs"],
+  bash: ["sh", "shell"],
+  markdown: ["md"],
+})
+
+const READING_WORDS_PER_MINUTE = 200
+const MODEL_EMIT_DEBOUNCE_MS = 120
+
 const createEmptyDoc = (): JSONContent => ({
   type: "doc",
   content: [{ type: "paragraph" }],
@@ -143,6 +211,30 @@ const isJSONDoc = (value: unknown): value is JSONContent =>
   value !== null &&
   (value as { type?: unknown }).type === "doc"
 
+const stripLegacyMentionNodes = (node: JSONContent): JSONContent => {
+  if (node.type === "mention") {
+    const attrs = (node.attrs ?? {}) as Record<string, unknown>
+    const label =
+      (typeof attrs.label === "string" && attrs.label.trim()) ||
+      (typeof attrs.id === "string" && attrs.id.trim()) ||
+      "mention"
+
+    return {
+      type: "text",
+      text: `@${label}`,
+    }
+  }
+
+  if (!node.content?.length) {
+    return node
+  }
+
+  return {
+    ...node,
+    content: node.content.map((child) => stripLegacyMentionNodes(child)),
+  }
+}
+
 const parseModelValue = (raw: string | undefined): JSONContent => {
   const trimmed = raw?.trim() ?? ""
   if (!trimmed.length) {
@@ -152,10 +244,10 @@ const parseModelValue = (raw: string | undefined): JSONContent => {
   try {
     const parsed = JSON.parse(trimmed) as unknown
     if (isJSONDoc(parsed)) {
-      return parsed
+      return stripLegacyMentionNodes(parsed)
     }
   } catch {
-    // Fallback to plain-text content.
+    // Fallback to paragraph text.
   }
 
   return {
@@ -209,28 +301,75 @@ const normalizeIncomingModelValue = (value: string | undefined): string => {
   return normalized.trim().length ? normalized : ""
 }
 
-const READING_WORDS_PER_MINUTE = 200
-const MODEL_EMIT_DEBOUNCE_MS = 120
-const MAX_IMAGE_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
-const IMAGE_MIME_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-] as const
+const normalizeLinkHref = (href: string): string | null => {
+  const trimmed = href.trim()
+  if (!trimmed.length) {
+    return ""
+  }
+
+  if (/^(mailto:|tel:)/i.test(trimmed)) {
+    return trimmed
+  }
+
+  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+
+  try {
+    return new URL(withProtocol).toString()
+  } catch {
+    return null
+  }
+}
 
 const isReadOnly = computed(() => props.readOnly)
 const initialContent = parseModelValue(props.modelValue)
 let currentSerializedModelValue = serializeModelValue(initialContent)
+
 const editorStats = ref({
   characters: 0,
   words: 0,
   readingMinutes: 0,
 })
+
 let modelEmitTimer: ReturnType<typeof setTimeout> | null = null
 let pendingModelValue: string | null = null
 
-const sharedLowlight = createLowlight(common)
+const isLinkDialogOpen = ref(false)
+const linkDialogHref = ref<string | null>(null)
+const isImageDialogOpen = ref(false)
+const slashPanelState = ref<SlashCommandPanelState | null>(null)
+const isTablePickerOpen = ref(false)
+const dragHandleNodePos = ref<number | null>(null)
+const tablePickerSelection = ref<{ rows: number; cols: number }>({
+  rows: 0,
+  cols: 0,
+})
+const tableOfContentsItems = shallowRef<TableOfContentData>([])
+let tableOfContentsScrollParent: HTMLElement | Window = window
+
+const getPanelPosition = (rect: DOMRect | null) => {
+  if (!rect || typeof window === "undefined") {
+    return { x: 0, y: 0 }
+  }
+
+  const panelWidth = 320
+  const panelHeight = 280
+  const x = Math.min(
+    Math.max(8, rect.left),
+    Math.max(8, window.innerWidth - panelWidth - 8)
+  )
+  const y = Math.min(
+    rect.bottom + 8,
+    Math.max(8, window.innerHeight - panelHeight - 8)
+  )
+
+  return { x, y }
+}
+
+const slashPanelPosition = computed(() =>
+  getPanelPosition(slashPanelState.value?.clientRect ?? null)
+)
 
 type CollaborationProvider = {
   awareness: Awareness
@@ -281,6 +420,7 @@ const getCollaborationUser = () => {
       color?: unknown
     }
   } | null
+
   const currentUser = localState?.user ?? {}
 
   const name =
@@ -302,202 +442,256 @@ const getCollaborationUser = () => {
   }
 }
 
-const updateEditorStats = (currentEditor: TiptapEditor) => {
-  const characterCountStorage = currentEditor.storage.characterCount as
-    | {
-        characters: () => number
-        words: () => number
-      }
-    | undefined
-
-  const characters = characterCountStorage?.characters?.() ?? 0
-  const words = characterCountStorage?.words?.() ?? 0
-
-  editorStats.value = {
-    characters,
-    words,
-    readingMinutes: Math.ceil(words / READING_WORDS_PER_MINUTE),
-  }
-}
-
-const readImageFileAsDataURL = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const fileReader = new FileReader()
-
-    fileReader.onload = () => {
-      if (typeof fileReader.result === "string") {
-        resolve(fileReader.result)
-        return
-      }
-      reject(new Error("Unable to read image file"))
-    }
-
-    fileReader.onerror = () => {
-      reject(fileReader.error ?? new Error("Unable to read image file"))
-    }
-
-    fileReader.onabort = () => {
-      reject(new Error("Image file read was aborted"))
-    }
-
-    fileReader.readAsDataURL(file)
-  })
-
-const insertImageFiles = async (
-  currentEditor: TiptapEditor,
-  files: File[],
-  position?: number
-) => {
-  const imageNodes = (
-    await Promise.all(
-      files.map(async (file) => {
-        if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
-          console.warn(
-            `[TextEditor] Skipping "${file.name}" because it exceeds ${MAX_IMAGE_FILE_SIZE_BYTES} bytes.`
-          )
-          return null
-        }
-
-        try {
-          const src = await readImageFileAsDataURL(file)
-          return {
-            type: "image",
-            attrs: { src },
-          } as JSONContent
-        } catch (error) {
-          console.error(`[TextEditor] Failed to insert "${file.name}":`, error)
-          return null
-        }
-      })
-    )
-  ).flatMap((node) => (node ? [node] : []))
-
-  if (!imageNodes.length) {
-    return
-  }
-
-  const chain = currentEditor.chain().focus()
-  if (typeof position === "number") {
-    chain.insertContentAt(position, imageNodes).run()
-    return
-  }
-
-  chain.insertContent(imageNodes).run()
-}
-
-const normalizeLinkHref = (href: string): string | null => {
-  const trimmed = href.trim()
-  if (!trimmed.length) {
-    return ""
-  }
-
-  if (/^(mailto:|tel:)/i.test(trimmed)) {
-    return trimmed
-  }
-
-  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`
-
-  try {
-    return new URL(withProtocol).toString()
-  } catch {
-    return null
-  }
-}
-
-const setLinkFromPrompt = () => {
+const openLinkDialog = () => {
   const currentEditor = editor.value
-  if (!currentEditor || typeof window === "undefined") {
+  if (!currentEditor) {
     return
   }
 
-  const currentHref = currentEditor.getAttributes("link").href
-  const nextHref = window.prompt(
-    "Enter URL",
-    typeof currentHref === "string" ? currentHref : "https://"
-  )
+  const href = currentEditor.getAttributes("link").href
+  linkDialogHref.value = typeof href === "string" ? href : ""
+  isLinkDialogOpen.value = true
+}
 
-  if (nextHref === null) {
+const applyLinkFromDialog = (value: string) => {
+  const currentEditor = editor.value
+  if (!currentEditor) {
     return
   }
 
-  const normalizedHref = normalizeLinkHref(nextHref)
-  if (normalizedHref === null) {
-    console.warn("[TextEditor] Ignoring invalid URL input")
+  const normalized = normalizeLinkHref(value)
+  if (normalized === null) {
+    showErrorToast("Invalid URL", "Please enter a valid URL.")
     return
   }
 
   const chain = currentEditor.chain().focus().extendMarkRange("link")
-  if (!normalizedHref.length) {
+  if (!normalized.length) {
     chain.unsetLink().run()
     return
   }
 
-  chain.setLink({ href: normalizedHref }).run()
+  chain.setLink({ href: normalized }).run()
 }
 
+const removeLinkFromDialog = () => {
+  editor.value?.chain().focus().extendMarkRange("link").unsetLink().run()
+}
+
+const openImageDialog = () => {
+  isImageDialogOpen.value = true
+}
+
+const insertImageFromDialog = (attrs: {
+  src: string
+  align?: "left" | "center" | "right"
+  width?: string
+}) => {
+  editor.value
+    ?.chain()
+    .focus()
+    .insertContent({
+      type: "image",
+      attrs,
+    })
+    .run()
+}
+
+const updateTablePickerSelection = (rows: number, cols: number) => {
+  tablePickerSelection.value = { rows, cols }
+}
+
+const clearTablePickerSelection = () => {
+  tablePickerSelection.value = { rows: 0, cols: 0 }
+}
+
+const insertTableFromPicker = (rows: number, cols: number) => {
+  editor.value
+    ?.chain()
+    .focus()
+    .insertTable({ rows, cols, withHeaderRow: true })
+    .run()
+
+  isTablePickerOpen.value = false
+  clearTablePickerSelection()
+}
+
+const createSlashCommands = (): SlashCommandItem[] => [
+  {
+    id: "heading-1",
+    title: "Heading 1",
+    description: "Large section title",
+    group: "Headings",
+    keywords: ["h1", "title"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleHeading({ level: 1 }).run()
+    },
+  },
+  {
+    id: "heading-2",
+    title: "Heading 2",
+    description: "Medium section title",
+    group: "Headings",
+    keywords: ["h2", "subtitle"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleHeading({ level: 2 }).run()
+    },
+  },
+  {
+    id: "heading-3",
+    title: "Heading 3",
+    description: "Small section title",
+    group: "Headings",
+    keywords: ["h3"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleHeading({ level: 3 }).run()
+    },
+  },
+  {
+    id: "bullet-list",
+    title: "Bullet List",
+    description: "Start an unordered list",
+    group: "Lists",
+    keywords: ["list", "ul"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleBulletList().run()
+    },
+  },
+  {
+    id: "ordered-list",
+    title: "Numbered List",
+    description: "Start an ordered list",
+    group: "Lists",
+    keywords: ["list", "ol", "numbered"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleOrderedList().run()
+    },
+  },
+  {
+    id: "task-list",
+    title: "Task List",
+    description: "Start a checklist",
+    group: "Lists",
+    keywords: ["todo", "checklist", "task"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleTaskList().run()
+    },
+  },
+  {
+    id: "blockquote",
+    title: "Blockquote",
+    description: "Add a quote block",
+    group: "Blocks",
+    keywords: ["quote"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleBlockquote().run()
+    },
+  },
+  {
+    id: "code-block",
+    title: "Code Block",
+    description: "Insert syntax-highlighted code",
+    group: "Blocks",
+    keywords: ["code", "snippet"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().toggleCodeBlock().run()
+    },
+  },
+  {
+    id: "insert-image-url",
+    title: "Image",
+    description: "Insert image from URL",
+    group: "Insert",
+    keywords: ["image", "url", "media", "embed"],
+    run: () => {
+      openImageDialog()
+    },
+  },
+  {
+    id: "insert-table",
+    title: "Table",
+    description: "Insert a 3x3 table",
+    group: "Insert",
+    keywords: ["table", "grid"],
+    run: (activeEditor) => {
+      activeEditor
+        .chain()
+        .focus()
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run()
+    },
+  },
+  {
+    id: "format-highlight",
+    title: "Highlight",
+    description: "Highlight selected text",
+    group: "Formatting",
+    keywords: ["highlight", "mark"],
+    run: (activeEditor) => {
+      activeEditor
+        .chain()
+        .focus()
+        .setHighlight({ color: DEFAULT_HIGHLIGHT_COLOR })
+        .run()
+    },
+  },
+  {
+    id: "format-text-color",
+    title: "Text Color",
+    description: "Apply a text color",
+    group: "Formatting",
+    keywords: ["color", "text"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().setColor(DEFAULT_TEXT_COLOR).run()
+    },
+  },
+]
+
+const slashCommandExtension = createSlashCommandExtension({
+  items: createSlashCommands(),
+  onChange: (state) => {
+    slashPanelState.value = state
+  },
+})
+
 const extensions = [
-  Document,
-  Paragraph,
-  Text,
-  Blockquote,
-  BulletList,
-  OrderedList,
+  StarterKit.configure({
+    codeBlock: false,
+    heading: {
+      levels: [1, 2, 3],
+    },
+    link: {
+      openOnClick: false,
+      autolink: true,
+      defaultProtocol: "https",
+    },
+    undoRedo: props.collaborationDoc ? false : {},
+  }),
+  Highlight.configure({ multicolor: true }),
+  Underline,
+  TextStyle,
+  Color,
+  Typography,
+  Placeholder.configure({
+    includeChildren: true,
+    placeholder: "Type '/' for commands",
+  }),
+  TableOfContents.configure({
+    getIndex: getHierarchicalIndexes,
+    onUpdate: (items) => {
+      tableOfContentsItems.value = items
+    },
+    scrollParent: () => tableOfContentsScrollParent,
+  }),
+  CharacterCount,
   TaskList,
-  ListItem,
   TaskItem.configure({
     nested: true,
   }),
-  ListKeymap,
   CodeBlockLowlight.configure({
     lowlight: sharedLowlight,
+    defaultLanguage: "plaintext",
   }),
-  Details.configure({
-    persist: true,
-  }),
-  DetailsSummary,
-  DetailsContent,
-  Placeholder.configure({
-    includeChildren: true,
-    placeholder: ({ node }) => {
-      if (node.type.name === "detailsSummary") {
-        return "Summary"
-      }
-      return "Type '/' for commands"
-    },
-  }),
-  Selection,
-  TrailingNode,
-  Emoji.configure({
-    enableEmoticons: true,
-  }),
-  HardBreak,
-  Heading.configure({
-    levels: [1, 2, 3],
-  }),
-  TextAlign.configure({
-    types: ["heading", "paragraph"],
-  }),
-  HorizontalRule,
-  Image,
-  Dropcursor,
-  Gapcursor,
-  Bold,
-  Italic,
-  Underline,
-  Code,
-  Highlight.configure({ multicolor: true }),
-  Link.configure({
-    openOnClick: false,
-    defaultProtocol: "https",
-  }),
-  Strike,
-  Subscript,
-  Superscript,
-  TextStyle,
-  Color,
-  BackgroundColor,
   Table.configure({
     resizable: true,
     allowTableNodeSelection: true,
@@ -505,44 +699,17 @@ const extensions = [
   TableRow,
   TableHeader,
   TableCell,
-  CharacterCount,
-  Typography,
-  Focus,
-  FileHandler.configure({
-    allowedMimeTypes: [...IMAGE_MIME_TYPES],
-    onDrop: (currentEditor, files, pos) => {
-      void insertImageFiles(currentEditor, files, pos)
-    },
-    onPaste: (currentEditor, files, pasteContent) => {
-      if (pasteContent?.length) {
-        return
-      }
-
-      // Snapshot the original selection before async file reads complete.
-      const insertPosition = currentEditor.state.selection.anchor
-      void insertImageFiles(currentEditor, files, insertPosition)
-    },
+  Subscript,
+  Superscript,
+  Details.configure({
+    persist: true,
   }),
-  FontFamily,
-  FontSize,
-  LineHeight,
-  InvisibleCharacters.configure({
-    visible: false, // Hide invisible characters by default
-  }),
-  Mathematics.configure({
-    inlineOptions: {
-      // optional options for the inline math node
-    },
-    blockOptions: {
-      // optional options for the block math node
-    },
-    katexOptions: {
-      // optional options for the KaTeX renderer
-    },
-  }),
-  UniqueID.configure({
-    types: ["heading", "paragraph"],
-  }),
+  DetailsSummary,
+  DetailsContent,
+  Mathematics.configure({}),
+  RichImage,
+  EmojiReplacer,
+  slashCommandExtension,
 ]
 
 if (props.collaborationDoc) {
@@ -562,8 +729,6 @@ if (props.collaborationDoc) {
       })
     )
   }
-} else {
-  extensions.push(UndoRedo)
 }
 
 const clearPendingModelEmit = () => {
@@ -571,6 +736,7 @@ const clearPendingModelEmit = () => {
     clearTimeout(modelEmitTimer)
     modelEmitTimer = null
   }
+
   pendingModelValue = null
 }
 
@@ -606,12 +772,54 @@ const scheduleModelEmit = (value: string, immediate = false) => {
   }, MODEL_EMIT_DEBOUNCE_MS)
 }
 
+const updateEditorStats = (currentEditor: TiptapEditor) => {
+  const characterCountStorage = currentEditor.storage.characterCount as
+    | {
+        characters: () => number
+        words: () => number
+      }
+    | undefined
+
+  const characters = characterCountStorage?.characters?.() ?? 0
+  const words = characterCountStorage?.words?.() ?? 0
+
+  editorStats.value = {
+    characters,
+    words,
+    readingMinutes: Math.ceil(words / READING_WORDS_PER_MINUTE),
+  }
+}
+
+const syncTableOfContentsScrollParent = (currentEditor: TiptapEditor) => {
+  const storage = currentEditor.storage.tableOfContents as
+    | TableOfContentsStorage
+    | undefined
+
+  if (!storage) {
+    return
+  }
+
+  const nextScrollParent =
+    (currentEditor.view.dom.closest(".os-viewport") as HTMLElement | null) ??
+    window
+
+  if (nextScrollParent === tableOfContentsScrollParent) {
+    return
+  }
+
+  tableOfContentsScrollParent.removeEventListener(
+    "scroll",
+    storage.scrollHandler
+  )
+  tableOfContentsScrollParent = nextScrollParent
+  tableOfContentsScrollParent.addEventListener("scroll", storage.scrollHandler)
+}
+
 const syncModelFromEditor = (
   currentEditor: TiptapEditor,
   options?: { immediate?: boolean }
 ) => {
-  const nextJson = currentEditor.getJSON()
-  const serialized = serializeModelValue(nextJson)
+  const serialized = serializeModelValue(currentEditor.getJSON())
 
   currentSerializedModelValue = serialized
   updateEditorStats(currentEditor)
@@ -624,7 +832,7 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "focus:outline-none size-full pl-10 pr-2 py-8 prose prose-sm max-w-none prose-neutral dark:prose-invert",
+        "tiptap prose prose-sm max-w-none dark:prose-invert p-8 focus:outline-none",
     },
   },
   extensions,
@@ -649,11 +857,22 @@ const editor = useEditor({
       migrateMathStrings(currentEditor)
     }
 
+    syncTableOfContentsScrollParent(currentEditor)
     syncModelFromEditor(currentEditor, { immediate: true })
   },
   onUpdate: ({ editor: currentEditor }) => {
     syncModelFromEditor(currentEditor)
   },
+})
+
+onMounted(() => {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return
+  }
+
+  syncTableOfContentsScrollParent(currentEditor)
+  currentEditor.commands.updateTableOfContents()
 })
 
 watch(
@@ -664,8 +883,8 @@ watch(
       return
     }
 
-    const normalizedIncomingValue = normalizeIncomingModelValue(value)
-    if (normalizedIncomingValue === currentSerializedModelValue) {
+    const normalizedIncoming = normalizeIncomingModelValue(value)
+    if (normalizedIncoming === currentSerializedModelValue) {
       return
     }
 
@@ -694,8 +913,8 @@ watch(
 
 watch(
   () => props.readOnly,
-  (newValue) => {
-    editor.value?.setEditable(!newValue, false)
+  (next) => {
+    editor.value?.setEditable(!next, false)
   }
 )
 
@@ -704,913 +923,691 @@ onBeforeUnmount(() => {
     clearTimeout(modelEmitTimer)
     modelEmitTimer = null
   }
-  flushPendingModelEmit()
 
+  flushPendingModelEmit()
   editor.value?.destroy()
 })
 
-const { copy, copied } = useClipboard({ legacy: true })
+const selectSlashCommand = (index: number) => {
+  slashPanelState.value?.execute(index)
+}
 
-const copySource = async () => {
-  if (!editor.value) {
+const hoverSlashCommand = (index: number) => {
+  if (!slashPanelState.value) {
     return
   }
 
-  await copy(JSON.stringify(editor.value.getJSON(), null, 2))
+  slashPanelState.value = {
+    ...slashPanelState.value,
+    selectedIndex: index,
+  }
+}
+
+const tablePickerLabel = computed(() => {
+  const { rows, cols } = tablePickerSelection.value
+  if (!rows || !cols) {
+    return "Select columns × rows"
+  }
+
+  return `${cols} × ${rows} columns × rows`
+})
+
+const currentBlockLabel = computed(() => {
+  const activeEditor = editor.value
+  if (!activeEditor) {
+    return "Text"
+  }
+
+  if (activeEditor.isActive("heading", { level: 1 })) {
+    return "H1"
+  }
+
+  if (activeEditor.isActive("heading", { level: 2 })) {
+    return "H2"
+  }
+
+  if (activeEditor.isActive("heading", { level: 3 })) {
+    return "H3"
+  }
+
+  if (activeEditor.isActive("blockquote")) {
+    return "Quote"
+  }
+
+  if (activeEditor.isActive("codeBlock")) {
+    return "Code"
+  }
+
+  return "Text"
+})
+
+const currentCodeLanguage = computed(() => {
+  const activeEditor = editor.value
+  if (!activeEditor?.isActive("codeBlock")) {
+    return "auto"
+  }
+
+  const language = activeEditor.getAttributes("codeBlock").language
+  return typeof language === "string" && language.trim().length
+    ? language
+    : "auto"
+})
+
+const setCodeLanguage = (language: unknown) => {
+  const normalized = typeof language === "string" ? language : "auto"
+
+  editor.value
+    ?.chain()
+    .focus()
+    .updateAttributes("codeBlock", {
+      language: normalized === "auto" ? null : normalized,
+    })
+    .run()
+}
+
+const applyImageAttrs = (attrs: Record<string, unknown>) => {
+  editor.value?.chain().focus().updateAttributes("image", attrs).run()
+}
+
+const handleDragHandleNodeChange = ({ pos }: { pos: number }) => {
+  dragHandleNodePos.value = pos >= 0 ? pos : null
+}
+
+const selectNodeFromDragHandle = () => {
+  const currentEditor = editor.value
+  const pos = dragHandleNodePos.value
+
+  if (!currentEditor || pos === null) {
+    return
+  }
+
+  currentEditor.chain().focus().setNodeSelection(pos).run()
+}
+
+const getTableOfContentsItemIndent = (level: number) =>
+  `${Math.max(level - 1, 0) * 0.5 + 0.5}rem`
+
+const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
+  item.dom.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+    inline: "nearest",
+  })
 }
 </script>
 
 <template>
-  <div
-    class="bg-background/50 sticky top-2 m-2 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
-  >
-    <p class="text-muted-foreground mr-auto ml-2 text-xs">
-      {{ editorStats.characters }} characters / {{ editorStats.words }} words /
-      {{ editorStats.readingMinutes }} min read
-    </p>
-    <Button variant="outline" size="icon-sm" @click="copySource">
-      <IconCopy v-if="!copied" />
-      <IconCheck v-else />
-    </Button>
-  </div>
-  <EditorContent :editor="editor" />
-  <BubbleMenu v-if="editor && !isReadOnly" :editor="editor">
-    <div class="bg-card flex gap-1 rounded-lg border p-1 shadow-lg">
-      <TooltipProvider>
-        <ButtonGroup>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconRefreshCcw />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Turn Into</TooltipContent>
-              <DropdownMenuContent align="start">
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Turn into
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().setParagraph().run()"
-                  >
-                    <IconType /> Paragraph
-                    <DropdownMenuShortcut v-if="editor?.isActive('paragraph')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor?.chain().focus().toggleHeading({ level: 1 }).run()
-                    "
-                  >
-                    <IconHeading1 /> Heading 1
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive('heading', { level: 1 })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor?.chain().focus().toggleHeading({ level: 2 }).run()
-                    "
-                  >
-                    <IconHeading2 /> Heading 2
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive('heading', { level: 2 })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor?.chain().focus().toggleHeading({ level: 3 }).run()
-                    "
-                  >
-                    <IconHeading3 /> Heading 3
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive('heading', { level: 3 })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleBulletList().run()"
-                  >
-                    <IconList /> {{ $t("components.textEditor.bulletedList") }}
-                    <DropdownMenuShortcut v-if="editor?.isActive('bulletList')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleOrderedList().run()"
-                  >
-                    <IconListOrdered />
-                    {{ $t("components.textEditor.numberedList") }}
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive('orderedList')"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleTaskList().run()"
-                  >
-                    <IconListChecks />
-                    {{ $t("components.textEditor.todoList") }}
-                    <DropdownMenuShortcut v-if="editor?.isActive('taskList')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().setDetails().run()"
-                  >
-                    <IconListCollapse />
-                    {{ $t("components.textEditor.toggleList") }}
-                    <DropdownMenuShortcut v-if="editor?.isActive('details')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleCodeBlock().run()"
-                  >
-                    <IconCode /> {{ $t("components.textEditor.codeBlock") }}
-                    <DropdownMenuShortcut v-if="editor?.isActive('codeBlock')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleBlockquote().run()"
-                  >
-                    <IconQuote /> {{ $t("components.textEditor.blockquote") }}
-                    <DropdownMenuShortcut v-if="editor?.isActive('blockquote')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-        </ButtonGroup>
-
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Toggle
-              variant="outline"
-              :value="'bold'"
-              :pressed="editor?.isActive('bold')"
-              @click="editor?.chain().focus().toggleBold().run()"
-            >
-              <IconBold />
-            </Toggle>
-          </TooltipTrigger>
-          <TooltipContent>{{
-            $t("components.textEditor.bold")
-          }}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Toggle
-              variant="outline"
-              :value="'italic'"
-              :pressed="editor?.isActive('italic')"
-              @click="editor?.chain().focus().toggleItalic().run()"
-            >
-              <IconItalic />
-            </Toggle>
-          </TooltipTrigger>
-          <TooltipContent>{{
-            $t("components.textEditor.italic")
-          }}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Toggle
-              variant="outline"
-              :value="'underline'"
-              :pressed="editor?.isActive('underline')"
-              @click="editor?.chain().focus().toggleUnderline().run()"
-            >
-              <IconUnderline />
-            </Toggle>
-          </TooltipTrigger>
-          <TooltipContent>{{
-            $t("components.textEditor.underline")
-          }}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Toggle
-              variant="outline"
-              :value="'strike'"
-              :pressed="editor?.isActive('strike')"
-              @click="editor?.chain().focus().toggleStrike().run()"
-            >
-              <IconStrikethrough />
-            </Toggle>
-          </TooltipTrigger>
-          <TooltipContent>{{
-            $t("components.textEditor.strike")
-          }}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Toggle
-              variant="outline"
-              :value="'code'"
-              :pressed="editor?.isActive('code')"
-              @click="editor?.chain().focus().toggleCode().run()"
-            >
-              <IconBraces />
-            </Toggle>
-          </TooltipTrigger>
-          <TooltipContent>{{
-            $t("components.textEditor.code")
-          }}</TooltipContent>
-        </Tooltip>
-
-        <ButtonGroup>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconPalette />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>{{
-                $t("components.textEditor.textColor")
-              }}</TooltipContent>
-              <DropdownMenuContent>
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $t("components.textEditor.textColor") }}
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    v-for="color in accents"
-                    :key="color.id"
-                    @click="editor?.chain().focus().setColor(color.id).run()"
-                  >
-                    <IconCircleFilled :class="`text-${color.id}-500`" />
-                    {{ color.name }}
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive('textStyle', { color: color.id })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  @click="editor?.chain().focus().unsetColor().run()"
-                >
-                  <IconX /> {{ $t("components.textEditor.removeColor") }}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconHighlighter />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>{{
-                $t("components.textEditor.highlightColor")
-              }}</TooltipContent>
-              <DropdownMenuContent>
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $t("components.textEditor.highlightColor") }}
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    v-for="color in accents"
-                    :key="color.id"
-                    @click="
-                      editor
-                        ?.chain()
-                        .focus()
-                        .toggleHighlight({ color: color.id })
-                        .run()
-                    "
-                  >
-                    <IconCircleFilled :class="`text-${color.id}-500`" />
-                    {{ color.name }}
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive('highlight', { color: color.id })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  @click="editor?.chain().focus().unsetHighlight().run()"
-                >
-                  <IconX /> Remove Highlight
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-        </ButtonGroup>
-
-        <ButtonGroup>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconType />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Font Size</TooltipContent>
-              <DropdownMenuContent>
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Font Size
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    v-for="size in sizes"
-                    :key="size.id"
-                    @click="editor?.chain().focus().setFontSize(size.id).run()"
-                  >
-                    <span class="mr-2" :style="{ fontSize: size.id }">Aa</span>
-                    {{ size.name }}
-                    <DropdownMenuShortcut
-                      v-if="
-                        editor?.isActive('textStyle', { fontSize: size.id })
-                      "
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  @click="editor?.chain().focus().unsetFontSize().run()"
-                >
-                  <IconX /> Remove Font Size
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconText />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Font Family</TooltipContent>
-              <DropdownMenuContent>
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Font Family
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    v-for="font in fonts"
-                    :key="font.id"
-                    @click="
-                      editor?.chain().focus().setFontFamily(font.id).run()
-                    "
-                  >
-                    <span class="mr-2" :style="{ fontFamily: font.id }"
-                      >Aa</span
-                    >
-                    {{ font.name }}
-                    <DropdownMenuShortcut
-                      v-if="
-                        editor?.isActive('textStyle', {
-                          fontFamily: font.id,
-                        })
-                      "
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor
-                        ?.chain()
-                        .focus()
-                        .setFontFamily('Comic Sans MS, Comic Sans')
-                        .run()
-                    "
-                  >
-                    <span class="mr-2" :style="{ fontFamily: 'Comic Sans MS' }"
-                      >Aa</span
-                    >
-                    Comic Sans
-                    <DropdownMenuShortcut
-                      v-if="
-                        editor?.isActive('textStyle', {
-                          fontFamily: 'Comic Sans MS, Comic Sans',
-                        })
-                      "
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor?.chain().focus().setFontFamily('cursive').run()
-                    "
-                  >
-                    <span class="mr-2" style="font-family: cursive">Aa</span>
-                    Cursive
-                    <DropdownMenuShortcut
-                      v-if="
-                        editor?.isActive('textStyle', {
-                          fontFamily: 'cursive',
-                        })
-                      "
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  @click="editor?.chain().focus().unsetFontFamily().run()"
-                >
-                  <IconX /> Remove Font Family
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconAlignLeft />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Text Align</TooltipContent>
-              <DropdownMenuContent>
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Text Alignment
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().setTextAlign('left').run()"
-                  >
-                    <IconAlignLeft /> Left
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive({ textAlign: 'left' })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor?.chain().focus().setTextAlign('center').run()
-                    "
-                  >
-                    <IconAlignCenter /> Center
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive({ textAlign: 'center' })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().setTextAlign('right').run()"
-                  >
-                    <IconAlignRight /> Right
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive({ textAlign: 'right' })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="
-                      editor?.chain().focus().setTextAlign('justify').run()
-                    "
-                  >
-                    <IconAlignJustify /> Justify
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive({ textAlign: 'justify' })"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Text Style
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleSubscript().run()"
-                  >
-                    <IconSubscript /> Subscript
-                    <DropdownMenuShortcut v-if="editor?.isActive('subscript')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleSuperscript().run()"
-                  >
-                    <IconSuperscript /> Superscript
-                    <DropdownMenuShortcut
-                      v-if="editor?.isActive('superscript')"
-                    >
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  @click="editor?.chain().focus().unsetTextAlign().run()"
-                >
-                  <IconX /> Remove Alignment
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-        </ButtonGroup>
-
-        <ButtonGroup>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconTable />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>{{
-                $t("components.textEditor.table")
-              }}</TooltipContent>
-              <DropdownMenuContent>
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $t("components.textEditor.table") }}
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="
-                      editor
-                        ?.chain()
-                        .focus()
-                        .insertTable({
-                          rows: 3,
-                          cols: 3,
-                          withHeaderRow: true,
-                        })
-                        .run()
-                    "
-                  >
-                    <IconPlus /> {{ $t("components.textEditor.insertTable") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().deleteTable().run()"
-                  >
-                    <IconTrash /> {{ $t("components.textEditor.deleteTable") }}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $t("components.textEditor.columns") }}
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().addColumnBefore().run()"
-                  >
-                    <IconArrowLeft />
-                    {{ $t("components.textEditor.addColumnBefore") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().addColumnAfter().run()"
-                  >
-                    <IconArrowRight />
-                    {{ $t("components.textEditor.addColumnAfter") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().deleteColumn().run()"
-                  >
-                    <IconTrash /> {{ $t("components.textEditor.deleteColumn") }}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $t("components.textEditor.rows") }}
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().addRowBefore().run()"
-                  >
-                    <IconArrowUp />
-                    {{ $t("components.textEditor.addRowBefore") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().addRowAfter().run()"
-                  >
-                    <IconArrowDown />
-                    {{ $t("components.textEditor.addRowAfter") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().deleteRow().run()"
-                  >
-                    <IconTrash /> {{ $t("components.textEditor.deleteRow") }}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{ $t("components.textEditor.cells") }}
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().mergeCells().run()"
-                  >
-                    <IconCombine /> {{ $t("components.textEditor.mergeCells") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().splitCell().run()"
-                  >
-                    <IconSplit /> {{ $t("components.textEditor.splitCell") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().mergeOrSplit().run()"
-                  >
-                    <IconSplitSquareHorizontal /> Merge or Split
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Headers
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleHeaderColumn().run()"
-                  >
-                    <IconColumns /> Toggle Header Column
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleHeaderRow().run()"
-                  >
-                    <IconRows /> Toggle Header Row
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().toggleHeaderCell().run()"
-                  >
-                    <IconSquare /> Toggle Header Cell
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Navigation
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().goToNextCell().run()"
-                  >
-                    <IconArrowRight /> Go to Next Cell
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().goToPreviousCell().run()"
-                  >
-                    <IconArrowLeft /> Go to Previous Cell
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Advanced
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    @click="
-                      editor
-                        ?.chain()
-                        .focus()
-                        .setCellAttribute('colspan', 2)
-                        .run()
-                    "
-                  >
-                    <IconSettings /> Set Cell Attribute
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="editor?.chain().focus().fixTables().run()"
-                  >
-                    <IconWrench /> Fix Tables
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-        </ButtonGroup>
-
-        <ButtonGroup>
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    class="data-[state=open]:bg-accent"
-                  >
-                    <IconLink />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Link</TooltipContent>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Link Management
-                </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem @click="setLinkFromPrompt">
-                    <IconExternalLink />
-                    {{ editor?.isActive("link") ? "Edit Link" : "Add Link" }}
-                    <DropdownMenuShortcut v-if="editor?.isActive('link')">
-                      <IconCheck />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    :disabled="!editor?.isActive('link')"
-                    @click="editor?.chain().focus().unsetLink().run()"
-                  >
-                    <IconUnlink /> Remove Link
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </Tooltip>
-        </ButtonGroup>
-      </TooltipProvider>
-    </div>
-  </BubbleMenu>
-  <FloatingMenu
-    v-if="editor && !isReadOnly"
-    :editor="editor"
-    :tippy-options="{ duration: 100 }"
+  <aside
+    aria-label="Table of contents"
+    class="sticky inset-0 z-20 ml-auto flex h-full w-max flex-col items-end gap-2 overflow-auto p-4"
   >
     <div
-      class="bg-card flex items-center gap-1 rounded-lg border p-1 shadow-lg"
+      v-if="tableOfContentsItems.length"
+      class="absolute top-1/2 flex -translate-y-1/2 flex-col items-end"
     >
-      <Button
-        variant="outline"
-        size="icon"
-        :class="{ 'bg-accent': editor?.isActive('heading', { level: 1 }) }"
-        @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
+      <div
+        v-for="item in tableOfContentsItems"
+        :key="item.id"
+        class="group flex cursor-pointer py-1"
+        @click="scrollToTableOfContentsItem(item)"
       >
-        <IconHeading1 />
-      </Button>
-      <Button
+        <span
+          class="bg-primary h-1 rounded-full opacity-25 group-hover:opacity-75"
+          :style="{ width: getTableOfContentsItemIndent(item.level) }"
+        >
+        </span>
+      </div>
+    </div>
+    <p class="text-muted-foreground text-xs">
+      {{ editorStats.characters }} chars · {{ editorStats.words }} words ·
+      {{ editorStats.readingMinutes }} min read
+    </p>
+  </aside>
+
+  <EditorContent
+    :editor="editor"
+    class="text-editor-content min-h-0 lg:h-full"
+  />
+
+  <BubbleMenu
+    v-if="editor && !isReadOnly"
+    :editor="editor"
+    :tippy-options="{
+      duration: 100,
+      interactive: true,
+      maxWidth: 'none',
+      placement: 'top-start',
+      offset: [0, 10],
+    }"
+  >
+    <div
+      class="bg-background/50 flex items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xl backdrop-blur-lg"
+    >
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline" size="sm" class="h-8 px-2.5 text-xs">
+            {{ currentBlockLabel }}
+            <IconChevronDown class="size-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem
+            @click="editor?.chain().focus().setParagraph().run()"
+          >
+            Text
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
+          >
+            <IconHeading1 />
+            Heading 1
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
+          >
+            <IconHeading2 />
+            Heading 2
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()"
+          >
+            <IconHeading3 />
+            Heading 3
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            @click="editor?.chain().focus().toggleBlockquote().run()"
+          >
+            <IconQuote />
+            Blockquote
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().toggleCodeBlock().run()"
+          >
+            <IconCode />
+            Code block
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Separator orientation="vertical" class="mx-0.5 h-6" />
+
+      <Toggle
         variant="outline"
-        size="icon"
-        :class="{ 'bg-accent': editor?.isActive('heading', { level: 2 }) }"
-        @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
+        size="sm"
+        :pressed="editor?.isActive('bold')"
+        @click="editor?.chain().focus().toggleBold().run()"
       >
-        <IconHeading2 />
-      </Button>
-      <Button
+        <IconBold />
+      </Toggle>
+      <Toggle
         variant="outline"
-        size="icon"
-        :class="{ 'bg-accent': editor?.isActive('bulletList') }"
+        size="sm"
+        :pressed="editor?.isActive('italic')"
+        @click="editor?.chain().focus().toggleItalic().run()"
+      >
+        <IconItalic />
+      </Toggle>
+      <Toggle
+        variant="outline"
+        size="sm"
+        :pressed="editor?.isActive('underline')"
+        @click="editor?.chain().focus().toggleUnderline().run()"
+      >
+        <IconUnderline />
+      </Toggle>
+      <Toggle
+        variant="outline"
+        size="sm"
+        :pressed="editor?.isActive('strike')"
+        @click="editor?.chain().focus().toggleStrike().run()"
+      >
+        <IconStrikethrough />
+      </Toggle>
+      <Toggle
+        variant="outline"
+        size="sm"
+        :pressed="editor?.isActive('code')"
+        @click="editor?.chain().focus().toggleCode().run()"
+      >
+        <IconBraces />
+      </Toggle>
+
+      <Separator orientation="vertical" class="mx-0.5 h-6" />
+
+      <Toggle
+        variant="outline"
+        size="sm"
+        :pressed="editor?.isActive('bulletList')"
         @click="editor?.chain().focus().toggleBulletList().run()"
       >
         <IconList />
-      </Button>
-      <Button
+      </Toggle>
+      <Toggle
         variant="outline"
-        size="icon"
-        :class="{ 'bg-accent': editor?.isActive('orderedList') }"
+        size="sm"
+        :pressed="editor?.isActive('orderedList')"
         @click="editor?.chain().focus().toggleOrderedList().run()"
       >
         <IconListOrdered />
-      </Button>
-      <Button
+      </Toggle>
+      <Toggle
         variant="outline"
-        size="icon"
-        :class="{ 'bg-accent': editor?.isActive('taskList') }"
+        size="sm"
+        :pressed="editor?.isActive('taskList')"
         @click="editor?.chain().focus().toggleTaskList().run()"
       >
         <IconListChecks />
+      </Toggle>
+
+      <Separator orientation="vertical" class="mx-0.5 h-6" />
+
+      <TextEditorColorPicker
+        :colors="TEXT_COLORS"
+        :active-color="
+          (editor?.getAttributes('textStyle').color as string | undefined) ??
+          null
+        "
+        title="Text color"
+        @select="editor?.chain().focus().setColor($event).run()"
+        @clear="editor?.chain().focus().unsetColor().run()"
+      >
+        <template #trigger>
+          <IconPalette />
+        </template>
+      </TextEditorColorPicker>
+
+      <TextEditorColorPicker
+        :colors="HIGHLIGHT_COLORS"
+        :active-color="
+          (editor?.getAttributes('highlight').color as string | undefined) ??
+          null
+        "
+        title="Highlight"
+        @select="editor?.chain().focus().setHighlight({ color: $event }).run()"
+        @clear="editor?.chain().focus().unsetHighlight().run()"
+      >
+        <template #trigger>
+          <IconHighlighter />
+        </template>
+      </TextEditorColorPicker>
+
+      <Button variant="outline" size="icon-sm" @click="openLinkDialog">
+        <IconLink />
+      </Button>
+      <Button
+        v-if="editor?.isActive('link')"
+        variant="outline"
+        size="icon-sm"
+        @click="
+          editor?.chain().focus().extendMarkRange('link').unsetLink().run()
+        "
+      >
+        <IconUnlink />
+      </Button>
+
+      <Button variant="outline" size="icon-sm" @click="openImageDialog">
+        <IconImage />
+      </Button>
+
+      <Popover
+        v-model:open="isTablePickerOpen"
+        @update:open="!$event && clearTablePickerSelection()"
+      >
+        <PopoverTrigger as-child>
+          <Button variant="outline" size="icon-sm">
+            <IconTable />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" class="w-auto p-2">
+          <div class="text-muted-foreground mb-2 text-xs font-medium">
+            {{ tablePickerLabel }}
+          </div>
+          <div
+            class="flex flex-col gap-1"
+            @mouseleave="clearTablePickerSelection"
+          >
+            <div v-for="row in TABLE_PICKER_ROWS" :key="row" class="flex gap-1">
+              <button
+                v-for="col in TABLE_PICKER_COLS"
+                :key="`${row}-${col}`"
+                type="button"
+                class="size-5 rounded-[2px] border transition-colors"
+                :class="
+                  col <= tablePickerSelection.cols &&
+                  row <= tablePickerSelection.rows
+                    ? 'border-accent bg-accent/30'
+                    : 'border-border bg-background hover:bg-muted'
+                "
+                @mouseenter="updateTablePickerSelection(row, col)"
+                @focus="updateTablePickerSelection(row, col)"
+                @click="insertTableFromPicker(row, col)"
+              />
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <DropdownMenu v-if="editor?.isActive('table')">
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline" size="icon-sm">
+            <IconTable />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel class="text-xs">Table</DropdownMenuLabel>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().addRowBefore().run()"
+          >
+            Add row above
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().addRowAfter().run()"
+          >
+            Add row below
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().addColumnBefore().run()"
+          >
+            Add column left
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().addColumnAfter().run()"
+          >
+            Add column right
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem @click="editor?.chain().focus().deleteRow().run()">
+            Delete row
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().deleteColumn().run()"
+          >
+            Delete column
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            @click="editor?.chain().focus().deleteTable().run()"
+          >
+            Delete table
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <div v-if="editor?.isActive('codeBlock')" class="min-w-36">
+        <Select
+          :model-value="currentCodeLanguage"
+          @update:model-value="setCodeLanguage"
+        >
+          <SelectTrigger class="h-8 w-full">
+            <SelectValue placeholder="Language" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">Auto</SelectItem>
+            <SelectItem
+              v-for="language in CODE_BLOCK_LANGUAGES"
+              :key="language"
+              :value="language"
+            >
+              {{ language }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div
+        v-if="editor?.isActive('image')"
+        class="border-border/70 bg-muted/30 flex items-center gap-1 rounded-md border px-1 py-0.5"
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="applyImageAttrs({ align: 'left' })"
+        >
+          Left
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="applyImageAttrs({ align: 'center' })"
+        >
+          Center
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="applyImageAttrs({ align: 'right' })"
+        >
+          Right
+        </Button>
+        <Select
+          :model-value="String(editor.getAttributes('image').width || '100%')"
+          @update:model-value="applyImageAttrs({ width: $event })"
+        >
+          <SelectTrigger class="h-8 w-20">
+            <SelectValue placeholder="Width" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="50%">50%</SelectItem>
+            <SelectItem value="75%">75%</SelectItem>
+            <SelectItem value="100%">100%</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator orientation="vertical" class="mx-0.5 h-6" />
+
+      <Button
+        variant="outline"
+        size="icon-sm"
+        :disabled="!editor?.can().undo()"
+        @click="editor?.chain().focus().undo().run()"
+      >
+        <IconRotateCcw />
       </Button>
       <Button
         variant="outline"
-        size="icon"
-        :class="{ 'bg-accent': editor?.isActive('codeBlock') }"
-        @click="editor?.chain().focus().toggleCodeBlock().run()"
+        size="icon-sm"
+        :disabled="!editor?.can().redo()"
+        @click="editor?.chain().focus().redo().run()"
       >
-        <IconCode />
+        <IconRefreshCw />
       </Button>
     </div>
-  </FloatingMenu>
-  <DragHandle v-if="editor && !isReadOnly" :editor="editor">
-    <Button variant="outline" size="icon-sm" class="mr-2 size-6">
+  </BubbleMenu>
+
+  <DragHandle
+    v-if="editor && !isReadOnly"
+    :editor="editor"
+    :on-node-change="handleDragHandleNodeChange"
+  >
+    <Button
+      variant="outline"
+      size="icon-sm"
+      class="mr-2 size-6"
+      @click.stop="selectNodeFromDragHandle"
+    >
       <IconGripVertical />
     </Button>
   </DragHandle>
+
+  <TextEditorCommandPanel
+    :open="Boolean(slashPanelState)"
+    :x="slashPanelPosition.x"
+    :y="slashPanelPosition.y"
+    :items="slashPanelState?.items ?? []"
+    :selected-index="slashPanelState?.selectedIndex ?? 0"
+    label="Slash Commands"
+    @select="selectSlashCommand"
+    @hover="hoverSlashCommand"
+  />
+
+  <TextEditorLinkDialog
+    v-model:open="isLinkDialogOpen"
+    :initial-href="linkDialogHref"
+    @submit="applyLinkFromDialog"
+    @remove="removeLinkFromDialog"
+  />
+
+  <TextEditorImageDialog
+    v-model:open="isImageDialogOpen"
+    @insert="insertImageFromDialog"
+  />
 </template>
 
 <style lang="scss">
-/* Basic editor styles */
+.text-editor-root {
+  min-height: 0;
+}
+
+.text-editor-content {
+  min-height: 0;
+}
+
 .tiptap {
+  min-height: 100%;
+  font-synthesis: style;
+
+  em,
+  i {
+    font-style: italic;
+  }
+
   :first-child {
     margin-top: 0;
   }
 
-  /* List styles */
   ul,
   ol {
+    margin: 1.25rem 0.8rem;
     padding: 0 1rem;
-    margin: 1.25rem 1rem 1.25rem 0.4rem;
 
     li p {
-      margin-top: 0.25em;
-      margin-bottom: 0.25em;
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
     }
   }
 
-  /* Task list specific styles */
   [data-type="taskList"] {
     list-style: none;
+    margin: 1.25rem 0;
     margin-left: 0;
     padding: 0;
 
-    li {
-      align-items: center;
+    > li {
       display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      margin: 0.25rem 0;
 
       > label {
         flex: 0 0 auto;
-        margin-right: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        width: 1rem;
+        height: 1rem;
+        margin-top: 0.15rem;
         user-select: none;
+        cursor: pointer;
+
+        input[type="checkbox"] {
+          width: 1rem;
+          height: 1rem;
+          margin: 0;
+          opacity: 0;
+          position: absolute;
+          inset: 0;
+          cursor: pointer;
+          outline: none;
+          z-index: 1;
+        }
+
+        > span {
+          width: 1rem;
+          height: 1rem;
+          border: 1px solid var(--input);
+          border-radius: 4px;
+          background-color: var(--background);
+          color: var(--primary-foreground);
+          box-shadow: inset 0 0 0 0 var(--primary);
+          transition:
+            background-color 0.15s ease,
+            border-color 0.15s ease,
+            box-shadow 0.15s ease,
+            color 0.15s ease;
+
+          &::after {
+            content: "";
+            display: block;
+            width: 0.3rem;
+            height: 0.58rem;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            transform: translate(0.28rem, 0.1rem) rotate(45deg) scale(0);
+            transform-origin: center;
+            transition: transform 0.12s ease-in-out;
+          }
+        }
+
+        input[type="checkbox"]:focus-visible + span {
+          border-color: var(--ring);
+          box-shadow: 0 0 0 3px
+            color-mix(in oklab, var(--ring) 35%, transparent);
+        }
+
+        input[type="checkbox"]:checked + span {
+          border-color: var(--primary);
+          background-color: var(--primary);
+        }
+
+        input[type="checkbox"]:checked + span::after {
+          transform: translate(0.28rem, 0.1rem) rotate(45deg) scale(1);
+        }
+
+        input[type="checkbox"]:disabled + span {
+          opacity: 0.5;
+        }
+
+        input[type="checkbox"]:disabled {
+          cursor: not-allowed;
+        }
       }
 
       > div {
         flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      &[data-checked="true"] > div {
+        color: var(--muted-foreground);
+        text-decoration: line-through;
+        text-decoration-thickness: 1px;
+      }
+
+      p {
+        margin-top: 0.125rem;
+        margin-bottom: 0.125rem;
       }
     }
 
-    input[type="checkbox"] {
-      cursor: pointer;
-      accent-color: inherit;
+    li ul,
+    li ol {
+      margin-top: 0.4rem;
+      margin-bottom: 0.2rem;
     }
   }
 
-  /* Details */
   [data-type="details"] {
-    list-style: none;
     display: flex;
     gap: 0.25rem;
-    margin: 1.5rem 0;
-    border: 1px solid var(--color-border);
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 0.5rem;
 
     summary {
-      font-weight: 700;
+      font-weight: 600;
     }
 
     > button {
@@ -1627,7 +1624,7 @@ const copySource = async () => {
       width: 1.25rem;
 
       &:hover {
-        background-color: var(--color-border);
+        background-color: var(--muted);
       }
 
       &::before {
@@ -1638,30 +1635,97 @@ const copySource = async () => {
     &.is-open > button::before {
       transform: rotate(90deg);
     }
-
-    > div {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      width: 100%;
-
-      > [data-type="detailsContent"] > :last-child {
-        margin-bottom: 0.5rem;
-      }
-    }
-
-    .details {
-      margin: 0.5rem 0;
-    }
   }
 
-  /* Editable */
+  .tableWrapper {
+    margin: 1rem 0;
+    overflow-x: auto;
+  }
+
+  table {
+    border-collapse: collapse;
+    margin: 0;
+    overflow: hidden;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  th,
+  td {
+    border: 1px solid var(--border);
+    box-sizing: border-box;
+    min-width: 1em;
+    padding: 0.5rem 0.625rem;
+    position: relative;
+    vertical-align: top;
+  }
+
+  th {
+    background: color-mix(in oklab, var(--muted) 80%, transparent);
+    font-weight: 600;
+    text-align: left;
+  }
+
+  th p,
+  td p {
+    margin: 0;
+  }
+
+  .selectedCell::after {
+    background: color-mix(in oklab, var(--accent) 24%, transparent);
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 1;
+  }
+
+  .column-resize-handle {
+    background: var(--ring);
+    bottom: -2px;
+    pointer-events: none;
+    position: absolute;
+    right: -2px;
+    top: 0;
+    width: 4px;
+  }
+
+  pre {
+    background: color-mix(in oklab, var(--muted) 70%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--foreground);
+    font-family:
+      var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+      Consolas, "Liberation Mono", "Courier New", monospace;
+    margin: 1rem 0;
+    overflow-x: auto;
+    padding: 0.75rem 0.9rem;
+  }
+
+  code {
+    background: color-mix(in oklab, var(--muted) 70%, transparent);
+    border-radius: 0.25rem;
+    font-size: 0.85em;
+    padding: 0.1rem 0.35rem;
+  }
+
+  pre code {
+    background: transparent;
+    padding: 0;
+  }
+
+  .editor-image-node {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+    max-width: 100%;
+  }
+
   &[contenteditable="false"] {
-    color: #999;
-    opacity: 0.6;
+    opacity: 0.7;
   }
 
-  /* Give a remote user a caret */
   .collaboration-carets__caret {
     border-left: 1px solid #0d0d0d;
     border-right: 1px solid #0d0d0d;
@@ -1672,7 +1736,6 @@ const copySource = async () => {
     word-break: normal;
   }
 
-  /* Render the username above the caret */
   .collaboration-carets__label {
     border-radius: 2px 2px 2px 0;
     color: #fff;

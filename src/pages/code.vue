@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { createYjsCollab, type YjsCollabSession } from "@/collab/yjsBinding"
-import { IconFileText } from "@/data/icons"
+import { IconCloudAlert, IconCloudCheck, IconFileText } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
@@ -68,6 +68,7 @@ const selectedFileId = computed(() => selectedFile.value?.id ?? null)
 
 const editorContent = ref("")
 const isDirty = ref(false)
+const isSaving = ref(false)
 const collabSession = shallowRef<YjsCollabSession | null>(null)
 const collabRole = ref<"editor" | "viewer" | null>(null)
 const collabError = ref<string | null>(null)
@@ -243,11 +244,13 @@ watch(editorContent, (value) => {
 
 const saveContent = async () => {
   if (!selectedFile.value || !teamId.value || !workspaceId.value) return
+  if (isSaving.value) return
   if (editorReadOnly.value) {
     showErrorToast("Read-only", "You do not have permission to edit this file.")
     return
   }
 
+  isSaving.value = true
   try {
     await fileTreeStore.saveFileContent(
       nodeScope,
@@ -260,6 +263,8 @@ const saveContent = async () => {
     showSuccessToast("Saved")
   } catch (error) {
     showErrorToast("Failed to save", (error as Error).message)
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -328,6 +333,8 @@ onBeforeUnmount(() => {
       class="flex items-center gap-2"
     >
       <Badge v-if="collabRole" variant="outline" class="capitalize">
+        <IconCloudAlert v-if="isDirty" class="text-muted-foreground" />
+        <IconCloudCheck v-else class="text-muted-foreground" />
         {{ collabRole }}
       </Badge>
       <Spinner v-if="!collabReady && !collabError" />
@@ -336,9 +343,10 @@ onBeforeUnmount(() => {
     <Button
       v-if="teamId && workspaceId && selectedFile"
       size="sm"
-      :disabled="editorReadOnly || !isDirty"
+      :disabled="editorReadOnly || !isDirty || isSaving"
       @click="saveContent"
     >
+      <Spinner v-if="isSaving" />
       Save
     </Button>
   </Teleport>
