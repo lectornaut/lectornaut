@@ -10,6 +10,7 @@ import {
   IconPencil,
   IconX,
 } from "@/data/icons"
+import { validateImageFile } from "@/helpers/imageFile"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { updateUserData } from "@/queries/updateUserData"
@@ -25,14 +26,13 @@ import {
   createUserMembershipsQuery,
   deleteUserPhotoFile,
   getUserPhotoStorageRef,
-} from "@/utils/firebase-helpers"
+} from "@/utils/firebase/firebase-helpers"
 import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
   usernamesMatch,
   validateUsername,
-} from "@/utils/firebase-username"
-import { validateImageFile } from "@/utils/imageFile"
+} from "@/utils/firebase/firebase-username"
 import {
   deleteUser,
   sendEmailVerification,

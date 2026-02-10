@@ -1,11 +1,11 @@
+import { withToast } from "@/helpers/toast"
 import { firestore as db, functions } from "@/modules/firebase"
 import { type INotification, type INotificationStatus } from "@/types"
 import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
-import { withToast } from "@/utils/toast-helpers"
+} from "@/utils/firebase/firebase-optimistic"
 import {
   collection,
   deleteDoc,

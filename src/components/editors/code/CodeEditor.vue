@@ -66,7 +66,7 @@ const props = withDefaults(defineProps<CodeEditorProps>(), {
   language: "typescript",
   lineWrapping: false,
   tabSize: 2,
-  indentGuides: true,
+  indentGuides: false,
 })
 
 const emit = defineEmits<{

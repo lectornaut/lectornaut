@@ -231,11 +231,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Deny by default; todos are not used by the current product paths.
-    match /todos/{todoId} {
-      allow read, write: if false;
-    }
-
     // Default deny for all non-explicit collections.
     match /{document=**} {
       allow read, write: if false;

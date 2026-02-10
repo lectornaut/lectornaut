@@ -1,5 +1,5 @@
-import { base64ToBytes, bytesToBase64 } from "@/collab/base64"
 import { firestore } from "@/modules/firebase"
+import { base64ToBytes, bytesToBase64 } from "@/utils/collab/base64"
 import {
   doc,
   getDoc,
@@ -10,6 +10,7 @@ import {
 import * as Y from "yjs"
 
 const DEFAULT_SNAPSHOT_DEBOUNCE_MS = 10_000 // 10s - balance between cost and data safety
+const MAX_SNAPSHOT_BYTES = 750_000 // ~750KB limit before base64 expansion hits Firestore's 1MB doc cap
 
 interface SnapshotDoc {
   contentId: string
@@ -45,7 +46,16 @@ export async function saveSnapshot(
   ydoc: Y.Doc,
   userId: string
 ): Promise<void> {
-  const ydocBase64 = bytesToBase64(Y.encodeStateAsUpdate(ydoc))
+  const stateUpdate = Y.encodeStateAsUpdate(ydoc)
+
+  if (stateUpdate.byteLength > MAX_SNAPSHOT_BYTES) {
+    console.warn(
+      `[collab:snapshot] Skipping save — doc size ${stateUpdate.byteLength} exceeds ${MAX_SNAPSHOT_BYTES} byte limit`
+    )
+    return
+  }
+
+  const ydocBase64 = bytesToBase64(stateUpdate)
 
   await setDoc(
     doc(firestore, "snapshots", contentId),
@@ -95,6 +105,11 @@ export function createSnapshotManager(
 
     if (inFlightSave) {
       await inFlightSave
+      // Re-check after the in-flight save completes — new changes
+      // may have arrived while we were waiting (fixes data loss on destroy)
+      if (dirty && !destroyed) {
+        return runSave()
+      }
       return
     }
 

@@ -5,17 +5,17 @@
  *
  * Features:
  * - Automatic retry with exponential backoff
- * - Configurable toast notifications via shared toast-helpers
+ * - Configurable toast notifications via shared toast
  * - Undo support for destructive operations
  * - Type-safe error handling
  */
 
+import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import {
   getFirestoreErrorMessage,
   isRetryableFirebaseError,
-} from "@/utils/firebase-errors"
-import { getBackoffDelay, sleep } from "@/utils/firebase-optimistic"
-import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
+} from "@/utils/firebase/firebase-errors"
+import { getBackoffDelay, sleep } from "@/utils/firebase/firebase-optimistic"
 import {
   addDoc,
   CollectionReference,

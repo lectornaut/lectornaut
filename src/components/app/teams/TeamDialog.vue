@@ -10,6 +10,7 @@ import {
   IconX,
 } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
+import { validateImageFile } from "@/helpers/imageFile"
 import { getInitials } from "@/helpers/utilities"
 import {
   useInvitationStore,
@@ -18,8 +19,7 @@ import {
 } from "@/stores/invitationStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole, ITeam } from "@/types"
-import { validateImageFile } from "@/utils/imageFile"
-import { Capabilities, roleCan } from "@/utils/permissions"
+import { Capabilities, roleCan } from "@/types/permissions"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 

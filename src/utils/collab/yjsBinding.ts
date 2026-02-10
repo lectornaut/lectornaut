@@ -1,4 +1,5 @@
-import { colorFromUserId } from "@/collab/colors"
+import type { WorkspaceNodeScope } from "@/types"
+import { colorFromUserId } from "@/utils/collab/colors"
 import {
   createPeer,
   deletePeer,
@@ -11,10 +12,14 @@ import {
   type CollabRole,
   type JoinCollabRoomResponse,
   type SendSignalRequest,
-} from "@/collab/signaling"
-import { createSnapshotManager, loadSnapshot } from "@/collab/snapshots"
-import { WebRtcMesh } from "@/collab/webrtcMesh"
-import type { WorkspaceNodeScope } from "@/types"
+} from "@/utils/collab/signaling"
+import { createSnapshotManager, loadSnapshot } from "@/utils/collab/snapshots"
+import { WebRtcMesh } from "@/utils/collab/webrtcMesh"
+import {
+  FirestoreErrorCodes,
+  hasFirebaseErrorCode,
+  isRetryableFirebaseError,
+} from "@/utils/firebase/firebase-errors"
 import type { Extension } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { yCollab } from "y-codemirror.next"
@@ -327,6 +332,7 @@ export async function createYjsCollab(
   }
 
   if (typeof window !== "undefined") {
+    sendHeartbeat() // Send first heartbeat immediately so peers see us right away
     restartHeartbeatTimer()
   }
   if (typeof document !== "undefined") {
@@ -456,6 +462,8 @@ export async function createYjsCollab(
     ydoc.off("update", handleYdocUpdate)
     awareness.off("update", handleAwarenessUpdate)
 
+    // Clear local awareness state before destroying mesh so the removal
+    // update is broadcast to connected peers
     awareness.setLocalState(null)
     mesh?.destroy()
 
@@ -506,6 +514,10 @@ const sleep = (delayMs: number): Promise<void> =>
     setTimeout(resolve, delayMs)
   })
 
+function isPeerGoneSignalError(error: unknown): boolean {
+  return hasFirebaseErrorCode(error, FirestoreErrorCodes.NOT_FOUND)
+}
+
 async function sendSignalWithRetry(payload: SendSignalRequest): Promise<void> {
   let lastError: unknown = null
 
@@ -514,6 +526,16 @@ async function sendSignalWithRetry(payload: SendSignalRequest): Promise<void> {
       await sendSignal(payload)
       return
     } catch (error) {
+      if (isPeerGoneSignalError(error)) {
+        // Peer lists are eventually consistent. If either side has already
+        // disconnected, treat the signal as stale and continue silently.
+        return
+      }
+
+      if (!isRetryableFirebaseError(error)) {
+        throw error
+      }
+
       lastError = error
       if (attempt >= SIGNAL_SEND_MAX_ATTEMPTS) {
         break

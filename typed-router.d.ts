@@ -192,13 +192,6 @@ declare module 'vue-router/auto-routes' {
       { teamId: ParamValue<false> },
       | never
     >,
-    '/test': RouteRecordInfo<
-      '/test',
-      '/test',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/welcome': RouteRecordInfo<
       '/welcome',
       '/welcome',
@@ -377,12 +370,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/teams/[teamId].vue': {
       routes:
         | '/teams/[teamId]'
-      views:
-        | never
-    }
-    'src/pages/test.vue': {
-      routes:
-        | '/test'
       views:
         | never
     }

@@ -4,14 +4,6 @@ import { Timestamp } from "firebase/firestore"
 // Domain Types
 // ============================================================================
 
-export interface ITodo {
-  readonly id: string
-  title: string
-  completed: boolean
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
-
 export interface ITeam {
   readonly id: string
   name: string

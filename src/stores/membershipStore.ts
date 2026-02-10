@@ -20,18 +20,18 @@ import {
 import { defaultTeamRole } from "@/helpers/defaults"
 import { useAuthStore } from "@/stores/authStore"
 import type { IMembership, IMembershipRole, ITeam } from "@/types"
+import { can, Capabilities, hasExactRole } from "@/types/permissions"
 import {
   getAllMembershipsGroup,
   getTeamMembershipsCollection,
-} from "@/utils/firebase-helpers"
+} from "@/utils/firebase/firebase-helpers"
 import {
   addPending,
   cloneState,
   createPendingSet,
   removePending,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
-import { can, Capabilities, hasExactRole } from "@/utils/permissions"
+} from "@/utils/firebase/firebase-optimistic"
 import {
   getDocs,
   query,

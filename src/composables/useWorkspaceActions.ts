@@ -1,9 +1,9 @@
 import { useLoadingState } from "@/composables/useLoadingState"
+import { withToast } from "@/helpers/toast"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
-import { can, Capabilities } from "@/utils/permissions"
-import { withToast } from "@/utils/toast-helpers"
+import { can, Capabilities } from "@/types/permissions"
 import { storeToRefs } from "pinia"
 
 /**

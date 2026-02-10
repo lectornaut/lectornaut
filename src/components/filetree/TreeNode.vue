@@ -11,9 +11,9 @@ import {
   IconTrash,
   IconTrash2,
 } from "@/data/icons"
+import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import type { WorkspaceNode, WorkspaceNodeScope } from "@/types"
-import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
 import { computed, ref } from "vue"
 
 defineOptions({

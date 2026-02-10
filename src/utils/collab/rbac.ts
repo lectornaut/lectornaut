@@ -1,6 +1,6 @@
 import { auth, firestore } from "@/modules/firebase"
 import type { IMembershipRole, WorkspaceNodeScope } from "@/types"
-import { Capabilities, roleCan } from "@/utils/permissions"
+import { Capabilities, roleCan } from "@/types/permissions"
 import { doc, getDoc } from "firebase/firestore"
 
 type CollabRole = "editor" | "viewer" | "none"
@@ -35,30 +35,38 @@ async function resolveRole(
     return null
   }
 
-  const contentRef = doc(
-    firestore,
-    "teams",
-    input.teamId,
-    "workspaces",
-    input.workspaceId,
-    input.scope,
-    input.contentId
-  )
-  const contentSnap = await getDoc(contentRef)
+  // Fetch all three docs in parallel to reduce latency (3 round-trips → 1)
+  const [contentSnap, workspaceMemberSnap, teamMemberSnap] = await Promise.all([
+    getDoc(
+      doc(
+        firestore,
+        "teams",
+        input.teamId,
+        "workspaces",
+        input.workspaceId,
+        input.scope,
+        input.contentId
+      )
+    ),
+    getDoc(
+      doc(
+        firestore,
+        "teams",
+        input.teamId,
+        "workspaces",
+        input.workspaceId,
+        "memberships",
+        userId
+      )
+    ),
+    getDoc(doc(firestore, "teams", input.teamId, "memberships", userId)),
+  ])
+
   if (!contentSnap.exists()) {
     return null
   }
 
-  const workspaceMemberRef = doc(
-    firestore,
-    "teams",
-    input.teamId,
-    "workspaces",
-    input.workspaceId,
-    "memberships",
-    userId
-  )
-  const workspaceMemberSnap = await getDoc(workspaceMemberRef)
+  // Prefer workspace-level membership over team-level
   if (workspaceMemberSnap.exists()) {
     const workspaceRole = workspaceMemberSnap.data()?.role
     if (isMembershipRole(workspaceRole)) {
@@ -66,14 +74,6 @@ async function resolveRole(
     }
   }
 
-  const teamMemberRef = doc(
-    firestore,
-    "teams",
-    input.teamId,
-    "memberships",
-    userId
-  )
-  const teamMemberSnap = await getDoc(teamMemberRef)
   if (!teamMemberSnap.exists()) {
     return null
   }

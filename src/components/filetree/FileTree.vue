@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { IconChevronRight, IconFilePlus, IconFolderPlus } from "@/data/icons"
+import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import {
   ROOT_PARENT_ID,
   type WorkspaceNode,
   type WorkspaceNodeScope,
 } from "@/types"
-import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue"
 import TreeNode from "./TreeNode.vue"
 

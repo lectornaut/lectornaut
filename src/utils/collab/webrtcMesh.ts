@@ -1,4 +1,4 @@
-import type { SignalType } from "@/collab/signaling"
+import type { SignalType } from "@/utils/collab/signaling"
 
 export interface IncomingSignal {
   fromPeerId: string
@@ -26,11 +26,15 @@ const MSG_TYPE_Y_UPDATE = 0x01
 const MSG_TYPE_AWARENESS = 0x02
 
 const DEFAULT_RTC_CONFIG: RTCConfiguration = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
 }
 const ICE_SIGNAL_FLUSH_MS = 20
 const DISCONNECT_GRACE_PERIOD_MS = 10_000
 const ICE_RESTART_DELAY_MS = 2_000
+const DATA_CHANNEL_HIGH_WATER_MARK = 1024 * 1024 // 1MB - pause sends above this
 
 export class WebRtcMesh {
   private readonly options: WebRtcMeshOptions
@@ -142,7 +146,7 @@ export class WebRtcMesh {
     }
 
     if (type === "answer") {
-      await this.handleAnswer(connection, payload)
+      await this.handleAnswer(fromPeerId, connection, payload)
       await this.flushPendingIce(fromPeerId, connection)
       return
     }
@@ -282,11 +286,19 @@ export class WebRtcMesh {
     peerId: string,
     connection: RTCPeerConnection
   ): Promise<void> {
-    const offer = await connection.createOffer()
-    await connection.setLocalDescription(offer)
+    try {
+      const offer = await connection.createOffer()
+      await connection.setLocalDescription(offer)
 
-    const payload = connection.localDescription?.toJSON() ?? offer
-    await this.options.sendSignal(peerId, "offer", payload)
+      const payload = connection.localDescription?.toJSON() ?? offer
+      await this.options.sendSignal(peerId, "offer", payload)
+    } catch (error) {
+      console.error(
+        `[collab:webrtc] Failed to create offer for ${peerId}`,
+        error
+      )
+      this.removePeer(peerId)
+    }
   }
 
   private async handleOffer(
@@ -294,31 +306,47 @@ export class WebRtcMesh {
     connection: RTCPeerConnection,
     payload: unknown
   ): Promise<void> {
-    const offer = this.toSessionDescription(payload)
-    if (!offer) {
-      return
+    try {
+      const offer = this.toSessionDescription(payload)
+      if (!offer) {
+        return
+      }
+
+      await connection.setRemoteDescription(new RTCSessionDescription(offer))
+      await this.flushPendingIce(peerId, connection)
+
+      const answer = await connection.createAnswer()
+      await connection.setLocalDescription(answer)
+
+      const answerPayload = connection.localDescription?.toJSON() ?? answer
+      await this.options.sendSignal(peerId, "answer", answerPayload)
+    } catch (error) {
+      console.error(
+        `[collab:webrtc] Failed to handle offer from ${peerId}`,
+        error
+      )
+      this.removePeer(peerId)
     }
-
-    await connection.setRemoteDescription(new RTCSessionDescription(offer))
-    await this.flushPendingIce(peerId, connection)
-
-    const answer = await connection.createAnswer()
-    await connection.setLocalDescription(answer)
-
-    const answerPayload = connection.localDescription?.toJSON() ?? answer
-    await this.options.sendSignal(peerId, "answer", answerPayload)
   }
 
   private async handleAnswer(
+    peerId: string,
     connection: RTCPeerConnection,
     payload: unknown
   ): Promise<void> {
-    const answer = this.toSessionDescription(payload)
-    if (!answer) {
-      return
-    }
+    try {
+      const answer = this.toSessionDescription(payload)
+      if (!answer) {
+        return
+      }
 
-    await connection.setRemoteDescription(new RTCSessionDescription(answer))
+      await connection.setRemoteDescription(new RTCSessionDescription(answer))
+    } catch (error) {
+      console.error(
+        `[collab:webrtc] Failed to handle answer from ${peerId}`,
+        error
+      )
+    }
   }
 
   private async handleIceCandidate(
@@ -385,6 +413,14 @@ export class WebRtcMesh {
   private sendBinaryMessage(peerId: string, message: ArrayBuffer): void {
     const channel = this.dataChannels.get(peerId)
     if (!channel || channel.readyState !== "open") {
+      return
+    }
+
+    // Backpressure: skip send if the channel buffer is saturated
+    if (channel.bufferedAmount > DATA_CHANNEL_HIGH_WATER_MARK) {
+      console.warn(
+        `[collab:webrtc] Data channel to ${peerId} is backed up (${channel.bufferedAmount} bytes), dropping message`
+      )
       return
     }
 
@@ -516,6 +552,14 @@ export class WebRtcMesh {
       }
 
       if (current.connectionState === "failed") {
+        // Only the initiator should create a new offer after ICE restart
+        // to avoid SDP glare (both sides sending offers simultaneously)
+        if (!this.shouldInitiate(peerId)) {
+          // Non-initiator: remove and let reconnect logic re-establish
+          this.removePeer(peerId)
+          return
+        }
+
         try {
           // Attempt ICE restart to recover the connection
           current.restartIce()

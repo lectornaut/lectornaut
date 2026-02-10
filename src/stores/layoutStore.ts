@@ -31,7 +31,7 @@ import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
+} from "@/utils/firebase/firebase-optimistic"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc, setDoc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"

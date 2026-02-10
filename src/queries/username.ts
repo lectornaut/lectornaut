@@ -3,7 +3,7 @@ import {
   normalizeUsername,
   RESERVED_USERNAMES,
   validateUsername,
-} from "@/utils/firebase-username"
+} from "@/utils/firebase/firebase-username"
 import {
   deleteDoc,
   doc,

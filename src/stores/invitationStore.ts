@@ -35,14 +35,14 @@ import { firestore, functions } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership, IMembershipRole } from "@/types"
-import { getMembershipRef } from "@/utils/firebase-helpers"
+import { can, Capabilities } from "@/types/permissions"
+import { getMembershipRef } from "@/utils/firebase/firebase-helpers"
 import {
   cloneState,
   createPendingSet,
   generateOperationId,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
-import { can, Capabilities } from "@/utils/permissions"
+} from "@/utils/firebase/firebase-optimistic"
 import {
   collection,
   getDoc,

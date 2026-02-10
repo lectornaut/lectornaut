@@ -29,7 +29,7 @@ import {
   signUpWithEmailPassword,
   switchAccount,
 } from "@/modules/auth"
-import { getAuthErrorMessage } from "@/utils/firebase-errors"
+import { getAuthErrorMessage } from "@/utils/firebase/firebase-errors"
 
 const { t } = useI18n()
 

@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconX } from "@/data/icons"
+import { validateImageFile } from "@/helpers/imageFile"
 import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types"
-import { validateImageFile } from "@/utils/imageFile"
 import { toast } from "vue-sonner"
 
 const props = defineProps<{

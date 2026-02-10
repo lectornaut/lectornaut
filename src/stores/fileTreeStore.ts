@@ -13,7 +13,7 @@ import {
   createPendingSet,
   generateOperationId,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
+} from "@/utils/firebase/firebase-optimistic"
 import { Timestamp, type QueryDocumentSnapshot } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { reactive, shallowRef } from "vue"

@@ -1,10 +1,13 @@
 <script lang="ts" setup>
-import { createYjsCollab, type YjsCollabSession } from "@/collab/yjsBinding"
 import { IconCloudAlert, IconCloudCheck, IconFileText } from "@/data/icons"
+import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
-import { showErrorToast, showSuccessToast } from "@/utils/toast-helpers"
+import {
+  createYjsCollab,
+  type YjsCollabSession,
+} from "@/utils/collab/yjsBinding"
 import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 

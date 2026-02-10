@@ -22,18 +22,18 @@ import {
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { ITeam } from "@/types"
+import { Capabilities, roleCan } from "@/types/permissions"
 import {
   deleteTeamPhotoFile,
   getTeamRef,
   getUserRef,
   uploadTeamPhoto,
-} from "@/utils/firebase-helpers"
+} from "@/utils/firebase/firebase-helpers"
 import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
-import { Capabilities, roleCan } from "@/utils/permissions"
+} from "@/utils/firebase/firebase-optimistic"
 import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"

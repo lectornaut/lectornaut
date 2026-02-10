@@ -51,13 +51,51 @@ export type FirestoreErrorCode =
 /**
  * Retryable Firestore error codes
  */
-const RETRYABLE_ERROR_CODES: readonly FirestoreErrorCode[] = [
+const RETRYABLE_ERROR_CODES = new Set<FirestoreErrorCode>([
   FirestoreErrorCodes.UNAVAILABLE,
   FirestoreErrorCodes.DEADLINE_EXCEEDED,
   FirestoreErrorCodes.RESOURCE_EXHAUSTED,
   FirestoreErrorCodes.ABORTED,
   FirestoreErrorCodes.INTERNAL,
-] as const
+])
+
+const FIREBASE_ERROR_PREFIX_SEPARATOR = "/"
+
+/**
+ * Normalize Firebase SDK namespaced error codes (e.g. "functions/not-found")
+ * to canonical status codes (e.g. "not-found").
+ */
+export const normalizeFirebaseErrorCode = (code: string): string => {
+  const separatorIndex = code.indexOf(FIREBASE_ERROR_PREFIX_SEPARATOR)
+  if (separatorIndex === -1) {
+    return code
+  }
+
+  return code.slice(separatorIndex + 1)
+}
+
+/**
+ * Extract normalized Firebase error code from an unknown error.
+ */
+export const getFirebaseErrorCode = (error: unknown): string | null => {
+  if (!(error instanceof FirebaseError)) {
+    return null
+  }
+
+  return normalizeFirebaseErrorCode(error.code)
+}
+
+/**
+ * Check whether an unknown error matches a Firebase code.
+ */
+export const hasFirebaseErrorCode = (error: unknown, code: string): boolean => {
+  const normalizedErrorCode = getFirebaseErrorCode(error)
+  if (!normalizedErrorCode) {
+    return false
+  }
+
+  return normalizedErrorCode === normalizeFirebaseErrorCode(code)
+}
 
 // ============================================================================
 // Error Message Helpers
@@ -105,8 +143,9 @@ export const getAuthErrorMessage = (error: unknown): string => {
  * Get a user-friendly error message for Firestore errors.
  */
 export const getFirestoreErrorMessage = (error: unknown): string => {
-  if (error instanceof FirebaseError) {
-    switch (error.code) {
+  const code = getFirebaseErrorCode(error)
+  if (code) {
+    switch (code) {
       case FirestoreErrorCodes.PERMISSION_DENIED:
         return "You don't have permission to perform this action."
       case FirestoreErrorCodes.NOT_FOUND:
@@ -140,7 +179,10 @@ export const getFirestoreErrorMessage = (error: unknown): string => {
       case FirestoreErrorCodes.DEADLINE_EXCEEDED:
         return "Operation timed out. Please try again."
       default:
-        return error.message
+        if (error instanceof FirebaseError) {
+          return error.message
+        }
+        break
     }
   }
 
@@ -155,8 +197,6 @@ export const getFirestoreErrorMessage = (error: unknown): string => {
  * Check if a Firebase error is retryable.
  */
 export const isRetryableFirebaseError = (error: unknown): boolean => {
-  if (error instanceof FirebaseError) {
-    return RETRYABLE_ERROR_CODES.includes(error.code as FirestoreErrorCode)
-  }
-  return false
+  const code = getFirebaseErrorCode(error)
+  return code ? RETRYABLE_ERROR_CODES.has(code as FirestoreErrorCode) : false
 }

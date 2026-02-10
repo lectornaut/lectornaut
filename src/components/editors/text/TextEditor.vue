@@ -18,6 +18,7 @@ import {
   IconHeading3,
   IconHighlighter,
   IconImage,
+  IconInfo,
   IconItalic,
   IconLink,
   IconList,
@@ -33,7 +34,7 @@ import {
   IconUnlink,
 } from "@/data/icons"
 import { accents } from "@/helpers/defaults"
-import { showErrorToast } from "@/utils/toast-helpers"
+import { showErrorToast } from "@/helpers/toast"
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
 import Collaboration from "@tiptap/extension-collaboration"
@@ -832,7 +833,7 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "tiptap prose prose-sm max-w-none dark:prose-invert p-8 focus:outline-none",
+        "tiptap prose prose-sm max-w-none dark:prose-invert p-16 focus:outline-none",
     },
   },
   extensions,
@@ -1037,37 +1038,48 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 </script>
 
 <template>
-  <aside
-    aria-label="Table of contents"
-    class="sticky inset-0 z-20 ml-auto flex h-full w-max flex-col items-end gap-2 overflow-auto p-4"
-  >
-    <div
-      v-if="tableOfContentsItems.length"
-      class="absolute top-1/2 flex -translate-y-1/2 flex-col items-end"
+  <div class="absolute top-0 left-0 z-20 h-full p-2">
+    <div class="sticky top-0 p-1.5">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="outline" size="icon-sm">
+              <IconInfo />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {{ editorStats.characters }} chars · {{ editorStats.words }} words ·
+            {{ editorStats.readingMinutes }} min read
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  </div>
+  <div class="absolute top-0 right-0 z-20 h-full p-2">
+    <aside
+      class="sticky top-1/2 ml-auto flex h-max w-max -translate-y-1/2 flex-col items-end gap-2 overflow-auto p-2"
     >
       <div
-        v-for="item in tableOfContentsItems"
-        :key="item.id"
-        class="group flex cursor-pointer py-1"
-        @click="scrollToTableOfContentsItem(item)"
+        v-if="tableOfContentsItems.length"
+        class="absolute top-1/2 flex -translate-y-1/2 flex-col items-end"
       >
-        <span
-          class="bg-primary h-1 rounded-full opacity-25 group-hover:opacity-75"
-          :style="{ width: getTableOfContentsItemIndent(item.level) }"
+        <div
+          v-for="item in tableOfContentsItems"
+          :key="item.id"
+          class="group flex cursor-pointer py-1"
+          @click="scrollToTableOfContentsItem(item)"
         >
-        </span>
+          <span
+            class="bg-sidebar-primary h-1 rounded-full opacity-25 group-hover:opacity-75"
+            :style="{ width: getTableOfContentsItemIndent(item.level) }"
+          >
+          </span>
+        </div>
       </div>
-    </div>
-    <p class="text-muted-foreground text-xs">
-      {{ editorStats.characters }} chars · {{ editorStats.words }} words ·
-      {{ editorStats.readingMinutes }} min read
-    </p>
-  </aside>
+    </aside>
+  </div>
 
-  <EditorContent
-    :editor="editor"
-    class="text-editor-content min-h-0 lg:h-full"
-  />
+  <EditorContent :editor="editor" />
 
   <BubbleMenu
     v-if="editor && !isReadOnly"
@@ -1455,14 +1467,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 </template>
 
 <style lang="scss">
-.text-editor-root {
-  min-height: 0;
-}
-
-.text-editor-content {
-  min-height: 0;
-}
-
 .tiptap {
   min-height: 100%;
   font-synthesis: style;

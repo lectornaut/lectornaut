@@ -6,13 +6,7 @@
  */
 
 import { firestore, storage } from "@/modules/firebase"
-import type {
-  IMembershipDocData,
-  ITeam,
-  ITodo,
-  IUser,
-  IWorkspace,
-} from "@/types"
+import type { IMembershipDocData, ITeam, IUser, IWorkspace } from "@/types"
 import {
   collection,
   collectionGroup,
@@ -79,10 +73,6 @@ export const getWorkspaceRef = (
     "workspaces",
     workspaceId
   ) as DocumentReference<IWorkspace>
-
-/** Get a reference to a todo document */
-export const getTodoRef = (todoId: string): DocumentReference<ITodo> =>
-  doc(firestore, "todos", todoId) as DocumentReference<ITodo>
 
 // ============================================================================
 // Collection References

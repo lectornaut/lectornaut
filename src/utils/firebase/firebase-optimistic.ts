@@ -11,7 +11,7 @@
  * - Snapshot protection to prevent VueFire overwrites
  */
 
-import { isRetryableFirebaseError } from "@/utils/firebase-errors"
+import { isRetryableFirebaseError } from "@/utils/firebase/firebase-errors"
 import type { Ref, ShallowRef } from "vue"
 import { isRef } from "vue"
 

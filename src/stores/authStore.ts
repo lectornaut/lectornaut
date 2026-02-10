@@ -16,12 +16,12 @@ import {
   getUserRef,
   updateUserInMemberships,
   uploadUserPhoto,
-} from "@/utils/firebase-helpers"
+} from "@/utils/firebase/firebase-helpers"
 import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
+} from "@/utils/firebase/firebase-optimistic"
 import type { User } from "firebase/auth"
 import {
   serverTimestamp,

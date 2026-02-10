@@ -1,4 +1,4 @@
-import { validateImageFile } from "@/utils/imageFile"
+import { validateImageFile } from "@/helpers/imageFile"
 import { toast } from "vue-sonner"
 
 interface UsePhotoUploadOptions {

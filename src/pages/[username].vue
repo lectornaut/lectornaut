@@ -27,6 +27,10 @@ const username = computed(() => {
   const name = (route.params as { username?: string }).username || ""
   return name && name.startsWith("@") ? name.slice(1) : name
 })
+const rawUsernameSegment = computed(() => {
+  const name = (route.params as { username?: string }).username || ""
+  return name
+})
 
 const isCurrentUser = computed(
   () => currentUserData.value?.username === username.value
@@ -56,8 +60,15 @@ const fetchUserProfile = async () => {
         isPrivate.value = true
         break
       case "not_found":
-        // Redirect to 404 page - let [...path].vue handle it
-        router.replace(`/${username.value}/not-found`)
+        // Switch to catch-all route while keeping the same URL.
+        await router.replace({
+          name: "/[...path]",
+          params: {
+            path: rawUsernameSegment.value || username.value,
+          },
+          query: route.query,
+          hash: route.hash,
+        })
         return
       case "error":
         error.value = result.message

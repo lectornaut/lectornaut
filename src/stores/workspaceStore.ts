@@ -28,12 +28,12 @@ import {
   deleteWorkspacePhotoFile,
   getUserRef,
   uploadWorkspacePhoto,
-} from "@/utils/firebase-helpers"
+} from "@/utils/firebase/firebase-helpers"
 import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
-} from "@/utils/firebase-optimistic"
+} from "@/utils/firebase/firebase-optimistic"
 import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
