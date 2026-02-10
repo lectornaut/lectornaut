@@ -4,6 +4,7 @@ import { type INotification, type INotificationStatus } from "@/types"
 import {
   cloneState,
   createPendingSet,
+  withCloudSyncOperation,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import {
@@ -144,8 +145,16 @@ export function useNotifications() {
     }
 
     try {
-      const fn = httpsCallable(functions, actionName)
-      return await fn({ status })
+      return await withCloudSyncOperation(
+        async () => {
+          const fn = httpsCallable(functions, actionName)
+          return fn({ status })
+        },
+        {
+          id: actionName,
+          source: "notifications.batch",
+        }
+      )
     } catch (e) {
       if (optimisticUpdate) {
         if (previousFirestore) {

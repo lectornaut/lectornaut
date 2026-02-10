@@ -186,7 +186,7 @@ export const useAuthStore = defineStore("auth", () => {
     const previousUserProfile = cloneState(userProfile.value)
 
     await withOptimisticUpdate(
-      pendingUserIds.value,
+      pendingUserIds,
       currentUser.value.uid,
       // Apply optimistic update
       () => {
@@ -248,7 +248,7 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     await withOptimisticUpdate(
-      pendingUserIds.value,
+      pendingUserIds,
       userId,
       // Apply optimistic update
       () => {

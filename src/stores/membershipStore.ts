@@ -30,6 +30,7 @@ import {
   cloneState,
   createPendingSet,
   removePending,
+  withCloudSyncOperation,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import {
@@ -517,7 +518,7 @@ export const useMembershipStore = defineStore("memberships", () => {
           (m) => m.userId !== userId
         )
         if (isRemovingSelf) {
-          pendingUserIds.value.add(userId)
+          addPending(pendingUserIds, userId)
           optimisticMemberships.value = memberships.value.filter(
             (m) => m.teamId !== teamId
           )
@@ -541,7 +542,7 @@ export const useMembershipStore = defineStore("memberships", () => {
           await removeMemberFn({ teamId, userId })
         } finally {
           if (isRemovingSelf) {
-            pendingUserIds.value.delete(userId)
+            removePending(pendingUserIds, userId)
           }
         }
       }
@@ -557,6 +558,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     userIds: string[]
   ): Promise<void> {
     if (!currentUser.value) return
+    const currentUserId = currentUser.value.uid
 
     if (
       !can(currentUser.value, Capabilities.REMOVE_MEMBER, {
@@ -575,44 +577,52 @@ export const useMembershipStore = defineStore("memberships", () => {
     const previousMemberships = cloneState(memberships.value)
     const previousUserProfile = cloneState(userProfile.value)
 
-    const isRemovingSelf = userIds.includes(currentUser.value.uid)
+    const isRemovingSelf = userIds.includes(currentUserId)
 
-    try {
-      // Mark all membership keys as pending
-      membershipKeys.forEach((k) => addPending(pendingMembershipIds, k))
+    await withCloudSyncOperation(
+      async () => {
+        try {
+          // Mark all membership keys as pending
+          membershipKeys.forEach((k) => addPending(pendingMembershipIds, k))
 
-      // Apply optimistic updates
-      optimisticTeamMembers.value = teamMembers.value.filter(
-        (m) => !userIdSet.has(m.userId)
-      )
+          // Apply optimistic updates
+          optimisticTeamMembers.value = teamMembers.value.filter(
+            (m) => !userIdSet.has(m.userId)
+          )
 
-      if (isRemovingSelf) {
-        pendingUserIds.value.add(currentUser.value.uid)
-        optimisticMemberships.value = memberships.value.filter(
-          (m) => m.teamId !== teamId
-        )
-        if (userProfile.value) {
-          authStore.setCurrentTeamId(null)
+          if (isRemovingSelf) {
+            addPending(pendingUserIds, currentUserId)
+            optimisticMemberships.value = memberships.value.filter(
+              (m) => m.teamId !== teamId
+            )
+            if (userProfile.value) {
+              authStore.setCurrentTeamId(null)
+            }
+          }
+
+          // Cloud Function call
+          await removeMembersFn({ teamId, userIds })
+        } catch (error) {
+          // Rollback optimistic state on error
+          optimisticTeamMembers.value = previousTeamMembers
+          optimisticMemberships.value = previousMemberships
+          if (isRemovingSelf && previousUserProfile?.currentTeamId) {
+            authStore.setCurrentTeamId(previousUserProfile.currentTeamId)
+          }
+          throw error
+        } finally {
+          // Clear pending flags
+          if (isRemovingSelf) {
+            removePending(pendingUserIds, currentUserId)
+          }
+          membershipKeys.forEach((k) => removePending(pendingMembershipIds, k))
         }
+      },
+      {
+        id: `${teamId}:${userIds.join(",")}`,
+        source: "membership.removeMembers",
       }
-
-      // Cloud Function call
-      await removeMembersFn({ teamId, userIds })
-    } catch (error) {
-      // Rollback optimistic state on error
-      optimisticTeamMembers.value = previousTeamMembers
-      optimisticMemberships.value = previousMemberships
-      if (isRemovingSelf && previousUserProfile?.currentTeamId) {
-        authStore.setCurrentTeamId(previousUserProfile.currentTeamId)
-      }
-      throw error
-    } finally {
-      // Clear pending flags
-      if (isRemovingSelf) {
-        pendingUserIds.value.delete(currentUser.value.uid)
-      }
-      membershipKeys.forEach((k) => removePending(pendingMembershipIds, k))
-    }
+    )
   }
 
   /**

@@ -28,8 +28,11 @@ import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import {
+  addPending,
   cloneState,
   createPendingSet,
+  removePending,
+  withCloudSyncOperation,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import { useStorage, watchDebounced } from "@vueuse/core"
@@ -77,6 +80,7 @@ export const useLayoutStore = defineStore("layout", () => {
   const pendingTabIds = shallowRef(createPendingSet())
   const pendingNavigation = shallowRef(false)
   const pendingTheme = shallowRef(false)
+  const isThemePersistQueued = ref(false)
 
   // Theme State - use storage refs directly to avoid double-wrapping
   const themeSettings = reactive({
@@ -358,6 +362,45 @@ export const useLayoutStore = defineStore("layout", () => {
     })
   }
 
+  /**
+   * Persist theme with global sync queue tracking.
+   * Queues one extra run when multiple theme changes happen during a save.
+   */
+  async function persistThemeWithSync(): Promise<void> {
+    if (!themeDocRef.value) return
+
+    if (pendingTheme.value) {
+      isThemePersistQueued.value = true
+      return
+    }
+
+    pendingTheme.value = true
+    isThemePersistQueued.value = false
+
+    try {
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persistTheme()
+          if (!success) {
+            throw new Error("Failed to persist theme")
+          }
+        },
+        {
+          id: "theme",
+          source: "layout.theme.persist",
+        }
+      )
+    } catch (error) {
+      console.error("[layoutStore] persistTheme failed:", error)
+    } finally {
+      pendingTheme.value = false
+
+      if (isThemePersistQueued.value) {
+        void persistThemeWithSync()
+      }
+    }
+  }
+
   // ============================================================================
   // Debounced Persistence Watchers
   // ============================================================================
@@ -388,9 +431,7 @@ export const useLayoutStore = defineStore("layout", () => {
   watchDebounced(
     [mode, base, accent, font, size, language],
     () => {
-      // Skip persistence during pending operations
-      if (pendingTheme.value) return
-      persistTheme()
+      void persistThemeWithSync()
     },
     { debounce: 500 }
   )
@@ -420,7 +461,7 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousActiveTabId = activeTabId.value
 
     await withOptimisticUpdate(
-      pendingTabIds.value,
+      pendingTabIds,
       newTab.id,
       // Apply optimistic update
       () => {
@@ -475,7 +516,7 @@ export const useLayoutStore = defineStore("layout", () => {
     let nextPathResult: string | null = null
 
     await withOptimisticUpdate(
-      pendingTabIds.value,
+      pendingTabIds,
       id,
       // Apply optimistic update
       () => {
@@ -543,11 +584,11 @@ export const useLayoutStore = defineStore("layout", () => {
     // So we will manually mark others, and let withOptimisticUpdate handle the main one.
 
     const tabsToClose = tabs.value.filter((t) => t.id !== keepId)
-    tabsToClose.forEach((t) => pendingTabIds.value.add(t.id))
+    tabsToClose.forEach((t) => addPending(pendingTabIds, t.id))
 
     try {
       await withOptimisticUpdate(
-        pendingTabIds.value,
+        pendingTabIds,
         keepId,
         // Apply optimistic update
         () => {
@@ -570,7 +611,7 @@ export const useLayoutStore = defineStore("layout", () => {
         }
       )
     } finally {
-      tabsToClose.forEach((t) => pendingTabIds.value.delete(t.id))
+      tabsToClose.forEach((t) => removePending(pendingTabIds, t.id))
     }
   }
 
@@ -589,37 +630,31 @@ export const useLayoutStore = defineStore("layout", () => {
     // Mark all as pending manually except one to carry the operation?
     // Or we use a special ID like 'all-tabs' but that might not block individual tab clicks if logic checks tab.id
     // It's safer to mark all.
-    tabsToClose.forEach((t) => pendingTabIds.value.add(t.id))
+    tabsToClose.forEach((t) => addPending(pendingTabIds, t.id))
 
     try {
-      // We can't easily use withOptimisticUpdate here because we need to clear ALL pending flags
-      // and withOptimisticUpdate manages one.
-      // But we can wrap the persistence part.
-      // Actually, let's keep the manual try/catch for this bulk operation but follow the pattern closer if possible.
-      // Or, we accept that withOptimisticUpdate is best for single-item or focused operations.
-      // 'closeAll' affects everything.
-      // Let's stick to manual try/catch for this one to ensure all IDs are cleared properly,
-      // mirroring the previous implementation but maybe ensuring we use the same error logging/behavior?
-      // The previous implementation was fine for bulk, but let's see if we can simplify.
-      // No, let's keep it manual as it involves multiple IDs.
+      await withCloudSyncOperation(
+        async () => {
+          tabsToClose.forEach(addToHistory)
+          tabs.value = []
+          activeTabId.value = ""
 
-      // Wait, the previous implementation was:
-      try {
-        tabsToClose.forEach(addToHistory)
-        tabs.value = []
-        activeTabId.value = ""
-
-        const success = await persistTabs()
-        if (!success) throw new Error("Failed to persist closeAllTabs")
-      } catch (error) {
-        tabs.value = previousTabs
-        activeTabId.value = previousActiveTabId
-        recentlyClosed.value = previousRecentlyClosed
-        console.error("[layoutStore] closeAllTabs failed:", error)
-        throw error
-      }
+          const success = await persistTabs()
+          if (!success) throw new Error("Failed to persist closeAllTabs")
+        },
+        {
+          id: "all",
+          source: "layout.tabs.closeAll",
+        }
+      )
+    } catch (error) {
+      tabs.value = previousTabs
+      activeTabId.value = previousActiveTabId
+      recentlyClosed.value = previousRecentlyClosed
+      console.error("[layoutStore] closeAllTabs failed:", error)
+      throw error
     } finally {
-      tabsToClose.forEach((t) => pendingTabIds.value.delete(t.id))
+      tabsToClose.forEach((t) => removePending(pendingTabIds, t.id))
     }
   }
 
@@ -656,7 +691,7 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousActiveTabId = activeTabId.value
 
     await withOptimisticUpdate(
-      pendingTabIds.value,
+      pendingTabIds,
       duplicate.id,
       // Apply optimistic update
       () => {
@@ -691,7 +726,7 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousTabs = cloneState(tabs.value)
 
     await withOptimisticUpdate(
-      pendingTabIds.value,
+      pendingTabIds,
       id,
       // Apply optimistic update
       () => {
@@ -759,11 +794,18 @@ export const useLayoutStore = defineStore("layout", () => {
         )
       }
 
-      // Persist
-      const success = await persistNavigation()
-      if (!success) {
-        throw new Error("Failed to persist toggleNavItem")
-      }
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persistNavigation()
+          if (!success) {
+            throw new Error("Failed to persist toggleNavItem")
+          }
+        },
+        {
+          id: itemId,
+          source: "layout.navigation.toggle",
+        }
+      )
     } catch (error) {
       // Rollback on error
       activeNavItems.value = previousNavItems
@@ -788,11 +830,18 @@ export const useLayoutStore = defineStore("layout", () => {
       // Apply optimistic update
       activeNavItems.value = cloneState(items)
 
-      // Persist
-      const success = await persistNavigation()
-      if (!success) {
-        throw new Error("Failed to persist setNavItems")
-      }
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persistNavigation()
+          if (!success) {
+            throw new Error("Failed to persist setNavItems")
+          }
+        },
+        {
+          id: "set",
+          source: "layout.navigation.set",
+        }
+      )
     } catch (error) {
       // Rollback on error
       activeNavItems.value = previousNavItems
@@ -817,11 +866,18 @@ export const useLayoutStore = defineStore("layout", () => {
       // Apply optimistic update
       activeNavItems.value = [...defaultMenu]
 
-      // Persist
-      const success = await persistNavigation()
-      if (!success) {
-        throw new Error("Failed to persist resetNavItems")
-      }
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persistNavigation()
+          if (!success) {
+            throw new Error("Failed to persist resetNavItems")
+          }
+        },
+        {
+          id: "reset",
+          source: "layout.navigation.reset",
+        }
+      )
     } catch (error) {
       // Rollback on error
       activeNavItems.value = previousNavItems

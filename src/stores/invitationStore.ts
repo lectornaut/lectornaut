@@ -295,7 +295,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
-      pendingInvitationIds.value,
+      pendingInvitationIds,
       opId,
       () => {
         optimisticInvitations.value = [
@@ -335,7 +335,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
-      pendingInvitationIds.value,
+      pendingInvitationIds,
       invitation.id,
       () => {
         optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
@@ -389,7 +389,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
-      pendingInvitationIds.value,
+      pendingInvitationIds,
       invitationId,
       () => {
         optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
@@ -429,7 +429,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
-      pendingInvitationIds.value,
+      pendingInvitationIds,
       invitationId,
       () => {
         optimisticInvitations.value = optimisticInvitations.value.filter(
@@ -487,7 +487,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     // Membership addition happens in its own store if we wanted full coverage,
     // but the invitation leaving the list is the most important immediate feedback.
     await withOptimisticUpdate(
-      pendingInvitationIds.value,
+      pendingInvitationIds,
       invitationId,
       () => {
         optimisticInvitations.value = optimisticInvitations.value.filter(
@@ -511,7 +511,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     const previousOptimistic = cloneState(optimisticInvitations.value)
 
     await withOptimisticUpdate(
-      pendingInvitationIds.value,
+      pendingInvitationIds,
       invitationId,
       () => {
         optimisticInvitations.value = optimisticInvitations.value.map((inv) =>

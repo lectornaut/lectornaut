@@ -30,8 +30,10 @@ import {
   uploadWorkspacePhoto,
 } from "@/utils/firebase/firebase-helpers"
 import {
+  addPending,
   cloneState,
   createPendingSet,
+  removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
@@ -304,13 +306,13 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     let actualWorkspaceId: string | null = null
 
     await withOptimisticUpdate(
-      pendingWorkspaceIds.value,
+      pendingWorkspaceIds,
       tempId,
       // Apply optimistic update
       () => {
         optimisticWorkspaces.value = [...workspaces.value, newWorkspace]
         // Auto-select the new workspace (will be updated to actual ID)
-        pendingUserIds.value.add(currentUser.value!.uid)
+        addPending(pendingUserIds, currentUser.value!.uid)
         authStore.setCurrentWorkspaceId(tempId)
       },
       // Rollback on error
@@ -319,7 +321,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         authStore.setCurrentWorkspaceId(
           previousUserProfile?.currentWorkspaceId ?? null
         )
-        pendingUserIds.value.delete(currentUser.value!.uid)
+        removePending(pendingUserIds, currentUser.value!.uid)
       },
       // Cloud Function call
       async () => {
@@ -363,7 +365,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           // Update local state with actual workspace ID
           authStore.setCurrentWorkspaceId(actualWorkspaceId)
         } finally {
-          pendingUserIds.value.delete(currentUser.value!.uid)
+          removePending(pendingUserIds, currentUser.value!.uid)
         }
       }
     )
@@ -384,7 +386,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const previousWorkspaceId = currentWorkspaceId.value
 
     await withOptimisticUpdate(
-      pendingUserIds.value,
+      pendingUserIds,
       currentUser.value.uid,
       // Apply optimistic update
       () => {
@@ -446,7 +448,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const previousWorkspaces = cloneState(workspaces.value)
 
     await withOptimisticUpdate(
-      pendingWorkspaceIds.value,
+      pendingWorkspaceIds,
       workspaceId,
       // Apply optimistic update
       () => {
@@ -497,7 +499,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const isCurrentWorkspace = currentWorkspaceId.value === workspaceId
 
     await withOptimisticUpdate(
-      pendingWorkspaceIds.value,
+      pendingWorkspaceIds,
       workspaceId,
       // Apply optimistic update
       () => {
@@ -505,7 +507,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           (w) => w.id !== workspaceId
         )
         if (isCurrentWorkspace) {
-          pendingUserIds.value.add(currentUser.value!.uid)
+          addPending(pendingUserIds, currentUser.value!.uid)
           authStore.setCurrentWorkspaceId(null)
         }
       },
@@ -528,7 +530,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           ])
         } finally {
           if (isCurrentWorkspace) {
-            pendingUserIds.value.delete(currentUser.value!.uid)
+            removePending(pendingUserIds, currentUser.value!.uid)
           }
         }
       }

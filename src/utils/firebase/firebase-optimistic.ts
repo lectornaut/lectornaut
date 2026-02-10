@@ -12,8 +12,8 @@
  */
 
 import { isRetryableFirebaseError } from "@/utils/firebase/firebase-errors"
-import type { Ref, ShallowRef } from "vue"
-import { isRef } from "vue"
+import type { ComputedRef, Ref } from "vue"
+import { computed, isRef, ref, shallowRef } from "vue"
 
 // ============================================================================
 // State Cloning
@@ -86,22 +86,17 @@ export function createPendingSet(): Set<string> {
 }
 
 /**
- * Triggers reactivity for a ShallowRef<Set>
+ * Triggers reactivity for a Ref<Set>
  * Call this after modifying the set to ensure Vue detects the change
  */
-export function triggerPendingUpdate(
-  pendingRef: ShallowRef<Set<string>>
-): void {
+export function triggerPendingUpdate(pendingRef: Ref<Set<string>>): void {
   pendingRef.value = new Set(pendingRef.value)
 }
 
 /**
  * Add an ID to pending set with reactivity trigger
  */
-export function addPending(
-  pendingRef: ShallowRef<Set<string>>,
-  id: string
-): void {
+export function addPending(pendingRef: Ref<Set<string>>, id: string): void {
   pendingRef.value.add(id)
   triggerPendingUpdate(pendingRef)
 }
@@ -109,12 +104,177 @@ export function addPending(
 /**
  * Remove an ID from pending set with reactivity trigger
  */
-export function removePending(
-  pendingRef: ShallowRef<Set<string>>,
-  id: string
-): void {
+export function removePending(pendingRef: Ref<Set<string>>, id: string): void {
   pendingRef.value.delete(id)
   triggerPendingUpdate(pendingRef)
+}
+
+// ============================================================================
+// Global Cloud Sync Queue
+// ============================================================================
+
+export interface CloudSyncOperationOptions {
+  id?: string
+  source?: string
+}
+
+export type CloudSyncErrorResetPolicy = "on_start" | "on_success" | "manual"
+
+interface CloudSyncOperation {
+  token: number
+  id?: string
+  source?: string
+  startedAt: number
+}
+
+const activeCloudSyncOperations = shallowRef(
+  new Map<number, CloudSyncOperation>()
+)
+const totalCloudSyncStarted = ref(0)
+const totalCloudSyncSucceeded = ref(0)
+const totalCloudSyncFailed = ref(0)
+const lastCloudSyncSuccessAt = ref<number | null>(null)
+const lastCloudSyncErrorAt = ref<number | null>(null)
+const lastCloudSyncErrorMessage = ref<string | null>(null)
+const cloudSyncErrorResetPolicy = ref<CloudSyncErrorResetPolicy>("on_start")
+let cloudSyncTokenCounter = 0
+
+const cloudSyncActiveCount = computed(
+  () => activeCloudSyncOperations.value.size
+)
+const cloudSyncIsSyncing = computed(() => cloudSyncActiveCount.value > 0)
+const cloudSyncHasError = computed(
+  () => lastCloudSyncErrorMessage.value !== null
+)
+
+const toCloudSyncErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message
+  }
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error
+  }
+  try {
+    const serialized = JSON.stringify(error)
+    if (serialized && serialized !== "{}") {
+      return serialized
+    }
+  } catch {
+    // ignore serialization errors and fallback to generic message
+  }
+  return "Cloud sync failed"
+}
+
+const setActiveCloudSyncOperation = (operation: CloudSyncOperation): void => {
+  const next = new Map(activeCloudSyncOperations.value)
+  next.set(operation.token, operation)
+  activeCloudSyncOperations.value = next
+}
+
+const clearActiveCloudSyncOperation = (token: number): boolean => {
+  if (!activeCloudSyncOperations.value.has(token)) return false
+  const next = new Map(activeCloudSyncOperations.value)
+  next.delete(token)
+  activeCloudSyncOperations.value = next
+  return true
+}
+
+export function clearCloudSyncError(): void {
+  lastCloudSyncErrorMessage.value = null
+  lastCloudSyncErrorAt.value = null
+}
+
+export function setCloudSyncErrorResetPolicy(
+  policy: CloudSyncErrorResetPolicy
+): void {
+  cloudSyncErrorResetPolicy.value = policy
+}
+
+export function beginCloudSyncOperation(
+  options: CloudSyncOperationOptions = {}
+): number {
+  if (cloudSyncErrorResetPolicy.value === "on_start") {
+    clearCloudSyncError()
+  }
+
+  const token = ++cloudSyncTokenCounter
+  totalCloudSyncStarted.value += 1
+
+  setActiveCloudSyncOperation({
+    token,
+    id: options.id,
+    source: options.source,
+    startedAt: Date.now(),
+  })
+
+  return token
+}
+
+export function endCloudSyncOperation(token: number, error?: unknown): void {
+  const removed = clearActiveCloudSyncOperation(token)
+  if (!removed) return
+
+  if (error !== undefined) {
+    totalCloudSyncFailed.value += 1
+    lastCloudSyncErrorAt.value = Date.now()
+    lastCloudSyncErrorMessage.value = toCloudSyncErrorMessage(error)
+    return
+  }
+
+  totalCloudSyncSucceeded.value += 1
+  lastCloudSyncSuccessAt.value = Date.now()
+  if (cloudSyncErrorResetPolicy.value === "on_success") {
+    clearCloudSyncError()
+  }
+}
+
+export async function withCloudSyncOperation<T>(
+  operation: () => Promise<T>,
+  options: CloudSyncOperationOptions = {}
+): Promise<T> {
+  const token = beginCloudSyncOperation(options)
+  let syncError: unknown
+
+  try {
+    return await operation()
+  } catch (error) {
+    syncError = error
+    throw error
+  } finally {
+    endCloudSyncOperation(token, syncError)
+  }
+}
+
+export interface CloudSyncQueueState {
+  activeCount: ComputedRef<number>
+  isSyncing: ComputedRef<boolean>
+  hasError: ComputedRef<boolean>
+  lastErrorMessage: ComputedRef<string | null>
+  lastErrorAt: ComputedRef<number | null>
+  lastSuccessAt: ComputedRef<number | null>
+  totalStarted: ComputedRef<number>
+  totalSucceeded: ComputedRef<number>
+  totalFailed: ComputedRef<number>
+  errorResetPolicy: ComputedRef<CloudSyncErrorResetPolicy>
+  clearError: () => void
+  setErrorResetPolicy: (policy: CloudSyncErrorResetPolicy) => void
+}
+
+export function useCloudSyncQueueState(): CloudSyncQueueState {
+  return {
+    activeCount: cloudSyncActiveCount,
+    isSyncing: cloudSyncIsSyncing,
+    hasError: cloudSyncHasError,
+    lastErrorMessage: computed(() => lastCloudSyncErrorMessage.value),
+    lastErrorAt: computed(() => lastCloudSyncErrorAt.value),
+    lastSuccessAt: computed(() => lastCloudSyncSuccessAt.value),
+    totalStarted: computed(() => totalCloudSyncStarted.value),
+    totalSucceeded: computed(() => totalCloudSyncSucceeded.value),
+    totalFailed: computed(() => totalCloudSyncFailed.value),
+    errorResetPolicy: computed(() => cloudSyncErrorResetPolicy.value),
+    clearError: clearCloudSyncError,
+    setErrorResetPolicy: setCloudSyncErrorResetPolicy,
+  }
 }
 
 // ============================================================================
@@ -144,6 +304,8 @@ export interface OptimisticOptions {
   maxRetries?: number
   /** Base delay for exponential backoff in ms (default: 1000) */
   retryBaseDelay?: number
+  /** Track this operation in the global cloud sync queue (default: true) */
+  trackSync?: boolean
 }
 
 // ============================================================================
@@ -198,17 +360,20 @@ export function getBackoffDelay(attempt: number, baseDelay: number): number {
  * @param options - Optional configuration for retries
  */
 export async function withOptimisticUpdate<T>(
-  pendingIds: Set<string> | ShallowRef<Set<string>>,
+  pendingIds: Set<string> | Ref<Set<string>>,
   id: string,
   applyOptimistic: () => void,
   rollback: () => void,
   firestoreOperation: () => Promise<T>,
   options: OptimisticOptions = {}
 ): Promise<T> {
-  const { maxRetries = 0, retryBaseDelay = 1000 } = options
-  const pendingRef = isRef(pendingIds)
-    ? (pendingIds as ShallowRef<Set<string>>)
+  const { maxRetries = 0, retryBaseDelay = 1000, trackSync = true } = options
+  const pendingRef = isRef(pendingIds) ? (pendingIds as Ref<Set<string>>) : null
+  const syncToken = trackSync
+    ? beginCloudSyncOperation({ id, source: "withOptimisticUpdate" })
     : null
+  let syncError: unknown
+
   const addPendingId = () => {
     if (pendingRef) {
       addPending(pendingRef, id)
@@ -254,12 +419,24 @@ export async function withOptimisticUpdate<T>(
       }
     }
 
-    // All retries exhausted - rollback
-    rollback()
     throw lastError ?? new Error("Operation failed after retries")
+  } catch (error) {
+    syncError = error
+    try {
+      rollback()
+    } catch (rollbackError) {
+      console.error(
+        `[withOptimisticUpdate] Rollback failed for operation "${id}"`,
+        rollbackError
+      )
+    }
+    throw error
   } finally {
     // Always clean up pending state
     removePendingId()
+    if (syncToken !== null) {
+      endCloudSyncOperation(syncToken, syncError)
+    }
   }
 }
 

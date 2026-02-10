@@ -7,9 +7,6 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconArrowUp,
-  IconCloudAlert,
-  IconCloudCheck,
-  IconCloudSync,
   IconCode,
   IconHand,
   IconLayerFill,
@@ -121,8 +118,6 @@ const isPoppedOutMinimized = useLocalStorage("popout-minimized-state", false)
 const observedSize = useLocalStorage("popout-size", { width: 300, height: 400 })
 const observedPosition = useLocalStorage("popout-position", { x: 0.5, y: 0.5 })
 
-const isOnline = useOnline()
-
 watch(isPoppedOut, (val) => {
   if (val) {
     isPoppedOutMinimized.value = false
@@ -140,12 +135,6 @@ useResizeObserver(draggableEl, (entries) => {
     height: target.offsetHeight,
   }
 })
-
-const isSyncing = ref(false)
-
-setInterval(() => {
-  isSyncing.value = Math.random() > 0.5
-}, 2000)
 
 const source = ref<{ id: string; label: string }[]>([])
 
@@ -802,32 +791,7 @@ const closeTab = (id: string) => {
                 class="flex items-center justify-start gap-2"
               >
                 <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
-                      >
-                        <IconCloudAlert v-if="!isOnline" />
-                        <IconCloudSync v-else-if="isSyncing" />
-                        <IconCloudCheck v-else />
-                        <template v-if="iconDisplay === 'text'">
-                          {{ t("layouts.app.statusBar.sync") }}
-                        </template>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <template v-if="!isOnline">
-                        {{ t("layouts.app.status.offline") }}
-                      </template>
-                      <template v-else-if="isSyncing">
-                        {{ t("layouts.app.status.syncing") }}
-                      </template>
-                      <template v-else>
-                        {{ t("layouts.app.status.synced") }}
-                      </template>
-                    </TooltipContent>
-                  </Tooltip>
+                  <SyncIndicator :icon-display="iconDisplay" />
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button

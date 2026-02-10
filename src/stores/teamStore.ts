@@ -30,8 +30,10 @@ import {
   uploadTeamPhoto,
 } from "@/utils/firebase/firebase-helpers"
 import {
+  addPending,
   cloneState,
   createPendingSet,
+  removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
@@ -257,11 +259,11 @@ export const useTeamStore = defineStore("teams", () => {
     let actualTeamId: string | undefined
 
     await withOptimisticUpdate(
-      pendingTeamIds.value,
+      pendingTeamIds,
       tempId,
       // Apply optimistic updates
       () => {
-        pendingUserIds.value.add(currentUser.value!.uid)
+        addPending(pendingUserIds, currentUser.value!.uid)
 
         // Update user profile through authStore (optimistically)
         authStore.setCurrentTeamId(tempId)
@@ -273,7 +275,7 @@ export const useTeamStore = defineStore("teams", () => {
         optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
         membershipStore.rollbackTeamMembers(previousTeamMembers)
-        pendingUserIds.value.delete(currentUser.value!.uid)
+        removePending(pendingUserIds, currentUser.value!.uid)
       },
       // Cloud Function call
       async () => {
@@ -305,7 +307,7 @@ export const useTeamStore = defineStore("teams", () => {
           }
           authStore.setCurrentTeamId(actualTeamId)
         } finally {
-          pendingUserIds.value.delete(currentUser.value!.uid)
+          removePending(pendingUserIds, currentUser.value!.uid)
         }
       }
     )
@@ -325,7 +327,7 @@ export const useTeamStore = defineStore("teams", () => {
     const cachedMembership = memberships.value.find((m) => m.teamId === teamId)
 
     await withOptimisticUpdate(
-      pendingUserIds.value,
+      pendingUserIds,
       currentUser.value.uid,
       // Apply optimistic update
       () => {
@@ -387,7 +389,7 @@ export const useTeamStore = defineStore("teams", () => {
     const previousMemberships = cloneState(memberships.value)
 
     await withOptimisticUpdate(
-      pendingTeamIds.value,
+      pendingTeamIds,
       teamId,
       // Apply optimistic update
       () => {
@@ -439,7 +441,7 @@ export const useTeamStore = defineStore("teams", () => {
     const previousUserProfile = cloneState(userProfile.value)
 
     await withOptimisticUpdate(
-      pendingTeamIds.value,
+      pendingTeamIds,
       teamId,
       // Apply optimistic update
       () => {
