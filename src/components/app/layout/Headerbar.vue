@@ -2,10 +2,14 @@
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { emitter } from "@/modules/mitt"
+import { useLayoutStore } from "@/stores/layoutStore"
+import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
 const { isMobile } = useSidebar()
 const isFullscreen = useIsFullscreen()
+const layoutStore = useLayoutStore()
+const { headerIconDisplay } = storeToRefs(layoutStore)
 
 watch(isMobile, (val) => {
   if (val) {
@@ -16,8 +20,6 @@ watch(isMobile, (val) => {
     emitter.emit("Sidebar.Right.Expand")
   }
 })
-
-const iconDisplay = ref<"icon" | "text">("icon")
 </script>
 
 <template>
@@ -35,7 +37,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
             <Logo class="size-8 shrink-0 p-2" />
             <SidebarTrigger v-if="isMobile" class="size-8" />
             <Separator orientation="vertical" class="max-h-4 min-h-4" />
-            <Notifications :icon-display="iconDisplay" />
+            <Notifications :icon-display="headerIconDisplay" />
           </div>
           <div
             data-tauri-drag-region
@@ -47,8 +49,8 @@ const iconDisplay = ref<"icon" | "text">("icon")
             data-tauri-drag-region
             class="flex grow items-center justify-end gap-2 transition-all"
           >
-            <CommandK :icon-display="iconDisplay" />
-            <AiAsk :icon-display="iconDisplay" />
+            <CommandK :icon-display="headerIconDisplay" />
+            <AiAsk :icon-display="headerIconDisplay" />
           </div>
         </div>
       </header>
@@ -57,7 +59,7 @@ const iconDisplay = ref<"icon" | "text">("icon")
       <ContextMenuLabel class="text-muted-foreground text-xs">
         {{ t("titlebar.appearance") }}
       </ContextMenuLabel>
-      <ContextMenuRadioGroup v-model="iconDisplay">
+      <ContextMenuRadioGroup v-model="headerIconDisplay">
         <ContextMenuRadioItem value="icon">
           {{ t("titlebar.iconsOnly") }}
         </ContextMenuRadioItem>

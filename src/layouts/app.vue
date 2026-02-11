@@ -29,6 +29,7 @@ import {
 } from "@/data/icons"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
+import { useLayoutStore } from "@/stores/layoutStore"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { listen } from "@tauri-apps/api/event"
@@ -40,6 +41,14 @@ const { currentTeam, isLoading } = storeToRefs(teamStore)
 
 const workspaceStore = useWorkspaceStore()
 const { currentWorkspace } = storeToRefs(workspaceStore)
+const layoutStore = useLayoutStore()
+const {
+  footerIconDisplay,
+  sidebarOpen,
+  leftPanelCollapsed,
+  rightPanelCollapsed,
+  bottomPanelCollapsed,
+} = storeToRefs(layoutStore)
 
 const { t } = useI18n()
 const router = useRouter()
@@ -49,7 +58,29 @@ const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
 const topPanel = ref<InstanceType<typeof ResizablePanel>>()
 const bottomPanel = ref<InstanceType<typeof ResizablePanel>>()
 
+const syncPanelCollapsed = (
+  panel: InstanceType<typeof ResizablePanel> | undefined,
+  collapsed: boolean
+) => {
+  const splitterPanel = panel?.splitterPanel
+  if (!splitterPanel) return
+  if (collapsed && !splitterPanel.isCollapsed) {
+    splitterPanel.collapse()
+  } else if (!collapsed && splitterPanel.isCollapsed) {
+    splitterPanel.expand()
+  }
+}
+
+const applyPersistedPanelState = () => {
+  syncPanelCollapsed(leftPanel.value, leftPanelCollapsed.value)
+  syncPanelCollapsed(rightPanel.value, rightPanelCollapsed.value)
+  syncPanelCollapsed(bottomPanel.value, bottomPanelCollapsed.value)
+}
+
 onMounted(async () => {
+  await nextTick()
+  applyPersistedPanelState()
+
   if (isTauri.value) {
     await listen("tray-action", (event) => {
       console.log("Tray action received:", event.payload)
@@ -58,6 +89,12 @@ onMounted(async () => {
       }
     })
   }
+})
+
+watch([leftPanelCollapsed, rightPanelCollapsed, bottomPanelCollapsed], () => {
+  void nextTick(() => {
+    applyPersistedPanelState()
+  })
 })
 
 emitter.on("Sidebar.Left.Toggle", () => {
@@ -138,8 +175,6 @@ useResizeObserver(draggableEl, (entries) => {
 
 const source = ref<{ id: string; label: string }[]>([])
 
-const iconDisplay = ref<"icon" | "text">("icon")
-
 const activeTab = ref<string>(source.value[0]?.id || "")
 
 const newTab = () => {
@@ -173,7 +208,7 @@ const closeTab = (id: string) => {
 </script>
 
 <template>
-  <SidebarProvider>
+  <SidebarProvider v-model:open="sidebarOpen">
     <SidebarInset class="bg-transparent">
       <Headerbar />
       <div data-tauri-drag-region class="grid min-h-0 min-w-0 grow">
@@ -203,6 +238,8 @@ const closeTab = (id: string) => {
                   as-child
                   class="transition-all"
                   :inert="leftPanel?.splitterPanel?.isCollapsed"
+                  @collapse="leftPanelCollapsed = true"
+                  @expand="leftPanelCollapsed = false"
                 >
                   <div class="h-full">
                     <div
@@ -382,6 +419,8 @@ const closeTab = (id: string) => {
                       as-child
                       class="transition-all"
                       :inert="bottomPanel?.splitterPanel?.isCollapsed"
+                      @collapse="bottomPanelCollapsed = true"
+                      @expand="bottomPanelCollapsed = false"
                     >
                       <Tabs v-model="activeTab">
                         <div class="h-full">
@@ -633,6 +672,8 @@ const closeTab = (id: string) => {
                   as-child
                   class="transition-all"
                   :inert="rightPanel?.splitterPanel?.isCollapsed"
+                  @collapse="rightPanelCollapsed = true"
+                  @expand="rightPanelCollapsed = false"
                 >
                   <div class="h-full">
                     <div
@@ -791,12 +832,12 @@ const closeTab = (id: string) => {
                 class="flex items-center justify-start gap-2"
               >
                 <TooltipProvider>
-                  <SyncIndicator :icon-display="iconDisplay" />
+                  <SyncIndicator :icon-display="footerIconDisplay" />
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="
                           bottomPanel?.splitterPanel?.isCollapsed
                             ? bottomPanel?.splitterPanel?.expand()
@@ -804,7 +845,7 @@ const closeTab = (id: string) => {
                         "
                       >
                         <IconTerminal />
-                        <template v-if="iconDisplay === 'text'">
+                        <template v-if="footerIconDisplay === 'text'">
                           {{ t("layouts.app.statusBar.console") }}
                         </template>
                       </Button>
@@ -832,12 +873,12 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="isPoppedOut = !isPoppedOut"
                       >
                         <IconPictureInPicture2 v-if="!isPoppedOut" />
                         <IconPictureInPicture v-else />
-                        <template v-if="iconDisplay === 'text'">
+                        <template v-if="footerIconDisplay === 'text'">
                           {{
                             isPoppedOut
                               ? t("layouts.app.statusBar.dock")
@@ -858,14 +899,14 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="emitter.emit('Sidebar.Left.Toggle')"
                       >
                         <IconPanelLeft
                           v-if="leftPanel?.splitterPanel?.isCollapsed"
                         />
                         <IconPanelLeftClose v-else />
-                        <template v-if="iconDisplay === 'text'">
+                        <template v-if="footerIconDisplay === 'text'">
                           {{ t("layouts.app.statusBar.sidebar") }}
                         </template>
                       </Button>
@@ -882,14 +923,14 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="emitter.emit('Panel.Bottom.Toggle')"
                       >
                         <IconPanelBottom
                           v-if="bottomPanel?.splitterPanel?.isCollapsed"
                         />
                         <IconPanelBottomClose v-else />
-                        <template v-if="iconDisplay === 'text'">
+                        <template v-if="footerIconDisplay === 'text'">
                           {{ t("layouts.app.statusBar.panel") }}
                         </template>
                       </Button>
@@ -906,14 +947,14 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="emitter.emit('Sidebar.Right.Toggle')"
                       >
                         <IconPanelRight
                           v-if="rightPanel?.splitterPanel?.isCollapsed"
                         />
                         <IconPanelRightClose v-else />
-                        <template v-if="iconDisplay === 'text'">
+                        <template v-if="footerIconDisplay === 'text'">
                           {{ t("layouts.app.statusBar.sidebar") }}
                         </template>
                       </Button>
@@ -935,7 +976,7 @@ const closeTab = (id: string) => {
           <ContextMenuLabel class="text-muted-foreground text-xs">
             {{ t("layouts.app.statusBar.appearance") }}
           </ContextMenuLabel>
-          <ContextMenuRadioGroup v-model="iconDisplay">
+          <ContextMenuRadioGroup v-model="footerIconDisplay">
             <ContextMenuRadioItem value="icon">
               {{ t("layouts.app.statusBar.iconsOnly") }}
             </ContextMenuRadioItem>

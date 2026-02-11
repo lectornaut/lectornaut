@@ -50,6 +50,13 @@ export type Tab = {
 export type NavItem = (typeof defaultMenu)[number]
 
 export type ThemeMode = ThemeId
+export type IconDisplay = "icon" | "text"
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null
+
+const isIconDisplay = (value: unknown): value is IconDisplay =>
+  value === "icon" || value === "text"
 
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
@@ -70,6 +77,27 @@ export const useLayoutStore = defineStore("layout", () => {
   const font = useStorage<FontId>("font", defaultFont)
   const size = useStorage<SizeId>("size", defaultSize)
   const language = useStorage<LanguageId>("language", defaultLanguage)
+  const headerIconDisplay = useStorage<IconDisplay>(
+    "layout.header.iconDisplay",
+    "icon"
+  )
+  const footerIconDisplay = useStorage<IconDisplay>(
+    "layout.footer.iconDisplay",
+    "icon"
+  )
+  const sidebarOpen = useStorage<boolean>("layout.sidebar.open", true)
+  const leftPanelCollapsed = useStorage<boolean>(
+    "layout.panel.left.collapsed",
+    false
+  )
+  const rightPanelCollapsed = useStorage<boolean>(
+    "layout.panel.right.collapsed",
+    false
+  )
+  const bottomPanelCollapsed = useStorage<boolean>(
+    "layout.panel.bottom.collapsed",
+    false
+  )
 
   const tabs = ref<Tab[]>([])
   const activeTabId = ref("")
@@ -217,15 +245,61 @@ export const useLayoutStore = defineStore("layout", () => {
   watch(
     navDocData,
     (doc) => {
-      // Skip if navigation operation is pending
-      if (pendingNavigation.value) return
-
       if (!doc) {
-        if (!navPending.value) {
+        if (!pendingNavigation.value && !navPending.value) {
           activeNavItems.value = [...defaultMenu]
         }
         return
       }
+
+      const ui = isRecord(doc.ui) ? doc.ui : null
+      if (ui) {
+        if (
+          "headerIconDisplay" in ui &&
+          isIconDisplay(ui.headerIconDisplay) &&
+          ui.headerIconDisplay !== headerIconDisplay.value
+        ) {
+          headerIconDisplay.value = ui.headerIconDisplay
+        }
+        if (
+          "footerIconDisplay" in ui &&
+          isIconDisplay(ui.footerIconDisplay) &&
+          ui.footerIconDisplay !== footerIconDisplay.value
+        ) {
+          footerIconDisplay.value = ui.footerIconDisplay
+        }
+        if (
+          "sidebarOpen" in ui &&
+          typeof ui.sidebarOpen === "boolean" &&
+          ui.sidebarOpen !== sidebarOpen.value
+        ) {
+          sidebarOpen.value = ui.sidebarOpen
+        }
+        if (
+          "leftPanelCollapsed" in ui &&
+          typeof ui.leftPanelCollapsed === "boolean" &&
+          ui.leftPanelCollapsed !== leftPanelCollapsed.value
+        ) {
+          leftPanelCollapsed.value = ui.leftPanelCollapsed
+        }
+        if (
+          "rightPanelCollapsed" in ui &&
+          typeof ui.rightPanelCollapsed === "boolean" &&
+          ui.rightPanelCollapsed !== rightPanelCollapsed.value
+        ) {
+          rightPanelCollapsed.value = ui.rightPanelCollapsed
+        }
+        if (
+          "bottomPanelCollapsed" in ui &&
+          typeof ui.bottomPanelCollapsed === "boolean" &&
+          ui.bottomPanelCollapsed !== bottomPanelCollapsed.value
+        ) {
+          bottomPanelCollapsed.value = ui.bottomPanelCollapsed
+        }
+      }
+
+      // Skip nav reconciliation if navigation operation is pending
+      if (pendingNavigation.value) return
 
       const savedVisibility = doc.visibleItems || {}
       const savedOrder: string[] = doc.order || []
@@ -341,6 +415,26 @@ export const useLayoutStore = defineStore("layout", () => {
   }
 
   /**
+   * Persist UI layout preferences with optimistic update protection
+   */
+  async function persistNavigationUiState(): Promise<boolean> {
+    return safeSetDoc(
+      navigationDocRef.value,
+      {
+        ui: {
+          headerIconDisplay: headerIconDisplay.value,
+          footerIconDisplay: footerIconDisplay.value,
+          sidebarOpen: sidebarOpen.value,
+          leftPanelCollapsed: leftPanelCollapsed.value,
+          rightPanelCollapsed: rightPanelCollapsed.value,
+          bottomPanelCollapsed: bottomPanelCollapsed.value,
+        },
+      },
+      "layout.navigation.ui.persist"
+    )
+  }
+
+  /**
    * Persist navigation with optimistic update protection
    */
   async function persistNavigation(): Promise<boolean> {
@@ -442,6 +536,22 @@ export const useLayoutStore = defineStore("layout", () => {
       persistNavigation()
     },
     { debounce: 500, deep: true }
+  )
+
+  // Persist UI Layout State (debounced)
+  watchDebounced(
+    [
+      headerIconDisplay,
+      footerIconDisplay,
+      sidebarOpen,
+      leftPanelCollapsed,
+      rightPanelCollapsed,
+      bottomPanelCollapsed,
+    ],
+    () => {
+      persistNavigationUiState()
+    },
+    { debounce: 500 }
   )
 
   // Persist Theme (debounced)
@@ -913,6 +1023,12 @@ export const useLayoutStore = defineStore("layout", () => {
     recentlyClosed,
     activeNavItems,
     themeSettings,
+    headerIconDisplay,
+    footerIconDisplay,
+    sidebarOpen,
+    leftPanelCollapsed,
+    rightPanelCollapsed,
+    bottomPanelCollapsed,
     isLoading,
     isHydrated,
 
