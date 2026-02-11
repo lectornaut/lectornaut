@@ -29,6 +29,7 @@ import {
   getUserRef,
   uploadTeamPhoto,
 } from "@/utils/firebase/firebase-helpers"
+import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
 import {
   addPending,
   cloneState,
@@ -36,7 +37,8 @@ import {
   removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
+import { buildUpdatedAtBaseVersion } from "@/utils/firebase/firebase-sync-engine"
+import { serverTimestamp, type Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"
 
@@ -323,34 +325,36 @@ export const useTeamStore = defineStore("teams", () => {
 
     // Clone previous state for rollback
     const previousCurrentTeam = cloneState(currentTeam.value)
+    const previousUserProfile = cloneState(userProfile.value)
 
     const cachedMembership = memberships.value.find((m) => m.teamId === teamId)
 
-    await withOptimisticUpdate(
-      pendingUserIds,
-      currentUser.value.uid,
-      // Apply optimistic update
-      () => {
+    await mutateWithCoordinator({
+      id: currentUser.value.uid,
+      source: "team.switchTeam",
+      pendingIds: pendingUserIds,
+      applyLocal: () => {
         if (cachedMembership?.team) {
           optimisticCurrentTeam.value = cloneState(cachedMembership.team)
         }
         authStore.setCurrentTeamId(teamId)
       },
-      // Rollback on error
-      () => {
+      rollbackLocal: () => {
         authStore.setCurrentTeamId(
           userProfile.value?.currentTeamId ?? previousCurrentTeam?.id ?? null
         )
         optimisticCurrentTeam.value = previousCurrentTeam
       },
-      // Firestore operation (no audit log needed for switching)
-      async () => {
-        await updateDoc(getUserRef(currentUser.value!.uid), {
+      mutation: {
+        source: "team.switchTeam",
+        targetPath: getUserRef(currentUser.value.uid).path,
+        type: "update",
+        data: {
           currentTeamId: teamId,
-          updatedAt: serverTimestamp(),
-        })
-      }
-    )
+        },
+        baseVersion: buildUpdatedAtBaseVersion(previousUserProfile?.updatedAt),
+      },
+    })
   }
 
   /**

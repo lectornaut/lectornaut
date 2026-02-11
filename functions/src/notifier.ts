@@ -1,6 +1,7 @@
-import admin from "firebase-admin"
 import * as logger from "firebase-functions/logger"
+import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
+import { db } from "./firebase.js"
 import {
   NotificationData,
   NotificationPayload,
@@ -8,24 +9,79 @@ import {
   NotificationTypeConfig,
 } from "./types.js"
 
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp()
+/**
+ * COST OPTIMIZATION: Per-instance TTL cache for notification preferences.
+ * Within the same warm function instance, repeated reads for the same user
+ * are served from cache. This is especially valuable during fan-out
+ * (e.g., notifying all admins triggers N calls to getUserPreferences).
+ *
+ * Cache is invalidated after PREFERENCE_CACHE_TTL_MS (default: 60s).
+ * Correctness: stale preferences for up to 60s is acceptable —
+ * a user who just muted notifications might get one more notification.
+ */
+interface CacheEntry<T> {
+  value: T
+  expiresAt: number
 }
 
-const db = admin.firestore()
+const preferencesCache = new Map<
+  string,
+  CacheEntry<NotificationPreferences | null>
+>()
+
+function getCachedPreferences(
+  userId: string
+): NotificationPreferences | null | undefined {
+  const entry = preferencesCache.get(userId)
+  if (!entry) return undefined
+  if (Date.now() > entry.expiresAt) {
+    preferencesCache.delete(userId)
+    return undefined
+  }
+  return entry.value
+}
+
+function setCachedPreferences(
+  userId: string,
+  prefs: NotificationPreferences | null
+): void {
+  preferencesCache.set(userId, {
+    value: prefs,
+    expiresAt: Date.now() + COST_BUDGET.PREFERENCE_CACHE_TTL_MS,
+  })
+
+  // Prevent unbounded cache growth (shouldn't happen in practice
+  // since function instances handle limited concurrent requests)
+  if (preferencesCache.size > 1000) {
+    // Evict oldest entries
+    const now = Date.now()
+    for (const [key, entry] of preferencesCache) {
+      if (now > entry.expiresAt) {
+        preferencesCache.delete(key)
+      }
+    }
+  }
+}
 
 /**
- * Check user's notification preferences
+ * Check user's notification preferences (with caching)
  */
 async function getUserPreferences(
   userId: string
 ): Promise<NotificationPreferences | null> {
+  // Check cache first
+  const cached = getCachedPreferences(userId)
+  if (cached !== undefined) {
+    return cached
+  }
+
   try {
     const prefsSnap = await db
       .doc(`users/${userId}/notificationPreferences/default`)
       .get()
-    return (prefsSnap.data() as NotificationPreferences) || null
+    const prefs = (prefsSnap.data() as NotificationPreferences) || null
+    setCachedPreferences(userId, prefs)
+    return prefs
   } catch (error) {
     logger.error(`Error fetching notification preferences for ${userId}`, error)
     return null
@@ -40,6 +96,7 @@ async function createInAppNotification(
   notification: Omit<NotificationData, "createdAt" | "status" | "read">
 ): Promise<boolean> {
   try {
+    const { admin } = await import("./firebase.js")
     await db.collection(`users/${userId}/notifications`).add({
       ...notification,
       status: "inbox",
@@ -108,7 +165,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
     email: false,
   }
 
-  // Get user preferences
+  // Get user preferences (cached within instance)
   const prefs = await getUserPreferences(userId)
 
   // Check global disable
@@ -149,9 +206,21 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
 /**
  * Send a notification to multiple users.
  * Useful for team-wide notifications.
+ *
+ * COST OPTIMIZATION: Preferences are cached per-instance,
+ * so multiple sendNotification calls within the same request/instance
+ * don't re-read the same user's preferences from Firestore.
  */
 export async function sendNotificationToMany(
   payloads: NotificationPayload[]
 ): Promise<void> {
-  await Promise.all(payloads.map((payload) => sendNotification(payload)))
+  // Cap fan-out to prevent runaway costs
+  const capped = payloads.slice(0, COST_BUDGET.NOTIFICATION_FANOUT_MAX)
+  if (payloads.length > COST_BUDGET.NOTIFICATION_FANOUT_MAX) {
+    logger.warn(
+      `[notifier] Fan-out capped at ${COST_BUDGET.NOTIFICATION_FANOUT_MAX}, ` +
+        `${payloads.length - COST_BUDGET.NOTIFICATION_FANOUT_MAX} notifications dropped`
+    )
+  }
+  await Promise.all(capped.map((payload) => sendNotification(payload)))
 }

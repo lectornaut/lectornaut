@@ -35,8 +35,9 @@ import {
   withCloudSyncOperation,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
+import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { useStorage, watchDebounced } from "@vueuse/core"
-import { collection, doc, setDoc } from "firebase/firestore"
+import { collection, doc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
@@ -308,11 +309,15 @@ export const useLayoutStore = defineStore("layout", () => {
    */
   async function safeSetDoc(
     docRef: ReturnType<typeof doc> | null,
-    data: Record<string, unknown>
+    data: Record<string, unknown>,
+    source: string
   ): Promise<boolean> {
     if (!docRef) return false
     try {
-      await setDoc(docRef, data, { merge: true })
+      await mutateSetDocument(docRef, data, {
+        source,
+        merge: true,
+      })
       return true
     } catch (error) {
       console.error("[layoutStore] Failed to persist to Firestore:", error)
@@ -324,11 +329,15 @@ export const useLayoutStore = defineStore("layout", () => {
    * Persist tabs with optimistic update protection
    */
   async function persistTabs(): Promise<boolean> {
-    return safeSetDoc(tabsDocRef.value, {
-      tabs: tabs.value,
-      active: activeTabId.value,
-      recentlyClosed: recentlyClosed.value,
-    })
+    return safeSetDoc(
+      tabsDocRef.value,
+      {
+        tabs: tabs.value,
+        active: activeTabId.value,
+        recentlyClosed: recentlyClosed.value,
+      },
+      "layout.tabs.persist"
+    )
   }
 
   /**
@@ -345,21 +354,29 @@ export const useLayoutStore = defineStore("layout", () => {
       visibleItems[item.id] = activeIds.has(item.id)
     }
 
-    return safeSetDoc(navigationDocRef.value, { visibleItems, order })
+    return safeSetDoc(
+      navigationDocRef.value,
+      { visibleItems, order },
+      "layout.navigation.persist"
+    )
   }
 
   /**
    * Persist theme with optimistic update protection
    */
   async function persistTheme(): Promise<boolean> {
-    return safeSetDoc(themeDocRef.value, {
-      mode: mode.value,
-      base: base.value,
-      accent: accent.value,
-      font: font.value,
-      size: size.value,
-      language: language.value,
-    })
+    return safeSetDoc(
+      themeDocRef.value,
+      {
+        mode: mode.value,
+        base: base.value,
+        accent: accent.value,
+        font: font.value,
+        size: size.value,
+        language: language.value,
+      },
+      "layout.theme.persist"
+    )
   }
 
   /**

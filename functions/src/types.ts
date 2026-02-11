@@ -65,6 +65,39 @@ export interface InvitationData {
 }
 
 // ============================================================================
+// Sync Types
+// ============================================================================
+
+export type SyncMutationType = "set" | "update" | "delete"
+export type SyncOperationStatus = "pending" | "ack" | "reject"
+
+export interface SyncBaseVersion {
+  field: string
+  value: number | string | null
+}
+
+/**
+ * Normalize a Firestore field value into a comparable primitive.
+ * Handles Timestamps, Dates, numbers, and strings.
+ * Used for base version comparison in sync operations.
+ */
+export const normalizeComparable = (value: unknown): number | string | null => {
+  if (value === null || value === undefined) return null
+  if (typeof value === "string") return value
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (value instanceof Date) return value.getTime()
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toMillis" in value &&
+    typeof (value as { toMillis?: unknown }).toMillis === "function"
+  ) {
+    return (value as { toMillis: () => number }).toMillis()
+  }
+  return null
+}
+
+// ============================================================================
 // Permission Types
 // ============================================================================
 

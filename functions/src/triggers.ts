@@ -1,11 +1,13 @@
-import admin from "firebase-admin"
 import * as logger from "firebase-functions/logger"
-import * as functions from "firebase-functions/v1"
 import {
   onDocumentCreated,
+  onDocumentDeleted,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore"
+import { beforeUserCreated } from "firebase-functions/v2/identity"
+import { auth } from "./firebase.js"
 import { sendNotification, sendNotificationToMany } from "./notifier.js"
+import { REGION, TRIGGER_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import { getTeamMembersByRoles } from "./teams.js"
 import {
@@ -14,11 +16,6 @@ import {
   NotificationType,
   RoleGroups,
 } from "./types.js"
-
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp()
-}
 
 // ============================================================================
 // Invitation Email Helpers
@@ -50,7 +47,7 @@ async function sendInvitationNotification(
   // Check if the user is already registered
   let userId: string | undefined
   try {
-    const userRecord = await admin.auth().getUserByEmail(email)
+    const userRecord = await auth.getUserByEmail(email)
     userId = userRecord.uid
   } catch (_error) {
     logger.info(`Invited email ${email} is not a registered user yet.`)
@@ -144,31 +141,53 @@ async function notifyTeamMembers(
 }
 
 // ============================================================================
-// Firebase Auth Triggers
+// Firebase Auth Triggers (V2 — Identity Platform)
 // ============================================================================
 
 /**
  * Trigger: Send Welcome Notification and Email on User Signup
+ *
+ * Migrated from V1 auth.user().onCreate to V2 identity.beforeUserCreated.
+ * This is a blocking function but we fire the notification asynchronously
+ * so it doesn't delay account creation. If sending fails, the user is
+ * still created — the welcome notification is non-critical.
  */
-export const onUserCreated = functions
-  .runWith({ secrets: ["POSTMARK_API_KEY"] })
-  .auth.user()
-  .onCreate(async (user) => {
-    await sendNotification({
-      userId: user.uid,
-      userEmail: user.email,
-      type: "user.welcome",
-      title: "Welcome to LectorNaut!",
-      description:
-        "We're excited to have you on board. Check out our getting started guide.",
-      url: "/welcome",
-      emailData: {
-        templateData: {
-          displayName: user.displayName || user.email || "there",
+export const onUserCreated = beforeUserCreated(
+  {
+    secrets: [postmarkApiKey],
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
+  },
+  async (event) => {
+    const user = event.data
+    if (!user) return
+
+    try {
+      // Send welcome notification and email
+      // We await this to ensure the function doesn't terminate early,
+      // but wrap in try/catch so failure doesn't block user creation.
+      await sendNotification({
+        userId: user.uid,
+        userEmail: user.email ?? undefined,
+        type: "user.welcome",
+        title: "Welcome to LectorNaut!",
+        description:
+          "We're excited to have you on board. Check out our getting started guide.",
+        url: "/welcome",
+        emailData: {
+          templateData: {
+            displayName: user.displayName || user.email || "there",
+          },
         },
-      },
-    })
-  })
+      })
+    } catch (err) {
+      // Log error but allow user creation to proceed
+      logger.error("Failed to send welcome notification", err)
+    }
+  }
+)
 
 // ============================================================================
 // Firestore Triggers - Invitations
@@ -181,6 +200,10 @@ export const onInvitationCreated = onDocumentCreated(
   {
     document: "invitations/{invitationId}",
     secrets: [postmarkApiKey],
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
   },
   async (event) => {
     const snapshot = event.data
@@ -199,6 +222,10 @@ export const onInvitationUpdated = onDocumentUpdated(
   {
     document: "invitations/{invitationId}",
     secrets: [postmarkApiKey],
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
   },
   async (event) => {
     const snapshot = event.data
@@ -248,6 +275,10 @@ export const onMembershipCreated = onDocumentCreated(
   {
     document: "teams/{teamId}/memberships/{userId}",
     secrets: [postmarkApiKey],
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
   },
   async (event) => {
     const snapshot = event.data
@@ -278,11 +309,23 @@ export const onMembershipCreated = onDocumentCreated(
 
 /**
  * Trigger: Notify User when they are removed from a team
+ *
+ * Migrated from V1 firestore.document().onDelete to V2 onDocumentDeleted.
+ * Now benefits from Gen 2 runtime with explicit region, memory, and instance caps.
  */
-export const onMembershipDeleted = functions
-  .runWith({ secrets: ["POSTMARK_API_KEY"] })
-  .firestore.document("teams/{teamId}/memberships/{userId}")
-  .onDelete(async (snapshot, event) => {
+export const onMembershipDeleted = onDocumentDeleted(
+  {
+    document: "teams/{teamId}/memberships/{userId}",
+    secrets: [postmarkApiKey],
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
+  },
+  async (event) => {
+    const snapshot = event.data
+    if (!snapshot) return
+
     const membership = snapshot.data()
     const teamName = membership?.team?.name || "a team"
 
@@ -301,4 +344,5 @@ export const onMembershipDeleted = functions
         templateData: { teamName },
       },
     })
-  })
+  }
+)

@@ -109,6 +109,124 @@ export function removePending(pendingRef: Ref<Set<string>>, id: string): void {
   triggerPendingUpdate(pendingRef)
 }
 
+export type PendingCollection = Set<string> | Ref<Set<string>>
+export type OptimisticMutationState = "pending" | "acked" | "rejected"
+
+export interface OptimisticMutationReceipt {
+  id: string
+  source?: string
+  startedAt: number
+  settledAt: number | null
+  state: OptimisticMutationState
+}
+
+interface InternalOptimisticMutationReceipt extends OptimisticMutationReceipt {
+  pendingRef: Ref<Set<string>> | null
+  pendingSet: Set<string> | null
+  rollback: () => void
+}
+
+interface ApplyLocalMutationOptions {
+  id: string
+  pendingIds: PendingCollection
+  applyLocal: () => void
+  rollback: () => void
+  source?: string
+}
+
+const toPendingHandle = (
+  pendingIds: PendingCollection
+): { pendingRef: Ref<Set<string>> | null; pendingSet: Set<string> | null } => {
+  if (isRef(pendingIds)) {
+    return {
+      pendingRef: pendingIds as Ref<Set<string>>,
+      pendingSet: null,
+    }
+  }
+  return {
+    pendingRef: null,
+    pendingSet: pendingIds,
+  }
+}
+
+const addPendingForHandle = (
+  pendingRef: Ref<Set<string>> | null,
+  pendingSet: Set<string> | null,
+  id: string
+) => {
+  if (pendingRef) {
+    addPending(pendingRef, id)
+    return
+  }
+  pendingSet?.add(id)
+}
+
+const removePendingForHandle = (
+  pendingRef: Ref<Set<string>> | null,
+  pendingSet: Set<string> | null,
+  id: string
+) => {
+  if (pendingRef) {
+    removePending(pendingRef, id)
+    return
+  }
+  pendingSet?.delete(id)
+}
+
+export function applyLocalMutation(
+  options: ApplyLocalMutationOptions
+): OptimisticMutationReceipt {
+  const startedAt = Date.now()
+  const { pendingRef, pendingSet } = toPendingHandle(options.pendingIds)
+
+  addPendingForHandle(pendingRef, pendingSet, options.id)
+  options.applyLocal()
+
+  return {
+    id: options.id,
+    source: options.source,
+    startedAt,
+    settledAt: null,
+    state: "pending",
+    pendingRef,
+    pendingSet,
+    rollback: options.rollback,
+  } as InternalOptimisticMutationReceipt
+}
+
+export function commitLocalMutation(
+  receipt: OptimisticMutationReceipt
+): OptimisticMutationReceipt {
+  const internal = receipt as InternalOptimisticMutationReceipt
+  if (internal.state !== "pending") return internal
+
+  removePendingForHandle(internal.pendingRef, internal.pendingSet, internal.id)
+  internal.state = "acked"
+  internal.settledAt = Date.now()
+
+  return internal
+}
+
+export function rollbackLocalMutation(
+  receipt: OptimisticMutationReceipt
+): OptimisticMutationReceipt {
+  const internal = receipt as InternalOptimisticMutationReceipt
+  if (internal.state !== "pending") return internal
+
+  internal.rollback()
+  removePendingForHandle(internal.pendingRef, internal.pendingSet, internal.id)
+  internal.state = "rejected"
+  internal.settledAt = Date.now()
+
+  return internal
+}
+
+export const optimisticUpdater = {
+  applyLocal: applyLocalMutation,
+  commit: commitLocalMutation,
+  rollback: rollbackLocalMutation,
+}
+
 // ============================================================================
 // Global Cloud Sync Queue
 // ============================================================================
@@ -360,7 +478,7 @@ export function getBackoffDelay(attempt: number, baseDelay: number): number {
  * @param options - Optional configuration for retries
  */
 export async function withOptimisticUpdate<T>(
-  pendingIds: Set<string> | Ref<Set<string>>,
+  pendingIds: PendingCollection,
   id: string,
   applyOptimistic: () => void,
   rollback: () => void,
@@ -368,40 +486,34 @@ export async function withOptimisticUpdate<T>(
   options: OptimisticOptions = {}
 ): Promise<T> {
   const { maxRetries = 0, retryBaseDelay = 1000, trackSync = true } = options
-  const pendingRef = isRef(pendingIds) ? (pendingIds as Ref<Set<string>>) : null
   const syncToken = trackSync
     ? beginCloudSyncOperation({ id, source: "withOptimisticUpdate" })
     : null
   let syncError: unknown
-
-  const addPendingId = () => {
-    if (pendingRef) {
-      addPending(pendingRef, id)
-      return
-    }
-    ;(pendingIds as Set<string>).add(id)
-  }
-  const removePendingId = () => {
-    if (pendingRef) {
-      removePending(pendingRef, id)
-      return
-    }
-    ;(pendingIds as Set<string>).delete(id)
-  }
-
-  // Add to pending set
-  addPendingId()
+  let receipt: OptimisticMutationReceipt | null = null
+  const runFirestoreOperation = () =>
+    new Promise<T>((resolve, reject) => {
+      queueMicrotask(() => {
+        void firestoreOperation().then(resolve).catch(reject)
+      })
+    })
 
   try {
-    // Apply optimistic update immediately
-    applyOptimistic()
+    // Apply optimistic update immediately (sync fast path)
+    receipt = optimisticUpdater.applyLocal({
+      id,
+      source: "withOptimisticUpdate",
+      pendingIds,
+      applyLocal: applyOptimistic,
+      rollback,
+    })
 
     let lastError: Error | undefined
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         // Perform the actual Firestore operation
-        return await firestoreOperation()
+        return await runFirestoreOperation()
       } catch (error) {
         lastError = error as Error
 
@@ -422,18 +534,21 @@ export async function withOptimisticUpdate<T>(
     throw lastError ?? new Error("Operation failed after retries")
   } catch (error) {
     syncError = error
-    try {
-      rollback()
-    } catch (rollbackError) {
-      console.error(
-        `[withOptimisticUpdate] Rollback failed for operation "${id}"`,
-        rollbackError
-      )
+    if (receipt) {
+      try {
+        optimisticUpdater.rollback(receipt)
+      } catch (rollbackError) {
+        console.error(
+          `[withOptimisticUpdate] Rollback failed for operation "${id}"`,
+          rollbackError
+        )
+      }
     }
     throw error
   } finally {
-    // Always clean up pending state
-    removePendingId()
+    if (receipt && receipt.state === "pending") {
+      optimisticUpdater.commit(receipt)
+    }
     if (syncToken !== null) {
       endCloudSyncOperation(syncToken, syncError)
     }

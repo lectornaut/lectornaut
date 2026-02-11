@@ -225,10 +225,14 @@ const finishAuthentication = async (result: UserCredential) => {
   }
 
   if (getAdditionalUserInfo(result)?.isNewUser) {
-    setDefaultUserData()
+    void setDefaultUserData().catch((error) => {
+      console.error("[auth] Failed to initialize default user data:", error)
+    })
     await router.push("/welcome")
   } else {
-    updateUserData()
+    void updateUserData().catch((error) => {
+      console.error("[auth] Failed to refresh user metadata:", error)
+    })
 
     const redirect = router.currentRoute.value.query.redirect
     await router.push(typeof redirect === "string" ? redirect : "/start")

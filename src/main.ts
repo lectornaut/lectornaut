@@ -9,6 +9,7 @@ import { router } from "@/modules/router"
 import { initTheme } from "@/modules/theme"
 import { initUpdater } from "@/modules/updater"
 import "@/styles/index.css"
+import { startSync } from "@/utils/firebase/firebase-sync-engine"
 import "@geoql/v-maplibre/dist/v-maplibre.css"
 import { InferSeoMetaPlugin } from "@unhead/addons"
 import { createHead } from "@unhead/vue/client"
@@ -64,3 +65,4 @@ initLanguage()
 initHotkeys()
 initPwa()
 initKeychain()
+startSync()

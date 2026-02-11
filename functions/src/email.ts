@@ -2,8 +2,30 @@ import * as logger from "firebase-functions/logger"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { ServerClient } from "postmark"
 import { renderEmail } from "./emails/renderEmail.js"
+import { EMAIL_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import { EmailData } from "./types.js"
+
+/**
+ * COST OPTIMIZATION: Lazy singleton Postmark client.
+ * Created once per warm instance instead of per invocation.
+ * The ServerClient reuses HTTP connections across calls.
+ */
+let _postmarkClient: ServerClient | null = null
+
+function getPostmarkClient(): ServerClient {
+  const key = postmarkApiKey.value()
+  if (!key) {
+    logger.error("POSTMARK_API_KEY is empty or not found")
+    throw new Error("Missing POSTMARK_API_KEY")
+  }
+
+  if (!_postmarkClient) {
+    _postmarkClient = new ServerClient(key)
+  }
+
+  return _postmarkClient
+}
 
 /**
  * Internal helper to send emails using Postmark
@@ -31,13 +53,7 @@ export async function sendEmailInternal(data: EmailData) {
     throw new Error("Either body or template and data must be provided")
   }
 
-  const key = postmarkApiKey.value()
-  if (!key) {
-    logger.error("POSTMARK_API_KEY is empty or not found")
-    throw new Error("Missing POSTMARK_API_KEY")
-  }
-
-  const client = new ServerClient(key)
+  const client = getPostmarkClient()
 
   try {
     await client.sendEmail({
@@ -58,7 +74,7 @@ export async function sendEmailInternal(data: EmailData) {
  * Callable function to send emails
  */
 export const sendEmail = onCall(
-  { secrets: [postmarkApiKey] },
+  { ...EMAIL_OPTS, secrets: [postmarkApiKey] },
   async (request) => {
     try {
       return await sendEmailInternal(request.data)

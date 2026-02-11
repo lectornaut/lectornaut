@@ -23,7 +23,9 @@ useHead({
 const router = useRouter()
 
 const completeOnboarding = () => {
-  updateUserData({ onboarding: false })
+  void updateUserData({ onboarding: false }).catch((error) => {
+    console.error("[welcome] Failed to persist onboarding completion:", error)
+  })
   router.push("/start")
 }
 

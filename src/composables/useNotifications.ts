@@ -1,25 +1,23 @@
-import { withToast } from "@/helpers/toast"
 import { firestore as db, functions } from "@/modules/firebase"
 import { type INotification, type INotificationStatus } from "@/types"
+import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
 import {
   cloneState,
   createPendingSet,
   withCloudSyncOperation,
-  withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import {
   collection,
-  deleteDoc,
   doc,
   limit,
   onSnapshot,
   orderBy,
   query,
   Timestamp,
-  updateDoc,
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
+import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
 export function useNotifications() {
@@ -82,10 +80,11 @@ export function useNotifications() {
 
     const previousOptimistic = cloneState(optimisticNotifications.value)
 
-    await withOptimisticUpdate(
-      pendingNotificationIds,
-      notificationId,
-      () => {
+    await mutateWithCoordinator({
+      id: notificationId,
+      source: "notifications.update",
+      pendingIds: pendingNotificationIds,
+      applyLocal: () => {
         // Special case: if we have it in optimistic list, update it.
         // If not, we found it in firestore list, so add to optimistic.
         const existingIndex = optimisticNotifications.value.findIndex(
@@ -111,16 +110,20 @@ export function useNotifications() {
           }
         }
       },
-      () => {
+      rollbackLocal: () => {
         optimisticNotifications.value = previousOptimistic
       },
-      async () => {
-        await updateDoc(
-          doc(db, `users/${user.value!.uid}/notifications`, notificationId),
-          updates
-        )
-      }
-    )
+      mutation: {
+        source: "notifications.update",
+        targetPath: doc(
+          db,
+          `users/${user.value.uid}/notifications`,
+          notificationId
+        ).path,
+        type: "update",
+        data: updates as Record<string, unknown>,
+      },
+    })
   }
 
   // Private helper for batch actions
@@ -208,6 +211,44 @@ export function useNotifications() {
     )
   }
 
+  const runNotificationActionWithToast = async <T>(
+    operation: () => Promise<T>,
+    options: {
+      success: string
+      error: string
+      onUndo?: () => Promise<void>
+      undoSuccessMessage?: string
+      undoErrorMessage?: string
+    }
+  ) => {
+    const toastId = options.onUndo
+      ? toast.success(options.success, {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                await options.onUndo?.()
+                toast.success(options.undoSuccessMessage ?? "Restored")
+              } catch (error) {
+                console.error("Undo failed:", error)
+                toast.error(options.undoErrorMessage ?? "Failed to undo")
+              }
+            },
+          },
+        })
+      : toast.success(options.success)
+
+    try {
+      return await operation()
+    } catch (error) {
+      toast.dismiss(toastId)
+      toast.error(options.error, {
+        description: (error as Error).message,
+      })
+      throw error
+    }
+  }
+
   const updateNotificationWithToast = async (
     notificationId: string,
     updates: Partial<INotification>,
@@ -219,14 +260,18 @@ export function useNotifications() {
     }
   ) => {
     const snapshot = getNotificationSnapshot(notificationId)
-    return withToast(() => updateNotification(notificationId, updates), {
-      success: options.success,
-      error: options.error,
-      onUndo: snapshot ? () => restoreNotification(snapshot) : undefined,
-      undoSuccessMessage: options.undoSuccessMessage ?? "Restored notification",
-      undoErrorMessage:
-        options.undoErrorMessage ?? "Failed to restore notification",
-    })
+    return runNotificationActionWithToast(
+      () => updateNotification(notificationId, updates),
+      {
+        success: options.success,
+        error: options.error,
+        onUndo: snapshot ? () => restoreNotification(snapshot) : undefined,
+        undoSuccessMessage:
+          options.undoSuccessMessage ?? "Restored notification",
+        undoErrorMessage:
+          options.undoErrorMessage ?? "Failed to restore notification",
+      }
+    )
   }
 
   const performBatchActionWithToast = async (
@@ -244,7 +289,7 @@ export function useNotifications() {
       .filter((n) => !status || n.status === status)
       .map((n) => ({ id: n.id, read: n.read, status: n.status }))
 
-    return withToast(
+    return runNotificationActionWithToast(
       () => performBatchAction(actionName, status, optimisticUpdate),
       {
         success: options.success,
@@ -417,41 +462,56 @@ export function useNotifications() {
       }
     )
 
-  const deleteNotification = async (notificationId: string) => {
+  const deleteNotificationMutation = async (notificationId: string) => {
     if (!user.value) return
 
     const previousOptimistic = cloneState(optimisticNotifications.value)
+    const previousFirestore = cloneState(firestoreNotifications.value)
 
-    await withOptimisticUpdate(
-      pendingNotificationIds,
-      notificationId,
-      () => {
-        // If it was optimistic, remove from optimistic
-        optimisticNotifications.value = optimisticNotifications.value.filter(
-          (n) => n.id !== notificationId
-        )
-        // Also ensure it's not "visible" in merged state if it was only in firestore
-        // The merged logic needs to handle this.
-      },
-      () => {
-        optimisticNotifications.value = previousOptimistic
-      },
-      async () => {
-        await deleteDoc(
-          doc(db, `users/${user.value!.uid}/notifications`, notificationId)
-        )
+    // Optimistic removal
+    optimisticNotifications.value = optimisticNotifications.value.filter(
+      (n) => n.id !== notificationId
+    )
+    firestoreNotifications.value = firestoreNotifications.value.filter(
+      (n) => n.id !== notificationId
+    )
+
+    try {
+      await withCloudSyncOperation(
+        async () => {
+          const fn = httpsCallable(functions, "deleteNotification")
+          await fn({ notificationId })
+        },
+        {
+          id: notificationId,
+          source: "notifications.delete",
+        }
+      )
+    } catch (error) {
+      // Rollback on failure
+      optimisticNotifications.value = previousOptimistic
+      firestoreNotifications.value = previousFirestore
+      throw error
+    }
+  }
+
+  const deleteNotification = (notificationId: string) =>
+    runNotificationActionWithToast(
+      () => deleteNotificationMutation(notificationId),
+      {
+        success: "Deleted notification",
+        error: "Failed to delete notification",
       }
     )
-  }
 
-  const deleteAllNotifications = (status?: INotificationStatus) => {
-    // For batch actions, we can't easily use withOptimisticUpdate per-ID without IDs.
-    // However, we can update the firestoreNotifications locally if we want a "fake" optimistic felt.
-    // But since performBatchAction has its own optimistic update helper, let's use that.
-    performBatchAction("deleteAllNotifications", status).catch(() => {
-      // Errors already logged in performBatchAction
-    })
-  }
+  const deleteAllNotifications = (status?: INotificationStatus) =>
+    runNotificationActionWithToast(
+      () => performBatchAction("deleteAllNotifications", status),
+      {
+        success: "Deleted notifications",
+        error: "Failed to delete notifications",
+      }
+    )
 
   return {
     notifications,

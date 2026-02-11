@@ -29,6 +29,7 @@ import {
   getUserRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase/firebase-helpers"
+import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
 import {
   addPending,
   cloneState,
@@ -36,7 +37,11 @@ import {
   removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { serverTimestamp, type Timestamp, updateDoc } from "firebase/firestore"
+import {
+  buildUpdatedAtBaseVersion,
+  mutateUpdateDocument,
+} from "@/utils/firebase/firebase-sync-engine"
+import { serverTimestamp, type Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
 
@@ -100,10 +105,16 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   ): Promise<void> {
     if (!currentUser.value) return
 
-    await updateDoc(getUserRef(currentUser.value.uid), {
-      currentWorkspaceId: workspaceId,
-      updatedAt: serverTimestamp(),
-    })
+    await mutateUpdateDocument(
+      getUserRef(currentUser.value.uid),
+      {
+        currentWorkspaceId: workspaceId,
+      },
+      {
+        source: "workspace.persistSelection",
+        baseVersion: buildUpdatedAtBaseVersion(userProfile.value?.updatedAt),
+      }
+    )
   }
 
   // ============================================================================
@@ -357,10 +368,18 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           }
 
           // Update user's current workspace to the actual ID
-          await updateDoc(getUserRef(currentUser.value!.uid), {
-            currentWorkspaceId: actualWorkspaceId,
-            updatedAt: serverTimestamp(),
-          })
+          await mutateUpdateDocument(
+            getUserRef(currentUser.value!.uid),
+            {
+              currentWorkspaceId: actualWorkspaceId,
+            },
+            {
+              source: "workspace.createWorkspace.select",
+              baseVersion: buildUpdatedAtBaseVersion(
+                previousUserProfile?.updatedAt
+              ),
+            }
+          )
 
           // Update local state with actual workspace ID
           authStore.setCurrentWorkspaceId(actualWorkspaceId)
@@ -384,26 +403,28 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     }
 
     const previousWorkspaceId = currentWorkspaceId.value
+    const previousUserProfile = cloneState(userProfile.value)
 
-    await withOptimisticUpdate(
-      pendingUserIds,
-      currentUser.value.uid,
-      // Apply optimistic update
-      () => {
+    await mutateWithCoordinator({
+      id: currentUser.value.uid,
+      source: "workspace.switchWorkspace",
+      pendingIds: pendingUserIds,
+      applyLocal: () => {
         authStore.setCurrentWorkspaceId(workspaceId)
       },
-      // Rollback on error
-      () => {
+      rollbackLocal: () => {
         authStore.setCurrentWorkspaceId(previousWorkspaceId)
       },
-      // Firestore operation
-      async () => {
-        await updateDoc(getUserRef(currentUser.value!.uid), {
+      mutation: {
+        source: "workspace.switchWorkspace",
+        targetPath: getUserRef(currentUser.value.uid).path,
+        type: "update",
+        data: {
           currentWorkspaceId: workspaceId,
-          updatedAt: serverTimestamp(),
-        })
-      }
-    )
+        },
+        baseVersion: buildUpdatedAtBaseVersion(previousUserProfile?.updatedAt),
+      },
+    })
   }
 
   /**

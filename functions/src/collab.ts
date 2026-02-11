@@ -1,4 +1,3 @@
-import admin from "firebase-admin"
 import {
   CallableRequest,
   HttpsError,
@@ -6,14 +5,10 @@ import {
 } from "firebase-functions/v2/https"
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { randomUUID } from "node:crypto"
+import { admin, db } from "./firebase.js"
 import { can } from "./permissions.js"
+import { CALLABLE_OPTS, SCHEDULED_OPTS } from "./runtimeConfig.js"
 import { Capabilities, IMembershipRole, WorkspaceNodeScope } from "./types.js"
-
-if (!admin.apps.length) {
-  admin.initializeApp()
-}
-
-const db = admin.firestore()
 
 const JOIN_TOKEN_TTL_MS = 10 * 60 * 1000
 const STALE_SIGNAL_MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - signals are cleaned by clients, this is fallback
@@ -358,7 +353,7 @@ async function cleanupCollectionGroup(
   return totalDeleted
 }
 
-export const joinCollabRoom = onCall(async (request) => {
+export const joinCollabRoom = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const contentId = assertString(request.data?.contentId, "contentId")
@@ -407,7 +402,7 @@ export const joinCollabRoom = onCall(async (request) => {
   }
 })
 
-export const createPeer = onCall(async (request) => {
+export const createPeer = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const contentId = assertString(request.data?.contentId, "contentId")
@@ -450,7 +445,7 @@ export const createPeer = onCall(async (request) => {
   return { ok: true }
 })
 
-export const heartbeatPeer = onCall(async (request) => {
+export const heartbeatPeer = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const contentId = assertString(request.data?.contentId, "contentId")
@@ -474,7 +469,7 @@ export const heartbeatPeer = onCall(async (request) => {
   return { ok: true }
 })
 
-export const sendSignal = onCall(async (request) => {
+export const sendSignal = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const contentId = assertString(request.data?.contentId, "contentId")
@@ -515,7 +510,7 @@ export const sendSignal = onCall(async (request) => {
   return { ok: true }
 })
 
-export const deletePeer = onCall(async (request) => {
+export const deletePeer = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const contentId = assertString(request.data?.contentId, "contentId")
@@ -534,7 +529,7 @@ export const deletePeer = onCall(async (request) => {
   return { ok: true }
 })
 
-export const deleteSignal = onCall(async (request) => {
+export const deleteSignal = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const contentId = assertString(request.data?.contentId, "contentId")
@@ -552,7 +547,7 @@ export const deleteSignal = onCall(async (request) => {
   return { ok: true }
 })
 
-export const deleteSignals = onCall(async (request) => {
+export const deleteSignals = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const contentId = assertString(request.data?.contentId, "contentId")
@@ -582,7 +577,10 @@ export const deleteSignals = onCall(async (request) => {
 })
 
 export const cleanupCollabSignaling = onSchedule(
-  "every 1 hours", // Reduced from 10 minutes - clients clean up signals, this is fallback
+  {
+    schedule: "every 1 hours", // Reduced from 10 minutes - clients clean up signals, this is fallback
+    ...SCHEDULED_OPTS,
+  },
   async () => {
     const [signalsDeleted, peersDeleted] = await Promise.all([
       cleanupCollectionGroup("signals", "createdAt", STALE_SIGNAL_MAX_AGE_MS),

@@ -1,10 +1,12 @@
-import admin from "firebase-admin"
 import {
   CallableRequest,
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { COST_BUDGET } from "./costBudget.js"
+import { admin, db } from "./firebase.js"
 import { can } from "./permissions.js"
+import { CALLABLE_OPTS, DESTRUCTIVE_CALLABLE_OPTS } from "./runtimeConfig.js"
 import {
   Actor,
   Capabilities,
@@ -17,12 +19,6 @@ import {
   NodeType,
   WorkspaceNodeScope,
 } from "./types.js"
-
-if (!admin.apps.length) {
-  admin.initializeApp()
-}
-
-const db = admin.firestore()
 
 // =============================================================================
 // Audit Log Types
@@ -278,7 +274,7 @@ function chunkArray<T>(items: T[], size: number): T[][] {
 // Team CRUD Operations
 // =============================================================================
 
-export const createTeam = onCall(async (request) => {
+export const createTeam = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const name = assertString(request.data?.name, "name")
@@ -358,7 +354,7 @@ export const createTeam = onCall(async (request) => {
   }
 })
 
-export const updateTeam = onCall(async (request) => {
+export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -421,9 +417,11 @@ export const updateTeam = onCall(async (request) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     })
 
-    // Also update team data in all memberships
+    // COST OPTIMIZATION: Use select() to fetch minimal fields for denormalization.
+    // We only need the doc refs to update them — no need to read full membership data.
     const membershipsSnap = await db
       .collection(`teams/${teamId}/memberships`)
+      .select()
       .get()
     membershipsSnap.docs.forEach((doc) => {
       transaction.update(doc.ref, {
@@ -454,7 +452,7 @@ export const updateTeam = onCall(async (request) => {
   })
 })
 
-export const deleteTeam = onCall(async (request) => {
+export const deleteTeam = onCall(DESTRUCTIVE_CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -492,42 +490,56 @@ export const deleteTeam = onCall(async (request) => {
 
   const teamData = teamSnap.data() ?? {}
 
-  // Get all memberships and workspaces
-  const [membershipsSnap, workspacesSnap] = await Promise.all([
-    db.collection(`teams/${teamId}/memberships`).get(),
-    db.collection(`teams/${teamId}/workspaces`).get(),
-  ])
+  // =========================================================================
+  // COST FIX: Recursively delete ALL subcollections under the team.
+  //
+  // Before: only deleted workspace docs and membership docs, leaving orphaned
+  // subcollections (code/, write/, workspace-memberships, membership-layouts)
+  // consuming storage and index costs indefinitely.
+  //
+  // After: uses db.recursiveDelete() which traverses and deletes all nested
+  // documents in subcollections automatically. This is the recommended
+  // approach from Firebase for deep document trees.
+  //
+  // Document tree under teams/{teamId}:
+  //   /memberships/{userId}
+  //     /workspaces/{workspaceId}
+  //       /layout/{layoutId}              ← was orphaned
+  //   /workspaces/{workspaceId}
+  //     /code/{nodeId}                    ← was orphaned
+  //     /write/{nodeId}                   ← was orphaned
+  //     /memberships/{userId}             ← was orphaned
+  // =========================================================================
 
-  // Batch delete all documents
-  const batch = db.batch()
-
-  // Delete workspaces
-  workspacesSnap.docs.forEach((doc) => batch.delete(doc.ref))
-
-  // Delete memberships (except actor's, delete last)
-  const otherMemberships = membershipsSnap.docs.filter(
-    (doc) => doc.id !== actorId
-  )
-  otherMemberships.forEach((doc) => batch.delete(doc.ref))
-
-  // Delete team
-  batch.delete(teamRef)
-
-  // Delete actor's membership last
-  batch.delete(membershipRef)
-
-  // Update user's current team if needed
+  // Update user's current team before deletion
   const userRef = db.doc(`users/${actorId}`)
   const userSnap = await userRef.get()
   if (userSnap.exists && userSnap.data()?.currentTeamId === teamId) {
-    batch.update(userRef, {
+    await userRef.update({
       currentTeamId: null,
       currentWorkspaceId: null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     })
   }
 
-  await batch.commit()
+  // Recursively delete the entire team document tree (all subcollections)
+  await db.recursiveDelete(teamRef)
+
+  // Also delete related invitations for this team
+  const invitationsSnap = await db
+    .collection("invitations")
+    .where("teamId", "==", teamId)
+    .select()
+    .get()
+
+  if (!invitationsSnap.empty) {
+    const inviteBatches = chunkArray(invitationsSnap.docs, DELETE_BATCH_SIZE)
+    for (const batchDocs of inviteBatches) {
+      const batch = db.batch()
+      batchDocs.forEach((doc) => batch.delete(doc.ref))
+      await batch.commit()
+    }
+  }
 
   // Log the event (outside transaction since team is deleted)
   await logEvent({
@@ -555,7 +567,7 @@ export const deleteTeam = onCall(async (request) => {
 // Workspace CRUD Operations
 // =============================================================================
 
-export const createWorkspace = onCall(async (request) => {
+export const createWorkspace = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -623,7 +635,7 @@ export const createWorkspace = onCall(async (request) => {
   })
 })
 
-export const updateWorkspace = onCall(async (request) => {
+export const updateWorkspace = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -720,73 +732,91 @@ export const updateWorkspace = onCall(async (request) => {
   })
 })
 
-export const deleteWorkspace = onCall(async (request) => {
-  assertAuthenticated(request)
+export const deleteWorkspace = onCall(
+  DESTRUCTIVE_CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
 
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
 
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
+    const actorId = request.auth.uid
+    const actorEmail = request.auth.token.email ?? undefined
 
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
+    // Step 1: Verify permissions and capture data for logging in a transaction
+    const { role, workspaceData } = await db.runTransaction(
+      async (transaction) => {
+        const memberRole = await requireTeamRole(transaction, teamId, actorId)
 
-    if (
-      !can(actorId, Capabilities.DELETE_WORKSPACE, {
-        scope: "team",
-        teamRole: role,
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to delete workspaces."
-      )
-    }
+        if (
+          !can(actorId, Capabilities.DELETE_WORKSPACE, {
+            scope: "team",
+            teamRole: memberRole,
+          })
+        ) {
+          throw new HttpsError(
+            "permission-denied",
+            "You do not have permission to delete workspaces."
+          )
+        }
 
+        const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
+        const workspaceSnap = await transaction.get(workspaceRef)
+
+        if (!workspaceSnap.exists) {
+          throw new HttpsError("not-found", "Workspace not found.")
+        }
+
+        return {
+          role: memberRole,
+          workspaceData: workspaceSnap.data() ?? {},
+        }
+      }
+    )
+
+    // Step 2: Recursively delete the workspace and ALL subcollections.
+    //
+    // COST FIX: Previously only deleted the workspace doc, leaving orphaned:
+    //   /code/{nodeId}        — code content nodes
+    //   /write/{nodeId}       — write content nodes
+    //   /memberships/{userId} — workspace-level memberships
+    //
+    // db.recursiveDelete() handles deep traversal automatically,
+    // deleting all nested documents and subcollections.
+    // NOTE: This cannot run inside a transaction, hence the two-step approach.
     const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
-    const workspaceSnap = await transaction.get(workspaceRef)
+    await db.recursiveDelete(workspaceRef)
 
-    if (!workspaceSnap.exists) {
-      throw new HttpsError("not-found", "Workspace not found.")
-    }
-
-    const workspaceData = workspaceSnap.data() ?? {}
-
-    transaction.delete(workspaceRef)
-
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "workspace.delete",
-        resource: { type: "workspace", id: workspaceId, parentId: teamId },
-        context: buildContext(request),
-        changes: {
-          fields: ["name", "description"],
-          before: {
-            name: workspaceData.name ?? null,
-            description: workspaceData.description ?? null,
-          },
+    // Step 3: Log the event
+    const logRef = await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: actorId, email: actorEmail, role },
+      action: "workspace.delete",
+      resource: { type: "workspace", id: workspaceId, parentId: teamId },
+      context: buildContext(request),
+      changes: {
+        fields: ["name", "description"],
+        before: {
+          name: workspaceData.name ?? null,
+          description: workspaceData.description ?? null,
         },
       },
-      { transaction }
-    )
+    })
 
     return {
       workspaceId,
       deleted: true,
       logId: logRef.id,
     }
-  })
-})
+  }
+)
 
 // =============================================================================
 // Workspace Node Operations
 // =============================================================================
 
-export const createWorkspaceNode = onCall(async (request) => {
+export const createWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -895,7 +925,7 @@ export const createWorkspaceNode = onCall(async (request) => {
   })
 })
 
-export const renameWorkspaceNode = onCall(async (request) => {
+export const renameWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -971,7 +1001,7 @@ export const renameWorkspaceNode = onCall(async (request) => {
   })
 })
 
-export const moveWorkspaceNode = onCall(async (request) => {
+export const moveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -1071,7 +1101,7 @@ export const moveWorkspaceNode = onCall(async (request) => {
   })
 })
 
-export const archiveWorkspaceNode = onCall(async (request) => {
+export const archiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -1141,7 +1171,7 @@ export const archiveWorkspaceNode = onCall(async (request) => {
   })
 })
 
-export const unarchiveWorkspaceNode = onCall(async (request) => {
+export const unarchiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -1211,117 +1241,19 @@ export const unarchiveWorkspaceNode = onCall(async (request) => {
   })
 })
 
-export const deleteWorkspaceNode = onCall(async (request) => {
-  assertAuthenticated(request)
+export const deleteWorkspaceNode = onCall(
+  DESTRUCTIVE_CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
 
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const scope = assertWorkspaceNodeScope(request.data?.scope)
-  const nodeId = assertString(request.data?.nodeId, "nodeId")
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const scope = assertWorkspaceNodeScope(request.data?.scope)
+    const nodeId = assertString(request.data?.nodeId, "nodeId")
 
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-  const role = await getTeamRole(teamId, actorId)
-
-  if (
-    !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-      scope: "workspace",
-      teamRole: role,
-    })
-  ) {
-    throw new HttpsError(
-      "permission-denied",
-      "You do not have permission to manage workspace content."
-    )
-  }
-
-  const nodesCollection = db.collection(
-    workspaceNodesCollectionPath(teamId, workspaceId, scope)
-  )
-  const nodeRef = nodesCollection.doc(nodeId)
-  const nodeSnap = await nodeRef.get()
-
-  if (!nodeSnap.exists) {
-    throw new HttpsError("not-found", "Node not found.")
-  }
-
-  const before = nodeSnap.data() ?? {}
-  if (!before.isArchived) {
-    throw new HttpsError(
-      "failed-precondition",
-      "Node must be archived before permanent deletion."
-    )
-  }
-
-  const idsToDelete = new Set<string>([nodeId])
-  const queue: string[] = [nodeId]
-
-  while (queue.length) {
-    const parentIds = queue.splice(0, IN_QUERY_CHUNK_SIZE)
-    const descendantsSnap = await nodesCollection
-      .where("parentId", "in", parentIds)
-      .get()
-
-    descendantsSnap.docs.forEach((docSnap) => {
-      if (idsToDelete.has(docSnap.id)) return
-      idsToDelete.add(docSnap.id)
-      queue.push(docSnap.id)
-    })
-  }
-
-  const deleteIds = [...idsToDelete]
-  const batches = chunkArray(deleteIds, DELETE_BATCH_SIZE)
-  for (const batchIds of batches) {
-    const batch = db.batch()
-    batchIds.forEach((id) => {
-      batch.delete(nodesCollection.doc(id))
-    })
-    await batch.commit()
-  }
-
-  const logRef = await logEvent({
-    teamId,
-    workspaceId,
-    actor: { userId: actorId, email: actorEmail, role },
-    action: "content.delete",
-    resource: { type: "content", id: nodeId, parentId: workspaceId },
-    context: buildContext(request),
-    changes: {
-      fields: ["deleted", "deletedCount"],
-      before: {
-        name: before.name ?? null,
-        isArchived: before.isArchived ?? false,
-      },
-      after: {
-        deleted: true,
-        deletedCount: deleteIds.length,
-      },
-    },
-  })
-
-  return {
-    nodeId,
-    deleted: true,
-    deletedCount: deleteIds.length,
-    logId: logRef.id,
-  }
-})
-
-export const updateWorkspaceNodeContent = onCall(async (request) => {
-  assertAuthenticated(request)
-
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const scope = assertWorkspaceNodeScope(request.data?.scope)
-  const nodeId = assertString(request.data?.nodeId, "nodeId")
-  const contentRaw = request.data?.content
-  const content = typeof contentRaw === "string" ? contentRaw : ""
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
+    const actorId = request.auth.uid
+    const actorEmail = request.auth.token.email ?? undefined
+    const role = await getTeamRole(teamId, actorId)
 
     if (
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
@@ -1335,54 +1267,161 @@ export const updateWorkspaceNodeContent = onCall(async (request) => {
       )
     }
 
-    const nodeRef = db.doc(
-      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+    const nodesCollection = db.collection(
+      workspaceNodesCollectionPath(teamId, workspaceId, scope)
     )
-    const nodeSnap = await transaction.get(nodeRef)
+    const nodeRef = nodesCollection.doc(nodeId)
+    const nodeSnap = await nodeRef.get()
+
     if (!nodeSnap.exists) {
       throw new HttpsError("not-found", "Node not found.")
     }
 
     const before = nodeSnap.data() ?? {}
-    if (before.type !== "file") {
-      throw new HttpsError("failed-precondition", "Only files can be updated.")
-    }
-    if (before.isArchived) {
+    if (!before.isArchived) {
       throw new HttpsError(
         "failed-precondition",
-        "Cannot edit an archived file."
+        "Node must be archived before permanent deletion."
       )
     }
 
-    const now = admin.firestore.FieldValue.serverTimestamp()
-    transaction.update(nodeRef, {
-      content,
-      updatedAt: now,
-      updatedBy: actorId,
-    })
+    const idsToDelete = new Set<string>([nodeId])
+    const queue: string[] = [nodeId]
 
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.update",
-        resource: { type: "content", id: nodeId, parentId: workspaceId },
-        context: buildContext(request),
-        changes: {
-          fields: ["content"],
+    while (queue.length) {
+      const parentIds = queue.splice(0, IN_QUERY_CHUNK_SIZE)
+      const descendantsSnap = await nodesCollection
+        .where("parentId", "in", parentIds)
+        .get()
+
+      descendantsSnap.docs.forEach((docSnap) => {
+        if (idsToDelete.has(docSnap.id)) return
+        idsToDelete.add(docSnap.id)
+        queue.push(docSnap.id)
+      })
+    }
+
+    const deleteIds = [...idsToDelete]
+    const batches = chunkArray(deleteIds, DELETE_BATCH_SIZE)
+    for (const batchIds of batches) {
+      const batch = db.batch()
+      batchIds.forEach((id) => {
+        batch.delete(nodesCollection.doc(id))
+      })
+      await batch.commit()
+    }
+
+    const logRef = await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: actorId, email: actorEmail, role },
+      action: "content.delete",
+      resource: { type: "content", id: nodeId, parentId: workspaceId },
+      context: buildContext(request),
+      changes: {
+        fields: ["deleted", "deletedCount"],
+        before: {
+          name: before.name ?? null,
+          isArchived: before.isArchived ?? false,
+        },
+        after: {
+          deleted: true,
+          deletedCount: deleteIds.length,
         },
       },
-      { transaction }
-    )
+    })
 
     return {
       nodeId,
-      updated: true,
+      deleted: true,
+      deletedCount: deleteIds.length,
       logId: logRef.id,
     }
-  })
-})
+  }
+)
+
+export const updateWorkspaceNodeContent = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const scope = assertWorkspaceNodeScope(request.data?.scope)
+    const nodeId = assertString(request.data?.nodeId, "nodeId")
+    const contentRaw = request.data?.content
+    const content = typeof contentRaw === "string" ? contentRaw : ""
+
+    const actorId = request.auth.uid
+    const actorEmail = request.auth.token.email ?? undefined
+
+    return db.runTransaction(async (transaction) => {
+      const role = await requireTeamRole(transaction, teamId, actorId)
+
+      if (
+        !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+          scope: "workspace",
+          teamRole: role,
+        })
+      ) {
+        throw new HttpsError(
+          "permission-denied",
+          "You do not have permission to manage workspace content."
+        )
+      }
+
+      const nodeRef = db.doc(
+        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+      if (!nodeSnap.exists) {
+        throw new HttpsError("not-found", "Node not found.")
+      }
+
+      const before = nodeSnap.data() ?? {}
+      if (before.type !== "file") {
+        throw new HttpsError(
+          "failed-precondition",
+          "Only files can be updated."
+        )
+      }
+      if (before.isArchived) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Cannot edit an archived file."
+        )
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      transaction.update(nodeRef, {
+        content,
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+
+      const logRef = await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorId, email: actorEmail, role },
+          action: "content.update",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          context: buildContext(request),
+          changes: {
+            fields: ["content"],
+          },
+        },
+        { transaction }
+      )
+
+      return {
+        nodeId,
+        updated: true,
+        logId: logRef.id,
+      }
+    })
+  }
+)
 
 // =============================================================================
 // Membership CRUD Operations
@@ -1390,7 +1429,7 @@ export const updateWorkspaceNodeContent = onCall(async (request) => {
 
 const validRoles: IMembershipRole[] = ["owner", "admin", "member", "guest"]
 
-export const assignRoleToUser = onCall(async (request) => {
+export const assignRoleToUser = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -1447,10 +1486,14 @@ export const assignRoleToUser = onCall(async (request) => {
     }
 
     // Check if changing from owner - must have at least one owner
+    // COST OPTIMIZATION: limit(2) is sufficient — we only need to know
+    // if there's more than 1 owner, not the exact count.
     if (beforeRole === "owner" && role !== "owner") {
       const membershipsSnap = await db
         .collection(`teams/${teamId}/memberships`)
         .where("role", "==", "owner")
+        .select()
+        .limit(COST_BUDGET.OWNER_CHECK_LIMIT)
         .get()
       if (membershipsSnap.size <= 1) {
         throw new HttpsError(
@@ -1491,7 +1534,7 @@ export const assignRoleToUser = onCall(async (request) => {
   })
 })
 
-export const removeMember = onCall(async (request) => {
+export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -1531,10 +1574,13 @@ export const removeMember = onCall(async (request) => {
     const targetEmail = membershipData?.user?.email ?? undefined
 
     // Check if removing last owner
+    // COST OPTIMIZATION: limit(2) + select() — only need to know if >1 owner exists
     if (targetRole === "owner") {
       const membershipsSnap = await db
         .collection(`teams/${teamId}/memberships`)
         .where("role", "==", "owner")
+        .select()
+        .limit(COST_BUDGET.OWNER_CHECK_LIMIT)
         .get()
       if (membershipsSnap.size <= 1) {
         throw new HttpsError(
@@ -1545,8 +1591,11 @@ export const removeMember = onCall(async (request) => {
     }
 
     // Check if removing last member
+    // COST OPTIMIZATION: limit(2) + select() — only need to know if >1 member exists
     const allMembershipsSnap = await db
       .collection(`teams/${teamId}/memberships`)
+      .select()
+      .limit(COST_BUDGET.MEMBER_CHECK_LIMIT)
       .get()
     if (allMembershipsSnap.size <= 1) {
       throw new HttpsError(
@@ -1598,7 +1647,7 @@ export const removeMember = onCall(async (request) => {
   })
 })
 
-export const removeMembers = onCall(async (request) => {
+export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -1672,8 +1721,10 @@ export const removeMembers = onCall(async (request) => {
     }
 
     // Get all memberships to check constraints
+    // COST OPTIMIZATION: select("role") — we only need the role field for the constraint check
     const allMembershipsSnap = await db
       .collection(`teams/${teamId}/memberships`)
+      .select("role")
       .get()
 
     const userIdSet = new Set(userIds)
@@ -1758,7 +1809,7 @@ export const removeMembers = onCall(async (request) => {
 /**
  * Send a new invitation to join a team.
  */
-export const sendInvitation = onCall(async (request) => {
+export const sendInvitation = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
@@ -1768,8 +1819,24 @@ export const sendInvitation = onCall(async (request) => {
   const actorId = request.auth.uid
   const actorEmail = request.auth.token.email ?? undefined
 
+  // COST OPTIMIZATION: Parallelize independent reads.
+  // Permission check, user-exists check, pending-invitation check, and team-doc fetch
+  // have no data dependencies and can run concurrently (~4 round-trips → ~1).
+  const [actorRole, userQuery, existingInvites, teamSnap] = await Promise.all([
+    getTeamRole(teamId, actorId),
+    db.collection("users").where("email", "==", email).select().limit(1).get(),
+    db
+      .collection("invitations")
+      .where("teamId", "==", teamId)
+      .where("email", "==", email)
+      .where("status", "==", "pending")
+      .select()
+      .limit(1)
+      .get(),
+    db.doc(`teams/${teamId}`).get(),
+  ])
+
   // 1. Check Permissions
-  const actorRole = await getTeamRole(teamId, actorId)
   if (
     !can(actorId, Capabilities.INVITE_MEMBER, {
       scope: "team",
@@ -1783,10 +1850,6 @@ export const sendInvitation = onCall(async (request) => {
   }
 
   // 2. Check if user is already a member
-  // querying by email to find userId
-  const usersRef = db.collection("users")
-  const userQuery = await usersRef.where("email", "==", email).get()
-
   if (!userQuery.empty) {
     const targetUserId = userQuery.docs[0].id
     const membershipRef = db.doc(`teams/${teamId}/memberships/${targetUserId}`)
@@ -1801,13 +1864,6 @@ export const sendInvitation = onCall(async (request) => {
   }
 
   // 3. Check for existing pending invitation
-  const invitationsRef = db.collection("invitations")
-  const existingInvites = await invitationsRef
-    .where("teamId", "==", teamId)
-    .where("email", "==", email)
-    .where("status", "==", "pending")
-    .get()
-
   if (!existingInvites.empty) {
     throw new HttpsError(
       "already-exists",
@@ -1815,9 +1871,7 @@ export const sendInvitation = onCall(async (request) => {
     )
   }
 
-  // 4. Create Invitation
-  const teamRef = db.doc(`teams/${teamId}`)
-  const teamSnap = await teamRef.get()
+  // 4. Get team data for invitation
   if (!teamSnap.exists) {
     throw new HttpsError("not-found", "Team not found.")
   }
@@ -1831,7 +1885,7 @@ export const sendInvitation = onCall(async (request) => {
     .join("")
 
   const now = admin.firestore.FieldValue.serverTimestamp()
-  const invitationRef = invitationsRef.doc()
+  const invitationRef = db.collection("invitations").doc()
 
   const invitationData: InvitationData = {
     teamId,
@@ -1866,7 +1920,7 @@ export const sendInvitation = onCall(async (request) => {
 /**
  * Resend an existing invitation.
  */
-export const resendInvitation = onCall(async (request) => {
+export const resendInvitation = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const invitationId = assertString(request.data?.invitationId, "invitationId")
@@ -1918,7 +1972,7 @@ export const resendInvitation = onCall(async (request) => {
 /**
  * Update the role of a pending invitation.
  */
-export const updateInvitationRole = onCall(async (request) => {
+export const updateInvitationRole = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const invitationId = assertString(request.data?.invitationId, "invitationId")
@@ -1974,7 +2028,7 @@ export const updateInvitationRole = onCall(async (request) => {
 /**
  * Cancel/Delete an invitation.
  */
-export const cancelInvitation = onCall(async (request) => {
+export const cancelInvitation = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const invitationId = assertString(request.data?.invitationId, "invitationId")
@@ -2026,7 +2080,7 @@ export const cancelInvitation = onCall(async (request) => {
 /**
  * Decline an invitation (called by the user who was invited).
  */
-export const declineInvitation = onCall(async (request) => {
+export const declineInvitation = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const invitationId = assertString(request.data?.invitationId, "invitationId")

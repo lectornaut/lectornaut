@@ -202,7 +202,9 @@ const companySizes = [
 const router = useRouter()
 
 const startOnboarding = () => {
-  updateUserData({ onboarding: true })
+  void updateUserData({ onboarding: true }).catch((error) => {
+    console.error("[support] Failed to persist onboarding preference:", error)
+  })
   router.push("/welcome")
 }
 </script>

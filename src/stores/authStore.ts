@@ -17,18 +17,18 @@ import {
   updateUserInMemberships,
   uploadUserPhoto,
 } from "@/utils/firebase/firebase-helpers"
+import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
 import {
   cloneState,
   createPendingSet,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import type { User } from "firebase/auth"
 import {
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  type Timestamp,
-} from "firebase/firestore"
+  buildUpdatedAtBaseVersion,
+  mutateUpdateDocument,
+} from "@/utils/firebase/firebase-sync-engine"
+import type { User } from "firebase/auth"
+import { serverTimestamp, setDoc, type Timestamp } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
 import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
@@ -185,28 +185,29 @@ export const useAuthStore = defineStore("auth", () => {
 
     const previousUserProfile = cloneState(userProfile.value)
 
-    await withOptimisticUpdate(
-      pendingUserIds,
-      currentUser.value.uid,
-      // Apply optimistic update
-      () => {
+    await mutateWithCoordinator({
+      id: currentUser.value.uid,
+      source: "auth.setCurrentTeamId",
+      pendingIds: pendingUserIds,
+      applyLocal: () => {
         optimisticUserProfile.value = {
           ...userProfile.value!,
           currentTeamId: teamId,
         }
       },
-      // Rollback on error
-      () => {
+      rollbackLocal: () => {
         optimisticUserProfile.value = previousUserProfile
       },
-      // Firestore operation
-      async () => {
-        await updateDoc(getUserRef(currentUser.value!.uid), {
+      mutation: {
+        source: "auth.setCurrentTeamId",
+        targetPath: getUserRef(currentUser.value.uid).path,
+        type: "update",
+        data: {
           currentTeamId: teamId,
-          updatedAt: serverTimestamp(),
-        })
-      }
-    )
+        },
+        baseVersion: buildUpdatedAtBaseVersion(previousUserProfile?.updatedAt),
+      },
+    })
   }
 
   /**
@@ -244,7 +245,6 @@ export const useAuthStore = defineStore("auth", () => {
     const firestoreUpdates = {
       ...userUpdates,
       ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
-      updatedAt: serverTimestamp(),
     }
 
     await withOptimisticUpdate(
@@ -286,7 +286,14 @@ export const useAuthStore = defineStore("auth", () => {
 
         // Update User Document
         if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
-          promises.push(updateDoc(userRef, firestoreUpdates))
+          promises.push(
+            mutateUpdateDocument(userRef, firestoreUpdates, {
+              source: "auth.updateUserProfile",
+              baseVersion: buildUpdatedAtBaseVersion(
+                previousUserProfile?.updatedAt
+              ),
+            })
+          )
         }
 
         // Update all memberships with new user data

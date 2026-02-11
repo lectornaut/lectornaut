@@ -1,17 +1,11 @@
-import admin from "firebase-admin"
 import {
   CallableRequest,
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { admin, db } from "./firebase.js"
+import { CALLABLE_OPTS } from "./runtimeConfig.js"
 import { InvitationData, NotificationStatus } from "./types.js"
-
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp()
-}
-
-const db = admin.firestore()
 
 /**
  * Generic helper to update or delete multiple notifications in batch.
@@ -124,6 +118,39 @@ export const deleteAllNotifications = onCall((request) =>
   )
 )
 
+/**
+ * Delete a single notification by ID.
+ * Used for individual notification deletion (sync engine blocks delete operations on notifications).
+ */
+export const deleteNotification = onCall(CALLABLE_OPTS, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    )
+  }
+
+  const uid = request.auth.uid
+  const notificationId = request.data?.notificationId
+
+  if (!notificationId || typeof notificationId !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      "Notification ID is required and must be a string."
+    )
+  }
+
+  const notificationRef = db.doc(`users/${uid}/notifications/${notificationId}`)
+  const snap = await notificationRef.get()
+
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Notification not found.")
+  }
+
+  await notificationRef.delete()
+  return { success: true }
+})
+
 // ============================================================================
 // Invitation Helpers
 // ============================================================================
@@ -132,7 +159,7 @@ export const deleteAllNotifications = onCall((request) =>
  * Accept an invitation by ID.
  * Runs server-side to validate email, create membership, and clean up.
  */
-export const acceptInvitation = onCall(async (request) => {
+export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
       "unauthenticated",
