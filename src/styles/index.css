@@ -24,28 +24,28 @@
   }
 
   body {
+    --grade-axis: 0;
+
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     font-variation-settings: "GRAD" var(--grade-axis);
 
-    --grade-axis: 0;
-
-    @apply selection:bg-primary/25;
     @apply h-dvh;
     @apply w-dvw;
     @apply bg-linear-to-b;
     @apply from-background/95;
-    @apply to-background/90;
+    @apply to-background/75;
+    @apply text-sm;
     @apply text-foreground;
+    @apply font-flex;
     @apply select-none;
+    @apply selection:bg-primary/25;
     @apply overflow-auto;
     @apply overscroll-none;
     @apply scroll-smooth;
     @apply accent-current;
     @apply antialiased;
-    @apply font-flex;
-    @apply text-sm;
   }
 
   @media (prefers-contrast: more) {
@@ -80,15 +80,6 @@
 
   /* Global custom properties used across the app and component libraries */
   :root {
-    @apply overflow-auto;
-    @apply overscroll-none;
-    @apply scroll-smooth;
-    @apply pl-safe-left;
-    @apply pr-safe-right;
-    @apply pt-safe-top;
-    @apply pb-safe-bottom;
-    @apply text-size;
-
     --vis-tooltip-background-color: none;
     --vis-tooltip-border-color: none;
     --vis-tooltip-text-color: none;
@@ -108,6 +99,15 @@
     font-synthesis: none;
     text-rendering: optimizelegibility;
     interpolate-size: allow-keywords;
+
+    @apply overflow-auto;
+    @apply overscroll-none;
+    @apply scroll-smooth;
+    @apply pl-safe-left;
+    @apply pr-safe-right;
+    @apply pt-safe-top;
+    @apply pb-safe-bottom;
+    @apply text-size;
   }
 
   /* ::-webkit-scrollbar {

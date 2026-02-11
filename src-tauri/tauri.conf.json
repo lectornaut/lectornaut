@@ -58,6 +58,9 @@
     "macOS": {
       "dmg": {
         "background": "icons/dmg/background.png"
+      },
+      "files": {
+        "Resources/Assets.car": "resources/Assets.car"
       }
     }
   },
@@ -71,7 +74,7 @@
     "updater": {
       "active": true,
       "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgzODgzNzc5MTdGNDY5QzYKUldUR2FmUVhlVGVJZ3hwaWlKWGpGU0tqUTU3VEppalQ4Vmx6eEswRG1kYUpuaGEwZTFVT1NxVnMK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVCMDExODg1MURDOTlGM0YKUldRL244a2RoUmdCNjJPMEVvaEpaYUUvWDVYWTBTcVdYMEg5NllBTUpNQVIwUGRZR0J0Wnc5Z0QK",
       "endpoints": [
         "https://github.com/lectornaut/lectornaut/releases/latest/download/latest.json"
       ]
