@@ -13,6 +13,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+dotenvy = "0.15"
 
 [dependencies]
 # https://crates.io/crates/tauri/versions
@@ -58,6 +59,10 @@ url = "2.5"
 tokio = { version = "1", features = ["full"] }
 # Rendering for Tray Icon
 tiny-skia = "0.11"
+# HMAC signing for App Check custom provider proof
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
 
 [profile.dev]
 incremental = true # Compile your binary in smaller steps.

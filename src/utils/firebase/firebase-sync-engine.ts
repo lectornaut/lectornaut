@@ -850,7 +850,7 @@ export function enqueue(
 ): EnqueuedSyncOperation {
   ensureInitialized()
   if (!isRunning.value) {
-    startSync()
+    initSync()
   }
 
   const userId = activeUserId.value ?? auth.currentUser?.uid ?? null
@@ -915,7 +915,7 @@ export function enqueue(
   }
 }
 
-export function startSync(): void {
+export function initSync(): void {
   ensureInitialized()
   isRunning.value = true
 
@@ -1007,7 +1007,7 @@ export function publishCanonical(event: SyncCanonicalEvent): void {
 }
 
 export const syncEngine = {
-  startSync,
+  initSync,
   stopSync,
   mutate,
   enqueue,

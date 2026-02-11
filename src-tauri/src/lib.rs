@@ -7,6 +7,7 @@ use window_vibrancy::*;
 
 mod magic_link;
 mod oauth;
+mod app_check;
 
 #[derive(Clone, serde::Serialize)]
 struct Payload {
@@ -49,7 +50,8 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![
             oauth::login_oauth,
-            magic_link::listen_magic_link
+            magic_link::listen_magic_link,
+            app_check::build_app_check_proof
         ])
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]

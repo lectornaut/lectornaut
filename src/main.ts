@@ -1,5 +1,6 @@
 import App from "@/App.vue"
 import { isTauri } from "@/composables/usePlatform"
+import { createAppCheckModule } from "@/modules/appCheck"
 import { initKeychain } from "@/modules/auth"
 import { firebaseApp } from "@/modules/firebase"
 import { initHotkeys } from "@/modules/hotkeys"
@@ -9,18 +10,17 @@ import { router } from "@/modules/router"
 import { initTheme } from "@/modules/theme"
 import { initUpdater } from "@/modules/updater"
 import "@/styles/index.css"
-import { startSync } from "@/utils/firebase/firebase-sync-engine"
+import { initSync } from "@/utils/firebase/firebase-sync-engine"
 import "@geoql/v-maplibre/dist/v-maplibre.css"
 import { InferSeoMetaPlugin } from "@unhead/addons"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
-import { ReCaptchaEnterpriseProvider } from "firebase/app-check"
 import "maplibre-gl/dist/maplibre-gl.css"
 import "overlayscrollbars/overlayscrollbars.css"
 import { createPinia } from "pinia"
 import "unfonts.css"
 import "vue-sonner/style.css"
-import { VueFire, VueFireAppCheck, VueFireAuth } from "vuefire"
+import { VueFire, VueFireAuth } from "vuefire"
 import "xterminal/dist/xterminal.css"
 import "~console/theme-detect"
 
@@ -32,19 +32,7 @@ const app = createApp(App)
 
 app.use(VueFire, {
   firebaseApp,
-  modules: [
-    VueFireAppCheck({
-      debug:
-        process.env.NODE_ENV !== "production"
-          ? import.meta.env.VITE_APPCHECK_DEBUG_TOKEN
-          : false,
-      provider: new ReCaptchaEnterpriseProvider(
-        import.meta.env.VITE_RECAPTCHA_ENTERPRISE_KEY
-      ),
-      isTokenAutoRefreshEnabled: true,
-    }),
-    VueFireAuth(),
-  ],
+  modules: [createAppCheckModule(), VueFireAuth()],
 })
 app.use(router)
 app.use(head)
@@ -65,4 +53,4 @@ initLanguage()
 initHotkeys()
 initPwa()
 initKeychain()
-startSync()
+initSync()
