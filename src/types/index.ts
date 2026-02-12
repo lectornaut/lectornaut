@@ -1,3 +1,11 @@
+import type {
+  AccentId,
+  BaseId,
+  FontId,
+  LanguageId,
+  SizeId,
+  ThemeId,
+} from "@/helpers/defaults"
 import { Timestamp } from "firebase/firestore"
 
 // ============================================================================
@@ -201,6 +209,49 @@ export type SyncOperationStatus = "pending" | "sent" | "acked" | "rejected"
 export interface SyncBaseVersion {
   field: string
   value: number | string | null
+}
+
+// ============================================================================
+// Layout Types
+// ============================================================================
+
+export type ThemeMode = ThemeId
+export type IconDisplay = "icon" | "text"
+
+export interface LayoutTab {
+  id: string
+  name: string
+  fullPath: string
+}
+
+export interface NavigationUiState {
+  headerIconDisplay: IconDisplay
+  footerIconDisplay: IconDisplay
+  sidebarOpen: boolean
+  leftPanelCollapsed: boolean
+  rightPanelCollapsed: boolean
+  bottomPanelCollapsed: boolean
+}
+
+export interface LayoutTabsDoc {
+  tabs?: LayoutTab[]
+  active?: string
+  recentlyClosed?: LayoutTab[]
+}
+
+export interface LayoutNavigationDoc {
+  visibleItems?: Record<string, boolean>
+  order?: string[]
+  ui?: Partial<NavigationUiState>
+}
+
+export interface LayoutThemeDoc {
+  mode?: ThemeMode
+  base?: BaseId
+  accent?: AccentId
+  font?: FontId
+  size?: SizeId
+  language?: LanguageId
 }
 
 // ============================================================================

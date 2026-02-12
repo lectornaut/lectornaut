@@ -34,8 +34,8 @@
     @apply h-dvh;
     @apply w-dvw;
     @apply bg-linear-to-b;
-    @apply from-background/95;
-    @apply to-background/75;
+    @apply from-secondary/95;
+    @apply to-secondary/90;
     @apply text-sm;
     @apply text-foreground;
     @apply font-flex;

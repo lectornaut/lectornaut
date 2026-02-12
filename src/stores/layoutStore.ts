@@ -14,7 +14,6 @@ import type {
   FontId,
   LanguageId,
   SizeId,
-  ThemeId,
 } from "@/helpers/defaults"
 import {
   defaultAccent,
@@ -27,6 +26,15 @@ import {
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
+import type {
+  IconDisplay,
+  LayoutNavigationDoc,
+  LayoutTab,
+  LayoutTabsDoc,
+  LayoutThemeDoc,
+  NavigationUiState,
+  ThemeMode,
+} from "@/types"
 import {
   addPending,
   cloneState,
@@ -41,22 +49,23 @@ import { collection, doc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
-export type Tab = {
-  id: string
-  name: string
-  fullPath: string
-}
-
+export type Tab = LayoutTab
 export type NavItem = (typeof defaultMenu)[number]
-
-export type ThemeMode = ThemeId
-export type IconDisplay = "icon" | "text"
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
 const isIconDisplay = (value: unknown): value is IconDisplay =>
   value === "icon" || value === "text"
+
+const toLayoutTabsDoc = (value: unknown): LayoutTabsDoc | null =>
+  isRecord(value) ? (value as LayoutTabsDoc) : null
+
+const toLayoutNavigationDoc = (value: unknown): LayoutNavigationDoc | null =>
+  isRecord(value) ? (value as LayoutNavigationDoc) : null
+
+const toLayoutThemeDoc = (value: unknown): LayoutThemeDoc | null =>
+  isRecord(value) ? (value as LayoutThemeDoc) : null
 
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
@@ -108,6 +117,10 @@ export const useLayoutStore = defineStore("layout", () => {
   // Pending operation tracking
   const pendingTabIds = shallowRef(createPendingSet())
   const pendingNavigation = shallowRef(false)
+  const pendingNavigationUi = shallowRef(false)
+  const isNavigationUiPersistQueued = ref(false)
+  const isApplyingNavigationUiSnapshot = shallowRef(false)
+  const navigationUiDirty = ref(false)
   const pendingTheme = shallowRef(false)
   const isThemePersistQueued = ref(false)
 
@@ -136,6 +149,29 @@ export const useLayoutStore = defineStore("layout", () => {
 
   /** Check if any tab operation is pending */
   const hasAnyTabPending = computed(() => pendingTabIds.value.size > 0)
+
+  const getNavigationUiState = (): NavigationUiState => ({
+    headerIconDisplay: headerIconDisplay.value,
+    footerIconDisplay: footerIconDisplay.value,
+    sidebarOpen: sidebarOpen.value,
+    leftPanelCollapsed: leftPanelCollapsed.value,
+    rightPanelCollapsed: rightPanelCollapsed.value,
+    bottomPanelCollapsed: bottomPanelCollapsed.value,
+  })
+
+  const isNavigationUiSnapshotInSync = (ui: Partial<NavigationUiState>) =>
+    isIconDisplay(ui.headerIconDisplay) &&
+    ui.headerIconDisplay === headerIconDisplay.value &&
+    isIconDisplay(ui.footerIconDisplay) &&
+    ui.footerIconDisplay === footerIconDisplay.value &&
+    typeof ui.sidebarOpen === "boolean" &&
+    ui.sidebarOpen === sidebarOpen.value &&
+    typeof ui.leftPanelCollapsed === "boolean" &&
+    ui.leftPanelCollapsed === leftPanelCollapsed.value &&
+    typeof ui.rightPanelCollapsed === "boolean" &&
+    ui.rightPanelCollapsed === rightPanelCollapsed.value &&
+    typeof ui.bottomPanelCollapsed === "boolean" &&
+    ui.bottomPanelCollapsed === bottomPanelCollapsed.value
 
   // ============================================================================
   // Firestore Refs
@@ -218,9 +254,11 @@ export const useLayoutStore = defineStore("layout", () => {
         recentlyClosed.value = []
         return
       }
-      tabs.value = doc.tabs ?? []
-      activeTabId.value = doc.active ?? ""
-      recentlyClosed.value = doc.recentlyClosed ?? []
+
+      const tabsDoc = toLayoutTabsDoc(doc)
+      tabs.value = tabsDoc?.tabs ?? []
+      activeTabId.value = tabsDoc?.active ?? ""
+      recentlyClosed.value = tabsDoc?.recentlyClosed ?? []
     },
     { immediate: true }
   )
@@ -241,68 +279,91 @@ export const useLayoutStore = defineStore("layout", () => {
     }
   )
 
+  // Mark UI prefs as dirty immediately when changed locally.
+  watch(
+    [
+      headerIconDisplay,
+      footerIconDisplay,
+      sidebarOpen,
+      leftPanelCollapsed,
+      rightPanelCollapsed,
+      bottomPanelCollapsed,
+    ],
+    () => {
+      if (isApplyingNavigationUiSnapshot.value) return
+      navigationUiDirty.value = true
+    },
+    { flush: "sync" }
+  )
+
   // Watch Navigation Data - protected against optimistic overwrites
   watch(
     navDocData,
     (doc) => {
-      if (!doc) {
+      const navigationDoc = toLayoutNavigationDoc(doc)
+      if (!navigationDoc) {
         if (!pendingNavigation.value && !navPending.value) {
           activeNavItems.value = [...defaultMenu]
         }
         return
       }
 
-      const ui = isRecord(doc.ui) ? doc.ui : null
-      if (ui) {
-        if (
-          "headerIconDisplay" in ui &&
-          isIconDisplay(ui.headerIconDisplay) &&
-          ui.headerIconDisplay !== headerIconDisplay.value
-        ) {
-          headerIconDisplay.value = ui.headerIconDisplay
-        }
-        if (
-          "footerIconDisplay" in ui &&
-          isIconDisplay(ui.footerIconDisplay) &&
-          ui.footerIconDisplay !== footerIconDisplay.value
-        ) {
-          footerIconDisplay.value = ui.footerIconDisplay
-        }
-        if (
-          "sidebarOpen" in ui &&
-          typeof ui.sidebarOpen === "boolean" &&
-          ui.sidebarOpen !== sidebarOpen.value
-        ) {
-          sidebarOpen.value = ui.sidebarOpen
-        }
-        if (
-          "leftPanelCollapsed" in ui &&
-          typeof ui.leftPanelCollapsed === "boolean" &&
-          ui.leftPanelCollapsed !== leftPanelCollapsed.value
-        ) {
-          leftPanelCollapsed.value = ui.leftPanelCollapsed
-        }
-        if (
-          "rightPanelCollapsed" in ui &&
-          typeof ui.rightPanelCollapsed === "boolean" &&
-          ui.rightPanelCollapsed !== rightPanelCollapsed.value
-        ) {
-          rightPanelCollapsed.value = ui.rightPanelCollapsed
-        }
-        if (
-          "bottomPanelCollapsed" in ui &&
-          typeof ui.bottomPanelCollapsed === "boolean" &&
-          ui.bottomPanelCollapsed !== bottomPanelCollapsed.value
-        ) {
-          bottomPanelCollapsed.value = ui.bottomPanelCollapsed
+      const ui = isRecord(navigationDoc.ui) ? navigationDoc.ui : null
+      if (ui && navigationUiDirty.value && isNavigationUiSnapshotInSync(ui)) {
+        navigationUiDirty.value = false
+      }
+
+      if (ui && !pendingNavigationUi.value && !navigationUiDirty.value) {
+        isApplyingNavigationUiSnapshot.value = true
+        try {
+          if (
+            isIconDisplay(ui.headerIconDisplay) &&
+            ui.headerIconDisplay !== headerIconDisplay.value
+          ) {
+            headerIconDisplay.value = ui.headerIconDisplay
+          }
+          if (
+            isIconDisplay(ui.footerIconDisplay) &&
+            ui.footerIconDisplay !== footerIconDisplay.value
+          ) {
+            footerIconDisplay.value = ui.footerIconDisplay
+          }
+          if (
+            typeof ui.sidebarOpen === "boolean" &&
+            ui.sidebarOpen !== sidebarOpen.value
+          ) {
+            sidebarOpen.value = ui.sidebarOpen
+          }
+          if (
+            typeof ui.leftPanelCollapsed === "boolean" &&
+            ui.leftPanelCollapsed !== leftPanelCollapsed.value
+          ) {
+            leftPanelCollapsed.value = ui.leftPanelCollapsed
+          }
+          if (
+            typeof ui.rightPanelCollapsed === "boolean" &&
+            ui.rightPanelCollapsed !== rightPanelCollapsed.value
+          ) {
+            rightPanelCollapsed.value = ui.rightPanelCollapsed
+          }
+          if (
+            typeof ui.bottomPanelCollapsed === "boolean" &&
+            ui.bottomPanelCollapsed !== bottomPanelCollapsed.value
+          ) {
+            bottomPanelCollapsed.value = ui.bottomPanelCollapsed
+          }
+        } finally {
+          isApplyingNavigationUiSnapshot.value = false
         }
       }
 
       // Skip nav reconciliation if navigation operation is pending
       if (pendingNavigation.value) return
 
-      const savedVisibility = doc.visibleItems || {}
-      const savedOrder: string[] = doc.order || []
+      const savedVisibility = navigationDoc.visibleItems ?? {}
+      const savedOrder = (navigationDoc.order ?? []).filter(
+        (value): value is string => typeof value === "string"
+      )
 
       const visibleIds = new Set<string>()
       for (const item of defaultMenu) {
@@ -340,17 +401,34 @@ export const useLayoutStore = defineStore("layout", () => {
       // Skip if theme operation is pending
       if (pendingTheme.value) return
 
-      if (!doc) return
+      const themeDoc = toLayoutThemeDoc(doc)
+      if (!themeDoc) return
       // Only sync if values differ (avoids unnecessary localStorage writes)
       // Use 'in' operator to check for key existence rather than truthy value
-      if ("mode" in doc && doc.mode !== mode.value) mode.value = doc.mode
-      if ("base" in doc && doc.base !== base.value) base.value = doc.base
-      if ("accent" in doc && doc.accent !== accent.value)
-        accent.value = doc.accent
-      if ("font" in doc && doc.font !== font.value) font.value = doc.font
-      if ("size" in doc && doc.size !== size.value) size.value = doc.size
-      if ("language" in doc && doc.language !== language.value)
-        language.value = doc.language
+      if ("mode" in themeDoc && themeDoc.mode && themeDoc.mode !== mode.value)
+        mode.value = themeDoc.mode
+      if ("base" in themeDoc && themeDoc.base && themeDoc.base !== base.value)
+        base.value = themeDoc.base
+      if (
+        "accent" in themeDoc &&
+        themeDoc.accent &&
+        themeDoc.accent !== accent.value
+      ) {
+        accent.value = themeDoc.accent
+      }
+      if ("font" in themeDoc && themeDoc.font && themeDoc.font !== font.value) {
+        font.value = themeDoc.font
+      }
+      if ("size" in themeDoc && themeDoc.size && themeDoc.size !== size.value) {
+        size.value = themeDoc.size
+      }
+      if (
+        "language" in themeDoc &&
+        themeDoc.language &&
+        themeDoc.language !== language.value
+      ) {
+        language.value = themeDoc.language
+      }
     },
     { immediate: true }
   )
@@ -421,14 +499,7 @@ export const useLayoutStore = defineStore("layout", () => {
     return safeSetDoc(
       navigationDocRef.value,
       {
-        ui: {
-          headerIconDisplay: headerIconDisplay.value,
-          footerIconDisplay: footerIconDisplay.value,
-          sidebarOpen: sidebarOpen.value,
-          leftPanelCollapsed: leftPanelCollapsed.value,
-          rightPanelCollapsed: rightPanelCollapsed.value,
-          bottomPanelCollapsed: bottomPanelCollapsed.value,
-        },
+        ui: getNavigationUiState(),
       },
       "layout.navigation.ui.persist"
     )
@@ -471,6 +542,46 @@ export const useLayoutStore = defineStore("layout", () => {
       },
       "layout.theme.persist"
     )
+  }
+
+  /**
+   * Persist UI layout state with global sync queue tracking.
+   * Queues one extra run when rapid toggle changes happen during a save.
+   */
+  async function persistNavigationUiWithSync(): Promise<void> {
+    if (!navigationDocRef.value) return
+
+    if (pendingNavigationUi.value) {
+      isNavigationUiPersistQueued.value = true
+      return
+    }
+
+    pendingNavigationUi.value = true
+    isNavigationUiPersistQueued.value = false
+
+    try {
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persistNavigationUiState()
+          if (!success) {
+            throw new Error("Failed to persist navigation ui state")
+          }
+        },
+        {
+          id: "navigation-ui",
+          source: "layout.navigation.ui.persist",
+        }
+      )
+    } catch (error) {
+      // Keep local state and avoid revert; the next local change will retry.
+      console.error("[layoutStore] persistNavigationUi failed:", error)
+    } finally {
+      pendingNavigationUi.value = false
+
+      if (isNavigationUiPersistQueued.value) {
+        void persistNavigationUiWithSync()
+      }
+    }
   }
 
   /**
@@ -549,7 +660,8 @@ export const useLayoutStore = defineStore("layout", () => {
       bottomPanelCollapsed,
     ],
     () => {
-      persistNavigationUiState()
+      if (!navigationUiDirty.value) return
+      void persistNavigationUiWithSync()
     },
     { debounce: 500 }
   )

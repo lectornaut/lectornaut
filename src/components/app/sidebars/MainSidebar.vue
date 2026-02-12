@@ -34,7 +34,7 @@ function closeSidebarOnMobile() {
     <ContextMenuTrigger>
       <Sidebar
         collapsible="icon"
-        class="inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-2xl border-0 border-y border-r shadow-sm"
+        class="inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-2xl border border-l-0 shadow-sm"
       >
         <SidebarHeader
           data-tauri-drag-region
@@ -78,7 +78,7 @@ function closeSidebarOnMobile() {
           <CreateMenu />
           <AccountMenu />
         </SidebarFooter>
-        <SidebarRail class="my-13.5" />
+        <SidebarRail />
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent align="start" side="bottom">
