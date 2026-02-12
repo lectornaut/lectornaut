@@ -1,10 +1,9 @@
 <script lang="ts" setup>
+import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconX } from "@/data/icons"
-import { validateImageFile } from "@/helpers/imageFile"
 import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types"
-import { toast } from "vue-sonner"
 
 const props = defineProps<{
   open?: boolean
@@ -37,50 +36,45 @@ const workspaceDescription = ref("")
 // Photo Upload State
 const photoFile = ref<File | null>(null)
 const photoPreview = ref<string | null>(null)
-const {
-  files,
-  open: openFileDialog,
-  reset,
-} = useFileDialog({
-  accept: "image/*",
-  multiple: false,
-})
-
-watch(files, (newFiles) => {
-  if (!newFiles || newFiles.length === 0) return
-  const file = newFiles.item(0)
-  if (!file) return
-  const res = validateImageFile(file)
-  if (!res.ok) {
-    toast.error(res.message)
-    return
-  }
-  // Revoke previous blob URL to avoid leaks
+const revokeBlobUrl = () => {
   if (photoPreview.value?.startsWith("blob:")) {
     URL.revokeObjectURL(photoPreview.value)
   }
-  photoFile.value = file
-  photoPreview.value = URL.createObjectURL(file)
+}
+
+const workspacePhotoUpload = usePhotoUpload({
+  canUpload: () =>
+    (props.mode === "create" && canCreateWorkspace.value) ||
+    (props.mode === "edit" && canUpdateWorkspace.value),
+  onUpload: async (_id, file) => {
+    revokeBlobUrl()
+    photoFile.value = file
+    photoPreview.value = URL.createObjectURL(file)
+  },
 })
 
-const removePhoto = () => {
-  if (photoPreview.value && photoPreview.value.startsWith("blob:")) {
-    URL.revokeObjectURL(photoPreview.value)
+const triggerWorkspacePhotoSelection = () => {
+  if (
+    (props.mode === "create" && !canCreateWorkspace.value) ||
+    (props.mode === "edit" && !canUpdateWorkspace.value)
+  ) {
+    return
   }
+  workspacePhotoUpload.triggerUpload(props.workspace?.id || "draft-workspace")
+}
+
+const removePhoto = () => {
+  revokeBlobUrl()
   photoFile.value = null
   photoPreview.value = null
-  reset()
 }
 
 const resetForm = () => {
-  if (photoPreview.value && photoPreview.value.startsWith("blob:")) {
-    URL.revokeObjectURL(photoPreview.value)
-  }
+  revokeBlobUrl()
   workspaceName.value = ""
   workspaceDescription.value = ""
   photoFile.value = null
   photoPreview.value = null
-  reset()
 }
 
 // Sync internal open state with prop
@@ -189,11 +183,7 @@ const handleSubmit = async () => {
                             (canCreateWorkspace && mode === 'create') ||
                             (canUpdateWorkspace && mode === 'edit'),
                         }"
-                        @click="
-                          ((canCreateWorkspace && mode === 'create') ||
-                            (canUpdateWorkspace && mode === 'edit')) &&
-                          openFileDialog({ accept: 'image/*', multiple: false })
-                        "
+                        @click="triggerWorkspacePhotoSelection"
                       >
                         <AvatarImage
                           class="size-16 rounded-md"

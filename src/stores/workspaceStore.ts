@@ -448,55 +448,76 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
     const teamId = currentTeamId.value
     const { name, description, photoFile } = updates
-
-    // Upload photo first if provided (outside of cloud function)
-    let photoURL: string | null | undefined = undefined
-    if (photoFile !== undefined) {
-      photoURL =
-        photoFile === null
-          ? null
-          : await uploadWorkspacePhoto(teamId, workspaceId, photoFile)
-    }
+    const optimisticPhotoURL =
+      photoFile instanceof File ? URL.createObjectURL(photoFile) : undefined
 
     // Prepare optimistic updates for workspace data
     const workspaceUpdates = {
       ...(name !== undefined ? { name } : {}),
       ...(description !== undefined ? { description } : {}),
-      ...(photoURL !== undefined ? { photoURL } : {}),
+      ...(photoFile === null
+        ? { photoURL: null }
+        : optimisticPhotoURL
+          ? { photoURL: optimisticPhotoURL }
+          : {}),
     }
 
     // Clone previous state for rollback
     const previousWorkspaces = cloneState(workspaces.value)
+    let resolvedPhotoURL: string | null | undefined =
+      photoFile === null ? null : undefined
 
-    await withOptimisticUpdate(
-      pendingWorkspaceIds,
-      workspaceId,
-      // Apply optimistic update
-      () => {
-        optimisticWorkspaces.value = workspaces.value.map((w) =>
-          w.id === workspaceId ? { ...w, ...workspaceUpdates } : w
-        )
-      },
-      // Rollback on error
-      () => {
-        optimisticWorkspaces.value = previousWorkspaces
-      },
-      // Cloud Function call
-      async () => {
-        await updateWorkspaceFn({
-          teamId,
-          workspaceId,
-          ...(name !== undefined ? { name } : {}),
-          ...(description !== undefined ? { description } : {}),
-          ...(photoURL !== undefined ? { photoURL } : {}),
-        })
+    try {
+      await withOptimisticUpdate(
+        pendingWorkspaceIds,
+        workspaceId,
+        // Apply optimistic update
+        () => {
+          optimisticWorkspaces.value = workspaces.value.map((w) =>
+            w.id === workspaceId ? { ...w, ...workspaceUpdates } : w
+          )
+        },
+        // Rollback on error
+        () => {
+          optimisticWorkspaces.value = previousWorkspaces
+        },
+        // Cloud Function call
+        async () => {
+          if (photoFile instanceof File) {
+            resolvedPhotoURL = await uploadWorkspacePhoto(
+              teamId,
+              workspaceId,
+              photoFile
+            )
+          }
 
-        // Cleanup photo object when profile picture is explicitly removed.
-        if (photoURL === null) {
-          await deleteWorkspacePhotoFile(teamId, workspaceId)
+          await updateWorkspaceFn({
+            teamId,
+            workspaceId,
+            ...(name !== undefined ? { name } : {}),
+            ...(description !== undefined ? { description } : {}),
+            ...(photoFile !== undefined
+              ? { photoURL: resolvedPhotoURL ?? null }
+              : {}),
+          })
+
+          if (photoFile !== undefined && resolvedPhotoURL !== undefined) {
+            optimisticWorkspaces.value = workspaces.value.map((w) =>
+              w.id === workspaceId ? { ...w, photoURL: resolvedPhotoURL } : w
+            )
+          }
+
+          // Cleanup photo object when profile picture is explicitly removed.
+          if (resolvedPhotoURL === null) {
+            await deleteWorkspacePhotoFile(teamId, workspaceId)
+          }
         }
+      )
+    } finally {
+      if (optimisticPhotoURL) {
+        URL.revokeObjectURL(optimisticPhotoURL)
       }
-    )
+    }
   }
 
   /**

@@ -5,7 +5,7 @@ import { IconBell, IconGift } from "@/data/icons"
 import { collection, doc } from "firebase/firestore"
 import { useCurrentUser, useDocument, useFirestore } from "vuefire"
 
-const { open, setOpen, isMobile } = useSidebar()
+const { open, setOpen, isMobile, setOpenMobile } = useSidebar()
 
 const db = useFirestore()
 const user = useCurrentUser()
@@ -23,6 +23,10 @@ const iconDisplay = computed({
 })
 
 const isFullscreen = useIsFullscreen()
+
+function closeSidebarOnMobile() {
+  if (isMobile.value) setOpenMobile(false)
+}
 </script>
 
 <template>
@@ -39,7 +43,7 @@ const isFullscreen = useIsFullscreen()
           <TeamSwitcher />
         </SidebarHeader>
         <Separator />
-        <SidebarContent>
+        <SidebarContent @click.capture="closeSidebarOnMobile">
           <OverlayScrollbarsWrapper data-tauri-drag-region>
             <Navigation />
           </OverlayScrollbarsWrapper>

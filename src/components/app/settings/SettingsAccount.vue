@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useKeychain } from "@/composables/useKeychain"
+import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import {
   IconAlertTriangle,
   IconAtSign,
@@ -10,7 +11,6 @@ import {
   IconPencil,
   IconX,
 } from "@/data/icons"
-import { validateImageFile } from "@/helpers/imageFile"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { updateUserData } from "@/queries/updateUserData"
@@ -63,23 +63,68 @@ const userDocRef = computed(() => {
 
 const { data: userData } = useDocument(userDocRef)
 
+const currentUsername = computed(() => userData.value?.username ?? "")
+const currentIsPublic = computed(() => userData.value?.isPublic ?? false)
+
+const optimisticUsername = ref<string | null>(null)
+const optimisticIsPublic = ref<boolean | null>(null)
+const hiddenProviderIds = ref<Set<string>>(new Set())
+const optimisticPhotoPreview = ref<string | null>(null)
+
+const effectiveUsername = computed(
+  () => optimisticUsername.value ?? currentUsername.value
+)
+
+const isPublic = computed(
+  () => optimisticIsPublic.value ?? currentIsPublic.value
+)
+
+const linkedProviders = computed(() => {
+  const hidden = hiddenProviderIds.value
+  return (user.value?.providerData ?? []).filter(
+    (provider) => !hidden.has(provider.providerId)
+  )
+})
+
 // ============================================================================
 // Form State
 // ============================================================================
 const localDisplayName = ref(user.value?.displayName ?? "")
-const localUsername = ref(userData.value?.username ?? "")
+const localUsername = ref(effectiveUsername.value)
 
 // Sync with external state changes
 watch(
   () => user.value?.displayName,
   (val) => {
-    if (val) localDisplayName.value = val
+    localDisplayName.value = val ?? ""
   }
 )
+watch(effectiveUsername, (val) => {
+  localUsername.value = val
+})
+
+watch(currentUsername, (value) => {
+  if (
+    optimisticUsername.value !== null &&
+    usernamesMatch(value, optimisticUsername.value)
+  ) {
+    optimisticUsername.value = null
+  }
+})
+
+watch(currentIsPublic, (value) => {
+  if (optimisticIsPublic.value !== null && value === optimisticIsPublic.value) {
+    optimisticIsPublic.value = null
+  }
+})
 watch(
-  () => userData.value?.username,
-  (val) => {
-    if (val) localUsername.value = val
+  () => (user.value?.providerData ?? []).map((provider) => provider.providerId),
+  (providerIds) => {
+    if (hiddenProviderIds.value.size === 0) return
+    const available = new Set(providerIds)
+    hiddenProviderIds.value = new Set(
+      Array.from(hiddenProviderIds.value).filter((id) => available.has(id))
+    )
   }
 )
 
@@ -88,7 +133,7 @@ const hasPendingChanges = computed(() => {
     localDisplayName.value !== (user.value?.displayName ?? "")
   const usernameChanged = !usernamesMatch(
     localUsername.value,
-    userData.value?.username ?? ""
+    effectiveUsername.value
   )
   return displayNameChanged || usernameChanged
 })
@@ -117,12 +162,16 @@ const saveAllChanges = async () => {
     }
 
     // Save username if changed and available
-    if (!usernamesMatch(localUsername.value, userData.value?.username ?? "")) {
+    if (!usernamesMatch(localUsername.value, effectiveUsername.value)) {
       if (usernameAvailable.value) {
         changesMade = true
+        const previousOptimisticUsername = optimisticUsername.value
+        const nextUsername = localUsername.value.trim()
+        optimisticUsername.value = nextUsername
         try {
-          await claimUsername(localUsername.value)
+          await claimUsername(nextUsername)
         } catch (error) {
+          optimisticUsername.value = previousOptimisticUsername
           errors.push(`Username: ${(error as Error).message}`)
         }
       } else if (usernameError.value) {
@@ -148,7 +197,7 @@ const saveAllChanges = async () => {
 
 const discardChanges = () => {
   localDisplayName.value = user.value?.displayName ?? ""
-  localUsername.value = userData.value?.username ?? ""
+  localUsername.value = effectiveUsername.value
 }
 
 // ============================================================================
@@ -160,15 +209,15 @@ const usernameError = ref<string | null>(null)
 
 // Check if user has a valid username set
 const hasUsername = computed(() => {
-  const username = userData.value?.username
-  return username && username.trim().length >= USERNAME_MIN_LENGTH
+  const username = effectiveUsername.value
+  return username.trim().length >= USERNAME_MIN_LENGTH
 })
 
 const checkUsername = async () => {
   const usernameInput = localUsername.value.trim()
 
   // Use case-insensitive comparison to check if username changed
-  if (usernamesMatch(usernameInput, userData.value?.username)) {
+  if (usernamesMatch(usernameInput, effectiveUsername.value)) {
     usernameAvailable.value = null
     usernameError.value = null
     return
@@ -196,12 +245,15 @@ const handleUsernameInput = () => {
   debouncedCheckUsername()
 }
 
-const isPublic = computed(() => userData.value?.isPublic ?? false)
-
 // Disable public profile if username is removed
 watch(hasUsername, (hasUser) => {
   if (!hasUser && isPublic.value) {
-    updateUserData({ isPublic: false }).catch(console.error)
+    const previousIsPublic = isPublic.value
+    optimisticIsPublic.value = false
+    updateUserData({ isPublic: false }).catch((error) => {
+      optimisticIsPublic.value = previousIsPublic
+      console.error(error)
+    })
   }
 })
 
@@ -215,21 +267,33 @@ const toggleIsPublic = async (value: boolean) => {
     return
   }
 
+  const previousIsPublic = isPublic.value
+  optimisticIsPublic.value = value
+
   try {
     await updateUserData({ isPublic: value })
     toast.success("Profile visibility updated")
   } catch (error) {
+    optimisticIsPublic.value = previousIsPublic
     toast.error("Failed to update profile visibility", {
       description: (error as Error).message,
     })
   }
 }
 
-const photoURL = computed({
-  get: () => user.value?.photoURL,
-  set: (value: string) => {
-    authStore.updateUserProfile({ photoURL: value })
-  },
+const displayPhotoURL = computed(
+  () => optimisticPhotoPreview.value ?? user.value?.photoURL ?? null
+)
+
+const clearOptimisticPhotoPreview = () => {
+  if (optimisticPhotoPreview.value?.startsWith("blob:")) {
+    URL.revokeObjectURL(optimisticPhotoPreview.value)
+  }
+  optimisticPhotoPreview.value = null
+}
+
+onBeforeUnmount(() => {
+  clearOptimisticPhotoPreview()
 })
 
 const sendingVerificationEmail = ref(false)
@@ -416,6 +480,9 @@ const deleteAccount = async () => {
 
 const unlinkingProviderMap = ref<Record<string, boolean>>({})
 const unlinkProvider = async (providerId: string) => {
+  const previousHiddenProviderIds = new Set(hiddenProviderIds.value)
+  hiddenProviderIds.value = new Set(hiddenProviderIds.value).add(providerId)
+
   unlinkingProviderMap.value = {
     ...unlinkingProviderMap.value,
     [providerId]: true,
@@ -428,6 +495,7 @@ const unlinkProvider = async (providerId: string) => {
       })
     })
     .catch((error) => {
+      hiddenProviderIds.value = previousHiddenProviderIds
       handleAuthError(error, "Failed to unlink provider")
     })
     .finally(() => {
@@ -446,59 +514,57 @@ const profilePhotoFileRef = computed(() => {
 const { url, uploadProgress, uploadError, uploadTask, upload } =
   useStorageFile(profilePhotoFileRef)
 
-const filename = ref<string>()
-const { files, open, reset } = useFileDialog()
-
-watch(
-  () => url.value,
-  (newVal, oldVal) => {
-    if (oldVal === undefined) return
-    if (oldVal === null && newVal) {
-      try {
-        photoURL.value = newVal
-        toast.success("Profile picture updated", {
-          description: "Your profile picture has been updated successfully.",
-        })
-        reset()
-        filename.value = ""
-      } catch (error) {
-        console.error("Error updating profile with new photo URL:", error)
-        toast.error("Failed to update profile picture", {
-          description: error as string,
-        })
-      }
-    }
-  }
-)
-
-const uploadPicture = async () => {
-  const data = files.value?.item(0)
-  if (!data) return
-  const res = validateImageFile(data)
-  if (!res.ok) {
-    toast.error(res.message)
-    return
-  }
-  try {
+const profilePhotoUpload = usePhotoUpload({
+  canUpload: () => !!user.value?.uid,
+  onUpload: async (_id, file) => {
+    clearOptimisticPhotoPreview()
+    optimisticPhotoPreview.value = URL.createObjectURL(file)
     toast.info("Uploading profile picture", {
       description: "Please wait while we upload your profile picture.",
     })
-    filename.value = data.name
-    await upload(data)
-  } catch (error) {
-    console.error("Error uploading picture or updating profile:", error)
-    toast.error("Failed to upload profile picture", {
-      description: (error as Error).message,
-    })
-  }
+    try {
+      await upload(file)
+    } catch (error) {
+      clearOptimisticPhotoPreview()
+      console.error("Error uploading picture or updating profile:", error)
+      toast.error("Failed to upload profile picture", {
+        description: (error as Error).message,
+      })
+    }
+  },
+})
+
+const triggerProfilePhotoUpload = () => {
+  if (!user.value?.uid) return
+  profilePhotoUpload.triggerUpload(user.value.uid)
 }
 
-watch(files, uploadPicture)
+watch(
+  () => url.value,
+  async (newVal, oldVal) => {
+    if (oldVal === undefined) return
+    if (!newVal || newVal === oldVal) return
+
+    try {
+      await authStore.updateUserProfile({ photoURL: newVal })
+      clearOptimisticPhotoPreview()
+      toast.success("Profile picture updated", {
+        description: "Your profile picture has been updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error updating profile with new photo URL:", error)
+      toast.error("Failed to update profile picture", {
+        description: error as string,
+      })
+    }
+  }
+)
 
 const handleRemoveProfilePicture = async () => {
   if (!user.value?.uid) return
 
   try {
+    clearOptimisticPhotoPreview()
     await authStore.updateUserProfile({ photoURL: null })
     await deleteUserPhotoFile(user.value.uid)
     toast.success("Profile picture removed")
@@ -548,18 +614,15 @@ const passwordExists = computed(() => {
                   <TooltipTrigger as-child>
                     <Avatar
                       class="flex size-11 cursor-pointer items-center justify-center rounded-md"
-                      @click="open({ accept: 'image/*', multiple: false })"
+                      @click="triggerProfilePhotoUpload"
                     >
-                      <template v-if="uploadTask">
-                        <Spinner />
-                      </template>
-                      <template v-else-if="uploadError">
+                      <template v-if="uploadError">
                         <IconAlertTriangle />
                       </template>
                       <template v-else>
                         <AvatarImage
                           class="rounded-md"
-                          :src="user?.photoURL!"
+                          :src="displayPhotoURL || ''"
                           :alt="user?.displayName"
                           referrerpolicy="no-referrer"
                         />
@@ -580,7 +643,7 @@ const passwordExists = computed(() => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Button
-                      v-if="photoURL"
+                      v-if="displayPhotoURL"
                       variant="secondary"
                       class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
                       size="icon-sm"
@@ -860,7 +923,7 @@ const passwordExists = computed(() => {
             </FieldContent>
           </Field>
           <Field
-            v-for="provider in user?.providerData"
+            v-for="provider in linkedProviders"
             :key="provider.providerId"
             orientation="horizontal"
           >
@@ -920,7 +983,7 @@ const passwordExists = computed(() => {
             </Button>
           </Field>
           <div
-            v-if="user?.providerData?.length === 0"
+            v-if="linkedProviders.length === 0"
             class="text-muted-foreground"
           >
             {{ t("settings.account.identityProviders.noAccounts") }}

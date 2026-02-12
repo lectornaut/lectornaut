@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconBan,
@@ -10,7 +11,6 @@ import {
   IconX,
 } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
-import { validateImageFile } from "@/helpers/imageFile"
 import { getInitials } from "@/helpers/utilities"
 import {
   useInvitationStore,
@@ -108,14 +108,6 @@ const isPrivileged = computed(() => {
 // Photo Upload State
 const photoFile = ref<File | null>(null)
 const photoPreview = ref<string | null>(null)
-const {
-  files,
-  open: openFileDialog,
-  reset,
-} = useFileDialog({
-  accept: "image/*",
-  multiple: false,
-})
 
 /** Revoke blob URL to prevent memory leaks */
 const revokeBlobUrl = () => {
@@ -124,27 +116,24 @@ const revokeBlobUrl = () => {
   }
 }
 
-watch(files, (newFiles) => {
-  const file = newFiles?.item(0)
-  if (!file) return
-  const res = validateImageFile(file)
-  if (!res.ok) {
-    toast.error(res.message)
-    return
-  }
-  // Revoke previous blob URL to avoid leaks
-  if (photoPreview.value?.startsWith("blob:")) {
-    URL.revokeObjectURL(photoPreview.value)
-  }
-  photoFile.value = file
-  photoPreview.value = URL.createObjectURL(file)
+const teamPhotoUpload = usePhotoUpload({
+  canUpload: () => canUpdateTeam.value || props.mode === "create",
+  onUpload: async (_id, file) => {
+    revokeBlobUrl()
+    photoFile.value = file
+    photoPreview.value = URL.createObjectURL(file)
+  },
 })
+
+const triggerTeamPhotoSelection = () => {
+  if (!canUpdateTeam.value && props.mode !== "create") return
+  teamPhotoUpload.triggerUpload(props.team?.id || "draft-team")
+}
 
 const removePhoto = () => {
   revokeBlobUrl()
   photoFile.value = null
   photoPreview.value = null
-  reset()
 }
 
 const resetForm = () => {
@@ -156,7 +145,6 @@ const resetForm = () => {
   removedMemberIds.value = []
   photoFile.value = null
   photoPreview.value = null
-  reset()
 }
 
 // Sync internal open state with prop
@@ -471,10 +459,7 @@ const handleSubmit = async () => {
                         :class="{
                           'cursor-pointer': canUpdateTeam || mode === 'create',
                         }"
-                        @click="
-                          (canUpdateTeam || mode === 'create') &&
-                          openFileDialog({ accept: 'image/*', multiple: false })
-                        "
+                        @click="triggerTeamPhotoSelection"
                       >
                         <AvatarImage
                           class="size-16 rounded-md"

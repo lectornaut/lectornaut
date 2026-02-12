@@ -374,56 +374,80 @@ export const useTeamStore = defineStore("teams", () => {
     }
 
     const { name, photoFile } = updates
-
-    // Upload photo first if provided (outside of cloud function)
-    let photoURL: string | null | undefined = undefined
-    if (photoFile !== undefined) {
-      photoURL =
-        photoFile === null ? null : await uploadTeamPhoto(teamId, photoFile)
-    }
+    const optimisticPhotoURL =
+      photoFile instanceof File ? URL.createObjectURL(photoFile) : undefined
 
     // Prepare optimistic updates for team data
     const teamUpdates = {
-      ...(name ? { name } : {}),
-      ...(photoURL !== undefined ? { photoURL } : {}),
+      ...(name !== undefined ? { name } : {}),
+      ...(photoFile === null
+        ? { photoURL: null }
+        : optimisticPhotoURL
+          ? { photoURL: optimisticPhotoURL }
+          : {}),
     }
 
     // Clone previous state for rollback
     const previousCurrentTeam = cloneState(currentTeam.value)
     const previousMemberships = cloneState(memberships.value)
+    let resolvedPhotoURL: string | null | undefined =
+      photoFile === null ? null : undefined
 
-    await withOptimisticUpdate(
-      pendingTeamIds,
-      teamId,
-      // Apply optimistic update
-      () => {
-        if (currentTeam.value?.id === teamId) {
-          optimisticCurrentTeam.value = {
-            ...currentTeam.value,
-            ...teamUpdates,
+    try {
+      await withOptimisticUpdate(
+        pendingTeamIds,
+        teamId,
+        // Apply optimistic update
+        () => {
+          if (currentTeam.value?.id === teamId) {
+            optimisticCurrentTeam.value = {
+              ...currentTeam.value,
+              ...teamUpdates,
+            }
+          }
+          membershipStore.updateTeamInMemberships(teamId, teamUpdates)
+        },
+        // Rollback on error
+        () => {
+          optimisticCurrentTeam.value = previousCurrentTeam
+          membershipStore.rollbackMemberships(previousMemberships)
+        },
+        // Cloud Function call
+        async () => {
+          if (photoFile instanceof File) {
+            resolvedPhotoURL = await uploadTeamPhoto(teamId, photoFile)
+          }
+
+          await updateTeamFn({
+            teamId,
+            ...(name !== undefined ? { name } : {}),
+            ...(photoFile !== undefined
+              ? { photoURL: resolvedPhotoURL ?? null }
+              : {}),
+          })
+
+          if (photoFile !== undefined && resolvedPhotoURL !== undefined) {
+            const syncedTeamUpdates = { photoURL: resolvedPhotoURL }
+            if (currentTeam.value?.id === teamId) {
+              optimisticCurrentTeam.value = {
+                ...currentTeam.value,
+                ...syncedTeamUpdates,
+              }
+            }
+            membershipStore.updateTeamInMemberships(teamId, syncedTeamUpdates)
+          }
+
+          // Cleanup photo object when profile picture is explicitly removed.
+          if (resolvedPhotoURL === null) {
+            await deleteTeamPhotoFile(teamId)
           }
         }
-        membershipStore.updateTeamInMemberships(teamId, teamUpdates)
-      },
-      // Rollback on error
-      () => {
-        optimisticCurrentTeam.value = previousCurrentTeam
-        membershipStore.rollbackMemberships(previousMemberships)
-      },
-      // Cloud Function call
-      async () => {
-        await updateTeamFn({
-          teamId,
-          ...(name ? { name } : {}),
-          ...(photoURL !== undefined ? { photoURL } : {}),
-        })
-
-        // Cleanup photo object when profile picture is explicitly removed.
-        if (photoURL === null) {
-          await deleteTeamPhotoFile(teamId)
-        }
+      )
+    } finally {
+      if (optimisticPhotoURL) {
+        URL.revokeObjectURL(optimisticPhotoURL)
       }
-    )
+    }
   }
 
   /**

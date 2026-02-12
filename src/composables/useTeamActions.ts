@@ -192,11 +192,6 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       if (!currentTeam.value) return
       const teamIdToRemoveFrom = currentTeam.value.id
       const isCurrentUser = userId === user.value?.uid
-      const wasSelectedTeam = currentTeam.value?.id === teamIdToRemoveFrom
-
-      if (isCurrentUser && wasSelectedTeam) {
-        teamStore.clearCurrentTeam()
-      }
 
       await withToast(
         () => membershipStore.removeMember(teamIdToRemoveFrom, userId),
@@ -221,10 +216,6 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
 
   const exitTeam = async (teamId: string) =>
     loading.team.withLoading(`exit-${teamId}`, async () => {
-      const wasSelectedTeam = currentTeam.value?.id === teamId
-      if (wasSelectedTeam) {
-        teamStore.clearCurrentTeam()
-      }
       await withToast(
         () => membershipStore.removeMember(teamId, user.value!.uid),
         {
@@ -236,10 +227,6 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
 
   const deleteTeam = async (teamId: string) =>
     loading.team.withLoading(`delete-${teamId}`, async () => {
-      const wasSelectedTeam = currentTeam.value?.id === teamId
-      if (wasSelectedTeam) {
-        teamStore.clearCurrentTeam()
-      }
       await withToast(() => teamStore.deleteTeam(teamId), {
         success: "Team deleted successfully",
         error: "Failed to delete team",
