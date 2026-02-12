@@ -217,12 +217,12 @@ const closeTab = (id: string) => {
         <WorkspaceSelector v-else-if="!currentWorkspace" />
         <main
           v-else
-          class="flex min-h-0 min-w-0 grow gap-2 self-stretch overflow-hidden overscroll-none scroll-smooth"
+          class="flex min-h-0 min-w-0 grow gap-2 self-stretch overscroll-none scroll-smooth"
         >
           <MainSidebar />
           <div id="left-dock" class="flex max-w-80 shrink-0 empty:hidden"></div>
           <ResizablePanelGroup
-            class="min-w-0 overflow-clip rounded-2xl border"
+            class="min-w-0 overflow-clip rounded-2xl border shadow-sm"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
