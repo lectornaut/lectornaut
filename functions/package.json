@@ -20,7 +20,7 @@
   "dependencies": {
     "@genkit-ai/firebase": "^1.28.0",
     "@genkit-ai/google-genai": "^1.28.0",
-    "@google-cloud/functions-framework": "^5.0.1",
+    "@google-cloud/functions-framework": "5.0.1",
     "firebase-admin": "^13.6.1",
     "firebase-functions": "^7.0.5",
     "genkit": "^1.28.0",

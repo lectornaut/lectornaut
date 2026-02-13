@@ -6,6 +6,7 @@ import {
 } from "firebase-functions/v2/firestore"
 import { beforeUserCreated } from "firebase-functions/v2/identity"
 import { auth } from "./firebase.js"
+import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
 import { sendNotification, sendNotificationToMany } from "./notifier.js"
 import { REGION, TRIGGER_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
@@ -16,6 +17,18 @@ import {
   NotificationType,
   RoleGroups,
 } from "./types.js"
+
+function getCloudEventId(event: unknown, fallback: string): string {
+  if (
+    typeof event === "object" &&
+    event !== null &&
+    "id" in event &&
+    typeof (event as { id?: unknown }).id === "string"
+  ) {
+    return (event as { id: string }).id
+  }
+  return fallback
+}
 
 // ============================================================================
 // Invitation Email Helpers
@@ -159,33 +172,39 @@ export const onUserCreated = beforeUserCreated(
     memory: TRIGGER_OPTS.memory,
     timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
     maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
   },
   async (event) => {
     const user = event.data
     if (!user) return
 
-    try {
-      // Send welcome notification and email
-      // We await this to ensure the function doesn't terminate early,
-      // but wrap in try/catch so failure doesn't block user creation.
-      await sendNotification({
-        userId: user.uid,
-        userEmail: user.email ?? undefined,
-        type: "user.welcome",
-        title: "Welcome to LectorNaut!",
-        description:
-          "We're excited to have you on board. Check out our getting started guide.",
-        url: "/welcome",
-        emailData: {
-          templateData: {
-            displayName: user.displayName || user.email || "there",
+    const eventId = getCloudEventId(event, `user:${user.uid}`)
+    const lockKey = makeEventIdempotencyKey("onUserCreated", eventId)
+
+    await runIdempotentEvent({ key: lockKey }, async () => {
+      try {
+        // Send welcome notification and email
+        // We await this to ensure the function doesn't terminate early,
+        // but wrap in try/catch so failure doesn't block user creation.
+        await sendNotification({
+          userId: user.uid,
+          userEmail: user.email ?? undefined,
+          type: "user.welcome",
+          title: "Welcome to LectorNaut!",
+          description:
+            "We're excited to have you on board. Check out our getting started guide.",
+          url: "/welcome",
+          emailData: {
+            templateData: {
+              displayName: user.displayName || user.email || "there",
+            },
           },
-        },
-      })
-    } catch (err) {
-      // Log error but allow user creation to proceed
-      logger.error("Failed to send welcome notification", err)
-    }
+        })
+      } catch (err) {
+        // Log error but allow user creation to proceed
+        logger.error("Failed to send welcome notification", err)
+      }
+    })
   }
 )
 
@@ -204,14 +223,21 @@ export const onInvitationCreated = onDocumentCreated(
     memory: TRIGGER_OPTS.memory,
     timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
     maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
   },
   async (event) => {
     const snapshot = event.data
     if (!snapshot) return
-    await sendInvitationNotification(
-      snapshot.data() as InvitationData,
-      event.params.invitationId
-    )
+
+    const eventId = getCloudEventId(event, event.params.invitationId)
+    const lockKey = makeEventIdempotencyKey("onInvitationCreated", eventId)
+
+    await runIdempotentEvent({ key: lockKey }, async () => {
+      await sendInvitationNotification(
+        snapshot.data() as InvitationData,
+        event.params.invitationId
+      )
+    })
   }
 )
 
@@ -226,41 +252,50 @@ export const onInvitationUpdated = onDocumentUpdated(
     memory: TRIGGER_OPTS.memory,
     timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
     maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
   },
   async (event) => {
     const snapshot = event.data
     if (!snapshot) return
 
-    const before = snapshot.before.data()
-    const after = snapshot.after.data()
+    const fallbackEventId = `${event.params.invitationId}:${
+      snapshot.after.updateTime?.toMillis?.() ?? "unknown"
+    }`
+    const eventId = getCloudEventId(event, fallbackEventId)
+    const lockKey = makeEventIdempotencyKey("onInvitationUpdated", eventId)
 
-    // Handle invitation declined
-    if (before.status !== "declined" && after.status === "declined") {
-      await notifyTeamMembers(after.teamId, RoleGroups.ADMINS, {
-        type: "invitation.declined",
-        title: "Invitation Declined",
-        description: `${after.email} declined the invitation to join ${after.teamName}.`,
-        source: {
-          entityType: "invitation",
-          entityId: event.params.invitationId,
-        },
-        templateData: {
-          email: after.email,
-          teamName: after.teamName,
-        },
-      })
-    }
+    await runIdempotentEvent({ key: lockKey }, async () => {
+      const before = snapshot.before.data()
+      const after = snapshot.after.data()
 
-    // Handle invitation resent
-    const beforeResentAt = before.resentAt?.toMillis?.() || 0
-    const afterResentAt = after.resentAt?.toMillis?.() || 0
+      // Handle invitation declined
+      if (before.status !== "declined" && after.status === "declined") {
+        await notifyTeamMembers(after.teamId, RoleGroups.ADMINS, {
+          type: "invitation.declined",
+          title: "Invitation Declined",
+          description: `${after.email} declined the invitation to join ${after.teamName}.`,
+          source: {
+            entityType: "invitation",
+            entityId: event.params.invitationId,
+          },
+          templateData: {
+            email: after.email,
+            teamName: after.teamName,
+          },
+        })
+      }
 
-    if (afterResentAt > 0 && afterResentAt > beforeResentAt) {
-      await sendInvitationNotification(
-        after as InvitationData,
-        event.params.invitationId
-      )
-    }
+      // Handle invitation resent
+      const beforeResentAt = before.resentAt?.toMillis?.() || 0
+      const afterResentAt = after.resentAt?.toMillis?.() || 0
+
+      if (afterResentAt > 0 && afterResentAt > beforeResentAt) {
+        await sendInvitationNotification(
+          after as InvitationData,
+          event.params.invitationId
+        )
+      }
+    })
   }
 )
 
@@ -279,31 +314,37 @@ export const onMembershipCreated = onDocumentCreated(
     memory: TRIGGER_OPTS.memory,
     timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
     maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
   },
   async (event) => {
     const snapshot = event.data
     if (!snapshot) return
 
-    const membership = snapshot.data()
     const { teamId, userId } = event.params
-    const userName =
-      membership.user?.displayName || membership.user?.email || "Someone"
+    const eventId = getCloudEventId(event, `${teamId}:${userId}`)
+    const lockKey = makeEventIdempotencyKey("onMembershipCreated", eventId)
 
-    await notifyTeamMembers(
-      teamId,
-      RoleGroups.ADMINS,
-      {
-        type: "member.joined",
-        title: "New Team Member",
-        description: `${userName} has joined ${membership.team?.name || "your team"}.`,
-        source: { entityType: "team", entityId: teamId },
-        templateData: {
-          memberName: userName,
-          teamName: membership.team?.name || "your team",
+    await runIdempotentEvent({ key: lockKey }, async () => {
+      const membership = snapshot.data()
+      const userName =
+        membership.user?.displayName || membership.user?.email || "Someone"
+
+      await notifyTeamMembers(
+        teamId,
+        RoleGroups.ADMINS,
+        {
+          type: "member.joined",
+          title: "New Team Member",
+          description: `${userName} has joined ${membership.team?.name || "your team"}.`,
+          source: { entityType: "team", entityId: teamId },
+          templateData: {
+            memberName: userName,
+            teamName: membership.team?.name || "your team",
+          },
         },
-      },
-      userId // Exclude the joining user from notifications
-    )
+        userId // Exclude the joining user from notifications
+      )
+    })
   }
 )
 
@@ -321,28 +362,35 @@ export const onMembershipDeleted = onDocumentDeleted(
     memory: TRIGGER_OPTS.memory,
     timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
     maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
   },
   async (event) => {
     const snapshot = event.data
     if (!snapshot) return
 
-    const membership = snapshot.data()
-    const teamName = membership?.team?.name || "a team"
+    const { teamId, userId } = event.params
+    const eventId = getCloudEventId(event, `${teamId}:${userId}`)
+    const lockKey = makeEventIdempotencyKey("onMembershipDeleted", eventId)
 
-    await sendNotification({
-      userId: event.params.userId,
-      userEmail: membership?.user?.email,
-      type: "member.removed",
-      title: "Removed from Team",
-      description: `You have been removed from ${teamName}.`,
-      url: "/teams",
-      source: {
-        entityType: "team",
-        entityId: event.params.teamId,
-      },
-      emailData: {
-        templateData: { teamName },
-      },
+    await runIdempotentEvent({ key: lockKey }, async () => {
+      const membership = snapshot.data()
+      const teamName = membership?.team?.name || "a team"
+
+      await sendNotification({
+        userId,
+        userEmail: membership?.user?.email,
+        type: "member.removed",
+        title: "Removed from Team",
+        description: `You have been removed from ${teamName}.`,
+        url: "/teams",
+        source: {
+          entityType: "team",
+          entityId: teamId,
+        },
+        emailData: {
+          templateData: { teamName },
+        },
+      })
     })
   }
 )

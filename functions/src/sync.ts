@@ -1,6 +1,7 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore"
 import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
+import { cleanupExpiredIdempotencyLocks } from "./idempotency.js"
 import { REGION, SCHEDULED_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
 import {
   normalizeComparable,
@@ -408,6 +409,7 @@ export const onSyncOperationCreated = onDocumentCreated(
     memory: TRIGGER_OPTS.memory,
     timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
     maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
   },
   async (event) => {
     const snapshot = event.data
@@ -539,8 +541,12 @@ export const cleanupSyncOperations = onSchedule(
       }
     }
 
+    const deletedEventLocks = await cleanupExpiredIdempotencyLocks({
+      batchSize: CLEANUP_BATCH_SIZE,
+    })
+
     logger.info(
-      `[cleanupSyncOperations] Deleted ${totalDeleted} stale sync operations`
+      `[cleanupSyncOperations] Deleted ${totalDeleted} stale sync operations and ${deletedEventLocks} stale event locks`
     )
   }
 )

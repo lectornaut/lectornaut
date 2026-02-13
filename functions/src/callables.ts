@@ -59,7 +59,7 @@ async function batchUpdateNotifications(
 /**
  * Mark all notifications as read
  */
-export const markAllNotificationsRead = onCall((request) =>
+export const markAllNotificationsRead = onCall(CALLABLE_OPTS, (request) =>
   batchUpdateNotifications(request, (q) => q.where("read", "==", false), {
     read: true,
   })
@@ -68,7 +68,7 @@ export const markAllNotificationsRead = onCall((request) =>
 /**
  * Mark all notifications as unread
  */
-export const markAllNotificationsUnread = onCall((request) =>
+export const markAllNotificationsUnread = onCall(CALLABLE_OPTS, (request) =>
   batchUpdateNotifications(request, (q) => q.where("read", "==", true), {
     read: false,
   })
@@ -77,7 +77,7 @@ export const markAllNotificationsUnread = onCall((request) =>
 /**
  * Mark all notifications as done
  */
-export const markAllNotificationsDone = onCall((request) =>
+export const markAllNotificationsDone = onCall(CALLABLE_OPTS, (request) =>
   batchUpdateNotifications(
     request,
     (q) => q.where("status", "in", ["inbox", "saved"]),
@@ -88,7 +88,7 @@ export const markAllNotificationsDone = onCall((request) =>
 /**
  * Mark all notifications as inbox
  */
-export const markAllNotificationsInbox = onCall((request) =>
+export const markAllNotificationsInbox = onCall(CALLABLE_OPTS, (request) =>
   batchUpdateNotifications(
     request,
     (q) => q.where("status", "in", ["saved", "done"]),
@@ -99,7 +99,7 @@ export const markAllNotificationsInbox = onCall((request) =>
 /**
  * Mark all notifications as saved
  */
-export const markAllNotificationsSaved = onCall((request) =>
+export const markAllNotificationsSaved = onCall(CALLABLE_OPTS, (request) =>
   batchUpdateNotifications(
     request,
     (q) => q.where("status", "in", ["inbox", "done"]),
@@ -110,7 +110,7 @@ export const markAllNotificationsSaved = onCall((request) =>
 /**
  * Delete all notifications
  */
-export const deleteAllNotifications = onCall((request) =>
+export const deleteAllNotifications = onCall(CALLABLE_OPTS, (request) =>
   batchUpdateNotifications(
     request,
     (q) => q, // No additional filter

@@ -1,7 +1,7 @@
 import * as logger from "firebase-functions/logger"
 import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
-import { db } from "./firebase.js"
+import { admin, db } from "./firebase.js"
 import {
   NotificationData,
   NotificationPayload,
@@ -96,7 +96,6 @@ async function createInAppNotification(
   notification: Omit<NotificationData, "createdAt" | "status" | "read">
 ): Promise<boolean> {
   try {
-    const { admin } = await import("./firebase.js")
     await db.collection(`users/${userId}/notifications`).add({
       ...notification,
       status: "inbox",

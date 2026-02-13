@@ -2,6 +2,7 @@ import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
 import { googleAI } from "@genkit-ai/google-genai"
 import { onCallGenkit } from "firebase-functions/https"
 import { genkit, z } from "genkit"
+import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { geminiApiKey } from "./secrets.js"
 
 enableFirebaseTelemetry()
@@ -12,7 +13,7 @@ enableFirebaseTelemetry()
  */
 const ai = genkit({
   plugins: [googleAI()],
-  model: googleAI.model("gemini-2.5-flash"),
+  model: googleAI.model("gemini-3-flash-preview"),
 })
 
 const generatePoemStreamingFlow = ai.defineFlow(
@@ -42,6 +43,7 @@ const generatePoemStreamingFlow = ai.defineFlow(
 
 export const generateFlow = onCallGenkit(
   {
+    ...GENKIT_OPTS,
     secrets: [geminiApiKey],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,

@@ -1,7 +1,6 @@
 import * as logger from "firebase-functions/logger"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { ServerClient } from "postmark"
-import { renderEmail } from "./emails/renderEmail.js"
 import { EMAIL_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import { EmailData } from "./types.js"
@@ -12,7 +11,24 @@ import { EmailData } from "./types.js"
  * The ServerClient reuses HTTP connections across calls.
  */
 let _postmarkClient: ServerClient | null = null
+let _renderEmail:
+  | ((templateName: string, data: Record<string, unknown>) => string)
+  | null = null
+let _renderEmailLoader: Promise<void> | null = null
 
+async function ensureEmailRendererLoaded(): Promise<void> {
+  if (_renderEmail) {
+    return
+  }
+
+  if (!_renderEmailLoader) {
+    _renderEmailLoader = import("./emails/renderEmail.js").then((module) => {
+      _renderEmail = module.renderEmail
+    })
+  }
+
+  await _renderEmailLoader
+}
 function getPostmarkClient(): ServerClient {
   const key = postmarkApiKey.value()
   if (!key) {
@@ -42,7 +58,8 @@ export async function sendEmailInternal(data: EmailData) {
   // If template is provided, render it
   if (template && templateData) {
     try {
-      htmlBody = renderEmail(template, templateData)
+      await ensureEmailRendererLoaded()
+      htmlBody = _renderEmail!(template, templateData)
     } catch (error) {
       logger.error(`Error rendering email template ${template}`, error)
       throw new Error(`Error rendering email template: ${error}`)

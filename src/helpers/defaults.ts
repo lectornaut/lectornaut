@@ -368,7 +368,7 @@ export const productsMenu = [
   {
     title: "Lectornaut AI",
     description: "AI capabilities for your agents",
-    url: "https://lectornaut.ai",
+    url: "https://lectornaut.com",
     id: "lectornaut-ai",
     icon: IconBot,
     style: {

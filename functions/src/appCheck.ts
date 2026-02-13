@@ -2,7 +2,7 @@ import * as logger from "firebase-functions/logger"
 import { HttpsError, onRequest } from "firebase-functions/v2/https"
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { admin } from "./firebase.js"
-import { CALLABLE_OPTS } from "./runtimeConfig.js"
+import { APP_CHECK_OPTS } from "./runtimeConfig.js"
 import {
   appCheckAllowedAppId,
   appCheckExchangeSharedSecret,
@@ -85,7 +85,7 @@ const getHttpStatusForHttpsError = (code: HttpsError["code"]) => {
  */
 export const exchangeTauriAppCheckToken = onRequest(
   {
-    ...CALLABLE_OPTS,
+    ...APP_CHECK_OPTS,
     invoker: "public",
     cors: true,
     secrets: [appCheckExchangeSharedSecret, appCheckAllowedAppId],
