@@ -1,5 +1,5 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.json",
+  "extends": "@vue/tsconfig",
   "compilerOptions": {
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,

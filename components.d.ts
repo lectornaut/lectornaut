@@ -140,6 +140,7 @@ declare module 'vue' {
     DialogScrollContent: typeof import('./src/components/ui/dialog/DialogScrollContent.vue')['default']
     DialogTitle: typeof import('./src/components/ui/dialog/DialogTitle.vue')['default']
     DialogTrigger: typeof import('./src/components/ui/dialog/DialogTrigger.vue')['default']
+    DocumentActivityLog: typeof import('./src/components/app/sidebars/DocumentActivityLog.vue')['default']
     Drawer: typeof import('./src/components/ui/drawer/Drawer.vue')['default']
     DrawerClose: typeof import('./src/components/ui/drawer/DrawerClose.vue')['default']
     DrawerContent: typeof import('./src/components/ui/drawer/DrawerContent.vue')['default']

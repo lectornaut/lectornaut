@@ -417,6 +417,10 @@ onBeforeUnmount(() => {
     </Button>
   </Teleport>
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="w-full"></Sidebar>
+    <DocumentActivityLog
+      :team-id="teamId"
+      :workspace-id="workspaceId"
+      :document-id="selectedNode?.id ?? null"
+    />
   </Teleport>
 </template>

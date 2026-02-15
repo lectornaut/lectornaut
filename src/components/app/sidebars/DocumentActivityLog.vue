@@ -1,0 +1,243 @@
+<script lang="ts" setup>
+import { useDocumentActivityLogs } from "@/composables/useDocumentActivityLogs"
+import {
+  IconAlertTriangle,
+  IconFilePlus,
+  IconHistory,
+  IconMinusSquare,
+  IconPenLine,
+  IconPencil,
+  IconRefreshCw,
+  IconRotateCcw,
+  IconSwitchHorizontal,
+  IconTrash2,
+} from "@/data/icons"
+import type { ILogEntry } from "@/types"
+import { DateFormatter } from "@internationalized/date"
+import { toRefs } from "vue"
+
+const props = defineProps<{
+  teamId: string | null
+  workspaceId: string | null
+  documentId: string | null
+}>()
+
+const { teamId, workspaceId, documentId } = toRefs(props)
+const scrollableContainer = useTemplateRef<ComponentPublicInstance>(
+  "scrollableContainer"
+)
+
+const { logs, loading, error, hasMore, canViewLogs, fetchLogs } =
+  useDocumentActivityLogs({
+    teamId,
+    workspaceId,
+    documentId,
+  })
+
+const df = new DateFormatter("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+})
+
+const ACTION_LABELS = {
+  "content.create": "Created",
+  "content.rename": "Renamed",
+  "content.move": "Moved",
+  "content.update": "Edited",
+  "content.archive": "Archived",
+  "content.unarchive": "Restored",
+  "content.delete": "Deleted",
+} as const
+
+const ACTION_ICONS = {
+  "content.create": IconFilePlus,
+  "content.rename": IconPencil,
+  "content.move": IconSwitchHorizontal,
+  "content.update": IconPenLine,
+  "content.archive": IconMinusSquare,
+  "content.unarchive": IconRotateCcw,
+  "content.delete": IconTrash2,
+} as const
+
+const hasSelectedNode = computed(() =>
+  Boolean(teamId.value && workspaceId.value && documentId.value)
+)
+
+const formatTimestamp = (entry: ILogEntry) => {
+  const timestamp = entry.timestamp?.toDate?.()
+  return timestamp ? df.format(timestamp) : "—"
+}
+
+const formatActor = (entry: ILogEntry) =>
+  entry.actor?.email || entry.actor?.userId || "Unknown"
+
+const formatAction = (entry: ILogEntry) => {
+  const label = ACTION_LABELS[entry.action as keyof typeof ACTION_LABELS]
+  if (label) return label
+
+  const raw = entry.action.includes(".")
+    ? (entry.action.split(".").slice(-1)[0] ?? entry.action)
+    : entry.action
+
+  return raw
+    .split(/[_-]/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
+const getActionIcon = (entry: ILogEntry) =>
+  ACTION_ICONS[entry.action as keyof typeof ACTION_ICONS] ?? IconHistory
+
+const formatChangeSummary = (entry: ILogEntry) => {
+  const fields = entry.changes?.fields?.filter(Boolean) ?? []
+  if (!fields.length) return null
+
+  if (fields.length === 1) {
+    const [field] = fields
+    if (field === "content") {
+      return "edited the document"
+    }
+    return `changed ${field}`
+  }
+
+  return `changed ${fields.length} fields`
+}
+
+const refreshLogs = () => fetchLogs(true)
+const loadMore = () => fetchLogs(false)
+
+useInfiniteScroll(
+  () => scrollableContainer.value?.$el as HTMLElement,
+  () => {
+    loadMore()
+  },
+  {
+    distance: 10,
+    canLoadMore: () =>
+      hasSelectedNode.value &&
+      canViewLogs.value &&
+      hasMore.value &&
+      !loading.value,
+  }
+)
+</script>
+
+<template>
+  <Sidebar collapsible="none" class="w-full">
+    <SidebarContent>
+      <OverlayScrollbarsWrapper ref="scrollableContainer">
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            History
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              class="ml-auto"
+              :disabled="!hasSelectedNode || !canViewLogs || loading"
+              @click="refreshLogs"
+            >
+              <IconRefreshCw :class="{ 'animate-spin': loading }" />
+              <span class="sr-only">Refresh activity history</span>
+            </Button>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <div
+              v-if="!hasSelectedNode"
+              class="text-muted-foreground p-2 text-xs"
+            >
+              Select a file or folder to view activity history.
+            </div>
+
+            <div
+              v-else-if="!canViewLogs"
+              class="text-muted-foreground p-2 text-xs"
+            >
+              You do not have access to view activity history.
+            </div>
+
+            <div v-else-if="loading && logs.length === 0" class="p-2">
+              <div
+                class="text-muted-foreground flex items-center gap-2 text-xs"
+              >
+                <Spinner />
+                Loading activity history...
+              </div>
+            </div>
+
+            <div v-else-if="error" class="space-y-2 p-2">
+              <div class="text-destructive flex items-start gap-2 text-xs">
+                <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+                <span>{{ error }}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                class="w-full"
+                @click="refreshLogs"
+              >
+                Retry
+              </Button>
+            </div>
+
+            <div
+              v-else-if="logs.length === 0"
+              class="text-muted-foreground p-2 text-xs"
+            >
+              No history available for this item.
+            </div>
+
+            <div v-else>
+              <Stepper
+                orientation="vertical"
+                :model-value="-1"
+                class="flex flex-col"
+              >
+                <StepperItem
+                  v-for="(entry, index) in logs"
+                  :key="entry.id"
+                  :step="index + 1"
+                  class="flex items-start self-stretch"
+                >
+                  <div class="relative flex flex-col items-center self-stretch">
+                    <StepperIndicator as-child>
+                      <Button variant="outline" size="icon-sm">
+                        <Component :is="getActionIcon(entry)" />
+                      </Button>
+                    </StepperIndicator>
+                    <StepperSeparator
+                      v-if="index < logs.length - 1"
+                      orientation="vertical"
+                      class="bg-border w-px flex-1"
+                    />
+                  </div>
+
+                  <div class="flex grow flex-col gap-1 p-2">
+                    <StepperTitle>
+                      {{ formatActor(entry) }}
+                    </StepperTitle>
+                    <StepperDescription v-if="formatChangeSummary(entry)">
+                      {{ formatChangeSummary(entry) }}
+                    </StepperDescription>
+                    <div class="flex items-start justify-between gap-2">
+                      <p class="text-xs font-medium">
+                        {{ formatAction(entry) }}
+                      </p>
+                      <time class="text-muted-foreground shrink-0 text-[10px]">
+                        {{ formatTimestamp(entry) }}
+                      </time>
+                    </div>
+                  </div>
+                </StepperItem>
+              </Stepper>
+
+              <div v-if="loading" class="flex justify-center p-2">
+                <Spinner />
+              </div>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </OverlayScrollbarsWrapper>
+    </SidebarContent>
+  </Sidebar>
+</template>
