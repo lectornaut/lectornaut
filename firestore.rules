@@ -51,7 +51,7 @@ service cloud.firestore {
       return isSignedIn()
         && request.auth.token.email is string
         && invitationEmail is string
-        && invitationEmail == request.auth.token.email;
+        && invitationEmail.trim().lower() == request.auth.token.email.trim().lower();
     }
 
     function isValidSyncMutationType(type) {
@@ -240,10 +240,12 @@ service cloud.firestore {
 
     match /invitations/{invitationId} {
       allow read: if isSignedIn()
-                  && resource.data.teamId is string
                   && (
                     isInvitationRecipient(resource.data.email)
-                    || isTeamAdmin(resource.data.teamId)
+                    || (
+                      resource.data.teamId is string
+                      && isTeamAdmin(resource.data.teamId)
+                    )
                   );
       allow write: if false;
     }

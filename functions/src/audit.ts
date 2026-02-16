@@ -215,6 +215,12 @@ function assertMembershipRole(value: unknown, field: string): IMembershipRole {
   return role
 }
 
+function normalizeEmail(email: string | null | undefined): string | null {
+  if (typeof email !== "string") return null
+  const normalized = email.trim().toLowerCase()
+  return normalized ? normalized : null
+}
+
 const ROOT_PARENT_ID = "root"
 const NODE_NAME_MAX_LENGTH = 128
 
@@ -2088,7 +2094,7 @@ export const declineInvitation = onCall(CALLABLE_OPTS, async (request) => {
 
   const invitationId = assertString(request.data?.invitationId, "invitationId")
   const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email
+  const actorEmail = normalizeEmail(request.auth.token.email)
 
   const invRef = db.doc(`invitations/${invitationId}`)
 
@@ -2100,7 +2106,7 @@ export const declineInvitation = onCall(CALLABLE_OPTS, async (request) => {
     const invitation = invSnap.data() as InvitationData
 
     // Verify the user declining is the one invited
-    if (invitation.email !== actorEmail) {
+    if (!actorEmail || normalizeEmail(invitation.email) !== actorEmail) {
       throw new HttpsError(
         "permission-denied",
         "This invitation is not for you."

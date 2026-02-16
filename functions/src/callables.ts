@@ -12,6 +12,12 @@ import {
   normalizeMembershipRole,
 } from "./types.js"
 
+function normalizeEmail(email: string | null | undefined): string | null {
+  if (typeof email !== "string") return null
+  const normalized = email.trim().toLowerCase()
+  return normalized ? normalized : null
+}
+
 /**
  * Generic helper to update or delete multiple notifications in batch.
  * Handles authentication, query building, and batch operations.
@@ -174,7 +180,7 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
 
   const auth = request.auth
   const uid = auth.uid
-  const authedEmail = auth.token.email ?? null
+  const authedEmail = normalizeEmail(auth.token.email)
 
   const invitationId = request.data?.invitationId
   if (!invitationId || typeof invitationId !== "string") {
@@ -206,7 +212,7 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
       )
     }
 
-    if (!authedEmail || invitation.email !== authedEmail) {
+    if (!authedEmail || normalizeEmail(invitation.email) !== authedEmail) {
       throw new HttpsError(
         "permission-denied",
         "Invitation does not match authenticated user."

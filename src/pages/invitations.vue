@@ -92,8 +92,8 @@ const loadInvitation = async (invitationCode: string) => {
       error.value = t("pages.join.errors.notFoundOrExpired")
     } else {
       // Check if the current user is the intended recipient
-      const currentUserEmail = authStore.currentUser?.email
-      if (currentUserEmail && invite.email !== currentUserEmail) {
+      const currentUserEmail = authStore.currentUser?.email?.toLowerCase()
+      if (currentUserEmail && invite.email.toLowerCase() !== currentUserEmail) {
         error.value = t("pages.join.errors.emailMismatch", {
           email: currentUserEmail,
         })

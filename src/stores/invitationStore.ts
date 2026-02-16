@@ -186,11 +186,11 @@ export const useInvitationStore = defineStore("invitations", () => {
 
   /** Merged user invitations (live + optimistic) */
   const userInvitations = computed(() => {
-    const email = currentUser.value?.email
+    const email = currentUser.value?.email?.toLowerCase()
     if (!email) return []
     return mergeInvitations(
       firestoreUserInvitations.value,
-      (invitation) => invitation.email === email
+      (invitation) => invitation.email.toLowerCase() === email
     )
   })
 
