@@ -3,10 +3,12 @@ import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
 import { admin, db } from "./firebase.js"
 import {
+  MembershipRoleLabels,
   NotificationData,
   NotificationPayload,
   NotificationPreferences,
   NotificationTypeConfig,
+  normalizeMembershipRole,
 } from "./types.js"
 
 /**
@@ -126,6 +128,14 @@ async function sendEmailNotification(
       description: payload.description,
       ctaUrl: `https://lectornaut.com${payload.url}`,
       ...payload.emailData?.templateData,
+    }
+
+    // Defense-in-depth: keep invitation role placeholders safe even if upstream
+    // payloads are malformed or missing role metadata.
+    if (template === "invitation.received") {
+      const role = normalizeMembershipRole(templateData.role)
+      templateData.role = role
+      templateData.roleLabel = MembershipRoleLabels[role]
     }
 
     await sendEmailInternal({

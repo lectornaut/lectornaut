@@ -101,7 +101,9 @@ export const normalizeComparable = (value: unknown): number | string | null => {
 // Permission Types
 // ============================================================================
 
-export type IMembershipRole = "owner" | "admin" | "member" | "guest"
+export const MEMBERSHIP_ROLES = ["owner", "admin", "member", "guest"] as const
+
+export type IMembershipRole = (typeof MEMBERSHIP_ROLES)[number]
 export type NodeType = "folder" | "file"
 export type WorkspaceNodeScope = "code" | "write"
 
@@ -144,6 +146,27 @@ export const MembershipRoles = {
   MEMBER: "member" as IMembershipRole,
   GUEST: "guest" as IMembershipRole,
 } as const
+
+export function isMembershipRole(value: unknown): value is IMembershipRole {
+  return (
+    typeof value === "string" &&
+    (MEMBERSHIP_ROLES as readonly string[]).includes(value)
+  )
+}
+
+export function normalizeMembershipRole(
+  value: unknown,
+  fallback: IMembershipRole = MembershipRoles.MEMBER
+): IMembershipRole {
+  return isMembershipRole(value) ? value : fallback
+}
+
+export const MembershipRoleLabels: Record<IMembershipRole, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  member: "Member",
+  guest: "Guest",
+}
 
 export const RoleGroups = {
   /** Owners and admins - users with administrative capabilities */

@@ -34,8 +34,12 @@ import {
 import { firestore, functions } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IMembership, IMembershipRole } from "@/types"
-import { can, Capabilities } from "@/types/permissions"
+import {
+  isMembershipRole,
+  type IMembership,
+  type IMembershipRole,
+} from "@/types"
+import { can, Capabilities, type Capability } from "@/types/permissions"
 import { getMembershipRef } from "@/utils/firebase/firebase-helpers"
 import {
   cloneState,
@@ -75,6 +79,10 @@ export const useInvitationStore = defineStore("invitations", () => {
   const membershipStore = useMembershipStore()
   const { currentUser, userProfile, currentTeamId } = storeToRefs(authStore)
   const { memberships } = storeToRefs(membershipStore)
+  const acceptInvitationFn = httpsCallable<{ invitationId: string }, unknown>(
+    functions,
+    "acceptInvitation"
+  )
 
   // ============================================================================
   // Optimistic State
@@ -134,82 +142,56 @@ export const useInvitationStore = defineStore("invitations", () => {
   // Computed - Merged State
   // ============================================================================
 
+  const mergeInvitations = (
+    firestoreData: IInvitation[] | undefined,
+    includeOptimistic: (invitation: IInvitation) => boolean
+  ): IInvitation[] => {
+    const pending = pendingInvitationIds.value
+    const base = firestoreData || []
+    if (pending.size === 0) return base
+
+    const optimisticById = new Map<string, IInvitation>()
+    optimisticInvitations.value.forEach((invitation) => {
+      if (!invitation.id || !pending.has(invitation.id)) return
+      if (!includeOptimistic(invitation)) return
+      optimisticById.set(invitation.id, invitation)
+    })
+
+    const merged = base.map((invitation) => {
+      if (!invitation.id) return invitation
+      return optimisticById.get(invitation.id) ?? invitation
+    })
+    const mergedIds = new Set(
+      merged.map((invitation) => invitation.id).filter(Boolean)
+    )
+
+    optimisticById.forEach((invitation, id) => {
+      if (!mergedIds.has(id)) {
+        merged.push(invitation)
+      }
+    })
+
+    return merged
+  }
+
   /** Merged team invitations (live + optimistic) */
   const teamInvitations = computed(() => {
     const teamId = currentTeamId.value
     if (!teamId) return []
-
-    const pending = pendingInvitationIds.value
-    if (pending.size === 0) return firestoreTeamInvitations.value || []
-
-    const result: IInvitation[] = []
-    const firestoreData = firestoreTeamInvitations.value || []
-
-    // Add Firestore data, replacing with optimistic if pending
-    firestoreData.forEach((inv) => {
-      if (inv.id && pending.has(inv.id)) {
-        const optimistic = optimisticInvitations.value.find(
-          (oi) => oi.id === inv.id
-        )
-        if (optimistic) {
-          result.push(optimistic)
-          return
-        }
-      }
-      result.push(inv)
-    })
-
-    // Add new optimistic invitations that haven't hit Firestore yet
-    optimisticInvitations.value.forEach((inv) => {
-      if (
-        inv.id &&
-        pending.has(inv.id) &&
-        inv.teamId === teamId &&
-        !result.some((r) => r.id === inv.id)
-      ) {
-        result.push(inv)
-      }
-    })
-
-    return result
+    return mergeInvitations(
+      firestoreTeamInvitations.value,
+      (invitation) => invitation.teamId === teamId
+    )
   })
 
   /** Merged user invitations (live + optimistic) */
   const userInvitations = computed(() => {
     const email = currentUser.value?.email
     if (!email) return []
-
-    const pending = pendingInvitationIds.value
-    if (pending.size === 0) return firestoreUserInvitations.value || []
-
-    const result: IInvitation[] = []
-    const firestoreData = firestoreUserInvitations.value || []
-
-    firestoreData.forEach((inv) => {
-      if (inv.id && pending.has(inv.id)) {
-        const optimistic = optimisticInvitations.value.find(
-          (oi) => oi.id === inv.id
-        )
-        if (optimistic) {
-          result.push(optimistic)
-          return
-        }
-      }
-      result.push(inv)
-    })
-
-    optimisticInvitations.value.forEach((inv) => {
-      if (
-        inv.id &&
-        pending.has(inv.id) &&
-        inv.email === email &&
-        !result.some((r) => r.id === inv.id)
-      ) {
-        result.push(inv)
-      }
-    })
-
-    return result
+    return mergeInvitations(
+      firestoreUserInvitations.value,
+      (invitation) => invitation.email === email
+    )
   })
 
   // ============================================================================
@@ -220,6 +202,87 @@ export const useInvitationStore = defineStore("invitations", () => {
     return Array.from(crypto.getRandomValues(new Uint8Array(24)))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("")
+  }
+
+  const findInvitationById = (invitationId: string) =>
+    optimisticInvitations.value.find(
+      (invitation) => invitation.id === invitationId
+    ) ||
+    firestoreTeamInvitations.value?.find(
+      (invitation) => invitation.id === invitationId
+    ) ||
+    firestoreUserInvitations.value?.find(
+      (invitation) => invitation.id === invitationId
+    )
+
+  async function resolveMembershipForTeam(
+    teamId: string,
+    options: { fallbackToFirestore?: boolean } = {}
+  ): Promise<IMembership | null> {
+    const existingMembership = memberships.value.find(
+      (m) => m.teamId === teamId
+    )
+    if (existingMembership) return existingMembership
+
+    if (!options.fallbackToFirestore || !currentUser.value) {
+      return null
+    }
+
+    const membershipSnap = await getDoc(
+      getMembershipRef(teamId, currentUser.value.uid)
+    )
+    if (!membershipSnap.exists()) return null
+    return membershipSnap.data() as IMembership
+  }
+
+  const assertTeamCapability = (
+    membership: IMembership | null,
+    capability: Capability,
+    errorMessage: string
+  ): void => {
+    if (
+      !membership ||
+      !can(currentUser.value, capability, {
+        scope: "team",
+        teamRole: membership.role,
+      })
+    ) {
+      throw new Error(errorMessage)
+    }
+  }
+
+  async function assertInvitationCapability(
+    invitationId: string,
+    capability: Capability,
+    errorMessage: string
+  ): Promise<void> {
+    const invitation = findInvitationById(invitationId)
+    if (!invitation) return
+
+    const membership = await resolveMembershipForTeam(invitation.teamId)
+    assertTeamCapability(membership, capability, errorMessage)
+  }
+
+  async function runInvitationMutation(
+    invitationId: string,
+    applyOptimistic: (invitations: IInvitation[]) => IInvitation[],
+    mutation: () => Promise<void>
+  ): Promise<void> {
+    const previousOptimistic = cloneState(optimisticInvitations.value)
+
+    await withOptimisticUpdate(
+      pendingInvitationIds,
+      invitationId,
+      () => {
+        optimisticInvitations.value = applyOptimistic(
+          optimisticInvitations.value
+        )
+      },
+      () => {
+        optimisticInvitations.value = previousOptimistic
+      },
+      mutation
+    )
   }
 
   // ============================================================================
@@ -237,33 +300,24 @@ export const useInvitationStore = defineStore("invitations", () => {
   }): Promise<void> {
     const { teamId, teamName, email, role } = payload
     const normalizedEmail = email.trim().toLowerCase()
+    if (!isMembershipRole(role)) {
+      throw new Error("Invalid invitation role")
+    }
     const user = currentUser.value
     const profile = userProfile.value
 
     if (!user || !profile) throw new Error("Not authenticated")
 
-    // Use current user's role from membership store if available
-    // Note: We can only check permissions if they are already a member of the team
-    let membership = membershipStore.memberships.find(
-      (m) => m.teamId === teamId
+    // Fallback to Firestore lookup because membership sync can lag immediately
+    // after team creation.
+    const membership = await resolveMembershipForTeam(teamId, {
+      fallbackToFirestore: true,
+    })
+    assertTeamCapability(
+      membership,
+      Capabilities.INVITE_MEMBER,
+      "You do not have permission to send invitations"
     )
-
-    // Fallback: membership might not be synced yet right after team creation.
-    if (!membership) {
-      const membershipSnap = await getDoc(getMembershipRef(teamId, user.uid))
-      if (membershipSnap.exists()) {
-        membership = membershipSnap.data() as IMembership
-      }
-    }
-    if (
-      !membership ||
-      !can(user, Capabilities.INVITE_MEMBER, {
-        scope: "team",
-        teamRole: membership.role,
-      })
-    ) {
-      throw new Error("You do not have permission to send invitations")
-    }
 
     // Check for existing pending invitation
     const q = query(
@@ -292,20 +346,9 @@ export const useInvitationStore = defineStore("invitations", () => {
       createdAt: Timestamp.now(),
     }
 
-    const previousOptimistic = cloneState(optimisticInvitations.value)
-
-    await withOptimisticUpdate(
-      pendingInvitationIds,
+    await runInvitationMutation(
       opId,
-      () => {
-        optimisticInvitations.value = [
-          ...optimisticInvitations.value,
-          invitation,
-        ]
-      },
-      () => {
-        optimisticInvitations.value = previousOptimistic
-      },
+      (invitations) => [...invitations, invitation],
       async () => {
         await sendInvitationFn({ teamId, email: normalizedEmail, role })
       }
@@ -319,26 +362,17 @@ export const useInvitationStore = defineStore("invitations", () => {
   async function resendInvitation(invitation: IInvitation): Promise<void> {
     if (!invitation.id) return
 
-    const membership = membershipStore.memberships.find(
-      (m) => m.teamId === invitation.teamId
+    const membership = await resolveMembershipForTeam(invitation.teamId)
+    assertTeamCapability(
+      membership,
+      Capabilities.INVITE_MEMBER,
+      "You do not have permission to resend invitations"
     )
-    if (
-      !membership ||
-      !can(currentUser.value, Capabilities.INVITE_MEMBER, {
-        scope: "team",
-        teamRole: membership.role,
-      })
-    ) {
-      throw new Error("You do not have permission to resend invitations")
-    }
 
-    const previousOptimistic = cloneState(optimisticInvitations.value)
-
-    await withOptimisticUpdate(
-      pendingInvitationIds,
+    await runInvitationMutation(
       invitation.id,
-      () => {
-        optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
+      (invitations) =>
+        invitations.map((inv) =>
           inv.id === invitation.id
             ? {
                 ...inv,
@@ -346,11 +380,7 @@ export const useInvitationStore = defineStore("invitations", () => {
                 resentAt: Timestamp.now(),
               }
             : inv
-        )
-      },
-      () => {
-        optimisticInvitations.value = previousOptimistic
-      },
+        ),
       async () => {
         await resendInvitationFn({ invitationId: invitation.id! })
       }
@@ -364,41 +394,22 @@ export const useInvitationStore = defineStore("invitations", () => {
     invitationId: string,
     role: IMembershipRole
   ): Promise<void> {
-    // Need to fetch invitation to get teamId for permission check if not passed
-    // But for optimistically we need to look it up or rely on caller context.
-    // Optimistic store has the invite
-    const invite = optimisticInvitations.value.find(
-      (i) => i.id === invitationId
-    )
-    // Fallback to firestore check handled by rules, but we want UI feedback
-
-    if (invite) {
-      const membership = membershipStore.memberships.find(
-        (m) => m.teamId === invite.teamId
-      )
-      if (
-        !membership ||
-        !can(currentUser.value, Capabilities.UPDATE_MEMBER_ROLE, {
-          scope: "team",
-          teamRole: membership.role,
-        })
-      ) {
-        throw new Error("You do not have permission to update invitations")
-      }
+    if (!isMembershipRole(role)) {
+      throw new Error("Invalid invitation role")
     }
-    const previousOptimistic = cloneState(optimisticInvitations.value)
 
-    await withOptimisticUpdate(
-      pendingInvitationIds,
+    await assertInvitationCapability(
       invitationId,
-      () => {
-        optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
+      Capabilities.UPDATE_MEMBER_ROLE,
+      "You do not have permission to update invitations"
+    )
+
+    await runInvitationMutation(
+      invitationId,
+      (invitations) =>
+        invitations.map((inv) =>
           inv.id === invitationId ? { ...inv, role } : inv
-        )
-      },
-      () => {
-        optimisticInvitations.value = previousOptimistic
-      },
+        ),
       async () => {
         await updateInvitationRoleFn({ invitationId, role })
       }
@@ -409,36 +420,15 @@ export const useInvitationStore = defineStore("invitations", () => {
    * Cancel/Delete an invitation
    */
   async function cancelInvitation(invitationId: string): Promise<void> {
-    const invite = optimisticInvitations.value.find(
-      (i) => i.id === invitationId
-    )
-    if (invite) {
-      const membership = membershipStore.memberships.find(
-        (m) => m.teamId === invite.teamId
-      )
-      if (
-        !membership ||
-        !can(currentUser.value, Capabilities.INVITE_MEMBER, {
-          scope: "team",
-          teamRole: membership.role,
-        })
-      ) {
-        throw new Error("You do not have permission to cancel invitations")
-      }
-    }
-    const previousOptimistic = cloneState(optimisticInvitations.value)
-
-    await withOptimisticUpdate(
-      pendingInvitationIds,
+    await assertInvitationCapability(
       invitationId,
-      () => {
-        optimisticInvitations.value = optimisticInvitations.value.filter(
-          (inv) => inv.id !== invitationId
-        )
-      },
-      () => {
-        optimisticInvitations.value = previousOptimistic
-      },
+      Capabilities.INVITE_MEMBER,
+      "You do not have permission to cancel invitations"
+    )
+
+    await runInvitationMutation(
+      invitationId,
+      (invitations) => invitations.filter((inv) => inv.id !== invitationId),
       async () => {
         await cancelInvitationFn({ invitationId })
       }
@@ -481,24 +471,14 @@ export const useInvitationStore = defineStore("invitations", () => {
     if (!invitation.id) throw new Error("Invalid invitation")
 
     const { id: invitationId } = invitation
-    const previousOptimistic = cloneState(optimisticInvitations.value)
 
     // Note: We only handle invitation removal optimistically here.
     // Membership addition happens in its own store if we wanted full coverage,
     // but the invitation leaving the list is the most important immediate feedback.
-    await withOptimisticUpdate(
-      pendingInvitationIds,
+    await runInvitationMutation(
       invitationId,
-      () => {
-        optimisticInvitations.value = optimisticInvitations.value.filter(
-          (inv) => inv.id !== invitationId
-        )
-      },
-      () => {
-        optimisticInvitations.value = previousOptimistic
-      },
+      (invitations) => invitations.filter((inv) => inv.id !== invitationId),
       async () => {
-        const acceptInvitationFn = httpsCallable(functions, "acceptInvitation")
         await acceptInvitationFn({ invitationId })
       }
     )
@@ -508,19 +488,12 @@ export const useInvitationStore = defineStore("invitations", () => {
    * Decline an invitation
    */
   async function declineInvitation(invitationId: string): Promise<void> {
-    const previousOptimistic = cloneState(optimisticInvitations.value)
-
-    await withOptimisticUpdate(
-      pendingInvitationIds,
+    await runInvitationMutation(
       invitationId,
-      () => {
-        optimisticInvitations.value = optimisticInvitations.value.map((inv) =>
+      (invitations) =>
+        invitations.map((inv) =>
           inv.id === invitationId ? { ...inv, status: "declined" } : inv
-        )
-      },
-      () => {
-        optimisticInvitations.value = previousOptimistic
-      },
+        ),
       async () => {
         await declineInvitationFn({ invitationId })
       }

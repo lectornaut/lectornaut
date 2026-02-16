@@ -1,6 +1,6 @@
+import { createActionRunner } from "@/composables/useActionRunner"
 import { useLoadingState } from "@/composables/useLoadingState"
 import { defaultTeamRole } from "@/helpers/defaults"
-import { withToast } from "@/helpers/toast"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type { IMembership } from "@/types"
@@ -29,6 +29,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     member: useLoadingState<string>(),
     team: useLoadingState<string>(),
   }
+  const roleActions = createActionRunner(loading.role.withLoading)
+  const memberActions = createActionRunner(loading.member.withLoading)
+  const teamActions = createActionRunner(loading.team.withLoading)
 
   // The effective team for permission checks - uses targetTeamId if provided, otherwise currentTeam
   const effectiveTeamId = computed(
@@ -173,116 +176,115 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     !canInviteMembers.value ? "Only admins and owners can invite members" : null
   )
 
-  // Actions using withToast utility
+  // Actions using shared loading + toast runner
   const changeRole = async (userId: string, newRole: IMembership["role"]) =>
-    loading.role.withLoading(userId, async () => {
-      if (!currentTeam.value) return
-      await withToast(
-        () =>
-          membershipStore.changeRole(currentTeam.value!.id, userId, newRole),
-        {
-          success: "Role updated successfully",
-          error: "Failed to update role",
-        }
-      )
-    })
+    roleActions.run(
+      userId,
+      async () => {
+        if (!currentTeam.value) return
+        await membershipStore.changeRole(currentTeam.value.id, userId, newRole)
+      },
+      {
+        success: "Role updated successfully",
+        error: "Failed to update role",
+      }
+    )
 
   const removeMember = async (userId: string) =>
-    loading.member.withLoading(userId, async () => {
-      if (!currentTeam.value) return
-      const teamIdToRemoveFrom = currentTeam.value.id
-      const isCurrentUser = userId === user.value?.uid
-
-      await withToast(
-        () => membershipStore.removeMember(teamIdToRemoveFrom, userId),
-        {
-          success: isCurrentUser
+    memberActions.run(
+      userId,
+      async () => {
+        if (!currentTeam.value) return
+        await membershipStore.removeMember(currentTeam.value.id, userId)
+      },
+      {
+        success:
+          userId === user.value?.uid
             ? "You have left the team"
             : "Member removed successfully",
-          error: "Failed to remove member",
-        }
-      )
-    })
+        error: "Failed to remove member",
+      }
+    )
 
   const switchTeam = async (teamId: string) => {
     if (currentTeam.value?.id === teamId) return
-    return loading.team.withLoading(teamId, () =>
-      withToast(() => teamStore.switchTeam(teamId), {
-        success: "Switched team successfully",
-        error: "Failed to switch team",
-      })
-    )
+    return teamActions.run(teamId, () => teamStore.switchTeam(teamId), {
+      success: "Switched team successfully",
+      error: "Failed to switch team",
+    })
   }
 
   const exitTeam = async (teamId: string) =>
-    loading.team.withLoading(`exit-${teamId}`, async () => {
-      await withToast(
-        () => membershipStore.removeMember(teamId, user.value!.uid),
-        {
-          success: "You have left the team",
-          error: "Failed to leave team",
-        }
-      )
-    })
+    teamActions.run(
+      `exit-${teamId}`,
+      () => membershipStore.removeMember(teamId, user.value!.uid),
+      {
+        success: "You have left the team",
+        error: "Failed to leave team",
+      }
+    )
 
   const deleteTeam = async (teamId: string) =>
-    loading.team.withLoading(`delete-${teamId}`, async () => {
-      await withToast(() => teamStore.deleteTeam(teamId), {
-        success: "Team deleted successfully",
-        error: "Failed to delete team",
-      })
+    teamActions.run(`delete-${teamId}`, () => teamStore.deleteTeam(teamId), {
+      success: "Team deleted successfully",
+      error: "Failed to delete team",
     })
 
   const createTeam = async (name: string, photoFile?: File) =>
-    loading.team.withLoading("create", () =>
-      withToast(() => teamStore.createTeam(name, photoFile), {
-        success: "Team created successfully",
-        error: "Failed to create team",
-      })
-    )
+    teamActions.run("create", () => teamStore.createTeam(name, photoFile), {
+      success: "Team created successfully",
+      error: "Failed to create team",
+    })
 
   const updateTeam = async (
     teamId: string,
     updates: { name?: string; photoFile?: File | null }
   ) =>
-    loading.team.withLoading(`update-${teamId}`, () =>
-      withToast(() => teamStore.updateTeam(teamId, updates), {
+    teamActions.run(
+      `update-${teamId}`,
+      () => teamStore.updateTeam(teamId, updates),
+      {
         success: "Team updated successfully",
         error: "Failed to update team",
-      })
+      }
     )
 
   const updateTeamPhoto = async (teamId: string, photoFile: File) =>
-    loading.team.withLoading(`photo-${teamId}`, () =>
-      withToast(() => teamStore.updateTeam(teamId, { photoFile }), {
+    teamActions.run(
+      `photo-${teamId}`,
+      () => teamStore.updateTeam(teamId, { photoFile }),
+      {
         info: "Uploading team photo...",
         success: "Team photo updated",
         error: "Failed to update team photo",
-      })
+      }
     )
 
   const removeTeamPhoto = async (teamId: string) =>
-    loading.team.withLoading(`photo-${teamId}`, () =>
-      withToast(() => teamStore.updateTeam(teamId, { photoFile: null }), {
+    teamActions.run(
+      `photo-${teamId}`,
+      () => teamStore.updateTeam(teamId, { photoFile: null }),
+      {
         success: "Team photo removed",
         error: "Failed to remove team photo",
-      })
+      }
     )
 
   const inviteMember = async (
     email: string,
     role: IMembership["role"] = defaultTeamRole
   ) =>
-    loading.member.withLoading(`invite-${email}`, async () => {
-      if (!currentTeam.value) return
-      await withToast(
-        () => membershipStore.inviteMember(currentTeam.value!.id, email, role),
-        {
-          success: "Member invited successfully",
-          error: "Failed to invite member",
-        }
-      )
-    })
+    memberActions.run(
+      `invite-${email}`,
+      async () => {
+        if (!currentTeam.value) return
+        await membershipStore.inviteMember(currentTeam.value.id, email, role)
+      },
+      {
+        success: "Member invited successfully",
+        error: "Failed to invite member",
+      }
+    )
 
   return {
     // State

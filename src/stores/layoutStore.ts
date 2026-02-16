@@ -1012,6 +1012,39 @@ export const useLayoutStore = defineStore("layout", () => {
     }
   }
 
+  async function mutateNavigationItems(options: {
+    id: string
+    source: string
+    actionName: string
+    applyOptimistic: () => void
+  }): Promise<void> {
+    const previousNavItems = cloneState(activeNavItems.value)
+    pendingNavigation.value = true
+
+    try {
+      options.applyOptimistic()
+
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persistNavigation()
+          if (!success) {
+            throw new Error(`Failed to persist ${options.actionName}`)
+          }
+        },
+        {
+          id: options.id,
+          source: options.source,
+        }
+      )
+    } catch (error) {
+      activeNavItems.value = previousNavItems
+      console.error(`[layoutStore] ${options.actionName} failed:`, error)
+      throw error
+    } finally {
+      pendingNavigation.value = false
+    }
+  }
+
   // ============================================================================
   // Actions: Navigation (with Optimistic Updates)
   // ============================================================================
@@ -1023,117 +1056,52 @@ export const useLayoutStore = defineStore("layout", () => {
     itemId: string,
     checked: boolean
   ): Promise<void> {
-    // Clone previous state for rollback
-    const previousNavItems = cloneState(activeNavItems.value)
-
-    // Mark as pending
-    pendingNavigation.value = true
-
-    try {
-      // Apply optimistic update
-      if (checked) {
-        const item = defaultMenu.find((i) => i.id === itemId)
-        if (item && !activeNavItems.value.some((i) => i.id === itemId)) {
-          activeNavItems.value = [...activeNavItems.value, item]
+    await mutateNavigationItems({
+      id: itemId,
+      source: "layout.navigation.toggle",
+      actionName: "toggleNavItem",
+      applyOptimistic: () => {
+        if (checked) {
+          const item = defaultMenu.find((i) => i.id === itemId)
+          if (item && !activeNavItems.value.some((i) => i.id === itemId)) {
+            activeNavItems.value = [...activeNavItems.value, item]
+          }
+          return
         }
-      } else {
+
         activeNavItems.value = activeNavItems.value.filter(
           (i) => i.id !== itemId
         )
-      }
-
-      await withCloudSyncOperation(
-        async () => {
-          const success = await persistNavigation()
-          if (!success) {
-            throw new Error("Failed to persist toggleNavItem")
-          }
-        },
-        {
-          id: itemId,
-          source: "layout.navigation.toggle",
-        }
-      )
-    } catch (error) {
-      // Rollback on error
-      activeNavItems.value = previousNavItems
-      console.error("[layoutStore] toggleNavItem failed:", error)
-      throw error
-    } finally {
-      pendingNavigation.value = false
-    }
+      },
+    })
   }
 
   /**
    * Set navigation items with optimistic update
    */
   async function setNavItems(items: NavItem[]): Promise<void> {
-    // Clone previous state for rollback
-    const previousNavItems = cloneState(activeNavItems.value)
-
-    // Mark as pending
-    pendingNavigation.value = true
-
-    try {
-      // Apply optimistic update
-      activeNavItems.value = cloneState(items)
-
-      await withCloudSyncOperation(
-        async () => {
-          const success = await persistNavigation()
-          if (!success) {
-            throw new Error("Failed to persist setNavItems")
-          }
-        },
-        {
-          id: "set",
-          source: "layout.navigation.set",
-        }
-      )
-    } catch (error) {
-      // Rollback on error
-      activeNavItems.value = previousNavItems
-      console.error("[layoutStore] setNavItems failed:", error)
-      throw error
-    } finally {
-      pendingNavigation.value = false
-    }
+    await mutateNavigationItems({
+      id: "set",
+      source: "layout.navigation.set",
+      actionName: "setNavItems",
+      applyOptimistic: () => {
+        activeNavItems.value = cloneState(items)
+      },
+    })
   }
 
   /**
    * Reset navigation items to defaults with optimistic update
    */
   async function resetNavItems(): Promise<void> {
-    // Clone previous state for rollback
-    const previousNavItems = cloneState(activeNavItems.value)
-
-    // Mark as pending
-    pendingNavigation.value = true
-
-    try {
-      // Apply optimistic update
-      activeNavItems.value = [...defaultMenu]
-
-      await withCloudSyncOperation(
-        async () => {
-          const success = await persistNavigation()
-          if (!success) {
-            throw new Error("Failed to persist resetNavItems")
-          }
-        },
-        {
-          id: "reset",
-          source: "layout.navigation.reset",
-        }
-      )
-    } catch (error) {
-      // Rollback on error
-      activeNavItems.value = previousNavItems
-      console.error("[layoutStore] resetNavItems failed:", error)
-      throw error
-    } finally {
-      pendingNavigation.value = false
-    }
+    await mutateNavigationItems({
+      id: "reset",
+      source: "layout.navigation.reset",
+      actionName: "resetNavItems",
+      applyOptimistic: () => {
+        activeNavItems.value = [...defaultMenu]
+      },
+    })
   }
 
   return {

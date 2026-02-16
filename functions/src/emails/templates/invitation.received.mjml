@@ -29,9 +29,9 @@
 
         <mj-text>
           <strong>{{ inviterName }}</strong> ({{ inviterEmail }}) has invited
-          you to join <strong>{{ teamName }}</strong> as a
-          <strong>{{ role }}</strong
-          >. Collaborate, share insights, and organize your knowledge together.
+          you to join <strong>{{ teamName }}</strong> with the role
+          <strong>{{ roleLabel }}</strong>. Collaborate, share insights, and
+          organize your knowledge together.
         </mj-text>
 
         <mj-button href="{{ ctaUrl }}" align="left">

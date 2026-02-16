@@ -5,7 +5,7 @@ import {
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore"
 import { beforeUserCreated } from "firebase-functions/v2/identity"
-import { auth } from "./firebase.js"
+import { auth, db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
 import { sendNotification, sendNotificationToMany } from "./notifier.js"
 import { REGION, TRIGGER_OPTS } from "./runtimeConfig.js"
@@ -14,8 +14,10 @@ import { getTeamMembersByRoles } from "./teams.js"
 import {
   IMembershipRole,
   InvitationData,
+  MembershipRoleLabels,
   NotificationType,
   RoleGroups,
+  normalizeMembershipRole,
 } from "./types.js"
 
 function getCloudEventId(event: unknown, fallback: string): string {
@@ -42,7 +44,6 @@ function buildInvitationTemplateData(invitation: InvitationData) {
     teamName: invitation.teamName,
     inviterName: invitation.inviterName,
     inviterEmail: invitation.inviterEmail,
-    role: invitation.role,
   }
 }
 
@@ -66,16 +67,40 @@ async function sendInvitationNotification(
     logger.info(`Invited email ${email} is not a registered user yet.`)
   }
 
-  const templateData = buildInvitationTemplateData(invitation)
+  const role = normalizeMembershipRole(invitation.role)
+  if (role !== invitation.role) {
+    logger.warn(
+      `Invitation ${invitationId} had invalid role "${String(
+        invitation.role
+      )}". Falling back to "${role}".`
+    )
+
+    // Self-heal malformed invitation docs for future reads.
+    try {
+      await db.doc(`invitations/${invitationId}`).update({ role })
+    } catch (error) {
+      logger.error(
+        `Failed to normalize invitation role for ${invitationId}`,
+        error
+      )
+    }
+  }
+
+  const templateData = {
+    ...buildInvitationTemplateData(invitation),
+    role,
+    roleLabel: MembershipRoleLabels[role],
+  }
 
   if (userId) {
     // User exists - send via unified notification service
+    const roleLabel = MembershipRoleLabels[role]
     await sendNotification({
       userId,
       userEmail: email,
       type: "invitation.received",
       title: `Join ${invitation.teamName}`,
-      description: `${invitation.inviterName} invited you to join ${invitation.teamName} as a ${invitation.role}.`,
+      description: `${invitation.inviterName} invited you to join ${invitation.teamName} with the role ${roleLabel}.`,
       url: `/invitations?code=${invitation.code}`,
       source: {
         entityType: "invitation",

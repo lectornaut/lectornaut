@@ -14,6 +14,7 @@ import {
   Context,
   IMembershipRole,
   InvitationData,
+  isMembershipRole,
   LogEntry,
   LogEventParams,
   NodeType,
@@ -204,6 +205,14 @@ function assertString(value: unknown, field: string): string {
     )
   }
   return trimmed
+}
+
+function assertMembershipRole(value: unknown, field: string): IMembershipRole {
+  const role = assertString(value, field)
+  if (!isMembershipRole(role)) {
+    throw new HttpsError("invalid-argument", "Invalid role provided.")
+  }
+  return role
 }
 
 const ROOT_PARENT_ID = "root"
@@ -1427,18 +1436,12 @@ export const updateWorkspaceNodeContent = onCall(
 // Membership CRUD Operations
 // =============================================================================
 
-const validRoles: IMembershipRole[] = ["owner", "admin", "member", "guest"]
-
 export const assignRoleToUser = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const targetUserId = assertString(request.data?.userId, "userId")
-  const role = assertString(request.data?.role, "role") as IMembershipRole
-
-  if (!validRoles.includes(role)) {
-    throw new HttpsError("invalid-argument", "Invalid role provided.")
-  }
+  const role = assertMembershipRole(request.data?.role, "role")
 
   const actorId = request.auth.uid
   const actorEmail = request.auth.token.email ?? undefined
@@ -1814,7 +1817,7 @@ export const sendInvitation = onCall(CALLABLE_OPTS, async (request) => {
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const email = assertString(request.data?.email, "email").toLowerCase()
-  const role = assertString(request.data?.role, "role") as IMembershipRole
+  const role = assertMembershipRole(request.data?.role, "role")
 
   const actorId = request.auth.uid
   const actorEmail = request.auth.token.email ?? undefined
@@ -1976,7 +1979,7 @@ export const updateInvitationRole = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const invitationId = assertString(request.data?.invitationId, "invitationId")
-  const role = assertString(request.data?.role, "role") as IMembershipRole
+  const role = assertMembershipRole(request.data?.role, "role")
 
   const actorId = request.auth.uid
   const actorEmail = request.auth.token.email ?? undefined

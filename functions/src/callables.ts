@@ -1,3 +1,4 @@
+import * as logger from "firebase-functions/logger"
 import {
   CallableRequest,
   HttpsError,
@@ -5,7 +6,11 @@ import {
 } from "firebase-functions/v2/https"
 import { admin, db } from "./firebase.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
-import { InvitationData, NotificationStatus } from "./types.js"
+import {
+  InvitationData,
+  NotificationStatus,
+  normalizeMembershipRole,
+} from "./types.js"
 
 /**
  * Generic helper to update or delete multiple notifications in batch.
@@ -185,6 +190,14 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
     }
 
     const invitation = invSnap.data() as InvitationData
+    const invitationRole = normalizeMembershipRole(invitation.role)
+    if (invitationRole !== invitation.role) {
+      logger.warn(
+        `Invitation ${invitationId} had invalid role "${String(
+          invitation.role
+        )}" during acceptance. Falling back to "${invitationRole}".`
+      )
+    }
 
     if (invitation.status !== "pending") {
       throw new HttpsError(
@@ -228,7 +241,7 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
     transaction.set(membershipRef, {
       userId: uid,
       teamId: invitation.teamId,
-      role: invitation.role,
+      role: invitationRole,
       user: userData,
       team: teamSnap.data() ?? {},
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

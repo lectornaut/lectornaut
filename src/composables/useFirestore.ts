@@ -46,6 +46,15 @@ const defaultOptions: FirestoreOperationOptions = {
   retryBaseDelay: 1000,
 }
 
+interface FirestoreExecutionOptions {
+  operationName: string
+  defaultSuccessMessage: string
+  options: FirestoreOperationOptions
+  successToast?: {
+    onUndo?: () => Promise<void>
+  }
+}
+
 /** Execute an operation with retry logic */
 async function withRetry<T>(
   operation: () => Promise<T>,
@@ -73,16 +82,40 @@ async function withRetry<T>(
   throw lastError
 }
 
+async function executeFirestoreOperation<T>(
+  operation: () => Promise<T>,
+  executionOptions: FirestoreExecutionOptions
+): Promise<T> {
+  const opts = { ...defaultOptions, ...executionOptions.options }
+
+  try {
+    const result = await withRetry(operation, opts)
+
+    if (opts.showSuccessToast) {
+      showSuccessToast(
+        opts.successMessage ?? executionOptions.defaultSuccessMessage,
+        executionOptions.successToast
+      )
+    }
+
+    return result
+  } catch (error) {
+    console.error(`Error in ${executionOptions.operationName}:`, error)
+    if (opts.showErrorToast) {
+      showErrorToast(opts.errorMessage ?? getFirestoreErrorMessage(error))
+    }
+    throw error
+  }
+}
+
 /** Add or set a document in Firestore */
 export async function firestoreAddDoc<T extends { id?: string }>(
   colRef: CollectionReference,
   document: T,
   options: FirestoreOperationOptions = {}
 ): Promise<DocumentReference> {
-  const opts = { ...defaultOptions, ...options }
-
-  try {
-    const docRef = await withRetry(async () => {
+  return executeFirestoreOperation(
+    async () => {
       let ref: DocumentReference
       if (document.id) {
         ref = doc(colRef, document.id)
@@ -91,20 +124,13 @@ export async function firestoreAddDoc<T extends { id?: string }>(
         ref = await addDoc(colRef, document as DocumentData)
       }
       return ref
-    }, opts)
-
-    if (opts.showSuccessToast) {
-      showSuccessToast(opts.successMessage ?? "Added")
+    },
+    {
+      operationName: "firestoreAddDoc",
+      defaultSuccessMessage: "Added",
+      options,
     }
-
-    return docRef
-  } catch (error) {
-    console.error("Error in firestoreAddDoc:", error)
-    if (opts.showErrorToast) {
-      showErrorToast(opts.errorMessage ?? getFirestoreErrorMessage(error))
-    }
-    throw error
-  }
+  )
 }
 
 /** Set a document in Firestore (create or overwrite) */
@@ -114,24 +140,14 @@ export async function firestoreSetDoc<T extends { id: string }>(
   document: T,
   options: FirestoreOperationOptions = {}
 ): Promise<void> {
-  const opts = { ...defaultOptions, ...options }
-
-  try {
-    await withRetry(
-      () => setDoc(doc(colRef, id), document as DocumentData),
-      opts
-    )
-
-    if (opts.showSuccessToast) {
-      showSuccessToast(opts.successMessage ?? "Saved")
+  await executeFirestoreOperation(
+    () => setDoc(doc(colRef, id), document as DocumentData),
+    {
+      operationName: "firestoreSetDoc",
+      defaultSuccessMessage: "Saved",
+      options,
     }
-  } catch (error) {
-    console.error("Error in firestoreSetDoc:", error)
-    if (opts.showErrorToast) {
-      showErrorToast(opts.errorMessage ?? getFirestoreErrorMessage(error))
-    }
-    throw error
-  }
+  )
 }
 
 /** Delete a document from Firestore */
@@ -140,23 +156,14 @@ export async function firestoreDeleteDoc(
   id: string,
   options: FirestoreOperationOptions = {}
 ): Promise<void> {
-  const opts = { ...defaultOptions, ...options }
-
-  try {
-    await withRetry(() => deleteDoc(doc(colRef, id)), opts)
-
-    if (opts.showSuccessToast) {
-      showSuccessToast(opts.successMessage ?? "Deleted", {
-        onUndo: opts.onUndo,
-      })
-    }
-  } catch (error) {
-    console.error("Error in firestoreDeleteDoc:", error)
-    if (opts.showErrorToast) {
-      showErrorToast(opts.errorMessage ?? getFirestoreErrorMessage(error))
-    }
-    throw error
-  }
+  await executeFirestoreOperation(() => deleteDoc(doc(colRef, id)), {
+    operationName: "firestoreDeleteDoc",
+    defaultSuccessMessage: "Deleted",
+    options,
+    successToast: {
+      onUndo: options.onUndo,
+    },
+  })
 }
 
 /** Update a document in Firestore */
@@ -166,24 +173,15 @@ export async function firestoreUpdateDoc<T extends { id: string }>(
   updates: Partial<T>,
   options: FirestoreOperationOptions = {}
 ): Promise<void> {
-  const opts = { ...defaultOptions, ...options }
-
-  try {
-    await withRetry(
-      () => updateDoc(doc(colRef, id), updates as DocumentData),
-      opts
-    )
-
-    if (opts.showSuccessToast) {
-      showSuccessToast(opts.successMessage ?? "Updated", {
-        onUndo: opts.onUndo,
-      })
+  await executeFirestoreOperation(
+    () => updateDoc(doc(colRef, id), updates as DocumentData),
+    {
+      operationName: "firestoreUpdateDoc",
+      defaultSuccessMessage: "Updated",
+      options,
+      successToast: {
+        onUndo: options.onUndo,
+      },
     }
-  } catch (error) {
-    console.error("Error in firestoreUpdateDoc:", error)
-    if (opts.showErrorToast) {
-      showErrorToast(opts.errorMessage ?? getFirestoreErrorMessage(error))
-    }
-    throw error
-  }
+  )
 }

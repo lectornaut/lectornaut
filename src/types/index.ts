@@ -107,7 +107,16 @@ export interface IUser {
   updatedAt: Timestamp
 }
 
-export type IMembershipRole = "owner" | "admin" | "member" | "guest"
+export const MEMBERSHIP_ROLES = ["owner", "admin", "member", "guest"] as const
+
+export type IMembershipRole = (typeof MEMBERSHIP_ROLES)[number]
+
+export function isMembershipRole(value: unknown): value is IMembershipRole {
+  return (
+    typeof value === "string" &&
+    (MEMBERSHIP_ROLES as readonly string[]).includes(value)
+  )
+}
 
 export interface IMembership {
   readonly userId: string

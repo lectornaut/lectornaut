@@ -19,7 +19,12 @@ import {
 } from "@/composables/useFunctions"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { useAuthStore } from "@/stores/authStore"
-import type { IMembership, IMembershipRole, ITeam } from "@/types"
+import {
+  isMembershipRole,
+  type IMembership,
+  type IMembershipRole,
+  type ITeam,
+} from "@/types"
 import { can, Capabilities, hasExactRole } from "@/types/permissions"
 import {
   getAllMembershipsGroup,
@@ -417,6 +422,9 @@ export const useMembershipStore = defineStore("memberships", () => {
     role: IMembership["role"] = defaultTeamRole
   ): Promise<void> {
     if (!currentUser.value) return
+    if (!isMembershipRole(role)) {
+      throw new Error("Invalid invitation role")
+    }
 
     const membership = memberships.value.find(
       (m) => m.teamId === teamId && m.userId === currentUser.value?.uid

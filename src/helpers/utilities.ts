@@ -43,5 +43,15 @@ export const getInitials = (name: string) => {
  * @returns True if the tab is a default route, false otherwise
  */
 export const isDefaultRoute = (tab: { fullPath: string }) => {
-  return defaultRoutes.some((route) => tab.fullPath.startsWith(route))
+  const normalizePath = (value: string) => {
+    const [path] = value.split(/[?#]/)
+    const normalizedPath = path || value
+    if (normalizedPath === "/") {
+      return normalizedPath
+    }
+    return normalizedPath.replace(/\/+$/, "")
+  }
+
+  const tabPath = normalizePath(tab.fullPath)
+  return defaultRoutes.some((route) => normalizePath(route) === tabPath)
 }

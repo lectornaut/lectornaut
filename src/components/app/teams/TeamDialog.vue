@@ -18,7 +18,12 @@ import {
   type IInvitation,
 } from "@/stores/invitationStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IMembership, IMembershipRole, ITeam } from "@/types"
+import {
+  isMembershipRole,
+  type IMembership,
+  type IMembershipRole,
+  type ITeam,
+} from "@/types"
 import { Capabilities, roleCan } from "@/types/permissions"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
@@ -200,6 +205,14 @@ const inviteMembers = async (
 ): Promise<InviteResult[]> => {
   const results = await Promise.all(
     membersToInvite.map(async (member): Promise<InviteResult> => {
+      if (!isMembershipRole(member.role)) {
+        return {
+          email: member.email,
+          success: false,
+          error: new Error("Invalid invitation role."),
+        }
+      }
+
       try {
         await invitationStore.sendInvitation({
           teamId,
@@ -256,6 +269,17 @@ const handleResendInvitation = async (invite: IInvitation) => {
     // Note: Since the ID changes, the button essentially disappears/is replaced by the new invite row.
     resendingIds.value.delete(invite.id)
   }
+}
+
+const handleInvitationRoleChange = async (
+  invitationId: string,
+  value: unknown
+) => {
+  if (!isMembershipRole(value)) {
+    toast.error("Invalid invitation role.")
+    return
+  }
+  await invitationStore.updateInvitationRole(invitationId, value)
 }
 
 // Actions
@@ -838,11 +862,7 @@ const handleSubmit = async () => {
                     v-model="invite.role"
                     :disabled="invite.status === 'declined'"
                     @update:model-value="
-                      (val) =>
-                        invitationStore.updateInvitationRole(
-                          invite.id!,
-                          val as IMembershipRole
-                        )
+                      (val) => handleInvitationRoleChange(invite.id!, val)
                     "
                   >
                     <SelectTrigger class="w-32">
