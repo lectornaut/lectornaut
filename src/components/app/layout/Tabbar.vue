@@ -56,6 +56,7 @@ const renamingTabId = ref<string | null>(null)
 const renamingName = ref("")
 
 const isInitialRouteSync = ref(true)
+const previousWorkspaceRoutePath = ref<string | null>(null)
 
 // Enable drag-and-drop reordering
 useSortable(el, tabs, {
@@ -84,6 +85,31 @@ watch(
   async ([newPath, hydrated]) => {
     // Ignore updates until hydrated or valid workspace
     if (!hydrated || !currentWorkspace.value) return
+
+    // Clear switch marker once route has moved away from the previous workspace path.
+    if (
+      previousWorkspaceRoutePath.value &&
+      newPath !== previousWorkspaceRoutePath.value
+    ) {
+      previousWorkspaceRoutePath.value = null
+    }
+
+    // During workspace switch, avoid materializing the old workspace route as a tab.
+    if (
+      previousWorkspaceRoutePath.value &&
+      newPath === previousWorkspaceRoutePath.value
+    ) {
+      const fallbackPath =
+        activeTab.value?.fullPath ?? tabs.value[0]?.fullPath ?? "/start"
+
+      if (fallbackPath !== newPath) {
+        router.replace(fallbackPath)
+        return
+      }
+
+      // Same route can legitimately exist in both workspaces.
+      previousWorkspaceRoutePath.value = null
+    }
 
     // Optimization: If the new route is already the active tab, do nothing.
     // This allows multiple /new tabs to exist without forcing a switch to the first one.
@@ -181,6 +207,10 @@ watch(
     if (newId !== oldId) {
       // Each workspace needs its own initial route synchronization phase.
       isInitialRouteSync.value = true
+
+      // Track the route from the previous workspace so we can ignore it once hydrated.
+      previousWorkspaceRoutePath.value =
+        oldId !== undefined ? route.fullPath : null
 
       // Do not force /start while switching workspace.
       // Persisted tabs restore asynchronously and may legitimately point to /new.
