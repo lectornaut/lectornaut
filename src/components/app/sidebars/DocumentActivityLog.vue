@@ -187,11 +187,11 @@ useInfiniteScroll(
               No history available for this item.
             </div>
 
-            <div v-else>
+            <template v-else>
               <Stepper
                 orientation="vertical"
                 :model-value="-1"
-                class="flex flex-col"
+                class="flex flex-col gap-0"
               >
                 <StepperItem
                   v-for="(entry, index) in logs"
@@ -212,7 +212,7 @@ useInfiniteScroll(
                     />
                   </div>
 
-                  <div class="flex grow flex-col gap-1 p-2">
+                  <div class="flex grow flex-col gap-2 p-2">
                     <StepperTitle>
                       {{ formatActor(entry) }}
                     </StepperTitle>
@@ -223,7 +223,7 @@ useInfiniteScroll(
                       <p class="text-xs font-medium">
                         {{ formatAction(entry) }}
                       </p>
-                      <time class="text-muted-foreground shrink-0 text-[10px]">
+                      <time class="text-muted-foreground shrink-0 text-xs">
                         {{ formatTimestamp(entry) }}
                       </time>
                     </div>
@@ -234,7 +234,7 @@ useInfiniteScroll(
               <div v-if="loading" class="flex justify-center p-2">
                 <Spinner />
               </div>
-            </div>
+            </template>
           </SidebarGroupContent>
         </SidebarGroup>
       </OverlayScrollbarsWrapper>

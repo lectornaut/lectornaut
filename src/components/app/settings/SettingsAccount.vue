@@ -543,6 +543,8 @@ watch(
   () => url.value,
   async (newVal, oldVal) => {
     if (oldVal === undefined) return
+    // Ignore initial storage URL hydration; only react to user-triggered uploads.
+    if (!optimisticPhotoPreview.value) return
     if (!newVal || newVal === oldVal) return
 
     try {

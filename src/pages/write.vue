@@ -417,10 +417,53 @@ onBeforeUnmount(() => {
     </Button>
   </Teleport>
   <Teleport defer to="#right-sidebar">
-    <DocumentActivityLog
-      :team-id="teamId"
-      :workspace-id="workspaceId"
-      :document-id="selectedNode?.id ?? null"
-    />
+    <Tabs default-value="details" class="grow gap-0">
+      <TabsList class="bg-background h-full w-full rounded-none border-b p-0">
+        <TabsTrigger
+          value="details"
+          class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+        >
+          <span class="flex items-center justify-center gap-2">
+            <span>Details</span>
+          </span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="activity"
+          class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+        >
+          <span class="flex items-center justify-center gap-2">
+            <span>Activity</span>
+          </span>
+        </TabsTrigger>
+      </TabsList>
+      <OverlayScrollbarsWrapper>
+        <TabsContent value="details" class="grow">
+          <DocumentActivityLog
+            v-if="teamId && workspaceId && selectedNode"
+            :team-id="teamId"
+            :workspace-id="workspaceId"
+            :document-id="selectedNode?.id ?? null"
+          />
+          <div v-else class="p-4">
+            <div class="text-muted-foreground text-xs">
+              Select a document to view details.
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="activity">
+          <DocumentActivityLog
+            v-if="teamId && workspaceId && selectedNode"
+            :team-id="teamId"
+            :workspace-id="workspaceId"
+            :document-id="selectedNode?.id ?? null"
+          />
+          <div v-else class="p-4">
+            <div class="text-muted-foreground text-xs">
+              Select a document to view activity history.
+            </div>
+          </div>
+        </TabsContent>
+      </OverlayScrollbarsWrapper>
+    </Tabs>
   </Teleport>
 </template>

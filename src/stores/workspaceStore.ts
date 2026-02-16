@@ -37,10 +37,7 @@ import {
   removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import {
-  buildUpdatedAtBaseVersion,
-  mutateUpdateDocument,
-} from "@/utils/firebase/firebase-sync-engine"
+import { mutateUpdateDocument } from "@/utils/firebase/firebase-sync-engine"
 import { serverTimestamp, type Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
@@ -112,7 +109,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       },
       {
         source: "workspace.persistSelection",
-        baseVersion: buildUpdatedAtBaseVersion(userProfile.value?.updatedAt),
       }
     )
   }
@@ -375,9 +371,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             },
             {
               source: "workspace.createWorkspace.select",
-              baseVersion: buildUpdatedAtBaseVersion(
-                previousUserProfile?.updatedAt
-              ),
             }
           )
 
@@ -403,7 +396,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     }
 
     const previousWorkspaceId = currentWorkspaceId.value
-    const previousUserProfile = cloneState(userProfile.value)
 
     await mutateWithCoordinator({
       id: currentUser.value.uid,
@@ -422,7 +414,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         data: {
           currentWorkspaceId: workspaceId,
         },
-        baseVersion: buildUpdatedAtBaseVersion(previousUserProfile?.updatedAt),
       },
     })
   }

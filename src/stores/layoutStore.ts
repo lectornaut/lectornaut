@@ -271,6 +271,9 @@ export const useLayoutStore = defineStore("layout", () => {
         (newTeamId !== oldTeamId && oldTeamId !== undefined) ||
         (newWorkspaceId !== oldWorkspaceId && oldWorkspaceId !== undefined)
       ) {
+        // Keep tab synchronization paused until the new workspace snapshot is ready.
+        isHydrated.value = false
+
         // Clear local state while waiting for new team/workspace's tabs to load
         tabs.value = []
         activeTabId.value = ""
@@ -444,9 +447,14 @@ export const useLayoutStore = defineStore("layout", () => {
         isHydrated.value = false
         return
       }
-      if (!tp && !np && !thp) {
-        isHydrated.value = true
+
+      // Re-enter hydration mode whenever any layout document is refreshing.
+      if (tp || np || thp) {
+        isHydrated.value = false
+        return
       }
+
+      isHydrated.value = true
     },
     { immediate: true }
   )
@@ -633,6 +641,7 @@ export const useLayoutStore = defineStore("layout", () => {
     () => {
       // Skip persistence during pending operations (will be handled by the action)
       if (pendingTabIds.value.size > 0) return
+      if (!tabsDocRef.value || tabsPending.value || !isHydrated.value) return
       persistTabs()
     },
     { debounce: 500, deep: true }

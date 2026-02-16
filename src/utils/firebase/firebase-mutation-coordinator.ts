@@ -24,6 +24,7 @@ export interface CoordinatedMutationOptions {
   trackSync?: boolean
   maxRetries?: number
   retryBaseDelay?: number
+  pendingReleaseDelayMs?: number
   onCommit?: (receipt: OptimisticMutationReceipt) => void
   onRollback?: (receipt: OptimisticMutationReceipt, error: unknown) => void
 }
@@ -70,6 +71,7 @@ export async function mutateWithCoordinator(
     trackSync = true,
     maxRetries = 0,
     retryBaseDelay = 1000,
+    pendingReleaseDelayMs,
     onCommit,
     onRollback,
   } = options
@@ -80,6 +82,7 @@ export async function mutateWithCoordinator(
     pendingIds,
     applyLocal,
     rollback: rollbackLocal,
+    pendingReleaseDelayMs,
   })
 
   const syncToken = trackSync ? beginCloudSyncOperation({ id, source }) : null

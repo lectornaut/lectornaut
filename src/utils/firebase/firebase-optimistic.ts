@@ -85,6 +85,27 @@ export function createPendingSet(): Set<string> {
   return new Set<string>()
 }
 
+const pendingCountsByRef = new WeakMap<Ref<Set<string>>, Map<string, number>>()
+const pendingCountsBySet = new WeakMap<Set<string>, Map<string, number>>()
+
+const getPendingCountsForRef = (pendingRef: Ref<Set<string>>) => {
+  let counts = pendingCountsByRef.get(pendingRef)
+  if (!counts) {
+    counts = new Map<string, number>()
+    pendingCountsByRef.set(pendingRef, counts)
+  }
+  return counts
+}
+
+const getPendingCountsForSet = (pendingSet: Set<string>) => {
+  let counts = pendingCountsBySet.get(pendingSet)
+  if (!counts) {
+    counts = new Map<string, number>()
+    pendingCountsBySet.set(pendingSet, counts)
+  }
+  return counts
+}
+
 /**
  * Triggers reactivity for a Ref<Set>
  * Call this after modifying the set to ensure Vue detects the change
@@ -97,16 +118,32 @@ export function triggerPendingUpdate(pendingRef: Ref<Set<string>>): void {
  * Add an ID to pending set with reactivity trigger
  */
 export function addPending(pendingRef: Ref<Set<string>>, id: string): void {
-  pendingRef.value.add(id)
-  triggerPendingUpdate(pendingRef)
+  const counts = getPendingCountsForRef(pendingRef)
+  const nextCount = (counts.get(id) ?? 0) + 1
+  counts.set(id, nextCount)
+
+  if (nextCount === 1 || !pendingRef.value.has(id)) {
+    pendingRef.value.add(id)
+    triggerPendingUpdate(pendingRef)
+  }
 }
 
 /**
  * Remove an ID from pending set with reactivity trigger
  */
 export function removePending(pendingRef: Ref<Set<string>>, id: string): void {
-  pendingRef.value.delete(id)
-  triggerPendingUpdate(pendingRef)
+  const counts = getPendingCountsForRef(pendingRef)
+  const currentCount = counts.get(id) ?? 0
+
+  if (currentCount <= 1) {
+    counts.delete(id)
+    if (pendingRef.value.delete(id)) {
+      triggerPendingUpdate(pendingRef)
+    }
+    return
+  }
+
+  counts.set(id, currentCount - 1)
 }
 
 export type PendingCollection = Set<string> | Ref<Set<string>>
@@ -124,6 +161,7 @@ interface InternalOptimisticMutationReceipt extends OptimisticMutationReceipt {
   pendingRef: Ref<Set<string>> | null
   pendingSet: Set<string> | null
   rollback: () => void
+  pendingReleaseDelayMs: number
 }
 
 interface ApplyLocalMutationOptions {
@@ -132,6 +170,7 @@ interface ApplyLocalMutationOptions {
   applyLocal: () => void
   rollback: () => void
   source?: string
+  pendingReleaseDelayMs?: number
 }
 
 const toPendingHandle = (
@@ -158,7 +197,13 @@ const addPendingForHandle = (
     addPending(pendingRef, id)
     return
   }
-  pendingSet?.add(id)
+  if (!pendingSet) return
+  const counts = getPendingCountsForSet(pendingSet)
+  const nextCount = (counts.get(id) ?? 0) + 1
+  counts.set(id, nextCount)
+  if (nextCount === 1) {
+    pendingSet.add(id)
+  }
 }
 
 const removePendingForHandle = (
@@ -170,8 +215,18 @@ const removePendingForHandle = (
     removePending(pendingRef, id)
     return
   }
-  pendingSet?.delete(id)
+  if (!pendingSet) return
+  const counts = getPendingCountsForSet(pendingSet)
+  const currentCount = counts.get(id) ?? 0
+  if (currentCount <= 1) {
+    counts.delete(id)
+    pendingSet.delete(id)
+    return
+  }
+  counts.set(id, currentCount - 1)
 }
+
+const DEFAULT_PENDING_RELEASE_DELAY_MS = 900
 
 export function applyLocalMutation(
   options: ApplyLocalMutationOptions
@@ -191,6 +246,8 @@ export function applyLocalMutation(
     pendingRef,
     pendingSet,
     rollback: options.rollback,
+    pendingReleaseDelayMs:
+      options.pendingReleaseDelayMs ?? DEFAULT_PENDING_RELEASE_DELAY_MS,
   } as InternalOptimisticMutationReceipt
 }
 
@@ -200,7 +257,19 @@ export function commitLocalMutation(
   const internal = receipt as InternalOptimisticMutationReceipt
   if (internal.state !== "pending") return internal
 
-  removePendingForHandle(internal.pendingRef, internal.pendingSet, internal.id)
+  const releasePending = () => {
+    removePendingForHandle(
+      internal.pendingRef,
+      internal.pendingSet,
+      internal.id
+    )
+  }
+  const releaseDelayMs = Math.max(0, internal.pendingReleaseDelayMs)
+  if (releaseDelayMs > 0) {
+    setTimeout(releasePending, releaseDelayMs)
+  } else {
+    releasePending()
+  }
   internal.state = "acked"
   internal.settledAt = Date.now()
 
@@ -424,6 +493,11 @@ export interface OptimisticOptions {
   retryBaseDelay?: number
   /** Track this operation in the global cloud sync queue (default: true) */
   trackSync?: boolean
+  /**
+   * Keep pending IDs alive briefly after mutation success to absorb Firestore
+   * snapshot lag and prevent UI flicker (default: 900ms).
+   */
+  pendingReleaseDelayMs?: number
 }
 
 // ============================================================================
@@ -485,7 +559,12 @@ export async function withOptimisticUpdate<T>(
   firestoreOperation: () => Promise<T>,
   options: OptimisticOptions = {}
 ): Promise<T> {
-  const { maxRetries = 0, retryBaseDelay = 1000, trackSync = true } = options
+  const {
+    maxRetries = 0,
+    retryBaseDelay = 1000,
+    trackSync = true,
+    pendingReleaseDelayMs = DEFAULT_PENDING_RELEASE_DELAY_MS,
+  } = options
   const syncToken = trackSync
     ? beginCloudSyncOperation({ id, source: "withOptimisticUpdate" })
     : null
@@ -506,6 +585,7 @@ export async function withOptimisticUpdate<T>(
       pendingIds,
       applyLocal: applyOptimistic,
       rollback,
+      pendingReleaseDelayMs,
     })
 
     let lastError: Error | undefined

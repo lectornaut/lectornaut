@@ -179,19 +179,11 @@ watch(
   () => currentWorkspace.value?.id,
   (newId, oldId) => {
     if (newId !== oldId) {
-      // When switching workspace, the store clears tabs.
-      // We might want to go to /start immediately to avoid "ghost" routes adding themselves?
-      // But usually the App persistence will redirect us.
-      // The previous logic used `hasInitialized` to gate this.
-      // With our simpler "Route -> Store" logic, if the user stays on OldRoute, it will try to AddTab to NewWorkspace.
-      // We should indeed redirect to start or the workspace's active tab.
-      // However, `layoutStore` persistence might load the new active tab and trigger the activeTabId watcher,
-      // which will push the new route.
-      // So mostly handled, but let's prevent accidental addition.
-      // For now, relies on layoutStore clearing activeTabId -> triggers Router push /start
-      if (tabs.value.length === 0) {
-        router.push("/start")
-      }
+      // Each workspace needs its own initial route synchronization phase.
+      isInitialRouteSync.value = true
+
+      // Do not force /start while switching workspace.
+      // Persisted tabs restore asynchronously and may legitimately point to /new.
     }
   }
 )
@@ -306,7 +298,15 @@ function selectTab(idOrDirection: string | number) {
   if (!targetId) return
 
   const target = tabs.value.find((t) => t.id === targetId)
-  if (target) navigateToTab(target)
+  if (!target) return
+
+  // Keep active tab state in sync even when route path does not change
+  // (e.g., multiple tabs pointing to the same fullPath such as "/new").
+  if (activeTabId.value !== target.id) {
+    setActiveTab(target.id)
+  }
+
+  navigateToTab(target)
 }
 
 // ----------------------------------------------------------------------------
@@ -362,43 +362,15 @@ function onTabsRename(id?: unknown) {
   )
 }
 
-// Register/Cleanup
-onMounted(async () => {
-  emitter.on("Tabs.Add", onTabsAdd)
-  emitter.on("Tabs.Close", onTabsClose)
-  emitter.on("Tabs.Close.Others", onTabsCloseOthers)
-  emitter.on("Tabs.Close.All", onTabsCloseAll)
-  emitter.on("Tabs.Select", onTabsSelect)
-  emitter.on("Tabs.ReopenLast", onTabsReopenLast)
-  emitter.on("Tabs.Reopen", onTabsReopen)
-  emitter.on("Tabs.Duplicate", onTabsDuplicate)
-  emitter.on("Tabs.Rename", onTabsRename)
-
-  // if (import.meta.env.TAURI_ENV_PLATFORM) {
-  //   await listen("single-instance", (event) => {
-  //     const payload = event.payload as { args: string[] }
-  //     // Try to find a URL in the arguments
-  //     const url = payload.args.find(
-  //       (arg) => arg.includes("://") || arg.startsWith("/")
-  //     )
-  //     if (url) {
-  //       onTabsAdd({ fullPath: url })
-  //     }
-  //   })
-  // }
-})
-
-onUnmounted(() => {
-  emitter.off("Tabs.Add", onTabsAdd)
-  emitter.off("Tabs.Close", onTabsClose)
-  emitter.off("Tabs.Close.Others", onTabsCloseOthers)
-  emitter.off("Tabs.Close.All", onTabsCloseAll)
-  emitter.off("Tabs.Select", onTabsSelect)
-  emitter.off("Tabs.ReopenLast", onTabsReopenLast)
-  emitter.off("Tabs.Reopen", onTabsReopen)
-  emitter.off("Tabs.Duplicate", onTabsDuplicate)
-  emitter.off("Tabs.Rename", onTabsRename)
-})
+emitter.on("Tabs.Add", onTabsAdd)
+emitter.on("Tabs.Close", onTabsClose)
+emitter.on("Tabs.Close.Others", onTabsCloseOthers)
+emitter.on("Tabs.Close.All", onTabsCloseAll)
+emitter.on("Tabs.Select", onTabsSelect)
+emitter.on("Tabs.ReopenLast", onTabsReopenLast)
+emitter.on("Tabs.Reopen", onTabsReopen)
+emitter.on("Tabs.Duplicate", onTabsDuplicate)
+emitter.on("Tabs.Rename", onTabsRename)
 </script>
 
 <template>

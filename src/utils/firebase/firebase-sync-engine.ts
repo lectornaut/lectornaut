@@ -19,8 +19,9 @@ import {
   onSnapshot,
   query,
   setDoc,
-  type Unsubscribe,
   where,
+  type DocumentData,
+  type Unsubscribe,
 } from "firebase/firestore"
 import type { ComputedRef } from "vue"
 
@@ -30,6 +31,7 @@ const CLIENT_ID_STORAGE_KEY = "lectornaut.sync.client.v1"
 const OUTBOX_SETTLED_RETENTION_MS = 60 * 60 * 1000
 const OUTBOX_MAX_PENDING_PER_USER = 2_000
 const RETRY_BASE_DELAY_MS = 1_000
+const CANONICAL_WAIT_TIMEOUT_MS = 6_000
 
 export interface SyncMutatePayload {
   source: string
@@ -236,6 +238,221 @@ const byCreatedOrder = (a: SyncOutboxOperation, b: SyncOutboxOperation) => {
     return a.createdAt - b.createdAt
   }
   return a.id.localeCompare(b.id)
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null
+
+const toComparableMillis = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (value instanceof Date) return value.getTime()
+  if (
+    isRecord(value) &&
+    "toMillis" in value &&
+    typeof (value as { toMillis?: unknown }).toMillis === "function"
+  ) {
+    const millis = (value as { toMillis: () => number }).toMillis()
+    return Number.isFinite(millis) ? millis : null
+  }
+  if (
+    isRecord(value) &&
+    "seconds" in value &&
+    "nanoseconds" in value &&
+    typeof value.seconds === "number" &&
+    typeof value.nanoseconds === "number"
+  ) {
+    return value.seconds * 1000 + Math.floor(value.nanoseconds / 1_000_000)
+  }
+  return null
+}
+
+const areValuesEqual = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true
+
+  const leftMillis = toComparableMillis(left)
+  const rightMillis = toComparableMillis(right)
+  if (leftMillis != null && rightMillis != null) {
+    return leftMillis === rightMillis
+  }
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) return false
+    for (let index = 0; index < left.length; index++) {
+      if (!areValuesEqual(left[index], right[index])) {
+        return false
+      }
+    }
+    return true
+  }
+
+  if (isRecord(left) && isRecord(right)) {
+    const leftKeys = Object.keys(left)
+    const rightKeys = Object.keys(right)
+    if (leftKeys.length !== rightKeys.length) return false
+    return leftKeys.every((key) => areValuesEqual(left[key], right[key]))
+  }
+
+  return false
+}
+
+const objectContainsSubset = (
+  candidate: Record<string, unknown>,
+  expected: Record<string, unknown>
+): boolean => {
+  const entries = Object.entries(expected)
+  for (const [key, expectedValue] of entries) {
+    if (expectedValue === undefined) continue
+    if (!(key in candidate)) return false
+
+    const actualValue = candidate[key]
+    if (isRecord(expectedValue)) {
+      if (!isRecord(actualValue)) return false
+      if (!objectContainsSubset(actualValue, expectedValue)) {
+        return false
+      }
+      continue
+    }
+
+    if (!areValuesEqual(actualValue, expectedValue)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+const getValueAtFieldPath = (
+  source: Record<string, unknown>,
+  fieldPath: string
+): unknown => {
+  const segments = fieldPath
+    .split(".")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0)
+
+  let cursor: unknown = source
+  for (const segment of segments) {
+    if (!isRecord(cursor)) return undefined
+    cursor = cursor[segment]
+  }
+  return cursor
+}
+
+const hasExpectedData = (operation: SyncOutboxOperation): boolean =>
+  Boolean(operation.data && Object.keys(operation.data).length > 0)
+
+const isBaseVersionSatisfied = (
+  data: Record<string, unknown>,
+  baseVersion: SyncBaseVersion | null | undefined
+): boolean => {
+  if (!baseVersion || !baseVersion.field) return false
+
+  const actualValue = getValueAtFieldPath(data, baseVersion.field)
+  const expectedValue = baseVersion.value
+
+  if (expectedValue == null) {
+    return actualValue == null
+  }
+
+  const actualMillis = toComparableMillis(actualValue)
+  const expectedMillis = toComparableMillis(expectedValue)
+  if (actualMillis != null && expectedMillis != null) {
+    return actualMillis >= expectedMillis
+  }
+
+  return areValuesEqual(actualValue, expectedValue)
+}
+
+const isCanonicalDocumentState = (
+  operation: SyncOutboxOperation,
+  exists: boolean,
+  data: Record<string, unknown> | null
+): boolean => {
+  if (operation.type === "delete") {
+    return !exists
+  }
+  if (!exists || !data) return false
+
+  const dataMatches = hasExpectedData(operation)
+    ? objectContainsSubset(data, operation.data as Record<string, unknown>)
+    : false
+  const baseVersionMatches = isBaseVersionSatisfied(data, operation.baseVersion)
+
+  if (hasExpectedData(operation) && operation.baseVersion) {
+    return dataMatches || baseVersionMatches
+  }
+  if (hasExpectedData(operation)) {
+    return dataMatches
+  }
+  if (operation.baseVersion) {
+    return baseVersionMatches
+  }
+
+  return true
+}
+
+const waitForCanonicalDocumentState = async (
+  operation: SyncOutboxOperation
+): Promise<void> => {
+  const targetPath = operation.targetPath.trim()
+  if (!targetPath) return
+
+  let targetRef: ReturnType<typeof doc>
+  try {
+    targetRef = doc(firestore, targetPath)
+  } catch (error) {
+    console.warn(
+      "[syncEngine] Invalid target path while waiting for canonical state:",
+      targetPath,
+      error
+    )
+    return
+  }
+
+  await new Promise<void>((resolve) => {
+    let settled = false
+    let unsubscribe: Unsubscribe | null = null
+    let timeout: ReturnType<typeof setTimeout> | null = null
+    const finish = () => {
+      if (settled) return
+      settled = true
+      if (unsubscribe) {
+        unsubscribe()
+        unsubscribe = null
+      }
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+      resolve()
+    }
+
+    timeout = setTimeout(() => {
+      console.warn(
+        `[syncEngine] Canonical wait timed out for ${operation.targetPath}`
+      )
+      finish()
+    }, CANONICAL_WAIT_TIMEOUT_MS)
+
+    unsubscribe = onSnapshot(
+      targetRef,
+      (snapshot) => {
+        const exists = snapshot.exists()
+        const data = exists ? (snapshot.data() as DocumentData) : null
+        const record = isRecord(data) ? data : null
+        if (isCanonicalDocumentState(operation, exists, record)) {
+          finish()
+        }
+      },
+      (error) => {
+        console.warn(
+          "[syncEngine] Canonical wait failed; continuing with ack settlement:",
+          error
+        )
+        finish()
+      }
+    )
+  })
 }
 
 const waiters: WaiterMap = new Map()
@@ -513,6 +730,43 @@ const toRemoteDocument = (
   }
 }
 
+const settleAckAfterCanonical = (
+  operationId: string,
+  eventBase: {
+    userId: string
+    targetPath: string
+    at: number
+  },
+  outboxOperation?: SyncOutboxOperation
+) => {
+  const finalize = () => {
+    notifyCanonicalSubscribers({
+      userId: eventBase.userId,
+      targetPath: eventBase.targetPath,
+      origin: "local",
+      operationId,
+      at: Date.now(),
+    })
+    settleWaiters(operationId)
+  }
+
+  if (!outboxOperation) {
+    finalize()
+    return
+  }
+
+  void waitForCanonicalDocumentState(outboxOperation)
+    .catch((error) => {
+      console.warn(
+        "[syncEngine] Canonical wait failed; proceeding with waiter settlement:",
+        error
+      )
+    })
+    .finally(() => {
+      finalize()
+    })
+}
+
 const applyRemoteSettlement = (
   operationId: string,
   data?: Partial<RemoteSyncOperationDocument>
@@ -555,14 +809,7 @@ const applyRemoteSettlement = (
       status: "ack",
       message: null,
     })
-    notifyCanonicalSubscribers({
-      userId: eventBase.userId,
-      targetPath: eventBase.targetPath,
-      origin: "local",
-      operationId,
-      at: settledAt,
-    })
-    settleWaiters(operationId)
+    settleAckAfterCanonical(operationId, eventBase, outboxOperation)
     return true
   }
 
