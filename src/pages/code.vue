@@ -1,5 +1,10 @@
 <script lang="ts" setup>
-import { IconCloudAlert, IconCloudCheck, IconFileText } from "@/data/icons"
+import {
+  IconCloudAlert,
+  IconCloudCheck,
+  IconFileText,
+  IconInfo,
+} from "@/data/icons"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
@@ -354,41 +359,33 @@ onBeforeUnmount(() => {
     </Button>
   </Teleport>
   <Teleport defer to="#right-sidebar">
-    <Tabs default-value="details" class="grow gap-0">
-      <TabsList class="bg-background h-full w-full rounded-none border-b p-0">
-        <TabsTrigger
-          value="details"
-          class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+    <Sidebar collapsible="none" class="w-full">
+      <Tabs default-value="details" class="h-full min-h-0 gap-0">
+        <TabsList
+          class="bg-background w-full shrink-0 rounded-none border-b p-0"
         >
-          <span class="flex items-center justify-center gap-2">
-            <span>Details</span>
-          </span>
-        </TabsTrigger>
-        <TabsTrigger
-          value="activity"
-          class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-        >
-          <span class="flex items-center justify-center gap-2">
-            <span>Activity</span>
-          </span>
-        </TabsTrigger>
-      </TabsList>
-      <OverlayScrollbarsWrapper>
-        <TabsContent value="details" class="grow">
-          <DocumentActivityLog
-            v-if="teamId && workspaceId && selectedNode"
-            :team-id="teamId"
-            :workspace-id="workspaceId"
-            :document-id="selectedNode?.id ?? null"
-          />
-          <div v-else class="p-4">
-            <div class="text-muted-foreground text-xs">
-              Select a document to view details.
-            </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="activity">
-          <DocumentActivityLog
+          <TabsTrigger
+            value="details"
+            class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            as-child
+          >
+            <Button>
+              <IconInfo />
+              Details
+            </Button>
+          </TabsTrigger>
+          <TabsTrigger
+            value="activity"
+            class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            <span class="flex items-center justify-center gap-2">
+              <span>Activity</span>
+            </span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="details" class="h-0 min-h-0 flex-1"></TabsContent>
+        <TabsContent value="activity" class="h-0 min-h-0 flex-1">
+          <NodeActivityLog
             v-if="teamId && workspaceId && selectedNode"
             :team-id="teamId"
             :workspace-id="workspaceId"
@@ -400,7 +397,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </TabsContent>
-      </OverlayScrollbarsWrapper>
-    </Tabs>
+      </Tabs>
+    </Sidebar>
   </Teleport>
 </template>

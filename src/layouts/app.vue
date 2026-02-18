@@ -260,7 +260,7 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=hover]:after:via-primary data-[resize-handle-state=hover]:after:bg-to-transparent data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-sidebar-accent focus-visible:bg-primary z-20 w-0! cursor-col-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 before:cursor-col-resize before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px data-[resize-handle-state=hover]:after:bg-linear-to-b data-[resize-handle-state=hover]:after:from-transparent"
+                    class="data-[resize-handle-state=drag]:after:bg-border data-[resize-handle-state=hover]:after:bg-border data-[resize-handle-state=hover]:bg-border data-[resize-handle-state=drag]:bg-border focus-visible:ring-sidebar-accent focus-visible:bg-border z-20 w-0! cursor-col-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 before:cursor-col-resize focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
                       'data-resize-handle:after:bg-border':
                         !leftPanel?.splitterPanel?.isCollapsed,
@@ -362,7 +362,7 @@ const closeTab = (id: string) => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <ResizableHandle
-                        class="data-[resize-handle-state=hover]:after:via-primary data-[resize-handle-state=hover]:after:bg-to-transparent data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-sidebar-accent focus-visible:bg-primary z-10 h-0! w-auto! cursor-row-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 before:cursor-row-resize before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:h-px! data-[resize-handle-state=hover]:after:bg-linear-to-r data-[resize-handle-state=hover]:after:from-transparent"
+                        class="data-[resize-handle-state=drag]:after:bg-border data-[resize-handle-state=hover]:after:bg-border data-[resize-handle-state=hover]:bg-border data-[resize-handle-state=drag]:bg-border focus-visible:ring-sidebar-accent focus-visible:bg-border z-10 h-0! w-auto! cursor-row-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 before:cursor-row-resize focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                         :class="{
                           'data-resize-handle:after:bg-border':
                             !bottomPanel?.splitterPanel?.isCollapsed &&
@@ -621,7 +621,7 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=hover]:after:via-primary data-[resize-handle-state=hover]:after:bg-to-transparent data-[resize-handle-state=drag]:after:bg-primary data-[resize-handle-state=hover]:bg-primary data-[resize-handle-state=drag]:bg-primary focus-visible:ring-sidebar-accent focus-visible:bg-primary z-20 w-0! cursor-col-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 before:cursor-col-resize before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px data-[resize-handle-state=hover]:after:bg-linear-to-b data-[resize-handle-state=hover]:after:from-transparent"
+                    class="data-[resize-handle-state=drag]:after:bg-border data-[resize-handle-state=hover]:after:bg-border data-[resize-handle-state=hover]:bg-border data-[resize-handle-state=drag]:bg-border focus-visible:ring-sidebar-accent focus-visible:bg-border z-20 w-0! cursor-col-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 before:cursor-col-resize focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
                       'data-resize-handle:after:bg-border':
                         !rightPanel?.splitterPanel?.isCollapsed,

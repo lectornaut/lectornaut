@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { useDocumentActivityLogs } from "@/composables/useDocumentActivityLogs"
+import { useNodeActivityLogs } from "@/composables/useNodeActivityLogs"
 import {
   IconAlertTriangle,
   IconFilePlus,
@@ -28,7 +28,7 @@ const scrollableContainer = useTemplateRef<ComponentPublicInstance>(
 )
 
 const { logs, loading, error, hasMore, canViewLogs, fetchLogs } =
-  useDocumentActivityLogs({
+  useNodeActivityLogs({
     teamId,
     workspaceId,
     documentId,

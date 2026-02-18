@@ -246,6 +246,7 @@ declare module 'vue' {
     NavigationMenuList: typeof import('./src/components/ui/navigation-menu/NavigationMenuList.vue')['default']
     NavigationMenuTrigger: typeof import('./src/components/ui/navigation-menu/NavigationMenuTrigger.vue')['default']
     NavigationMenuViewport: typeof import('./src/components/ui/navigation-menu/NavigationMenuViewport.vue')['default']
+    NodeActivityLog: typeof import('./src/components/app/sidebars/NodeActivityLog.vue')['default']
     NotificationItem: typeof import('./src/components/app/layout/NotificationItem.vue')['default']
     Notifications: typeof import('./src/components/app/layout/Notifications.vue')['default']
     OverlayScrollbarsWrapper: typeof import('./src/components/smart/OverlayScrollbarsWrapper.vue')['default']

@@ -16,17 +16,17 @@ import { computed, type Ref } from "vue"
 
 const PAGE_SIZE = 10
 
-interface UseDocumentActivityLogsOptions {
+interface useNodeActivityLogsOptions {
   teamId: Ref<string | null>
   workspaceId: Ref<string | null>
   documentId: Ref<string | null>
 }
 
-export function useDocumentActivityLogs({
+export function useNodeActivityLogs({
   teamId,
   workspaceId,
   documentId,
-}: UseDocumentActivityLogsOptions) {
+}: useNodeActivityLogsOptions) {
   const membershipStore = useMembershipStore()
   const { isOwner, isAdmin } = storeToRefs(membershipStore)
 
@@ -56,7 +56,7 @@ export function useDocumentActivityLogs({
 
   const { logs, loading, error, hasMore, fetchLogs } = usePaginatedLogs({
     pageSize: PAGE_SIZE,
-    source: "useDocumentActivityLogs",
+    source: "useNodeActivityLogs",
     errorMessage: "Failed to load document history.",
     canFetch: () =>
       Boolean(
