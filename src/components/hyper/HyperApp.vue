@@ -279,7 +279,7 @@ const randomIndex = () => {
             }"
           >
             <div
-              class="absolute inset-0 flex items-center justify-center bg-black/5 transition group-hover:bg-transparent"
+              class="absolute inset-0 flex items-center justify-center bg-black/50 transition group-hover:bg-transparent"
             ></div>
           </CarouselItem>
         </CarouselContent>
@@ -341,7 +341,7 @@ const randomIndex = () => {
                   class="aspect-square size-full rounded-4xl object-cover"
                 />
               </div>
-              <div class="absolute end-4 top-4 z-10 flex flex-col gap-2">
+              <div class="absolute inset-e-4 top-4 z-10 flex flex-col gap-2">
                 <Button
                   variant="ghost"
                   class="text-muted-foreground rounded-full"
@@ -413,7 +413,7 @@ const randomIndex = () => {
                     />
                   </Label>
                   <span
-                    class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
+                    class="absolute inset-y-0 inset-e-0 flex items-center justify-center gap-2 p-2"
                   >
                     <Badge class="rounded-full" variant="secondary">
                       <IconDotsCircle />
@@ -449,7 +449,7 @@ const randomIndex = () => {
                     />
                   </Label>
                   <span
-                    class="absolute inset-y-0 end-0 flex items-center justify-center gap-2 p-2"
+                    class="absolute inset-y-0 inset-e-0 flex items-center justify-center gap-2 p-2"
                   >
                     <Badge class="rounded-full" variant="secondary">
                       <IconDotsCircle />
@@ -476,7 +476,7 @@ const randomIndex = () => {
                     :placeholder="$t('components.hyper.askAi')"
                   />
                 </Label>
-                <span class="absolute end-0 top-0 flex gap-2 p-4">
+                <span class="absolute inset-e-0 top-0 flex gap-2 p-4">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger as-child>

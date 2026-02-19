@@ -2,7 +2,7 @@
   /*
    * Theme Configuration
    * data-theme: light | dark
-   * data-base:  slate | gray | zinc | neutral | stone | accent
+   * data-base:  slate | gray | zinc | neutral | stone | taupe | mauve | mist | olive | accent
    * data-accent: red | orange | amber | yellow | lime | green | emerald | teal | cyan | sky | blue | indigo | violet | purple | fuchsia | pink | rose
    */
 
@@ -158,6 +158,102 @@
     --secondary-foreground: var(--foreground);
     --muted: var(--color-stone-200);
     --muted-foreground: var(--color-stone-600);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="light"][data-base="taupe"] {
+    --background: var(--color-white);
+    --foreground: var(--color-taupe-800);
+    --card: var(--color-taupe-50);
+    --card-foreground: var(--color-taupe-900);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-taupe-100);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-taupe-200);
+    --muted-foreground: var(--color-taupe-600);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="light"][data-base="mauve"] {
+    --background: var(--color-white);
+    --foreground: var(--color-mauve-800);
+    --card: var(--color-mauve-50);
+    --card-foreground: var(--color-mauve-900);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-mauve-100);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-mauve-200);
+    --muted-foreground: var(--color-mauve-600);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="light"][data-base="mist"] {
+    --background: var(--color-white);
+    --foreground: var(--color-mist-800);
+    --card: var(--color-mist-50);
+    --card-foreground: var(--color-mist-900);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-mist-100);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-mist-200);
+    --muted-foreground: var(--color-mist-600);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="light"][data-base="olive"] {
+    --background: var(--color-white);
+    --foreground: var(--color-olive-800);
+    --card: var(--color-olive-50);
+    --card-foreground: var(--color-olive-900);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-olive-100);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-olive-200);
+    --muted-foreground: var(--color-olive-600);
     --accent: var(--muted);
     --accent-foreground: var(--card-foreground);
     --border: var(--muted);
@@ -529,6 +625,102 @@
     --secondary-foreground: var(--foreground);
     --muted: var(--color-stone-800);
     --muted-foreground: var(--color-stone-400);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="dark"][data-base="taupe"] {
+    --background: var(--color-black);
+    --foreground: var(--color-taupe-200);
+    --card: var(--color-taupe-950);
+    --card-foreground: var(--color-taupe-100);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-taupe-900);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-taupe-800);
+    --muted-foreground: var(--color-taupe-400);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="dark"][data-base="mauve"] {
+    --background: var(--color-black);
+    --foreground: var(--color-mauve-200);
+    --card: var(--color-mauve-950);
+    --card-foreground: var(--color-mauve-100);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-mauve-900);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-mauve-800);
+    --muted-foreground: var(--color-mauve-400);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="dark"][data-base="mist"] {
+    --background: var(--color-black);
+    --foreground: var(--color-mist-200);
+    --card: var(--color-mist-950);
+    --card-foreground: var(--color-mist-100);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-mist-900);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-mist-800);
+    --muted-foreground: var(--color-mist-400);
+    --accent: var(--muted);
+    --accent-foreground: var(--card-foreground);
+    --border: var(--muted);
+    --input: var(--muted);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--foreground);
+    --sidebar-primary-foreground: var(--card);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--card-foreground);
+    --sidebar-border: var(--muted);
+  }
+
+  :root[data-theme="dark"][data-base="olive"] {
+    --background: var(--color-black);
+    --foreground: var(--color-olive-200);
+    --card: var(--color-olive-950);
+    --card-foreground: var(--color-olive-100);
+    --popover: var(--background);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--color-olive-900);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--color-olive-800);
+    --muted-foreground: var(--color-olive-400);
     --accent: var(--muted);
     --accent-foreground: var(--card-foreground);
     --border: var(--muted);
@@ -1620,4 +1812,5 @@
     --sidebar-accent-foreground: var(--card-foreground);
     --sidebar-border: var(--muted);
   }
+
 }

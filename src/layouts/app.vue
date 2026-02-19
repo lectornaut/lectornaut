@@ -222,7 +222,7 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div id="left-dock" class="flex max-w-80 shrink-0 empty:hidden"></div>
           <ResizablePanelGroup
-            class="min-w-0 overflow-clip rounded-2xl border shadow-sm"
+            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded-2xl border shadow-md"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -260,9 +260,9 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=drag]:after:bg-border data-[resize-handle-state=hover]:after:bg-border data-[resize-handle-state=hover]:bg-border data-[resize-handle-state=drag]:bg-border focus-visible:ring-sidebar-accent focus-visible:bg-border z-20 w-0! cursor-col-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 before:cursor-col-resize focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+                    class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
-                      'data-resize-handle:after:bg-border':
+                      'data-resize-handle:after:bg-muted':
                         !leftPanel?.splitterPanel?.isCollapsed,
                     }"
                     @dblclick="
@@ -317,30 +317,28 @@ const closeTab = (id: string) => {
                       class="transition-all"
                       :inert="topPanel?.splitterPanel?.isCollapsed"
                     >
-                      <div class="flex min-h-0 flex-1 flex-col gap-2">
+                      <div
+                        class="bg-background/80 flex min-h-0 flex-1 flex-col overflow-clip"
+                      >
+                        <!-- Non-scrollable header -->
+                        <div class="flex shrink-0 flex-col">
+                          <Tabbar />
+                          <Separator />
+                        </div>
+                        <!-- Scrollable content area - isolate scroll context -->
                         <div
-                          class="bg-background flex min-h-0 flex-1 flex-col overflow-clip"
+                          class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [scrollbar-gutter:stable]"
                         >
-                          <!-- Non-scrollable header -->
-                          <div class="flex shrink-0 flex-col">
-                            <Tabbar />
-                            <Separator />
-                          </div>
-                          <!-- Scrollable content area - isolate scroll context -->
                           <div
-                            class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [scrollbar-gutter:stable]"
+                            class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b-2xl border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
                           >
+                            <SubNavigation />
                             <div
-                              class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b-2xl border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
-                            >
-                              <SubNavigation />
-                              <div
-                                id="cta-dock"
-                                class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
-                              ></div>
-                            </div>
-                            <RouterView />
+                              id="cta-dock"
+                              class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
+                            ></div>
                           </div>
+                          <RouterView />
                         </div>
                       </div>
                     </ResizablePanel>
@@ -362,9 +360,9 @@ const closeTab = (id: string) => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <ResizableHandle
-                        class="data-[resize-handle-state=drag]:after:bg-border data-[resize-handle-state=hover]:after:bg-border data-[resize-handle-state=hover]:bg-border data-[resize-handle-state=drag]:bg-border focus-visible:ring-sidebar-accent focus-visible:bg-border z-10 h-0! w-auto! cursor-row-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 before:cursor-row-resize focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+                        class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-10 h-0! w-auto! transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                         :class="{
-                          'data-resize-handle:after:bg-border':
+                          'data-resize-handle:after:bg-muted':
                             !bottomPanel?.splitterPanel?.isCollapsed &&
                             !topPanel?.splitterPanel?.isCollapsed,
                         }"
@@ -621,9 +619,9 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=drag]:after:bg-border data-[resize-handle-state=hover]:after:bg-border data-[resize-handle-state=hover]:bg-border data-[resize-handle-state=drag]:bg-border focus-visible:ring-sidebar-accent focus-visible:bg-border z-20 w-0! cursor-col-resize bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 before:cursor-col-resize focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+                    class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
-                      'data-resize-handle:after:bg-border':
+                      'data-resize-handle:after:bg-muted':
                         !rightPanel?.splitterPanel?.isCollapsed,
                     }"
                     @dblclick="

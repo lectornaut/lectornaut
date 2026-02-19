@@ -103,6 +103,10 @@ export const bases = [
   { id: "zinc", name: "Zinc", style: "text-zinc-500" },
   { id: "neutral", name: "Neutral", style: "text-neutral-500" },
   { id: "stone", name: "Stone", style: "text-stone-500" },
+  { id: "taupe", name: "Taupe", style: "text-taupe-500" },
+  { id: "mauve", name: "Mauve", style: "text-mauve-500" },
+  { id: "mist", name: "Mist", style: "text-mist-500" },
+  { id: "olive", name: "Olive", style: "text-olive-500" },
   { id: "accent", name: "Accent", style: "text-primary" },
 ] as const
 
