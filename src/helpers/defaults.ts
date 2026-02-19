@@ -93,6 +93,7 @@ export const accents = [
   { id: "fuchsia", name: "Fuchsia", style: "text-fuchsia-500" },
   { id: "pink", name: "Pink", style: "text-pink-500" },
   { id: "rose", name: "Rose", style: "text-rose-500" },
+  { id: "base", name: "Base", style: "text-foreground" },
 ] as const
 
 export type AccentId = (typeof accents)[number]["id"]
@@ -113,7 +114,7 @@ export const bases = [
 export type BaseId = (typeof bases)[number]["id"]
 
 export const defaultBase: BaseId = "neutral"
-export const defaultAccent: AccentId = "orange"
+export const defaultAccent: AccentId = "base"
 
 export const fonts = [
   { id: "sans", name: "Sans", icon: IconFontSans, style: "font-sans" },

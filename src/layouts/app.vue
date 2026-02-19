@@ -7,7 +7,6 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconArrowUp,
-  IconCode,
   IconHand,
   IconLayerFill,
   IconMaximize,
@@ -449,7 +448,7 @@ const closeTab = (id: string) => {
                                     }"
                                     @click="setActiveTab(tab.id)"
                                   >
-                                    <IconCode />
+                                    <IconTerminal />
                                     <span
                                       class="flex-1 items-center justify-start truncate text-left"
                                     >

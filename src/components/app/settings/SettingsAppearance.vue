@@ -11,6 +11,9 @@ import {
 import { accent, base, font, size, store } from "@/modules/theme"
 
 const { locale, t } = useI18n()
+
+const isAccentBaseSelected = computed(() => accent.value === "base")
+const isBaseAccentSelected = computed(() => base.value === "accent")
 </script>
 
 <template>
@@ -60,6 +63,7 @@ const { locale, t } = useI18n()
                 v-for="color in bases"
                 :key="color.id"
                 :value="color.id"
+                :disabled="isAccentBaseSelected && color.id === 'accent'"
               >
                 <IconCircleDot :class="color.style" />
                 {{ color.name }}
@@ -87,6 +91,7 @@ const { locale, t } = useI18n()
                 v-for="color in accents"
                 :key="color.id"
                 :value="color.id"
+                :disabled="isBaseAccentSelected && color.id === 'base'"
               >
                 <IconCircleDot :class="color.style" />
                 {{ color.name }}

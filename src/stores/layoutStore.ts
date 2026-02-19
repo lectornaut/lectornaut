@@ -436,6 +436,36 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
+  // Prevent cyclic "accent<->base" mode combinations that cannot resolve a palette.
+  watch(
+    [base, accent],
+    ([nextBase, nextAccent], previousPair) => {
+      if (nextBase !== "accent" || nextAccent !== "base") return
+
+      const [prevBase, prevAccent] = previousPair ?? []
+      const safePrevBase: BaseId =
+        prevBase && prevBase !== "accent" ? prevBase : defaultBase
+      const safePrevAccent: AccentId =
+        prevAccent && prevAccent !== "base" ? prevAccent : defaultAccent
+
+      // Keep the earlier conflicting side and revert the newly changed side.
+      if (prevAccent === "base" && prevBase !== "accent") {
+        base.value = safePrevBase
+        return
+      }
+
+      if (prevBase === "accent" && prevAccent !== "base") {
+        accent.value = safePrevAccent
+        return
+      }
+
+      // Fallback for invalid persisted/multi-update states.
+      base.value = safePrevBase
+      accent.value = safePrevAccent
+    },
+    { immediate: true }
+  )
+
   // Set isHydrated when all critical documents are loaded or failed to load
   // Only set hydrated when we have valid refs (user/team loaded) AND documents are no longer pending
   watch(
