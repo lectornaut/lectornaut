@@ -1050,31 +1050,37 @@
     "welcome": {
       "steps": {
         "account": {
-          "title": "Account",
-          "description": "Add your address"
+          "title": "Account details",
+          "description": "Profile picture, preferred name, username and visibility."
         },
-        "preferences": {
-          "title": "Preferences",
-          "description": "Set your preferred"
+        "appearance": {
+          "title": "Appearance",
+          "description": "Theme, base color, accent color and language."
         },
-        "payment": {
-          "title": "Payment",
-          "description": "Add any payment"
+        "teamWorkspace": {
+          "title": "Team and workspace",
+          "description": "Create and switch your active team and workspace."
         },
-        "confirmation": {
-          "title": "Confirmation",
-          "description": "Confirm your order"
+        "app": {
+          "title": "App",
+          "description": "Cmd+K, workspace switcher shortcuts, and full keyboard help."
+        },
+        "plans": {
+          "title": "Plans",
+          "description": "Plan setup is available soon."
         }
       },
       "content": {
         "accountDetails": "Account Details",
-        "accountDescription": "Enter your personal information and address to get started.",
-        "preferences": "Your Preferences",
-        "preferencesDescription": "Customize your experience by setting your preferred options.",
-        "paymentMethod": "Payment Method",
-        "paymentDescription": "Add a payment method to complete your subscription.",
-        "confirmation": "Confirmation",
-        "confirmationDescription": "Review and confirm your details before proceeding.",
+        "accountDescription": "Set your profile basics before you get started.",
+        "preferences": "Appearance",
+        "preferencesDescription": "Adjust how the app looks and which language it uses.",
+        "paymentMethod": "Team and Workspace",
+        "paymentDescription": "Create and select where you want to work.",
+        "confirmation": "Plans",
+        "confirmationDescription": "Plans are not configured yet.",
+        "plans": "Plans setup is intentionally empty for now.",
+        "plansDescription": "You can continue onboarding and configure plans later.",
         "allSet": "All Set!",
         "allSetDescription": "You're ready to start using the app."
       }

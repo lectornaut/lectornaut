@@ -49,7 +49,7 @@ watch(isMobile, (val) => {
             data-tauri-drag-region
             class="flex grow items-center justify-end gap-2 transition-all"
           >
-            <CommandK :icon-display="headerIconDisplay" />
+            <CommandKTrigger :icon-display="headerIconDisplay" />
             <AiAsk :icon-display="headerIconDisplay" />
           </div>
         </div>

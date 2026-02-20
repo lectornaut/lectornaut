@@ -24,6 +24,7 @@ const teamStore = useTeamStore()
 const { currentTeam } = storeToRefs(teamStore)
 
 const isCreatingWorkspaceDialogOpen = ref(false)
+const isWorkspaceSwitcherOpen = ref(false)
 
 const switchWorkspace = async (workspaceId: string) => {
   try {
@@ -32,6 +33,13 @@ const switchWorkspace = async (workspaceId: string) => {
     toast.error("Failed to switch workspace")
   }
 }
+
+const openWorkspaceSwitcher = () => {
+  if (!currentTeam.value) return
+  isWorkspaceSwitcherOpen.value = true
+}
+
+emitter.on("Workspace.Switch", openWorkspaceSwitcher)
 </script>
 
 <template>
@@ -39,7 +47,7 @@ const switchWorkspace = async (workspaceId: string) => {
     <ContextMenuTrigger id="tour-workspace-switcher">
       <TooltipProvider>
         <Tooltip>
-          <DropdownMenu>
+          <DropdownMenu v-model:open="isWorkspaceSwitcherOpen">
             <TooltipTrigger as-child>
               <DropdownMenuTrigger as-child>
                 <Button

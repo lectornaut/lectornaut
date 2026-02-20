@@ -1,0 +1,270 @@
+<script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
+import {
+  IconCheck,
+  IconPlus,
+  IconSwitchHorizontal,
+  IconUsers,
+} from "@/data/icons"
+
+const {
+  currentTeam,
+  memberships,
+  isLoading: isTeamLoading,
+  loading: teamLoading,
+  canCreateTeam,
+  getCannotCreateTeamReason,
+  switchTeam,
+  createTeam,
+} = useTeamActions()
+
+const {
+  currentWorkspace,
+  workspaces,
+  isLoading: isWorkspaceLoading,
+  loading: workspaceLoading,
+  canCreateWorkspace,
+  getCannotCreateWorkspaceReason,
+  switchWorkspace,
+  createWorkspace,
+} = useWorkspaceActions()
+
+const newTeamName = ref("")
+const newWorkspaceName = ref("")
+const newWorkspaceDescription = ref("")
+
+const isCreatingTeam = computed(() => teamLoading.team.isLoading("create"))
+const isCreatingWorkspace = computed(() => workspaceLoading.isLoading("create"))
+
+const createTeamDisabled = computed(
+  () =>
+    !canCreateTeam.value || !newTeamName.value.trim() || isCreatingTeam.value
+)
+const createWorkspaceDisabled = computed(
+  () =>
+    !canCreateWorkspace.value ||
+    !newWorkspaceName.value.trim() ||
+    isCreatingWorkspace.value
+)
+
+const handleCreateTeam = async () => {
+  const name = newTeamName.value.trim()
+  if (!name || !canCreateTeam.value) return
+
+  await createTeam(name)
+  newTeamName.value = ""
+}
+
+const handleCreateWorkspace = async () => {
+  const name = newWorkspaceName.value.trim()
+  if (!name || !canCreateWorkspace.value) return
+
+  await createWorkspace(name, newWorkspaceDescription.value.trim() || undefined)
+  newWorkspaceName.value = ""
+  newWorkspaceDescription.value = ""
+}
+</script>
+
+<template>
+  <div class="p-4">
+    <FieldGroup>
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="onboarding-team-name">Create team</FieldLabel>
+            <FieldDescription>
+              Create a team to organize members and workspaces.
+            </FieldDescription>
+          </FieldContent>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div class="flex w-full max-w-md gap-2">
+                  <Input
+                    id="onboarding-team-name"
+                    v-model="newTeamName"
+                    placeholder="My Team"
+                    :disabled="!canCreateTeam"
+                    @keyup.enter="handleCreateTeam"
+                  />
+                  <Button
+                    :disabled="createTeamDisabled"
+                    @click="handleCreateTeam"
+                  >
+                    <Spinner v-if="isCreatingTeam" />
+                    <template v-else>
+                      <IconPlus />
+                      Create
+                    </template>
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canCreateTeam">
+                {{ getCannotCreateTeamReason }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Field>
+
+        <Field orientation="horizontal">
+          <FieldContent class="w-full">
+            <FieldLabel>Switch team</FieldLabel>
+            <FieldDescription>
+              Use this to continue in the correct team context.
+            </FieldDescription>
+
+            <div v-if="isTeamLoading" class="flex justify-center py-6">
+              <Spinner />
+            </div>
+            <div v-else class="mt-3 space-y-2">
+              <div
+                v-for="membership in memberships"
+                :key="membership.teamId"
+                class="flex items-center justify-between rounded-md border px-3 py-2"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium">
+                    {{ membership.team?.name || "Untitled team" }}
+                  </p>
+                  <p class="text-muted-foreground text-xs capitalize">
+                    {{ membership.role }}
+                  </p>
+                </div>
+                <Button
+                  v-if="currentTeam?.id !== membership.team?.id"
+                  variant="outline"
+                  :disabled="
+                    !membership.team?.id ||
+                    teamLoading.team.isLoading(membership.team.id)
+                  "
+                  @click="membership.team?.id && switchTeam(membership.team.id)"
+                >
+                  <Spinner
+                    v-if="teamLoading.team.isLoading(membership.team?.id)"
+                  />
+                  <template v-else>
+                    <IconSwitchHorizontal />
+                    Switch
+                  </template>
+                </Button>
+                <Button v-else variant="outline" disabled>
+                  <IconCheck />
+                  Current
+                </Button>
+              </div>
+              <div
+                v-if="memberships.length === 0"
+                class="text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-4 text-sm"
+              >
+                <IconUsers />
+                No teams yet. Create one to continue.
+              </div>
+            </div>
+          </FieldContent>
+        </Field>
+      </FieldSet>
+
+      <FieldSeparator />
+
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="onboarding-workspace-name">
+              Create workspace
+            </FieldLabel>
+            <FieldDescription>
+              Create a workspace inside the current team.
+            </FieldDescription>
+          </FieldContent>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div class="flex w-full max-w-md flex-col gap-2">
+                  <Input
+                    id="onboarding-workspace-name"
+                    v-model="newWorkspaceName"
+                    placeholder="My Workspace"
+                    :disabled="!canCreateWorkspace"
+                    @keyup.enter="handleCreateWorkspace"
+                  />
+                  <Input
+                    id="onboarding-workspace-description"
+                    v-model="newWorkspaceDescription"
+                    placeholder="Optional description"
+                    :disabled="!canCreateWorkspace"
+                    @keyup.enter="handleCreateWorkspace"
+                  />
+                  <Button
+                    :disabled="createWorkspaceDisabled"
+                    @click="handleCreateWorkspace"
+                  >
+                    <Spinner v-if="isCreatingWorkspace" />
+                    <template v-else>
+                      <IconPlus />
+                      Create
+                    </template>
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canCreateWorkspace">
+                {{ getCannotCreateWorkspaceReason }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Field>
+
+        <Field orientation="horizontal">
+          <FieldContent class="w-full">
+            <FieldLabel>Switch workspace</FieldLabel>
+            <FieldDescription>
+              Pick the workspace you want to start with.
+            </FieldDescription>
+
+            <div v-if="isWorkspaceLoading" class="flex justify-center py-6">
+              <Spinner />
+            </div>
+            <div v-else class="mt-3 space-y-2">
+              <div
+                v-for="workspace in workspaces"
+                :key="workspace.id"
+                class="flex items-center justify-between rounded-md border px-3 py-2"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium">
+                    {{ workspace.name }}
+                  </p>
+                  <p class="text-muted-foreground truncate text-xs">
+                    {{ workspace.description || "No description" }}
+                  </p>
+                </div>
+                <Button
+                  v-if="currentWorkspace?.id !== workspace.id"
+                  variant="outline"
+                  :disabled="workspaceLoading.isLoading(workspace.id)"
+                  @click="switchWorkspace(workspace.id)"
+                >
+                  <Spinner v-if="workspaceLoading.isLoading(workspace.id)" />
+                  <template v-else>
+                    <IconSwitchHorizontal />
+                    Switch
+                  </template>
+                </Button>
+                <Button v-else variant="outline" disabled>
+                  <IconCheck />
+                  Current
+                </Button>
+              </div>
+              <div
+                v-if="workspaces.length === 0"
+                class="text-muted-foreground rounded-md border px-3 py-4 text-sm"
+              >
+                No workspaces yet. Create one in the current team.
+              </div>
+            </div>
+          </FieldContent>
+        </Field>
+      </FieldSet>
+    </FieldGroup>
+  </div>
+</template>

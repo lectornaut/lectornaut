@@ -222,7 +222,9 @@ const getButtonLabel = (planId: string) => {
             :model-value="currentPlanId"
             class="grid grid-cols-4 gap-2"
             :disabled="!canManageBilling"
-            @update:model-value="(val) => (currentPlanId = val)"
+            @update:model-value="
+              (val) => val && (currentPlanId = val as string)
+            "
           >
             <FieldLabel
               v-for="plan in availablePlans"

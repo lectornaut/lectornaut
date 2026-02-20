@@ -260,6 +260,14 @@ export const shortcuts: ShortcutCategory[] = [
         tags: ["keyboard", "shortcuts", "help", "keys"],
       },
       {
+        description: ["Workspace", "Switch"],
+        hotkeys: "cmd+shift+up,ctrl+shift+up,cmd+shift+down,ctrl+shift+down",
+        event: "Workspace.Switch",
+        icon: IconComponent,
+        tags: ["workspace", "switch", "dropdown"],
+        visibility: { hideFrom: ["commands", "shortcuts"] },
+      },
+      {
         description: ["Help and support"],
         keys: [["?"]],
         hotkeys: "shift+/",
