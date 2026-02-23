@@ -248,6 +248,7 @@ declare module 'vue' {
     NavigationMenuTrigger: typeof import('./src/components/ui/navigation-menu/NavigationMenuTrigger.vue')['default']
     NavigationMenuViewport: typeof import('./src/components/ui/navigation-menu/NavigationMenuViewport.vue')['default']
     NodeActivityLog: typeof import('./src/components/app/sidebars/NodeActivityLog.vue')['default']
+    NodeDetails: typeof import('./src/components/app/sidebars/NodeDetails.vue')['default']
     NotificationItem: typeof import('./src/components/app/layout/NotificationItem.vue')['default']
     Notifications: typeof import('./src/components/app/layout/Notifications.vue')['default']
     OnboardingAccountFlow: typeof import('./src/components/app/onboarding/OnboardingAccountFlow.vue')['default']

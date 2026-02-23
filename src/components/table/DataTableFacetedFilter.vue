@@ -64,7 +64,7 @@ const selectedValues = computed(
               :value="option"
               class="py-2"
               @select="
-                (e) => {
+                () => {
                   const isSelected = selectedValues.has(option.value)
                   if (isSelected) {
                     selectedValues.delete(option.value)

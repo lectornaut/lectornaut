@@ -134,7 +134,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                 'var(--chart-5)',
               ]"
               :y-formatter="
-                (tick: string | number | bigint, i: any) => {
+                (tick: string | number | bigint) => {
                   return typeof tick === 'number'
                     ? `$ ${new Intl.NumberFormat('us').format(tick).toString()}`
                     : ''

@@ -7,7 +7,6 @@ import {
   IconMinusSquare,
   IconPenLine,
   IconPencil,
-  IconRefreshCw,
   IconRotateCcw,
   IconSwitchHorizontal,
   IconTrash2,
@@ -128,19 +127,6 @@ useInfiniteScroll(
     <SidebarContent>
       <OverlayScrollbarsWrapper ref="scrollableContainer">
         <SidebarGroup>
-          <SidebarGroupLabel>
-            History
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="ml-auto"
-              :disabled="!hasSelectedNode || !canViewLogs || loading"
-              @click="refreshLogs"
-            >
-              <IconRefreshCw :class="{ 'animate-spin': loading }" />
-              <span class="sr-only">Refresh activity history</span>
-            </Button>
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <div
               v-if="!hasSelectedNode"

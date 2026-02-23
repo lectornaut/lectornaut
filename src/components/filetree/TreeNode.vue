@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import {
+  IconChevronRight,
   IconFile,
   IconFilePlus,
   IconFolder,
@@ -234,8 +235,14 @@ const showEmptyState = computed(
               @drop="handleDrop"
             >
               <Spinner v-if="isLoading" />
-              <IconFolderOpen v-else-if="isExpanded" />
-              <IconFolder v-else />
+              <template v-else>
+                <IconChevronRight
+                  class="transition"
+                  :class="{ 'rotate-90': isExpanded }"
+                />
+                <IconFolderOpen v-if="isExpanded" />
+                <IconFolder v-else />
+              </template>
               <span
                 class="truncate"
                 :class="{

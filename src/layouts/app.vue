@@ -221,7 +221,7 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div id="left-dock" class="flex max-w-80 shrink-0 empty:hidden"></div>
           <ResizablePanelGroup
-            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded-2xl border shadow-md"
+            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded-lg border shadow-md"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -329,7 +329,7 @@ const closeTab = (id: string) => {
                           class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [scrollbar-gutter:stable]"
                         >
                           <div
-                            class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b-2xl border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
+                            class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
                           >
                             <SubNavigation />
                             <div

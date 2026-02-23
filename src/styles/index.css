@@ -180,10 +180,13 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --radius-xs: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 2px);
-  --radius: 8px;
+  --radius: 18px;
   --radius-md: calc(var(--radius) + 2px);
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 10px);
+  --radius-4xl: calc(var(--radius) + 12px);
   --spacing: 4px;
   --spacing-safe-top: env(safe-area-inset-top);
   --spacing-safe-bottom: env(safe-area-inset-bottom);

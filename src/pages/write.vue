@@ -419,27 +419,23 @@ onBeforeUnmount(() => {
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full">
       <Tabs default-value="details" class="h-full min-h-0 gap-0">
-        <TabsList
-          class="bg-background h-10 w-full shrink-0 rounded-none border-b p-0"
-        >
+        <TabsList class="bg-transparent p-2">
           <TabsTrigger
             value="details"
-            class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            class="data-[state=active]:bg-muted rounded-xs p-2! text-xs leading-0 data-[state=active]:shadow-none"
           >
-            <span class="flex items-center justify-center gap-2">
-              <span>Details</span>
-            </span>
+            Details
           </TabsTrigger>
           <TabsTrigger
             value="activity"
-            class="data-[state=active]:after:bg-primary relative rounded-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            class="data-[state=active]:bg-muted rounded-xs p-2! text-xs leading-0 data-[state=active]:shadow-none"
           >
-            <span class="flex items-center justify-center gap-2">
-              <span>Activity</span>
-            </span>
+            Activity
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="details" class="h-0 min-h-0 flex-1"></TabsContent>
+        <TabsContent value="details" class="h-0 min-h-0 flex-1">
+          <NodeDetails :node="selectedNode" />
+        </TabsContent>
         <TabsContent value="activity" class="h-0 min-h-0 flex-1">
           <NodeActivityLog
             v-if="teamId && workspaceId && selectedNode"

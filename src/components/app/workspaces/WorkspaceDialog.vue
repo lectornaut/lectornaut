@@ -292,7 +292,7 @@ const handleSubmit = async () => {
                     id="description"
                     v-model="workspaceDescription"
                     placeholder="A brief description of this workspace..."
-                    rows="3"
+                    class="h-32"
                     :disabled="
                       (!canCreateWorkspace && mode === 'create') ||
                       (!canUpdateWorkspace && mode === 'edit')
