@@ -42,7 +42,7 @@ const userInput = ref("")
         </SidebarMenuItem>
       </SheetTrigger>
       <SheetContent
-        class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
+        class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-lg border"
         side="left"
         :class="{ 'mt-12': isTauri && !isFullscreen }"
       >
@@ -54,9 +54,10 @@ const userInput = ref("")
         </SheetHeader>
         <Separator />
         <AiChat />
-        <Separator />
-        <SheetFooter>
-          <InputGroup>
+        <SheetFooter
+          class="bg-secondary rounded-lg rounded-b-none border p-1.5"
+        >
+          <InputGroup class="bg-background shadow-lg">
             <InputGroupTextarea
               v-model="userInput"
               placeholder="Ask, Search or Chat..."

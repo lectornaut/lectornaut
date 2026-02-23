@@ -7,6 +7,7 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconArrowUp,
+  IconGripHorizontal,
   IconHand,
   IconLayerFill,
   IconMaximize,
@@ -219,9 +220,12 @@ const closeTab = (id: string) => {
           class="flex min-h-0 min-w-0 grow gap-2 self-stretch overscroll-none scroll-smooth"
         >
           <MainSidebar />
-          <div id="left-dock" class="flex max-w-80 shrink-0 empty:hidden"></div>
+          <div
+            id="left-dock"
+            class="shadow-muted-foreground/5 flex max-w-80 shrink-0 overflow-clip rounded border shadow-lg empty:hidden"
+          ></div>
           <ResizablePanelGroup
-            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded-lg border shadow-md"
+            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded border shadow-md"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -329,7 +333,7 @@ const closeTab = (id: string) => {
                           class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [scrollbar-gutter:stable]"
                         >
                           <div
-                            class="bg-sidebar/95 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b border-x border-b p-1.5 shadow-xs backdrop-blur-lg"
+                            class="bg-sidebar/95 shadow-muted-foreground/5 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b border-x border-b p-2 shadow-xs backdrop-blur-lg"
                           >
                             <SubNavigation />
                             <div
@@ -725,7 +729,7 @@ const closeTab = (id: string) => {
                             height: `${observedSize.height}px`,
                           }
                     "
-                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded-md border will-change-transform"
+                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded-lg border will-change-transform"
                     :class="
                       isPoppedOutMinimized
                         ? 'border-foreground shadow-md ring-1'
@@ -740,7 +744,8 @@ const closeTab = (id: string) => {
                       "
                       @dblclick="isPoppedOutMinimized = !isPoppedOutMinimized"
                     >
-                      <span class="ml-1 font-medium">
+                      <span class="ml-2 flex items-center gap-2 font-medium">
+                        <IconGripHorizontal />
                         {{ t("layouts.app.popout.title") }}
                       </span>
                       <ButtonGroup>
@@ -788,7 +793,7 @@ const closeTab = (id: string) => {
                       class="bg-background mx-2 mb-2 grow rounded border p-2"
                     >
                       <div
-                        class="size-full bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+                        class="size-full rounded-md bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
                       >
                         Sample Content
                       </div>
@@ -814,7 +819,10 @@ const closeTab = (id: string) => {
               </ContextMenu>
             </div>
           </Transition>
-          <div id="right-dock" class="flex max-w-80 shrink-0"></div>
+          <div
+            id="right-dock"
+            class="shadow-muted-foreground/5 flex max-w-80 shrink-0 overflow-clip rounded-l border shadow-lg"
+          ></div>
         </main>
       </div>
       <ContextMenu>

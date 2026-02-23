@@ -304,7 +304,7 @@ const { t } = useI18n()
                     </TooltipContent>
                   </SheetTrigger>
                   <SheetContent
-                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
+                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-lg border"
                     :class="{ 'mt-12': isTauri && !isFullscreen }"
                   >
                     <SheetHeader>
@@ -518,7 +518,9 @@ const { t } = useI18n()
                       </div>
                     </OverlayScrollbarsWrapper>
                     <Separator />
-                    <SheetFooter>
+                    <SheetFooter
+                      class="bg-accent rounded-lg rounded-b-none border p-1.5"
+                    >
                       <div class="flex items-center justify-between gap-2">
                         <ColorMode />
                         <LanguageSwitcher />

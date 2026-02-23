@@ -267,16 +267,14 @@ useInfiniteScroll(
     </PopoverContent>
   </Popover>
   <Teleport v-if="isDocked" defer to="#left-dock" :disabled="!isDocked">
-    <div class="rounded-2xl border">
-      <OverlayScrollbarsWrapper>
-        <div class="grid size-full w-full min-w-64 grid-cols-1">
-          <div
-            class="size-full bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
-          >
-            Sample Content
-          </div>
+    <OverlayScrollbarsWrapper>
+      <div class="grid size-full w-full min-w-64 grid-cols-1">
+        <div
+          class="size-full bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+        >
+          Sample Content
         </div>
-      </OverlayScrollbarsWrapper>
-    </div>
+      </div>
+    </OverlayScrollbarsWrapper>
   </Teleport>
 </template>

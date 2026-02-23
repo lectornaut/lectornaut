@@ -19,7 +19,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
 <template>
   <Sheet v-model:open="openChangelog">
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+8px)] h-auto gap-0 rounded-md border"
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-lg border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader>
@@ -56,8 +56,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
           </Accordion>
         </div>
       </OverlayScrollbarsWrapper>
-      <Separator />
-      <SheetFooter>
+      <SheetFooter class="bg-accent rounded-lg rounded-b-none border p-1.5">
         <Button class="justify-start" variant="secondary">
           <IconMessageCircle />
           Get support
