@@ -144,7 +144,7 @@ const filteredShortcuts = computed(() => {
           </div>
         </Accordion>
       </OverlayScrollbarsWrapper>
-      <SheetFooter class="bg-accent rounded-lg rounded-b-none border p-1.5">
+      <SheetFooter class="bg-accent rounded-lg rounded-b-none p-1.5">
         <Button class="justify-start" variant="secondary">
           <IconMessageCircle />
           {{ t("components.global.shortcuts.getSupport") }}

@@ -1,12 +1,6 @@
 <script lang="ts" setup>
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import {
-  IconAiFill,
-  IconArrowUp,
-  IconPin,
-  IconPinOff,
-  IconPlus,
-} from "@/data/icons"
+import { IconAiFill, IconPin, IconPinOff } from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 
@@ -25,8 +19,6 @@ emitter.on("Dialog.AiAsk.Toggle", () => {
 })
 
 const { t } = useI18n()
-
-const userInput = ref("")
 </script>
 
 <template>
@@ -60,7 +52,7 @@ const userInput = ref("")
           </TooltipContent>
         </SheetTrigger>
         <Teleport v-if="isDocked" defer to="#right-dock" :disabled="!isDocked">
-          <AiChat />
+          <AiChatShell :placeholder="t('ai.placeholder')" />
         </Teleport>
         <SheetContent
           class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-lg border"
@@ -73,46 +65,7 @@ const userInput = ref("")
             </SheetDescription>
           </SheetHeader>
           <Separator />
-          <AiChat />
-          <SheetFooter
-            class="bg-secondary rounded-lg rounded-b-none border p-1.5"
-          >
-            <InputGroup class="bg-background shadow-lg">
-              <InputGroupTextarea
-                v-model="userInput"
-                :placeholder="t('ai.placeholder')"
-              />
-              <InputGroupAddon align="block-end">
-                <InputGroupButton variant="outline" size="icon-xs">
-                  <IconPlus />
-                </InputGroupButton>
-                <Select>
-                  <InputGroupButton variant="ghost" as-child>
-                    <SelectTrigger>
-                      <SelectValue :placeholder="t('ai.mode')" />
-                    </SelectTrigger>
-                  </InputGroupButton>
-                  <SelectContent side="top" align="start">
-                    <SelectItem value="auto">{{ t("ai.auto") }}</SelectItem>
-                    <SelectItem value="agent">{{ t("ai.agent") }}</SelectItem>
-                    <SelectItem value="manual">{{ t("ai.manual") }}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <InputGroupText class="ml-auto text-xs">
-                  52% used
-                </InputGroupText>
-                <Separator orientation="vertical" />
-                <InputGroupButton
-                  variant="default"
-                  size="icon-xs"
-                  :disabled="userInput.trim().length === 0"
-                >
-                  <IconArrowUp />
-                  <span class="sr-only">{{ t("actions.send") }}</span>
-                </InputGroupButton>
-              </InputGroupAddon>
-            </InputGroup>
-          </SheetFooter>
+          <AiChatShell :placeholder="t('ai.placeholder')" />
         </SheetContent>
       </Tooltip>
     </TooltipProvider>

@@ -101,7 +101,7 @@ onBeforeUnmount(() => {
 :root {
   --xt-bg: var(--background);
   --xt-fg: var(--foreground);
-  --xt-font-size: calc(var(--size) - 2px);
+  --xt-font-size: calc(var(--size) - 4px);
   --xt-font-family: var(--font-mono);
 }
 </style>

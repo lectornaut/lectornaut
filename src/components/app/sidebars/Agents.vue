@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconArrowUp, IconCirclePlus, IconPlus } from "@/data/icons"
+import { IconCirclePlus } from "@/data/icons"
 import Avatar from "vue-boring-avatars"
 
 const isFullscreen = useIsFullscreen()
@@ -10,8 +10,6 @@ const agents = [
   { id: 2, name: "Beta" },
   { id: 3, name: "Gamma" },
 ]
-
-const userInput = ref("")
 </script>
 
 <template>
@@ -53,46 +51,7 @@ const userInput = ref("")
           </SheetDescription>
         </SheetHeader>
         <Separator />
-        <AiChat />
-        <SheetFooter
-          class="bg-secondary rounded-lg rounded-b-none border p-1.5"
-        >
-          <InputGroup class="bg-background shadow-lg">
-            <InputGroupTextarea
-              v-model="userInput"
-              placeholder="Ask, Search or Chat..."
-            />
-            <InputGroupAddon align="block-end">
-              <InputGroupButton variant="outline" size="icon-xs">
-                <IconPlus />
-              </InputGroupButton>
-              <Select>
-                <InputGroupButton variant="ghost" as-child>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Mode" />
-                  </SelectTrigger>
-                </InputGroupButton>
-                <SelectContent side="top" align="start">
-                  <SelectItem value="auto">Auto</SelectItem>
-                  <SelectItem value="agent">Agent</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                </SelectContent>
-              </Select>
-              <InputGroupText class="ml-auto text-xs">
-                52% used
-              </InputGroupText>
-              <!-- <Separator orientation="vertical" /> -->
-              <InputGroupButton
-                variant="default"
-                size="icon-xs"
-                :disabled="userInput.trim().length === 0"
-              >
-                <IconArrowUp />
-                <span class="sr-only">Send</span>
-              </InputGroupButton>
-            </InputGroupAddon>
-          </InputGroup>
-        </SheetFooter>
+        <AiChatShell />
       </SheetContent>
     </Sheet>
   </SidebarMenu>

@@ -221,7 +221,7 @@ export default defineConfig({
       fontsource: {
         families: [
           "Roboto Flex Variable",
-          "Roboto Slab Variable",
+          "Roboto Serif Variable",
           "Roboto Mono Variable",
           "Playfair Display Variable",
         ],

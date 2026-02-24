@@ -1,3 +1,4 @@
+import { withToast } from "@/helpers/toast"
 import { firestore as db, functions } from "@/modules/firebase"
 import { type INotification, type INotificationStatus } from "@/types"
 import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
@@ -17,7 +18,6 @@ import {
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
-import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
 export function useNotifications() {
@@ -211,7 +211,7 @@ export function useNotifications() {
     )
   }
 
-  const runNotificationActionWithToast = async <T>(
+  const runNotificationActionWithToast = <T>(
     operation: () => Promise<T>,
     options: {
       success: string
@@ -220,34 +220,14 @@ export function useNotifications() {
       undoSuccessMessage?: string
       undoErrorMessage?: string
     }
-  ) => {
-    const toastId = options.onUndo
-      ? toast.success(options.success, {
-          action: {
-            label: "Undo",
-            onClick: async () => {
-              try {
-                await options.onUndo?.()
-                toast.success(options.undoSuccessMessage ?? "Restored")
-              } catch (error) {
-                console.error("Undo failed:", error)
-                toast.error(options.undoErrorMessage ?? "Failed to undo")
-              }
-            },
-          },
-        })
-      : toast.success(options.success)
-
-    try {
-      return await operation()
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error(options.error, {
-        description: (error as Error).message,
-      })
-      throw error
-    }
-  }
+  ) =>
+    withToast(operation, {
+      success: options.success,
+      error: options.error,
+      onUndo: options.onUndo,
+      undoSuccessMessage: options.undoSuccessMessage,
+      undoErrorMessage: options.undoErrorMessage,
+    })
 
   const updateNotificationWithToast = async (
     notificationId: string,

@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
     </Sidebar>
   </Teleport>
   <div
-    class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded-2xl border"
+    class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded border"
   >
     <OverlayScrollbarsWrapper v-if="teamId && workspaceId && selectedFile">
       <CodeEditor

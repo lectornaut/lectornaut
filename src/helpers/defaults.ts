@@ -211,6 +211,21 @@ export const defaultMenu = [
     shortcut: "⌘A",
   },
   {
+    title: "Bot",
+    action: "Open Bot Chat",
+    description:
+      "Chat with AI and use side panels for context, history, and actions.",
+    url: "/bot",
+    id: "bot",
+    icon: IconMessageCircle,
+    style: {
+      text: "text-amber-700/90 dark:text-amber-300/90",
+      bg: "bg-amber-50 dark:bg-amber-950/40",
+      grid: "",
+    },
+    shortcut: "⌘B",
+  },
+  {
     title: "Tasks",
     action: "Create a Gallery",
     description: "Great for mood boards and inspiration.",

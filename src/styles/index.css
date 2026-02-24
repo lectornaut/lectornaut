@@ -199,7 +199,7 @@
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
   --font-sans: "Roboto Flex Variable", "sans-serif";
-  --font-serif: "Roboto Slab Variable", "serif";
+  --font-serif: "Roboto Serif Variable", "serif";
   --font-mono: "Roboto Mono Variable", "monospace";
   --font-display: "Playfair Display Variable", "serif";
   --font-flex: var(--flex);

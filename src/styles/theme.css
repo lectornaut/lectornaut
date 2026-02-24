@@ -14,7 +14,7 @@
   }
 
   :root[data-font="serif"] {
-    --flex: "Roboto Slab Variable", "serif";
+    --flex: "Roboto Serif Variable", "serif";
   }
 
   :root[data-font="mono"] {

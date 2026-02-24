@@ -26,6 +26,18 @@ export interface WithToastOptions extends ToastMessages {
   undoErrorMessage?: string
 }
 
+const getToastErrorDescription = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  if (typeof error === "string") {
+    return error
+  }
+
+  return "An unexpected error occurred"
+}
+
 /**
  * Wraps an async operation with consistent toast notifications.
  * Supports optional undo action button on success toast.
@@ -50,41 +62,35 @@ export async function withToast<T>(
   options: WithToastOptions | ToastMessages
 ): Promise<T> {
   const opts = options as WithToastOptions
+  const promise = Promise.resolve().then(() => operation())
 
-  try {
-    if (opts.info) {
-      toast.info(opts.info)
-    }
+  toast.promise(promise, {
+    ...(opts.info ? { loading: opts.info } : {}),
+    success: () =>
+      opts.onUndo
+        ? {
+            message: opts.success,
+            action: {
+              label: opts.undoLabel ?? "Undo",
+              onClick: async () => {
+                try {
+                  await opts.onUndo!()
+                  toast.success(opts.undoSuccessMessage ?? "Restored")
+                } catch (undoError) {
+                  console.error("Undo failed:", undoError)
+                  toast.error(opts.undoErrorMessage ?? "Failed to undo")
+                }
+              },
+            },
+          }
+        : opts.success,
+    error: (error: unknown) => ({
+      message: opts.error,
+      description: getToastErrorDescription(error),
+    }),
+  })
 
-    const result = await operation()
-
-    // Show success toast with optional undo action
-    if (opts.onUndo) {
-      toast.success(opts.success, {
-        action: {
-          label: opts.undoLabel ?? "Undo",
-          onClick: async () => {
-            try {
-              await opts.onUndo!()
-              toast.success(opts.undoSuccessMessage ?? "Restored")
-            } catch (undoError) {
-              console.error("Undo failed:", undoError)
-              toast.error(opts.undoErrorMessage ?? "Failed to undo")
-            }
-          },
-        },
-      })
-    } else {
-      toast.success(opts.success)
-    }
-
-    return result
-  } catch (error) {
-    toast.error(opts.error, {
-      description: (error as Error).message,
-    })
-    throw error
-  }
+  return await promise
 }
 
 /**

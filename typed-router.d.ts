@@ -66,6 +66,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/bot': RouteRecordInfo<
+      '/bot',
+      '/bot',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/changelog': RouteRecordInfo<
       '/changelog',
       '/changelog',
@@ -261,6 +268,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/agents/[id].vue': {
       routes:
         | '/agents/[id]'
+      views:
+        | never
+    }
+    'src/pages/bot.vue': {
+      routes:
+        | '/bot'
       views:
         | never
     }
