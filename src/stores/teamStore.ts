@@ -26,10 +26,8 @@ import { Capabilities, roleCan } from "@/types/permissions"
 import {
   deleteTeamPhotoFile,
   getTeamRef,
-  getUserRef,
   uploadTeamPhoto,
 } from "@/utils/firebase/firebase-helpers"
-import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
 import {
   addPending,
   cloneState,
@@ -37,8 +35,7 @@ import {
   removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { buildUpdatedAtBaseVersion } from "@/utils/firebase/firebase-sync-engine"
-import { serverTimestamp, type Timestamp } from "firebase/firestore"
+import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useDocument } from "vuefire"
 
@@ -206,7 +203,15 @@ export const useTeamStore = defineStore("teams", () => {
         // Verify one more time that we really don't have membership
         const hasMembership = memberships.value.some((m) => m.teamId === teamId)
         if (!hasMembership) {
-          await authStore.setCurrentTeamId(null)
+          try {
+            await authStore.setCurrentTeamId(null)
+          } catch (error) {
+            console.error(
+              "[teamStore] Failed to clear stale currentTeamId:",
+              error
+            )
+            authStore.setCurrentTeamIdLocal(null)
+          }
           optimisticCurrentTeam.value = null
         }
       }
@@ -239,7 +244,7 @@ export const useTeamStore = defineStore("teams", () => {
 
     // Generate a temporary ID for optimistic update - will be replaced by server
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    const timestamp = serverTimestamp()
+    const now = Timestamp.now()
 
     // Photo upload happens after team creation since we need the real team ID.
     const photoURL: string | null = null
@@ -248,8 +253,8 @@ export const useTeamStore = defineStore("teams", () => {
       id: tempId,
       name,
       photoURL,
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
+      createdAt: now,
+      updatedAt: now,
     }
 
     // Clone previous state for rollback
@@ -268,12 +273,14 @@ export const useTeamStore = defineStore("teams", () => {
         addPending(pendingUserIds, currentUser.value!.uid)
 
         // Update user profile through authStore (optimistically)
-        authStore.setCurrentTeamId(tempId)
+        authStore.setCurrentTeamIdLocal(tempId)
         optimisticCurrentTeam.value = newTeam
       },
       // Rollback on error
       () => {
-        authStore.setCurrentTeamId(previousUserProfile?.currentTeamId ?? null)
+        authStore.setCurrentTeamIdLocal(
+          previousUserProfile?.currentTeamId ?? null
+        )
         optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
         membershipStore.rollbackTeamMembers(previousTeamMembers)
@@ -307,7 +314,7 @@ export const useTeamStore = defineStore("teams", () => {
             ...newTeam,
             id: actualTeamId,
           }
-          authStore.setCurrentTeamId(actualTeamId)
+          authStore.setCurrentTeamIdLocal(actualTeamId)
         } finally {
           removePending(pendingUserIds, currentUser.value!.uid)
         }
@@ -322,39 +329,23 @@ export const useTeamStore = defineStore("teams", () => {
    */
   async function switchTeam(teamId: string): Promise<void> {
     if (!currentUser.value || !userProfile.value) return
+    if (currentTeamId.value === teamId) return
 
     // Clone previous state for rollback
     const previousCurrentTeam = cloneState(currentTeam.value)
-    const previousUserProfile = cloneState(userProfile.value)
 
     const cachedMembership = memberships.value.find((m) => m.teamId === teamId)
 
-    await mutateWithCoordinator({
-      id: currentUser.value.uid,
-      source: "team.switchTeam",
-      pendingIds: pendingUserIds,
-      applyLocal: () => {
-        if (cachedMembership?.team) {
-          optimisticCurrentTeam.value = cloneState(cachedMembership.team)
-        }
-        authStore.setCurrentTeamId(teamId)
-      },
-      rollbackLocal: () => {
-        authStore.setCurrentTeamId(
-          userProfile.value?.currentTeamId ?? previousCurrentTeam?.id ?? null
-        )
-        optimisticCurrentTeam.value = previousCurrentTeam
-      },
-      mutation: {
-        source: "team.switchTeam",
-        targetPath: getUserRef(currentUser.value.uid).path,
-        type: "update",
-        data: {
-          currentTeamId: teamId,
-        },
-        baseVersion: buildUpdatedAtBaseVersion(previousUserProfile?.updatedAt),
-      },
-    })
+    if (cachedMembership?.team) {
+      optimisticCurrentTeam.value = cloneState(cachedMembership.team)
+    }
+
+    try {
+      await authStore.setCurrentTeamId(teamId)
+    } catch (error) {
+      optimisticCurrentTeam.value = previousCurrentTeam
+      throw error
+    }
   }
 
   /**
@@ -476,14 +467,16 @@ export const useTeamStore = defineStore("teams", () => {
         membershipStore.removeMembershipsForTeam(teamId)
         if (currentTeam.value?.id === teamId) {
           optimisticCurrentTeam.value = null
-          authStore.setCurrentTeamId(null)
+          authStore.setCurrentTeamIdLocal(null)
         }
       },
       // Rollback on error
       () => {
         membershipStore.rollbackMemberships(previousMemberships)
         optimisticCurrentTeam.value = previousCurrentTeam
-        authStore.setCurrentTeamId(previousUserProfile?.currentTeamId ?? null)
+        authStore.setCurrentTeamIdLocal(
+          previousUserProfile?.currentTeamId ?? null
+        )
       },
       // Cloud Function call + Storage cleanup
       async () => {
@@ -495,6 +488,12 @@ export const useTeamStore = defineStore("teams", () => {
         await deleteTeamFn({ teamId })
       }
     )
+  }
+
+  async function clearCurrentTeam(): Promise<void> {
+    await authStore.setCurrentTeamId(null)
+    optimisticCurrentTeam.value = null
+    membershipStore.clearTeamMembers()
   }
 
   return {
@@ -524,11 +523,7 @@ export const useTeamStore = defineStore("teams", () => {
     deleteTeam,
 
     // Helpers
-    clearCurrentTeam: () => {
-      optimisticCurrentTeam.value = null
-      membershipStore.clearTeamMembers()
-      authStore.setCurrentTeamId(null)
-    },
+    clearCurrentTeam,
 
     // Lifecycle
     cleanup,

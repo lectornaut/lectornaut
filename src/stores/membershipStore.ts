@@ -38,13 +38,7 @@ import {
   withCloudSyncOperation,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import {
-  getDocs,
-  query,
-  serverTimestamp,
-  where,
-  type Timestamp,
-} from "firebase/firestore"
+import { getDocs, query, Timestamp, where } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { computed, ref, shallowRef } from "vue"
 import { useCollection } from "vuefire"
@@ -52,6 +46,8 @@ import { useCollection } from "vuefire"
 // Helper to get ownership count (used for ownerCount computed property)
 const getOwnerCount = (members: IMembership[]) =>
   members.filter((m) => m.role === "owner").length
+
+const MEMBER_COUNT_QUERY_BATCH_SIZE = 10
 
 export const useMembershipStore = defineStore("memberships", () => {
   const authStore = useAuthStore()
@@ -270,6 +266,7 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** Cache of member counts for each team */
   const teamMemberCounts = ref<Record<string, number>>({})
+  let latestMemberCountRequestId = 0
 
   /** Get member count for a specific team */
   const getTeamMemberCount = (teamId: string): number => {
@@ -278,34 +275,79 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** Fetch member counts for all teams the user is a member of */
   async function fetchTeamMemberCounts() {
-    const teamIds = memberships.value.map((m) => m.teamId)
+    const requestId = ++latestMemberCountRequestId
+    const teamIds = [...new Set(memberships.value.map((m) => m.teamId))].sort()
+
+    if (teamIds.length === 0) {
+      if (requestId === latestMemberCountRequestId) {
+        teamMemberCounts.value = {}
+      }
+      return
+    }
+
     const counts: Record<string, number> = {}
+    teamIds.forEach((teamId) => {
+      counts[teamId] = 0
+    })
+
+    const batches: string[][] = []
+    for (let i = 0; i < teamIds.length; i += MEMBER_COUNT_QUERY_BATCH_SIZE) {
+      batches.push(teamIds.slice(i, i + MEMBER_COUNT_QUERY_BATCH_SIZE))
+    }
 
     await Promise.all(
-      teamIds.map(async (teamId) => {
+      batches.map(async (batch) => {
         try {
-          const membersSnapshot = await getDocs(
-            getTeamMembershipsCollection(teamId)
+          const snapshot = await getDocs(
+            query(getAllMembershipsGroup(), where("teamId", "in", batch))
           )
-          counts[teamId] = membersSnapshot.size
+
+          snapshot.docs.forEach((docSnap) => {
+            const data = docSnap.data() as IMembership
+            if (!(data.teamId in counts)) return
+            counts[data.teamId] = (counts[data.teamId] ?? 0) + 1
+          })
         } catch (error) {
           console.error(
-            `[membershipStore] Failed to fetch member count for team ${teamId}:`,
+            `[membershipStore] Failed to batch fetch member counts for teams [${batch.join(", ")}], falling back to per-team queries:`,
             error
           )
-          counts[teamId] = 1
+
+          await Promise.all(
+            batch.map(async (teamId) => {
+              try {
+                const membersSnapshot = await getDocs(
+                  getTeamMembershipsCollection(teamId)
+                )
+                counts[teamId] = membersSnapshot.size
+              } catch (fallbackError) {
+                console.error(
+                  `[membershipStore] Failed to fetch member count for team ${teamId}:`,
+                  fallbackError
+                )
+                counts[teamId] = 1
+              }
+            })
+          )
         }
       })
     )
 
+    teamIds.forEach((teamId) => {
+      if ((counts[teamId] ?? 0) <= 0) {
+        counts[teamId] = 1
+      }
+    })
+
+    if (requestId !== latestMemberCountRequestId) return
     teamMemberCounts.value = counts
   }
 
   // Fetch member counts when memberships change
   watch(
-    () => memberships.value.map((m) => m.teamId).join(","),
+    () => [...new Set(memberships.value.map((m) => m.teamId))].sort().join(","),
     () => {
-      fetchTeamMemberCounts()
+      void fetchTeamMemberCounts()
     },
     { immediate: true }
   )
@@ -341,6 +383,8 @@ export const useMembershipStore = defineStore("memberships", () => {
   // ============================================================================
 
   function cleanup() {
+    latestMemberCountRequestId += 1
+    teamMemberCounts.value = {}
     optimisticMemberships.value = []
     optimisticTeamMembers.value = []
     // VueFire handles subscription cleanup automatically
@@ -531,7 +575,7 @@ export const useMembershipStore = defineStore("memberships", () => {
             (m) => m.teamId !== teamId
           )
           if (userProfile.value) {
-            authStore.setCurrentTeamId(null)
+            authStore.setCurrentTeamIdLocal(null)
           }
         }
       },
@@ -541,7 +585,7 @@ export const useMembershipStore = defineStore("memberships", () => {
         optimisticMemberships.value = previousMemberships
         if (isRemovingSelf && previousUserProfile?.currentTeamId) {
           // Restore user's current team through authStore
-          authStore.setCurrentTeamId(previousUserProfile.currentTeamId)
+          authStore.setCurrentTeamIdLocal(previousUserProfile.currentTeamId)
         }
       },
       // Cloud Function call
@@ -604,7 +648,7 @@ export const useMembershipStore = defineStore("memberships", () => {
               (m) => m.teamId !== teamId
             )
             if (userProfile.value) {
-              authStore.setCurrentTeamId(null)
+              authStore.setCurrentTeamIdLocal(null)
             }
           }
 
@@ -615,7 +659,7 @@ export const useMembershipStore = defineStore("memberships", () => {
           optimisticTeamMembers.value = previousTeamMembers
           optimisticMemberships.value = previousMemberships
           if (isRemovingSelf && previousUserProfile?.currentTeamId) {
-            authStore.setCurrentTeamId(previousUserProfile.currentTeamId)
+            authStore.setCurrentTeamIdLocal(previousUserProfile.currentTeamId)
           }
           throw error
         } finally {
@@ -644,15 +688,15 @@ export const useMembershipStore = defineStore("memberships", () => {
       throw new Error("Not authenticated")
     }
 
-    const timestamp = serverTimestamp()
+    const now = Timestamp.now()
     const newMembership: IMembership = {
       userId: currentUser.value.uid,
       teamId,
       role: "owner",
       user: userProfile.value,
       team,
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
+      createdAt: now,
+      updatedAt: now,
     }
 
     return newMembership

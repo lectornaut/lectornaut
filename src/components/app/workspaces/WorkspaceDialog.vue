@@ -177,7 +177,7 @@ const handleSubmit = async () => {
                       }"
                     >
                       <Avatar
-                        class="size-16 rounded-md"
+                        class="size-16 rounded-full"
                         :class="{
                           'cursor-pointer':
                             (canCreateWorkspace && mode === 'create') ||
@@ -186,11 +186,11 @@ const handleSubmit = async () => {
                         @click="triggerWorkspacePhotoSelection"
                       >
                         <AvatarImage
-                          class="size-16 rounded-md"
+                          class="size-16 rounded-full"
                           :src="photoPreview!"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="size-16 rounded-md">
+                        <AvatarFallback class="size-16 rounded-full">
                           {{ getInitials(workspaceName) }}
                         </AvatarFallback>
                       </Avatar>
@@ -292,7 +292,6 @@ const handleSubmit = async () => {
                     id="description"
                     v-model="workspaceDescription"
                     placeholder="A brief description of this workspace..."
-                    class="h-32"
                     :disabled="
                       (!canCreateWorkspace && mode === 'create') ||
                       (!canUpdateWorkspace && mode === 'edit')

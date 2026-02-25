@@ -36,7 +36,8 @@ const switchWorkspace = async (workspaceId: AcceptableValue) => {
 const deselectTeam = async () => {
   try {
     await teamStore.clearCurrentTeam()
-  } catch (_error) {
+  } catch (error) {
+    console.error("[WorkspaceSelector] Failed to deselect team:", error)
     toast.error("Failed to deselect team")
   }
 }

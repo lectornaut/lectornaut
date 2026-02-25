@@ -38,7 +38,7 @@ import {
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import { mutateUpdateDocument } from "@/utils/firebase/firebase-sync-engine"
-import { serverTimestamp, type Timestamp } from "firebase/firestore"
+import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
 
@@ -256,6 +256,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   watch(currentTeamId, async (teamId) => {
     if (!teamId) {
       cleanup()
+      if (currentWorkspaceId.value === null) return
       if (isPersistingWorkspaceSelection.value) return
       isPersistingWorkspaceSelection.value = true
       try {
@@ -294,7 +295,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const teamId = currentTeamId.value
     // Generate a temporary ID for optimistic update - will be replaced by server
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    const timestamp = serverTimestamp()
+    const now = Timestamp.now()
 
     const newWorkspace: IWorkspace = {
       id: tempId,
@@ -302,8 +303,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       name,
       description: description ?? null,
       photoURL: null,
-      createdAt: timestamp as Timestamp,
-      updatedAt: timestamp as Timestamp,
+      createdAt: now,
+      updatedAt: now,
     }
 
     // Clone previous state for rollback
@@ -556,11 +557,22 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // Cloud Function call
       async () => {
         try {
-          // Cleanup Storage (Profile Photo) - Run in parallel with Cloud Function
-          await Promise.allSettled([
-            deleteWorkspaceFn({ teamId, workspaceId }),
-            deleteWorkspacePhotoFile(teamId, workspaceId),
-          ])
+          const [deleteWorkspaceResult, deletePhotoResult] =
+            await Promise.allSettled([
+              deleteWorkspaceFn({ teamId, workspaceId }),
+              deleteWorkspacePhotoFile(teamId, workspaceId),
+            ])
+
+          if (deletePhotoResult.status === "rejected") {
+            console.error(
+              "[workspaceStore] Failed to delete workspace photo:",
+              deletePhotoResult.reason
+            )
+          }
+
+          if (deleteWorkspaceResult.status === "rejected") {
+            throw deleteWorkspaceResult.reason
+          }
         } finally {
           if (isCurrentWorkspace) {
             removePending(pendingUserIds, currentUser.value!.uid)

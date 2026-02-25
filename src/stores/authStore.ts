@@ -28,7 +28,7 @@ import {
   mutateUpdateDocument,
 } from "@/utils/firebase/firebase-sync-engine"
 import type { User } from "firebase/auth"
-import { serverTimestamp, setDoc, type Timestamp } from "firebase/firestore"
+import { Timestamp, serverTimestamp, setDoc } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
 import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
@@ -119,19 +119,25 @@ export const useAuthStore = defineStore("auth", () => {
       if (!profile) {
         try {
           const userRef = getUserRef(user.uid)
-          const newUser: IUser = {
+          const now = Timestamp.now()
+          const optimisticUser: IUser = {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
             currentTeamId: null,
             currentWorkspaceId: null,
-            createdAt: serverTimestamp() as Timestamp,
-            updatedAt: serverTimestamp() as Timestamp,
+            createdAt: now,
+            updatedAt: now,
           }
-          await setDoc(userRef, newUser)
+          const firestoreUser = {
+            ...optimisticUser,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }
+          await setDoc(userRef, firestoreUser)
           // Set optimistic profile immediately
-          optimisticUserProfile.value = newUser
+          optimisticUserProfile.value = optimisticUser
         } catch (error) {
           console.error("[authStore] Failed to create user profile:", error)
           toast.error("Failed to create user profile. Please try again.")
@@ -176,38 +182,76 @@ export const useAuthStore = defineStore("auth", () => {
   // Actions
   // ============================================================================
 
+  let currentTeamMutationChain: Promise<void> = Promise.resolve()
+
+  const getUserUpdatedAtBaseVersion = (fallbackUpdatedAt: unknown) =>
+    buildUpdatedAtBaseVersion(
+      firestoreUserProfile.value?.updatedAt ?? fallbackUpdatedAt
+    )
+
+  /**
+   * Optimistically update current team ID in local state only.
+   * Does not persist to Firestore.
+   */
+  function setCurrentTeamIdLocal(teamId: string | null): void {
+    if (!currentUser.value || !userProfile.value) return
+
+    optimisticUserProfile.value = {
+      ...userProfile.value,
+      currentTeamId: teamId,
+      ...(teamId === null ? { currentWorkspaceId: null } : {}),
+    }
+  }
+
   /**
    * Update the current team ID for the user
    * Used by teamStore when switching/creating teams
    */
   async function setCurrentTeamId(teamId: string | null): Promise<void> {
-    if (!currentUser.value || !userProfile.value) return
+    currentTeamMutationChain = currentTeamMutationChain
+      .catch(() => undefined)
+      .then(async () => {
+        if (!currentUser.value || !userProfile.value) return
+        const shouldClearWorkspaceSelection =
+          teamId === null && userProfile.value.currentWorkspaceId !== null
+        if (
+          userProfile.value.currentTeamId === teamId &&
+          !shouldClearWorkspaceSelection
+        ) {
+          return
+        }
 
-    const previousUserProfile = cloneState(userProfile.value)
-
-    await mutateWithCoordinator({
-      id: currentUser.value.uid,
-      source: "auth.setCurrentTeamId",
-      pendingIds: pendingUserIds,
-      applyLocal: () => {
-        optimisticUserProfile.value = {
-          ...userProfile.value!,
+        const previousUserProfile = cloneState(userProfile.value)
+        const mutationData: Record<string, unknown> = {
           currentTeamId: teamId,
         }
-      },
-      rollbackLocal: () => {
-        optimisticUserProfile.value = previousUserProfile
-      },
-      mutation: {
-        source: "auth.setCurrentTeamId",
-        targetPath: getUserRef(currentUser.value.uid).path,
-        type: "update",
-        data: {
-          currentTeamId: teamId,
-        },
-        baseVersion: buildUpdatedAtBaseVersion(previousUserProfile?.updatedAt),
-      },
-    })
+        if (teamId === null) {
+          mutationData.currentWorkspaceId = null
+        }
+
+        await mutateWithCoordinator({
+          id: currentUser.value.uid,
+          source: "auth.setCurrentTeamId",
+          pendingIds: pendingUserIds,
+          applyLocal: () => {
+            setCurrentTeamIdLocal(teamId)
+          },
+          rollbackLocal: () => {
+            optimisticUserProfile.value = previousUserProfile
+          },
+          mutation: {
+            source: "auth.setCurrentTeamId",
+            targetPath: getUserRef(currentUser.value.uid).path,
+            type: "update",
+            data: mutationData,
+            baseVersion: getUserUpdatedAtBaseVersion(
+              previousUserProfile?.updatedAt
+            ),
+          },
+        })
+      })
+
+    return currentTeamMutationChain
   }
 
   /**
@@ -289,7 +333,7 @@ export const useAuthStore = defineStore("auth", () => {
           promises.push(
             mutateUpdateDocument(userRef, firestoreUpdates, {
               source: "auth.updateUserProfile",
-              baseVersion: buildUpdatedAtBaseVersion(
+              baseVersion: getUserUpdatedAtBaseVersion(
                 previousUserProfile?.updatedAt
               ),
             })
@@ -394,6 +438,7 @@ export const useAuthStore = defineStore("auth", () => {
     currentWorkspaceId,
 
     // Actions
+    setCurrentTeamIdLocal,
     setCurrentTeamId,
     setCurrentWorkspaceId,
     updateUserProfile,

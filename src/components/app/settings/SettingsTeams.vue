@@ -141,7 +141,7 @@ const sortedMemberships = computed(() => {
             <div v-if="isLoading" class="flex justify-center py-8">
               <Spinner />
             </div>
-            <div v-else class="rounded-md border">
+            <div v-else class="overflow-clip rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -219,11 +219,11 @@ const sortedMemberships = computed(() => {
                                   </template>
                                   <template v-else>
                                     <AvatarImage
-                                      class="rounded-md"
+                                      class="rounded-full"
                                       :src="membership.team?.photoURL!"
                                       :alt="membership.team?.name"
                                     />
-                                    <AvatarFallback class="rounded-md">
+                                    <AvatarFallback class="rounded-full">
                                       {{ getInitials(membership.team?.name) }}
                                     </AvatarFallback>
                                   </template>

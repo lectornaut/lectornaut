@@ -1,7 +1,3 @@
-import {
-  DEFAULT_KEYCHAIN_MAX_AGE_MS,
-  useKeychain,
-} from "@/composables/useKeychain"
 import { isTauri } from "@/composables/usePlatform"
 import { generateRandomString } from "@/helpers/utilities"
 import { auth } from "@/modules/firebase"
@@ -16,7 +12,6 @@ import {
   GoogleAuthProvider,
   isSignInWithEmailLink,
   OAuthProvider,
-  onIdTokenChanged,
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
   signInWithCredential,
@@ -141,88 +136,8 @@ export const sendResetEmailPassword = async (email: string) => {
     .catch((error) => handleAuthError(error, "sendResetEmailPassword"))
 }
 
-/**
- * Helper to retrieve the Firebase Auth persistence key from LocalStorage
- * Used to manually manage session data for account switching
- */
-const getFirebaseKey = () => {
-  const foundKey = Object.keys(window.localStorage).find((k) =>
-    k.startsWith("firebase:authUser:")
-  )
-  if (foundKey) return foundKey
-
-  // Fallback: construct the key manually if not found (e.g. user is logged out)
-  const apiKey = import.meta.env.VITE_API_KEY
-  return `firebase:authUser:${apiKey}:[DEFAULT]`
-}
-
-/**
- * Listens for auth state changes (token refreshes, sign-ins) and keeps the keychain updated.
- * This ensures we capture the freshest session data whenever it changes.
- */
-export const initKeychain = () => {
-  // Prune accounts inactive for 30 days
-  useKeychain().pruneExpiredAccounts(DEFAULT_KEYCHAIN_MAX_AGE_MS)
-
-  onIdTokenChanged(auth, async (user) => {
-    if (user) {
-      // If we intended to switch to this user, clear the pending flag since it succeeded
-      const pendingUid = sessionStorage.getItem("pendingAccountSwitch")
-      if (pendingUid === user.uid) {
-        sessionStorage.removeItem("pendingAccountSwitch")
-      }
-
-      const { hasAccount, addAccount } = useKeychain()
-      // Only update if account is already trusted (in keychain)
-      if (hasAccount(user.uid)) {
-        const key = getFirebaseKey()
-        if (key) {
-          const sessionData = useStorage(key, null)
-          if (sessionData.value) {
-            addAccount({
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              photoURL: user.photoURL,
-              sessionData: sessionData.value as Record<string, unknown>,
-            })
-          }
-        }
-      }
-    }
-  })
-}
-
 const finishAuthentication = async (result: UserCredential) => {
   toast.success("Logged in")
-
-  // Check if account is already in keychain
-  const { hasAccount, addAccount } = useKeychain()
-  const user = result.user
-
-  if (!hasAccount(user.uid)) {
-    toast("Trust this device for 30 days?", {
-      action: {
-        label: "Yes",
-        onClick: () => {
-          const key = getFirebaseKey()
-          if (key) {
-            const sessionData = useStorage(key, null)
-            if (sessionData.value) {
-              addAccount({
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                sessionData: sessionData.value as Record<string, unknown>,
-              })
-            }
-          }
-        },
-      },
-      duration: Infinity, // Give user time to decide
-    })
-  }
 
   if (getAdditionalUserInfo(result)?.isNewUser) {
     void setDefaultUserData().catch((error) => {
@@ -236,45 +151,6 @@ const finishAuthentication = async (result: UserCredential) => {
 
     const redirect = router.currentRoute.value.query.redirect
     await router.push(typeof redirect === "string" ? redirect : "/start")
-  }
-}
-
-/**
- * Switches the current session to another account stored in the keychain
- * @param targetUid - The UID of the account to switch to
- */
-export const switchAccount = async (targetUid: string) => {
-  const account = useKeychain().getAccount(targetUid)
-  if (!account || !account.sessionData) {
-    toast.error("Account session not found in keychain")
-    return
-  }
-
-  // Client-side session restore
-  try {
-    await auth.signOut() // Clear current in-memory state
-
-    const key = getFirebaseKey()
-    if (key) {
-      // Store intent to switch account so we can handle session expiry/failure on reload
-      sessionStorage.setItem("pendingAccountSwitch", targetUid)
-
-      const sessionData = useStorage<Record<string, unknown> | null>(key, null)
-      sessionData.value = account.sessionData
-      // Reload to force Firebase SDK to pick up the injected persistence
-      window.location.reload()
-    } else {
-      // If no key found (shouldn't happen if we just signed out, the key usually remains or we can reconstruct it),
-      // we might need to know the apiKey and appName to reconstruct the key string.
-      // However, usually the key exists.
-      // Fallback: search for it again or error out.
-      console.error("Firebase Auth persistence key missing")
-      toast.error("Failed to switch account: Persistence key missing")
-    }
-  } catch (error) {
-    console.error("Error switching account:", error)
-    toast.error("Failed to switch account.")
-    sessionStorage.removeItem("pendingAccountSwitch")
   }
 }
 
@@ -571,15 +447,7 @@ export const signInWithApple = async () => {
 /**
  * Logs out the current user and redirects to the home page
  */
-export const logout = async (removeFromKeychain: boolean = false) => {
-  const { removeAccount } = useKeychain()
-  const currentUserUid = auth.currentUser?.uid
-
-  // Remove account from keychain if requested
-  if (removeFromKeychain && currentUserUid) {
-    removeAccount(currentUserUid)
-  }
-
+export const logout = async () => {
   return auth
     .signOut()
     .then(async () => {

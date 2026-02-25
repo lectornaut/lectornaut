@@ -101,7 +101,7 @@ const generatePoem = async () => {
               {{ t("pages.create.labels.avatar") }}
             </Label>
             <div class="flex items-center justify-center">
-              <Avatar class="size-16">
+              <Avatar class="size-16 rounded-full">
                 <AvatarImage
                   src="https://avatar.vercel.sh/agent.png"
                   alt="Agent"

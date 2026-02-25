@@ -86,9 +86,4 @@ watch(online, (value) => {
     position="bottom-center"
     :theme="sonnerTheme"
   />
-  <CommandK />
-  <Shortcuts />
-  <Changelog />
-  <Settings />
-  <ExitTrigger />
 </template>

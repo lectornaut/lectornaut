@@ -222,7 +222,7 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div
             id="left-dock"
-            class="shadow-muted-foreground/5 flex max-w-80 shrink-0 overflow-clip rounded border shadow-lg empty:hidden"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded border shadow-lg empty:hidden"
           ></div>
           <ResizablePanelGroup
             class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded border shadow-md"
@@ -821,7 +821,7 @@ const closeTab = (id: string) => {
           </Transition>
           <div
             id="right-dock"
-            class="shadow-muted-foreground/5 flex max-w-80 shrink-0 overflow-clip rounded-l border shadow-lg"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-l border shadow-lg"
           ></div>
         </main>
       </div>
@@ -992,5 +992,10 @@ const closeTab = (id: string) => {
         </ContextMenuContent>
       </ContextMenu>
     </SidebarInset>
+    <CommandK />
+    <Shortcuts />
+    <Changelog />
+    <Settings />
+    <ExitTrigger />
   </SidebarProvider>
 </template>

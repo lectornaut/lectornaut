@@ -334,12 +334,12 @@ const handleRemoveProfilePicture = async () => {
                     </template>
                     <template v-else>
                       <AvatarImage
-                        class="rounded-md"
+                        class="rounded-full"
                         :src="displayPhotoURL || ''"
                         :alt="user?.displayName"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback class="rounded-md">
+                      <AvatarFallback class="rounded-full">
                         {{ getInitials(user?.displayName || "") }}
                       </AvatarFallback>
                     </template>

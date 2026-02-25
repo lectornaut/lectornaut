@@ -6,7 +6,9 @@ import type { Ref } from "vue"
  * Whether the app is running in Tauri (desktop) environment.
  * This is a computed ref that can be used reactively.
  */
-export const isTauri = computed(() => "__TAURI_INTERNALS__" in window)
+export const isTauri = computed(
+  () => typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
+)
 
 /**
  * Whether the app is running in a browser environment.

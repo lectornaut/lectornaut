@@ -137,7 +137,7 @@ const sortedWorkspaces = computed(() => {
             <div v-if="isLoading" class="flex justify-center py-8">
               <Spinner />
             </div>
-            <div v-else class="rounded-md border">
+            <div v-else class="overflow-clip rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -215,11 +215,11 @@ const sortedWorkspaces = computed(() => {
                                   </template>
                                   <template v-else>
                                     <AvatarImage
-                                      class="rounded-md"
+                                      class="rounded-full"
                                       :src="workspace.photoURL!"
                                       :alt="workspace.name"
                                     />
-                                    <AvatarFallback class="rounded-md">
+                                    <AvatarFallback class="rounded-full">
                                       {{ getInitials(workspace.name) }}
                                     </AvatarFallback>
                                   </template>

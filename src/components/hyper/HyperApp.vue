@@ -279,7 +279,7 @@ const randomIndex = () => {
             }"
           >
             <div
-              class="absolute inset-0 flex items-center justify-center bg-black/25 transition group-hover:bg-transparent"
+              class="absolute inset-0 flex items-center justify-center bg-black/15 transition group-hover:bg-transparent"
             ></div>
           </CarouselItem>
         </CarouselContent>

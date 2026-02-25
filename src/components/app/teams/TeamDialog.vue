@@ -479,18 +479,18 @@ const handleSubmit = async () => {
                       }"
                     >
                       <Avatar
-                        class="size-16 rounded-md"
+                        class="size-16 rounded-full"
                         :class="{
                           'cursor-pointer': canUpdateTeam || mode === 'create',
                         }"
                         @click="triggerTeamPhotoSelection"
                       >
                         <AvatarImage
-                          class="size-16 rounded-md"
+                          class="size-16 rounded-full"
                           :src="photoPreview!"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="size-16 rounded-md">
+                        <AvatarFallback class="size-16 rounded-full">
                           {{ getInitials(teamName) }}
                         </AvatarFallback>
                       </Avatar>

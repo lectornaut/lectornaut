@@ -45,16 +45,16 @@ const teams = computed(() =>
               <SidebarMenuButton
                 :tooltip="t('components.teamSwitcher.switchTeam')"
                 size="lg"
-                class="data-[state=open]:bg-accent"
+                class="data-[state=open]:bg-accent rounded-full"
               >
-                <Avatar class="rounded-md">
+                <Avatar class="rounded-full">
                   <AvatarImage
-                    class="rounded-md"
+                    class="rounded-full"
                     :src="currentTeam?.photoURL!"
                     :alt="currentTeam?.name"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback class="rounded-md">
+                  <AvatarFallback class="rounded-full">
                     {{ getInitials(currentTeam?.name!) }}
                   </AvatarFallback>
                 </Avatar>
@@ -98,17 +98,17 @@ const teams = computed(() =>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-48" align="start" side="right">
               <DropdownMenuLabel>
-                <Item size="sm" class="group w-full gap-2 p-0">
+                <Item size="sm" class="group w-full gap-2 rounded-full p-0">
                   <ItemMedia>
-                    <Avatar class="rounded-md">
+                    <Avatar class="rounded-full">
                       <AvatarImage
                         v-if="currentTeam?.photoURL"
-                        class="rounded-md"
+                        class="rounded-full"
                         :src="currentTeam.photoURL"
                         :alt="currentTeam?.name"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback class="rounded-md">
+                      <AvatarFallback class="rounded-full">
                         {{ getInitials(currentTeam?.name!) }}
                       </AvatarFallback>
                     </Avatar>
@@ -173,16 +173,19 @@ const teams = computed(() =>
                         :key="team.value"
                         @click="switchTeam(team.value)"
                       >
-                        <Item size="sm" class="group w-full gap-2 p-0">
+                        <Item
+                          size="sm"
+                          class="group w-full gap-2 rounded-full p-0"
+                        >
                           <ItemMedia>
-                            <Avatar class="rounded-md">
+                            <Avatar class="rounded-full">
                               <AvatarImage
-                                class="rounded-md"
+                                class="rounded-full"
                                 :src="team.original?.photoURL!"
                                 :alt="team.label"
                                 referrerpolicy="no-referrer"
                               />
-                              <AvatarFallback class="rounded-md">
+                              <AvatarFallback class="rounded-full">
                                 {{ getInitials(team.label) }}
                               </AvatarFallback>
                             </Avatar>

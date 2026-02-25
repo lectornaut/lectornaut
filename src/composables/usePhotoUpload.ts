@@ -44,6 +44,8 @@ export function usePhotoUpload(options: UsePhotoUploadOptions) {
 
     try {
       await options.onUpload(itemId, file)
+    } catch (error) {
+      console.error("[usePhotoUpload] Photo upload failed:", error)
     } finally {
       reset()
       itemIdToUpdate.value = null

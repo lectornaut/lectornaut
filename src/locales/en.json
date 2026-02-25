@@ -1088,8 +1088,7 @@
         "title": "Are you sure you want to logout?",
         "description": "You will be redirected to the login page.",
         "cancel": "Cancel",
-        "logout": "Logout",
-        "removeKeychainProfile": "Remove profile from this device"
+        "logout": "Logout"
       }
     },
     "test": {
@@ -1771,15 +1770,10 @@
     }
   },
   "accountMenu": {
-    "noOtherAccounts": "No other accounts available",
     "account": "Account",
     "billing": "Billing",
-    "switchAccount": "Switch account",
-    "accounts": "Accounts",
-    "addAccount": "Add account",
     "logout": "Log out",
-    "profile": "Profile",
-    "accountRemoved": "Account removed"
+    "profile": "Profile"
   },
   "layouts": {
     "app": {

@@ -21,7 +21,7 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
   const user = useCurrentUser()
   const { teamMembers, memberships, currentTeam, isLoading } =
     storeToRefs(teamStore)
-  const { isOwner, ownerCount } = storeToRefs(membershipStore)
+  const { ownerCount } = storeToRefs(membershipStore)
 
   // Unified loading state for all team operations
   const loading = {
@@ -47,26 +47,17 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     )
     return membership?.role || null
   })
+  const isOwner = computed(() => currentUserRole.value === "owner")
 
   // Permission checks
   const canChangeRole = (member: IMembership) => {
-    // 1. Basic permission check using capability
     if (
-      !roleCan(currentUserRole.value, Capabilities.UPDATE_MEMBER_ROLE) &&
-      !isOwner.value
+      !can(user.value, Capabilities.UPDATE_MEMBER_ROLE, {
+        scope: "team",
+        teamRole: currentUserRole.value,
+      })
     ) {
-      // Note: isOwner check is redundant if roleCan works correctly for owner,
-      // but keeping strict check for safety if needed, or rely on can().
-      // Let's use can() logic which we have in store, but here we might not have full user context easily accessible if we just use roleCan.
-      // Actually we have 'user' from useCurrentUser().
-      if (
-        !can(user.value, Capabilities.UPDATE_MEMBER_ROLE, {
-          scope: "team",
-          teamRole: currentUserRole.value,
-        })
-      ) {
-        return false
-      }
+      return false
     }
 
     // 2. Business logic constraints (e.g. last owner)
@@ -112,7 +103,13 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
   }
 
   const getCannotRemoveMemberReason = (member: IMembership): string | null => {
-    if (!isOwner.value && member.userId !== user.value?.uid) {
+    if (
+      !can(user.value, Capabilities.REMOVE_MEMBER, {
+        scope: "team",
+        teamRole: currentUserRole.value,
+      }) &&
+      member.userId !== user.value?.uid
+    ) {
       return "settings.teams.members.noPermissionToRemove"
     }
     if (teamMembers.value.length <= 1) {

@@ -143,14 +143,14 @@ const getRoleBadgeVariant = (role: string) => {
           variant="muted"
         >
           <ItemMedia>
-            <Avatar class="rounded-md">
+            <Avatar class="rounded-full">
               <AvatarImage
-                class="rounded-md"
+                class="rounded-full"
                 :src="membership.user.photoURL!"
                 :alt="membership.user.displayName"
                 referrerpolicy="no-referrer"
               />
-              <AvatarFallback class="rounded-md">
+              <AvatarFallback class="rounded-full">
                 {{ getInitials(membership.user.displayName!) }}
               </AvatarFallback>
             </Avatar>

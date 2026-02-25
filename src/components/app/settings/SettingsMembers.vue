@@ -117,7 +117,7 @@ const handleRemoveMember = (userId: string) => {
             <div v-if="isLoading" class="flex justify-center py-8">
               <Spinner />
             </div>
-            <div v-else class="rounded-md border">
+            <div v-else class="overflow-clip rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -177,14 +177,14 @@ const handleRemoveMember = (userId: string) => {
                     <TableCell>
                       <Item size="sm" class="group w-full gap-2 p-0">
                         <ItemMedia>
-                          <Avatar class="rounded-md">
+                          <Avatar class="rounded-full">
                             <AvatarImage
-                              class="rounded-md"
+                              class="rounded-full"
                               :src="member.user?.photoURL!"
                               :alt="member.user?.displayName"
                               referrerpolicy="no-referrer"
                             />
-                            <AvatarFallback class="rounded-md">
+                            <AvatarFallback class="rounded-full">
                               {{ getInitials(member.user?.displayName!) }}
                             </AvatarFallback>
                           </Avatar>

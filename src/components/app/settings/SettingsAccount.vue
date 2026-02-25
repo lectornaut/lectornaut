@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useKeychain } from "@/composables/useKeychain"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import {
   IconAlertTriangle,
@@ -329,10 +328,6 @@ const handleAuthError = async (
       action: {
         label: "Logout",
         onClick: async () => {
-          // Remove from keychain to force fresh login (not session restore)
-          if (user.value?.uid) {
-            useKeychain().removeAccount(user.value.uid)
-          }
           // Full logout and redirect to /enter
           await logout()
         },
@@ -458,12 +453,7 @@ const deleteAccount = async () => {
       await deleteDoc(userDocRef.value)
     }
 
-    // 6. Local Cleanup: Remove from keychain
-    if (user.value?.uid) {
-      useKeychain().removeAccount(user.value.uid)
-    }
-
-    // 7. Delete User Account
+    // 6. Delete User Account
     await deleteUser(user.value!)
     toast.success("Account deleted", {
       description: "Your account has been successfully deleted.",
@@ -617,12 +607,12 @@ const passwordExists = computed(() => {
                       </template>
                       <template v-else>
                         <AvatarImage
-                          class="rounded-md"
+                          class="rounded-full"
                           :src="displayPhotoURL || ''"
                           :alt="user?.displayName"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="rounded-md">
+                        <AvatarFallback class="rounded-full">
                           {{ getInitials(user?.displayName!) }}
                         </AvatarFallback>
                       </template>
@@ -926,14 +916,14 @@ const passwordExists = computed(() => {
             <FieldContent>
               <Item size="sm" class="p-0">
                 <ItemMedia class="group relative">
-                  <Avatar class="rounded-md">
+                  <Avatar class="rounded-full">
                     <AvatarImage
-                      class="rounded-md"
+                      class="rounded-full"
                       :src="provider?.photoURL!"
                       :alt="provider?.displayName"
                       referrerpolicy="no-referrer"
                     />
-                    <AvatarFallback class="rounded-md">
+                    <AvatarFallback class="rounded-full">
                       {{ getInitials(provider.displayName!) }}
                     </AvatarFallback>
                   </Avatar>
