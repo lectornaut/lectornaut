@@ -9,7 +9,7 @@ import {
 } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import { ROOT_PARENT_ID, type WorkspaceNode } from "@/types"
+import { ROOT_PARENT_ID, type WorkspaceNode } from "@/types/nodes"
 import { DateFormatter } from "@internationalized/date"
 import { storeToRefs } from "pinia"
 import { toRef } from "vue"

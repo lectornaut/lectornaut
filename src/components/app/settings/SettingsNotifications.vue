@@ -1,5 +1,19 @@
 <script lang="ts" setup>
+import { useSettingsStore } from "@/stores/settingsStore"
+import { storeToRefs } from "pinia"
+
 const { t } = useI18n()
+
+const settingsStore = useSettingsStore()
+const { notificationSettings, isUpdatingNotifications } =
+  storeToRefs(settingsStore)
+const {
+  updateNotificationCategory,
+  updateNotificationFrequency,
+  updateNotificationChannel,
+} = settingsStore
+
+const toBoolean = (value: unknown): boolean => value === true
 </script>
 
 <template>
@@ -20,7 +34,14 @@ const { t } = useI18n()
               }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="communication-notifications" :model-value="true" />
+          <Switch
+            id="communication-notifications"
+            :disabled="isUpdatingNotifications"
+            :model-value="notificationSettings.categories.communication"
+            @update:model-value="
+              updateNotificationCategory('communication', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -31,7 +52,14 @@ const { t } = useI18n()
               {{ t("settings.notifications.categories.marketing.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="marketing-notifications" :model-value="true" />
+          <Switch
+            id="marketing-notifications"
+            :disabled="isUpdatingNotifications"
+            :model-value="notificationSettings.categories.marketing"
+            @update:model-value="
+              updateNotificationCategory('marketing', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -42,7 +70,11 @@ const { t } = useI18n()
               {{ t("settings.notifications.categories.security.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="security-notifications" :model-value="true" disabled />
+          <Switch
+            id="security-notifications"
+            :model-value="notificationSettings.categories.security"
+            disabled
+          />
         </Field>
       </FieldSet>
       <FieldSeparator />
@@ -53,7 +85,11 @@ const { t } = useI18n()
         <FieldDescription>
           {{ t("settings.notifications.frequency.description") }}
         </FieldDescription>
-        <RadioGroup default-value="immediate">
+        <RadioGroup
+          :disabled="isUpdatingNotifications"
+          :model-value="notificationSettings.frequency"
+          @update:model-value="updateNotificationFrequency"
+        >
           <Field orientation="horizontal">
             <RadioGroupItem id="notify-immediate" value="immediate" />
             <FieldLabel for="notify-immediate">
@@ -94,7 +130,14 @@ const { t } = useI18n()
               {{ t("settings.notifications.channels.email.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="email-notifications" :model-value="true" />
+          <Switch
+            id="email-notifications"
+            :disabled="isUpdatingNotifications"
+            :model-value="notificationSettings.channels.email"
+            @update:model-value="
+              updateNotificationChannel('email', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -105,18 +148,14 @@ const { t } = useI18n()
               {{ t("settings.notifications.channels.inApp.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="inapp-notifications" :model-value="true" />
-        </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="push-notifications">
-              {{ t("settings.notifications.channels.push.label") }}
-            </FieldLabel>
-            <FieldDescription>
-              {{ t("settings.notifications.channels.push.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Switch id="push-notifications" :model-value="true" />
+          <Switch
+            id="inapp-notifications"
+            :disabled="isUpdatingNotifications"
+            :model-value="notificationSettings.channels.inApp"
+            @update:model-value="
+              updateNotificationChannel('inApp', toBoolean($event))
+            "
+          />
         </Field>
       </FieldSet>
     </FieldGroup>

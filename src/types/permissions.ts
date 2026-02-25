@@ -10,7 +10,7 @@
  * - Workspace: Actions within a specific workspace (e.g., create workspace)
  */
 
-import type { IMembershipRole } from "@/types"
+import type { IMembershipRole } from "@/types/membership"
 
 // ============================================================================
 // Core Types

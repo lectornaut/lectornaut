@@ -6,7 +6,7 @@ import {
   ROOT_PARENT_ID,
   type WorkspaceNode,
   type WorkspaceNodeScope,
-} from "@/types"
+} from "@/types/nodes"
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue"
 import TreeNode from "./TreeNode.vue"
 

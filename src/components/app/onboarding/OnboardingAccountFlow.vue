@@ -326,7 +326,7 @@ const handleRemoveProfilePicture = async () => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Avatar
-                    class="flex size-11 cursor-pointer items-center justify-center rounded-md"
+                    class="flex size-10 cursor-pointer items-center justify-center rounded-md"
                     @click="triggerProfilePhotoUpload"
                   >
                     <template v-if="uploadError">

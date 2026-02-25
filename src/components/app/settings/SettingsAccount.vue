@@ -11,6 +11,7 @@ import {
   IconPencil,
   IconX,
 } from "@/data/icons"
+import { withToast } from "@/helpers/toast"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { updateUserData } from "@/queries/updateUserData"
@@ -21,7 +22,7 @@ import {
 } from "@/queries/username"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IMembership } from "@/types"
+import type { IMembership } from "@/types/membership"
 import {
   createUserMembershipsQuery,
   deleteUserPhotoFile,
@@ -511,7 +512,7 @@ const profilePhotoFileRef = computed(() => {
   return getUserPhotoStorageRef(user.value.uid)
 })
 
-const { url, uploadProgress, uploadError, uploadTask, upload } =
+const { uploadProgress, uploadError, uploadTask, upload, refresh } =
   useStorageFile(profilePhotoFileRef)
 
 const profilePhotoUpload = usePhotoUpload({
@@ -519,17 +520,33 @@ const profilePhotoUpload = usePhotoUpload({
   onUpload: async (_id, file) => {
     clearOptimisticPhotoPreview()
     optimisticPhotoPreview.value = URL.createObjectURL(file)
-    toast.info("Uploading profile picture", {
-      description: "Please wait while we upload your profile picture.",
-    })
     try {
-      await upload(file)
+      await withToast(
+        async () => {
+          const uploadPromise = upload(file)
+          if (!uploadPromise) {
+            throw new Error("Unable to start profile photo upload.")
+          }
+
+          await uploadPromise
+          const [nextPhotoURL] = await refresh()
+
+          if (!nextPhotoURL) {
+            throw new Error("Unable to resolve uploaded profile picture URL.")
+          }
+
+          await authStore.updateUserProfile({ photoURL: nextPhotoURL })
+        },
+        {
+          info: "Uploading profile picture...",
+          success: "Profile picture updated",
+          error: "Failed to upload profile picture",
+        }
+      )
+      clearOptimisticPhotoPreview()
     } catch (error) {
       clearOptimisticPhotoPreview()
       console.error("Error uploading picture or updating profile:", error)
-      toast.error("Failed to upload profile picture", {
-        description: (error as Error).message,
-      })
     }
   },
 })
@@ -538,29 +555,6 @@ const triggerProfilePhotoUpload = () => {
   if (!user.value?.uid) return
   profilePhotoUpload.triggerUpload(user.value.uid)
 }
-
-watch(
-  () => url.value,
-  async (newVal, oldVal) => {
-    if (oldVal === undefined) return
-    // Ignore initial storage URL hydration; only react to user-triggered uploads.
-    if (!optimisticPhotoPreview.value) return
-    if (!newVal || newVal === oldVal) return
-
-    try {
-      await authStore.updateUserProfile({ photoURL: newVal })
-      clearOptimisticPhotoPreview()
-      toast.success("Profile picture updated", {
-        description: "Your profile picture has been updated successfully.",
-      })
-    } catch (error) {
-      console.error("Error updating profile with new photo URL:", error)
-      toast.error("Failed to update profile picture", {
-        description: error as string,
-      })
-    }
-  }
-)
 
 const handleRemoveProfilePicture = async () => {
   if (!user.value?.uid) return
@@ -615,7 +609,7 @@ const passwordExists = computed(() => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Avatar
-                      class="flex size-11 cursor-pointer items-center justify-center rounded-md"
+                      class="flex size-10 cursor-pointer items-center justify-center rounded-md"
                       @click="triggerProfilePhotoUpload"
                     >
                       <template v-if="uploadError">

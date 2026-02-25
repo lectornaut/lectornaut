@@ -15,7 +15,7 @@ import {
   IconUserRoundMinus,
   IconUserRoundPlus,
 } from "@/data/icons"
-import { type INotification } from "@/types"
+import { type INotification } from "@/types/notification"
 
 const props = defineProps<{
   notification: INotification

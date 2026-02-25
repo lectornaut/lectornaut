@@ -4,7 +4,8 @@ import { IconSettings, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IMembership, ITeam } from "@/types"
+import type { ITeam } from "@/types/domain"
+import type { IMembership } from "@/types/membership"
 import { useCurrentUser } from "vuefire"
 
 const route = useRoute()

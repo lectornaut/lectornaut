@@ -398,10 +398,6 @@
           "label": "Email notifications",
           "description": "Manage your email notification preferences."
         },
-        "push": {
-          "label": "Push notifications",
-          "description": "Manage your push notification preferences."
-        },
         "inApp": {
           "label": "In-app notifications",
           "description": "Manage your in-app notification preferences."

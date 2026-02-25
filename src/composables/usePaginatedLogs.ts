@@ -1,4 +1,4 @@
-import type { ILogEntry } from "@/types"
+import type { ILogEntry } from "@/types/logs"
 import {
   getDocs,
   type Query,

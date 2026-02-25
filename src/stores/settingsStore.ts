@@ -1,0 +1,360 @@
+import type {
+  AccentId,
+  BaseId,
+  FontId,
+  LanguageId,
+  SizeId,
+} from "@/helpers/defaults"
+import {
+  defaultAccent,
+  defaultBase,
+  defaultFont,
+  defaultLanguage,
+  defaultSize,
+} from "@/helpers/defaults"
+import {
+  areNotificationSettingsEqual,
+  cloneNotificationSettings,
+  normalizeNotificationFrequency,
+  normalizeNotificationSettings,
+  type NotificationFrequency,
+  type UserNotificationSettings,
+} from "@/types/notifications"
+import type { SettingsThemeDoc, ThemeMode } from "@/types/settings"
+import { withCloudSyncOperation } from "@/utils/firebase/firebase-optimistic"
+import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
+import { useStorage, watchDebounced } from "@vueuse/core"
+import { collection, doc } from "firebase/firestore"
+import { defineStore } from "pinia"
+import { toast } from "vue-sonner"
+import { useCurrentUser, useDocument, useFirestore } from "vuefire"
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null
+
+const toSettingsThemeDoc = (value: unknown): SettingsThemeDoc | null =>
+  isRecord(value) ? (value as SettingsThemeDoc) : null
+
+export const useSettingsStore = defineStore("settings", () => {
+  const db = useFirestore()
+  const user = useCurrentUser()
+
+  const mode = useStorage<ThemeMode>("theme", "auto")
+  const base = useStorage<BaseId>("base", defaultBase)
+  const accent = useStorage<AccentId>("accent", defaultAccent)
+  const font = useStorage<FontId>("font", defaultFont)
+  const size = useStorage<SizeId>("size", defaultSize)
+  const language = useStorage<LanguageId>("language", defaultLanguage)
+
+  const themeSettings = reactive({
+    mode,
+    base,
+    accent,
+    font,
+    size,
+    language,
+  })
+
+  const pendingTheme = shallowRef(false)
+  const isThemePersistQueued = ref(false)
+
+  const themeDocRef = computed(() => {
+    if (!user.value?.uid) return null
+    return doc(
+      collection(doc(collection(db, "users"), user.value.uid), "settings"),
+      "themes"
+    )
+  })
+
+  const { data: themeDocData, pending: themePending } = useDocument(themeDocRef)
+
+  watch(
+    themeDocData,
+    (docData) => {
+      if (pendingTheme.value) return
+
+      const themeDoc = toSettingsThemeDoc(docData)
+      if (!themeDoc) return
+
+      if ("mode" in themeDoc && themeDoc.mode && themeDoc.mode !== mode.value) {
+        mode.value = themeDoc.mode
+      }
+      if ("base" in themeDoc && themeDoc.base && themeDoc.base !== base.value) {
+        base.value = themeDoc.base
+      }
+      if (
+        "accent" in themeDoc &&
+        themeDoc.accent &&
+        themeDoc.accent !== accent.value
+      ) {
+        accent.value = themeDoc.accent
+      }
+      if ("font" in themeDoc && themeDoc.font && themeDoc.font !== font.value) {
+        font.value = themeDoc.font
+      }
+      if ("size" in themeDoc && themeDoc.size && themeDoc.size !== size.value) {
+        size.value = themeDoc.size
+      }
+      if (
+        "language" in themeDoc &&
+        themeDoc.language &&
+        themeDoc.language !== language.value
+      ) {
+        language.value = themeDoc.language
+      }
+    },
+    { immediate: true }
+  )
+
+  // Prevent cyclic "accent<->base" combinations that cannot resolve a palette.
+  watch(
+    [base, accent],
+    ([nextBase, nextAccent], previousPair) => {
+      if (nextBase !== "accent" || nextAccent !== "base") return
+
+      const [prevBase, prevAccent] = previousPair ?? []
+      const safePrevBase: BaseId =
+        prevBase && prevBase !== "accent" ? prevBase : defaultBase
+      const safePrevAccent: AccentId =
+        prevAccent && prevAccent !== "base" ? prevAccent : defaultAccent
+
+      if (prevAccent === "base" && prevBase !== "accent") {
+        base.value = safePrevBase
+        return
+      }
+
+      if (prevBase === "accent" && prevAccent !== "base") {
+        accent.value = safePrevAccent
+        return
+      }
+
+      base.value = safePrevBase
+      accent.value = safePrevAccent
+    },
+    { immediate: true }
+  )
+
+  async function safeSetDoc(
+    docRef: ReturnType<typeof doc> | null,
+    data: Record<string, unknown>,
+    source: string
+  ): Promise<boolean> {
+    if (!docRef) return false
+    try {
+      await mutateSetDocument(docRef, data, {
+        source,
+        merge: true,
+      })
+      return true
+    } catch (error) {
+      console.error("[settingsStore] Failed to persist to Firestore:", error)
+      return false
+    }
+  }
+
+  async function persistTheme(): Promise<boolean> {
+    return safeSetDoc(
+      themeDocRef.value,
+      {
+        mode: mode.value,
+        base: base.value,
+        accent: accent.value,
+        font: font.value,
+        size: size.value,
+        language: language.value,
+      },
+      "settings.themes.persist"
+    )
+  }
+
+  async function persistThemeWithSync(): Promise<void> {
+    if (!themeDocRef.value) return
+
+    if (pendingTheme.value) {
+      isThemePersistQueued.value = true
+      return
+    }
+
+    pendingTheme.value = true
+    isThemePersistQueued.value = false
+
+    try {
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persistTheme()
+          if (!success) {
+            throw new Error("Failed to persist theme")
+          }
+        },
+        {
+          id: "theme",
+          source: "settings.themes.persist",
+        }
+      )
+    } catch (error) {
+      console.error("[settingsStore] persistTheme failed:", error)
+    } finally {
+      pendingTheme.value = false
+
+      if (isThemePersistQueued.value) {
+        void persistThemeWithSync()
+      }
+    }
+  }
+
+  watchDebounced(
+    [mode, base, accent, font, size, language],
+    () => {
+      void persistThemeWithSync()
+    },
+    { debounce: 500 }
+  )
+
+  const notificationSettingsDocRef = computed(() => {
+    if (!user.value?.uid) return null
+    return doc(db, "users", user.value.uid, "settings", "notifications")
+  })
+
+  const { data: notificationSettingsDoc, pending: notificationPending } =
+    useDocument(notificationSettingsDocRef)
+
+  const optimisticNotificationSettings = ref<UserNotificationSettings | null>(
+    null
+  )
+  const isUpdatingNotifications = ref(false)
+
+  const notificationSettings = computed(() =>
+    optimisticNotificationSettings.value
+      ? cloneNotificationSettings(optimisticNotificationSettings.value)
+      : normalizeNotificationSettings(notificationSettingsDoc.value)
+  )
+
+  watch(
+    () => notificationSettingsDoc.value,
+    (nextValue) => {
+      if (!optimisticNotificationSettings.value) return
+      const remote = normalizeNotificationSettings(nextValue)
+      if (
+        areNotificationSettingsEqual(
+          remote,
+          optimisticNotificationSettings.value
+        )
+      ) {
+        optimisticNotificationSettings.value = null
+      }
+    }
+  )
+
+  async function persistNotificationSettings(
+    updater: (current: UserNotificationSettings) => UserNotificationSettings,
+    messages: {
+      success: string
+      error: string
+    }
+  ): Promise<boolean> {
+    if (!notificationSettingsDocRef.value || isUpdatingNotifications.value) {
+      return false
+    }
+
+    const previous = cloneNotificationSettings(notificationSettings.value)
+    const next = updater(previous)
+
+    if (areNotificationSettingsEqual(previous, next)) {
+      return true
+    }
+
+    optimisticNotificationSettings.value = next
+    isUpdatingNotifications.value = true
+
+    try {
+      await mutateSetDocument(
+        notificationSettingsDocRef.value,
+        next as unknown as Record<string, unknown>,
+        {
+          source: "settings.notifications.persist",
+          merge: true,
+        }
+      )
+      toast.success(messages.success)
+      return true
+    } catch (error) {
+      optimisticNotificationSettings.value = previous
+      toast.error(messages.error, {
+        description: (error as Error).message,
+      })
+      return false
+    } finally {
+      isUpdatingNotifications.value = false
+    }
+  }
+
+  async function updateNotificationCategory(
+    category: "communication" | "marketing",
+    value: boolean
+  ): Promise<boolean> {
+    return persistNotificationSettings(
+      (current) => ({
+        ...current,
+        categories: {
+          ...current.categories,
+          [category]: value,
+        },
+      }),
+      {
+        success: "Notification category updated",
+        error: "Failed to update notification category",
+      }
+    )
+  }
+
+  async function updateNotificationFrequency(value: unknown): Promise<boolean> {
+    if (typeof value !== "string") return false
+    const frequency: NotificationFrequency =
+      normalizeNotificationFrequency(value)
+
+    return persistNotificationSettings(
+      (current) => ({
+        ...current,
+        frequency,
+      }),
+      {
+        success: "Notification frequency updated",
+        error: "Failed to update notification frequency",
+      }
+    )
+  }
+
+  async function updateNotificationChannel(
+    channel: "email" | "inApp",
+    value: boolean
+  ): Promise<boolean> {
+    return persistNotificationSettings(
+      (current) => ({
+        ...current,
+        channels: {
+          ...current.channels,
+          [channel]: value,
+        },
+      }),
+      {
+        success: "Notification channel updated",
+        error: "Failed to update notification channel",
+      }
+    )
+  }
+
+  const isThemeLoading = computed(() => themePending.value)
+  const isNotificationLoading = computed(() => notificationPending.value)
+
+  return {
+    themeSettings,
+    pendingTheme,
+    isThemeLoading,
+    notificationSettings,
+    isUpdatingNotifications,
+    isNotificationLoading,
+    updateNotificationCategory,
+    updateNotificationFrequency,
+    updateNotificationChannel,
+  }
+})

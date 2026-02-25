@@ -55,7 +55,7 @@ const entries: ChangelogEntry[] = [
     items: [
       "Native mobile experience for on-the-go productivity",
       "Offline mode support for working without internet connection",
-      "Push notifications for important updates",
+      "In-app notifications for important updates",
       "Biometric authentication for enhanced security",
     ],
   },

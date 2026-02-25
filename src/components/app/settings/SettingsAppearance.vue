@@ -1,5 +1,12 @@
 <script lang="ts" setup>
 import { IconCircleDot } from "@/data/icons"
+import type {
+  AccentId,
+  BaseId,
+  FontId,
+  LanguageId,
+  SizeId,
+} from "@/helpers/defaults"
 import {
   accents,
   bases,
@@ -8,12 +15,59 @@ import {
   sizes,
   themes,
 } from "@/helpers/defaults"
-import { accent, base, font, size, store } from "@/modules/theme"
+import { useSettingsStore } from "@/stores/settingsStore"
+import type { ThemeMode } from "@/types/settings"
+import { storeToRefs } from "pinia"
 
-const { locale, t } = useI18n()
+const { t } = useI18n()
 
-const isAccentBaseSelected = computed(() => accent.value === "base")
-const isBaseAccentSelected = computed(() => base.value === "accent")
+const settingsStore = useSettingsStore()
+const { themeSettings } = storeToRefs(settingsStore)
+
+const selectedTheme = computed({
+  get: () => themeSettings.value.mode,
+  set: (value: ThemeMode) => {
+    themeSettings.value.mode = value
+  },
+})
+
+const selectedBase = computed({
+  get: () => themeSettings.value.base,
+  set: (value: BaseId) => {
+    themeSettings.value.base = value
+  },
+})
+
+const selectedAccent = computed({
+  get: () => themeSettings.value.accent,
+  set: (value: AccentId) => {
+    themeSettings.value.accent = value
+  },
+})
+
+const selectedLanguage = computed({
+  get: () => themeSettings.value.language,
+  set: (value: LanguageId) => {
+    themeSettings.value.language = value
+  },
+})
+
+const selectedFont = computed({
+  get: () => themeSettings.value.font,
+  set: (value: FontId) => {
+    themeSettings.value.font = value
+  },
+})
+
+const selectedSize = computed({
+  get: () => themeSettings.value.size,
+  set: (value: SizeId) => {
+    themeSettings.value.size = value
+  },
+})
+
+const isAccentBaseSelected = computed(() => selectedAccent.value === "base")
+const isBaseAccentSelected = computed(() => selectedBase.value === "accent")
 </script>
 
 <template>
@@ -29,7 +83,7 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               {{ t("settings.preferences.theme.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="theme" v-model="store">
+          <Select id="theme" v-model="selectedTheme">
             <SelectTrigger>
               <SelectValue
                 :placeholder="t('settings.preferences.theme.placeholder')"
@@ -54,7 +108,7 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               Select the base color for the application.
             </FieldDescription>
           </FieldContent>
-          <Select id="base" v-model="base">
+          <Select id="base" v-model="selectedBase">
             <SelectTrigger>
               <SelectValue placeholder="Select a base color" />
             </SelectTrigger>
@@ -80,7 +134,7 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               {{ t("settings.preferences.accent.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="accent" v-model="accent">
+          <Select id="accent" v-model="selectedAccent">
             <SelectTrigger>
               <SelectValue
                 :placeholder="t('settings.preferences.accent.placeholder')"
@@ -108,7 +162,7 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               {{ t("settings.preferences.language.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="language" v-model="locale">
+          <Select id="language" v-model="selectedLanguage">
             <SelectTrigger>
               <SelectValue
                 :placeholder="t('settings.preferences.language.placeholder')"
@@ -135,7 +189,7 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               {{ t("settings.preferences.font.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="font" v-model="font">
+          <Select id="font" v-model="selectedFont">
             <SelectTrigger>
               <SelectValue
                 :placeholder="t('settings.preferences.font.placeholder')"
@@ -164,7 +218,7 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               {{ t("settings.preferences.text.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="text-size" v-model="size" class="w-40">
+          <Select id="text-size" v-model="selectedSize" class="w-40">
             <SelectTrigger>
               <SelectValue
                 :placeholder="t('settings.preferences.text.placeholder')"

@@ -7,7 +7,7 @@ import {
   toNameLower,
   type WorkspaceNode,
   type WorkspaceNodeScope,
-} from "@/types"
+} from "@/types/nodes"
 import {
   cloneState,
   createPendingSet,

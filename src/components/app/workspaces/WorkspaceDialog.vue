@@ -3,7 +3,7 @@ import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconX } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import type { IWorkspace } from "@/types"
+import type { IWorkspace } from "@/types/domain"
 
 const props = defineProps<{
   open?: boolean

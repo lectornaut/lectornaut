@@ -181,12 +181,31 @@ const validateUserLayoutMutation = (
   if (path[2] !== "layout") return false
 
   const layoutId = path[3]
-  if (layoutId !== "navigation" && layoutId !== "theme") {
+  if (layoutId !== "navigation") {
     reject("permission-denied", "Invalid user layout target")
   }
 
   if (operation.type === "delete") {
     reject("permission-denied", "Layout documents cannot be deleted via sync")
+  }
+
+  return true
+}
+
+const validateUserSettingsMutation = (
+  path: string[],
+  operation: SyncOperation
+) => {
+  if (path.length !== 4) return false
+  if (path[2] !== "settings") return false
+
+  const settingId = path[3]
+  if (settingId !== "notifications" && settingId !== "themes") {
+    reject("permission-denied", "Invalid user settings target")
+  }
+
+  if (operation.type === "delete") {
+    reject("permission-denied", "Settings documents cannot be deleted via sync")
   }
 
   return true
@@ -301,6 +320,7 @@ const validateOperationAccess = async (
 
     if (validateUserDocumentMutation(path, operation)) return
     if (validateUserLayoutMutation(path, operation)) return
+    if (validateUserSettingsMutation(path, operation)) return
     if (validateNotificationMutation(path, operation)) return
 
     reject("permission-denied", "Unsupported user mutation target")

@@ -18,12 +18,12 @@ import {
   type IInvitation,
 } from "@/stores/invitationStore"
 import { useMembershipStore } from "@/stores/membershipStore"
+import type { ITeam } from "@/types/domain"
 import {
   isMembershipRole,
   type IMembership,
   type IMembershipRole,
-  type ITeam,
-} from "@/types"
+} from "@/types/membership"
 import { Capabilities, roleCan } from "@/types/permissions"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"

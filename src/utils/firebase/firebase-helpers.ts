@@ -6,7 +6,8 @@
  */
 
 import { firestore, storage } from "@/modules/firebase"
-import type { IMembershipDocData, ITeam, IUser, IWorkspace } from "@/types"
+import type { ITeam, IUser, IWorkspace } from "@/types/domain"
+import type { IMembershipDocData } from "@/types/membership"
 import {
   collection,
   collectionGroup,

@@ -19,12 +19,12 @@ import {
 } from "@/composables/useFunctions"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { useAuthStore } from "@/stores/authStore"
+import type { ITeam } from "@/types/domain"
 import {
   isMembershipRole,
   type IMembership,
   type IMembershipRole,
-  type ITeam,
-} from "@/types"
+} from "@/types/membership"
 import { can, Capabilities, hasExactRole } from "@/types/permissions"
 import {
   getAllMembershipsGroup,

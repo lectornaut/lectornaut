@@ -3,7 +3,7 @@ import type {
   SyncBaseVersion,
   SyncMutationType,
   SyncOperationStatus,
-} from "@/types"
+} from "@/types/sync"
 import {
   getFirestoreErrorMessage,
   isRetryableFirebaseError,

@@ -1,12 +1,7 @@
 import { isTauri } from "@/composables/usePlatform"
-import type {
-  AccentId,
-  BaseId,
-  FontId,
-  SizeId,
-  ThemeId,
-} from "@/helpers/defaults"
-import { useLayoutStore } from "@/stores/layoutStore"
+import type { AccentId, BaseId, FontId, SizeId } from "@/helpers/defaults"
+import { useSettingsStore } from "@/stores/settingsStore"
+import type { ThemeMode } from "@/types/settings"
 import { setTheme } from "@tauri-apps/api/app"
 import { storeToRefs } from "pinia"
 
@@ -17,8 +12,8 @@ export const { store, system, state } = useColorMode({
 
 // Initialize theme sync
 export const initTheme = () => {
-  const layoutStore = useLayoutStore()
-  const { themeSettings } = storeToRefs(layoutStore)
+  const settingsStore = useSettingsStore()
+  const { themeSettings } = storeToRefs(settingsStore)
 
   // Sync Mode
   watch(
@@ -33,7 +28,7 @@ export const initTheme = () => {
 
   watch(store, (val) => {
     if (val && val !== themeSettings.value.mode) {
-      themeSettings.value.mode = val as ThemeId
+      themeSettings.value.mode = val as ThemeMode
     }
   })
 
@@ -86,44 +81,44 @@ export const initTheme = () => {
 
 export const accent = computed({
   get: () => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     return s.themeSettings.accent
   },
   set: (val: AccentId) => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     s.themeSettings.accent = val
   },
 })
 
 export const base = computed({
   get: () => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     return s.themeSettings.base
   },
   set: (val: BaseId) => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     s.themeSettings.base = val
   },
 })
 
 export const font = computed({
   get: () => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     return s.themeSettings.font
   },
   set: (val: FontId) => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     s.themeSettings.font = val
   },
 })
 
 export const size = computed({
   get: () => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     return s.themeSettings.size
   },
   set: (val: SizeId) => {
-    const s = useLayoutStore()
+    const s = useSettingsStore()
     s.themeSettings.size = val
   },
 })

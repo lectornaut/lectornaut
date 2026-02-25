@@ -3,100 +3,133 @@ import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
 import { admin, db } from "./firebase.js"
 import {
+  DEFAULT_NOTIFICATION_SETTINGS,
   MembershipRoleLabels,
   NotificationData,
   NotificationPayload,
-  NotificationPreferences,
+  NotificationSettings,
   NotificationTypeConfig,
   normalizeMembershipRole,
 } from "./types.js"
 
-/**
- * COST OPTIMIZATION: Per-instance TTL cache for notification preferences.
- * Within the same warm function instance, repeated reads for the same user
- * are served from cache. This is especially valuable during fan-out
- * (e.g., notifying all admins triggers N calls to getUserPreferences).
- *
- * Cache is invalidated after PREFERENCE_CACHE_TTL_MS (default: 60s).
- * Correctness: stale preferences for up to 60s is acceptable —
- * a user who just muted notifications might get one more notification.
- */
 interface CacheEntry<T> {
   value: T
   expiresAt: number
 }
 
-const preferencesCache = new Map<
-  string,
-  CacheEntry<NotificationPreferences | null>
->()
+const settingsCache = new Map<string, CacheEntry<NotificationSettings>>()
 
-function getCachedPreferences(
-  userId: string
-): NotificationPreferences | null | undefined {
-  const entry = preferencesCache.get(userId)
-  if (!entry) return undefined
-  if (Date.now() > entry.expiresAt) {
-    preferencesCache.delete(userId)
-    return undefined
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+
+const normalizeBoolean = (value: unknown, fallback: boolean): boolean =>
+  typeof value === "boolean" ? value : fallback
+
+const normalizeNotificationSettings = (
+  value: unknown
+): NotificationSettings => {
+  if (!isObjectRecord(value)) {
+    return {
+      categories: { ...DEFAULT_NOTIFICATION_SETTINGS.categories },
+      frequency: DEFAULT_NOTIFICATION_SETTINGS.frequency,
+      channels: { ...DEFAULT_NOTIFICATION_SETTINGS.channels },
+    }
   }
-  return entry.value
+
+  const categories = isObjectRecord(value.categories) ? value.categories : {}
+  const channels = isObjectRecord(value.channels) ? value.channels : {}
+  const frequency = value.frequency
+
+  return {
+    categories: {
+      communication: normalizeBoolean(
+        categories.communication,
+        DEFAULT_NOTIFICATION_SETTINGS.categories.communication
+      ),
+      marketing: normalizeBoolean(
+        categories.marketing,
+        DEFAULT_NOTIFICATION_SETTINGS.categories.marketing
+      ),
+      // Security notifications are always enabled.
+      security: true,
+    },
+    frequency:
+      frequency === "immediate" ||
+      frequency === "daily" ||
+      frequency === "weekly" ||
+      frequency === "none"
+        ? frequency
+        : DEFAULT_NOTIFICATION_SETTINGS.frequency,
+    channels: {
+      email: normalizeBoolean(
+        channels.email,
+        DEFAULT_NOTIFICATION_SETTINGS.channels.email
+      ),
+      inApp: normalizeBoolean(
+        channels.inApp,
+        DEFAULT_NOTIFICATION_SETTINGS.channels.inApp
+      ),
+    },
+  }
 }
 
-function setCachedPreferences(
-  userId: string,
-  prefs: NotificationPreferences | null
-): void {
-  preferencesCache.set(userId, {
-    value: prefs,
+const getCachedSettings = (
+  userId: string
+): NotificationSettings | undefined => {
+  const cached = settingsCache.get(userId)
+  if (!cached) return undefined
+
+  if (Date.now() > cached.expiresAt) {
+    settingsCache.delete(userId)
+    return undefined
+  }
+
+  return cached.value
+}
+
+const setCachedSettings = (userId: string, settings: NotificationSettings) => {
+  settingsCache.set(userId, {
+    value: settings,
     expiresAt: Date.now() + COST_BUDGET.PREFERENCE_CACHE_TTL_MS,
   })
 
-  // Prevent unbounded cache growth (shouldn't happen in practice
-  // since function instances handle limited concurrent requests)
-  if (preferencesCache.size > 1000) {
-    // Evict oldest entries
+  if (settingsCache.size > 1000) {
     const now = Date.now()
-    for (const [key, entry] of preferencesCache) {
+    for (const [key, entry] of settingsCache) {
       if (now > entry.expiresAt) {
-        preferencesCache.delete(key)
+        settingsCache.delete(key)
       }
     }
   }
 }
 
-/**
- * Check user's notification preferences (with caching)
- */
-async function getUserPreferences(
+const getUserNotificationSettings = async (
   userId: string
-): Promise<NotificationPreferences | null> {
-  // Check cache first
-  const cached = getCachedPreferences(userId)
-  if (cached !== undefined) {
-    return cached
-  }
+): Promise<NotificationSettings> => {
+  const cached = getCachedSettings(userId)
+  if (cached) return cached
 
   try {
-    const prefsSnap = await db
-      .doc(`users/${userId}/notificationPreferences/default`)
+    const settingsSnap = await db
+      .doc(`users/${userId}/settings/notifications`)
       .get()
-    const prefs = (prefsSnap.data() as NotificationPreferences) || null
-    setCachedPreferences(userId, prefs)
-    return prefs
+    const settings = normalizeNotificationSettings(settingsSnap.data())
+    setCachedSettings(userId, settings)
+    return settings
   } catch (error) {
-    logger.error(`Error fetching notification preferences for ${userId}`, error)
-    return null
+    logger.error(`Error fetching notification settings for ${userId}`, error)
+    return {
+      categories: { ...DEFAULT_NOTIFICATION_SETTINGS.categories },
+      frequency: DEFAULT_NOTIFICATION_SETTINGS.frequency,
+      channels: { ...DEFAULT_NOTIFICATION_SETTINGS.channels },
+    }
   }
 }
 
-/**
- * Create an in-app notification for a user
- */
-async function createInAppNotification(
+const createInAppNotification = async (
   userId: string,
   notification: Omit<NotificationData, "createdAt" | "status" | "read">
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     await db.collection(`users/${userId}/notifications`).add({
       ...notification,
@@ -111,18 +144,14 @@ async function createInAppNotification(
   }
 }
 
-/**
- * Send an email notification to a user
- */
-async function sendEmailNotification(
+const sendEmailNotification = async (
   email: string,
   payload: NotificationPayload
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     const template = payload.emailData?.template || payload.type
     const subject = payload.emailData?.subject || payload.title
 
-    // Build template data from payload and any overrides
     const templateData: Record<string, unknown> = {
       title: payload.title,
       description: payload.description,
@@ -130,8 +159,6 @@ async function sendEmailNotification(
       ...payload.emailData?.templateData,
     }
 
-    // Defense-in-depth: keep invitation role placeholders safe even if upstream
-    // payloads are malformed or missing role metadata.
     if (template === "invitation.received") {
       const role = normalizeMembershipRole(templateData.role)
       templateData.role = role
@@ -144,6 +171,7 @@ async function sendEmailNotification(
       template,
       data: templateData,
     })
+
     return true
   } catch (error) {
     logger.error(`Error sending email notification to ${email}`, error)
@@ -151,46 +179,45 @@ async function sendEmailNotification(
   }
 }
 
-/**
- * Send a notification through all configured channels.
- *
- * This is the main entry point for sending notifications. It will:
- * 1. Check the notification type's channel configuration
- * 2. Check user preferences to see if notifications are enabled
- * 3. Send to in-app and/or email channels as configured
- *
- * @param payload - The notification payload
- * @returns Object indicating success/failure for each channel
- */
 export async function sendNotification(payload: NotificationPayload): Promise<{
   inApp: boolean
   email: boolean
 }> {
   const { userId, userEmail, type } = payload
   const channelConfig = NotificationTypeConfig[type]
+  const isSecurityNotification = channelConfig.category === "security"
 
   const result = {
     inApp: false,
     email: false,
   }
 
-  // Get user preferences (cached within instance)
-  const prefs = await getUserPreferences(userId)
+  const settings = await getUserNotificationSettings(userId)
 
-  // Check global disable
-  if (prefs?.enabled === false) {
-    logger.info(`Notifications globally disabled for user ${userId}`)
+  if (!isSecurityNotification && !settings.categories[channelConfig.category]) {
+    logger.info(
+      `Notification category ${channelConfig.category} disabled for user ${userId}`
+    )
     return result
   }
 
-  // Check if this type is muted
-  if (prefs?.mutedTypes?.includes(type)) {
-    logger.info(`Notification type ${type} muted for user ${userId}`)
+  if (!isSecurityNotification && settings.frequency === "none") {
+    logger.info(`Notification frequency set to none for user ${userId}`)
     return result
   }
 
-  // Send to in-app channel
-  if (channelConfig.inApp) {
+  const immediateExternalDelivery =
+    isSecurityNotification || settings.frequency === "immediate"
+
+  const shouldSendInApp =
+    channelConfig.inApp &&
+    (isSecurityNotification || settings.channels.inApp) &&
+    (isSecurityNotification || settings.frequency !== "none")
+
+  const shouldSendEmail =
+    channelConfig.email && settings.channels.email && immediateExternalDelivery
+
+  if (shouldSendInApp) {
     result.inApp = await createInAppNotification(userId, {
       type: payload.type,
       title: payload.title,
@@ -200,10 +227,9 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
     })
   }
 
-  // Send to email channel
-  if (channelConfig.email && userEmail) {
+  if (shouldSendEmail && userEmail) {
     result.email = await sendEmailNotification(userEmail, payload)
-  } else if (channelConfig.email && !userEmail) {
+  } else if (shouldSendEmail && !userEmail) {
     logger.warn(
       `Email channel configured for ${type} but no email provided for user ${userId}`
     )
@@ -212,24 +238,15 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
   return result
 }
 
-/**
- * Send a notification to multiple users.
- * Useful for team-wide notifications.
- *
- * COST OPTIMIZATION: Preferences are cached per-instance,
- * so multiple sendNotification calls within the same request/instance
- * don't re-read the same user's preferences from Firestore.
- */
 export async function sendNotificationToMany(
   payloads: NotificationPayload[]
 ): Promise<void> {
-  // Cap fan-out to prevent runaway costs
   const capped = payloads.slice(0, COST_BUDGET.NOTIFICATION_FANOUT_MAX)
   if (payloads.length > COST_BUDGET.NOTIFICATION_FANOUT_MAX) {
     logger.warn(
-      `[notifier] Fan-out capped at ${COST_BUDGET.NOTIFICATION_FANOUT_MAX}, ` +
-        `${payloads.length - COST_BUDGET.NOTIFICATION_FANOUT_MAX} notifications dropped`
+      `Fan-out capped at ${COST_BUDGET.NOTIFICATION_FANOUT_MAX} notifications (requested ${payloads.length})`
     )
   }
+
   await Promise.all(capped.map((payload) => sendNotification(payload)))
 }

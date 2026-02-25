@@ -1,4 +1,4 @@
-import type { WorkspaceNodeScope } from "@/types"
+import type { WorkspaceNodeScope } from "@/types/nodes"
 import { colorFromUserId } from "@/utils/collab/colors"
 import {
   createPeer,

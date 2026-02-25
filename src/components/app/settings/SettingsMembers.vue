@@ -9,7 +9,7 @@ import {
   IconPlus,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import type { IMembershipRole } from "@/types"
+import type { IMembershipRole } from "@/types/membership"
 import { DateFormatter } from "@internationalized/date"
 import { useCurrentUser } from "vuefire"
 

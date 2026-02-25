@@ -1,5 +1,5 @@
 import { firestore, functions } from "@/modules/firebase"
-import type { WorkspaceNodeScope } from "@/types"
+import type { WorkspaceNodeScope } from "@/types/nodes"
 import {
   collection,
   onSnapshot,

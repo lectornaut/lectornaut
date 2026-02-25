@@ -1,6 +1,6 @@
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
-import type { WorkspaceNodeScope } from "@/types"
+import type { WorkspaceNodeScope } from "@/types/nodes"
 import { storeToRefs } from "pinia"
 
 type BreadcrumbRoute = {

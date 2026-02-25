@@ -11,7 +11,7 @@ import {
   IconSwitchHorizontal,
   IconTrash2,
 } from "@/data/icons"
-import type { ILogEntry } from "@/types"
+import type { ILogEntry } from "@/types/logs"
 import { DateFormatter } from "@internationalized/date"
 import { toRefs } from "vue"
 

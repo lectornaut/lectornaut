@@ -14,7 +14,7 @@ import {
   type NodeType,
   type WorkspaceNode,
   type WorkspaceNodeScope,
-} from "@/types"
+} from "@/types/nodes"
 import {
   collection,
   doc,

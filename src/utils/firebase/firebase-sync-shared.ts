@@ -1,4 +1,4 @@
-import type { SyncBaseVersion } from "@/types"
+import type { SyncBaseVersion } from "@/types/sync"
 
 const toMillis = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value

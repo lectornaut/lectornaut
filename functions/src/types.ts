@@ -2,10 +2,13 @@ import admin from "firebase-admin"
 
 // Notification Channel Types
 export type NotificationChannel = "in-app" | "email"
+export type NotificationCategory = "communication" | "marketing" | "security"
+export type NotificationFrequency = "immediate" | "daily" | "weekly" | "none"
 
 export interface ChannelConfig {
   inApp: boolean
   email: boolean
+  category: NotificationCategory
 }
 
 export type NotificationStatus = "inbox" | "saved" | "done"
@@ -16,13 +19,63 @@ export type NotificationType =
   | "member.joined"
   | "member.removed"
 
+export interface NotificationCategorySettings {
+  communication: boolean
+  marketing: boolean
+  security: boolean
+}
+
+export interface NotificationChannelSettings {
+  email: boolean
+  inApp: boolean
+}
+
+export interface NotificationSettings {
+  categories: NotificationCategorySettings
+  frequency: NotificationFrequency
+  channels: NotificationChannelSettings
+}
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  categories: {
+    communication: true,
+    marketing: true,
+    security: true,
+  },
+  frequency: "immediate",
+  channels: {
+    email: true,
+    inApp: true,
+  },
+}
+
 // Default channel configuration for each notification type
 export const NotificationTypeConfig: Record<NotificationType, ChannelConfig> = {
-  "user.welcome": { inApp: true, email: true },
-  "invitation.received": { inApp: true, email: true },
-  "invitation.declined": { inApp: true, email: true },
-  "member.joined": { inApp: true, email: true },
-  "member.removed": { inApp: true, email: true },
+  "user.welcome": {
+    inApp: true,
+    email: true,
+    category: "marketing",
+  },
+  "invitation.received": {
+    inApp: true,
+    email: true,
+    category: "communication",
+  },
+  "invitation.declined": {
+    inApp: true,
+    email: true,
+    category: "communication",
+  },
+  "member.joined": {
+    inApp: true,
+    email: true,
+    category: "communication",
+  },
+  "member.removed": {
+    inApp: true,
+    email: true,
+    category: "security",
+  },
 }
 
 export interface NotificationData {
@@ -37,11 +90,6 @@ export interface NotificationData {
     entityId: string
   }
   createdAt: admin.firestore.FieldValue
-}
-
-export interface NotificationPreferences {
-  enabled: boolean
-  mutedTypes: string[]
 }
 
 export interface EmailData {

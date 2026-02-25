@@ -16,7 +16,7 @@ import {
   IconSquareMousePointer,
   IconTrash,
 } from "@/data/icons"
-import type { INotificationStatus } from "@/types"
+import type { INotificationStatus } from "@/types/notification"
 
 defineProps<{
   iconDisplay?: "icon" | "text"

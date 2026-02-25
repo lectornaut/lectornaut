@@ -163,13 +163,15 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      match /notificationPreferences/{preferenceId} {
-        allow read, write: if isSelf(userId);
-      }
-
       match /layout/{layoutId} {
         allow read: if isSelf(userId)
-          && layoutId in ["navigation", "theme"];
+          && layoutId == "navigation";
+        allow write: if false;
+      }
+
+      match /settings/{settingId} {
+        allow read: if isSelf(userId)
+          && settingId in ["notifications", "themes"];
         allow write: if false;
       }
 

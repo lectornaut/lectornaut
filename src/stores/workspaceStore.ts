@@ -22,7 +22,7 @@ import {
 } from "@/composables/useFunctions"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IWorkspace } from "@/types"
+import type { IWorkspace } from "@/types/domain"
 import {
   createTeamWorkspacesQuery,
   deleteWorkspacePhotoFile,

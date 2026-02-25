@@ -1,28 +1,14 @@
 /**
  * Layout Store with Optimistic Firestore Updates
  *
- * Manages tabs, navigation, and theme settings with:
+ * Manages tabs and layout navigation with:
  * - Instant UI updates via optimistic state changes
  * - Automatic rollback on Firestore errors
  * - pendingIds tracking to prevent snapshot overwrites
  * - Debounced persistence to Firestore
  */
 
-import type {
-  AccentId,
-  BaseId,
-  FontId,
-  LanguageId,
-  SizeId,
-} from "@/helpers/defaults"
-import {
-  defaultAccent,
-  defaultBase,
-  defaultFont,
-  defaultLanguage,
-  defaultMenu,
-  defaultSize,
-} from "@/helpers/defaults"
+import { defaultMenu } from "@/helpers/defaults"
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
@@ -31,10 +17,8 @@ import type {
   LayoutNavigationDoc,
   LayoutTab,
   LayoutTabsDoc,
-  LayoutThemeDoc,
   NavigationUiState,
-  ThemeMode,
-} from "@/types"
+} from "@/types/layout"
 import {
   addPending,
   cloneState,
@@ -64,9 +48,6 @@ const toLayoutTabsDoc = (value: unknown): LayoutTabsDoc | null =>
 const toLayoutNavigationDoc = (value: unknown): LayoutNavigationDoc | null =>
   isRecord(value) ? (value as LayoutNavigationDoc) : null
 
-const toLayoutThemeDoc = (value: unknown): LayoutThemeDoc | null =>
-  isRecord(value) ? (value as LayoutThemeDoc) : null
-
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
   const user = useCurrentUser()
@@ -79,13 +60,6 @@ export const useLayoutStore = defineStore("layout", () => {
   // State
   // ============================================================================
 
-  // Pre-load from localStorage to avoid flash
-  const mode = useStorage<ThemeMode>("theme", "auto")
-  const base = useStorage<BaseId>("base", defaultBase)
-  const accent = useStorage<AccentId>("accent", defaultAccent)
-  const font = useStorage<FontId>("font", defaultFont)
-  const size = useStorage<SizeId>("size", defaultSize)
-  const language = useStorage<LanguageId>("language", defaultLanguage)
   const headerIconDisplay = useStorage<IconDisplay>(
     "layout.header.iconDisplay",
     "icon"
@@ -121,18 +95,6 @@ export const useLayoutStore = defineStore("layout", () => {
   const isNavigationUiPersistQueued = ref(false)
   const isApplyingNavigationUiSnapshot = shallowRef(false)
   const navigationUiDirty = ref(false)
-  const pendingTheme = shallowRef(false)
-  const isThemePersistQueued = ref(false)
-
-  // Theme State - use storage refs directly to avoid double-wrapping
-  const themeSettings = reactive({
-    mode,
-    base,
-    accent,
-    font,
-    size,
-    language,
-  })
 
   // ============================================================================
   // Computed
@@ -213,14 +175,6 @@ export const useLayoutStore = defineStore("layout", () => {
     )
   })
 
-  const themeDocRef = computed(() => {
-    if (!user.value?.uid) return null
-    return doc(
-      collection(doc(collection(db, "users"), user.value.uid), "layout"),
-      "theme"
-    )
-  })
-
   // ============================================================================
   // Hydration (VueFire) with Optimistic Protection
   // ============================================================================
@@ -228,12 +182,9 @@ export const useLayoutStore = defineStore("layout", () => {
   const { data: tabsDocData, pending: tabsPending } = useDocument(tabsDocRef)
   const { data: navDocData, pending: navPending } =
     useDocument(navigationDocRef)
-  const { data: themeDocData, pending: themePending } = useDocument(themeDocRef)
 
   const isLoading = computed(
-    () =>
-      (tabsPending.value || navPending.value || themePending.value) &&
-      !isHydrated.value
+    () => (tabsPending.value || navPending.value) && !isHydrated.value
   )
 
   // Watch Tabs Data - protected against optimistic overwrites
@@ -397,80 +348,11 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
-  // Sync Firestore theme data back to localStorage - protected against optimistic overwrites
-  watch(
-    themeDocData,
-    (doc) => {
-      // Skip if theme operation is pending
-      if (pendingTheme.value) return
-
-      const themeDoc = toLayoutThemeDoc(doc)
-      if (!themeDoc) return
-      // Only sync if values differ (avoids unnecessary localStorage writes)
-      // Use 'in' operator to check for key existence rather than truthy value
-      if ("mode" in themeDoc && themeDoc.mode && themeDoc.mode !== mode.value)
-        mode.value = themeDoc.mode
-      if ("base" in themeDoc && themeDoc.base && themeDoc.base !== base.value)
-        base.value = themeDoc.base
-      if (
-        "accent" in themeDoc &&
-        themeDoc.accent &&
-        themeDoc.accent !== accent.value
-      ) {
-        accent.value = themeDoc.accent
-      }
-      if ("font" in themeDoc && themeDoc.font && themeDoc.font !== font.value) {
-        font.value = themeDoc.font
-      }
-      if ("size" in themeDoc && themeDoc.size && themeDoc.size !== size.value) {
-        size.value = themeDoc.size
-      }
-      if (
-        "language" in themeDoc &&
-        themeDoc.language &&
-        themeDoc.language !== language.value
-      ) {
-        language.value = themeDoc.language
-      }
-    },
-    { immediate: true }
-  )
-
-  // Prevent cyclic "accent<->base" mode combinations that cannot resolve a palette.
-  watch(
-    [base, accent],
-    ([nextBase, nextAccent], previousPair) => {
-      if (nextBase !== "accent" || nextAccent !== "base") return
-
-      const [prevBase, prevAccent] = previousPair ?? []
-      const safePrevBase: BaseId =
-        prevBase && prevBase !== "accent" ? prevBase : defaultBase
-      const safePrevAccent: AccentId =
-        prevAccent && prevAccent !== "base" ? prevAccent : defaultAccent
-
-      // Keep the earlier conflicting side and revert the newly changed side.
-      if (prevAccent === "base" && prevBase !== "accent") {
-        base.value = safePrevBase
-        return
-      }
-
-      if (prevBase === "accent" && prevAccent !== "base") {
-        accent.value = safePrevAccent
-        return
-      }
-
-      // Fallback for invalid persisted/multi-update states.
-      base.value = safePrevBase
-      accent.value = safePrevAccent
-    },
-    { immediate: true }
-  )
-
   // Set isHydrated when all critical documents are loaded or failed to load
   // Only set hydrated when we have valid refs (user/team loaded) AND documents are no longer pending
   watch(
-    [tabsPending, navPending, themePending, tabsDocRef],
-    ([tp, np, thp, tabsRef]) => {
+    [tabsPending, navPending, tabsDocRef],
+    ([tp, np, tabsRef]) => {
       // Don't mark as hydrated if we don't have a valid tabs doc ref yet
       // (meaning user or team hasn't loaded)
       if (!tabsRef) {
@@ -479,7 +361,7 @@ export const useLayoutStore = defineStore("layout", () => {
       }
 
       // Re-enter hydration mode whenever any layout document is refreshing.
-      if (tp || np || thp) {
+      if (tp || np) {
         isHydrated.value = false
         return
       }
@@ -565,24 +447,6 @@ export const useLayoutStore = defineStore("layout", () => {
   }
 
   /**
-   * Persist theme with optimistic update protection
-   */
-  async function persistTheme(): Promise<boolean> {
-    return safeSetDoc(
-      themeDocRef.value,
-      {
-        mode: mode.value,
-        base: base.value,
-        accent: accent.value,
-        font: font.value,
-        size: size.value,
-        language: language.value,
-      },
-      "layout.theme.persist"
-    )
-  }
-
-  /**
    * Persist UI layout state with global sync queue tracking.
    * Queues one extra run when rapid toggle changes happen during a save.
    */
@@ -618,45 +482,6 @@ export const useLayoutStore = defineStore("layout", () => {
 
       if (isNavigationUiPersistQueued.value) {
         void persistNavigationUiWithSync()
-      }
-    }
-  }
-
-  /**
-   * Persist theme with global sync queue tracking.
-   * Queues one extra run when multiple theme changes happen during a save.
-   */
-  async function persistThemeWithSync(): Promise<void> {
-    if (!themeDocRef.value) return
-
-    if (pendingTheme.value) {
-      isThemePersistQueued.value = true
-      return
-    }
-
-    pendingTheme.value = true
-    isThemePersistQueued.value = false
-
-    try {
-      await withCloudSyncOperation(
-        async () => {
-          const success = await persistTheme()
-          if (!success) {
-            throw new Error("Failed to persist theme")
-          }
-        },
-        {
-          id: "theme",
-          source: "layout.theme.persist",
-        }
-      )
-    } catch (error) {
-      console.error("[layoutStore] persistTheme failed:", error)
-    } finally {
-      pendingTheme.value = false
-
-      if (isThemePersistQueued.value) {
-        void persistThemeWithSync()
       }
     }
   }
@@ -701,15 +526,6 @@ export const useLayoutStore = defineStore("layout", () => {
     () => {
       if (!navigationUiDirty.value) return
       void persistNavigationUiWithSync()
-    },
-    { debounce: 500 }
-  )
-
-  // Persist Theme (debounced)
-  watchDebounced(
-    [mode, base, accent, font, size, language],
-    () => {
-      void persistThemeWithSync()
     },
     { debounce: 500 }
   )
@@ -1141,7 +957,6 @@ export const useLayoutStore = defineStore("layout", () => {
     activeTab,
     recentlyClosed,
     activeNavItems,
-    themeSettings,
     headerIconDisplay,
     footerIconDisplay,
     sidebarOpen,
@@ -1154,7 +969,6 @@ export const useLayoutStore = defineStore("layout", () => {
     // Pending state
     pendingTabIds,
     pendingNavigation,
-    pendingTheme,
     isTabPending,
     hasAnyTabPending,
 

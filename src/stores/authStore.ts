@@ -11,7 +11,7 @@
 
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
-import type { IUser } from "@/types"
+import type { IUser } from "@/types/domain"
 import {
   getUserRef,
   updateUserInMemberships,

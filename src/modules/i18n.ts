@@ -1,6 +1,6 @@
 import type { LanguageId } from "@/helpers/defaults"
 import { defaultLanguage } from "@/helpers/defaults"
-import { useLayoutStore } from "@/stores/layoutStore"
+import { useSettingsStore } from "@/stores/settingsStore"
 import messages from "@intlify/unplugin-vue-i18n/messages"
 import { storeToRefs } from "pinia"
 import { createI18n } from "vue-i18n"
@@ -17,8 +17,8 @@ export const i18n = createI18n({
 })
 
 export const initLanguage = () => {
-  const layoutStore = useLayoutStore()
-  const { themeSettings } = storeToRefs(layoutStore)
+  const settingsStore = useSettingsStore()
+  const { themeSettings } = storeToRefs(settingsStore)
 
   watch(
     () => themeSettings.value.language,

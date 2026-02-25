@@ -38,7 +38,7 @@ import {
   isMembershipRole,
   type IMembership,
   type IMembershipRole,
-} from "@/types"
+} from "@/types/membership"
 import { can, Capabilities, type Capability } from "@/types/permissions"
 import { getMembershipRef } from "@/utils/firebase/firebase-helpers"
 import {

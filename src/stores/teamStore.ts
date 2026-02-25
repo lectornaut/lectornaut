@@ -21,7 +21,7 @@ import {
 } from "@/composables/useFunctions"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { ITeam } from "@/types"
+import type { ITeam } from "@/types/domain"
 import { Capabilities, roleCan } from "@/types/permissions"
 import {
   deleteTeamPhotoFile,

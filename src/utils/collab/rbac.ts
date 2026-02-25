@@ -1,5 +1,6 @@
 import { auth, firestore } from "@/modules/firebase"
-import type { IMembershipRole, WorkspaceNodeScope } from "@/types"
+import type { IMembershipRole } from "@/types/membership"
+import type { WorkspaceNodeScope } from "@/types/nodes"
 import { Capabilities, roleCan } from "@/types/permissions"
 import { doc, getDoc } from "firebase/firestore"
 

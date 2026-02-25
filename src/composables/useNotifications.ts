@@ -1,6 +1,9 @@
 import { withToast } from "@/helpers/toast"
 import { firestore as db, functions } from "@/modules/firebase"
-import { type INotification, type INotificationStatus } from "@/types"
+import {
+  type INotification,
+  type INotificationStatus,
+} from "@/types/notification"
 import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
 import {
   cloneState,

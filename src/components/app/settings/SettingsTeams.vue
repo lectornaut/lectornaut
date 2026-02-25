@@ -16,7 +16,8 @@ import {
   IconX,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import type { IMembership, ITeam } from "@/types"
+import type { ITeam } from "@/types/domain"
+import type { IMembership } from "@/types/membership"
 import { DateFormatter } from "@internationalized/date"
 
 const { t } = useI18n()
