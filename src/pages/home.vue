@@ -713,7 +713,7 @@ const expandedCard = ref<number | null>(null)
           v-for="card in dashboardData"
           :key="card.id"
           :class="[
-            'col-span-1 shadow-none',
+            'col-span-1 rounded shadow-none',
             {
               '@xl:col-span-2 @6xl:col-span-2': expandedCard === card.id,
             },
@@ -827,8 +827,6 @@ const expandedCard = ref<number | null>(null)
                     })
                   "
                   :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
-                  bar-padding="0.1"
-                  group-padding="0"
                 />
               </VisXYContainer>
               <ChartLegendContent />

@@ -23,16 +23,16 @@ const { t } = useI18n()
               <SidebarMenuButton
                 :tooltip="t('accountMenu.account')"
                 size="lg"
-                class="data-[state=open]:bg-accent rounded-full"
+                class="data-[state=open]:bg-accent rounded"
               >
-                <Avatar class="rounded-full">
+                <Avatar class="rounded">
                   <AvatarImage
-                    class="rounded-full"
+                    class="rounded"
                     :src="user?.photoURL!"
                     :alt="user?.displayName"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback class="rounded-full">
+                  <AvatarFallback class="rounded">
                     {{ getInitials(user?.displayName!) }}
                   </AvatarFallback>
                 </Avatar>
@@ -53,16 +53,16 @@ const { t } = useI18n()
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-48" align="end" side="right">
               <DropdownMenuLabel>
-                <Item size="sm" class="group w-full gap-2 rounded-full p-0">
+                <Item size="sm" class="group w-full gap-2 rounded p-0">
                   <ItemMedia>
-                    <Avatar class="rounded-full">
+                    <Avatar class="rounded">
                       <AvatarImage
-                        class="rounded-full"
+                        class="rounded"
                         :src="user?.photoURL!"
                         :alt="user?.displayName"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback class="rounded-full">
+                      <AvatarFallback class="rounded">
                         {{ getInitials(user?.displayName!) }}
                       </AvatarFallback>
                     </Avatar>

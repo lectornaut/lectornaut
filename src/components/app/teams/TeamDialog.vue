@@ -479,18 +479,18 @@ const handleSubmit = async () => {
                       }"
                     >
                       <Avatar
-                        class="size-16 rounded-full"
+                        class="size-16 rounded"
                         :class="{
                           'cursor-pointer': canUpdateTeam || mode === 'create',
                         }"
                         @click="triggerTeamPhotoSelection"
                       >
                         <AvatarImage
-                          class="size-16 rounded-full"
+                          class="size-16 rounded"
                           :src="photoPreview!"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="size-16 rounded-full">
+                        <AvatarFallback class="size-16 rounded">
                           {{ getInitials(teamName) }}
                         </AvatarFallback>
                       </Avatar>
@@ -509,7 +509,7 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
+                      class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0 ring-2 transition group-hover:opacity-100"
                       size="icon-sm"
                       @click.stop="removePhoto"
                     >

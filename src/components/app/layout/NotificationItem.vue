@@ -77,7 +77,7 @@ const handleClick = () => {
             <Component :is="typeIcon" />
             <span
               v-if="notification.read === false"
-              class="bg-primary ring-accent absolute -top-1 -left-1 flex size-2.5 rounded-full ring-2"
+              class="bg-primary ring-accent absolute -top-1 -left-1 flex size-2.5 rounded ring-2"
             ></span>
           </ItemMedia>
           <ItemContent class="gap-0.5 truncate">

@@ -215,11 +215,11 @@ const sortedWorkspaces = computed(() => {
                                   </template>
                                   <template v-else>
                                     <AvatarImage
-                                      class="rounded-full"
+                                      class="rounded"
                                       :src="workspace.photoURL!"
                                       :alt="workspace.name"
                                     />
-                                    <AvatarFallback class="rounded-full">
+                                    <AvatarFallback class="rounded">
                                       {{ getInitials(workspace.name) }}
                                     </AvatarFallback>
                                   </template>
@@ -241,7 +241,7 @@ const sortedWorkspaces = computed(() => {
                               <TooltipTrigger as-child>
                                 <Button
                                   variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
+                                  class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0 ring-2 transition group-hover:opacity-100"
                                   size="icon-sm"
                                   @click.stop="
                                     removeWorkspacePhoto(workspace.id)

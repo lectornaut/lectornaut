@@ -177,14 +177,14 @@ const handleRemoveMember = (userId: string) => {
                     <TableCell>
                       <Item size="sm" class="group w-full gap-2 p-0">
                         <ItemMedia>
-                          <Avatar class="rounded-full">
+                          <Avatar class="rounded">
                             <AvatarImage
-                              class="rounded-full"
+                              class="rounded"
                               :src="member.user?.photoURL!"
                               :alt="member.user?.displayName"
                               referrerpolicy="no-referrer"
                             />
-                            <AvatarFallback class="rounded-full">
+                            <AvatarFallback class="rounded">
                               {{ getInitials(member.user?.displayName!) }}
                             </AvatarFallback>
                           </Avatar>

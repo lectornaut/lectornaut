@@ -45,16 +45,16 @@ const teams = computed(() =>
               <SidebarMenuButton
                 :tooltip="t('components.teamSwitcher.switchTeam')"
                 size="lg"
-                class="data-[state=open]:bg-accent rounded-full"
+                class="data-[state=open]:bg-accent rounded"
               >
-                <Avatar class="rounded-full">
+                <Avatar class="rounded">
                   <AvatarImage
-                    class="rounded-full"
+                    class="rounded"
                     :src="currentTeam?.photoURL!"
                     :alt="currentTeam?.name"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback class="rounded-full">
+                  <AvatarFallback class="rounded">
                     {{ getInitials(currentTeam?.name!) }}
                   </AvatarFallback>
                 </Avatar>
@@ -73,15 +73,15 @@ const teams = computed(() =>
                     <Avatar
                       v-for="member in teamMembers.slice(0, 3)"
                       :key="member.userId"
-                      class="ring-sidebar size-5 rounded-full ring-3"
+                      class="ring-sidebar size-5 rounded ring-3"
                     >
                       <AvatarImage
-                        class="rounded-full"
+                        class="rounded"
                         :src="member.user?.photoURL!"
                         :alt="member.user?.displayName"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback class="rounded-full">
+                      <AvatarFallback class="rounded">
                         {{ getInitials(member.user?.displayName!) }}
                       </AvatarFallback>
                     </Avatar>
@@ -98,17 +98,17 @@ const teams = computed(() =>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-48" align="start" side="right">
               <DropdownMenuLabel>
-                <Item size="sm" class="group w-full gap-2 rounded-full p-0">
+                <Item size="sm" class="group w-full gap-2 rounded p-0">
                   <ItemMedia>
-                    <Avatar class="rounded-full">
+                    <Avatar class="rounded">
                       <AvatarImage
                         v-if="currentTeam?.photoURL"
-                        class="rounded-full"
+                        class="rounded"
                         :src="currentTeam.photoURL"
                         :alt="currentTeam?.name"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback class="rounded-full">
+                      <AvatarFallback class="rounded">
                         {{ getInitials(currentTeam?.name!) }}
                       </AvatarFallback>
                     </Avatar>
@@ -175,17 +175,17 @@ const teams = computed(() =>
                       >
                         <Item
                           size="sm"
-                          class="group w-full gap-2 rounded-full p-0"
+                          class="group w-full gap-2 rounded p-0"
                         >
                           <ItemMedia>
-                            <Avatar class="rounded-full">
+                            <Avatar class="rounded">
                               <AvatarImage
-                                class="rounded-full"
+                                class="rounded"
                                 :src="team.original?.photoURL!"
                                 :alt="team.label"
                                 referrerpolicy="no-referrer"
                               />
-                              <AvatarFallback class="rounded-full">
+                              <AvatarFallback class="rounded">
                                 {{ getInitials(team.label) }}
                               </AvatarFallback>
                             </Avatar>

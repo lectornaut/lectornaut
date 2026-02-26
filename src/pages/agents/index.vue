@@ -344,7 +344,7 @@ const route = useRoute()
                                 'var(--chart-4)',
                                 'var(--chart-5)',
                               ]"
-                              class="rounded-full"
+                              class="rounded"
                             />
                             Agent {{ index + 1 }}
                           </CardTitle>
@@ -442,7 +442,7 @@ const route = useRoute()
                           'var(--chart-4)',
                           'var(--chart-5)',
                         ]"
-                        class="rounded-full"
+                        class="rounded"
                       />
                       Agent {{ index + 1 }}
                     </CardTitle>

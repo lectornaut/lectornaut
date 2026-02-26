@@ -185,7 +185,7 @@ const teams = [
                         class="ring-background ring-3"
                       >
                         <AvatarImage
-                          class="inline-block size-8 rounded-full"
+                          class="inline-block size-8 rounded"
                           :src="person?.avatar!"
                           :alt="person?.name"
                           referrerpolicy="no-referrer"
@@ -226,7 +226,7 @@ const teams = [
                   <div class="flex flex-col gap-2">
                     <Avatar>
                       <AvatarImage
-                        class="inline-block size-8 rounded-full"
+                        class="inline-block size-8 rounded"
                         :src="person?.avatar!"
                         :alt="person?.name"
                         referrerpolicy="no-referrer"

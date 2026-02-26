@@ -18,7 +18,7 @@ withDefaults(
   {
     activeColor: null,
     title: "Color",
-    swatchClass: "size-4 rounded-full border",
+    swatchClass: "size-4 rounded border",
     disabled: false,
   }
 )

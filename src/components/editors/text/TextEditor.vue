@@ -1072,7 +1072,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           @click="scrollToTableOfContentsItem(item)"
         >
           <span
-            class="bg-sidebar-primary h-1 rounded-full opacity-25 group-hover:opacity-75"
+            class="bg-sidebar-primary h-1 rounded opacity-25 group-hover:opacity-75"
             :style="{ width: getTableOfContentsItemIndent(item.level) }"
           >
           </span>

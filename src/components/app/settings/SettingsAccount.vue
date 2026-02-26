@@ -607,12 +607,12 @@ const passwordExists = computed(() => {
                       </template>
                       <template v-else>
                         <AvatarImage
-                          class="rounded-full"
+                          class="rounded"
                           :src="displayPhotoURL || ''"
                           :alt="user?.displayName"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="rounded-full">
+                        <AvatarFallback class="rounded">
                           {{ getInitials(user?.displayName!) }}
                         </AvatarFallback>
                       </template>
@@ -631,7 +631,7 @@ const passwordExists = computed(() => {
                     <Button
                       v-if="displayPhotoURL"
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-5 rounded-full opacity-0 ring-2 transition group-hover:opacity-100"
+                      class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0 ring-2 transition group-hover:opacity-100"
                       size="icon-sm"
                       @click.stop="handleRemoveProfilePicture"
                     >
@@ -916,14 +916,14 @@ const passwordExists = computed(() => {
             <FieldContent>
               <Item size="sm" class="p-0">
                 <ItemMedia class="group relative">
-                  <Avatar class="rounded-full">
+                  <Avatar class="rounded">
                     <AvatarImage
-                      class="rounded-full"
+                      class="rounded"
                       :src="provider?.photoURL!"
                       :alt="provider?.displayName"
                       referrerpolicy="no-referrer"
                     />
-                    <AvatarFallback class="rounded-full">
+                    <AvatarFallback class="rounded">
                       {{ getInitials(provider.displayName!) }}
                     </AvatarFallback>
                   </Avatar>
@@ -932,7 +932,7 @@ const passwordExists = computed(() => {
                       <TooltipTrigger as-child>
                         <Button
                           variant="secondary"
-                          class="ring-background absolute -right-2 -bottom-2 size-5 rounded-full ring-2"
+                          class="ring-background absolute -right-2 -bottom-2 size-5 rounded ring-2"
                           size="icon-sm"
                         >
                           <IconGoogleIcon

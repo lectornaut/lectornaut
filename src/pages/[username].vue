@@ -114,23 +114,23 @@ useHead({
         <div
           class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
         ></div>
-        <div class="bg-background mx-auto -mt-10 rounded-full border p-1">
+        <div class="bg-background mx-auto -mt-10 rounded border p-1">
           <div v-if="user">
-            <Avatar class="size-20 rounded-full">
+            <Avatar class="size-20 rounded">
               <AvatarImage
-                class="size-20 rounded-full"
+                class="size-20 rounded"
                 :src="user?.photoURL!"
                 :alt="user?.displayName"
                 referrerpolicy="no-referrer"
               />
-              <AvatarFallback class="size-20 rounded-full">
+              <AvatarFallback class="size-20 rounded">
                 {{ getInitials(user.displayName) }}
               </AvatarFallback>
             </Avatar>
           </div>
           <div
             v-else
-            class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded-full"
+            class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded"
           >
             <IconLock />
           </div>

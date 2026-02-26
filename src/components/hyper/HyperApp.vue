@@ -306,7 +306,7 @@ const randomIndex = () => {
                   )
                 "
               >
-                <span :class="item.style.icon" class="rounded-full p-4">
+                <span :class="item.style.icon" class="rounded p-4">
                   <Component :is="item.icon" class="size-8" />
                 </span>
                 <span
@@ -344,7 +344,7 @@ const randomIndex = () => {
               <div class="absolute inset-e-4 top-4 z-10 flex flex-col gap-2">
                 <Button
                   variant="ghost"
-                  class="text-muted-foreground rounded-full"
+                  class="text-muted-foreground rounded"
                   size="icon"
                   @click="toggleCamera"
                 >
@@ -355,7 +355,7 @@ const randomIndex = () => {
                 <Button
                   v-if="isPhotoTaken"
                   variant="ghost"
-                  class="text-muted-foreground rounded-full"
+                  class="text-muted-foreground rounded"
                   size="icon"
                   as-child
                 >
@@ -376,7 +376,7 @@ const randomIndex = () => {
                 <Button
                   variant="secondary"
                   size="icon"
-                  class="rounded-full"
+                  class="rounded"
                   @click="takePhoto"
                 >
                   <IconCircle v-if="!isPhotoTaken" class="size-8" />
@@ -407,7 +407,7 @@ const randomIndex = () => {
                       id="picture"
                       type="file"
                       accept=".jpg, .png"
-                      class="bg-muted rounded-full shadow-none"
+                      class="bg-muted rounded shadow-none"
                       :placeholder="$t('components.hyper.uploadPicture')"
                       @change="handleFileChange"
                     />
@@ -415,7 +415,7 @@ const randomIndex = () => {
                   <span
                     class="absolute inset-y-0 inset-e-0 flex items-center justify-center gap-2 p-2"
                   >
-                    <Badge class="rounded-full" variant="secondary">
+                    <Badge class="rounded" variant="secondary">
                       <IconDotsCircle />
                       <span>{{ $t("components.hyper.trySampleImage") }}</span>
                     </Badge>
@@ -444,14 +444,14 @@ const randomIndex = () => {
                     <Input
                       id="link"
                       type="text"
-                      class="bg-muted rounded-full shadow-none"
+                      class="bg-muted rounded shadow-none"
                       :placeholder="$t('components.hyper.pasteLink')"
                     />
                   </Label>
                   <span
                     class="absolute inset-y-0 inset-e-0 flex items-center justify-center gap-2 p-2"
                   >
-                    <Badge class="rounded-full" variant="secondary">
+                    <Badge class="rounded" variant="secondary">
                       <IconDotsCircle />
                       <span>{{ $t("components.hyper.trySampleLink") }}</span>
                     </Badge>
@@ -480,7 +480,7 @@ const randomIndex = () => {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger as-child>
-                        <Badge class="rounded-full px-0.5" variant="secondary">
+                        <Badge class="rounded px-0.5" variant="secondary">
                           <IconDotsCircle />
                         </Badge>
                       </TooltipTrigger>
@@ -562,7 +562,7 @@ const randomIndex = () => {
                     </TooltipProvider>
                   </span>
                   <span class="flex gap-2">
-                    <Button size="icon" class="rounded-full">
+                    <Button size="icon" class="rounded">
                       <IconArrowUp />
                     </Button>
                   </span>
@@ -581,7 +581,7 @@ const randomIndex = () => {
         <template v-for="(item, index) in navItems" :key="index">
           <CarouselItem
             :class="[
-              'flex shrink-0 basis-auto items-center justify-center gap-2 rounded-full px-3 transition-all',
+              'flex shrink-0 basis-auto items-center justify-center gap-2 rounded px-3 transition-all',
               `border-${item.color}-500/5`,
               selectedIndex === index ? item.style.active : item.style.inactive,
             ]"

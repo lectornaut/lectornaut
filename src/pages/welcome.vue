@@ -121,16 +121,16 @@ const handleNextStep = () => {
                           class="relative flex size-4 items-center justify-center"
                         >
                           <span
-                            class="bg-primary/25 absolute size-4 rounded-full"
+                            class="bg-primary/25 absolute size-4 rounded"
                           />
                           <span
-                            class="bg-primary relative block size-2 rounded-full"
+                            class="bg-primary relative block size-2 rounded"
                           />
                         </span>
                       </template>
                       <template v-else>
                         <span
-                          class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2 rounded-full"
+                          class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2 rounded"
                         />
                       </template>
                     </StepperIndicator>

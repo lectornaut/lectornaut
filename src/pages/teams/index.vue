@@ -101,14 +101,14 @@ const isCreatingTeamDialogOpen = ref(false)
         >
           <RouterLink :to="`/teams/${membership.teamId}`">
             <ItemMedia>
-              <Avatar class="rounded-full">
+              <Avatar class="rounded">
                 <AvatarImage
-                  class="rounded-full"
+                  class="rounded"
                   :src="membership.team.photoURL!"
                   :alt="membership.team.name"
                   referrerpolicy="no-referrer"
                 />
-                <AvatarFallback class="rounded-full">
+                <AvatarFallback class="rounded">
                   {{ getInitials(membership.team.name) }}
                 </AvatarFallback>
               </Avatar>

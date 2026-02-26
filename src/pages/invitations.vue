@@ -207,14 +207,14 @@ const handleLogout = () => {
         class="flex items-center justify-end transition-all"
       >
         <Button variant="ghost" size="sm">
-          <Avatar class="size-5 rounded-full">
+          <Avatar class="size-5 rounded">
             <AvatarImage
-              class="rounded-fulld size-5"
+              class="roundedd size-5"
               :src="authStore.currentUser?.photoURL!"
               :alt="authStore.currentUser?.displayName"
               referrerpolicy="no-referrer"
             />
-            <AvatarFallback class="size-5 rounded-full">
+            <AvatarFallback class="size-5 rounded">
               {{ getInitials(authStore.currentUser?.displayName!) }}
             </AvatarFallback>
           </Avatar>

@@ -222,10 +222,10 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div
             id="left-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded border shadow-lg empty:hidden"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-lg border shadow empty:hidden"
           ></div>
           <ResizablePanelGroup
-            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded border shadow-md"
+            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded-lg border shadow"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -333,7 +333,7 @@ const closeTab = (id: string) => {
                           class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [scrollbar-gutter:stable]"
                         >
                           <div
-                            class="bg-sidebar/95 shadow-muted-foreground/5 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b border-x border-b p-2 shadow-xs backdrop-blur-lg"
+                            class="bg-sidebar/95 shadow-muted-foreground/5 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
                           >
                             <SubNavigation />
                             <div
@@ -729,11 +729,11 @@ const closeTab = (id: string) => {
                             height: `${observedSize.height}px`,
                           }
                     "
-                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded-lg border will-change-transform"
+                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded border will-change-transform"
                     :class="
                       isPoppedOutMinimized
                         ? 'border-foreground shadow-md ring-1'
-                        : 'min-h-64 resize shadow-lg'
+                        : 'min-h-64 resize shadow'
                     "
                   >
                     <div
@@ -793,7 +793,7 @@ const closeTab = (id: string) => {
                       class="bg-background mx-2 mb-2 grow rounded border p-2"
                     >
                       <div
-                        class="size-full rounded-md bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
+                        class="size-full rounded bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
                       >
                         Sample Content
                       </div>
@@ -821,7 +821,7 @@ const closeTab = (id: string) => {
           </Transition>
           <div
             id="right-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-l border shadow-lg"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-l-lg border shadow"
           ></div>
         </main>
       </div>
