@@ -10,14 +10,16 @@ import {
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { ITeam } from "@/types/domain"
 import type { IMembership } from "@/types/membership"
+import { storeToRefs } from "pinia"
 import { useCurrentUser } from "vuefire"
 
 const route = useRoute()
 const router = useRouter()
 const user = useCurrentUser()
 const membershipStore = useMembershipStore()
+const { memberships, isLoading: isMembershipsLoading } =
+  storeToRefs(membershipStore)
 
 const teamId = computed(() => route.params.teamId as string)
 
@@ -36,44 +38,86 @@ useHead({
 })
 
 const { t } = useI18n()
-const { canUpdateTeam } = useTeamActions()
+const { canUpdateTeam } = useTeamActions(teamId)
 
 // Fetch team data and members
-const team = ref<ITeam | null>(null)
 const isLoading = ref(true)
-const isMember = ref(false)
 const teamMembers = ref<IMembership[]>([])
+const loadedMembersTeamId = ref<string | null>(null)
+let memberLoadRequestId = 0
+
+const currentMembership = computed(() => {
+  const userId = user.value?.uid
+  if (!userId) return null
+  return (
+    memberships.value.find(
+      (membership) =>
+        membership.teamId === teamId.value && membership.userId === userId
+    ) ?? null
+  )
+})
+
+const team = computed(() => currentMembership.value?.team ?? null)
+const isMember = computed(() => !!currentMembership.value)
 const isPublic = computed(() => team.value?.isPublic ?? false)
 const username = computed(() => team.value?.username ?? "")
 
-// Check if current user is a member of this team
-onMounted(async () => {
-  try {
-    isLoading.value = true
+watch(teamId, () => {
+  if (loadedMembersTeamId.value !== teamId.value) {
+    teamMembers.value = []
+  }
+})
 
-    // Check if user is a member of this team
-    const membership = membershipStore.memberships.find(
-      (m) => m.teamId === teamId.value && m.userId === user.value?.uid
-    )
-
-    if (!membership) {
-      // User is not a member, redirect to teams list
-      router.push("/teams")
+watch(
+  [teamId, () => user.value?.uid, isMembershipsLoading, isMember],
+  async ([nextTeamId, userId, membershipsLoading, member]) => {
+    if (!userId) {
+      isLoading.value = false
+      teamMembers.value = []
+      loadedMembersTeamId.value = null
       return
     }
 
-    isMember.value = true
-    team.value = membership.team
+    if (membershipsLoading) {
+      isLoading.value = true
+      return
+    }
 
-    // Load all members for this specific team
-    teamMembers.value = await membershipStore.getMembersForTeam(teamId.value)
-  } catch (error) {
-    console.error("Failed to load team:", error)
-    router.push("/teams")
-  } finally {
-    isLoading.value = false
-  }
-})
+    if (!member) {
+      isLoading.value = false
+      teamMembers.value = []
+      loadedMembersTeamId.value = null
+      if (router.currentRoute.value.path !== "/teams") {
+        void router.replace("/teams")
+      }
+      return
+    }
+
+    if (loadedMembersTeamId.value === nextTeamId) {
+      isLoading.value = false
+      return
+    }
+
+    const requestId = ++memberLoadRequestId
+    isLoading.value = true
+
+    try {
+      const members = await membershipStore.getMembersForTeam(nextTeamId)
+      if (requestId !== memberLoadRequestId) return
+      teamMembers.value = members
+      loadedMembersTeamId.value = nextTeamId
+    } catch (error) {
+      if (requestId !== memberLoadRequestId) return
+      console.error("Failed to load team members:", error)
+      teamMembers.value = []
+    } finally {
+      if (requestId === memberLoadRequestId) {
+        isLoading.value = false
+      }
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>

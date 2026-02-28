@@ -24,7 +24,7 @@ const {
 
 const localTeamName = ref("")
 const localTeamUsername = ref("")
-const localTeamIsPublic = ref(false)
+const optimisticTeamIsPublic = ref<boolean | null>(null)
 const isCheckingTeamUsername = ref(false)
 const teamUsernameAvailable = ref<boolean | null>(null)
 const teamUsernameError = ref<string | null>(null)
@@ -33,18 +33,36 @@ const isSaving = ref(false)
 const currentTeamName = computed(() => currentTeam.value?.name ?? "")
 const currentTeamUsername = computed(() => currentTeam.value?.username ?? "")
 const currentTeamIsPublic = computed(() => currentTeam.value?.isPublic ?? false)
+const teamIsPublic = computed(
+  () => optimisticTeamIsPublic.value ?? currentTeamIsPublic.value
+)
 
 watch(
-  [currentTeamName, currentTeamUsername, currentTeamIsPublic],
-  ([name, username, isPublic]) => {
+  currentTeamName,
+  (name) => {
     localTeamName.value = name ?? ""
+  },
+  { immediate: true }
+)
+
+watch(
+  currentTeamUsername,
+  (username) => {
     localTeamUsername.value = username ?? ""
-    localTeamIsPublic.value = isPublic ?? false
     teamUsernameAvailable.value = null
     teamUsernameError.value = null
   },
   { immediate: true }
 )
+
+watch(currentTeamIsPublic, (value) => {
+  if (
+    optimisticTeamIsPublic.value !== null &&
+    value === optimisticTeamIsPublic.value
+  ) {
+    optimisticTeamIsPublic.value = null
+  }
+})
 
 const hasTeamUsername = computed(() => {
   const usernameInput = localTeamUsername.value.trim()
@@ -57,10 +75,12 @@ const hasValidTeamUsername = computed(() => {
   return validateUsername(usernameInput).valid
 })
 
-watch(hasValidTeamUsername, (isValid) => {
-  if (!isValid && localTeamIsPublic.value) {
-    localTeamIsPublic.value = false
+const publicTeamPath = computed(() => {
+  const usernameInput = localTeamUsername.value.trim()
+  if (usernameInput && validateUsername(usernameInput).valid) {
+    return usernameInput
   }
+  return currentTeamUsername.value.trim()
 })
 
 const hasPendingChanges = computed(() => {
@@ -69,8 +89,7 @@ const hasPendingChanges = computed(() => {
     localTeamUsername.value,
     currentTeamUsername.value
   )
-  const publicChanged = localTeamIsPublic.value !== currentTeamIsPublic.value
-  return nameChanged || usernameChanged || publicChanged
+  return nameChanged || usernameChanged
 })
 
 const isTeamPhotoLoading = computed(() => {
@@ -101,7 +120,6 @@ const canSave = computed(() => {
     !!currentTeam.value &&
     canUpdateTeam.value &&
     localTeamName.value.trim().length > 0 &&
-    (!localTeamIsPublic.value || hasValidTeamUsername.value) &&
     hasPendingChanges.value
   )
 })
@@ -137,7 +155,7 @@ const checkTeamUsername = async () => {
   }
 
   const validation = validateUsername(usernameInput)
-  if (!validation.valid) {
+  if (!validation.valid || !validation.normalized) {
     teamUsernameAvailable.value = false
     teamUsernameError.value = validation.error
     return
@@ -146,7 +164,9 @@ const checkTeamUsername = async () => {
   teamUsernameError.value = null
   isCheckingTeamUsername.value = true
   try {
-    teamUsernameAvailable.value = await checkUsernameAvailability(usernameInput)
+    teamUsernameAvailable.value = await checkUsernameAvailability(
+      validation.normalized
+    )
     if (!teamUsernameAvailable.value) {
       teamUsernameError.value = "Username is already taken"
     }
@@ -166,15 +186,79 @@ const handleTeamUsernameInput = () => {
   debouncedCheckTeamUsername()
 }
 
-const toggleTeamIsPublic = (value: boolean) => {
-  if (!canUpdateTeam.value) return
+const resolveTeamUsernamePayload = async (
+  options: { requireUsername?: boolean } = {}
+) => {
+  const { requireUsername = false } = options
+  const trimmedUsername = localTeamUsername.value.trim()
 
-  if (value && !hasValidTeamUsername.value) {
-    toast.error("Public team requires a valid username")
+  if (!trimmedUsername) {
+    if (requireUsername) {
+      throw new Error("Public team requires a username")
+    }
+    return currentTeamUsername.value ? null : undefined
+  }
+
+  const validation = validateUsername(trimmedUsername)
+  if (!validation.valid || !validation.normalized) {
+    teamUsernameAvailable.value = false
+    teamUsernameError.value = validation.error || null
+    throw new Error(validation.error || "Invalid username")
+  }
+
+  const normalizedUsername = validation.normalized
+  if (usernamesMatch(normalizedUsername, currentTeamUsername.value)) {
+    teamUsernameAvailable.value = null
+    teamUsernameError.value = null
+    return undefined
+  }
+
+  isCheckingTeamUsername.value = true
+  try {
+    const isAvailable = await checkUsernameAvailability(normalizedUsername)
+    teamUsernameAvailable.value = isAvailable
+    teamUsernameError.value = isAvailable ? null : "Username is already taken"
+
+    if (!isAvailable) {
+      throw new Error("Username is already taken")
+    }
+
+    return normalizedUsername
+  } finally {
+    isCheckingTeamUsername.value = false
+  }
+}
+
+const toggleTeamIsPublic = async (value: boolean) => {
+  if (!canUpdateTeam.value || !currentTeam.value) return
+
+  let usernamePayload: string | null | undefined = undefined
+
+  if (value) {
+    try {
+      usernamePayload = await resolveTeamUsernamePayload({
+        requireUsername: true,
+      })
+    } catch (error) {
+      toast.error((error as Error).message)
+      return
+    }
+  }
+
+  if (value === currentTeamIsPublic.value && usernamePayload === undefined) {
     return
   }
 
-  localTeamIsPublic.value = value
+  optimisticTeamIsPublic.value = value
+
+  try {
+    await updateTeam(currentTeam.value.id, {
+      ...(usernamePayload !== undefined ? { username: usernamePayload } : {}),
+      isPublic: value,
+    })
+  } catch {
+    optimisticTeamIsPublic.value = null
+  }
 }
 
 const saveChanges = async () => {
@@ -183,7 +267,6 @@ const saveChanges = async () => {
 
   try {
     const trimmedName = localTeamName.value.trim()
-    const trimmedUsername = localTeamUsername.value.trim()
     let namePayload: string | undefined = undefined
     let usernamePayload: string | null | undefined = undefined
     let isPublicPayload: boolean | undefined = undefined
@@ -192,51 +275,11 @@ const saveChanges = async () => {
       namePayload = trimmedName
     }
 
-    if (!trimmedUsername) {
-      if (currentTeamUsername.value) {
-        usernamePayload = null
-      }
-    } else {
-      const validation = validateUsername(trimmedUsername)
-      if (!validation.valid || !validation.normalized) {
-        teamUsernameAvailable.value = false
-        teamUsernameError.value = validation.error || null
-        toast.error("Invalid username", {
-          description: validation.error || undefined,
-        })
-        return
-      }
-
-      if (
-        !usernamesMatch(validation.normalized, currentTeamUsername.value) &&
-        teamUsernameAvailable.value !== true
-      ) {
-        const isAvailable = await checkUsernameAvailability(
-          validation.normalized
-        )
-        teamUsernameAvailable.value = isAvailable
-        teamUsernameError.value = isAvailable
-          ? null
-          : "Username is already taken"
-
-        if (!isAvailable) {
-          toast.error("Username is already taken")
-          return
-        }
-      }
-
-      if (!usernamesMatch(validation.normalized, currentTeamUsername.value)) {
-        usernamePayload = validation.normalized
-      }
-    }
-
-    if (localTeamIsPublic.value && !trimmedUsername) {
-      toast.error("Public team requires a username")
+    try {
+      usernamePayload = await resolveTeamUsernamePayload()
+    } catch (error) {
+      toast.error((error as Error).message)
       return
-    }
-
-    if (localTeamIsPublic.value !== currentTeamIsPublic.value) {
-      isPublicPayload = localTeamIsPublic.value
     }
 
     if (
@@ -268,7 +311,6 @@ const saveChanges = async () => {
 const discardChanges = () => {
   localTeamName.value = currentTeamName.value
   localTeamUsername.value = currentTeamUsername.value
-  localTeamIsPublic.value = currentTeamIsPublic.value
   teamUsernameAvailable.value = null
   teamUsernameError.value = null
 }
@@ -461,9 +503,12 @@ const discardChanges = () => {
                   <span class="inline-block">
                     <Switch
                       id="team-is-public"
-                      :model-value="localTeamIsPublic"
+                      :model-value="teamIsPublic"
                       :disabled="
-                        !currentTeam || !canUpdateTeam || !hasValidTeamUsername
+                        !currentTeam ||
+                        !canUpdateTeam ||
+                        isUpdatingOverview ||
+                        (!teamIsPublic && !hasValidTeamUsername)
                       "
                       @update:model-value="toggleTeamIsPublic"
                     />
@@ -473,10 +518,12 @@ const discardChanges = () => {
                   {{
                     !canUpdateTeam
                       ? getCannotUpdateTeamReason
-                      : !hasTeamUsername
-                        ? "Set a username to enable public access"
-                        : localTeamIsPublic
-                          ? `Public at /${localTeamUsername.trim()}`
+                      : teamIsPublic
+                        ? publicTeamPath
+                          ? `Public at /${publicTeamPath}`
+                          : "Public team is enabled"
+                        : !hasTeamUsername
+                          ? "Set a username to enable public access"
                           : "Turn on to make this team public"
                   }}
                 </TooltipContent>

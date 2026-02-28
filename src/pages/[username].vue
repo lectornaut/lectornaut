@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
 import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import {
@@ -37,25 +38,37 @@ const rawUsernameSegment = computed(() => {
   return name
 })
 
-const isCurrentUser = computed(
-  () =>
-    entityType.value === "user" &&
-    currentUserData.value?.username === username.value
-)
-
-const settingsRoute = computed(() => {
-  if (isCurrentUser.value && entityType.value === "user") return "/profile"
-  if (entityType.value === "team") return "/teams"
-  return null
-})
-
 const loading = ref(true)
 const user = ref<DocumentData | null>(null)
 const team = ref<DocumentData | null>(null)
+const viewedTeamId = ref<string | null>(null)
 const entityType = ref<"user" | "team" | null>(null)
 const isPrivate = ref(false)
 const error = ref<string | null>(null)
 const hasFetched = ref(false)
+
+const targetTeamId = computed(() =>
+  entityType.value === "team" ? viewedTeamId.value : null
+)
+const { canUpdateTeam } = useTeamActions(targetTeamId)
+
+const isCurrentUser = computed(() => {
+  if (entityType.value !== "user" || !currentUser.value) return false
+
+  const viewedUserId =
+    typeof user.value?.uid === "string" ? user.value.uid : null
+  if (viewedUserId) {
+    return currentUser.value.uid === viewedUserId
+  }
+
+  return currentUserData.value?.username === username.value
+})
+
+const settingsRoute = computed(() => {
+  if (isCurrentUser.value) return "/profile"
+  if (entityType.value === "team" && canUpdateTeam.value) return "/teams"
+  return null
+})
 
 const displayName = computed(() => {
   if (user.value?.displayName) return user.value.displayName
@@ -74,6 +87,7 @@ watch(username, () => {
   hasFetched.value = false
   user.value = null
   team.value = null
+  viewedTeamId.value = null
   entityType.value = null
   isPrivate.value = false
   error.value = null
@@ -107,10 +121,12 @@ const fetchPublicProfile = async () => {
           switch (teamResult.status) {
             case "found":
               team.value = teamResult.data
+              viewedTeamId.value = teamResult.teamId
               entityType.value = "team"
               break
             case "private":
               isPrivate.value = true
+              viewedTeamId.value = teamResult.teamId ?? null
               entityType.value = "team"
               break
             case "not_found":
@@ -213,7 +229,7 @@ useHead({
           <Badge variant="secondary">
             <IconGlobe v-if="isPublicProfile" />
             <IconLock v-else />
-            {{ isPublicProfile ? "Public" : "Private" }}
+            {{ isPublicProfile ? "Public" : "Private" }} {{ entityType }}
           </Badge>
           <Badge
             v-if="settingsRoute"

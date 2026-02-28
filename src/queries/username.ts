@@ -117,12 +117,13 @@ export type UserFetchResult =
 export type TeamFetchResult =
   | {
       status: "found"
+      teamId: string
       data: ReturnType<
         typeof import("firebase/firestore").DocumentSnapshot.prototype.data
       >
     }
   | { status: "not_found" }
-  | { status: "private"; name?: string }
+  | { status: "private"; teamId?: string; name?: string }
   | { status: "error"; message: string }
 
 /**
@@ -216,7 +217,8 @@ export const getTeamByUsername = async (
       return { status: "not_found" }
     }
 
-    const teamDocRef = doc(firestore, "teams", usernameData.teamId)
+    const teamId = usernameData.teamId
+    const teamDocRef = doc(firestore, "teams", teamId)
     const teamDoc = await getDoc(teamDocRef)
 
     if (!teamDoc.exists()) {
@@ -225,10 +227,10 @@ export const getTeamByUsername = async (
 
     const data = teamDoc.data()
     if (!data.isPublic) {
-      return { status: "private", name: data.name }
+      return { status: "private", teamId, name: data.name }
     }
 
-    return { status: "found", data }
+    return { status: "found", teamId, data }
   } catch (error: unknown) {
     if (
       error &&
