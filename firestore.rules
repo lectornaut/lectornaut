@@ -198,7 +198,7 @@ service cloud.firestore {
     }
 
     match /teams/{teamId} {
-      allow read: if isTeamMember(teamId);
+      allow read: if isTeamMember(teamId) || resource.data.isPublic == true;
       allow write: if false;
 
       match /memberships/{userId} {

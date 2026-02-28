@@ -221,6 +221,211 @@ function normalizeEmail(email: string | null | undefined): string | null {
   return normalized ? normalized : null
 }
 
+const PUBLIC_USERNAME_MIN_LENGTH = 3
+const PUBLIC_USERNAME_MAX_LENGTH = 30
+const PUBLIC_USERNAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+const TEAM_USERNAME_UID_PREFIX = "team_"
+const RESERVED_PUBLIC_USERNAMES = new Set([
+  "home",
+  "login",
+  "logout",
+  "signin",
+  "signout",
+  "signup",
+  "register",
+  "enter",
+  "exit",
+  "profile",
+  "settings",
+  "account",
+  "dashboard",
+  "admin",
+  "administrator",
+  "editor",
+  "api",
+  "app",
+  "about",
+  "help",
+  "support",
+  "contact",
+  "pricing",
+  "billing",
+  "subscription",
+  "subscriptions",
+  "explore",
+  "search",
+  "discover",
+  "browse",
+  "feed",
+  "notifications",
+  "messages",
+  "inbox",
+  "chat",
+  "teams",
+  "team",
+  "org",
+  "organization",
+  "organizations",
+  "create",
+  "new",
+  "edit",
+  "delete",
+  "remove",
+  "update",
+  "manage",
+  "agents",
+  "agent",
+  "runs",
+  "run",
+  "tasks",
+  "task",
+  "flows",
+  "flow",
+  "changelog",
+  "blog",
+  "docs",
+  "documentation",
+  "legal",
+  "terms",
+  "privacy",
+  "security",
+  "cookies",
+  "welcome",
+  "start",
+  "write",
+  "test",
+  "system",
+  "root",
+  "null",
+  "undefined",
+  "anonymous",
+  "guest",
+  "user",
+  "users",
+  "member",
+  "members",
+  "viewer",
+  "moderator",
+  "mod",
+  "staff",
+  "owner",
+  "bot",
+  "bots",
+  "official",
+  "verified",
+  "lectornaut",
+  "lector",
+  "naut",
+  "www",
+  "mail",
+  "email",
+  "ftp",
+  "ssl",
+  "ssh",
+  "cdn",
+  "assets",
+  "static",
+  "public",
+  "private",
+  "internal",
+  "external",
+])
+
+function normalizePublicUsername(username: string): string {
+  let normalized = username.trim().toLowerCase()
+  if (normalized.startsWith("@")) {
+    normalized = normalized.slice(1)
+  }
+  return normalized
+}
+
+function assertPublicUsername(value: unknown, field: string): string {
+  if (typeof value !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} must be a valid username.`
+    )
+  }
+
+  const normalized = normalizePublicUsername(value)
+
+  if (
+    normalized.length < PUBLIC_USERNAME_MIN_LENGTH ||
+    normalized.length > PUBLIC_USERNAME_MAX_LENGTH
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} must be between ${PUBLIC_USERNAME_MIN_LENGTH} and ${PUBLIC_USERNAME_MAX_LENGTH} characters.`
+    )
+  }
+
+  if (!PUBLIC_USERNAME_REGEX.test(normalized)) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} can only contain letters, numbers, underscores, and hyphens.`
+    )
+  }
+
+  if (/[-_]{2,}/.test(normalized)) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} cannot have consecutive underscores or hyphens.`
+    )
+  }
+
+  if (/[-_]$/.test(normalized)) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} cannot end with an underscore or hyphen.`
+    )
+  }
+
+  if (RESERVED_PUBLIC_USERNAMES.has(normalized)) {
+    throw new HttpsError("invalid-argument", `${field} is reserved.`)
+  }
+
+  return normalized
+}
+
+function parseOptionalPublicUsername(
+  value: unknown,
+  field: string
+): string | null | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (value === null) {
+    return null
+  }
+
+  if (typeof value !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} must be a string, null, or undefined.`
+    )
+  }
+
+  if (!value.trim()) {
+    return null
+  }
+
+  return assertPublicUsername(value, field)
+}
+
+function parseOptionalBoolean(
+  value: unknown,
+  field: string
+): boolean | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  if (typeof value !== "boolean") {
+    throw new HttpsError("invalid-argument", `${field} must be a boolean.`)
+  }
+  return value
+}
+
 const ROOT_PARENT_ID = "root"
 const NODE_NAME_MAX_LENGTH = 128
 
@@ -308,6 +513,8 @@ export const createTeam = onCall(CALLABLE_OPTS, async (request) => {
     id: teamRef.id,
     name,
     photoURL,
+    username: null,
+    isPublic: false,
     createdAt: now,
     updatedAt: now,
   }
@@ -356,8 +563,8 @@ export const createTeam = onCall(CALLABLE_OPTS, async (request) => {
         resource: { type: "team", id: teamRef.id },
         context: buildContext(request),
         changes: {
-          fields: ["name", "photoURL"],
-          after: { name, photoURL },
+          fields: ["name", "photoURL", "username", "isPublic"],
+          after: { name, photoURL, username: null, isPublic: false },
         },
       },
       { transaction }
@@ -383,17 +590,11 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
       : typeof request.data?.photoURL === "string"
         ? request.data.photoURL.trim() || null
         : undefined
-
-  const updates: Record<string, unknown> = {}
-  if (name !== undefined) updates.name = name
-  if (photoURL !== undefined) updates.photoURL = photoURL
-
-  if (Object.keys(updates).length === 0) {
-    throw new HttpsError(
-      "invalid-argument",
-      "At least one field must be provided for update."
-    )
-  }
+  const username = parseOptionalPublicUsername(
+    request.data?.username,
+    "username"
+  )
+  const isPublic = parseOptionalBoolean(request.data?.isPublic, "isPublic")
 
   const actorId = request.auth.uid
   const actorEmail = request.auth.token.email ?? undefined
@@ -421,6 +622,79 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
     }
 
     const before = teamSnap.data() ?? {}
+    const previousUsername =
+      typeof before.username === "string"
+        ? normalizePublicUsername(before.username)
+        : null
+    const previousIsPublic = before.isPublic === true
+    const nextUsername = username !== undefined ? username : previousUsername
+    let nextIsPublic = isPublic !== undefined ? isPublic : previousIsPublic
+
+    // Keep behavior aligned with public user profiles: clearing handle turns off visibility.
+    if (username === null && isPublic === undefined && previousIsPublic) {
+      nextIsPublic = false
+    }
+
+    if (nextIsPublic && !nextUsername) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Public teams require a username."
+      )
+    }
+
+    const updates: Record<string, unknown> = {}
+    if (name !== undefined) updates.name = name
+    if (photoURL !== undefined) updates.photoURL = photoURL
+    if (username !== undefined) updates.username = username
+    if (isPublic !== undefined || (username === null && previousIsPublic)) {
+      updates.isPublic = nextIsPublic
+    }
+
+    if (Object.keys(updates).length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "At least one field must be provided for update."
+      )
+    }
+
+    if (username !== undefined && username !== previousUsername) {
+      if (username) {
+        const usernameRef = db.doc(`usernames/${username}`)
+        const usernameSnap = await transaction.get(usernameRef)
+
+        if (usernameSnap.exists) {
+          const usernameData = usernameSnap.data() ?? {}
+          const isSameTeamOwner =
+            usernameData.entityType === "team" && usernameData.teamId === teamId
+
+          if (!isSameTeamOwner) {
+            throw new HttpsError("already-exists", "Username already taken.")
+          }
+        }
+
+        transaction.set(usernameRef, {
+          uid: `${TEAM_USERNAME_UID_PREFIX}${teamId}`,
+          entityType: "team",
+          teamId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        })
+      }
+
+      if (previousUsername) {
+        const oldUsernameRef = db.doc(`usernames/${previousUsername}`)
+        const oldUsernameSnap = await transaction.get(oldUsernameRef)
+        const oldUsernameData = oldUsernameSnap.data() ?? {}
+
+        if (
+          oldUsernameSnap.exists &&
+          oldUsernameData.entityType === "team" &&
+          oldUsernameData.teamId === teamId
+        ) {
+          transaction.delete(oldUsernameRef)
+        }
+      }
+    }
+
     const changes = buildChanges(before, updates)
 
     if (!changes) {
@@ -442,6 +716,8 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
       transaction.update(doc.ref, {
         "team.name": updates.name ?? before.name,
         "team.photoURL": updates.photoURL ?? before.photoURL,
+        "team.username": updates.username ?? before.username ?? null,
+        "team.isPublic": updates.isPublic ?? previousIsPublic,
         "team.updatedAt": admin.firestore.FieldValue.serverTimestamp(),
       })
     })
@@ -504,6 +780,10 @@ export const deleteTeam = onCall(DESTRUCTIVE_CALLABLE_OPTS, async (request) => {
   }
 
   const teamData = teamSnap.data() ?? {}
+  const teamUsername =
+    typeof teamData.username === "string"
+      ? normalizePublicUsername(teamData.username)
+      : null
 
   // =========================================================================
   // COST FIX: Recursively delete ALL subcollections under the team.
@@ -556,6 +836,20 @@ export const deleteTeam = onCall(DESTRUCTIVE_CALLABLE_OPTS, async (request) => {
     }
   }
 
+  // Release public username/handle mapping when the team is deleted.
+  if (teamUsername) {
+    const usernameRef = db.doc(`usernames/${teamUsername}`)
+    const usernameSnap = await usernameRef.get()
+    const usernameData = usernameSnap.data() ?? {}
+    if (
+      usernameSnap.exists &&
+      usernameData.entityType === "team" &&
+      usernameData.teamId === teamId
+    ) {
+      await usernameRef.delete()
+    }
+  }
+
   // Log the event (outside transaction since team is deleted)
   await logEvent({
     teamId,
@@ -564,10 +858,12 @@ export const deleteTeam = onCall(DESTRUCTIVE_CALLABLE_OPTS, async (request) => {
     resource: { type: "team", id: teamId },
     context: buildContext(request),
     changes: {
-      fields: ["name", "photoURL"],
+      fields: ["name", "photoURL", "username", "isPublic"],
       before: {
         name: teamData.name ?? null,
         photoURL: teamData.photoURL ?? null,
+        username: teamData.username ?? null,
+        isPublic: teamData.isPublic ?? false,
       },
     },
   })

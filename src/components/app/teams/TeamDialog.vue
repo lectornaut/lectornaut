@@ -2,7 +2,9 @@
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
+  IconAtSign,
   IconBan,
+  IconCheck,
   IconCircle,
   IconCircleDashed,
   IconForward,
@@ -12,6 +14,7 @@ import {
 } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { getInitials } from "@/helpers/utilities"
+import { checkUsernameAvailability } from "@/queries/username"
 import {
   useInvitationStore,
   useTeamInvitations,
@@ -25,6 +28,12 @@ import {
   type IMembershipRole,
 } from "@/types/membership"
 import { Capabilities, roleCan } from "@/types/permissions"
+import {
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  usernamesMatch,
+  validateUsername,
+} from "@/utils/firebase/firebase-username"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
@@ -81,10 +90,15 @@ const isLoading = ref(false)
 
 // Form State
 const teamName = ref("")
+const teamUsername = ref("")
+const teamIsPublic = ref(false)
 const inviteEmail = ref("")
 const inviteRole = ref<IMembershipRole>(defaultTeamRole)
 const members = ref<PendingMember[]>([])
 const removedMemberIds = ref<string[]>([])
+const isCheckingTeamUsername = ref(false)
+const teamUsernameAvailable = ref<boolean | null>(null)
+const teamUsernameError = ref<string | null>(null)
 
 const teamInvitations = useTeamInvitations(targetTeamId)
 
@@ -108,6 +122,33 @@ const userRole = computed(() => {
 
 const isPrivileged = computed(() => {
   return roleCan(userRole.value, Capabilities.INVITE_MEMBER)
+})
+
+const canShowTeamInvitations = computed(() => {
+  return (
+    (props.mode === "edit" || props.mode === "invite") && isPrivileged.value
+  )
+})
+
+const visibleTeamInvitations = computed(() => {
+  if (!canShowTeamInvitations.value) return []
+
+  if (props.mode === "invite") {
+    return teamInvitations.value.filter((invite) => invite.status === "pending")
+  }
+
+  return teamInvitations.value
+})
+
+const currentTeamUsername = computed(() => props.team?.username ?? "")
+const currentTeamIsPublic = computed(() => props.team?.isPublic ?? false)
+const hasTeamUsername = computed(() => {
+  const usernameInput = teamUsername.value.trim()
+  return usernameInput.length >= USERNAME_MIN_LENGTH
+})
+const hasValidTeamUsername = computed(() => {
+  if (!teamUsername.value.trim()) return false
+  return validateUsername(teamUsername.value).valid
 })
 
 // Photo Upload State
@@ -144,12 +185,75 @@ const removePhoto = () => {
 const resetForm = () => {
   revokeBlobUrl()
   teamName.value = ""
+  teamUsername.value = ""
+  teamIsPublic.value = false
   inviteEmail.value = ""
   inviteRole.value = defaultTeamRole
   members.value = []
   removedMemberIds.value = []
   photoFile.value = null
   photoPreview.value = null
+  teamUsernameAvailable.value = null
+  teamUsernameError.value = null
+  isCheckingTeamUsername.value = false
+}
+
+const checkTeamUsername = async () => {
+  const usernameInput = teamUsername.value.trim()
+
+  if (!usernameInput) {
+    teamUsernameAvailable.value = null
+    teamUsernameError.value = null
+    return
+  }
+
+  if (
+    props.mode === "edit" &&
+    usernamesMatch(usernameInput, currentTeamUsername.value)
+  ) {
+    teamUsernameAvailable.value = null
+    teamUsernameError.value = null
+    return
+  }
+
+  const validation = validateUsername(usernameInput)
+  if (!validation.valid) {
+    teamUsernameAvailable.value = false
+    teamUsernameError.value = validation.error
+    return
+  }
+
+  teamUsernameError.value = null
+  isCheckingTeamUsername.value = true
+
+  try {
+    teamUsernameAvailable.value = await checkUsernameAvailability(usernameInput)
+    if (!teamUsernameAvailable.value) {
+      teamUsernameError.value = t("components.teamDialog.errors.usernameTaken")
+    }
+  } finally {
+    isCheckingTeamUsername.value = false
+  }
+}
+
+const debouncedCheckTeamUsername = useDebounceFn(checkTeamUsername, 500)
+
+const handleTeamUsernameInput = () => {
+  if (!teamUsername.value.trim()) {
+    teamUsernameAvailable.value = null
+    teamUsernameError.value = null
+    return
+  }
+  debouncedCheckTeamUsername()
+}
+
+const toggleTeamIsPublic = (value: boolean) => {
+  if (value && !hasValidTeamUsername.value) {
+    toast.error(t("components.teamDialog.errors.publicTeamRequiresUsername"))
+    return
+  }
+
+  teamIsPublic.value = value
 }
 
 // Sync internal open state with prop
@@ -159,6 +263,12 @@ watch(
     isOpen.value = val ?? false
   }
 )
+
+watch(hasValidTeamUsername, (isValid) => {
+  if (!isValid && teamIsPublic.value) {
+    teamIsPublic.value = false
+  }
+})
 
 watch(isOpen, async (val) => {
   emit("update:open", val)
@@ -170,6 +280,8 @@ watch(isOpen, async (val) => {
       isLoading.value = true
       try {
         teamName.value = props.team.name
+        teamUsername.value = props.team.username ?? ""
+        teamIsPublic.value = props.team.isPublic ?? false
         photoPreview.value = props.team.photoURL || null
         // Load existing team members from membershipStore for the specific team
         const teamMembers = await membershipStore.getMembersForTeam(
@@ -186,6 +298,9 @@ watch(isOpen, async (val) => {
       } finally {
         isLoading.value = false
       }
+    } else if (props.mode === "create") {
+      teamUsername.value = ""
+      teamIsPublic.value = false
     }
   }
 })
@@ -329,11 +444,56 @@ const handleSubmit = async () => {
   isLoading.value = true
   try {
     if (props.mode === "create") {
+      const trimmedUsername = teamUsername.value.trim()
+      let usernamePayload: string | undefined = undefined
+      let isPublicPayload: boolean | undefined = undefined
+
+      if (!trimmedUsername) {
+        teamUsernameAvailable.value = null
+        teamUsernameError.value = null
+      } else {
+        const validation = validateUsername(trimmedUsername)
+        if (!validation.valid || !validation.normalized) {
+          teamUsernameAvailable.value = false
+          teamUsernameError.value = validation.error || null
+          toast.error(t("components.teamDialog.errors.invalidUsername"), {
+            description: validation.error || undefined,
+          })
+          return
+        }
+
+        const isAvailable = await checkUsernameAvailability(
+          validation.normalized
+        )
+        teamUsernameAvailable.value = isAvailable
+        teamUsernameError.value = isAvailable
+          ? null
+          : t("components.teamDialog.errors.usernameTaken")
+        if (!isAvailable) {
+          toast.error(t("components.teamDialog.errors.usernameTaken"))
+          return
+        }
+
+        usernamePayload = validation.normalized
+      }
+
+      if (teamIsPublic.value && !usernamePayload) {
+        toast.error(
+          t("components.teamDialog.errors.publicTeamRequiresUsername")
+        )
+        return
+      }
+
+      if (teamIsPublic.value) {
+        isPublicPayload = true
+      }
+
       // 1. Create Team (useTeamActions handles success toast)
-      const newTeamId = await createTeam(
-        teamName.value,
-        photoFile.value || undefined
-      )
+      const newTeamId = await createTeam(teamName.value, {
+        photoFile: photoFile.value || undefined,
+        username: usernamePayload,
+        isPublic: isPublicPayload,
+      })
 
       // 2. Invite Members to New Team
       if (newTeamId && members.value.length > 0) {
@@ -362,9 +522,61 @@ const handleSubmit = async () => {
         filePayload = null // Signal to remove photo
       }
 
+      const trimmedUsername = teamUsername.value.trim()
+      let usernamePayload: string | null | undefined = undefined
+      let isPublicPayload: boolean | undefined = undefined
+
+      if (!trimmedUsername) {
+        if (currentTeamUsername.value) {
+          usernamePayload = null
+        }
+      } else {
+        const validation = validateUsername(trimmedUsername)
+        if (!validation.valid || !validation.normalized) {
+          toast.error(t("components.teamDialog.errors.invalidUsername"), {
+            description: validation.error || undefined,
+          })
+          return
+        }
+
+        if (
+          teamUsernameAvailable.value === false &&
+          !usernamesMatch(validation.normalized, currentTeamUsername.value)
+        ) {
+          toast.error(t("components.teamDialog.errors.usernameTaken"))
+          return
+        }
+
+        if (!usernamesMatch(validation.normalized, currentTeamUsername.value)) {
+          usernamePayload = validation.normalized
+        }
+      }
+
+      if (teamIsPublic.value && !trimmedUsername) {
+        toast.error(
+          t("components.teamDialog.errors.publicTeamRequiresUsername")
+        )
+        return
+      }
+
+      if (teamIsPublic.value !== currentTeamIsPublic.value) {
+        isPublicPayload = teamIsPublic.value
+      }
+
+      // Keep behavior aligned with user profiles: clearing handle turns off public visibility.
+      if (
+        usernamePayload === null &&
+        isPublicPayload === undefined &&
+        currentTeamIsPublic.value
+      ) {
+        isPublicPayload = false
+      }
+
       await updateTeam(props.team.id, {
         name: teamName.value,
         photoFile: filePayload,
+        username: usernamePayload,
+        isPublic: isPublicPayload,
       })
 
       // 2. Process Member Changes
@@ -559,6 +771,126 @@ const handleSubmit = async () => {
           </TooltipProvider>
         </Field>
 
+        <!-- Team Public Profile (Create/Edit Mode) -->
+        <Field v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
+          <FieldLabel
+            class="text-secondary-foreground text-xs"
+            for="team-username"
+          >
+            {{ t("components.teamDialog.labels.publicHandle") }}
+          </FieldLabel>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <InputGroup>
+                    <InputGroupInput
+                      id="team-username"
+                      v-model="teamUsername"
+                      :placeholder="
+                        $t('components.teamDialog.placeholders.publicHandle')
+                      "
+                      :maxlength="USERNAME_MAX_LENGTH"
+                      :disabled="!canUpdateTeam && mode === 'edit'"
+                      @input="handleTeamUsernameInput"
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <TooltipProvider>
+                        <Tooltip v-if="isCheckingTeamUsername">
+                          <TooltipTrigger as-child>
+                            <Spinner class="size-4" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ t("settings.account.username.checking") }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip v-else-if="teamUsernameAvailable === true">
+                          <TooltipTrigger as-child>
+                            <IconCheck class="text-green-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ t("settings.account.username.available") }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip v-else-if="teamUsernameAvailable === false">
+                          <TooltipTrigger as-child>
+                            <IconX class="text-red-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ teamUsernameError }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip v-else>
+                          <TooltipTrigger as-child>
+                            <IconAtSign />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ t("settings.account.username.checkPrompt") }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canUpdateTeam && mode === 'edit'">
+                {{ t(getCannotUpdateTeamReason || "") }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <p v-if="teamUsernameError" class="text-xs text-red-500">
+            {{ teamUsernameError }}
+          </p>
+        </Field>
+
+        <Field v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
+          <FieldLabel
+            class="text-secondary-foreground text-xs"
+            for="team-is-public"
+          >
+            {{ t("components.teamDialog.labels.publicTeam") }}
+          </FieldLabel>
+          <p class="text-muted-foreground text-xs">
+            {{
+              teamIsPublic
+                ? t("components.teamDialog.tooltips.publicTeamUrl", {
+                    url: `/${teamUsername.trim()}`,
+                  })
+                : t("components.teamDialog.tooltips.turnOnPublicTeam")
+            }}
+          </p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <span class="inline-block">
+                  <Switch
+                    id="team-is-public"
+                    :model-value="teamIsPublic"
+                    :disabled="
+                      !hasValidTeamUsername ||
+                      (!canUpdateTeam && mode === 'edit')
+                    "
+                    @update:model-value="toggleTeamIsPublic"
+                  />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{
+                  !canUpdateTeam && mode === "edit"
+                    ? t(getCannotUpdateTeamReason || "")
+                    : !hasTeamUsername
+                      ? t("components.teamDialog.tooltips.requiresHandle")
+                      : teamIsPublic
+                        ? t("components.teamDialog.tooltips.publicTeamUrl", {
+                            url: `/${teamUsername.trim()}`,
+                          })
+                        : t("components.teamDialog.tooltips.turnOnPublicTeam")
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Field>
+
         <!-- 1. MEMBERS SECTION (Active) -->
         <Field v-if="mode === 'edit'" class="grid gap-2">
           <FieldLabel class="text-secondary-foreground text-xs">
@@ -711,10 +1043,7 @@ const handleSubmit = async () => {
         <Field
           v-if="
             stagedInvites.length > 0 ||
-            (mode === 'edit' &&
-              isPrivileged &&
-              teamInvitations &&
-              teamInvitations.length > 0)
+            (canShowTeamInvitations && visibleTeamInvitations.length > 0)
           "
           class="grid gap-2"
         >
@@ -797,10 +1126,10 @@ const handleSubmit = async () => {
               </ButtonGroup>
             </ButtonGroup>
           </ButtonGroup>
-          <!-- Sent Invitations (Edit Mode Only) -->
-          <template v-if="mode === 'edit' && isPrivileged">
+          <!-- Sent Invitations -->
+          <template v-if="canShowTeamInvitations">
             <ButtonGroup
-              v-for="invite in teamInvitations"
+              v-for="invite in visibleTeamInvitations"
               :key="invite.id"
               class="flex-1"
             >

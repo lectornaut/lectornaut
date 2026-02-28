@@ -55,19 +55,19 @@ const username = computed(() => userData.value?.username ?? "")
     <h1 class="text-2xl font-bold tracking-tight">
       {{ user?.displayName }}
     </h1>
-    <!-- <Badge variant="secondary" as-child> -->
-    <a
-      v-if="username"
-      :href="`/${username}`"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="text-muted-foreground"
-    >
-      <IconAtSign />
-      {{ username }}
-    </a>
-    <span v-else> {{ t("pages.profile.noUsername") }} </span>
-    <!-- </Badge> -->
+    <Badge variant="secondary" as-child>
+      <a
+        v-if="username"
+        :href="`/${username}`"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-muted-foreground"
+      >
+        <IconAtSign />
+        {{ username }}
+      </a>
+      <span v-else> {{ t("pages.profile.noUsername") }} </span>
+    </Badge>
     <div class="flex items-center gap-2">
       <Badge variant="secondary">
         <IconGlobe v-if="isPublic" />

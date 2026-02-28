@@ -137,7 +137,7 @@ const teams = computed(() =>
                   <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  @click="emitter.emit('Dialog.Settings.Open', 'teams')"
+                  @click="emitter.emit('Dialog.Settings.Open', 'overview')"
                 >
                   <IconComponent />
                   {{ t("components.teamSwitcher.menu.settings") }}
@@ -173,10 +173,7 @@ const teams = computed(() =>
                         :key="team.value"
                         @click="switchTeam(team.value)"
                       >
-                        <Item
-                          size="sm"
-                          class="group w-full gap-2 rounded p-0"
-                        >
+                        <Item size="sm" class="group w-full gap-2 rounded p-0">
                           <ItemMedia>
                             <Avatar class="rounded">
                               <AvatarImage
@@ -249,7 +246,7 @@ const teams = computed(() =>
               <ContextMenuShortcut>⇧⌘M</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem
-              @click="emitter.emit('Dialog.Settings.Open', 'teams')"
+              @click="emitter.emit('Dialog.Settings.Open', 'overview')"
             >
               <IconComponent />
               {{ t("components.teamSwitcher.menu.settings") }}

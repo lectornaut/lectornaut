@@ -219,9 +219,11 @@
       "notifications": "Notifications",
       "appearance": "Appearance",
       "security": "Security",
+      "team": "Team",
       "workspace": "Workspace",
       "agents": "Agents",
       "members": "Members",
+      "overview": "Overview",
       "teams": "Teams",
       "workspaces": "Workspaces",
       "runs": "Runs",
@@ -240,8 +242,10 @@
       "security": "Manage your security settings.",
       "agents": "Manage your workspace agents.",
       "members": "Manage members in your organization.",
+      "overview": "Manage your team's profile and access settings.",
       "teams": "Manage your workspace teams.",
       "workspaces": "Manage your team workspaces.",
+      "invite": "Invite new members to your team.",
       "runs": "View and manage your runs.",
       "knowledge": "Manage your workspace knowledge base.",
       "integrations": "Manage your workspace integrations.",
@@ -1247,7 +1251,10 @@
         "draft": "Draft",
         "resendInvitation": "Resend invitation",
         "declined": "Declined",
-        "pending": "Pending"
+        "pending": "Pending",
+        "requiresHandle": "Set a team handle to enable public visibility",
+        "turnOnPublicTeam": "Turn on to make your team publicly discoverable",
+        "publicTeamUrl": "Public team URL: {url}"
       },
       "labels": {
         "clickToChange": "Click to change",
@@ -1260,11 +1267,14 @@
         "teamPhoto": "Team photo",
         "invite": "Invite",
         "invitations": "Invitations",
-        "noActiveMembers": "No active members found."
+        "noActiveMembers": "No active members found.",
+        "publicHandle": "Public handle",
+        "publicTeam": "Public team profile"
       },
       "placeholders": {
         "teamName": "Acme Inc.",
-        "email": "user{'@'}example.com"
+        "email": "user{'@'}example.com",
+        "publicHandle": "acme"
       },
       "roles": {
         "owner": "Owner",
@@ -1284,6 +1294,9 @@
         "emailAlreadyAdded": "This email has already been added",
         "cannotInviteSelf": "You cannot invite yourself",
         "noTeam": "No team to invite to",
+        "usernameTaken": "This handle is already taken",
+        "invalidUsername": "Please enter a valid handle",
+        "publicTeamRequiresUsername": "Set a valid team handle before enabling public visibility",
         "failedToCreate": "Failed to create team",
         "failedToUpdate": "Failed to update team",
         "failedToInvite": "Failed to invite members"

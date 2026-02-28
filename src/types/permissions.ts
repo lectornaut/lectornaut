@@ -68,6 +68,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.MANAGE_WORKSPACE_CONTENT,
   ]),
   admin: new Set([
+    Capabilities.EDIT_TEAM,
     Capabilities.INVITE_MEMBER,
     Capabilities.UPDATE_MEMBER_ROLE,
     Capabilities.REMOVE_MEMBER,

@@ -238,9 +238,14 @@ export const useTeamStore = defineStore("teams", () => {
    */
   async function createTeam(
     name: string,
-    photoFile?: File
+    options?: {
+      photoFile?: File
+      username?: string
+      isPublic?: boolean
+    }
   ): Promise<string | undefined> {
     if (!currentUser.value || !userProfile.value) return
+    const { photoFile, username, isPublic } = options ?? {}
 
     // Generate a temporary ID for optimistic update - will be replaced by server
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -253,6 +258,8 @@ export const useTeamStore = defineStore("teams", () => {
       id: tempId,
       name,
       photoURL,
+      username: null,
+      isPublic: false,
       createdAt: now,
       updatedAt: now,
     }
@@ -264,6 +271,9 @@ export const useTeamStore = defineStore("teams", () => {
     const previousTeamMembers = cloneState(teamMembers.value)
 
     let actualTeamId: string | undefined
+    let resolvedPhotoURL: string | null = photoURL
+    let resolvedUsername: string | null = null
+    let resolvedIsPublic = false
 
     await withOptimisticUpdate(
       pendingTeamIds,
@@ -304,8 +314,33 @@ export const useTeamStore = defineStore("teams", () => {
                 teamId: actualTeamId,
                 photoURL: uploadedPhotoURL,
               })
+              resolvedPhotoURL = uploadedPhotoURL
             } catch (error) {
               console.error("[teamStore] Error uploading team photo:", error)
+            }
+          }
+
+          if (
+            actualTeamId &&
+            (username !== undefined || isPublic !== undefined)
+          ) {
+            try {
+              await updateTeamFn({
+                teamId: actualTeamId,
+                ...(username !== undefined ? { username } : {}),
+                ...(isPublic !== undefined ? { isPublic } : {}),
+              })
+              if (username !== undefined) {
+                resolvedUsername = username
+              }
+              if (isPublic !== undefined) {
+                resolvedIsPublic = isPublic
+              }
+            } catch (error) {
+              console.error(
+                "[teamStore] Error applying public team settings:",
+                error
+              )
             }
           }
 
@@ -313,6 +348,9 @@ export const useTeamStore = defineStore("teams", () => {
           optimisticCurrentTeam.value = {
             ...newTeam,
             id: actualTeamId,
+            photoURL: resolvedPhotoURL,
+            username: resolvedUsername,
+            isPublic: resolvedIsPublic,
           }
           authStore.setCurrentTeamIdLocal(actualTeamId)
         } finally {
@@ -354,23 +392,30 @@ export const useTeamStore = defineStore("teams", () => {
    */
   async function updateTeam(
     teamId: string,
-    updates: { name?: string; photoFile?: File | null }
+    updates: {
+      name?: string
+      photoFile?: File | null
+      username?: string | null
+      isPublic?: boolean
+    }
   ): Promise<void> {
     if (!currentUser.value) return
 
     // Check if user is owner of the team (using centralized permissions)
     const membership = memberships.value.find((m) => m.teamId === teamId)
     if (!membership || !roleCan(membership.role, Capabilities.EDIT_TEAM)) {
-      throw new Error("Only team owners can update team details")
+      throw new Error("Only team owners and admins can update team details")
     }
 
-    const { name, photoFile } = updates
+    const { name, photoFile, username, isPublic } = updates
     const optimisticPhotoURL =
       photoFile instanceof File ? URL.createObjectURL(photoFile) : undefined
 
     // Prepare optimistic updates for team data
-    const teamUpdates = {
+    const teamUpdates: Partial<ITeam> = {
       ...(name !== undefined ? { name } : {}),
+      ...(username !== undefined ? { username } : {}),
+      ...(isPublic !== undefined ? { isPublic } : {}),
       ...(photoFile === null
         ? { photoURL: null }
         : optimisticPhotoURL
@@ -412,6 +457,8 @@ export const useTeamStore = defineStore("teams", () => {
           await updateTeamFn({
             teamId,
             ...(name !== undefined ? { name } : {}),
+            ...(username !== undefined ? { username } : {}),
+            ...(isPublic !== undefined ? { isPublic } : {}),
             ...(photoFile !== undefined
               ? { photoURL: resolvedPhotoURL ?? null }
               : {}),

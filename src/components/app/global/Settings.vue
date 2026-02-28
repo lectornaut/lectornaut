@@ -50,9 +50,9 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                     v-for="navigation in defaultSettingsTabs"
                     :key="navigation.id"
                   >
-                    <SidebarGroupLabel>{{
-                      t(navigation.title)
-                    }}</SidebarGroupLabel>
+                    <SidebarGroupLabel>
+                      {{ t(navigation.title) }}
+                    </SidebarGroupLabel>
                     <SidebarGroupContent>
                       <SidebarMenu>
                         <SidebarMenuItem
@@ -112,12 +112,20 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
               <SettingsMembers />
             </TabsContent>
 
+            <TabsContent :class="tabContentClass" value="overview">
+              <SettingsOverview />
+            </TabsContent>
+
             <TabsContent :class="tabContentClass" value="teams">
               <SettingsTeams />
             </TabsContent>
 
             <TabsContent :class="tabContentClass" value="workspaces">
               <SettingsWorkspaces />
+            </TabsContent>
+
+            <TabsContent :class="tabContentClass" value="invite">
+              <SettingsInvite />
             </TabsContent>
 
             <TabsContent :class="tabContentClass" value="billing">

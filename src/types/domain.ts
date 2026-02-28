@@ -4,6 +4,8 @@ export interface ITeam {
   readonly id: string
   name: string
   photoURL?: string | null
+  username?: string | null
+  isPublic?: boolean
   createdAt: Timestamp
   updatedAt: Timestamp
 }

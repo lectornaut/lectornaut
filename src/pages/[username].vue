@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { getUserByUsername, type UserFetchResult } from "@/queries/username"
+import {
+  getTeamByUsername,
+  getUserByUsername,
+  type TeamFetchResult,
+  type UserFetchResult,
+} from "@/queries/username"
 import type { DocumentData } from "firebase/firestore"
 import { doc } from "firebase/firestore"
 import { useRoute, useRouter } from "vue-router"
@@ -33,16 +38,42 @@ const rawUsernameSegment = computed(() => {
 })
 
 const isCurrentUser = computed(
-  () => currentUserData.value?.username === username.value
+  () =>
+    entityType.value === "user" &&
+    currentUserData.value?.username === username.value
 )
 
 const loading = ref(true)
 const user = ref<DocumentData | null>(null)
+const team = ref<DocumentData | null>(null)
+const entityType = ref<"user" | "team" | null>(null)
 const isPrivate = ref(false)
 const error = ref<string | null>(null)
 const hasFetched = ref(false)
 
-const fetchUserProfile = async () => {
+const displayName = computed(() => {
+  if (user.value?.displayName) return user.value.displayName
+  if (team.value?.name) return team.value.name
+  if (isPrivate.value) {
+    return entityType.value === "team" ? "Private Team" : "Private User"
+  }
+  return username.value
+})
+
+const isPublicProfile = computed(
+  () => user.value?.isPublic || team.value?.isPublic || false
+)
+
+watch(username, () => {
+  hasFetched.value = false
+  user.value = null
+  team.value = null
+  entityType.value = null
+  isPrivate.value = false
+  error.value = null
+})
+
+const fetchPublicProfile = async () => {
   // Don't fetch if username is empty or already fetched
   if (!username.value || hasFetched.value) return
 
@@ -55,21 +86,44 @@ const fetchUserProfile = async () => {
     switch (result.status) {
       case "found":
         user.value = result.data
+        entityType.value = "user"
         break
       case "private":
         isPrivate.value = true
+        entityType.value = "user"
         break
       case "not_found":
-        // Switch to catch-all route while keeping the same URL.
-        await router.replace({
-          name: "/[...path]",
-          params: {
-            path: rawUsernameSegment.value || username.value,
-          },
-          query: route.query,
-          hash: route.hash,
-        })
-        return
+        {
+          const teamResult: TeamFetchResult = await getTeamByUsername(
+            username.value
+          )
+
+          switch (teamResult.status) {
+            case "found":
+              team.value = teamResult.data
+              entityType.value = "team"
+              break
+            case "private":
+              isPrivate.value = true
+              entityType.value = "team"
+              break
+            case "not_found":
+              // Switch to catch-all route while keeping the same URL.
+              await router.replace({
+                name: "/[...path]",
+                params: {
+                  path: rawUsernameSegment.value || username.value,
+                },
+                query: route.query,
+                hash: route.hash,
+              })
+              return
+            case "error":
+              error.value = teamResult.message
+              break
+          }
+        }
+        break
       case "error":
         error.value = result.message
         break
@@ -88,7 +142,7 @@ watch(
   [username, isAuthLoaded],
   ([newUsername, authLoaded]) => {
     if (newUsername && authLoaded && !hasFetched.value) {
-      fetchUserProfile()
+      fetchPublicProfile()
     }
   },
   { immediate: true }
@@ -115,16 +169,16 @@ useHead({
           class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
         ></div>
         <div class="bg-background mx-auto -mt-10 rounded border p-1">
-          <div v-if="user">
+          <div v-if="user || team">
             <Avatar class="size-20 rounded">
               <AvatarImage
                 class="size-20 rounded"
-                :src="user?.photoURL!"
-                :alt="user?.displayName"
+                :src="(user?.photoURL || team?.photoURL) ?? ''"
+                :alt="user?.displayName || team?.name"
                 referrerpolicy="no-referrer"
               />
               <AvatarFallback class="size-20 rounded">
-                {{ getInitials(user.displayName) }}
+                {{ getInitials(user?.displayName || team?.name) }}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -141,7 +195,7 @@ useHead({
         class="mx-auto flex max-w-2xl flex-col items-center justify-center gap-2 p-4"
       >
         <h1 class="text-2xl font-bold tracking-tight">
-          {{ user ? user.displayName : isPrivate ? "Private User" : username }}
+          {{ displayName }}
         </h1>
 
         <span v-if="!error" class="text-muted-foreground">
@@ -151,13 +205,13 @@ useHead({
 
         <div v-if="!error" class="flex items-center gap-2">
           <Badge variant="secondary">
-            <IconGlobe v-if="user?.isPublic" />
+            <IconGlobe v-if="isPublicProfile" />
             <IconLock v-else />
-            {{ user?.isPublic ? "Public" : "Private" }}
+            {{ isPublicProfile ? "Public" : "Private" }}
           </Badge>
 
           <Badge
-            v-if="isCurrentUser"
+            v-if="isCurrentUser && entityType === 'user'"
             variant="outline"
             @click="router.push('/profile')"
           >

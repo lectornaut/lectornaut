@@ -143,7 +143,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     })
   )
   const getCannotUpdateTeamReason = computed(() =>
-    !canUpdateTeam.value ? "Only team owners can update team settings" : null
+    !canUpdateTeam.value
+      ? "Only team owners and admins can update team settings"
+      : null
   )
 
   const canCreateTeam = computed(() =>
@@ -227,15 +229,27 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       error: "Failed to delete team",
     })
 
-  const createTeam = async (name: string, photoFile?: File) =>
-    teamActions.run("create", () => teamStore.createTeam(name, photoFile), {
+  const createTeam = async (
+    name: string,
+    options?: {
+      photoFile?: File
+      username?: string
+      isPublic?: boolean
+    }
+  ) =>
+    teamActions.run("create", () => teamStore.createTeam(name, options), {
       success: "Team created successfully",
       error: "Failed to create team",
     })
 
   const updateTeam = async (
     teamId: string,
-    updates: { name?: string; photoFile?: File | null }
+    updates: {
+      name?: string
+      photoFile?: File | null
+      username?: string | null
+      isPublic?: boolean
+    }
   ) =>
     teamActions.run(
       `update-${teamId}`,

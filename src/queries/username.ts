@@ -12,6 +12,12 @@ import {
   serverTimestamp,
 } from "firebase/firestore"
 
+interface UsernameDocData {
+  uid?: string
+  entityType?: string
+  teamId?: string
+}
+
 /**
  * Checks if a username is available.
  * @param username The username to check.
@@ -108,6 +114,17 @@ export type UserFetchResult =
   | { status: "private"; displayName?: string }
   | { status: "error"; message: string }
 
+export type TeamFetchResult =
+  | {
+      status: "found"
+      data: ReturnType<
+        typeof import("firebase/firestore").DocumentSnapshot.prototype.data
+      >
+    }
+  | { status: "not_found" }
+  | { status: "private"; name?: string }
+  | { status: "error"; message: string }
+
 /**
  * Fetches user data by username.
  * @param username The username to search for.
@@ -129,7 +146,19 @@ export const getUserByUsername = async (
       return { status: "not_found" }
     }
 
-    const uid = usernameDoc.data().uid
+    const usernameData = usernameDoc.data() as UsernameDocData
+    if (
+      usernameData.entityType === "team" ||
+      typeof usernameData.teamId === "string"
+    ) {
+      return { status: "not_found" }
+    }
+
+    const uid = typeof usernameData.uid === "string" ? usernameData.uid : null
+    if (!uid) {
+      return { status: "not_found" }
+    }
+
     const userDocRef = doc(firestore, "users", uid)
     const userDoc = await getDoc(userDocRef)
 
@@ -152,6 +181,62 @@ export const getUserByUsername = async (
       error.code === "permission-denied"
     ) {
       console.warn("Permission denied fetching user profile:", username)
+      return { status: "private" }
+    }
+    throw error
+  }
+}
+
+/**
+ * Fetches team data by public username/handle.
+ * @param username The username/handle to search for.
+ * @returns Promise<TeamFetchResult> Detailed result of team fetch.
+ */
+export const getTeamByUsername = async (
+  username: string
+): Promise<TeamFetchResult> => {
+  try {
+    const normalized = normalizeUsername(username)
+
+    if (!normalized) {
+      return { status: "not_found" }
+    }
+
+    const usernameDoc = await getDoc(doc(firestore, "usernames", normalized))
+
+    if (!usernameDoc.exists()) {
+      return { status: "not_found" }
+    }
+
+    const usernameData = usernameDoc.data() as UsernameDocData
+    if (
+      usernameData.entityType !== "team" ||
+      typeof usernameData.teamId !== "string"
+    ) {
+      return { status: "not_found" }
+    }
+
+    const teamDocRef = doc(firestore, "teams", usernameData.teamId)
+    const teamDoc = await getDoc(teamDocRef)
+
+    if (!teamDoc.exists()) {
+      return { status: "not_found" }
+    }
+
+    const data = teamDoc.data()
+    if (!data.isPublic) {
+      return { status: "private", name: data.name }
+    }
+
+    return { status: "found", data }
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "permission-denied"
+    ) {
+      console.warn("Permission denied fetching team profile:", username)
       return { status: "private" }
     }
     throw error

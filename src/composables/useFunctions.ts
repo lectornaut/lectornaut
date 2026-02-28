@@ -27,6 +27,8 @@ export interface UpdateTeamRequest {
   teamId: string
   name?: string
   photoURL?: string | null
+  username?: string | null
+  isPublic?: boolean
 }
 
 export interface UpdateTeamResponse {

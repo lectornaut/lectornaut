@@ -1,6 +1,12 @@
 <script lang="ts" setup>
 import { useTeamActions } from "@/composables/useTeamActions"
-import { IconSettings, IconUsers } from "@/data/icons"
+import {
+  IconAtSign,
+  IconGlobe,
+  IconLock,
+  IconSettings,
+  IconUsers,
+} from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -37,6 +43,8 @@ const team = ref<ITeam | null>(null)
 const isLoading = ref(true)
 const isMember = ref(false)
 const teamMembers = ref<IMembership[]>([])
+const isPublic = computed(() => team.value?.isPublic ?? false)
+const username = computed(() => team.value?.username ?? "")
 
 // Check if current user is a member of this team
 onMounted(async () => {
@@ -116,21 +124,41 @@ const getRoleBadgeVariant = (role: string) => {
       <h1 class="text-2xl font-bold tracking-tight">
         {{ team.name }}
       </h1>
+      <Badge variant="secondary" as-child>
+        <a
+          v-if="username"
+          :href="`/${username}`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-muted-foreground"
+        >
+          <IconAtSign />
+          {{ username }}
+        </a>
+        <span v-else> {{ t("pages.profile.noUsername") }} </span>
+      </Badge>
+      <div class="flex items-center gap-2">
+        <Badge variant="secondary">
+          <IconGlobe v-if="isPublic" />
+          <IconLock v-else />
+          {{
+            isPublic ? t("pages.profile.public") : t("pages.profile.private")
+          }}
+        </Badge>
+        <Badge
+          v-if="canUpdateTeam"
+          variant="outline"
+          @click="emitter.emit('Dialog.Settings.Open', 'overview')"
+        >
+          <IconSettings />
+          {{ t("actions.settings") }}
+        </Badge>
+      </div>
       <div class="text-muted-foreground flex items-center gap-1">
         <IconUsers class="size-4" />
         <span>
           {{ t("pages.teams.memberCount", { count: teamMembers.length }) }}
         </span>
-      </div>
-      <div class="flex items-center gap-2">
-        <Badge
-          v-if="canUpdateTeam"
-          variant="outline"
-          @click="emitter.emit('Dialog.Settings.Open', 'teams')"
-        >
-          <IconSettings />
-          {{ t("actions.settings") }}
-        </Badge>
       </div>
     </div>
 

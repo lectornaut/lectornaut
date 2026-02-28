@@ -797,14 +797,14 @@ export const defaultSettingsTabs = [
     ],
   },
   {
-    title: "settings.titles.workspace",
-    id: "workspace",
+    title: "settings.titles.team",
+    id: "team",
     links: [
       {
-        name: "settings.titles.teams",
-        icon: IconComponent,
-        id: "teams",
-        description: "settings.descriptions.teams",
+        name: "settings.titles.overview",
+        icon: IconShieldCheck,
+        id: "overview",
+        description: "settings.descriptions.overview",
       },
       {
         name: "settings.titles.workspaces",
@@ -859,6 +859,12 @@ export const defaultSettingsTabs = [
         icon: IconBolt,
         id: "general",
         description: "settings.descriptions.general",
+      },
+      {
+        name: "settings.titles.teams",
+        icon: IconComponent,
+        id: "teams",
+        description: "settings.descriptions.teams",
       },
       {
         name: "settings.titles.billing",
