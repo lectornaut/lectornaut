@@ -120,9 +120,7 @@ const handleNextStep = () => {
                         <span
                           class="relative flex size-4 items-center justify-center"
                         >
-                          <span
-                            class="bg-primary/25 absolute size-4 rounded"
-                          />
+                          <span class="bg-primary/25 absolute size-4 rounded" />
                           <span
                             class="bg-primary relative block size-2 rounded"
                           />
