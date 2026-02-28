@@ -96,6 +96,7 @@ const inviteEmail = ref("")
 const inviteRole = ref<IMembershipRole>(defaultTeamRole)
 const members = ref<PendingMember[]>([])
 const removedMemberIds = ref<string[]>([])
+const originalMemberRoles = ref<Record<string, IMembershipRole>>({})
 const isCheckingTeamUsername = ref(false)
 const teamUsernameAvailable = ref<boolean | null>(null)
 const teamUsernameError = ref<string | null>(null)
@@ -123,6 +124,10 @@ const userRole = computed(() => {
 const isPrivileged = computed(() => {
   return roleCan(userRole.value, Capabilities.INVITE_MEMBER)
 })
+
+const canManageOwnerRoles = computed(
+  () => props.mode === "create" || userRole.value === "owner"
+)
 
 const canShowTeamInvitations = computed(() => {
   return (
@@ -191,6 +196,7 @@ const resetForm = () => {
   inviteRole.value = defaultTeamRole
   members.value = []
   removedMemberIds.value = []
+  originalMemberRoles.value = {}
   photoFile.value = null
   photoPreview.value = null
   teamUsernameAvailable.value = null
@@ -288,6 +294,12 @@ watch(isOpen, async (val) => {
           props.team.id
         )
         if (teamMembers && teamMembers.length > 0) {
+          originalMemberRoles.value = Object.fromEntries(
+            teamMembers.map((membership) => [
+              membership.userId,
+              membership.role,
+            ])
+          )
           members.value = teamMembers.map((membership: IMembership) => ({
             email: membership.user.email!,
             role: membership.role,
@@ -394,6 +406,16 @@ const handleInvitationRoleChange = async (
     toast.error("Invalid invitation role.")
     return
   }
+  const invitation = visibleTeamInvitations.value.find(
+    (invite) => invite.id === invitationId
+  )
+  if (
+    !canManageOwnerRoles.value &&
+    (value === "owner" || invitation?.role === "owner")
+  ) {
+    toast.error(t("components.teamDialog.errors.ownerRoleRequiresOwner"))
+    return
+  }
   await invitationStore.updateInvitationRole(invitationId, value)
 }
 
@@ -423,6 +445,11 @@ const addMember = (e?: Event) => {
     return
   }
 
+  if (!canManageOwnerRoles.value && inviteRole.value === "owner") {
+    toast.error(t("components.teamDialog.errors.ownerRoleRequiresOwner"))
+    return
+  }
+
   members.value.push({
     email: email,
     role: inviteRole.value,
@@ -432,6 +459,18 @@ const addMember = (e?: Event) => {
 }
 
 const removeMember = (email: string, id?: string) => {
+  const existingMember = members.value.find((member) =>
+    id ? member.id === id : member.email === email
+  )
+  if (
+    existingMember &&
+    !canManageOwnerRoles.value &&
+    (existingMember.role === "owner" || existingMember.originalRole === "owner")
+  ) {
+    toast.error(t("components.teamDialog.errors.ownerRoleRequiresOwner"))
+    return
+  }
+
   if (id) {
     removedMemberIds.value.push(id)
   }
@@ -580,6 +619,28 @@ const handleSubmit = async () => {
       })
 
       // 2. Process Member Changes
+      const membersToUpdate = members.value.filter(
+        (m) => m.id && m.role !== m.originalRole
+      )
+      const newMembers = members.value.filter((m) => !m.id)
+      const isRemovingOwners = removedMemberIds.value.some(
+        (id) => originalMemberRoles.value[id] === "owner"
+      )
+      const isChangingOwnerRoles = membersToUpdate.some(
+        (member) => member.role === "owner" || member.originalRole === "owner"
+      )
+      const isInvitingOwners = newMembers.some(
+        (member) => member.role === "owner"
+      )
+
+      if (
+        !canManageOwnerRoles.value &&
+        (isRemovingOwners || isChangingOwnerRoles || isInvitingOwners)
+      ) {
+        toast.error(t("components.teamDialog.errors.ownerRoleRequiresOwner"))
+        return
+      }
+
       // Remove deleted members
       if (removedMemberIds.value.length > 0) {
         await membershipStore.removeMembers(
@@ -589,9 +650,6 @@ const handleSubmit = async () => {
       }
 
       // Update existing member roles if changed
-      const membersToUpdate = members.value.filter(
-        (m) => m.id && m.role !== m.originalRole
-      )
       if (membersToUpdate.length > 0) {
         const updatePromises = membersToUpdate.map((member) =>
           membershipStore.changeRole(props.team!.id, member.id!, member.role)
@@ -600,7 +658,6 @@ const handleSubmit = async () => {
       }
 
       // Invite new members (those without an id)
-      const newMembers = members.value.filter((m) => !m.id)
       if (newMembers.length > 0) {
         const results = await inviteMembers(
           props.team.id,
@@ -615,6 +672,13 @@ const handleSubmit = async () => {
       // Invite Mode
       const targetTeam = props.team
       if (!targetTeam) throw new Error(t("components.teamDialog.errors.noTeam"))
+      if (
+        !canManageOwnerRoles.value &&
+        members.value.some((member) => member.role === "owner")
+      ) {
+        toast.error(t("components.teamDialog.errors.ownerRoleRequiresOwner"))
+        return
+      }
 
       if (members.value.length > 0) {
         const results = await inviteMembers(
@@ -908,14 +972,22 @@ const handleSubmit = async () => {
             </ButtonGroup>
             <ButtonGroup>
               <ButtonGroup>
-                <Select v-model="member.role">
+                <Select
+                  v-model="member.role"
+                  :disabled="
+                    !canManageOwnerRoles &&
+                    (member.role === 'owner' || member.originalRole === 'owner')
+                  "
+                >
                   <SelectTrigger class="w-32">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="owner">{{
-                      t("components.teamDialog.roles.owner")
-                    }}</SelectItem>
+                    <SelectItem
+                      value="owner"
+                      :disabled="!canManageOwnerRoles"
+                      >{{ t("components.teamDialog.roles.owner") }}</SelectItem
+                    >
                     <SelectItem value="admin">{{
                       t("components.teamDialog.roles.admin")
                     }}</SelectItem>
@@ -1001,9 +1073,11 @@ const handleSubmit = async () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="owner">{{
-                      t("components.teamDialog.roles.owner")
-                    }}</SelectItem>
+                    <SelectItem
+                      value="owner"
+                      :disabled="!canManageOwnerRoles"
+                      >{{ t("components.teamDialog.roles.owner") }}</SelectItem
+                    >
                     <SelectItem value="admin">{{
                       t("components.teamDialog.roles.admin")
                     }}</SelectItem>
@@ -1091,9 +1165,11 @@ const handleSubmit = async () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="owner">{{
-                      t("components.teamDialog.roles.owner")
-                    }}</SelectItem>
+                    <SelectItem
+                      value="owner"
+                      :disabled="!canManageOwnerRoles"
+                      >{{ t("components.teamDialog.roles.owner") }}</SelectItem
+                    >
                     <SelectItem value="admin">{{
                       t("components.teamDialog.roles.admin")
                     }}</SelectItem>
@@ -1189,7 +1265,10 @@ const handleSubmit = async () => {
                 <ButtonGroup>
                   <Select
                     v-model="invite.role"
-                    :disabled="invite.status === 'declined'"
+                    :disabled="
+                      invite.status === 'declined' ||
+                      (!canManageOwnerRoles && invite.role === 'owner')
+                    "
                     @update:model-value="
                       (val) => handleInvitationRoleChange(invite.id!, val)
                     "
@@ -1198,9 +1277,15 @@ const handleSubmit = async () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="owner">{{
-                        t("components.teamDialog.roles.owner")
-                      }}</SelectItem>
+                      <SelectItem
+                        value="owner"
+                        :disabled="
+                          !canManageOwnerRoles && invite.role !== 'owner'
+                        "
+                        >{{
+                          t("components.teamDialog.roles.owner")
+                        }}</SelectItem
+                      >
                       <SelectItem value="admin">{{
                         t("components.teamDialog.roles.admin")
                       }}</SelectItem>

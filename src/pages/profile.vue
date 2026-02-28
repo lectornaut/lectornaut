@@ -1,5 +1,12 @@
 <script lang="ts" setup>
-import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
+import { useTeamActions } from "@/composables/useTeamActions"
+import {
+  IconAtSign,
+  IconGlobe,
+  IconLock,
+  IconSettings,
+  IconUsers,
+} from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { doc } from "firebase/firestore"
@@ -28,6 +35,12 @@ const userDocRef = computed(() =>
 const { data: userData } = useDocument(userDocRef)
 const isPublic = computed(() => userData.value?.isPublic ?? false)
 const username = computed(() => userData.value?.username ?? "")
+const {
+  memberships,
+  currentTeam,
+  isLoading: isTeamsLoading,
+  getTeamMemberCount,
+} = useTeamActions()
 </script>
 
 <template>
@@ -82,5 +95,64 @@ const username = computed(() => userData.value?.username ?? "")
         {{ t("actions.settings") }}
       </Badge>
     </div>
+    <div class="text-muted-foreground flex items-center gap-1">
+      <IconUsers class="size-4" />
+      <span>
+        {{ t("pages.profile.teamCount", { count: memberships.length }) }}
+      </span>
+    </div>
+  </div>
+  <div class="mx-auto flex w-full max-w-md flex-col gap-2 p-2">
+    <div v-if="isTeamsLoading" class="flex justify-center p-4">
+      <Spinner />
+    </div>
+    <ItemGroup
+      v-else-if="memberships.length > 0"
+      class="grid grid-cols-1 gap-2"
+    >
+      <Item v-for="membership in memberships" :key="membership.teamId" as-child>
+        <RouterLink :to="`/teams/${membership.teamId}`">
+          <ItemMedia>
+            <Avatar class="rounded">
+              <AvatarImage
+                class="rounded"
+                :src="membership.team.photoURL!"
+                :alt="membership.team.name"
+                referrerpolicy="no-referrer"
+              />
+              <AvatarFallback class="rounded">
+                {{ getInitials(membership.team.name) }}
+              </AvatarFallback>
+            </Avatar>
+          </ItemMedia>
+          <ItemContent class="gap-0.5 truncate">
+            <ItemTitle class="truncate">
+              {{ membership.team.name }}
+            </ItemTitle>
+            <ItemDescription class="truncate text-xs">
+              {{
+                t("pages.teams.memberCount", {
+                  count: getTeamMemberCount(membership.teamId),
+                })
+              }}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <Badge
+              v-if="currentTeam?.id === membership.teamId"
+              variant="secondary"
+            >
+              {{ t("pages.teams.active") }}
+            </Badge>
+            <Badge variant="outline">
+              {{ t(`components.teamDialog.roles.${membership.role}`) }}
+            </Badge>
+          </ItemActions>
+        </RouterLink>
+      </Item>
+    </ItemGroup>
+    <p v-else class="text-muted-foreground text-center text-sm">
+      {{ t("pages.profile.noTeams") }}
+    </p>
   </div>
 </template>

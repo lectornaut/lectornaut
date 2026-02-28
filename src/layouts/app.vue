@@ -443,7 +443,7 @@ const closeTab = (id: string) => {
                                     v-for="tab in source"
                                     :key="tab.id"
                                     :value="tab.id"
-                                    class="hover:bg-secondary/50 size-full w-60 max-w-60 min-w-0 gap-2 border-0 px-3"
+                                    class="hover:bg-secondary/50 data-[state=inactive]:text-secondary-foreground/50 data-[state=inactive]:bg-secondary/50 group size-full w-60 max-w-60 min-w-0 gap-2 border-0 px-3 pr-1.5!"
                                     :class="{
                                       'min-w-40 transition-all':
                                         tab.id === activeTab,
@@ -461,16 +461,16 @@ const closeTab = (id: string) => {
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger as-child>
-                                          <Button
+                                          <InputGroupButton
                                             variant="ghost"
-                                            size="icon-sm"
-                                            class="size-4 shrink-0"
+                                            size="icon-xs"
+                                            class="invisible group-hover:visible"
                                             @click.stop.prevent="
                                               closeTab(tab.id)
                                             "
                                           >
-                                            <IconX class="size-3!" />
-                                          </Button>
+                                            <IconX />
+                                          </InputGroupButton>
                                         </TooltipTrigger>
                                         <TooltipContent>
                                           {{ t("layouts.app.tabs.close") }}

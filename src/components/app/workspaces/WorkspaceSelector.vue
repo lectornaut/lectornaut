@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconCirclePlus, IconFolder, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { useTeamStore } from "@/stores/teamStore"
@@ -12,6 +13,7 @@ const { workspaces, isLoading, currentWorkspace } = storeToRefs(workspaceStore)
 
 const teamStore = useTeamStore()
 const { currentTeam } = storeToRefs(teamStore)
+const { canCreateWorkspace } = useWorkspaceActions()
 
 const isCreatingWorkspaceDialogOpen = ref(false)
 
@@ -95,7 +97,7 @@ const deselectTeam = async () => {
       <Button
         variant="secondary"
         class="justify-start"
-        :disabled="!currentTeam"
+        :disabled="!currentTeam || !canCreateWorkspace"
         @click="isCreatingWorkspaceDialogOpen = true"
       >
         <IconCirclePlus />

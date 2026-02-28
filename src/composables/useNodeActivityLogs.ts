@@ -1,6 +1,8 @@
 import { usePaginatedLogs } from "@/composables/usePaginatedLogs"
 import { firestore } from "@/modules/firebase"
+import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
+import { can, Capabilities } from "@/types/permissions"
 import {
   collection,
   limit,
@@ -27,10 +29,28 @@ export function useNodeActivityLogs({
   workspaceId,
   documentId,
 }: useNodeActivityLogsOptions) {
+  const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
-  const { isOwner, isAdmin } = storeToRefs(membershipStore)
+  const { currentUser } = storeToRefs(authStore)
+  const { memberships } = storeToRefs(membershipStore)
 
-  const canViewLogs = computed(() => isOwner.value || isAdmin.value)
+  const currentRole = computed(() => {
+    if (!teamId.value || !currentUser.value) return null
+    return (
+      memberships.value.find(
+        (membership) =>
+          membership.teamId === teamId.value &&
+          membership.userId === currentUser.value?.uid
+      )?.role ?? null
+    )
+  })
+
+  const canViewLogs = computed(() =>
+    can(currentUser.value, Capabilities.READ_AUDIT_LOGS, {
+      scope: "team",
+      teamRole: currentRole.value,
+    })
+  )
 
   const buildQuery = (cursor?: QueryDocumentSnapshot | null): Query | null => {
     if (!teamId.value || !workspaceId.value || !documentId.value) {

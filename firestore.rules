@@ -27,6 +27,15 @@ service cloud.firestore {
         && teamRole(teamId) in ["owner", "admin"];
     }
 
+    function canManageMembers(teamId) {
+      return isTeamAdmin(teamId);
+    }
+
+    function canReadAuditLogs(teamId) {
+      return isTeamMember(teamId)
+        && teamRole(teamId) in ["owner", "admin"];
+    }
+
     function canManageWorkspaceContent(teamId) {
       return isTeamMember(teamId)
         && teamRole(teamId) in ["owner", "admin", "member"];
@@ -246,7 +255,7 @@ service cloud.firestore {
                     isInvitationRecipient(resource.data.email)
                     || (
                       resource.data.teamId is string
-                      && isTeamAdmin(resource.data.teamId)
+                      && canManageMembers(resource.data.teamId)
                     )
                   );
       allow write: if false;
@@ -254,7 +263,7 @@ service cloud.firestore {
 
     match /logs/{logId} {
       allow read: if resource.data.teamId is string
-                  && isTeamAdmin(resource.data.teamId);
+                  && canReadAuditLogs(resource.data.teamId);
       allow write: if false;
     }
 

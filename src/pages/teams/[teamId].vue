@@ -74,21 +74,6 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
-
-const getRoleBadgeVariant = (role: string) => {
-  switch (role) {
-    case "owner":
-      return "default"
-    case "admin":
-      return "secondary"
-    case "member":
-      return "outline"
-    case "guest":
-      return "outline"
-    default:
-      return "outline"
-  }
-}
 </script>
 
 <template>
@@ -195,7 +180,7 @@ const getRoleBadgeVariant = (role: string) => {
             <Badge v-if="membership.userId === user?.uid" variant="secondary">
               {{ t("pages.teams.you") }}
             </Badge>
-            <Badge :variant="getRoleBadgeVariant(membership.role)">
+            <Badge variant="outline">
               {{ t(`components.teamDialog.roles.${membership.role}`) }}
             </Badge>
           </ItemActions>

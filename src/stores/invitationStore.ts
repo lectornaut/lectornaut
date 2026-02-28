@@ -318,6 +318,12 @@ export const useInvitationStore = defineStore("invitations", () => {
       Capabilities.INVITE_MEMBER,
       "You do not have permission to send invitations"
     )
+    if (!membership) {
+      throw new Error("You do not have permission to send invitations")
+    }
+    if (role === "owner" && membership.role !== "owner") {
+      throw new Error("Only team owners can invite owners")
+    }
 
     // Check for existing pending invitation
     const q = query(
@@ -403,6 +409,19 @@ export const useInvitationStore = defineStore("invitations", () => {
       Capabilities.UPDATE_MEMBER_ROLE,
       "You do not have permission to update invitations"
     )
+
+    const invitation = findInvitationById(invitationId)
+    if (!invitation) {
+      throw new Error("Invitation not found")
+    }
+
+    const membership = await resolveMembershipForTeam(invitation.teamId)
+    if (
+      membership?.role !== "owner" &&
+      (role === "owner" || invitation.role === "owner")
+    ) {
+      throw new Error("Only team owners can manage owner invitations")
+    }
 
     await runInvitationMutation(
       invitationId,

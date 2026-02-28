@@ -60,10 +60,12 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       return false
     }
 
-    // 2. Business logic constraints (e.g. last owner)
-    // These are NOT pure permissions, but business rules.
-    // Changing TO/FROM owner requires owner. (This rule might be part of the capability or separate)
-    // The previous logic had: member.role === 'owner' && ownerCount <= 1
+    // Owner role transitions are owner-only.
+    if (member.role === "owner" && currentUserRole.value !== "owner") {
+      return false
+    }
+
+    // Business logic constraints (e.g. last owner).
     if (member.role === "owner" && ownerCount.value <= 1) {
       return false
     }
@@ -78,6 +80,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       })
     )
       return "settings.teams.members.noPermissionToChangeRole"
+    if (member.role === "owner" && currentUserRole.value !== "owner") {
+      return "settings.teams.members.onlyOwnersCanManageOwners"
+    }
     if (
       member.userId === user.value?.uid &&
       ownerCount.value <= 1 &&
@@ -97,6 +102,8 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       member.userId !== user.value?.uid
     )
       return false
+    if (member.role === "owner" && currentUserRole.value !== "owner")
+      return false
     if (teamMembers.value.length <= 1) return false
     if (member.role === "owner" && ownerCount.value <= 1) return false
     return true
@@ -111,6 +118,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       member.userId !== user.value?.uid
     ) {
       return "settings.teams.members.noPermissionToRemove"
+    }
+    if (member.role === "owner" && currentUserRole.value !== "owner") {
+      return "settings.teams.members.onlyOwnersCanManageOwners"
     }
     if (teamMembers.value.length <= 1) {
       return "settings.teams.members.lastMemberCannotBeRemoved"
@@ -152,7 +162,7 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     can(user.value, Capabilities.CREATE_TEAM, { scope: "global" })
   )
   const getCannotCreateTeamReason = computed(() =>
-    !canCreateTeam.value ? "Only team owners can create new teams" : null
+    !canCreateTeam.value ? "You must be signed in to create a team" : null
   )
 
   const canEditTeam = (membership: IMembership) =>
@@ -180,8 +190,16 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     roleActions.run(
       userId,
       async () => {
-        if (!currentTeam.value) return
-        await membershipStore.changeRole(currentTeam.value.id, userId, newRole)
+        const teamId = effectiveTeamId.value
+        if (!teamId) return
+        const targetMember = teamMembers.value.find((m) => m.userId === userId)
+        if (
+          currentUserRole.value !== "owner" &&
+          (newRole === "owner" || targetMember?.role === "owner")
+        ) {
+          throw new Error("Only team owners can manage owner roles")
+        }
+        await membershipStore.changeRole(teamId, userId, newRole)
       },
       {
         success: "Role updated successfully",
@@ -193,8 +211,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     memberActions.run(
       userId,
       async () => {
-        if (!currentTeam.value) return
-        await membershipStore.removeMember(currentTeam.value.id, userId)
+        const teamId = effectiveTeamId.value
+        if (!teamId) return
+        await membershipStore.removeMember(teamId, userId)
       },
       {
         success:
@@ -288,8 +307,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     memberActions.run(
       `invite-${email}`,
       async () => {
-        if (!currentTeam.value) return
-        await membershipStore.inviteMember(currentTeam.value.id, email, role)
+        const teamId = effectiveTeamId.value
+        if (!teamId) return
+        await membershipStore.inviteMember(teamId, email, role)
       },
       {
         success: "Member invited successfully",

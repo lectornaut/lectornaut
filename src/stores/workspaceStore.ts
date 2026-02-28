@@ -2,7 +2,7 @@
  * Workspace Store - Workspace CRUD Operations
  *
  * Handles:
- * - Workspace creation, update, deletion (owner or member)
+ * - Workspace creation, update, deletion (owner or admin)
  * - Current workspace selection and switching (all members)
  * - Workspaces for the current team
  *
@@ -277,7 +277,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   // ============================================================================
 
   /**
-   * Create a new workspace with optimistic update (owner or member).
+   * Create a new workspace with optimistic update (owner or admin).
    * Uses Cloud Function for automatic audit logging.
    */
   async function createWorkspace(
@@ -287,9 +287,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
-    // Check if user can manage workspaces (owner or member)
+    // Check if user can manage workspaces (owner or admin)
     if (!canManageWorkspaces.value) {
-      throw new Error("Only team owners and members can create workspaces")
+      throw new Error("Only team owners and admins can create workspaces")
     }
 
     const teamId = currentTeamId.value
@@ -420,7 +420,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   /**
-   * Update workspace details with optimistic update (owner or member).
+   * Update workspace details with optimistic update (owner or admin).
    * Uses Cloud Function for automatic audit logging.
    */
   async function updateWorkspace(
@@ -433,9 +433,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
-    // Check if user can manage workspaces (owner or member)
+    // Check if user can manage workspaces (owner or admin)
     if (!canManageWorkspaces.value) {
-      throw new Error("Only team owners and members can update workspaces")
+      throw new Error("Only team owners and admins can update workspaces")
     }
 
     const teamId = currentTeamId.value
@@ -513,15 +513,15 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   /**
-   * Delete a workspace with optimistic update (owner or member).
+   * Delete a workspace with optimistic update (owner or admin).
    * Uses Cloud Function for automatic audit logging.
    */
   async function deleteWorkspace(workspaceId: string): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
-    // Check if user can manage workspaces (owner or member)
+    // Check if user can manage workspaces (owner or admin)
     if (!canManageWorkspaces.value) {
-      throw new Error("Only team owners and members can delete workspaces")
+      throw new Error("Only team owners and admins can delete workspaces")
     }
 
     const teamId = currentTeamId.value

@@ -1790,6 +1790,14 @@ export const assignRoleToUser = onCall(CALLABLE_OPTS, async (request) => {
       }
     }
 
+    // Owner role transitions are owner-only.
+    if (actorRole !== "owner" && (beforeRole === "owner" || role === "owner")) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only team owners can manage owner roles."
+      )
+    }
+
     // Check if changing from owner - must have at least one owner
     // COST OPTIMIZATION: limit(2) is sufficient — we only need to know
     // if there's more than 1 owner, not the exact count.
@@ -1877,6 +1885,13 @@ export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
     const membershipData = membershipSnap.data()
     const targetRole = membershipData?.role as IMembershipRole
     const targetEmail = membershipData?.user?.email ?? undefined
+
+    if (targetRole === "owner" && actorRole !== "owner") {
+      throw new HttpsError(
+        "permission-denied",
+        "Only team owners can remove owners."
+      )
+    }
 
     // Check if removing last owner
     // COST OPTIMIZATION: limit(2) + select() — only need to know if >1 owner exists
@@ -2025,6 +2040,16 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
       })
     }
 
+    const includesOwner = membershipsToRemove.some(
+      (membership) => membership.role === "owner"
+    )
+    if (includesOwner && actorRole !== "owner") {
+      throw new HttpsError(
+        "permission-denied",
+        "Only team owners can remove owners."
+      )
+    }
+
     // Get all memberships to check constraints
     // COST OPTIMIZATION: select("role") — we only need the role field for the constraint check
     const allMembershipsSnap = await db
@@ -2151,6 +2176,13 @@ export const sendInvitation = onCall(CALLABLE_OPTS, async (request) => {
     throw new HttpsError(
       "permission-denied",
       "You do not have permission to invite members."
+    )
+  }
+
+  if (role === "owner" && actorRole !== "owner") {
+    throw new HttpsError(
+      "permission-denied",
+      "Only team owners can invite owners."
     )
   }
 
@@ -2308,6 +2340,16 @@ export const updateInvitationRole = onCall(CALLABLE_OPTS, async (request) => {
       throw new HttpsError(
         "permission-denied",
         "You do not have permission to update invitations."
+      )
+    }
+
+    if (
+      actorRole !== "owner" &&
+      (invitation.role === "owner" || role === "owner")
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only team owners can manage owner invitations."
       )
     }
 

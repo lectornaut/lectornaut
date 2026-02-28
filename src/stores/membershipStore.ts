@@ -28,6 +28,7 @@ import {
 import { can, Capabilities, hasExactRole } from "@/types/permissions"
 import {
   getAllMembershipsGroup,
+  getMembershipRef,
   getTeamMembershipsCollection,
 } from "@/utils/firebase/firebase-helpers"
 import {
@@ -38,7 +39,7 @@ import {
   withCloudSyncOperation,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { getDocs, query, Timestamp, where } from "firebase/firestore"
+import { getDoc, getDocs, query, Timestamp, where } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { computed, ref, shallowRef } from "vue"
 import { useCollection } from "vuefire"
@@ -259,6 +260,55 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** Count of owners in the current team */
   const ownerCount = computed(() => getOwnerCount(teamMembers.value))
+
+  /**
+   * Resolve the current user's role for a specific team.
+   * Always derive role from the target team to avoid cross-team permission leaks.
+   */
+  const resolveActorRoleForTeam = (
+    teamId: string
+  ): IMembershipRole | null | undefined => {
+    if (!currentUser.value) return null
+    return memberships.value.find(
+      (m) => m.teamId === teamId && m.userId === currentUser.value?.uid
+    )?.role
+  }
+
+  /**
+   * Resolve a membership for the target team without relying on currentTeam context.
+   */
+  const resolveMembershipForTeamUser = async (
+    teamId: string,
+    userId: string
+  ): Promise<IMembership | null> => {
+    if (currentTeamId.value === teamId) {
+      return teamMembers.value.find((m) => m.userId === userId) ?? null
+    }
+
+    const membershipSnap = await getDoc(getMembershipRef(teamId, userId))
+    if (!membershipSnap.exists()) return null
+    return membershipSnap.data() as IMembership
+  }
+
+  /**
+   * Resolve multiple memberships for a target team without relying on currentTeam context.
+   */
+  const resolveMembershipsForTeamUsers = async (
+    teamId: string,
+    userIds: string[]
+  ): Promise<IMembership[]> => {
+    if (currentTeamId.value === teamId) {
+      const userIdSet = new Set(userIds)
+      return teamMembers.value.filter((member) => userIdSet.has(member.userId))
+    }
+
+    const snapshots = await Promise.all(
+      userIds.map((userId) => getDoc(getMembershipRef(teamId, userId)))
+    )
+    return snapshots
+      .filter((snapshot) => snapshot.exists())
+      .map((snapshot) => snapshot.data() as IMembership)
+  }
 
   // ============================================================================
   // Team Member Counts - Reactive map of team ID to member count
@@ -499,30 +549,46 @@ export const useMembershipStore = defineStore("memberships", () => {
     userId: string,
     newRole: IMembershipRole
   ): Promise<void> {
+    const isCurrentTeamTarget = currentTeamId.value === teamId
+    const actorRole = resolveActorRoleForTeam(teamId)
     if (
       !can(currentUser.value, Capabilities.UPDATE_MEMBER_ROLE, {
         scope: "team",
-        teamRole: currentUserRole.value,
+        teamRole: actorRole,
       })
     ) {
       throw new Error("You do not have permission to change member roles")
     }
 
+    const targetMembership = await resolveMembershipForTeamUser(teamId, userId)
+    if (
+      actorRole !== "owner" &&
+      (newRole === "owner" || targetMembership?.role === "owner")
+    ) {
+      throw new Error("Only team owners can manage owner roles")
+    }
+
     const membershipKey = `${teamId}-${userId}`
-    const previousTeamMembers = cloneState(teamMembers.value)
+    const previousTeamMembers = isCurrentTeamTarget
+      ? cloneState(teamMembers.value)
+      : []
 
     await withOptimisticUpdate(
       pendingMembershipIds,
       membershipKey,
       // Apply optimistic update
       () => {
-        optimisticTeamMembers.value = teamMembers.value.map((m) =>
-          m.userId === userId ? { ...m, role: newRole } : m
-        )
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = teamMembers.value.map((m) =>
+            m.userId === userId ? { ...m, role: newRole } : m
+          )
+        }
       },
       // Rollback on error
       () => {
-        optimisticTeamMembers.value = previousTeamMembers
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = previousTeamMembers
+        }
       },
       // Cloud Function call
       async () => {
@@ -542,48 +608,67 @@ export const useMembershipStore = defineStore("memberships", () => {
   async function removeMember(teamId: string, userId: string): Promise<void> {
     if (!currentUser.value) return
 
+    const isCurrentTeamTarget = currentTeamId.value === teamId
+    const actorRole = resolveActorRoleForTeam(teamId)
+
     // If removing someone else, check permissions
     if (userId !== currentUser.value.uid) {
       if (
         !can(currentUser.value, Capabilities.REMOVE_MEMBER, {
           scope: "team",
-          teamRole: currentUserRole.value,
+          teamRole: actorRole,
         })
       ) {
         throw new Error("You do not have permission to remove members")
       }
     }
 
+    const targetMembership = await resolveMembershipForTeamUser(teamId, userId)
+    if (targetMembership?.role === "owner" && actorRole !== "owner") {
+      throw new Error("Only team owners can remove owners")
+    }
+
     const membershipKey = `${teamId}-${userId}`
-    const previousTeamMembers = cloneState(teamMembers.value)
+    const previousTeamMembers = isCurrentTeamTarget
+      ? cloneState(teamMembers.value)
+      : []
     const previousMemberships = cloneState(memberships.value)
     const previousUserProfile = cloneState(userProfile.value)
 
     const isRemovingSelf = userId === currentUser.value.uid
+    const isRemovingSelfFromCurrentTeam = isRemovingSelf && isCurrentTeamTarget
 
     await withOptimisticUpdate(
       pendingMembershipIds,
       membershipKey,
       // Apply optimistic update
       () => {
-        optimisticTeamMembers.value = teamMembers.value.filter(
-          (m) => m.userId !== userId
-        )
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = teamMembers.value.filter(
+            (m) => m.userId !== userId
+          )
+        }
+
         if (isRemovingSelf) {
           addPending(pendingUserIds, userId)
           optimisticMemberships.value = memberships.value.filter(
             (m) => m.teamId !== teamId
           )
-          if (userProfile.value) {
+          if (isRemovingSelfFromCurrentTeam && userProfile.value) {
             authStore.setCurrentTeamIdLocal(null)
           }
         }
       },
       // Rollback on error
       () => {
-        optimisticTeamMembers.value = previousTeamMembers
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = previousTeamMembers
+        }
         optimisticMemberships.value = previousMemberships
-        if (isRemovingSelf && previousUserProfile?.currentTeamId) {
+        if (
+          isRemovingSelfFromCurrentTeam &&
+          previousUserProfile?.currentTeamId
+        ) {
           // Restore user's current team through authStore
           authStore.setCurrentTeamIdLocal(previousUserProfile.currentTeamId)
         }
@@ -610,12 +695,14 @@ export const useMembershipStore = defineStore("memberships", () => {
     userIds: string[]
   ): Promise<void> {
     if (!currentUser.value) return
+    const isCurrentTeamTarget = currentTeamId.value === teamId
     const currentUserId = currentUser.value.uid
+    const actorRole = resolveActorRoleForTeam(teamId)
 
     if (
       !can(currentUser.value, Capabilities.REMOVE_MEMBER, {
         scope: "team",
-        teamRole: currentUserRole.value,
+        teamRole: actorRole,
       })
     ) {
       throw new Error("You do not have permission to remove members")
@@ -624,12 +711,25 @@ export const useMembershipStore = defineStore("memberships", () => {
     if (!userIds || userIds.length === 0) return
 
     const userIdSet = new Set(userIds)
+    const targetMemberships = await resolveMembershipsForTeamUsers(
+      teamId,
+      userIds
+    )
+    const includesOwner = targetMemberships.some(
+      (member) => member.role === "owner"
+    )
+    if (includesOwner && actorRole !== "owner") {
+      throw new Error("Only team owners can remove owners")
+    }
     const membershipKeys = userIds.map((userId) => `${teamId}-${userId}`)
-    const previousTeamMembers = cloneState(teamMembers.value)
+    const previousTeamMembers = isCurrentTeamTarget
+      ? cloneState(teamMembers.value)
+      : []
     const previousMemberships = cloneState(memberships.value)
     const previousUserProfile = cloneState(userProfile.value)
 
     const isRemovingSelf = userIds.includes(currentUserId)
+    const isRemovingSelfFromCurrentTeam = isRemovingSelf && isCurrentTeamTarget
 
     await withCloudSyncOperation(
       async () => {
@@ -638,16 +738,18 @@ export const useMembershipStore = defineStore("memberships", () => {
           membershipKeys.forEach((k) => addPending(pendingMembershipIds, k))
 
           // Apply optimistic updates
-          optimisticTeamMembers.value = teamMembers.value.filter(
-            (m) => !userIdSet.has(m.userId)
-          )
+          if (isCurrentTeamTarget) {
+            optimisticTeamMembers.value = teamMembers.value.filter(
+              (m) => !userIdSet.has(m.userId)
+            )
+          }
 
           if (isRemovingSelf) {
             addPending(pendingUserIds, currentUserId)
             optimisticMemberships.value = memberships.value.filter(
               (m) => m.teamId !== teamId
             )
-            if (userProfile.value) {
+            if (isRemovingSelfFromCurrentTeam && userProfile.value) {
               authStore.setCurrentTeamIdLocal(null)
             }
           }
@@ -656,9 +758,14 @@ export const useMembershipStore = defineStore("memberships", () => {
           await removeMembersFn({ teamId, userIds })
         } catch (error) {
           // Rollback optimistic state on error
-          optimisticTeamMembers.value = previousTeamMembers
+          if (isCurrentTeamTarget) {
+            optimisticTeamMembers.value = previousTeamMembers
+          }
           optimisticMemberships.value = previousMemberships
-          if (isRemovingSelf && previousUserProfile?.currentTeamId) {
+          if (
+            isRemovingSelfFromCurrentTeam &&
+            previousUserProfile?.currentTeamId
+          ) {
             authStore.setCurrentTeamIdLocal(previousUserProfile.currentTeamId)
           }
           throw error

@@ -168,6 +168,8 @@ export const Capabilities = {
   UPDATE_MEMBER_ROLE: "update_member_role",
   REMOVE_MEMBER: "remove_member",
   READ_TEAM: "read_team",
+  MANAGE_BILLING: "manage_billing",
+  READ_AUDIT_LOGS: "read_audit_logs",
 
   // Workspace Scope
   CREATE_WORKSPACE: "create_workspace",

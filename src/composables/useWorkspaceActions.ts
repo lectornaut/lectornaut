@@ -31,7 +31,7 @@ export function useWorkspaceActions() {
   const canCreateWorkspace = computed(() => canManageWorkspaces.value)
   const getCannotCreateWorkspaceReason = computed(() =>
     !canManageWorkspaces.value
-      ? "Only members and above can create workspaces"
+      ? "Only team owners and admins can create workspaces"
       : null
   )
 
@@ -43,7 +43,7 @@ export function useWorkspaceActions() {
   )
   const getCannotUpdateWorkspaceReason = computed(() =>
     !canUpdateWorkspace.value
-      ? "Only members and above can update workspaces"
+      ? "Only team owners and admins can update workspaces"
       : null
   )
 
@@ -55,7 +55,7 @@ export function useWorkspaceActions() {
   )
   const getCannotDeleteWorkspaceReason = computed(() =>
     !canDeleteWorkspace.value
-      ? "Only members and above can delete workspaces"
+      ? "Only team owners and admins can delete workspaces"
       : null
   )
 

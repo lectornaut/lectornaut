@@ -30,6 +30,7 @@ export const Capabilities = {
   REMOVE_MEMBER: "remove_member",
   READ_TEAM: "read_team", // Usually implicit, but good to have
   MANAGE_BILLING: "manage_billing",
+  READ_AUDIT_LOGS: "read_audit_logs",
 
   // Workspace Scope
   CREATE_WORKSPACE: "create_workspace",
@@ -60,6 +61,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.UPDATE_MEMBER_ROLE,
     Capabilities.REMOVE_MEMBER,
     Capabilities.READ_TEAM,
+    Capabilities.READ_AUDIT_LOGS,
     Capabilities.CREATE_WORKSPACE,
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,
@@ -73,6 +75,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.UPDATE_MEMBER_ROLE,
     Capabilities.REMOVE_MEMBER,
     Capabilities.READ_TEAM,
+    Capabilities.READ_AUDIT_LOGS,
     Capabilities.CREATE_WORKSPACE,
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,

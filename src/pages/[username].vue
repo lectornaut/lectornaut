@@ -43,6 +43,12 @@ const isCurrentUser = computed(
     currentUserData.value?.username === username.value
 )
 
+const settingsRoute = computed(() => {
+  if (isCurrentUser.value && entityType.value === "user") return "/profile"
+  if (entityType.value === "team") return "/teams"
+  return null
+})
+
 const loading = ref(true)
 const user = ref<DocumentData | null>(null)
 const team = ref<DocumentData | null>(null)
@@ -209,11 +215,10 @@ useHead({
             <IconLock v-else />
             {{ isPublicProfile ? "Public" : "Private" }}
           </Badge>
-
           <Badge
-            v-if="isCurrentUser && entityType === 'user'"
+            v-if="settingsRoute"
             variant="outline"
-            @click="router.push('/profile')"
+            @click="router.push(settingsRoute)"
           >
             <IconSettings />
             Settings

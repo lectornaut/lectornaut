@@ -156,7 +156,7 @@ export const defaultSize: SizeId = "base"
 export const defaultMenu = [
   {
     title: "Home",
-    action: "Create a List",
+    action: "View your workspace dashboard",
     description: "Another to-do system you'll try but eventually give up on.",
     url: "/home",
     id: "home",
@@ -170,7 +170,7 @@ export const defaultMenu = [
   },
   {
     title: "Maps",
-    action: "Create a Map",
+    action: "Explore and annotate maps",
     description: "Visualize ideas and concepts in a structured way.",
     url: "/maps",
     id: "maps",
@@ -184,7 +184,7 @@ export const defaultMenu = [
   },
   {
     title: "Write",
-    action: "Create a Document",
+    action: "Draft and organize documents",
     description: "A place to write and organize your thoughts.",
     url: "/write",
     id: "write",
@@ -198,7 +198,7 @@ export const defaultMenu = [
   },
   {
     title: "Agents",
-    action: "Create a Calendar",
+    action: "Discover and manage AI agents",
     description: "Stay on top of your deadlines, or don't — it's up to you.",
     url: "/agents",
     id: "agents",
@@ -212,7 +212,7 @@ export const defaultMenu = [
   },
   {
     title: "Bot",
-    action: "Open Bot Chat",
+    action: "Chat with your AI assistant",
     description:
       "Chat with AI and use side panels for context, history, and actions.",
     url: "/bot",
@@ -227,7 +227,7 @@ export const defaultMenu = [
   },
   {
     title: "Tasks",
-    action: "Create a Gallery",
+    action: "Plan and track your tasks",
     description: "Great for mood boards and inspiration.",
     url: "/tasks",
     id: "tasks",
@@ -241,7 +241,7 @@ export const defaultMenu = [
   },
   {
     title: "Runs",
-    action: "Create a Board",
+    action: "Monitor run history and status",
     description: "Track tasks in different stages of your project.",
     url: "/runs",
     id: "runs",
@@ -256,7 +256,7 @@ export const defaultMenu = [
   // code
   {
     title: "Code",
-    action: "Create a Code",
+    action: "Build and edit code projects",
     description: "A place to write and organize your code.",
     url: "/code",
     id: "code",
@@ -270,7 +270,7 @@ export const defaultMenu = [
   },
   {
     title: "Teams",
-    action: "Create a Spreadsheet",
+    action: "Manage teams and collaborators",
     description: "Lots of numbers and things — good for nerds.",
     url: "/teams",
     id: "teams",
@@ -284,7 +284,7 @@ export const defaultMenu = [
   },
   {
     title: "Create",
-    action: "Create a Timeline",
+    action: "Create and configure new agents",
     description: "Get a birds-eye-view of your procrastination.",
     url: "/create",
     id: "create",
@@ -298,7 +298,7 @@ export const defaultMenu = [
   },
   {
     title: "Profile",
-    action: "View Profile",
+    action: "View and update your profile",
     description: "Manage your personal information and settings.",
     url: "/profile",
     id: "profile",

@@ -469,6 +469,7 @@
       "memberCount": "{count} member | {count} members",
       "members": {
         "noPermissionToChangeRole": "You don't have permission to change roles",
+        "onlyOwnersCanManageOwners": "Only team owners can manage owner roles",
         "lastOwnerCannotChangeRole": "Cannot change role of the last owner",
         "noPermissionToRemove": "You don't have permission to remove members",
         "lastMemberCannotBeRemoved": "Cannot remove the last member",
@@ -1031,7 +1032,9 @@
       "noUsername": "No username set",
       "public": "Public",
       "private": "Private",
-      "settings": "Settings"
+      "settings": "Settings",
+      "teamCount": "{count} team | {count} teams",
+      "noTeams": "No teams yet"
     },
     "teams": {
       "title": "Teams",
@@ -1296,6 +1299,7 @@
         "noTeam": "No team to invite to",
         "usernameTaken": "This handle is already taken",
         "invalidUsername": "Please enter a valid handle",
+        "ownerRoleRequiresOwner": "Only team owners can manage owner roles",
         "publicTeamRequiresUsername": "Set a valid team handle before enabling public visibility",
         "failedToCreate": "Failed to create team",
         "failedToUpdate": "Failed to update team",

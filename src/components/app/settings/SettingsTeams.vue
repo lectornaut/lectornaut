@@ -241,7 +241,7 @@ const sortedMemberships = computed(() => {
                             </Tooltip>
                             <Tooltip
                               v-if="
-                                membership.role === 'owner' &&
+                                canEditTeam(membership) &&
                                 membership.team?.photoURL
                               "
                             >
@@ -328,10 +328,13 @@ const sortedMemberships = computed(() => {
                                       Exit
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator
-                                      v-if="canEditTeam(membership)"
+                                      v-if="
+                                        canEditTeam(membership) ||
+                                        canDeleteTeam(membership)
+                                      "
                                     />
                                     <DropdownMenuItem
-                                      v-if="canDeleteTeam(membership)"
+                                      v-if="canEditTeam(membership)"
                                       @click="
                                         openTeamDialog('edit', membership.team!)
                                       "
@@ -339,6 +342,12 @@ const sortedMemberships = computed(() => {
                                       <IconPencil />
                                       Edit
                                     </DropdownMenuItem>
+                                    <DropdownMenuSeparator
+                                      v-if="
+                                        canEditTeam(membership) &&
+                                        canDeleteTeam(membership)
+                                      "
+                                    />
                                     <DropdownMenuItem
                                       v-if="canDeleteTeam(membership)"
                                       @click="
