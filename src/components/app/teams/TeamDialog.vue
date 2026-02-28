@@ -128,6 +128,9 @@ const isPrivileged = computed(() => {
 const canManageOwnerRoles = computed(
   () => props.mode === "create" || userRole.value === "owner"
 )
+const ownerRoleManagementReason = computed(() =>
+  t("components.teamDialog.errors.ownerRoleRequiresOwner")
+)
 
 const canShowTeamInvitations = computed(() => {
   return (
@@ -476,6 +479,29 @@ const removeMember = (email: string, id?: string) => {
   }
   members.value = members.value.filter((m) => m.email !== email)
 }
+
+const isOwnerRoleManagedMember = (member: PendingMember) =>
+  member.role === "owner" || member.originalRole === "owner"
+
+const isMemberRoleUpdateDisabled = (member: PendingMember) =>
+  !canManageOwnerRoles.value && isOwnerRoleManagedMember(member)
+
+const isMemberRemovalDisabled = (member: PendingMember) =>
+  !canManageOwnerRoles.value && isOwnerRoleManagedMember(member)
+
+const isAddMemberBlockedByOwnerPolicy = computed(
+  () => !canManageOwnerRoles.value && inviteRole.value === "owner"
+)
+
+const addMemberDisabledReason = computed(() => {
+  if (!canInviteMembers.value && props.mode !== "create") {
+    return t(getCannotInviteMembersReason.value || "")
+  }
+  if (isAddMemberBlockedByOwnerPolicy.value) {
+    return ownerRoleManagementReason.value
+  }
+  return null
+})
 
 const handleSubmit = async () => {
   if (props.mode !== "invite" && !teamName.value.trim()) return
@@ -972,13 +998,37 @@ const handleSubmit = async () => {
             </ButtonGroup>
             <ButtonGroup>
               <ButtonGroup>
-                <Select
-                  v-model="member.role"
-                  :disabled="
-                    !canManageOwnerRoles &&
-                    (member.role === 'owner' || member.originalRole === 'owner')
-                  "
-                >
+                <TooltipProvider v-if="isMemberRoleUpdateDisabled(member)">
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <div>
+                        <Select v-model="member.role" disabled>
+                          <SelectTrigger class="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="owner">{{
+                              t("components.teamDialog.roles.owner")
+                            }}</SelectItem>
+                            <SelectItem value="admin">{{
+                              t("components.teamDialog.roles.admin")
+                            }}</SelectItem>
+                            <SelectItem value="member">{{
+                              t("components.teamDialog.roles.member")
+                            }}</SelectItem>
+                            <SelectItem value="guest">{{
+                              t("components.teamDialog.roles.guest")
+                            }}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ ownerRoleManagementReason }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Select v-else v-model="member.role">
                   <SelectTrigger class="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -1007,13 +1057,18 @@ const handleSubmit = async () => {
                       <Button
                         variant="outline"
                         size="icon"
+                        :disabled="isMemberRemovalDisabled(member)"
                         @click="removeMember(member.email, member.id)"
                       >
                         <IconTrash />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {{ t("components.teamDialog.tooltips.removeMember") }}
+                      {{
+                        isMemberRemovalDisabled(member)
+                          ? ownerRoleManagementReason
+                          : t("components.teamDialog.tooltips.removeMember")
+                      }}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -1097,14 +1152,20 @@ const handleSubmit = async () => {
                       <Button
                         variant="outline"
                         size="icon"
-                        :disabled="!canInviteMembers && mode !== 'create'"
+                        :disabled="
+                          (!canInviteMembers && mode !== 'create') ||
+                          isAddMemberBlockedByOwnerPolicy
+                        "
                         @click="addMember"
                       >
                         <IconPlus />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {{ t("components.teamDialog.tooltips.addMember") }}
+                      {{
+                        addMemberDisabledReason ||
+                        t("components.teamDialog.tooltips.addMember")
+                      }}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -1189,13 +1250,18 @@ const handleSubmit = async () => {
                       <Button
                         variant="outline"
                         size="icon"
+                        :disabled="isMemberRemovalDisabled(member)"
                         @click="removeMember(member.email)"
                       >
                         <IconTrash />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {{ t("components.teamDialog.tooltips.cancelInvitation") }}
+                      {{
+                        isMemberRemovalDisabled(member)
+                          ? ownerRoleManagementReason
+                          : t("components.teamDialog.tooltips.cancelInvitation")
+                      }}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

@@ -85,10 +85,24 @@ const isCreatingTeamDialogOpen = ref(false)
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button @click="isCreatingTeamDialogOpen = true">
-            <IconCirclePlus />
-            {{ t("pages.teams.createTeam") }}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <Button
+                    :disabled="!canCreateTeam"
+                    @click="isCreatingTeamDialogOpen = true"
+                  >
+                    <IconCirclePlus />
+                    {{ t("pages.teams.createTeam") }}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canCreateTeam">
+                {{ t(getCannotCreateTeamReason || "") }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </EmptyContent>
       </Empty>
 

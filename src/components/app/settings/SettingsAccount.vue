@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
+import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
 import {
   IconAlertTriangle,
   IconAtSign,
@@ -14,11 +15,7 @@ import { withToast } from "@/helpers/toast"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { updateUserData } from "@/queries/updateUserData"
-import {
-  checkUsernameAvailability,
-  claimUsername,
-  releaseUsername,
-} from "@/queries/username"
+import { claimUsername, releaseUsername } from "@/queries/username"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership } from "@/types/membership"
@@ -29,9 +26,7 @@ import {
 } from "@/utils/firebase/firebase-helpers"
 import {
   USERNAME_MAX_LENGTH,
-  USERNAME_MIN_LENGTH,
   usernamesMatch,
-  validateUsername,
 } from "@/utils/firebase/firebase-username"
 import {
   deleteUser,
@@ -91,6 +86,12 @@ const linkedProviders = computed(() => {
 // ============================================================================
 const localDisplayName = ref(user.value?.displayName ?? "")
 const localUsername = ref(effectiveUsername.value)
+const usernameAvailability = useUsernameAvailability({
+  getCurrentUsername: () => effectiveUsername.value,
+})
+const isCheckingUsername = usernameAvailability.isChecking
+const usernameAvailable = usernameAvailability.available
+const usernameError = usernameAvailability.error
 
 // Sync with external state changes
 watch(
@@ -101,6 +102,7 @@ watch(
 )
 watch(effectiveUsername, (val) => {
   localUsername.value = val
+  usernameAvailability.reset()
 })
 
 watch(currentUsername, (value) => {
@@ -143,7 +145,7 @@ const hasPendingChanges = computed(() => {
 // ============================================================================
 const isSaving = ref(false)
 
-const saveAllChanges = async () => {
+const saveChanges = async () => {
   isSaving.value = true
   const errors: string[] = []
   let changesMade = false
@@ -198,51 +200,19 @@ const saveAllChanges = async () => {
 const discardChanges = () => {
   localDisplayName.value = user.value?.displayName ?? ""
   localUsername.value = effectiveUsername.value
+  usernameAvailability.reset()
 }
 
 // ============================================================================
 // Local state for username checking
 // ============================================================================
-const isCheckingUsername = ref(false)
-const usernameAvailable = ref<boolean | null>(null)
-const usernameError = ref<string | null>(null)
-
 // Check if user has a valid username set
 const hasUsername = computed(() => {
-  const username = effectiveUsername.value
-  return username.trim().length >= USERNAME_MIN_LENGTH
+  return usernameAvailability.hasMinimumLength(effectiveUsername.value)
 })
 
-const checkUsername = async () => {
-  const usernameInput = localUsername.value.trim()
-
-  // Use case-insensitive comparison to check if username changed
-  if (usernamesMatch(usernameInput, effectiveUsername.value)) {
-    usernameAvailable.value = null
-    usernameError.value = null
-    return
-  }
-
-  const validation = validateUsername(usernameInput)
-  if (!validation.valid) {
-    usernameAvailable.value = false
-    usernameError.value = validation.error
-    return
-  }
-
-  usernameError.value = null
-  isCheckingUsername.value = true
-  usernameAvailable.value = await checkUsernameAvailability(usernameInput)
-  if (!usernameAvailable.value) {
-    usernameError.value = "Username is already taken"
-  }
-  isCheckingUsername.value = false
-}
-
-const debouncedCheckUsername = useDebounceFn(checkUsername, 500)
-
 const handleUsernameInput = () => {
-  debouncedCheckUsername()
+  usernameAvailability.handleInput(localUsername.value)
 }
 
 // Disable public profile if username is removed
@@ -1041,7 +1011,7 @@ const passwordExists = computed(() => {
       <Button variant="secondary" :disabled="isSaving" @click="discardChanges">
         {{ t("common.discard") }}
       </Button>
-      <Button :disabled="isSaving" @click="saveAllChanges">
+      <Button :disabled="isSaving" @click="saveChanges">
         <Spinner v-if="isSaving" />
         {{ t("common.save") }}
       </Button>

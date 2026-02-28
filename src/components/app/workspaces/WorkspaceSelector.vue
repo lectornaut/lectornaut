@@ -13,7 +13,8 @@ const { workspaces, isLoading, currentWorkspace } = storeToRefs(workspaceStore)
 
 const teamStore = useTeamStore()
 const { currentTeam } = storeToRefs(teamStore)
-const { canCreateWorkspace } = useWorkspaceActions()
+const { canCreateWorkspace, getCannotCreateWorkspaceReason } =
+  useWorkspaceActions()
 
 const isCreatingWorkspaceDialogOpen = ref(false)
 
@@ -94,15 +95,30 @@ const deselectTeam = async () => {
           </SelectItem>
         </SelectContent>
       </Select>
-      <Button
-        variant="secondary"
-        class="justify-start"
-        :disabled="!currentTeam || !canCreateWorkspace"
-        @click="isCreatingWorkspaceDialogOpen = true"
-      >
-        <IconCirclePlus />
-        Create workspace
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <div>
+              <Button
+                variant="secondary"
+                class="justify-start"
+                :disabled="!currentTeam || !canCreateWorkspace"
+                @click="isCreatingWorkspaceDialogOpen = true"
+              >
+                <IconCirclePlus />
+                Create workspace
+              </Button>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent v-if="!currentTeam || !canCreateWorkspace">
+            {{
+              !currentTeam
+                ? "Select a team to create a workspace"
+                : getCannotCreateWorkspaceReason
+            }}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </EmptyContent>
     <Button variant="outline" size="sm" @click="deselectTeam">
       <IconUsers />

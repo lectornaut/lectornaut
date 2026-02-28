@@ -26,6 +26,7 @@ const {
   teamMembers,
   isLoading,
   canInviteMembers,
+  getCannotInviteMembersReason,
   loading: teamLoading,
   getCannotChangeRoleReason,
   getCannotRemoveMemberReason,
@@ -107,10 +108,24 @@ const handleRemoveMember = (userId: string) => {
               Manage your team members and their roles.
             </FieldDescription>
           </FieldContent>
-          <Button v-if="canInviteMembers" @click="openInviteDialog">
-            <IconPlus />
-            Invite Member
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <Button
+                    :disabled="!canInviteMembers"
+                    @click="openInviteDialog"
+                  >
+                    <IconPlus />
+                    Invite Member
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canInviteMembers">
+                {{ t(getCannotInviteMembersReason || "") }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>

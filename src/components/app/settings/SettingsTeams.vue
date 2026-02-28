@@ -32,10 +32,15 @@ const {
   memberships,
   isLoading,
   loading: teamLoading,
+  canCreateTeam,
   canExitTeam,
   canDeleteTeam,
+  getCannotExitTeamReason,
+  getCannotDeleteTeamReason,
   getTeamMemberCount,
   canEditTeam,
+  getCannotCreateTeamReason,
+  getCannotEditTeamReason,
   switchTeam,
   exitTeam,
   deleteTeam,
@@ -131,10 +136,24 @@ const sortedMemberships = computed(() => {
               Manage your teams and switch between them.
             </FieldDescription>
           </FieldContent>
-          <Button @click="openTeamDialog('create')">
-            <IconPlus />
-            Create Team
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <Button
+                    :disabled="!canCreateTeam"
+                    @click="openTeamDialog('create')"
+                  >
+                    <IconPlus />
+                    Create Team
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canCreateTeam">
+                {{ t(getCannotCreateTeamReason || "") }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -206,6 +225,11 @@ const sortedMemberships = computed(() => {
                               <TooltipTrigger as-child>
                                 <Avatar
                                   class="flex items-center justify-center rounded-md"
+                                  :class="{
+                                    'cursor-pointer': canEditTeam(membership),
+                                    'cursor-not-allowed opacity-60':
+                                      !canEditTeam(membership),
+                                  }"
                                   @click="handleTeamAvatarClick(membership)"
                                 >
                                   <template
@@ -229,27 +253,25 @@ const sortedMemberships = computed(() => {
                                   </template>
                                 </Avatar>
                               </TooltipTrigger>
-                              <TooltipContent v-if="canEditTeam(membership)">
+                              <TooltipContent>
                                 {{
-                                  teamLoading.team.isLoading(
-                                    `photo-${membership.teamId}`
-                                  )
-                                    ? "Uploading..."
-                                    : "Upload team photo"
+                                  canEditTeam(membership)
+                                    ? teamLoading.team.isLoading(
+                                        `photo-${membership.teamId}`
+                                      )
+                                      ? "Uploading..."
+                                      : "Upload team photo"
+                                    : getCannotEditTeamReason(membership)
                                 }}
                               </TooltipContent>
                             </Tooltip>
-                            <Tooltip
-                              v-if="
-                                canEditTeam(membership) &&
-                                membership.team?.photoURL
-                              "
-                            >
+                            <Tooltip v-if="membership.team?.photoURL">
                               <TooltipTrigger as-child>
                                 <Button
                                   variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0 ring-2 transition group-hover:opacity-100"
+                                  class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
                                   size="icon-sm"
+                                  :disabled="!canEditTeam(membership)"
                                   @click.stop="
                                     removeTeamPhoto(membership.teamId)
                                   "
@@ -257,7 +279,13 @@ const sortedMemberships = computed(() => {
                                   <IconX />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Remove team photo</TooltipContent>
+                              <TooltipContent>
+                                {{
+                                  canEditTeam(membership)
+                                    ? "Remove team photo"
+                                    : getCannotEditTeamReason(membership)
+                                }}
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
@@ -318,45 +346,82 @@ const sortedMemberships = computed(() => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      :disabled="!canExitTeam(membership)"
-                                      @click="
-                                        exitTeamDialog.open(membership.team!)
-                                      "
-                                    >
-                                      <IconLogOut />
-                                      Exit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator
-                                      v-if="
-                                        canEditTeam(membership) ||
-                                        canDeleteTeam(membership)
-                                      "
-                                    />
-                                    <DropdownMenuItem
-                                      v-if="canEditTeam(membership)"
-                                      @click="
-                                        openTeamDialog('edit', membership.team!)
-                                      "
-                                    >
-                                      <IconPencil />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator
-                                      v-if="
-                                        canEditTeam(membership) &&
-                                        canDeleteTeam(membership)
-                                      "
-                                    />
-                                    <DropdownMenuItem
-                                      v-if="canDeleteTeam(membership)"
-                                      @click="
-                                        deleteTeamDialog.open(membership.team!)
-                                      "
-                                    >
-                                      <IconTrash />
-                                      Delete
-                                    </DropdownMenuItem>
+                                    <Tooltip>
+                                      <TooltipTrigger as-child>
+                                        <div>
+                                          <DropdownMenuItem
+                                            :disabled="!canExitTeam(membership)"
+                                            @click="
+                                              exitTeamDialog.open(
+                                                membership.team!
+                                              )
+                                            "
+                                          >
+                                            <IconLogOut />
+                                            Exit
+                                          </DropdownMenuItem>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        v-if="!canExitTeam(membership)"
+                                      >
+                                        {{
+                                          getCannotExitTeamReason(membership)
+                                        }}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <DropdownMenuSeparator />
+                                    <Tooltip>
+                                      <TooltipTrigger as-child>
+                                        <div>
+                                          <DropdownMenuItem
+                                            :disabled="!canEditTeam(membership)"
+                                            @click="
+                                              openTeamDialog(
+                                                'edit',
+                                                membership.team!
+                                              )
+                                            "
+                                          >
+                                            <IconPencil />
+                                            Edit
+                                          </DropdownMenuItem>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        v-if="!canEditTeam(membership)"
+                                      >
+                                        {{
+                                          getCannotEditTeamReason(membership)
+                                        }}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger as-child>
+                                        <div>
+                                          <DropdownMenuItem
+                                            :disabled="
+                                              !canDeleteTeam(membership)
+                                            "
+                                            @click="
+                                              deleteTeamDialog.open(
+                                                membership.team!
+                                              )
+                                            "
+                                          >
+                                            <IconTrash />
+                                            Delete
+                                          </DropdownMenuItem>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        v-if="!canDeleteTeam(membership)"
+                                      >
+                                        {{
+                                          getCannotDeleteTeamReason(membership)
+                                        }}
+                                      </TooltipContent>
+                                    </Tooltip>
                                   </DropdownMenuContent>
                                 </TooltipTrigger>
                                 <TooltipContent>Actions</TooltipContent>

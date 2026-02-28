@@ -27,7 +27,12 @@ const {
   currentWorkspace,
   workspaces,
   isLoading,
-  canManageWorkspaces,
+  canCreateWorkspace,
+  canUpdateWorkspace,
+  canDeleteWorkspace,
+  getCannotCreateWorkspaceReason,
+  getCannotUpdateWorkspaceReason,
+  getCannotDeleteWorkspaceReason,
   loading: workspaceLoading,
   switchWorkspace,
   deleteWorkspace,
@@ -58,10 +63,11 @@ const handleDeleteWorkspace = () =>
 // Photo upload
 const workspacePhotoUpload = usePhotoUpload({
   onUpload: updateWorkspacePhoto,
-  canUpload: () => canManageWorkspaces.value,
+  canUpload: () => canUpdateWorkspace.value,
 })
 
 const handleWorkspaceAvatarClick = (workspace: IWorkspace) => {
+  if (!canUpdateWorkspace.value) return
   workspacePhotoUpload.triggerUpload(workspace.id)
 }
 
@@ -124,13 +130,24 @@ const sortedWorkspaces = computed(() => {
               Manage workspaces in your current team.
             </FieldDescription>
           </FieldContent>
-          <Button
-            v-if="canManageWorkspaces"
-            @click="openWorkspaceDialog('create')"
-          >
-            <IconPlus />
-            Create Workspace
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div>
+                  <Button
+                    :disabled="!canCreateWorkspace"
+                    @click="openWorkspaceDialog('create')"
+                  >
+                    <IconPlus />
+                    Create Workspace
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canCreateWorkspace">
+                {{ getCannotCreateWorkspaceReason }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -202,6 +219,11 @@ const sortedWorkspaces = computed(() => {
                               <TooltipTrigger as-child>
                                 <Avatar
                                   class="flex items-center justify-center rounded-md"
+                                  :class="{
+                                    'cursor-pointer': canUpdateWorkspace,
+                                    'cursor-not-allowed opacity-60':
+                                      !canUpdateWorkspace,
+                                  }"
                                   @click="handleWorkspaceAvatarClick(workspace)"
                                 >
                                   <template
@@ -225,24 +247,25 @@ const sortedWorkspaces = computed(() => {
                                   </template>
                                 </Avatar>
                               </TooltipTrigger>
-                              <TooltipContent v-if="canManageWorkspaces">
+                              <TooltipContent>
                                 {{
-                                  workspaceLoading.isLoading(
-                                    `photo-${workspace.id}`
-                                  )
-                                    ? "Uploading..."
-                                    : "Upload workspace photo"
+                                  !canUpdateWorkspace
+                                    ? getCannotUpdateWorkspaceReason
+                                    : workspaceLoading.isLoading(
+                                          `photo-${workspace.id}`
+                                        )
+                                      ? "Uploading..."
+                                      : "Upload workspace photo"
                                 }}
                               </TooltipContent>
                             </Tooltip>
-                            <Tooltip
-                              v-if="canManageWorkspaces && workspace.photoURL"
-                            >
+                            <Tooltip v-if="workspace.photoURL">
                               <TooltipTrigger as-child>
                                 <Button
                                   variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0 ring-2 transition group-hover:opacity-100"
+                                  class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
                                   size="icon-sm"
+                                  :disabled="!canUpdateWorkspace"
                                   @click.stop="
                                     removeWorkspacePhoto(workspace.id)
                                   "
@@ -250,9 +273,13 @@ const sortedWorkspaces = computed(() => {
                                   <IconX />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent
-                                >Remove workspace photo</TooltipContent
-                              >
+                              <TooltipContent>
+                                {{
+                                  !canUpdateWorkspace
+                                    ? getCannotUpdateWorkspaceReason
+                                    : "Remove workspace photo"
+                                }}
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
@@ -294,7 +321,7 @@ const sortedWorkspaces = computed(() => {
                             Current
                           </Button>
                         </ButtonGroup>
-                        <ButtonGroup v-if="canManageWorkspaces">
+                        <ButtonGroup>
                           <DropdownMenu>
                             <TooltipProvider>
                               <Tooltip>
@@ -305,22 +332,51 @@ const sortedWorkspaces = computed(() => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      @click="
-                                        openWorkspaceDialog('edit', workspace)
-                                      "
-                                    >
-                                      <IconPencil />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      @click="
-                                        deleteWorkspaceDialog.open(workspace)
-                                      "
-                                    >
-                                      <IconTrash />
-                                      Delete
-                                    </DropdownMenuItem>
+                                    <Tooltip>
+                                      <TooltipTrigger as-child>
+                                        <div>
+                                          <DropdownMenuItem
+                                            :disabled="!canUpdateWorkspace"
+                                            @click="
+                                              openWorkspaceDialog(
+                                                'edit',
+                                                workspace
+                                              )
+                                            "
+                                          >
+                                            <IconPencil />
+                                            Edit
+                                          </DropdownMenuItem>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        v-if="!canUpdateWorkspace"
+                                      >
+                                        {{ getCannotUpdateWorkspaceReason }}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger as-child>
+                                        <div>
+                                          <DropdownMenuItem
+                                            :disabled="!canDeleteWorkspace"
+                                            @click="
+                                              deleteWorkspaceDialog.open(
+                                                workspace
+                                              )
+                                            "
+                                          >
+                                            <IconTrash />
+                                            Delete
+                                          </DropdownMenuItem>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        v-if="!canDeleteWorkspace"
+                                      >
+                                        {{ getCannotDeleteWorkspaceReason }}
+                                      </TooltipContent>
+                                    </Tooltip>
                                   </DropdownMenuContent>
                                 </TooltipTrigger>
                                 <TooltipContent>Actions</TooltipContent>

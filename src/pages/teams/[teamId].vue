@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconAtSign,
   IconGlobe,
@@ -38,7 +37,6 @@ useHead({
 })
 
 const { t } = useI18n()
-const { canUpdateTeam } = useTeamActions(teamId)
 
 // Fetch team data and members
 const isLoading = ref(true)
@@ -175,7 +173,6 @@ watch(
           }}
         </Badge>
         <Badge
-          v-if="canUpdateTeam"
           variant="outline"
           @click="emitter.emit('Dialog.Settings.Open', 'overview')"
         >

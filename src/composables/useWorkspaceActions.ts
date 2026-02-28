@@ -34,6 +34,11 @@ export function useWorkspaceActions() {
       ? "Only team owners and admins can create workspaces"
       : null
   )
+  const getCannotManageWorkspacesReason = computed(() =>
+    !canManageWorkspaces.value
+      ? "Only team owners and admins can manage workspaces"
+      : null
+  )
 
   const canUpdateWorkspace = computed(() =>
     can(currentUser.value, Capabilities.EDIT_WORKSPACE, {
@@ -76,7 +81,15 @@ export function useWorkspaceActions() {
   const deleteWorkspace = async (workspaceId: string) =>
     actions.run(
       `delete-${workspaceId}`,
-      () => workspaceStore.deleteWorkspace(workspaceId),
+      async () => {
+        if (!canDeleteWorkspace.value) {
+          throw new Error(
+            getCannotDeleteWorkspaceReason.value ||
+              "You do not have permission to delete workspaces"
+          )
+        }
+        await workspaceStore.deleteWorkspace(workspaceId)
+      },
       {
         success: "Workspace deleted successfully",
         error: "Failed to delete workspace",
@@ -91,7 +104,15 @@ export function useWorkspaceActions() {
   ) =>
     actions.run(
       "create",
-      () => workspaceStore.createWorkspace(name, description, photoFile),
+      async () => {
+        if (!canCreateWorkspace.value) {
+          throw new Error(
+            getCannotCreateWorkspaceReason.value ||
+              "You do not have permission to create workspaces"
+          )
+        }
+        await workspaceStore.createWorkspace(name, description, photoFile)
+      },
       {
         success: "Workspace created successfully",
         error: "Failed to create workspace",
@@ -109,7 +130,15 @@ export function useWorkspaceActions() {
   ) =>
     actions.run(
       `update-${workspaceId}`,
-      () => workspaceStore.updateWorkspace(workspaceId, updates),
+      async () => {
+        if (!canUpdateWorkspace.value) {
+          throw new Error(
+            getCannotUpdateWorkspaceReason.value ||
+              "You do not have permission to update workspaces"
+          )
+        }
+        await workspaceStore.updateWorkspace(workspaceId, updates)
+      },
       {
         success: "Workspace updated successfully",
         error: "Failed to update workspace",
@@ -120,7 +149,15 @@ export function useWorkspaceActions() {
   const updateWorkspacePhoto = async (workspaceId: string, file: File) =>
     actions.run(
       `photo-${workspaceId}`,
-      () => workspaceStore.updateWorkspace(workspaceId, { photoFile: file }),
+      async () => {
+        if (!canUpdateWorkspace.value) {
+          throw new Error(
+            getCannotUpdateWorkspaceReason.value ||
+              "You do not have permission to update workspaces"
+          )
+        }
+        await workspaceStore.updateWorkspace(workspaceId, { photoFile: file })
+      },
       {
         info: "Uploading workspace photo...",
         success: "Workspace photo updated successfully",
@@ -132,7 +169,15 @@ export function useWorkspaceActions() {
   const removeWorkspacePhoto = async (workspaceId: string) =>
     actions.run(
       `photo-${workspaceId}`,
-      () => workspaceStore.updateWorkspace(workspaceId, { photoFile: null }),
+      async () => {
+        if (!canUpdateWorkspace.value) {
+          throw new Error(
+            getCannotUpdateWorkspaceReason.value ||
+              "You do not have permission to update workspaces"
+          )
+        }
+        await workspaceStore.updateWorkspace(workspaceId, { photoFile: null })
+      },
       {
         success: "Workspace photo removed successfully",
         error: "Failed to remove workspace photo",
@@ -160,6 +205,7 @@ export function useWorkspaceActions() {
     getCannotCreateWorkspaceReason,
     getCannotUpdateWorkspaceReason,
     getCannotDeleteWorkspaceReason,
+    getCannotManageWorkspacesReason,
 
     // Actions
     switchWorkspace,

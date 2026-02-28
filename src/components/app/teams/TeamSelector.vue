@@ -21,7 +21,8 @@ const computedTeams = computed(() =>
   }))
 )
 
-const { currentTeam } = useTeamActions()
+const { currentTeam, canCreateTeam, getCannotCreateTeamReason } =
+  useTeamActions()
 
 const switchTeam = async (teamId: AcceptableValue) => {
   if (typeof teamId !== "string") return
@@ -82,14 +83,26 @@ const switchTeam = async (teamId: AcceptableValue) => {
           </SelectItem>
         </SelectContent>
       </Select>
-      <Button
-        variant="secondary"
-        class="justify-start"
-        @click="isCreatingTeamDialogOpen = true"
-      >
-        <IconCirclePlus />
-        Create team
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <div>
+              <Button
+                variant="secondary"
+                class="justify-start"
+                :disabled="!canCreateTeam"
+                @click="isCreatingTeamDialogOpen = true"
+              >
+                <IconCirclePlus />
+                Create team
+              </Button>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent v-if="!canCreateTeam">
+            {{ getCannotCreateTeamReason }}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </EmptyContent>
     <Button
       variant="outline"

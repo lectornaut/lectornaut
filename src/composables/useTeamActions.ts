@@ -142,9 +142,28 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     }
     return true
   }
+  const getCannotExitTeamReason = (membership: IMembership): string | null => {
+    if (canExitTeam(membership)) return null
+    if (
+      membership.role === "owner" &&
+      membership.teamId === currentTeam.value?.id &&
+      ownerCount.value <= 1
+    ) {
+      return "Cannot exit the last owner of this team"
+    }
+    if (
+      membership.role === "owner" &&
+      membershipStore.getTeamMemberCount(membership.teamId) <= 1
+    ) {
+      return "Cannot exit the only member of this team"
+    }
+    return "You do not have permission to leave this team"
+  }
 
   const canDeleteTeam = (membership: IMembership) =>
     roleCan(membership.role, Capabilities.DELETE_TEAM)
+  const getCannotDeleteTeamReason = (membership: IMembership): string | null =>
+    canDeleteTeam(membership) ? null : "Only team owners can delete teams"
 
   const canUpdateTeam = computed(() =>
     can(user.value, Capabilities.EDIT_TEAM, {
@@ -167,6 +186,10 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
 
   const canEditTeam = (membership: IMembership) =>
     roleCan(membership.role, Capabilities.EDIT_TEAM)
+  const getCannotEditTeamReason = (membership: IMembership): string | null =>
+    canEditTeam(membership)
+      ? null
+      : "Only team owners and admins can update team settings"
 
   const canManageBilling = computed(() =>
     can(user.value, Capabilities.MANAGE_BILLING, {
@@ -226,6 +249,10 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
 
   const switchTeam = async (teamId: string) => {
     if (currentTeam.value?.id === teamId) return
+    const membership = memberships.value.find((m) => m.teamId === teamId)
+    if (!membership) {
+      throw new Error("You do not belong to this team")
+    }
     return teamActions.run(teamId, () => teamStore.switchTeam(teamId), {
       success: "Switched team successfully",
       error: "Failed to switch team",
@@ -235,7 +262,17 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
   const exitTeam = async (teamId: string) =>
     teamActions.run(
       `exit-${teamId}`,
-      () => membershipStore.removeMember(teamId, user.value!.uid),
+      async () => {
+        const membership = memberships.value.find((m) => m.teamId === teamId)
+        if (!membership) {
+          throw new Error("You do not belong to this team")
+        }
+        const cannotReason = getCannotExitTeamReason(membership)
+        if (cannotReason) {
+          throw new Error(cannotReason)
+        }
+        await membershipStore.removeMember(teamId, user.value!.uid)
+      },
       {
         success: "You have left the team",
         error: "Failed to leave team",
@@ -243,10 +280,24 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     )
 
   const deleteTeam = async (teamId: string) =>
-    teamActions.run(`delete-${teamId}`, () => teamStore.deleteTeam(teamId), {
-      success: "Team deleted successfully",
-      error: "Failed to delete team",
-    })
+    teamActions.run(
+      `delete-${teamId}`,
+      async () => {
+        const membership = memberships.value.find((m) => m.teamId === teamId)
+        if (!membership) {
+          throw new Error("You do not belong to this team")
+        }
+        const cannotReason = getCannotDeleteTeamReason(membership)
+        if (cannotReason) {
+          throw new Error(cannotReason)
+        }
+        await teamStore.deleteTeam(teamId)
+      },
+      {
+        success: "Team deleted successfully",
+        error: "Failed to delete team",
+      }
+    )
 
   const createTeam = async (
     name: string,
@@ -256,10 +307,22 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       isPublic?: boolean
     }
   ) =>
-    teamActions.run("create", () => teamStore.createTeam(name, options), {
-      success: "Team created successfully",
-      error: "Failed to create team",
-    })
+    teamActions.run(
+      "create",
+      async () => {
+        if (!canCreateTeam.value) {
+          throw new Error(
+            getCannotCreateTeamReason.value ||
+              "You do not have permission to create teams"
+          )
+        }
+        return teamStore.createTeam(name, options)
+      },
+      {
+        success: "Team created successfully",
+        error: "Failed to create team",
+      }
+    )
 
   const updateTeam = async (
     teamId: string,
@@ -272,7 +335,15 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
   ) =>
     teamActions.run(
       `update-${teamId}`,
-      () => teamStore.updateTeam(teamId, updates),
+      async () => {
+        if (!canUpdateTeam.value) {
+          throw new Error(
+            getCannotUpdateTeamReason.value ||
+              "You do not have permission to update teams"
+          )
+        }
+        await teamStore.updateTeam(teamId, updates)
+      },
       {
         success: "Team updated successfully",
         error: "Failed to update team",
@@ -282,7 +353,17 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
   const updateTeamPhoto = async (teamId: string, photoFile: File) =>
     teamActions.run(
       `photo-${teamId}`,
-      () => teamStore.updateTeam(teamId, { photoFile }),
+      async () => {
+        const membership = memberships.value.find((m) => m.teamId === teamId)
+        if (!membership) {
+          throw new Error("You do not belong to this team")
+        }
+        const cannotReason = getCannotEditTeamReason(membership)
+        if (cannotReason) {
+          throw new Error(cannotReason)
+        }
+        await teamStore.updateTeam(teamId, { photoFile })
+      },
       {
         info: "Uploading team photo...",
         success: "Team photo updated",
@@ -293,7 +374,17 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
   const removeTeamPhoto = async (teamId: string) =>
     teamActions.run(
       `photo-${teamId}`,
-      () => teamStore.updateTeam(teamId, { photoFile: null }),
+      async () => {
+        const membership = memberships.value.find((m) => m.teamId === teamId)
+        if (!membership) {
+          throw new Error("You do not belong to this team")
+        }
+        const cannotReason = getCannotEditTeamReason(membership)
+        if (cannotReason) {
+          throw new Error(cannotReason)
+        }
+        await teamStore.updateTeam(teamId, { photoFile: null })
+      },
       {
         success: "Team photo removed",
         error: "Failed to remove team photo",
@@ -309,6 +400,12 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       async () => {
         const teamId = effectiveTeamId.value
         if (!teamId) return
+        if (!canInviteMembers.value) {
+          throw new Error(
+            getCannotInviteMembersReason.value ||
+              "You do not have permission to invite members"
+          )
+        }
         await membershipStore.inviteMember(teamId, email, role)
       },
       {
@@ -344,6 +441,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     // Disabled state reasons
     getCannotChangeRoleReason,
     getCannotRemoveMemberReason,
+    getCannotExitTeamReason,
+    getCannotDeleteTeamReason,
+    getCannotEditTeamReason,
     getCannotUpdateTeamReason,
     getCannotCreateTeamReason,
     getCannotInviteMembersReason,

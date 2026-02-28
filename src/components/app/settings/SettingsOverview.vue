@@ -1,16 +1,16 @@
 <script lang="ts" setup>
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
+import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
 import { IconAtSign, IconCheck, IconPencil, IconX } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { checkUsernameAvailability } from "@/queries/username"
 import {
   USERNAME_MAX_LENGTH,
-  USERNAME_MIN_LENGTH,
   usernamesMatch,
-  validateUsername,
 } from "@/utils/firebase/firebase-username"
 import { toast } from "vue-sonner"
+
+const { t } = useI18n()
 
 const {
   currentTeam,
@@ -23,18 +23,21 @@ const {
 } = useTeamActions()
 
 const localTeamName = ref("")
-const localTeamUsername = ref("")
+const localUsername = ref("")
 const optimisticTeamIsPublic = ref<boolean | null>(null)
-const isCheckingTeamUsername = ref(false)
-const teamUsernameAvailable = ref<boolean | null>(null)
-const teamUsernameError = ref<string | null>(null)
 const isSaving = ref(false)
 
 const currentTeamName = computed(() => currentTeam.value?.name ?? "")
-const currentTeamUsername = computed(() => currentTeam.value?.username ?? "")
-const currentTeamIsPublic = computed(() => currentTeam.value?.isPublic ?? false)
-const teamIsPublic = computed(
-  () => optimisticTeamIsPublic.value ?? currentTeamIsPublic.value
+const currentUsername = computed(() => currentTeam.value?.username ?? "")
+const currentIsPublic = computed(() => currentTeam.value?.isPublic ?? false)
+const usernameAvailability = useUsernameAvailability({
+  getCurrentUsername: () => currentUsername.value,
+})
+const isCheckingUsername = usernameAvailability.isChecking
+const usernameAvailable = usernameAvailability.available
+const usernameError = usernameAvailability.error
+const isPublic = computed(
+  () => optimisticTeamIsPublic.value ?? currentIsPublic.value
 )
 
 watch(
@@ -46,16 +49,15 @@ watch(
 )
 
 watch(
-  currentTeamUsername,
+  currentUsername,
   (username) => {
-    localTeamUsername.value = username ?? ""
-    teamUsernameAvailable.value = null
-    teamUsernameError.value = null
+    localUsername.value = username ?? ""
+    usernameAvailability.reset()
   },
   { immediate: true }
 )
 
-watch(currentTeamIsPublic, (value) => {
+watch(currentIsPublic, (value) => {
   if (
     optimisticTeamIsPublic.value !== null &&
     value === optimisticTeamIsPublic.value
@@ -64,30 +66,27 @@ watch(currentTeamIsPublic, (value) => {
   }
 })
 
-const hasTeamUsername = computed(() => {
-  const usernameInput = localTeamUsername.value.trim()
-  return usernameInput.length >= USERNAME_MIN_LENGTH
+const hasUsername = computed(() => {
+  return usernameAvailability.hasMinimumLength(localUsername.value)
 })
 
-const hasValidTeamUsername = computed(() => {
-  const usernameInput = localTeamUsername.value.trim()
-  if (!usernameInput) return false
-  return validateUsername(usernameInput).valid
+const hasValidUsername = computed(() => {
+  return usernameAvailability.isValidUsername(localUsername.value)
 })
 
-const publicTeamPath = computed(() => {
-  const usernameInput = localTeamUsername.value.trim()
-  if (usernameInput && validateUsername(usernameInput).valid) {
+const publicPath = computed(() => {
+  const usernameInput = localUsername.value.trim()
+  if (usernameAvailability.isValidUsername(usernameInput)) {
     return usernameInput
   }
-  return currentTeamUsername.value.trim()
+  return currentUsername.value.trim()
 })
 
 const hasPendingChanges = computed(() => {
   const nameChanged = localTeamName.value.trim() !== currentTeamName.value
   const usernameChanged = !usernamesMatch(
-    localTeamUsername.value,
-    currentTeamUsername.value
+    localUsername.value,
+    currentUsername.value
   )
   return nameChanged || usernameChanged
 })
@@ -103,15 +102,15 @@ const isUpdatingOverview = computed(() => {
 })
 
 const canSave = computed(() => {
-  const usernameInput = localTeamUsername.value.trim()
+  const usernameInput = localUsername.value.trim()
 
-  if (usernameInput && !validateUsername(usernameInput).valid) {
+  if (usernameInput && !usernameAvailability.isValidUsername(usernameInput)) {
     return false
   }
 
   if (
-    teamUsernameAvailable.value === false &&
-    !usernamesMatch(usernameInput, currentTeamUsername.value)
+    usernameAvailable.value === false &&
+    !usernamesMatch(usernameInput, currentUsername.value)
   ) {
     return false
   }
@@ -139,104 +138,47 @@ const handleRemoveTeamPhoto = () => {
   removeTeamPhoto(currentTeam.value.id)
 }
 
-const checkTeamUsername = async () => {
-  const usernameInput = localTeamUsername.value.trim()
-
-  if (!usernameInput) {
-    teamUsernameAvailable.value = null
-    teamUsernameError.value = null
-    return
-  }
-
-  if (usernamesMatch(usernameInput, currentTeamUsername.value)) {
-    teamUsernameAvailable.value = null
-    teamUsernameError.value = null
-    return
-  }
-
-  const validation = validateUsername(usernameInput)
-  if (!validation.valid || !validation.normalized) {
-    teamUsernameAvailable.value = false
-    teamUsernameError.value = validation.error
-    return
-  }
-
-  teamUsernameError.value = null
-  isCheckingTeamUsername.value = true
-  try {
-    teamUsernameAvailable.value = await checkUsernameAvailability(
-      validation.normalized
-    )
-    if (!teamUsernameAvailable.value) {
-      teamUsernameError.value = "Username is already taken"
-    }
-  } finally {
-    isCheckingTeamUsername.value = false
-  }
+const handleUsernameInput = () => {
+  usernameAvailability.handleInput(localUsername.value)
 }
 
-const debouncedCheckTeamUsername = useDebounceFn(checkTeamUsername, 500)
-
-const handleTeamUsernameInput = () => {
-  if (!localTeamUsername.value.trim()) {
-    teamUsernameAvailable.value = null
-    teamUsernameError.value = null
-    return
-  }
-  debouncedCheckTeamUsername()
-}
-
-const resolveTeamUsernamePayload = async (
+const resolveUsernamePayload = async (
   options: { requireUsername?: boolean } = {}
 ) => {
   const { requireUsername = false } = options
-  const trimmedUsername = localTeamUsername.value.trim()
+  const trimmedUsername = localUsername.value.trim()
 
   if (!trimmedUsername) {
     if (requireUsername) {
       throw new Error("Public team requires a username")
     }
-    return currentTeamUsername.value ? null : undefined
+    return currentUsername.value ? null : undefined
   }
 
-  const validation = validateUsername(trimmedUsername)
-  if (!validation.valid || !validation.normalized) {
-    teamUsernameAvailable.value = false
-    teamUsernameError.value = validation.error || null
-    throw new Error(validation.error || "Invalid username")
-  }
-
-  const normalizedUsername = validation.normalized
-  if (usernamesMatch(normalizedUsername, currentTeamUsername.value)) {
-    teamUsernameAvailable.value = null
-    teamUsernameError.value = null
+  const result = await usernameAvailability.evaluate(trimmedUsername)
+  if (result.state === "unchanged") {
     return undefined
   }
 
-  isCheckingTeamUsername.value = true
-  try {
-    const isAvailable = await checkUsernameAvailability(normalizedUsername)
-    teamUsernameAvailable.value = isAvailable
-    teamUsernameError.value = isAvailable ? null : "Username is already taken"
-
-    if (!isAvailable) {
-      throw new Error("Username is already taken")
-    }
-
-    return normalizedUsername
-  } finally {
-    isCheckingTeamUsername.value = false
+  if (result.state === "invalid" || result.state === "taken") {
+    throw new Error(result.error || "Invalid username")
   }
+
+  if (result.state === "available" && result.normalized) {
+    return result.normalized
+  }
+
+  throw new Error("Invalid username")
 }
 
-const toggleTeamIsPublic = async (value: boolean) => {
+const toggleIsPublic = async (value: boolean) => {
   if (!canUpdateTeam.value || !currentTeam.value) return
 
   let usernamePayload: string | null | undefined = undefined
 
   if (value) {
     try {
-      usernamePayload = await resolveTeamUsernamePayload({
+      usernamePayload = await resolveUsernamePayload({
         requireUsername: true,
       })
     } catch (error) {
@@ -245,7 +187,7 @@ const toggleTeamIsPublic = async (value: boolean) => {
     }
   }
 
-  if (value === currentTeamIsPublic.value && usernamePayload === undefined) {
+  if (value === currentIsPublic.value && usernamePayload === undefined) {
     return
   }
 
@@ -276,7 +218,7 @@ const saveChanges = async () => {
     }
 
     try {
-      usernamePayload = await resolveTeamUsernamePayload()
+      usernamePayload = await resolveUsernamePayload()
     } catch (error) {
       toast.error((error as Error).message)
       return
@@ -285,7 +227,7 @@ const saveChanges = async () => {
     if (
       usernamePayload === null &&
       isPublicPayload === undefined &&
-      currentTeamIsPublic.value
+      currentIsPublic.value
     ) {
       isPublicPayload = false
     }
@@ -310,9 +252,8 @@ const saveChanges = async () => {
 
 const discardChanges = () => {
   localTeamName.value = currentTeamName.value
-  localTeamUsername.value = currentTeamUsername.value
-  teamUsernameAvailable.value = null
-  teamUsernameError.value = null
+  localUsername.value = currentUsername.value
+  usernameAvailability.reset()
 }
 </script>
 
@@ -373,7 +314,7 @@ const discardChanges = () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0 ring-2 transition group-hover:opacity-100"
+                      class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
                       size="icon-sm"
                       @click.stop="handleRemoveTeamPhoto"
                     >
@@ -437,16 +378,18 @@ const discardChanges = () => {
                     <InputGroup>
                       <InputGroupInput
                         id="team-username"
-                        v-model="localTeamUsername"
-                        placeholder="team-handle"
+                        v-model="localUsername"
+                        :placeholder="
+                          t('settings.account.username.placeholder')
+                        "
                         :maxlength="USERNAME_MAX_LENGTH"
                         :disabled="!canUpdateTeam || !currentTeam"
-                        @input="handleTeamUsernameInput"
+                        @input="handleUsernameInput"
                         @keyup.enter="saveChanges"
                       />
                       <InputGroupAddon align="inline-end">
                         <TooltipProvider>
-                          <Tooltip v-if="isCheckingTeamUsername">
+                          <Tooltip v-if="isCheckingUsername">
                             <TooltipTrigger as-child>
                               <Spinner class="size-4" />
                             </TooltipTrigger>
@@ -454,7 +397,7 @@ const discardChanges = () => {
                               Checking availability
                             </TooltipContent>
                           </Tooltip>
-                          <Tooltip v-else-if="teamUsernameAvailable === true">
+                          <Tooltip v-else-if="usernameAvailable === true">
                             <TooltipTrigger as-child>
                               <IconCheck class="text-green-500" />
                             </TooltipTrigger>
@@ -462,13 +405,11 @@ const discardChanges = () => {
                               >Username is available</TooltipContent
                             >
                           </Tooltip>
-                          <Tooltip v-else-if="teamUsernameAvailable === false">
+                          <Tooltip v-else-if="usernameAvailable === false">
                             <TooltipTrigger as-child>
                               <IconX class="text-red-500" />
                             </TooltipTrigger>
-                            <TooltipContent>{{
-                              teamUsernameError
-                            }}</TooltipContent>
+                            <TooltipContent>{{ usernameError }}</TooltipContent>
                           </Tooltip>
                           <Tooltip v-else>
                             <TooltipTrigger as-child>
@@ -503,14 +444,14 @@ const discardChanges = () => {
                   <span class="inline-block">
                     <Switch
                       id="team-is-public"
-                      :model-value="teamIsPublic"
+                      :model-value="isPublic"
                       :disabled="
                         !currentTeam ||
                         !canUpdateTeam ||
                         isUpdatingOverview ||
-                        (!teamIsPublic && !hasValidTeamUsername)
+                        (!isPublic && !hasValidUsername)
                       "
-                      @update:model-value="toggleTeamIsPublic"
+                      @update:model-value="toggleIsPublic"
                     />
                   </span>
                 </TooltipTrigger>
@@ -518,11 +459,11 @@ const discardChanges = () => {
                   {{
                     !canUpdateTeam
                       ? getCannotUpdateTeamReason
-                      : teamIsPublic
-                        ? publicTeamPath
-                          ? `Public at /${publicTeamPath}`
+                      : isPublic
+                        ? publicPath
+                          ? `Public at /${publicPath}`
                           : "Public team is enabled"
-                        : !hasTeamUsername
+                        : !hasUsername
                           ? "Set a username to enable public access"
                           : "Turn on to make this team public"
                   }}
