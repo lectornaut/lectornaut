@@ -21,6 +21,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 const isAuthLoaded = useIsCurrentUserLoaded()
+const { t } = useI18n()
 
 const currentUser = useCurrentUser()
 const db = useFirestore()
@@ -38,14 +39,14 @@ const rawUsernameSegment = computed(() => {
   return name
 })
 
-const loading = ref(true)
+const loading = ref(!!username.value)
 const user = ref<DocumentData | null>(null)
 const team = ref<DocumentData | null>(null)
 const viewedTeamId = ref<string | null>(null)
 const entityType = ref<"user" | "team" | null>(null)
 const isPrivate = ref(false)
 const error = ref<string | null>(null)
-const hasFetched = ref(false)
+let fetchRequestId = 0
 
 const targetTeamId = computed(() =>
   entityType.value === "team" ? viewedTeamId.value : null
@@ -74,34 +75,42 @@ const displayName = computed(() => {
   if (user.value?.displayName) return user.value.displayName
   if (team.value?.name) return team.value.name
   if (isPrivate.value) {
-    return entityType.value === "team" ? "Private Team" : "Private User"
+    return t("pages.publicProfile.privateTitle")
   }
-  return username.value
+  return username.value || t("pages.publicProfile.title")
 })
 
 const isPublicProfile = computed(
   () => user.value?.isPublic || team.value?.isPublic || false
 )
+const shouldShowUsername = computed(
+  () => !error.value && !isPrivate.value && !!username.value
+)
 
 watch(username, () => {
-  hasFetched.value = false
   user.value = null
   team.value = null
   viewedTeamId.value = null
   entityType.value = null
   isPrivate.value = false
   error.value = null
+  loading.value = !!username.value
 })
 
 const fetchPublicProfile = async () => {
-  // Don't fetch if username is empty or already fetched
-  if (!username.value || hasFetched.value) return
+  if (!username.value) {
+    loading.value = false
+    error.value = t("pages.publicProfile.invalidUsername")
+    return
+  }
 
-  hasFetched.value = true
+  const requestId = ++fetchRequestId
   loading.value = true
+  error.value = null
 
   try {
     const result: UserFetchResult = await getUserByUsername(username.value)
+    if (requestId !== fetchRequestId) return
 
     switch (result.status) {
       case "found":
@@ -117,6 +126,7 @@ const fetchPublicProfile = async () => {
           const teamResult: TeamFetchResult = await getTeamByUsername(
             username.value
           )
+          if (requestId !== fetchRequestId) return
 
           switch (teamResult.status) {
             case "found":
@@ -139,22 +149,27 @@ const fetchPublicProfile = async () => {
                 query: route.query,
                 hash: route.hash,
               })
+              if (requestId !== fetchRequestId) return
               return
             case "error":
-              error.value = teamResult.message
+              error.value =
+                teamResult.message || t("pages.publicProfile.fetchError")
               break
           }
         }
         break
       case "error":
-        error.value = result.message
+        error.value = result.message || t("pages.publicProfile.fetchError")
         break
     }
   } catch (err) {
+    if (requestId !== fetchRequestId) return
     console.error("Error fetching user:", err)
-    error.value = "An error occurred while fetching the profile"
+    error.value = t("pages.publicProfile.fetchError")
   } finally {
-    loading.value = false
+    if (requestId === fetchRequestId) {
+      loading.value = false
+    }
   }
 }
 
@@ -163,23 +178,31 @@ const fetchPublicProfile = async () => {
 watch(
   [username, isAuthLoaded],
   ([newUsername, authLoaded]) => {
-    if (newUsername && authLoaded && !hasFetched.value) {
-      fetchPublicProfile()
+    if (!authLoaded) return
+    if (!newUsername) {
+      loading.value = false
+      error.value = t("pages.publicProfile.invalidUsername")
+      return
     }
+    void fetchPublicProfile()
   },
   { immediate: true }
 )
 
-useHead({
-  title: username.value ? `@${username.value}` : "Profile",
-})
+useHead(() => ({
+  title: isPrivate.value
+    ? t("pages.publicProfile.privateTitle")
+    : username.value
+      ? `@${username.value}`
+      : t("pages.publicProfile.title"),
+}))
 </script>
 
 <template>
   <div class="container mx-auto">
     <!-- Loading State -->
     <template v-if="loading">
-      <div class="flex flex-col items-center justify-center p-2">
+      <div class="flex h-screen flex-col items-center justify-center p-2">
         <Spinner />
       </div>
     </template>
@@ -188,9 +211,28 @@ useHead({
     <template v-else>
       <div class="flex flex-col items-center justify-center p-2">
         <div
-          class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
-        ></div>
-        <div class="bg-background mx-auto -mt-10 rounded border p-1">
+          class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-lg border bg-[repeating-linear-gradient(135deg,var(--border)_0,var(--border)_1px,transparent_0,transparent_25%)] bg-size-[16px_16px] shadow-xs"
+        >
+          <div class="flex items-center justify-between p-2">
+            <Logo class="size-8 shrink-0 p-2" />
+            <Button
+              v-if="settingsRoute"
+              variant="outline"
+              size="sm"
+              @click="router.push(settingsRoute)"
+            >
+              <IconSettings />
+              {{ t("pages.publicProfile.settings") }}
+            </Button>
+          </div>
+          <div class="flex grow items-center justify-between p-2"></div>
+          <div class="flex items-center justify-between p-2">
+            avatar stack here
+          </div>
+        </div>
+        <div
+          class="bg-background mx-auto -mt-10 rounded-lg border p-1.5 shadow-xs"
+        >
           <div v-if="user || team">
             <Avatar class="size-20 rounded">
               <AvatarImage
@@ -220,27 +262,34 @@ useHead({
           {{ displayName }}
         </h1>
 
-        <span v-if="!error" class="text-muted-foreground">
+        <span v-if="shouldShowUsername" class="text-muted-foreground">
           <IconAtSign />
           {{ username }}
         </span>
+        <p
+          v-else-if="isPrivate"
+          class="text-muted-foreground text-center text-sm"
+        >
+          {{ t("pages.publicProfile.privateDescription") }}
+        </p>
 
-        <div v-if="!error" class="flex items-center gap-2">
+        <div v-if="error" class="flex flex-col items-center gap-2">
+          <p class="text-muted-foreground text-sm">{{ error }}</p>
+          <Button variant="outline" size="sm" @click="fetchPublicProfile">
+            {{ t("pages.publicProfile.retry") }}
+          </Button>
+        </div>
+        <div v-else class="flex items-center gap-2">
           <Badge variant="secondary">
             <IconGlobe v-if="isPublicProfile" />
             <IconLock v-else />
-            {{ isPublicProfile ? "Public" : "Private" }} {{ entityType }}
-          </Badge>
-          <Badge
-            v-if="settingsRoute"
-            variant="outline"
-            @click="router.push(settingsRoute)"
-          >
-            <IconSettings />
-            Settings
+            {{
+              isPublicProfile
+                ? t("pages.publicProfile.public")
+                : t("pages.publicProfile.private")
+            }}
           </Badge>
         </div>
-        <p v-if="error" class="text-muted-foreground text-sm">{{ error }}</p>
       </div>
     </template>
   </div>

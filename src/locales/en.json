@@ -1036,6 +1036,17 @@
       "teamCount": "{count} team | {count} teams",
       "noTeams": "No teams yet"
     },
+    "publicProfile": {
+      "title": "Profile",
+      "privateTitle": "Private Profile",
+      "privateDescription": "This profile is private.",
+      "invalidUsername": "Invalid profile URL.",
+      "fetchError": "An error occurred while fetching the profile.",
+      "retry": "Retry",
+      "public": "Public",
+      "private": "Private",
+      "settings": "Settings"
+    },
     "teams": {
       "title": "Teams",
       "description": "Manage and collaborate with your teams",

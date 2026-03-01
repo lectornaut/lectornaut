@@ -69,23 +69,45 @@ const teams = computed(() =>
                   </span>
                 </div>
                 <div class="flex items-center gap-1">
-                  <div class="flex -space-x-1">
-                    <Avatar
-                      v-for="member in teamMembers.slice(0, 3)"
-                      :key="member.userId"
-                      class="ring-sidebar size-5 rounded ring-3"
-                    >
-                      <AvatarImage
-                        class="rounded"
-                        :src="member.user?.photoURL!"
-                        :alt="member.user?.displayName"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback class="rounded">
-                        {{ getInitials(member.user?.displayName!) }}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
+                  <TooltipProvider>
+                    <div class="flex -space-x-1">
+                      <Tooltip
+                        v-for="member in teamMembers.slice(0, 3)"
+                        :key="member.userId"
+                      >
+                        <TooltipTrigger as-child>
+                          <Avatar class="ring-sidebar size-5 rounded ring-3">
+                            <AvatarImage
+                              class="rounded"
+                              :src="member.user?.photoURL!"
+                              :alt="
+                                member.user?.displayName ||
+                                member.user?.email ||
+                                member.userId
+                              "
+                              referrerpolicy="no-referrer"
+                            />
+                            <AvatarFallback class="rounded">
+                              {{
+                                getInitials(
+                                  member.user?.displayName ||
+                                    member.user?.email ||
+                                    member.userId
+                                )
+                              }}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {{
+                            member.user?.displayName ||
+                            member.user?.email ||
+                            member.userId
+                          }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                   <span
                     v-if="teamMembers.length > 3"
                     class="text-muted-foreground text-xs"
