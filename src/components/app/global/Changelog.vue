@@ -56,7 +56,8 @@ emitter.on("Dialog.Changelog.Open", (id) => {
           </Accordion>
         </div>
       </OverlayScrollbarsWrapper>
-      <SheetFooter class="bg-accent rounded rounded-b-none p-1.5">
+      <Separator />
+      <SheetFooter>
         <Button class="justify-start" variant="secondary">
           <IconMessageCircle />
           Get support

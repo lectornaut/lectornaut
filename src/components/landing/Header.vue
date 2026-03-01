@@ -518,7 +518,7 @@ const { t } = useI18n()
                       </div>
                     </OverlayScrollbarsWrapper>
                     <Separator />
-                    <SheetFooter class="bg-accent rounded rounded-b-none p-1.5">
+                    <SheetFooter>
                       <div class="flex items-center justify-between gap-2">
                         <ColorMode />
                         <LanguageSwitcher />

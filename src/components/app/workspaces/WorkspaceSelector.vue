@@ -98,7 +98,7 @@ const deselectTeam = async () => {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
-            <div>
+            <div class="grid">
               <Button
                 variant="secondary"
                 class="justify-start"

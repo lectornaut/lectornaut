@@ -417,27 +417,6 @@ export const shortcuts: ShortcutCategory[] = [
     title: "Settings",
     id: "settings",
     shortcuts: [
-      // With keyboard shortcuts
-      {
-        description: ["Settings", "Members"],
-        keys: [[getPlatformSpecialKey(), "⇧", "M"]],
-        hotkeys: "cmd+shift+m,ctrl+shift+m",
-        event: "Dialog.Settings.Open",
-        parameters: "members",
-        icon: IconUsersRound,
-        tags: ["settings", "members", "users", "team"],
-        visibility: { hideFrom: ["commands"] },
-      },
-      {
-        description: ["Settings", "Teams"],
-        keys: [[getPlatformSpecialKey(), ";"]],
-        hotkeys: "cmd+;,ctrl+;",
-        event: "Dialog.Settings.Open",
-        parameters: "teams",
-        icon: IconComponent,
-        tags: ["settings", "teams", "workspace", "organization"],
-        visibility: { hideFrom: ["commands"] },
-      },
       // Command palette only (no keyboard shortcuts)
       {
         description: ["Settings", "Account"],
@@ -462,6 +441,48 @@ export const shortcuts: ShortcutCategory[] = [
         icon: IconCreditCard,
         tags: ["settings", "billing", "payment", "subscription"],
         visibility: { hideFrom: ["hotkeys", "shortcuts"] },
+      },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Team settings - Quick access to settings panels
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    title: "Team",
+    id: "team",
+    shortcuts: [
+      // With keyboard shortcuts
+      {
+        description: ["Settings", "Team", "Overview"],
+        keys: [[getPlatformSpecialKey(), ";"]],
+        hotkeys: "cmd+;,ctrl+;",
+        event: "Dialog.Settings.Open",
+        parameters: "overview",
+        icon: IconComponent,
+        tags: ["settings", "team", "overview", "workspace", "organization"],
+        visibility: { hideFrom: ["commands"] },
+      },
+      // workspaces
+      {
+        description: ["Settings", "Team", "Workspaces"],
+        keys: [[getPlatformSpecialKey(), "⇧", "W"]],
+        hotkeys: "cmd+shift+w,ctrl+shift+w",
+        event: "Dialog.Settings.Open",
+        parameters: "workspaces",
+        icon: IconSettings,
+        tags: ["settings", "team", "workspaces", "projects"],
+        visibility: { hideFrom: ["commands"] },
+      },
+      {
+        description: ["Settings", "Team", "Members"],
+        keys: [[getPlatformSpecialKey(), "⇧", "M"]],
+        hotkeys: "cmd+shift+m,ctrl+shift+m",
+        event: "Dialog.Settings.Open",
+        parameters: "members",
+        icon: IconUsersRound,
+        tags: ["settings", "team", "members", "users"],
+        visibility: { hideFrom: ["commands"] },
       },
     ],
   },
