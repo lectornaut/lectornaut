@@ -48,8 +48,6 @@ import { useCollection } from "vuefire"
 const getOwnerCount = (members: IMembership[]) =>
   members.filter((m) => m.role === "owner").length
 
-const MEMBER_COUNT_QUERY_BATCH_SIZE = 10
-
 export const useMembershipStore = defineStore("memberships", () => {
   const authStore = useAuthStore()
   const { currentUser, userProfile, pendingUserIds, currentTeamId } =
@@ -337,48 +335,35 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     const counts: Record<string, number> = {}
     teamIds.forEach((teamId) => {
-      counts[teamId] = 0
+      counts[teamId] = 1
     })
 
-    const batches: string[][] = []
-    for (let i = 0; i < teamIds.length; i += MEMBER_COUNT_QUERY_BATCH_SIZE) {
-      batches.push(teamIds.slice(i, i + MEMBER_COUNT_QUERY_BATCH_SIZE))
-    }
-
+    // We cannot use collectionGroup("memberships").where("teamId", "in", ...)
+    // here because security rules only allow reads on membership docs owned by
+    // the signed-in user in collectionGroup queries. Count each team directly.
     await Promise.all(
-      batches.map(async (batch) => {
+      teamIds.map(async (teamId) => {
         try {
-          const snapshot = await getDocs(
-            query(getAllMembershipsGroup(), where("teamId", "in", batch))
+          const membersSnapshot = await getDocs(
+            getTeamMembershipsCollection(teamId)
           )
-
-          snapshot.docs.forEach((docSnap) => {
-            const data = docSnap.data() as IMembership
-            if (!(data.teamId in counts)) return
-            counts[data.teamId] = (counts[data.teamId] ?? 0) + 1
-          })
+          counts[teamId] = Math.max(membersSnapshot.size, 1)
         } catch (error) {
+          if (
+            error &&
+            typeof error === "object" &&
+            "code" in error &&
+            error.code === "permission-denied"
+          ) {
+            counts[teamId] = 1
+            return
+          }
+
           console.error(
-            `[membershipStore] Failed to batch fetch member counts for teams [${batch.join(", ")}], falling back to per-team queries:`,
+            `[membershipStore] Failed to fetch member count for team ${teamId}:`,
             error
           )
-
-          await Promise.all(
-            batch.map(async (teamId) => {
-              try {
-                const membersSnapshot = await getDocs(
-                  getTeamMembershipsCollection(teamId)
-                )
-                counts[teamId] = membersSnapshot.size
-              } catch (fallbackError) {
-                console.error(
-                  `[membershipStore] Failed to fetch member count for team ${teamId}:`,
-                  fallbackError
-                )
-                counts[teamId] = 1
-              }
-            })
-          )
+          counts[teamId] = 1
         }
       })
     )

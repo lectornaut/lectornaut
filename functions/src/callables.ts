@@ -269,3 +269,210 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
 
   return { success: true }
 })
+
+type PublicProfileMember = {
+  userId: string
+  displayName: string
+  photoURL: string | null
+}
+
+type PublicProfileTeam = {
+  teamId: string
+  name: string
+  photoURL: string | null
+}
+
+function toPublicProfileMember(input: {
+  userId?: unknown
+  user?: {
+    displayName?: unknown
+    photoURL?: unknown
+  }
+}): PublicProfileMember | null {
+  const userId = typeof input.userId === "string" ? input.userId : null
+  if (!userId) return null
+
+  const displayNameValue = input.user?.displayName
+  const displayName =
+    typeof displayNameValue === "string" && displayNameValue.trim().length > 0
+      ? displayNameValue.trim()
+      : userId
+
+  const photoURL = typeof input.user?.photoURL === "string" ? input.user.photoURL : null
+
+  return {
+    userId,
+    displayName,
+    photoURL,
+  }
+}
+
+async function getPublicMembersForTeam(teamId: string): Promise<{
+  members: PublicProfileMember[]
+  memberCount: number
+}> {
+  const membershipsSnap = await db
+    .collection(`teams/${teamId}/memberships`)
+    .select("userId", "user")
+    .get()
+
+  const members = membershipsSnap.docs
+    .map((docSnap) =>
+      toPublicProfileMember(
+        docSnap.data() as {
+          userId?: unknown
+          user?: {
+            displayName?: unknown
+            photoURL?: unknown
+          }
+        }
+      )
+    )
+    .filter((member): member is PublicProfileMember => !!member)
+    .sort((a, b) => a.displayName.localeCompare(b.displayName))
+
+  return {
+    members,
+    memberCount: members.length,
+  }
+}
+
+/**
+ * Returns public teams for a public user profile.
+ * Works without auth and only exposes public team data.
+ */
+export const getPublicTeamsForUser = onCall(CALLABLE_OPTS, async (request) => {
+  const rawUserId = request.data?.userId
+  const userId =
+    typeof rawUserId === "string" ? rawUserId.trim() : String(rawUserId ?? "")
+
+  if (!userId) {
+    throw new HttpsError("invalid-argument", "userId is required.")
+  }
+
+  const userSnap = await db.doc(`users/${userId}`).get()
+  if (!userSnap.exists || userSnap.data()?.isPublic !== true) {
+    return {
+      teams: [] as PublicProfileTeam[],
+      teamCount: 0,
+    }
+  }
+
+  const membershipsSnap = await db
+    .collectionGroup("memberships")
+    .where("userId", "==", userId)
+    .select("teamId", "team")
+    .get()
+
+  const candidateById = new Map<string, PublicProfileTeam>()
+
+  membershipsSnap.docs.forEach((docSnap) => {
+    const data = docSnap.data() as {
+      teamId?: unknown
+      team?: {
+        name?: unknown
+        photoURL?: unknown
+      }
+    }
+
+    const teamId = typeof data.teamId === "string" ? data.teamId : null
+    const team = data.team ?? {}
+    const name =
+      typeof team.name === "string" && team.name.trim().length > 0
+        ? team.name.trim()
+        : null
+
+    if (!teamId || !name || candidateById.has(teamId)) return
+
+    candidateById.set(teamId, {
+      teamId,
+      name,
+      photoURL: typeof team.photoURL === "string" ? team.photoURL : null,
+    })
+  })
+
+  if (candidateById.size === 0) {
+    return {
+      teams: [] as PublicProfileTeam[],
+      teamCount: 0,
+    }
+  }
+
+  const teamRefs = [...candidateById.keys()].map((teamId) => db.doc(`teams/${teamId}`))
+  const teamSnaps = await db.getAll(...teamRefs)
+
+  const teams = teamSnaps
+    .map((teamSnap) => {
+      if (!teamSnap.exists) return null
+      const teamData = teamSnap.data() ?? {}
+      if (teamData.isPublic !== true) return null
+
+      const fallback = candidateById.get(teamSnap.id)
+      if (!fallback) return null
+
+      const name =
+        typeof teamData.name === "string" && teamData.name.trim().length > 0
+          ? teamData.name.trim()
+          : fallback.name
+
+      if (!name) return null
+
+      return {
+        teamId: teamSnap.id,
+        name,
+        photoURL:
+          typeof teamData.photoURL === "string"
+            ? teamData.photoURL
+            : fallback.photoURL,
+      } satisfies PublicProfileTeam
+    })
+    .filter((team): team is PublicProfileTeam => !!team)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  return {
+    teams,
+    teamCount: teams.length,
+  }
+})
+
+/**
+ * Returns members for a public team profile.
+ * This endpoint is intentionally callable without auth and only exposes public data.
+ */
+export const getPublicTeamMembers = onCall(CALLABLE_OPTS, async (request) => {
+  const rawTeamId = request.data?.teamId
+  const teamId =
+    typeof rawTeamId === "string" ? rawTeamId.trim() : String(rawTeamId ?? "")
+
+  if (!teamId) {
+    throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+
+  const teamSnap = await db.doc(`teams/${teamId}`).get()
+  if (!teamSnap.exists) {
+    return {
+      members: [] as PublicProfileMember[],
+      memberCount: 0,
+    }
+  }
+
+  const isPublic = teamSnap.data()?.isPublic === true
+  let canRead = isPublic
+
+  if (!canRead && request.auth?.uid) {
+    const membershipSnap = await db
+      .doc(`teams/${teamId}/memberships/${request.auth.uid}`)
+      .get()
+    canRead = membershipSnap.exists
+  }
+
+  if (!canRead) {
+    return {
+      members: [] as PublicProfileMember[],
+      memberCount: 0,
+    }
+  }
+
+  const { members, memberCount } = await getPublicMembersForTeam(teamId)
+  return { members, memberCount }
+})

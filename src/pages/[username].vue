@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import {
+  getPublicTeamMembers,
+  getPublicTeamsForUser,
+  type PublicProfileMember,
+  type PublicProfileTeam,
+} from "@/composables/useFunctions"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
@@ -46,7 +52,12 @@ const viewedTeamId = ref<string | null>(null)
 const entityType = ref<"user" | "team" | null>(null)
 const isPrivate = ref(false)
 const error = ref<string | null>(null)
+const profileMembers = ref<PublicProfileMember[]>([])
+const profileMemberCount = ref(0)
+const profileTeams = ref<PublicProfileTeam[]>([])
+const profileTeamCount = ref(0)
 let fetchRequestId = 0
+let profileHeaderRequestId = 0
 
 const targetTeamId = computed(() =>
   entityType.value === "team" ? viewedTeamId.value : null
@@ -62,7 +73,10 @@ const isCurrentUser = computed(() => {
     return currentUser.value.uid === viewedUserId
   }
 
-  return currentUserData.value?.username === username.value
+  return (
+    currentUserData.value?.username?.trim().toLowerCase() ===
+    username.value.trim().toLowerCase()
+  )
 })
 
 const settingsRoute = computed(() => {
@@ -86,6 +100,46 @@ const isPublicProfile = computed(
 const shouldShowUsername = computed(
   () => !error.value && !isPrivate.value && !!username.value
 )
+const profileStackMode = computed<"members" | "teams" | null>(() => {
+  if (entityType.value === "team") return "members"
+  if (entityType.value === "user") return "teams"
+  return null
+})
+const profileTeamId = computed(() => {
+  return entityType.value === "team" ? viewedTeamId.value : null
+})
+const profileUserId = computed(() =>
+  entityType.value === "user" && typeof user.value?.uid === "string"
+    ? user.value.uid
+    : null
+)
+const headerAvatars = computed(() =>
+  profileStackMode.value === "members"
+    ? profileMembers.value.map((member) => ({
+        id: member.userId,
+        name: member.displayName,
+        photoURL: member.photoURL,
+      }))
+    : profileTeams.value.map((team) => ({
+        id: team.teamId,
+        name: team.name,
+        photoURL: team.photoURL,
+      }))
+)
+const headerCount = computed(() =>
+  profileStackMode.value === "members"
+    ? profileMemberCount.value
+    : profileTeamCount.value
+)
+const visibleHeaderAvatars = computed(() => headerAvatars.value.slice(0, 3))
+const hiddenHeaderAvatarNames = computed(() =>
+  headerAvatars.value
+    .slice(visibleHeaderAvatars.value.length)
+    .map((avatar) => avatar.name || avatar.id)
+)
+const hiddenHeaderAvatarCount = computed(() =>
+  Math.max(headerCount.value - visibleHeaderAvatars.value.length, 0)
+)
 
 watch(username, () => {
   user.value = null
@@ -94,8 +148,69 @@ watch(username, () => {
   entityType.value = null
   isPrivate.value = false
   error.value = null
+  profileMembers.value = []
+  profileMemberCount.value = 0
+  profileTeams.value = []
+  profileTeamCount.value = 0
   loading.value = !!username.value
 })
+
+watch(
+  [profileStackMode, profileTeamId, profileUserId],
+  async ([mode, teamId, userId]) => {
+    const requestId = ++profileHeaderRequestId
+    profileMembers.value = []
+    profileMemberCount.value = 0
+    profileTeams.value = []
+    profileTeamCount.value = 0
+
+    if (mode === "members" && teamId) {
+      try {
+        const response = await getPublicTeamMembers({ teamId })
+        if (requestId !== profileHeaderRequestId) return
+
+        const members = (
+          Array.isArray(response.data?.members) ? response.data.members : []
+        ).filter((member): member is PublicProfileMember => !!member)
+
+        profileMembers.value = members
+        profileMemberCount.value = Math.max(
+          typeof response.data?.memberCount === "number"
+            ? response.data.memberCount
+            : members.length,
+          members.length
+        )
+      } catch (err) {
+        if (requestId !== profileHeaderRequestId) return
+        console.error("Failed to load team members for profile:", err)
+      }
+      return
+    }
+
+    if (mode === "teams" && userId) {
+      try {
+        const response = await getPublicTeamsForUser({ userId })
+        if (requestId !== profileHeaderRequestId) return
+
+        const teams = (
+          Array.isArray(response.data?.teams) ? response.data.teams : []
+        ).filter((team): team is PublicProfileTeam => !!team)
+
+        profileTeams.value = teams
+        profileTeamCount.value = Math.max(
+          typeof response.data?.teamCount === "number"
+            ? response.data.teamCount
+            : teams.length,
+          teams.length
+        )
+      } catch (err) {
+        if (requestId !== profileHeaderRequestId) return
+        console.error("Failed to load profile teams:", err)
+      }
+    }
+  },
+  { immediate: true }
+)
 
 const fetchPublicProfile = async () => {
   if (!username.value) {
@@ -211,7 +326,7 @@ useHead(() => ({
     <template v-else>
       <div class="flex flex-col items-center justify-center p-2">
         <div
-          class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-lg border bg-[repeating-linear-gradient(135deg,var(--border)_0,var(--border)_1px,transparent_0,transparent_25%)] bg-size-[16px_16px] shadow-xs"
+          class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-lg border shadow-xs"
         >
           <div class="flex items-center justify-between p-2">
             <Logo class="size-8 shrink-0 p-2" />
@@ -226,8 +341,81 @@ useHead(() => ({
             </Button>
           </div>
           <div class="flex grow items-center justify-between p-2"></div>
-          <div class="flex items-center justify-between p-2">
-            avatar stack here
+          <div
+            v-if="headerAvatars.length > 0"
+            class="flex items-center justify-between p-2"
+          >
+            <div v-if="error" class="flex flex-col items-center gap-2">
+              <p class="text-muted-foreground text-sm">{{ error }}</p>
+              <Button variant="outline" size="sm" @click="fetchPublicProfile">
+                {{ t("pages.publicProfile.retry") }}
+              </Button>
+            </div>
+            <div v-else class="flex items-center gap-2">
+              <Badge variant="secondary">
+                <IconGlobe v-if="isPublicProfile" />
+                <IconLock v-else />
+                {{
+                  isPublicProfile
+                    ? t("pages.publicProfile.public")
+                    : t("pages.publicProfile.private")
+                }}
+              </Badge>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-muted-foreground text-xs">
+                {{
+                  profileStackMode === "members"
+                    ? t("pages.teams.memberCount", {
+                        count: headerCount,
+                      })
+                    : t("pages.profile.teamCount", {
+                        count: headerCount,
+                      })
+                }}
+              </span>
+              <div class="flex items-center gap-1">
+                <TooltipProvider>
+                  <div class="flex items-center gap-1">
+                    <div class="flex -space-x-1">
+                      <Tooltip
+                        v-for="avatar in visibleHeaderAvatars"
+                        :key="avatar.id"
+                      >
+                        <TooltipTrigger as-child>
+                          <Avatar class="ring-background size-5 rounded ring-2">
+                            <AvatarImage
+                              class="rounded"
+                              :src="avatar.photoURL!"
+                              :alt="avatar.name || avatar.id"
+                              referrerpolicy="no-referrer"
+                            />
+                            <AvatarFallback class="rounded">
+                              {{ getInitials(avatar.name || avatar.id) }}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {{ avatar.name || avatar.id }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Tooltip v-if="hiddenHeaderAvatarCount > 0">
+                      <TooltipTrigger as-child>
+                        <Avatar class="ring-background size-5 rounded ring-2">
+                          <AvatarFallback class="rounded text-[10px]">
+                            +{{ hiddenHeaderAvatarCount }}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" class="max-w-56 text-xs">
+                        {{ hiddenHeaderAvatarNames.join(", ") }}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
+              </div>
+            </div>
           </div>
         </div>
         <div
@@ -272,23 +460,13 @@ useHead(() => ({
         >
           {{ t("pages.publicProfile.privateDescription") }}
         </p>
+      </div>
 
-        <div v-if="error" class="flex flex-col items-center gap-2">
-          <p class="text-muted-foreground text-sm">{{ error }}</p>
-          <Button variant="outline" size="sm" @click="fetchPublicProfile">
-            {{ t("pages.publicProfile.retry") }}
-          </Button>
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <Badge variant="secondary">
-            <IconGlobe v-if="isPublicProfile" />
-            <IconLock v-else />
-            {{
-              isPublicProfile
-                ? t("pages.publicProfile.public")
-                : t("pages.publicProfile.private")
-            }}
-          </Badge>
+      <div class="flex flex-col items-center justify-center p-2">
+        <div
+          class="bg-background flex w-full grow rounded-lg border p-4 shadow-xs"
+        >
+          Content
         </div>
       </div>
     </template>

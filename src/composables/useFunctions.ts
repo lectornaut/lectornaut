@@ -279,6 +279,40 @@ export interface DeclineInvitationResponse {
 }
 
 // =============================================================================
+// Public Profile Functions
+// =============================================================================
+
+export interface PublicProfileMember {
+  userId: string
+  displayName: string
+  photoURL: string | null
+}
+
+export interface PublicProfileTeam {
+  teamId: string
+  name: string
+  photoURL: string | null
+}
+
+export interface GetPublicTeamsForUserRequest {
+  userId: string
+}
+
+export interface GetPublicTeamsForUserResponse {
+  teams: PublicProfileTeam[]
+  teamCount: number
+}
+
+export interface GetPublicTeamMembersRequest {
+  teamId: string
+}
+
+export interface GetPublicTeamMembersResponse {
+  members: PublicProfileMember[]
+  memberCount: number
+}
+
+// =============================================================================
 // Typed Function Callers
 // =============================================================================
 
@@ -454,6 +488,16 @@ export const declineInvitation = createTypedCallable<
   DeclineInvitationResponse
 >("declineInvitation")
 
+export const getPublicTeamMembers = createTypedCallable<
+  GetPublicTeamMembersRequest,
+  GetPublicTeamMembersResponse
+>("getPublicTeamMembers")
+
+export const getPublicTeamsForUser = createTypedCallable<
+  GetPublicTeamsForUserRequest,
+  GetPublicTeamsForUserResponse
+>("getPublicTeamsForUser")
+
 // =============================================================================
 // Composable Hook
 // =============================================================================
@@ -520,5 +564,9 @@ export function useFunctions() {
     updateInvitationRole,
     cancelInvitation,
     declineInvitation,
+
+    // Public profile operations
+    getPublicTeamMembers,
+    getPublicTeamsForUser,
   }
 }

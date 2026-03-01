@@ -33,6 +33,15 @@ const teams = computed(() =>
     original: m.team,
   }))
 )
+
+const hiddenTeamMemberNames = computed(() =>
+  teamMembers.value
+    .slice(3)
+    .map(
+      (member) =>
+        member.user?.displayName || member.user?.email || member.userId
+    )
+)
 </script>
 
 <template>
@@ -70,50 +79,58 @@ const teams = computed(() =>
                 </div>
                 <div class="flex items-center gap-1">
                   <TooltipProvider>
-                    <div class="flex -space-x-1">
-                      <Tooltip
-                        v-for="member in teamMembers.slice(0, 3)"
-                        :key="member.userId"
-                      >
+                    <div class="flex items-center gap-1">
+                      <div class="flex -space-x-1">
+                        <Tooltip
+                          v-for="member in teamMembers.slice(0, 3)"
+                          :key="member.userId"
+                        >
+                          <TooltipTrigger as-child>
+                            <Avatar class="ring-sidebar size-5 rounded ring-3">
+                              <AvatarImage
+                                class="rounded"
+                                :src="member.user?.photoURL!"
+                                :alt="
+                                  member.user?.displayName ||
+                                  member.user?.email ||
+                                  member.userId
+                                "
+                                referrerpolicy="no-referrer"
+                              />
+                              <AvatarFallback class="rounded">
+                                {{
+                                  getInitials(
+                                    member.user?.displayName ||
+                                      member.user?.email ||
+                                      member.userId
+                                  )
+                                }}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {{
+                              member.user?.displayName ||
+                              member.user?.email ||
+                              member.userId
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Tooltip v-if="teamMembers.length > 3">
                         <TooltipTrigger as-child>
                           <Avatar class="ring-sidebar size-5 rounded ring-3">
-                            <AvatarImage
-                              class="rounded"
-                              :src="member.user?.photoURL!"
-                              :alt="
-                                member.user?.displayName ||
-                                member.user?.email ||
-                                member.userId
-                              "
-                              referrerpolicy="no-referrer"
-                            />
-                            <AvatarFallback class="rounded">
-                              {{
-                                getInitials(
-                                  member.user?.displayName ||
-                                    member.user?.email ||
-                                    member.userId
-                                )
-                              }}
+                            <AvatarFallback class="rounded text-[10px]">
+                              +{{ teamMembers.length - 3 }}
                             </AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>
-                        <TooltipContent side="top">
-                          {{
-                            member.user?.displayName ||
-                            member.user?.email ||
-                            member.userId
-                          }}
+                        <TooltipContent side="top" class="max-w-56 text-xs">
+                          {{ hiddenTeamMemberNames.join(", ") }}
                         </TooltipContent>
                       </Tooltip>
                     </div>
                   </TooltipProvider>
-                  <span
-                    v-if="teamMembers.length > 3"
-                    class="text-muted-foreground text-xs"
-                  >
-                    +{{ teamMembers.length - 3 }}
-                  </span>
                 </div>
                 <IconChevronsUpDown />
               </SidebarMenuButton>
