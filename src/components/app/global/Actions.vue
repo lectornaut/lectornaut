@@ -86,4 +86,6 @@ watch(online, (value) => {
     position="bottom-center"
     :theme="sonnerTheme"
   />
+  <Shortcuts />
+  <ExitTrigger />
 </template>

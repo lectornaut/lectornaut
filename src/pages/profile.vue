@@ -69,16 +69,15 @@ const {
       {{ user?.displayName }}
     </h1>
     <Badge variant="secondary" as-child>
-      <a
+      <RouterLink
         v-if="username"
-        :href="`/${username}`"
-        target="_blank"
+        :to="`/${username}`"
         rel="noopener noreferrer"
         class="text-muted-foreground"
       >
         <IconAtSign />
         {{ username }}
-      </a>
+      </RouterLink>
       <span v-else> {{ t("pages.profile.noUsername") }} </span>
     </Badge>
     <div class="flex items-center gap-2">

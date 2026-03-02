@@ -314,161 +314,165 @@ useHead(() => ({
 </script>
 
 <template>
-  <div class="container mx-auto">
-    <!-- Loading State -->
-    <template v-if="loading">
-      <div class="flex h-screen flex-col items-center justify-center p-2">
-        <Spinner />
-      </div>
-    </template>
-
-    <!-- Shared profile header -->
-    <template v-else>
-      <div class="flex flex-col items-center justify-center p-2">
-        <div
-          class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-lg border shadow-xs"
-        >
-          <div class="flex items-center justify-between p-2">
-            <Logo class="size-8 shrink-0 p-2" />
-            <Button
-              v-if="settingsRoute"
-              variant="outline"
-              size="sm"
-              @click="router.push(settingsRoute)"
-            >
-              <IconSettings />
-              {{ t("pages.publicProfile.settings") }}
-            </Button>
-          </div>
-          <div class="flex grow items-center justify-between p-2"></div>
+  <div class="flex grow flex-col items-center">
+    <PageHeader />
+    <div class="container mx-auto">
+      <!-- Loading State -->
+      <template v-if="loading">
+        <div class="flex h-screen flex-col items-center justify-center p-2">
+          <Spinner />
+        </div>
+      </template>
+      <!-- Shared profile header -->
+      <template v-else>
+        <div class="flex flex-col items-center justify-center p-2">
           <div
-            v-if="headerAvatars.length > 0"
-            class="flex items-center justify-between p-2"
+            class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-lg border shadow-xs"
           >
-            <div v-if="error" class="flex flex-col items-center gap-2">
-              <p class="text-muted-foreground text-sm">{{ error }}</p>
-              <Button variant="outline" size="sm" @click="fetchPublicProfile">
-                {{ t("pages.publicProfile.retry") }}
+            <div class="flex items-center justify-between p-2">
+              <Logo class="size-8 shrink-0 p-2" />
+              <Button
+                v-if="settingsRoute"
+                variant="outline"
+                size="sm"
+                @click="router.push(settingsRoute)"
+              >
+                <IconSettings />
+                {{ t("pages.publicProfile.settings") }}
               </Button>
             </div>
-            <div v-else class="flex items-center gap-2">
-              <Badge variant="secondary">
-                <IconGlobe v-if="isPublicProfile" />
-                <IconLock v-else />
-                {{
-                  isPublicProfile
-                    ? t("pages.publicProfile.public")
-                    : t("pages.publicProfile.private")
-                }}
-              </Badge>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-muted-foreground text-xs">
-                {{
-                  profileStackMode === "members"
-                    ? t("pages.teams.memberCount", {
-                        count: headerCount,
-                      })
-                    : t("pages.profile.teamCount", {
-                        count: headerCount,
-                      })
-                }}
-              </span>
-              <div class="flex items-center gap-1">
-                <TooltipProvider>
-                  <div class="flex items-center gap-1">
-                    <div class="flex -space-x-1">
-                      <Tooltip
-                        v-for="avatar in visibleHeaderAvatars"
-                        :key="avatar.id"
-                      >
+            <div class="flex grow items-center justify-between p-2"></div>
+            <div
+              v-if="headerAvatars.length > 0"
+              class="flex items-center justify-between p-2"
+            >
+              <div v-if="error" class="flex flex-col items-center gap-2">
+                <p class="text-muted-foreground text-sm">{{ error }}</p>
+                <Button variant="outline" size="sm" @click="fetchPublicProfile">
+                  {{ t("pages.publicProfile.retry") }}
+                </Button>
+              </div>
+              <div v-else class="flex items-center gap-2">
+                <Badge variant="secondary">
+                  <IconGlobe v-if="isPublicProfile" />
+                  <IconLock v-else />
+                  {{
+                    isPublicProfile
+                      ? t("pages.publicProfile.public")
+                      : t("pages.publicProfile.private")
+                  }}
+                </Badge>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-muted-foreground text-xs">
+                  {{
+                    profileStackMode === "members"
+                      ? t("pages.teams.memberCount", {
+                          count: headerCount,
+                        })
+                      : t("pages.profile.teamCount", {
+                          count: headerCount,
+                        })
+                  }}
+                </span>
+                <div class="flex items-center gap-1">
+                  <TooltipProvider>
+                    <div class="flex items-center gap-1">
+                      <div class="flex -space-x-1">
+                        <Tooltip
+                          v-for="avatar in visibleHeaderAvatars"
+                          :key="avatar.id"
+                        >
+                          <TooltipTrigger as-child>
+                            <Avatar
+                              class="ring-background size-5 rounded ring-2"
+                            >
+                              <AvatarImage
+                                class="rounded"
+                                :src="avatar.photoURL!"
+                                :alt="avatar.name || avatar.id"
+                                referrerpolicy="no-referrer"
+                              />
+                              <AvatarFallback class="rounded">
+                                {{ getInitials(avatar.name || avatar.id) }}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {{ avatar.name || avatar.id }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Tooltip v-if="hiddenHeaderAvatarCount > 0">
                         <TooltipTrigger as-child>
                           <Avatar class="ring-background size-5 rounded ring-2">
-                            <AvatarImage
-                              class="rounded"
-                              :src="avatar.photoURL!"
-                              :alt="avatar.name || avatar.id"
-                              referrerpolicy="no-referrer"
-                            />
-                            <AvatarFallback class="rounded">
-                              {{ getInitials(avatar.name || avatar.id) }}
+                            <AvatarFallback class="rounded text-[10px]">
+                              +{{ hiddenHeaderAvatarCount }}
                             </AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>
-                        <TooltipContent side="top">
-                          {{ avatar.name || avatar.id }}
+                        <TooltipContent side="top" class="max-w-56 text-xs">
+                          {{ hiddenHeaderAvatarNames.join(", ") }}
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <Tooltip v-if="hiddenHeaderAvatarCount > 0">
-                      <TooltipTrigger as-child>
-                        <Avatar class="ring-background size-5 rounded ring-2">
-                          <AvatarFallback class="rounded text-[10px]">
-                            +{{ hiddenHeaderAvatarCount }}
-                          </AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" class="max-w-56 text-xs">
-                        {{ hiddenHeaderAvatarNames.join(", ") }}
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </TooltipProvider>
+                  </TooltipProvider>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div
-          class="bg-background mx-auto -mt-10 rounded-lg border p-1.5 shadow-xs"
-        >
-          <div v-if="user || team">
-            <Avatar class="size-20 rounded">
-              <AvatarImage
-                class="size-20 rounded"
-                :src="(user?.photoURL || team?.photoURL) ?? ''"
-                :alt="user?.displayName || team?.name"
-                referrerpolicy="no-referrer"
-              />
-              <AvatarFallback class="size-20 rounded">
-                {{ getInitials(user?.displayName || team?.name) }}
-              </AvatarFallback>
-            </Avatar>
-          </div>
           <div
-            v-else
-            class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded"
+            class="bg-background mx-auto -mt-10 rounded-lg border p-1.5 shadow-xs"
           >
-            <IconLock />
+            <div v-if="user || team">
+              <Avatar class="size-20 rounded">
+                <AvatarImage
+                  class="size-20 rounded"
+                  :src="(user?.photoURL || team?.photoURL) ?? ''"
+                  :alt="user?.displayName || team?.name"
+                  referrerpolicy="no-referrer"
+                />
+                <AvatarFallback class="size-20 rounded">
+                  {{ getInitials(user?.displayName || team?.name) }}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <div
+              v-else
+              class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded"
+            >
+              <IconLock />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div
-        class="mx-auto flex max-w-2xl flex-col items-center justify-center gap-2 p-4"
-      >
-        <h1 class="text-2xl font-bold tracking-tight">
-          {{ displayName }}
-        </h1>
-
-        <span v-if="shouldShowUsername" class="text-muted-foreground">
-          <IconAtSign />
-          {{ username }}
-        </span>
-        <p
-          v-else-if="isPrivate"
-          class="text-muted-foreground text-center text-sm"
-        >
-          {{ t("pages.publicProfile.privateDescription") }}
-        </p>
-      </div>
-
-      <div class="flex flex-col items-center justify-center p-2">
         <div
-          class="bg-background flex w-full grow rounded-lg border p-4 shadow-xs"
+          class="mx-auto flex max-w-2xl flex-col items-center justify-center gap-2 p-4"
         >
-          Content
+          <h1 class="text-2xl font-bold tracking-tight">
+            {{ displayName }}
+          </h1>
+
+          <span v-if="shouldShowUsername" class="text-muted-foreground">
+            <IconAtSign />
+            {{ username }}
+          </span>
+          <p
+            v-else-if="isPrivate"
+            class="text-muted-foreground text-center text-sm"
+          >
+            {{ t("pages.publicProfile.privateDescription") }}
+          </p>
         </div>
-      </div>
-    </template>
+
+        <div class="flex flex-col items-center justify-center p-2">
+          <div
+            class="bg-background flex w-full grow rounded-lg border p-4 shadow-xs"
+          >
+            Content
+          </div>
+        </div>
+      </template>
+    </div>
   </div>
 </template>

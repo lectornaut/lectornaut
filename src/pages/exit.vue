@@ -1,13 +1,12 @@
 <script lang="ts" setup>
+import PageHeader from "@/components/layout/PageHeader.vue"
 import { IconLogOut } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 
 definePage({
   meta: {
     requiresUser: true,
-    layout: "app",
-    sidebar: "Exit",
-    breadcrumb: "Exit",
+    layout: "empty",
   },
 })
 
@@ -20,6 +19,7 @@ const { t } = useI18n()
 
 <template>
   <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
+    <PageHeader />
     <div class="flex grow flex-col gap-2 p-2">
       <Button variant="secondary" @click="emitter.emit('Dialog.Exit.Open')">
         <IconLogOut />

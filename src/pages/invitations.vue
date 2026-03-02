@@ -1,11 +1,5 @@
 <script lang="ts" setup>
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import {
-  IconAlertTriangle,
-  IconArrowLeft,
-  IconUserRoundPlus,
-} from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
+import { IconAlertTriangle, IconUserRoundPlus } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useAuthStore } from "@/stores/authStore"
 import { useInvitationStore, type IInvitation } from "@/stores/invitationStore"
@@ -25,7 +19,6 @@ useHead({
 })
 
 const { t } = useI18n()
-const isFullscreen = useIsFullscreen()
 const route = useRoute()
 const router = useRouter()
 const invitationStore = useInvitationStore()
@@ -190,38 +183,7 @@ const handleLogout = () => {
 
 <template>
   <div class="flex grow flex-col items-center">
-    <div data-tauri-drag-region class="grid grid-cols-2 gap-2 self-stretch p-2">
-      <div
-        data-tauri-drag-region
-        class="flex items-center justify-start transition-all"
-        :class="{ 'pl-20': isTauri && !isFullscreen }"
-      >
-        <Button variant="ghost" size="icon-sm" as-child>
-          <RouterLink to="/start">
-            <IconArrowLeft />
-          </RouterLink>
-        </Button>
-      </div>
-      <div
-        data-tauri-drag-region
-        class="flex items-center justify-end transition-all"
-      >
-        <Button variant="ghost" size="sm">
-          <Avatar class="size-5 rounded">
-            <AvatarImage
-              class="roundedd size-5"
-              :src="authStore.currentUser?.photoURL!"
-              :alt="authStore.currentUser?.displayName"
-              referrerpolicy="no-referrer"
-            />
-            <AvatarFallback class="size-5 rounded">
-              {{ getInitials(authStore.currentUser?.displayName!) }}
-            </AvatarFallback>
-          </Avatar>
-          {{ authStore.currentUser?.displayName }}
-        </Button>
-      </div>
-    </div>
+    <PageHeader />
     <div class="w-full max-w-md p-2">
       <div class="grid gap-2">
         <Label for="team-select" class="text-muted-foreground text-xs">

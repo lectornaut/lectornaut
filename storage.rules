@@ -47,7 +47,7 @@ service firebase.storage {
     }
 
     match /images/teams/{teamId}/workspaces/{workspaceId}/profilePhoto {
-      allow read: if isTeamMember(teamId);
+      allow read: if isTeamMember(teamId) || isTeamPublic(teamId);
       allow create, update: if canManageTeamAssets(teamId) && isValidImageUpload();
       allow delete: if canManageTeamAssets(teamId);
     }

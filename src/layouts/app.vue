@@ -993,9 +993,7 @@ const closeTab = (id: string) => {
       </ContextMenu>
     </SidebarInset>
     <CommandK />
-    <Shortcuts />
     <Changelog />
     <Settings />
-    <ExitTrigger />
   </SidebarProvider>
 </template>
