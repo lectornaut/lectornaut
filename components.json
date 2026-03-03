@@ -9,7 +9,6 @@
     "cssVariables": true,
     "prefix": ""
   },
-  "iconLibrary": "lucide",
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
@@ -17,5 +16,6 @@
     "lib": "@/lib",
     "composables": "@/composables"
   },
+  "iconLibrary": "lucide",
   "registries": {}
 }

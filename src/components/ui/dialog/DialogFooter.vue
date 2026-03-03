@@ -1,8 +1,18 @@
 <script setup lang="ts">
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { DialogClose } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
-const props = defineProps<{ class?: HTMLAttributes["class"] }>()
+const props = withDefaults(
+  defineProps<{
+    class?: HTMLAttributes["class"]
+    showCloseButton?: boolean
+  }>(),
+  {
+    showCloseButton: false,
+  }
+)
 </script>
 
 <template>
@@ -13,5 +23,8 @@ const props = defineProps<{ class?: HTMLAttributes["class"] }>()
     "
   >
     <slot />
+    <DialogClose v-if="showCloseButton" as-child>
+      <Button variant="outline"> Close </Button>
+    </DialogClose>
   </div>
 </template>

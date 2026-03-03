@@ -8,13 +8,18 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
     "tauri": "tauri",
     "lint:types": "vue-tsc --noEmit",
-    "lint:code": "eslint './src/**/*.{js,ts,cjs,mjs,vue}' --fix",
-    "lint:style": "stylelint './src/**/*.{css,scss}' --fix --ignore-path .gitignore",
-    "lint:format": "prettier . --write --ignore-path .gitignore",
+    "lint:code": "eslint './src/**/*.{js,ts,cjs,mjs,vue}'",
+    "lint:code:fix": "eslint './src/**/*.{js,ts,cjs,mjs,vue}' --fix",
+    "lint:style": "stylelint './src/**/*.{css,scss}' --ignore-path .gitignore",
+    "lint:style:fix": "stylelint './src/**/*.{css,scss}' --fix --ignore-path .gitignore",
+    "lint:format": "prettier . --check --ignore-path .gitignore",
+    "lint:format:fix": "prettier . --write --ignore-path .gitignore",
     "lint": "pnpm lint:types && pnpm lint:code && pnpm lint:style && pnpm lint:format",
+    "lint:fix": "pnpm lint:types && pnpm lint:code:fix && pnpm lint:style:fix && pnpm lint:format:fix",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -201,9 +206,6 @@
     "vitest": "^4.0.18",
     "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "3.2.5",
-    "workbox-build": "^7.4.0"
-  },
-  "peerDependencies": {
     "workbox-build": "^7.4.0"
   },
   "engines": {

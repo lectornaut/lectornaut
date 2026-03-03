@@ -298,7 +298,8 @@ function toPublicProfileMember(input: {
       ? displayNameValue.trim()
       : userId
 
-  const photoURL = typeof input.user?.photoURL === "string" ? input.user.photoURL : null
+  const photoURL =
+    typeof input.user?.photoURL === "string" ? input.user.photoURL : null
 
   return {
     userId,
@@ -398,7 +399,9 @@ export const getPublicTeamsForUser = onCall(CALLABLE_OPTS, async (request) => {
     }
   }
 
-  const teamRefs = [...candidateById.keys()].map((teamId) => db.doc(`teams/${teamId}`))
+  const teamRefs = [...candidateById.keys()].map((teamId) =>
+    db.doc(`teams/${teamId}`)
+  )
   const teamSnaps = await db.getAll(...teamRefs)
 
   const teams = teamSnaps

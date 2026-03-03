@@ -1,7 +1,5 @@
-import type { ButtonVariants } from "@/components/ui/button"
 import type { VariantProps } from "class-variance-authority"
 import { cva } from "class-variance-authority"
-import type { HTMLAttributes } from "vue"
 
 export { default as InputGroup } from "./InputGroup.vue"
 export { default as InputGroupAddon } from "./InputGroupAddon.vue"
@@ -54,9 +52,3 @@ export const inputGroupButtonVariants = cva(
 export type InputGroupButtonVariants = VariantProps<
   typeof inputGroupButtonVariants
 >
-
-export interface InputGroupButtonProps {
-  variant?: ButtonVariants["variant"]
-  size?: InputGroupButtonVariants["size"]
-  class?: HTMLAttributes["class"]
-}
