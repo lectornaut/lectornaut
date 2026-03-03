@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import {
   IconChevronsUpDown,
-  IconCircleUser,
   IconLogOut,
+  IconUserCog,
   IconUserRound,
+  IconUserRoundPlus,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
@@ -88,8 +89,14 @@ const { t } = useI18n()
                 <DropdownMenuItem
                   @click="emitter.emit('Dialog.Settings.Open', 'account')"
                 >
-                  <IconCircleUser />
+                  <IconUserCog />
                   {{ t("accountMenu.account") }}
+                </DropdownMenuItem>
+                <DropdownMenuItem as-child>
+                  <RouterLink to="/invitations">
+                    <IconUserRoundPlus />
+                    Invitations
+                  </RouterLink>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
@@ -114,8 +121,14 @@ const { t } = useI18n()
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'account')"
             >
-              <IconCircleUser />
+              <IconUserCog />
               {{ t("accountMenu.account") }}
+            </ContextMenuItem>
+            <ContextMenuItem as-child>
+              <RouterLink to="/invitations">
+                <IconUserRoundPlus />
+                Invitations
+              </RouterLink>
             </ContextMenuItem>
           </ContextMenuGroup>
         </ContextMenuContent>

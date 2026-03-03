@@ -4,6 +4,7 @@ import {
   defaultFont,
   defaultLanguage,
   defaultSize,
+  defaultTheme,
 } from "@/helpers/defaults"
 import { DEFAULT_NOTIFICATION_SETTINGS } from "@/types/notifications"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
@@ -51,7 +52,7 @@ export const setDefaultUserData = async (): Promise<void> => {
     mutateSetDocument(
       themesDocRef,
       {
-        mode: "auto",
+        mode: defaultTheme,
         base: defaultBase,
         accent: defaultAccent,
         font: defaultFont,

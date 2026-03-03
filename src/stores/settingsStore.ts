@@ -11,6 +11,7 @@ import {
   defaultFont,
   defaultLanguage,
   defaultSize,
+  defaultTheme,
 } from "@/helpers/defaults"
 import {
   areNotificationSettingsEqual,
@@ -39,7 +40,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const db = useFirestore()
   const user = useCurrentUser()
 
-  const mode = useStorage<ThemeMode>("theme", "auto")
+  const mode = useStorage<ThemeMode>("theme", defaultTheme)
   const base = useStorage<BaseId>("base", defaultBase)
   const accent = useStorage<AccentId>("accent", defaultAccent)
   const font = useStorage<FontId>("font", defaultFont)

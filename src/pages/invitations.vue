@@ -282,10 +282,7 @@ const handleLogout = () => {
       <div
         class="bg-sidebar flex size-full flex-col items-center justify-between rounded-md p-2"
       >
-        <div
-          v-if="invitation || isLoading || error"
-          class="m-auto grid grow flex-col items-center justify-center"
-        >
+        <div class="m-auto grid grow flex-col items-center justify-center">
           <Empty v-if="isLoading">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -357,6 +354,19 @@ const handleLogout = () => {
                 {{ $t("pages.join.labels.hasDeclined") }}
               </Badge>
             </EmptyContent>
+          </Empty>
+          <Empty v-else>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconUserRoundPlus />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ $t("pages.join.placeholders.selectInvitation") }}
+              </EmptyTitle>
+              <EmptyDescription>
+                {{ $t("pages.join.labels.findTeam") }}
+              </EmptyDescription>
+            </EmptyHeader>
           </Empty>
         </div>
         <div

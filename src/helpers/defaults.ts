@@ -9,7 +9,7 @@ import {
   IconBolt,
   IconBot,
   IconBriefcase,
-  IconCircleUserRound,
+  IconCode,
   IconComponent,
   IconCreditCard,
   IconDatabase,
@@ -34,6 +34,7 @@ import {
   IconSun,
   IconSunMoon,
   IconUSA,
+  IconUserCog,
   IconUserRound,
   IconUsersRound,
 } from "@/data/icons"
@@ -56,6 +57,11 @@ export const defaultLanguage: LanguageId = "en-US"
 
 export const themes = [
   {
+    id: "auto",
+    name: "Auto",
+    icon: IconSunMoon,
+  },
+  {
     id: "light",
     name: "Light",
     icon: IconSun,
@@ -65,17 +71,13 @@ export const themes = [
     name: "Dark",
     icon: IconMoon,
   },
-  {
-    id: "auto",
-    name: "Auto",
-    icon: IconSunMoon,
-  },
 ] as const
 
 export type ThemeId = (typeof themes)[number]["id"]
 export const defaultTheme: ThemeId = "auto"
 
 export const accents = [
+  { id: "base", name: "Base", style: "text-foreground" },
   { id: "red", name: "Red", style: "text-red-500" },
   { id: "orange", name: "Orange", style: "text-orange-500" },
   { id: "amber", name: "Amber", style: "text-amber-500" },
@@ -93,7 +95,6 @@ export const accents = [
   { id: "fuchsia", name: "Fuchsia", style: "text-fuchsia-500" },
   { id: "pink", name: "Pink", style: "text-pink-500" },
   { id: "rose", name: "Rose", style: "text-rose-500" },
-  { id: "base", name: "Base", style: "text-foreground" },
 ] as const
 
 export type AccentId = (typeof accents)[number]["id"]
@@ -156,8 +157,8 @@ export const defaultSize: SizeId = "base"
 export const defaultMenu = [
   {
     title: "Home",
-    action: "View your workspace dashboard",
-    description: "Another to-do system you'll try but eventually give up on.",
+    action: "Open your workspace dashboard",
+    description: "Get a snapshot of activity across your workspace.",
     url: "/home",
     id: "home",
     icon: IconHome,
@@ -167,48 +168,6 @@ export const defaultMenu = [
       grid: "",
     },
     shortcut: "⌘H",
-  },
-  {
-    title: "Maps",
-    action: "Explore and annotate maps",
-    description: "Visualize ideas and concepts in a structured way.",
-    url: "/maps",
-    id: "maps",
-    icon: IconMapPin,
-    style: {
-      text: "text-yellow-700/90 dark:text-yellow-300/90",
-      bg: "bg-yellow-50 dark:bg-yellow-950/40",
-      grid: "",
-    },
-    shortcut: "⌘M",
-  },
-  {
-    title: "Write",
-    action: "Draft and organize documents",
-    description: "A place to write and organize your thoughts.",
-    url: "/write",
-    id: "write",
-    icon: IconFileText,
-    style: {
-      text: "text-teal-700/90 dark:text-teal-300/90",
-      bg: "bg-teal-50 dark:bg-teal-950/40",
-      grid: "",
-    },
-    shortcut: "⌘W",
-  },
-  {
-    title: "Agents",
-    action: "Discover and manage AI agents",
-    description: "Stay on top of your deadlines, or don't — it's up to you.",
-    url: "/agents",
-    id: "agents",
-    icon: IconBot,
-    style: {
-      text: "text-orange-700/90 dark:text-orange-300/90",
-      bg: "bg-orange-50 dark:bg-orange-950/40",
-      grid: "",
-    },
-    shortcut: "⌘A",
   },
   {
     title: "Bot",
@@ -226,9 +185,23 @@ export const defaultMenu = [
     shortcut: "⌘B",
   },
   {
+    title: "Agents",
+    action: "Create and manage AI agents",
+    description: "Build, test, and organize your AI agents.",
+    url: "/agents",
+    id: "agents",
+    icon: IconBot,
+    style: {
+      text: "text-orange-700/90 dark:text-orange-300/90",
+      bg: "bg-orange-50 dark:bg-orange-950/40",
+      grid: "",
+    },
+    shortcut: "⌘A",
+  },
+  {
     title: "Tasks",
     action: "Plan and track your tasks",
-    description: "Great for mood boards and inspiration.",
+    description: "Track work, deadlines, and progress across projects.",
     url: "/tasks",
     id: "tasks",
     icon: IconBadgeCheck,
@@ -241,8 +214,8 @@ export const defaultMenu = [
   },
   {
     title: "Runs",
-    action: "Monitor run history and status",
-    description: "Track tasks in different stages of your project.",
+    action: "Monitor run status and history",
+    description: "Track jobs across queues, states, and execution history.",
     url: "/runs",
     id: "runs",
     icon: IconActivity,
@@ -253,14 +226,27 @@ export const defaultMenu = [
     },
     shortcut: "⌘R",
   },
-  // code
+  {
+    title: "Write",
+    action: "Draft and organize documents",
+    description: "Capture notes, drafts, and long-form documents.",
+    url: "/write",
+    id: "write",
+    icon: IconFileText,
+    style: {
+      text: "text-teal-700/90 dark:text-teal-300/90",
+      bg: "bg-teal-50 dark:bg-teal-950/40",
+      grid: "",
+    },
+    shortcut: "⌘W",
+  },
   {
     title: "Code",
-    action: "Build and edit code projects",
-    description: "A place to write and organize your code.",
+    action: "Build and review code projects",
+    description: "Work with repositories, files, and coding tasks.",
     url: "/code",
     id: "code",
-    icon: IconFileText,
+    icon: IconCode,
     style: {
       text: "text-teal-700/90 dark:text-teal-300/90",
       bg: "bg-teal-50 dark:bg-teal-950/40",
@@ -269,32 +255,32 @@ export const defaultMenu = [
     shortcut: "⌘C",
   },
   {
+    title: "Maps",
+    action: "Explore and annotate maps",
+    description: "Visualize ideas and concepts in a structured way.",
+    url: "/maps",
+    id: "maps",
+    icon: IconMapPin,
+    style: {
+      text: "text-yellow-700/90 dark:text-yellow-300/90",
+      bg: "bg-yellow-50 dark:bg-yellow-950/40",
+      grid: "",
+    },
+    shortcut: "⌘M",
+  },
+  {
     title: "Teams",
     action: "Manage teams and collaborators",
-    description: "Lots of numbers and things — good for nerds.",
+    description: "Organize members, roles, and shared workspaces.",
     url: "/teams",
     id: "teams",
-    icon: IconComponent,
+    icon: IconUsersRound,
     style: {
       text: "text-indigo-700/90 dark:text-indigo-300/90",
       bg: "bg-indigo-50 dark:bg-indigo-950/40",
       grid: "",
     },
     shortcut: "⌘E",
-  },
-  {
-    title: "Create",
-    action: "Create and configure new agents",
-    description: "Get a birds-eye-view of your procrastination.",
-    url: "/create",
-    id: "create",
-    icon: IconSparkle,
-    style: {
-      text: "text-purple-700/90 dark:text-purple-300/90",
-      bg: "bg-purple-50 dark:bg-purple-950/40",
-      grid: "",
-    },
-    shortcut: "⌘N",
   },
   {
     title: "Profile",
@@ -309,6 +295,20 @@ export const defaultMenu = [
       grid: "",
     },
     shortcut: "⌘P",
+  },
+  {
+    title: "Create",
+    action: "Start something new",
+    description: "Create new resources for your workspace.",
+    url: "/create",
+    id: "create",
+    icon: IconSparkle,
+    style: {
+      text: "text-purple-700/90 dark:text-purple-300/90",
+      bg: "bg-purple-50 dark:bg-purple-950/40",
+      grid: "",
+    },
+    shortcut: "⌘N",
   },
 ] as const
 
@@ -772,7 +772,7 @@ export const defaultSettingsTabs = [
       },
       {
         name: "settings.titles.account",
-        icon: IconCircleUserRound,
+        icon: IconUserCog,
         id: "account",
         description: "settings.descriptions.account",
       },

@@ -176,7 +176,7 @@ const hiddenTeamMemberNames = computed(() =>
                   <DropdownMenuShortcut>⇧⌘M</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  @click="emitter.emit('Dialog.Settings.Open', 'overview')"
+                  @click="emitter.emit('Dialog.Settings.Open', 'teams')"
                 >
                   <IconComponent />
                   {{ t("components.teamSwitcher.menu.settings") }}
@@ -285,7 +285,7 @@ const hiddenTeamMemberNames = computed(() =>
               <ContextMenuShortcut>⇧⌘M</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem
-              @click="emitter.emit('Dialog.Settings.Open', 'overview')"
+              @click="emitter.emit('Dialog.Settings.Open', 'teams')"
             >
               <IconComponent />
               {{ t("components.teamSwitcher.menu.settings") }}
