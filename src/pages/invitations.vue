@@ -184,100 +184,92 @@ const handleLogout = () => {
 <template>
   <div class="flex grow flex-col items-center">
     <PageHeader />
-    <div class="w-full max-w-md p-2">
-      <div class="grid gap-2">
-        <Label for="team-select" class="text-muted-foreground text-xs">
-          {{ $t("pages.join.labels.findTeam") }}
-        </Label>
-        <Select id="team-select" v-model="selectedCode">
-          <SelectTrigger class="w-full truncate **:data-desc:hidden">
-            <SelectValue
-              :placeholder="$t('pages.join.placeholders.selectInvitation')"
-            />
-          </SelectTrigger>
-          <SelectContent class="w-full">
-            <template v-if="isAuthenticated">
-              <SelectGroup v-if="pendingInvitations.length > 0">
-                <SelectLabel>{{ $t("pages.join.labels.pending") }}</SelectLabel>
-                <TooltipProvider>
-                  <Tooltip
-                    v-for="invite in pendingInvitations"
-                    :key="invite.id"
-                  >
-                    <TooltipTrigger as-child>
-                      <SelectItem :value="invite.code">
-                        <SelectText class="font-semibold">
-                          {{ invite.teamName }}
-                          <span class="text-muted-foreground/50 text-xs">
-                            [{{ invite.role }}]
-                            {{ $t("pages.join.labels.invitedBy") }}
-                            {{ invite.inviterName }}
-                          </span>
-                        </SelectText>
-                      </SelectItem>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      {{ invite.inviterEmail }} on
-                      {{
-                        new Intl.DateTimeFormat("en-US", {
-                          hour: "numeric",
-                          minute: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        }).format(invite.createdAt.toDate())
-                      }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </SelectGroup>
-              <SelectLabel v-else>
-                {{ $t("pages.join.empty.noPending") }}
-              </SelectLabel>
-              <SelectSeparator v-if="declinedInvitations.length > 0" />
-              <SelectGroup v-if="declinedInvitations.length > 0">
-                <SelectLabel>{{
-                  $t("pages.join.labels.declined")
-                }}</SelectLabel>
-                <TooltipProvider>
-                  <Tooltip
-                    v-for="invite in declinedInvitations"
-                    :key="invite.id"
-                  >
-                    <TooltipTrigger as-child>
-                      <SelectItem :value="invite.code">
-                        <SelectText class="font-semibold">
-                          {{ invite.teamName }}
-                          <span class="text-muted-foreground/50 text-xs">
-                            [{{ invite.role }}] invited by
-                            {{ invite.inviterName }}
-                          </span>
-                        </SelectText>
-                      </SelectItem>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      {{ invite.inviterEmail }} on
-                      {{
-                        new Intl.DateTimeFormat("en-US", {
-                          hour: "numeric",
-                          minute: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        }).format(invite.createdAt.toDate())
-                      }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </SelectGroup>
-              <SelectLabel v-else>
-                {{ $t("pages.join.empty.noDeclined") }}
-              </SelectLabel>
-            </template>
-          </SelectContent>
-        </Select>
-      </div>
+    <div class="grid w-full max-w-md gap-2 px-2">
+      <Label for="team-select" class="text-muted-foreground text-xs">
+        {{ $t("pages.join.labels.findInvite") }}
+      </Label>
+      <Select id="team-select" v-model="selectedCode">
+        <SelectTrigger
+          class="bg-background w-full truncate **:data-desc:hidden"
+        >
+          <SelectValue
+            :placeholder="$t('pages.join.placeholders.selectInvitation')"
+          />
+        </SelectTrigger>
+        <SelectContent class="w-full">
+          <template v-if="isAuthenticated">
+            <SelectGroup v-if="pendingInvitations.length > 0">
+              <SelectLabel>{{ $t("pages.join.labels.pending") }}</SelectLabel>
+              <TooltipProvider>
+                <Tooltip v-for="invite in pendingInvitations" :key="invite.id">
+                  <TooltipTrigger as-child>
+                    <SelectItem :value="invite.code">
+                      <SelectText class="font-semibold">
+                        {{ invite.teamName }}
+                        <span class="text-muted-foreground/50 text-xs">
+                          [{{ invite.role }}]
+                          {{ $t("pages.join.labels.invitedBy") }}
+                          {{ invite.inviterName }}
+                        </span>
+                      </SelectText>
+                    </SelectItem>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {{ invite.inviterEmail }} on
+                    {{
+                      new Intl.DateTimeFormat("en-US", {
+                        hour: "numeric",
+                        minute: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }).format(invite.createdAt.toDate())
+                    }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </SelectGroup>
+            <SelectLabel v-else>
+              {{ $t("pages.join.empty.noPending") }}
+            </SelectLabel>
+            <SelectSeparator />
+            <SelectGroup v-if="declinedInvitations.length > 0">
+              <SelectLabel>{{ $t("pages.join.labels.declined") }}</SelectLabel>
+              <TooltipProvider>
+                <Tooltip v-for="invite in declinedInvitations" :key="invite.id">
+                  <TooltipTrigger as-child>
+                    <SelectItem :value="invite.code">
+                      <SelectText class="font-semibold">
+                        {{ invite.teamName }}
+                        <span class="text-muted-foreground/50 text-xs">
+                          [{{ invite.role }}] invited by
+                          {{ invite.inviterName }}
+                        </span>
+                      </SelectText>
+                    </SelectItem>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {{ invite.inviterEmail }} on
+                    {{
+                      new Intl.DateTimeFormat("en-US", {
+                        hour: "numeric",
+                        minute: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }).format(invite.createdAt.toDate())
+                    }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </SelectGroup>
+            <SelectLabel v-else>
+              {{ $t("pages.join.empty.noDeclined") }}
+            </SelectLabel>
+          </template>
+        </SelectContent>
+      </Select>
     </div>
     <OverlayScrollbarsWrapper
-      class="w-full max-w-md items-center justify-between px-2"
+      class="w-full max-w-md items-center justify-between p-2"
     >
       <div
         class="bg-sidebar flex size-full flex-col items-center justify-between rounded-md p-2"
@@ -364,7 +356,7 @@ const handleLogout = () => {
                 {{ $t("pages.join.placeholders.selectInvitation") }}
               </EmptyTitle>
               <EmptyDescription>
-                {{ $t("pages.join.labels.findTeam") }}
+                {{ $t("pages.join.labels.findInvite") }}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -397,13 +389,5 @@ const handleLogout = () => {
         </div>
       </div>
     </OverlayScrollbarsWrapper>
-    <div class="flex w-full max-w-md flex-col items-center gap-2 p-2">
-      <span class="text-muted-foreground truncate text-xs">
-        {{ authStore.currentUser?.email }}
-      </span>
-      <Button variant="outline" size="sm" @click="handleLogout">
-        {{ $t("pages.join.buttons.useDifferentAccount") }}
-      </Button>
-    </div>
   </div>
 </template>

@@ -182,7 +182,7 @@ const teams = [
                       <Avatar
                         v-for="person in team.members"
                         :key="person.email"
-                        class="ring-background ring-3"
+                        class="ring-background ring-2"
                       >
                         <AvatarImage
                           class="inline-block size-8 rounded"

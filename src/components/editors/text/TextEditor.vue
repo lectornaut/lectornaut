@@ -1286,7 +1286,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
                 v-for="col in TABLE_PICKER_COLS"
                 :key="`${row}-${col}`"
                 type="button"
-                class="size-5 rounded-[2px] border transition-colors"
+                class="size-4 rounded-[2px] border transition-colors"
                 :class="
                   col <= tablePickerSelection.cols &&
                   row <= tablePickerSelection.rows

@@ -68,7 +68,7 @@ const switchTeam = async (teamId: AcceptableValue) => {
             :value="team.value"
           >
             <div class="flex items-center gap-2">
-              <Avatar class="size-5">
+              <Avatar class="size-4">
                 <AvatarImage
                   :src="team.original?.photoURL!"
                   :alt="team.label"

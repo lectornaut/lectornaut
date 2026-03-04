@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
       <Tooltip v-for="participant in visibleUsers" :key="participant.peerId">
         <TooltipTrigger as-child>
           <Avatar
-            class="ring-offset-sidebar -ml-2 size-5 ring-2 ring-offset-2 first:ml-0"
+            class="ring-offset-sidebar -ml-2 size-4 ring-2 ring-offset-2 first:ml-0"
             :style="{ '--tw-ring-color': participant.color }"
           >
             <AvatarImage

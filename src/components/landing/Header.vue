@@ -339,7 +339,7 @@ const { t } = useI18n()
                                       >
                                         <Component
                                           :is="item.icon"
-                                          class="size-5"
+                                          class="size-4"
                                           :class="item.style.text"
                                         />
                                       </div>
@@ -406,7 +406,7 @@ const { t } = useI18n()
                                         >
                                           <Component
                                             :is="item.icon"
-                                            class="size-5"
+                                            class="size-4"
                                             :class="item.style.text"
                                           />
                                         </div>
@@ -447,7 +447,7 @@ const { t } = useI18n()
                                       >
                                         <Component
                                           :is="item.icon"
-                                          class="size-5"
+                                          class="size-4"
                                           :class="item.style.text"
                                         />
                                       </div>
@@ -487,7 +487,7 @@ const { t } = useI18n()
                                       >
                                         <Component
                                           :is="item.icon"
-                                          class="size-5"
+                                          class="size-4"
                                           :class="item.style.text"
                                         />
                                       </div>

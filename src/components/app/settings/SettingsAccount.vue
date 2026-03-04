@@ -601,7 +601,7 @@ const passwordExists = computed(() => {
                     <Button
                       v-if="displayPhotoURL"
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0 ring-2 transition group-hover:opacity-100"
+                      class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0 ring-2 transition group-hover:opacity-100"
                       size="icon-sm"
                       @click.stop="handleRemoveProfilePicture"
                     >
@@ -902,7 +902,7 @@ const passwordExists = computed(() => {
                       <TooltipTrigger as-child>
                         <Button
                           variant="secondary"
-                          class="ring-background absolute -right-2 -bottom-2 size-5 rounded ring-2"
+                          class="ring-background absolute -right-2 -bottom-2 size-4 rounded ring-2"
                           size="icon-sm"
                         >
                           <IconGoogleIcon

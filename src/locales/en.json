@@ -1149,7 +1149,7 @@
     "join": {
       "title": "Join",
       "labels": {
-        "findTeam": "Let's find a team for you to join",
+        "findInvite": "Let's find your invitation",
         "pending": "Pending",
         "declined": "Declined",
         "joinTeam": "Join {teamName}",

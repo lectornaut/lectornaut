@@ -263,7 +263,7 @@ const sortedWorkspaces = computed(() => {
                               <TooltipTrigger as-child>
                                 <Button
                                   variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-5 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
+                                  class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
                                   size="icon-sm"
                                   :disabled="!canUpdateWorkspace"
                                   @click.stop="

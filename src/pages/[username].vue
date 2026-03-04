@@ -316,7 +316,7 @@ useHead(() => ({
 <template>
   <div class="flex grow flex-col items-center">
     <PageHeader />
-    <div class="container mx-auto">
+    <div class="w-full max-w-2xl px-2">
       <!-- Loading State -->
       <template v-if="loading">
         <div class="flex h-screen flex-col items-center justify-center p-2">
@@ -385,7 +385,7 @@ useHead(() => ({
                         >
                           <TooltipTrigger as-child>
                             <Avatar
-                              class="ring-background size-5 rounded ring-2"
+                              class="ring-background size-4 rounded ring-2"
                             >
                               <AvatarImage
                                 class="rounded"
@@ -405,7 +405,7 @@ useHead(() => ({
                       </div>
                       <Tooltip v-if="hiddenHeaderAvatarCount > 0">
                         <TooltipTrigger as-child>
-                          <Avatar class="ring-background size-5 rounded ring-2">
+                          <Avatar class="ring-background size-4 rounded ring-2">
                             <AvatarFallback class="rounded text-[10px]">
                               +{{ hiddenHeaderAvatarCount }}
                             </AvatarFallback>

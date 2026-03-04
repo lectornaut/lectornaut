@@ -86,7 +86,7 @@ const hiddenTeamMemberNames = computed(() =>
                           :key="member.userId"
                         >
                           <TooltipTrigger as-child>
-                            <Avatar class="ring-sidebar size-5 rounded ring-3">
+                            <Avatar class="ring-sidebar size-4 rounded ring-2">
                               <AvatarImage
                                 class="rounded"
                                 :src="member.user?.photoURL!"
@@ -119,7 +119,7 @@ const hiddenTeamMemberNames = computed(() =>
                       </div>
                       <Tooltip v-if="teamMembers.length > 3">
                         <TooltipTrigger as-child>
-                          <Avatar class="ring-sidebar size-5 rounded ring-3">
+                          <Avatar class="ring-sidebar size-4 rounded ring-2">
                             <AvatarFallback class="rounded text-[10px]">
                               +{{ teamMembers.length - 3 }}
                             </AvatarFallback>

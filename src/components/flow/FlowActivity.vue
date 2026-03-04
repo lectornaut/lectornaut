@@ -281,7 +281,7 @@ const range = ref({
                       <span
                         :class="[
                           event.iconColor,
-                          'ring-background bg-background flex size-5 items-center justify-center rounded ring-6',
+                          'ring-background bg-background flex size-4 items-center justify-center rounded ring-6',
                         ]"
                       >
                         <Component :is="event.icon" />

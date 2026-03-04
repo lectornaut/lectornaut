@@ -80,7 +80,7 @@ const deselectTeam = async () => {
             :value="workspace.value"
           >
             <div class="flex items-center gap-2">
-              <Avatar class="size-5">
+              <Avatar class="size-4">
                 <AvatarImage
                   :src="workspace.original?.photoURL!"
                   :alt="workspace.label"
