@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
+import { useBillingAccess } from "@/composables/useBillingAccess"
 import { isTauri } from "@/composables/usePlatform"
 import {
   IconArrowBigUp,
@@ -52,6 +53,49 @@ const {
 
 const { t } = useI18n()
 const router = useRouter()
+const { canUseFeature } = useBillingAccess()
+
+const hasPaidPlan = computed(() => canUseFeature("paid"))
+
+const teamPlanGateSkipMap = useLocalStorage<Record<string, true>>(
+  "team-plan-gate-skip-map",
+  {}
+)
+
+const isPlanGateSkippedForCurrentTeam = computed(() => {
+  const teamId = currentTeam.value?.id
+  if (!teamId) return false
+  return Boolean(teamPlanGateSkipMap.value[teamId])
+})
+
+const showTeamPlanSelector = computed(() => {
+  if (!currentTeam.value?.id || !currentWorkspace.value?.id) return false
+  return !hasPaidPlan.value && !isPlanGateSkippedForCurrentTeam.value
+})
+
+const skipTeamPlanGateForCurrentTeam = () => {
+  const teamId = currentTeam.value?.id
+  if (!teamId) return
+
+  teamPlanGateSkipMap.value = {
+    ...teamPlanGateSkipMap.value,
+    [teamId]: true,
+  }
+}
+
+watch(
+  [() => currentTeam.value?.id, hasPaidPlan],
+  ([teamId, hasActive]) => {
+    if (!teamId || !hasActive || !teamPlanGateSkipMap.value[teamId]) {
+      return
+    }
+
+    const nextSkippedMap = { ...teamPlanGateSkipMap.value }
+    delete nextSkippedMap[teamId]
+    teamPlanGateSkipMap.value = nextSkippedMap
+  },
+  { immediate: true }
+)
 
 const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
 const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
@@ -215,6 +259,10 @@ const closeTab = (id: string) => {
         <Spinner v-if="isLoading" class="m-auto" />
         <TeamSelector v-else-if="!currentTeam" />
         <WorkspaceSelector v-else-if="!currentWorkspace" />
+        <TeamPlanSelector
+          v-else-if="showTeamPlanSelector"
+          @skip="skipTeamPlanGateForCurrentTeam"
+        />
         <main
           v-else
           class="flex min-h-0 min-w-0 grow gap-2 self-stretch overscroll-none scroll-smooth"

@@ -8,6 +8,7 @@ import {
   IconSwitchHorizontal,
   IconUsersRound,
 } from "@/data/icons"
+import { isTeamBillingEntitled } from "@/helpers/billing"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 
@@ -42,6 +43,24 @@ const hiddenTeamMemberNames = computed(() =>
         member.user?.displayName || member.user?.email || member.userId
     )
 )
+
+const currentPlanLabel = computed(() => {
+  const billing = currentTeam.value?.billing
+  const planKey = billing?.planKey
+
+  if (!planKey || !isTeamBillingEntitled(billing ?? null)) {
+    return "Free"
+  }
+
+  const normalizedPlan = `${planKey[0].toUpperCase()}${planKey.slice(1)}`
+  // if (billing?.interval === "year") {
+  //   return `${normalizedPlan} (Annual)`
+  // }
+  // if (billing?.interval === "month") {
+  //   return `${normalizedPlan} (Monthly)`
+  // }
+  return `${normalizedPlan}`
+})
 </script>
 
 <template>
@@ -74,7 +93,7 @@ const hiddenTeamMemberNames = computed(() =>
                     {{ currentTeam?.name }}
                   </span>
                   <span class="text-muted-foreground truncate text-xs">
-                    {{ teamMembers.length === 1 ? "Free" : "Pro" }} Plan
+                    {{ currentPlanLabel }}
                   </span>
                 </div>
                 <div class="flex items-center gap-1">

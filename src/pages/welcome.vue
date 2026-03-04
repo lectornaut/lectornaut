@@ -1,5 +1,12 @@
 <script lang="ts" setup>
+import { useBillingAccess } from "@/composables/useBillingAccess"
+import {
+  createCheckoutSession as createCheckoutSessionFn,
+  type BillingInterval,
+  type BillingPlanKey,
+} from "@/composables/useFunctions"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconAperture,
   IconBlocks,
@@ -9,7 +16,13 @@ import {
   IconChevronRight,
   IconCommand,
 } from "@/data/icons"
+import {
+  closePendingExternalTab,
+  createPendingExternalTab,
+  openExternalUrl,
+} from "@/helpers/openExternalUrl"
 import { updateUserData } from "@/queries/updateUserData"
+import { toast } from "vue-sonner"
 
 definePage({
   meta: {
@@ -22,16 +35,88 @@ useHead({
 })
 
 const router = useRouter()
+const route = useRoute()
 const isFullscreen = useIsFullscreen()
-
-const completeOnboarding = () => {
-  void updateUserData({ onboarding: false }).catch((error) => {
-    console.error("[welcome] Failed to persist onboarding completion:", error)
-  })
-  router.push("/start")
-}
+const { currentTeam, canManageBilling } = useTeamActions()
+const {
+  catalog: billingCatalog,
+  isCatalogLoading: isPricingLoading,
+  isEntitled: hasActiveTeamPlan,
+  planKey: activePlanKey,
+  interval: activeInterval,
+  status: billingStatus,
+} = useBillingAccess({ loadCatalog: true })
 
 const { t } = useI18n()
+
+const isCheckingOut = ref(false)
+const selectedPlanKey = ref<BillingPlanKey | null>(null)
+const selectedInterval = ref<BillingInterval | null>(null)
+
+const canCheckout = computed(() => {
+  if (hasActiveTeamPlan.value) return false
+  if (
+    !canManageBilling.value ||
+    !currentTeam.value?.id ||
+    isCheckingOut.value ||
+    !billingCatalog.value
+  ) {
+    return false
+  }
+  return !!selectedPlanKey.value && !!selectedInterval.value
+})
+
+watch(
+  () => currentTeam.value?.id,
+  (teamId) => {
+    selectedPlanKey.value = null
+    selectedInterval.value = null
+
+    if (!teamId) return
+  },
+  { immediate: true }
+)
+
+watch(
+  [hasActiveTeamPlan, activePlanKey, activeInterval],
+  ([hasActive, planKey, interval]) => {
+    if (!hasActive || !planKey) return
+
+    selectedPlanKey.value = planKey
+    selectedInterval.value = interval ?? "month"
+  },
+  { immediate: true }
+)
+
+const startStepFiveCheckout = async () => {
+  if (
+    !currentTeam.value?.id ||
+    !selectedPlanKey.value ||
+    !selectedInterval.value ||
+    !canCheckout.value
+  ) {
+    return
+  }
+
+  isCheckingOut.value = true
+  const pendingTab = createPendingExternalTab()
+
+  try {
+    const { data } = await createCheckoutSessionFn({
+      teamId: currentTeam.value.id,
+      planKey: selectedPlanKey.value,
+      interval: selectedInterval.value,
+    })
+    await openExternalUrl(data.url, pendingTab)
+  } catch (error) {
+    closePendingExternalTab(pendingTab)
+    toast.error("Unable to continue to checkout.", {
+      description: error instanceof Error ? error.message : String(error),
+    })
+  } finally {
+    isCheckingOut.value = false
+  }
+}
 
 const steps = computed(() => [
   {
@@ -66,11 +151,42 @@ const steps = computed(() => [
   },
 ])
 
-const currentStep = ref(1)
+const normalizeStep = (stepValue: unknown): number | null => {
+  const rawValue = Array.isArray(stepValue) ? stepValue[0] : stepValue
+  if (typeof rawValue !== "string") return null
+
+  const parsed = Number.parseInt(rawValue, 10)
+  if (!Number.isFinite(parsed)) return null
+
+  return Math.min(steps.value.length, Math.max(1, parsed))
+}
+
+const currentStep = ref(normalizeStep(route.query.step) ?? 1)
 const activeStep = computed(() =>
   steps.value.find((step) => step.step === currentStep.value)
 )
 const totalSteps = computed(() => steps.value.length)
+
+watch(
+  () => route.query.step,
+  (stepValue) => {
+    const parsedStep = normalizeStep(stepValue)
+    if (parsedStep && parsedStep !== currentStep.value) {
+      currentStep.value = parsedStep
+    }
+  }
+)
+
+const completeOnboarding = () => {
+  if (currentStep.value !== totalSteps.value || !hasActiveTeamPlan.value) {
+    return
+  }
+
+  void updateUserData({ onboarding: false }).catch((error) => {
+    console.error("[welcome] Failed to persist onboarding completion:", error)
+  })
+  router.push("/start")
+}
 
 const handlePreviousStep = () => {
   if (currentStep.value > 1) {
@@ -82,6 +198,29 @@ const handleNextStep = () => {
   if (currentStep.value < totalSteps.value) {
     currentStep.value = currentStep.value + 1
   }
+}
+
+const finalStepActionLabel = computed(() =>
+  hasActiveTeamPlan.value
+    ? t("pages.welcome.actions.continue")
+    : t("pages.welcome.actions.continueToCheckout")
+)
+
+const finalStepActionDisabled = computed(() => {
+  if (isCheckingOut.value) return true
+  if (hasActiveTeamPlan.value) return false
+  return !canCheckout.value
+})
+
+const handleFinalStepAction = async () => {
+  if (currentStep.value !== totalSteps.value) return
+
+  if (hasActiveTeamPlan.value) {
+    completeOnboarding()
+    return
+  }
+
+  await startStepFiveCheckout()
 }
 </script>
 
@@ -183,16 +322,17 @@ const handleNextStep = () => {
           <OnboardingAppFlow />
         </template>
         <template v-else-if="currentStep === 5">
-          <div
-            class="text-muted-foreground flex h-full min-h-80 flex-col items-center justify-center gap-2 p-6 text-center"
-          >
-            <h3 class="text-foreground text-base font-medium">
-              {{ t("pages.welcome.content.plans") }}
-            </h3>
-            <p class="max-w-md text-sm">
-              {{ t("pages.welcome.content.plansDescription") }}
-            </p>
-          </div>
+          <OnboardingPlansFlow
+            v-model:selected-plan-key="selectedPlanKey"
+            v-model:selected-interval="selectedInterval"
+            :has-active-plan="hasActiveTeamPlan"
+            :active-plan-key="activePlanKey"
+            :active-interval="activeInterval"
+            :billing-status="billingStatus"
+            :can-manage-billing="canManageBilling"
+            :is-pricing-loading="isPricingLoading"
+            :billing-catalog="billingCatalog"
+          />
         </template>
         <template v-else>
           <h2 class="px-6 pt-6 text-xl font-semibold">
@@ -223,9 +363,17 @@ const handleNextStep = () => {
             Next
             <IconChevronRight />
           </Button>
-          <Button v-else size="sm" @click="completeOnboarding">
-            Continue
-            <IconChevronRight />
+          <Button
+            v-else
+            size="sm"
+            :disabled="finalStepActionDisabled"
+            @click="handleFinalStepAction"
+          >
+            <Spinner v-if="isCheckingOut" />
+            <template v-else>
+              {{ finalStepActionLabel }}
+              <IconChevronRight />
+            </template>
           </Button>
         </div>
       </div>

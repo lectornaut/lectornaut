@@ -1082,7 +1082,7 @@
         },
         "plans": {
           "title": "Plans",
-          "description": "Plan setup is available soon."
+          "description": "Choose a subscription plan and billing term for your team."
         }
       },
       "content": {
@@ -1093,11 +1093,28 @@
         "paymentMethod": "Team and Workspace",
         "paymentDescription": "Create and select where you want to work.",
         "confirmation": "Plans",
-        "confirmationDescription": "Plans are not configured yet.",
-        "plans": "Plans setup is intentionally empty for now.",
-        "plansDescription": "You can continue onboarding and configure plans later.",
+        "confirmationDescription": "Choose a plan to continue onboarding.",
+        "plans": "Select a plan",
+        "plansDescription": "Choose a plan and billing term, then continue to secure checkout.",
         "allSet": "All Set!",
         "allSetDescription": "You're ready to start using the app."
+      },
+      "actions": {
+        "continue": "Continue",
+        "continueToCheckout": "Continue to checkout"
+      },
+      "plans": {
+        "noActivePlan": "No active plan",
+        "monthly": "Monthly",
+        "annual": "Annual",
+        "notAvailable": "N/A",
+        "unavailable": "Unavailable",
+        "pricingSummary": "{monthly}/mo • {annual}/yr",
+        "monthlyDescription": "Billed monthly with flexible plan changes.",
+        "annualDescription": "Billed yearly with one upfront renewal cycle.",
+        "activeSummary": "Current team plan: {plan} ({interval}) • Status: {status}",
+        "activeReadOnly": "This team already has an active plan. Selection is read-only.",
+        "noPermission": "You need billing permissions in this team to select a plan and continue to checkout."
       }
     },
     "exit": {
@@ -1244,6 +1261,12 @@
         "settings": "Settings",
         "switchTeam": "Switch team"
       }
+    },
+    "teamPlanSelector": {
+      "title": "Plans",
+      "description": "This team needs an active plan before you continue.",
+      "choosePlan": "Choose plan",
+      "skipForNow": "Skip for now"
     },
     "teamDialog": {
       "title": {

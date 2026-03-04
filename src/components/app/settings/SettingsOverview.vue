@@ -477,7 +477,7 @@ const discardChanges = () => {
 
     <DialogFooter
       v-if="hasPendingChanges"
-      class="bg-background/50 sticky bottom-3 m-3 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
+      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
     >
       <p class="text-muted-foreground mr-auto ml-2 text-xs">Unsaved changes</p>
       <Button variant="secondary" :disabled="isSaving" @click="discardChanges">

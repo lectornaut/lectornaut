@@ -6,9 +6,16 @@
  */
 
 import { functions } from "@/modules/firebase"
+import type {
+  BillingInterval,
+  BillingPlanKey,
+  ITeamBilling,
+} from "@/types/domain"
 import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { httpsCallable, type HttpsCallableResult } from "firebase/functions"
+
+export type { BillingInterval, BillingPlanKey } from "@/types/domain"
 
 // =============================================================================
 // Team Request/Response Types
@@ -279,6 +286,78 @@ export interface DeclineInvitationResponse {
 }
 
 // =============================================================================
+// Billing Request/Response Types
+// =============================================================================
+
+export type BillingStatusData = ITeamBilling
+
+export interface CreateCheckoutSessionRequest {
+  teamId: string
+  planKey: BillingPlanKey
+  interval: BillingInterval
+}
+
+export interface CreateCheckoutSessionResponse {
+  url: string
+}
+
+export interface CreateBillingPortalSessionRequest {
+  teamId: string
+}
+
+export interface CreateBillingPortalSessionResponse {
+  url: string
+}
+
+export interface ChangeSubscriptionPlanRequest {
+  teamId: string
+  targetPlanKey: BillingPlanKey
+  targetInterval: BillingInterval
+  timing?: "immediate" | "period_end"
+}
+
+export interface BillingSummaryResponse {
+  status: string | null
+  currentPeriodEnd: number | null
+  cancelAtPeriodEnd: boolean
+  priceId: string | null
+}
+
+export interface CancelSubscriptionRequest {
+  teamId: string
+  when?: "period_end"
+}
+
+export interface RestoreSubscriptionRequest {
+  teamId: string
+}
+
+export interface GetBillingStatusRequest {
+  teamId: string
+}
+
+export interface GetBillingStatusResponse {
+  billing: BillingStatusData
+}
+
+export interface BillingCatalogPrice {
+  priceId: string
+  unitAmount: number | null
+  currency: string | null
+}
+
+export type BillingCatalog = Record<
+  BillingPlanKey,
+  Record<BillingInterval, BillingCatalogPrice>
+>
+
+export type GetBillingCatalogRequest = Record<string, never>
+
+export interface GetBillingCatalogResponse {
+  prices: BillingCatalog
+}
+
+// =============================================================================
 // Public Profile Functions
 // =============================================================================
 
@@ -488,6 +567,41 @@ export const declineInvitation = createTypedCallable<
   DeclineInvitationResponse
 >("declineInvitation")
 
+export const createCheckoutSession = createTypedCallable<
+  CreateCheckoutSessionRequest,
+  CreateCheckoutSessionResponse
+>("createCheckoutSession")
+
+export const createBillingPortalSession = createTypedCallable<
+  CreateBillingPortalSessionRequest,
+  CreateBillingPortalSessionResponse
+>("createBillingPortalSession")
+
+export const changeSubscriptionPlan = createTypedCallable<
+  ChangeSubscriptionPlanRequest,
+  BillingSummaryResponse
+>("changeSubscriptionPlan")
+
+export const cancelSubscription = createTypedCallable<
+  CancelSubscriptionRequest,
+  BillingSummaryResponse
+>("cancelSubscription")
+
+export const restoreSubscription = createTypedCallable<
+  RestoreSubscriptionRequest,
+  BillingSummaryResponse
+>("restoreSubscription")
+
+export const getBillingStatus = createTypedCallable<
+  GetBillingStatusRequest,
+  GetBillingStatusResponse
+>("getBillingStatus")
+
+export const getBillingCatalog = createTypedCallable<
+  GetBillingCatalogRequest,
+  GetBillingCatalogResponse
+>("getBillingCatalog")
+
 export const getPublicTeamMembers = createTypedCallable<
   GetPublicTeamMembersRequest,
   GetPublicTeamMembersResponse
@@ -564,6 +678,15 @@ export function useFunctions() {
     updateInvitationRole,
     cancelInvitation,
     declineInvitation,
+
+    // Billing operations
+    createCheckoutSession,
+    createBillingPortalSession,
+    changeSubscriptionPlan,
+    cancelSubscription,
+    restoreSubscription,
+    getBillingStatus,
+    getBillingCatalog,
 
     // Public profile operations
     getPublicTeamMembers,

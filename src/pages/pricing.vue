@@ -1,5 +1,21 @@
 <script lang="ts" setup>
+import { useBillingAccess } from "@/composables/useBillingAccess"
+import {
+  changeSubscriptionPlan as changeSubscriptionPlanFn,
+  createCheckoutSession as createCheckoutSessionFn,
+  type BillingInterval,
+  type BillingPlanKey,
+} from "@/composables/useFunctions"
+import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCircleCheck } from "@/data/icons"
+import { hasActiveLikeBillingStatus } from "@/helpers/billing"
+import {
+  closePendingExternalTab,
+  createPendingExternalTab,
+  openExternalUrl,
+} from "@/helpers/openExternalUrl"
+import { toast } from "vue-sonner"
+import { useCurrentUser } from "vuefire"
 
 definePage({
   meta: {
@@ -12,6 +28,18 @@ useHead({
 })
 
 const { t } = useI18n()
+const router = useRouter()
+const user = useCurrentUser()
+const { canManageBilling, currentTeam } = useTeamActions()
+const {
+  catalog: billingCatalog,
+  isCatalogLoading: isPricingLoading,
+  planKey: activePlanKey,
+  interval: activeInterval,
+  status,
+  refreshBilling,
+} = useBillingAccess({ loadCatalog: true })
+const actionLoadingPlanId = ref<BillingPlanKey | null>(null)
 
 const billingDuration = computed(() => [
   {
@@ -26,38 +54,154 @@ const billingDuration = computed(() => [
 
 const activeBillingDuration = ref("monthly")
 
+const selectedInterval = computed<BillingInterval>(() =>
+  activeBillingDuration.value === "monthly" ? "month" : "year"
+)
+
+const hasActiveSubscription = computed(() => {
+  return hasActiveLikeBillingStatus(status.value)
+})
+
+const canManageCurrentTeamBilling = computed(
+  () => !!user.value && !!currentTeam.value?.id && canManageBilling.value
+)
+
+const isCurrentSelection = (planId: BillingPlanKey): boolean => {
+  return (
+    hasActiveSubscription.value &&
+    activePlanKey.value === planId &&
+    activeInterval.value === selectedInterval.value
+  )
+}
+
+const getActionLabel = (planId: BillingPlanKey): string => {
+  if (!user.value) return t("pages.pricing.plans.cta.getStarted")
+  if (isCurrentSelection(planId)) return "Current plan"
+  if (hasActiveSubscription.value) return "Change plan"
+  return "Subscribe"
+}
+
+const isActionDisabled = (planId: BillingPlanKey): boolean => {
+  if (actionLoadingPlanId.value !== null) return true
+  if (!user.value) return false
+  if (!canManageCurrentTeamBilling.value) return true
+  return isCurrentSelection(planId)
+}
+
+const handlePlanAction = async (planId: BillingPlanKey): Promise<void> => {
+  if (!user.value) {
+    await router.push("/enter")
+    return
+  }
+
+  if (!currentTeam.value?.id) {
+    toast.error("Select a team before managing billing.")
+    return
+  }
+
+  if (!canManageBilling.value) {
+    toast.error("You do not have permission to manage billing for this team.")
+    return
+  }
+
+  if (isCurrentSelection(planId)) return
+
+  actionLoadingPlanId.value = planId
+
+  try {
+    if (hasActiveSubscription.value) {
+      await changeSubscriptionPlanFn({
+        teamId: currentTeam.value.id,
+        targetPlanKey: planId,
+        targetInterval: selectedInterval.value,
+      })
+      await refreshBilling()
+      toast.success("Plan updated successfully.")
+      return
+    }
+
+    const pendingTab = createPendingExternalTab()
+    try {
+      const { data } = await createCheckoutSessionFn({
+        teamId: currentTeam.value.id,
+        planKey: planId,
+        interval: selectedInterval.value,
+      })
+
+      await openExternalUrl(data.url, pendingTab)
+    } catch (error) {
+      closePendingExternalTab(pendingTab)
+      throw error
+    }
+  } catch (error) {
+    toast.error("Unable to continue with billing.", {
+      description: error instanceof Error ? error.message : String(error),
+    })
+  } finally {
+    actionLoadingPlanId.value = null
+  }
+}
+
+const formatCurrencyAmount = (
+  amountInMinorUnits: number,
+  currency: string
+): string => {
+  const currencyCode = currency.toUpperCase()
+  const amount = amountInMinorUnits / 100
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currencyCode,
+      maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    }).format(amount)
+  } catch {
+    return `${amount.toFixed(2)} ${currencyCode}`
+  }
+}
+
+const getDisplayedPrice = (
+  planId: BillingPlanKey,
+  interval: BillingInterval
+): string => {
+  const price = billingCatalog.value?.[planId]?.[interval]
+  if (!price?.currency || typeof price.unitAmount !== "number") {
+    return isPricingLoading.value
+      ? t("states.loading")
+      : t("pages.welcome.plans.unavailable")
+  }
+
+  const suffix = interval === "month" ? "/month" : "/year"
+  return `${formatCurrencyAmount(price.unitAmount, price.currency)}${suffix}`
+}
+
 const pricingPlans = computed(() => [
   {
     title: t("pages.pricing.plans.personal.title"),
-    id: "personal",
-    monthlyPrice: t("pages.pricing.plans.personal.price"),
-    annualPrice: t("pages.pricing.plans.personal.price"),
+    id: "personal" as BillingPlanKey,
+    monthlyPrice: getDisplayedPrice("personal", "month"),
+    annualPrice: getDisplayedPrice("personal", "year"),
     overview: [
       t("pages.pricing.features.unlimitedConnections"),
       t("pages.pricing.features.professionalFeatures"),
       t("pages.pricing.features.communitySupport"),
     ],
-    cta: t("pages.pricing.plans.cta.getStarted"),
-    ctaLink: "/enter",
   },
   {
     title: t("pages.pricing.plans.professional.title"),
-    id: "professional",
-    monthlyPrice: t("pages.pricing.plans.professional.monthly"),
-    annualPrice: t("pages.pricing.plans.professional.annual"),
+    id: "professional" as BillingPlanKey,
+    monthlyPrice: getDisplayedPrice("professional", "month"),
+    annualPrice: getDisplayedPrice("professional", "year"),
     overview: [
       t("pages.pricing.features.everythingInPersonal"),
       t("pages.pricing.features.advancedFeatures"),
       t("pages.pricing.features.prioritySupport"),
     ],
-    cta: t("pages.pricing.plans.cta.getStarted"),
-    ctaLink: "/enter",
   },
   {
     title: t("pages.pricing.plans.business.title"),
-    id: "business",
-    monthlyPrice: t("pages.pricing.plans.business.monthly"),
-    annualPrice: t("pages.pricing.plans.business.annual"),
+    id: "business" as BillingPlanKey,
+    monthlyPrice: getDisplayedPrice("business", "month"),
+    annualPrice: getDisplayedPrice("business", "year"),
     overview: [
       t("pages.pricing.features.everythingInProfessional"),
       t("pages.pricing.features.teamManagement"),
@@ -66,14 +210,12 @@ const pricingPlans = computed(() => [
       t("pages.pricing.features.analyticsAndReporting"),
       t("pages.pricing.features.dedicatedSupport"),
     ],
-    cta: t("pages.pricing.plans.cta.getStarted"),
-    ctaLink: "/enter",
   },
   {
     title: t("pages.pricing.plans.enterprise.title"),
-    id: "enterprise",
-    monthlyPrice: t("pages.pricing.plans.enterprise.price"),
-    annualPrice: t("pages.pricing.plans.enterprise.price"),
+    id: "enterprise" as BillingPlanKey,
+    monthlyPrice: getDisplayedPrice("enterprise", "month"),
+    annualPrice: getDisplayedPrice("enterprise", "year"),
     overview: [
       // "Everything in Business"
       t("pages.pricing.features.customSLAs"),
@@ -81,8 +223,6 @@ const pricingPlans = computed(() => [
       t("pages.pricing.features.integrationSupport"),
       t("pages.pricing.features.complianceAndAudits"),
     ],
-    cta: t("pages.pricing.plans.cta.contactSales"),
-    ctaLink: "/contact",
   },
 ])
 
@@ -247,10 +387,12 @@ const comparisonPlans = computed(() => [
               </ul>
             </CardContent>
             <CardFooter class="mt-auto grid">
-              <Button as-child>
-                <RouterLink :to="card.ctaLink">
-                  {{ card.cta }}
-                </RouterLink>
+              <Button
+                :disabled="isActionDisabled(card.id)"
+                @click="handlePlanAction(card.id)"
+              >
+                <Spinner v-if="actionLoadingPlanId === card.id" />
+                {{ getActionLabel(card.id) }}
               </Button>
             </CardFooter>
           </Card>

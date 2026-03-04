@@ -6,3 +6,5 @@ export const appCheckExchangeSharedSecret = defineSecret(
   "APPCHECK_EXCHANGE_SHARED_SECRET"
 )
 export const appCheckAllowedAppId = defineSecret("APPCHECK_ALLOWED_APP_ID")
+export const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY")
+export const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET")
