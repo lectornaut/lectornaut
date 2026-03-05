@@ -1,12 +1,15 @@
+import * as logger from "firebase-functions/logger"
 import {
   CallableRequest,
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import Stripe from "stripe"
 import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS, DESTRUCTIVE_CALLABLE_OPTS } from "./runtimeConfig.js"
+import { stripeSecretKey } from "./secrets.js"
 import {
   Actor,
   Capabilities,
@@ -219,6 +222,167 @@ function normalizeEmail(email: string | null | undefined): string | null {
   if (typeof email !== "string") return null
   const normalized = email.trim().toLowerCase()
   return normalized ? normalized : null
+}
+
+type TeamStripeBillingRefs = {
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
+  stripeScheduleId: string | null
+}
+
+const TERMINAL_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
+  "canceled",
+  "incomplete_expired",
+])
+
+let stripeClient: Stripe | null = null
+
+function getStripeClient(): Stripe {
+  if (!stripeClient) {
+    const secret = stripeSecretKey.value()
+    if (!secret) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Stripe secret key is not configured."
+      )
+    }
+    stripeClient = new Stripe(secret)
+  }
+  return stripeClient
+}
+
+function toOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function getTeamStripeBillingRefs(
+  teamData: Record<string, unknown>
+): TeamStripeBillingRefs {
+  const billingRaw = teamData.billing
+  const billing =
+    billingRaw && typeof billingRaw === "object"
+      ? (billingRaw as Record<string, unknown>)
+      : {}
+
+  return {
+    stripeCustomerId: toOptionalString(billing.stripeCustomerId),
+    stripeSubscriptionId: toOptionalString(billing.stripeSubscriptionId),
+    stripeScheduleId: toOptionalString(billing.stripeScheduleId),
+  }
+}
+
+function normalizeScheduleId(
+  schedule: string | Stripe.SubscriptionSchedule | null | undefined
+): string | null {
+  if (!schedule) return null
+  return typeof schedule === "string" ? schedule : schedule.id
+}
+
+function selectSubscriptionCandidate(
+  subscriptions: Stripe.Subscription[]
+): Stripe.Subscription | null {
+  const candidates = subscriptions
+    .filter(
+      (subscription) => !TERMINAL_SUBSCRIPTION_STATUSES.has(subscription.status)
+    )
+    .sort((left, right) => {
+      const leftPeriodEnd = left.items.data[0]?.current_period_end ?? 0
+      const rightPeriodEnd = right.items.data[0]?.current_period_end ?? 0
+      return rightPeriodEnd - leftPeriodEnd
+    })
+
+  return candidates[0] ?? null
+}
+
+function isStripeResourceMissingError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const code = (error as { code?: unknown }).code
+  return code === "resource_missing"
+}
+
+async function resolveTeamSubscriptionForDeletion(
+  stripe: Stripe,
+  refs: TeamStripeBillingRefs
+): Promise<Stripe.Subscription | null> {
+  const preferredSubscriptionId = refs.stripeSubscriptionId
+
+  if (preferredSubscriptionId) {
+    try {
+      return await stripe.subscriptions.retrieve(preferredSubscriptionId)
+    } catch (error) {
+      if (!isStripeResourceMissingError(error)) {
+        throw error
+      }
+      logger.warn("Stripe subscription referenced by team was not found", {
+        subscriptionId: preferredSubscriptionId,
+      })
+    }
+  }
+
+  if (!refs.stripeCustomerId) {
+    return null
+  }
+
+  const listed = await stripe.subscriptions.list({
+    customer: refs.stripeCustomerId,
+    status: "all",
+    limit: 20,
+  })
+  return selectSubscriptionCandidate(listed.data)
+}
+
+async function cleanupTeamBillingBeforeDelete(
+  teamId: string,
+  teamData: Record<string, unknown>
+): Promise<void> {
+  const refs = getTeamStripeBillingRefs(teamData)
+  if (
+    !refs.stripeSubscriptionId &&
+    !refs.stripeCustomerId &&
+    !refs.stripeScheduleId
+  ) {
+    return
+  }
+
+  const stripe = getStripeClient()
+  const subscription = await resolveTeamSubscriptionForDeletion(stripe, refs)
+  const scheduleId =
+    refs.stripeScheduleId ?? normalizeScheduleId(subscription?.schedule)
+
+  if (scheduleId) {
+    try {
+      await stripe.subscriptionSchedules.release(scheduleId, {})
+      logger.info(
+        "Released Stripe subscription schedule before team deletion",
+        {
+          teamId,
+          scheduleId,
+        }
+      )
+    } catch (error) {
+      if (!isStripeResourceMissingError(error)) {
+        throw error
+      }
+      logger.warn("Stripe schedule referenced by team was not found", {
+        teamId,
+        scheduleId,
+      })
+    }
+  }
+
+  if (
+    subscription &&
+    !TERMINAL_SUBSCRIPTION_STATUSES.has(subscription.status)
+  ) {
+    await stripe.subscriptions.cancel(subscription.id)
+    logger.info("Cancelled Stripe subscription before team deletion", {
+      teamId,
+      subscriptionId: subscription.id,
+      status: subscription.status,
+    })
+  }
 }
 
 const PUBLIC_USERNAME_MIN_LENGTH = 3
@@ -743,136 +907,158 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
   })
 })
 
-export const deleteTeam = onCall(DESTRUCTIVE_CALLABLE_OPTS, async (request) => {
-  assertAuthenticated(request)
+export const deleteTeam = onCall(
+  {
+    ...DESTRUCTIVE_CALLABLE_OPTS,
+    secrets: [stripeSecretKey],
+  },
+  async (request) => {
+    assertAuthenticated(request)
 
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const actorId = request.auth.uid
+    const actorEmail = request.auth.token.email ?? undefined
 
-  // First verify role outside transaction
-  const membershipRef = db.doc(`teams/${teamId}/memberships/${actorId}`)
-  const membershipSnap = await membershipRef.get()
+    // First verify role outside transaction
+    const membershipRef = db.doc(`teams/${teamId}/memberships/${actorId}`)
+    const membershipSnap = await membershipRef.get()
 
-  if (!membershipSnap.exists) {
-    throw new HttpsError("permission-denied", "User is not a team member.")
-  }
-
-  const role = membershipSnap.data()?.role as IMembershipRole
-  if (
-    !can(actorId, Capabilities.DELETE_TEAM, {
-      scope: "team",
-      teamRole: role,
-    })
-  ) {
-    throw new HttpsError(
-      "permission-denied",
-      "You do not have permission to delete this team."
-    )
-  }
-
-  // Get team data for logging
-  const teamRef = db.doc(`teams/${teamId}`)
-  const teamSnap = await teamRef.get()
-
-  if (!teamSnap.exists) {
-    throw new HttpsError("not-found", "Team not found.")
-  }
-
-  const teamData = teamSnap.data() ?? {}
-  const teamUsername =
-    typeof teamData.username === "string"
-      ? normalizePublicUsername(teamData.username)
-      : null
-
-  // =========================================================================
-  // COST FIX: Recursively delete ALL subcollections under the team.
-  //
-  // Before: only deleted workspace docs and membership docs, leaving orphaned
-  // subcollections (code/, write/, workspace-memberships, membership-layouts)
-  // consuming storage and index costs indefinitely.
-  //
-  // After: uses db.recursiveDelete() which traverses and deletes all nested
-  // documents in subcollections automatically. This is the recommended
-  // approach from Firebase for deep document trees.
-  //
-  // Document tree under teams/{teamId}:
-  //   /memberships/{userId}
-  //     /workspaces/{workspaceId}
-  //       /layout/{layoutId}              ← was orphaned
-  //   /workspaces/{workspaceId}
-  //     /code/{nodeId}                    ← was orphaned
-  //     /write/{nodeId}                   ← was orphaned
-  //     /memberships/{userId}             ← was orphaned
-  // =========================================================================
-
-  // Update user's current team before deletion
-  const userRef = db.doc(`users/${actorId}`)
-  const userSnap = await userRef.get()
-  if (userSnap.exists && userSnap.data()?.currentTeamId === teamId) {
-    await userRef.update({
-      currentTeamId: null,
-      currentWorkspaceId: null,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    })
-  }
-
-  // Recursively delete the entire team document tree (all subcollections)
-  await db.recursiveDelete(teamRef)
-
-  // Also delete related invitations for this team
-  const invitationsSnap = await db
-    .collection("invitations")
-    .where("teamId", "==", teamId)
-    .select()
-    .get()
-
-  if (!invitationsSnap.empty) {
-    const inviteBatches = chunkArray(invitationsSnap.docs, DELETE_BATCH_SIZE)
-    for (const batchDocs of inviteBatches) {
-      const batch = db.batch()
-      batchDocs.forEach((doc) => batch.delete(doc.ref))
-      await batch.commit()
+    if (!membershipSnap.exists) {
+      throw new HttpsError("permission-denied", "User is not a team member.")
     }
-  }
 
-  // Release public username/handle mapping when the team is deleted.
-  if (teamUsername) {
-    const usernameRef = db.doc(`usernames/${teamUsername}`)
-    const usernameSnap = await usernameRef.get()
-    const usernameData = usernameSnap.data() ?? {}
+    const role = membershipSnap.data()?.role as IMembershipRole
     if (
-      usernameSnap.exists &&
-      usernameData.entityType === "team" &&
-      usernameData.teamId === teamId
+      !can(actorId, Capabilities.DELETE_TEAM, {
+        scope: "team",
+        teamRole: role,
+      })
     ) {
-      await usernameRef.delete()
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to delete this team."
+      )
+    }
+
+    // Get team data for logging
+    const teamRef = db.doc(`teams/${teamId}`)
+    const teamSnap = await teamRef.get()
+
+    if (!teamSnap.exists) {
+      throw new HttpsError("not-found", "Team not found.")
+    }
+
+    const teamData = teamSnap.data() ?? {}
+    const teamUsername =
+      typeof teamData.username === "string"
+        ? normalizePublicUsername(teamData.username)
+        : null
+
+    try {
+      await cleanupTeamBillingBeforeDelete(
+        teamId,
+        teamData as Record<string, unknown>
+      )
+    } catch (error) {
+      logger.error("Unable to clean up billing before team deletion", {
+        teamId,
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw new HttpsError(
+        "internal",
+        "Unable to clean up billing before deleting team."
+      )
+    }
+
+    // =========================================================================
+    // COST FIX: Recursively delete ALL subcollections under the team.
+    //
+    // Before: only deleted workspace docs and membership docs, leaving orphaned
+    // subcollections (code/, write/, workspace-memberships, membership-layouts)
+    // consuming storage and index costs indefinitely.
+    //
+    // After: uses db.recursiveDelete() which traverses and deletes all nested
+    // documents in subcollections automatically. This is the recommended
+    // approach from Firebase for deep document trees.
+    //
+    // Document tree under teams/{teamId}:
+    //   /memberships/{userId}
+    //     /workspaces/{workspaceId}
+    //       /layout/{layoutId}              ← was orphaned
+    //   /workspaces/{workspaceId}
+    //     /code/{nodeId}                    ← was orphaned
+    //     /write/{nodeId}                   ← was orphaned
+    //     /memberships/{userId}             ← was orphaned
+    // =========================================================================
+
+    // Update user's current team before deletion
+    const userRef = db.doc(`users/${actorId}`)
+    const userSnap = await userRef.get()
+    if (userSnap.exists && userSnap.data()?.currentTeamId === teamId) {
+      await userRef.update({
+        currentTeamId: null,
+        currentWorkspaceId: null,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+    }
+
+    // Recursively delete the entire team document tree (all subcollections)
+    await db.recursiveDelete(teamRef)
+
+    // Also delete related invitations for this team
+    const invitationsSnap = await db
+      .collection("invitations")
+      .where("teamId", "==", teamId)
+      .select()
+      .get()
+
+    if (!invitationsSnap.empty) {
+      const inviteBatches = chunkArray(invitationsSnap.docs, DELETE_BATCH_SIZE)
+      for (const batchDocs of inviteBatches) {
+        const batch = db.batch()
+        batchDocs.forEach((doc) => batch.delete(doc.ref))
+        await batch.commit()
+      }
+    }
+
+    // Release public username/handle mapping when the team is deleted.
+    if (teamUsername) {
+      const usernameRef = db.doc(`usernames/${teamUsername}`)
+      const usernameSnap = await usernameRef.get()
+      const usernameData = usernameSnap.data() ?? {}
+      if (
+        usernameSnap.exists &&
+        usernameData.entityType === "team" &&
+        usernameData.teamId === teamId
+      ) {
+        await usernameRef.delete()
+      }
+    }
+
+    // Log the event (outside transaction since team is deleted)
+    await logEvent({
+      teamId,
+      actor: { userId: actorId, email: actorEmail, role },
+      action: "team.delete",
+      resource: { type: "team", id: teamId },
+      context: buildContext(request),
+      changes: {
+        fields: ["name", "photoURL", "username", "isPublic"],
+        before: {
+          name: teamData.name ?? null,
+          photoURL: teamData.photoURL ?? null,
+          username: teamData.username ?? null,
+          isPublic: teamData.isPublic ?? false,
+        },
+      },
+    })
+
+    return {
+      teamId,
+      deleted: true,
     }
   }
-
-  // Log the event (outside transaction since team is deleted)
-  await logEvent({
-    teamId,
-    actor: { userId: actorId, email: actorEmail, role },
-    action: "team.delete",
-    resource: { type: "team", id: teamId },
-    context: buildContext(request),
-    changes: {
-      fields: ["name", "photoURL", "username", "isPublic"],
-      before: {
-        name: teamData.name ?? null,
-        photoURL: teamData.photoURL ?? null,
-        username: teamData.username ?? null,
-        isPublic: teamData.isPublic ?? false,
-      },
-    },
-  })
-
-  return {
-    teamId,
-    deleted: true,
-  }
-})
+)
 
 // =============================================================================
 // Workspace CRUD Operations

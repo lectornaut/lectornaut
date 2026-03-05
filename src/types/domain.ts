@@ -14,6 +14,7 @@ export interface ITeamBilling {
   planKey: BillingPlanKey | null
   interval: BillingInterval | null
   priceId: string | null
+  quantity: number | null
   status: string | null
   currentPeriodEnd: number | null
   cancelAtPeriodEnd: boolean

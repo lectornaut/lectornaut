@@ -38,6 +38,7 @@ import {
   IconUserRound,
   IconUsersRound,
 } from "@/data/icons"
+import type { BillingPlanKey } from "@/types/domain"
 
 export const languages = [
   {
@@ -758,6 +759,138 @@ export const footerSections = [
     ],
   },
 ] as const
+
+export type SettingsPlan = {
+  id: BillingPlanKey
+  titleKey: string
+  descriptionKey: string
+  highlights: readonly string[]
+}
+
+export type SettingsPlanFeature = {
+  name: string
+  values: Record<BillingPlanKey, string | boolean>
+}
+
+export const settingsPlans = [
+  {
+    id: "personal",
+    titleKey: "settings.plans.subscriptionPlan.personal.title",
+    descriptionKey: "settings.plans.subscriptionPlan.personal.description",
+    highlights: ["Personal Workspaces", "10 Agents", "100 Monthly Tasks"],
+  },
+  {
+    id: "professional",
+    titleKey: "settings.plans.subscriptionPlan.professional.title",
+    descriptionKey: "settings.plans.subscriptionPlan.professional.description",
+    highlights: ["Team Workspaces", "100 Agents", "1000 Monthly Tasks"],
+  },
+  {
+    id: "business",
+    titleKey: "settings.plans.subscriptionPlan.business.title",
+    descriptionKey: "settings.plans.subscriptionPlan.business.description",
+    highlights: ["Team Workspaces", "500 Agents", "5000 Monthly Tasks"],
+  },
+  {
+    id: "enterprise",
+    titleKey: "settings.plans.subscriptionPlan.enterprise.title",
+    descriptionKey: "settings.plans.subscriptionPlan.enterprise.description",
+    highlights: ["Team Workspaces", "1000 Agents", "10000 Monthly Tasks"],
+  },
+] as const satisfies readonly SettingsPlan[]
+
+export const settingsPlanFeatures = [
+  {
+    name: "Workspaces",
+    values: {
+      personal: "1",
+      professional: "5",
+      business: "20",
+      enterprise: "Unlimited",
+    },
+  },
+  {
+    name: "Storage",
+    values: {
+      personal: "5 GB",
+      professional: "50 GB",
+      business: "200 GB",
+      enterprise: "1 TB",
+    },
+  },
+  {
+    name: "Support",
+    values: {
+      personal: false,
+      professional: true,
+      business: true,
+      enterprise: true,
+    },
+  },
+  {
+    name: "Custom Domain",
+    values: {
+      personal: false,
+      professional: false,
+      business: true,
+      enterprise: true,
+    },
+  },
+  {
+    name: "Team Members",
+    values: {
+      personal: false,
+      professional: false,
+      business: true,
+      enterprise: true,
+    },
+  },
+  {
+    name: "Advanced Analytics",
+    values: {
+      personal: false,
+      professional: false,
+      business: true,
+      enterprise: true,
+    },
+  },
+  {
+    name: "Priority Support",
+    values: {
+      personal: false,
+      professional: false,
+      business: false,
+      enterprise: true,
+    },
+  },
+  {
+    name: "Account Manager",
+    values: {
+      personal: false,
+      professional: false,
+      business: false,
+      enterprise: true,
+    },
+  },
+  {
+    name: "Custom SLAs",
+    values: {
+      personal: false,
+      professional: false,
+      business: false,
+      enterprise: true,
+    },
+  },
+  {
+    name: "Onboarding Assistance",
+    values: {
+      personal: false,
+      professional: false,
+      business: false,
+      enterprise: true,
+    },
+  },
+] as const satisfies readonly SettingsPlanFeature[]
 
 export const defaultSettingsTabs = [
   {

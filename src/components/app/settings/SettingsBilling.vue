@@ -6,7 +6,11 @@ import {
   restoreSubscription as restoreSubscriptionFn,
 } from "@/composables/useFunctions"
 import { useTeamActions } from "@/composables/useTeamActions"
-import { hasActiveLikeBillingStatus } from "@/helpers/billing"
+import {
+  countBillableSeatsFromMembers,
+  hasActiveLikeBillingStatus,
+} from "@/helpers/billing"
+import { settingsPlans } from "@/helpers/defaults"
 import {
   closePendingExternalTab,
   createPendingExternalTab,
@@ -16,8 +20,9 @@ import { emitter } from "@/modules/mitt"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
-const { canManageBilling, currentTeam } = useTeamActions()
-const { billing, status, refreshBilling } = useBillingAccess()
+const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
+const { billing, catalog, isCatalogLoading, status, refreshBilling } =
+  useBillingAccess({ loadCatalog: true })
 
 const billingAction = ref<"portal" | "cancel" | "restore" | null>(null)
 
@@ -25,16 +30,99 @@ const hasActiveSubscription = computed(() => {
   return hasActiveLikeBillingStatus(status.value)
 })
 
-const planLabel = computed(() => {
+const currentPlanMeta = computed(() => {
   const planKey = billing.value?.planKey
-  if (!planKey) return "No active subscription"
-  return `${planKey.charAt(0).toUpperCase()}${planKey.slice(1)}`
+  if (!planKey) return null
+  return settingsPlans.find((plan) => plan.id === planKey) ?? null
+})
+
+const planLabel = computed(() => {
+  if (!currentPlanMeta.value) return "No active subscription"
+  return t(currentPlanMeta.value.titleKey)
+})
+
+const hasCurrentPlan = computed(() => !!billing.value?.planKey)
+
+const currentPlanButtonLabel = computed(() => {
+  if (!hasCurrentPlan.value) {
+    return t("settings.billing.currentPlan.subscribeButton")
+  }
+  return t("settings.billing.currentPlan.button")
+})
+
+const currentPlanDescriptionLabel = computed(() => {
+  if (!hasCurrentPlan.value) {
+    return t("settings.billing.currentPlan.noPlanDescription")
+  }
+  return t("settings.billing.currentPlan.description")
 })
 
 const intervalLabel = computed(() => {
   if (billing.value?.interval === "month") return "Monthly"
   if (billing.value?.interval === "year") return "Annual"
   return "N/A"
+})
+
+const seatCount = computed(() => {
+  const subscriptionQuantity = billing.value?.quantity
+  if (
+    typeof subscriptionQuantity === "number" &&
+    Number.isFinite(subscriptionQuantity) &&
+    subscriptionQuantity > 0
+  ) {
+    return Math.floor(subscriptionQuantity)
+  }
+  return countBillableSeatsFromMembers(teamMembers.value)
+})
+
+const seatCountLabel = computed(() =>
+  t("settings.billing.seatCount", { count: seatCount.value })
+)
+
+const formatCurrencyAmount = (
+  amountInMinorUnits: number,
+  currency: string
+): string => {
+  const currencyCode = currency.toUpperCase()
+  const amount = amountInMinorUnits / 100
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currencyCode,
+      maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    }).format(amount)
+  } catch {
+    return `${amount.toFixed(2)} ${currencyCode}`
+  }
+}
+
+const currentPlanUnitPriceLabel = computed(() => {
+  const planKey = billing.value?.planKey
+  const interval = billing.value?.interval
+  if (!planKey || !interval) return "N/A"
+
+  const price = catalog.value?.[planKey]?.[interval]
+  if (!price?.currency || typeof price.unitAmount !== "number") {
+    return isCatalogLoading.value ? "Loading..." : "Unavailable"
+  }
+
+  const intervalSuffix = interval === "year" ? "/year" : "/month"
+  return `${formatCurrencyAmount(price.unitAmount, price.currency)}${intervalSuffix}`
+})
+
+const currentPlanTotalPriceLabel = computed(() => {
+  const planKey = billing.value?.planKey
+  const interval = billing.value?.interval
+  if (!planKey || !interval) return "N/A"
+
+  const price = catalog.value?.[planKey]?.[interval]
+  if (!price?.currency || typeof price.unitAmount !== "number") {
+    return isCatalogLoading.value ? "Loading..." : "Unavailable"
+  }
+
+  const total = price.unitAmount * seatCount.value
+  const intervalSuffix = interval === "year" ? "/year" : "/month"
+  return `${formatCurrencyAmount(total, price.currency)}${intervalSuffix}`
 })
 
 const currentPeriodEndLabel = computed(() => {
@@ -244,22 +332,41 @@ const handleSubscriptionAction = async (): Promise<void> => {
   <div class="p-6">
     <FieldGroup>
       <FieldSet v-if="canManageBilling">
-        <div
-          class="bg-secondary text-secondary-foreground rounded border px-4 py-2"
-        >
-          {{ `${planLabel} • ${intervalLabel}` }}
-          <br />
-          {{ `Status: ${billing?.status ?? "none"}` }}
-          <br />
-          {{ billingLifecycleLabel }}
-        </div>
+        <Card v-if="hasCurrentPlan" class="shadow-none">
+          <CardHeader>
+            <CardTitle>
+              {{ planLabel }}
+              ({{ intervalLabel }})
+            </CardTitle>
+            <CardDescription>
+              {{ billingLifecycleLabel }}
+              &middot;
+              {{ currentPlanTotalPriceLabel }}
+              <br />
+              {{ seatCountLabel }}
+              &middot;
+              {{
+                t("settings.billing.perSeat", {
+                  price: currentPlanUnitPriceLabel,
+                })
+              }}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <CardAction>
+              <Button @click="openPlansTab">
+                {{ t("settings.billing.changePlan.upgrade") }}
+              </Button>
+            </CardAction>
+          </CardFooter>
+        </Card>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="current-plan">
               {{ t("settings.billing.currentPlan.label") }}
             </FieldLabel>
             <FieldDescription>
-              {{ t("settings.billing.currentPlan.description") }}
+              {{ currentPlanDescriptionLabel }}
             </FieldDescription>
           </FieldContent>
           <Button
@@ -267,7 +374,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
             :disabled="!canManageBilling"
             @click="openPlansTab"
           >
-            {{ t("settings.billing.currentPlan.button") }}
+            {{ currentPlanButtonLabel }}
           </Button>
         </Field>
         <Field orientation="horizontal">
@@ -309,10 +416,10 @@ const handleSubscriptionAction = async (): Promise<void> => {
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="upgrade-plan">
-              {{ t("settings.billing.upgradePlan.label") }}
+              {{ t("settings.billing.changePlan.label") }}
             </FieldLabel>
             <FieldDescription>
-              {{ t("settings.billing.upgradePlan.description") }}
+              {{ t("settings.billing.changePlan.description") }}
             </FieldDescription>
           </FieldContent>
           <Button
@@ -320,7 +427,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
             :disabled="!canManageBilling"
             @click="openPlansTab"
           >
-            {{ t("settings.billing.upgradePlan.button") }}
+            {{ t("settings.billing.changePlan.button") }}
           </Button>
         </Field>
         <Field orientation="horizontal">

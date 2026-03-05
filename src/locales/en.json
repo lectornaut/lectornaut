@@ -412,8 +412,12 @@
       "currentPlan": {
         "label": "Current plan",
         "description": "View details about your current subscription plan.",
-        "button": "View plan details"
+        "noPlanDescription": "No active plan. Subscribe to choose a plan.",
+        "button": "View plan details",
+        "subscribeButton": "Subscribe"
       },
+      "seatCount": "{count} seat | {count} seats",
+      "perSeat": "{price} per seat",
       "paymentMethod": {
         "label": "Payment method",
         "description": "Manage your payment methods and billing information.",
@@ -429,10 +433,11 @@
         "description": "View your billing history and invoices.",
         "button": "View invoices"
       },
-      "upgradePlan": {
-        "label": "Upgrade plan",
-        "description": "Explore and upgrade to a different subscription plan.",
-        "button": "Upgrade plan"
+      "changePlan": {
+        "label": "Change plan",
+        "description": "Explore and change to a different subscription plan.",
+        "button": "Change plan",
+        "upgrade": "Upgrade plan"
       },
       "noPermission": "No permission"
     },
@@ -463,7 +468,10 @@
         "annually": "Annually (Save 25%)",
         "monthly": "Monthly"
       },
-      "features": "Features"
+      "features": "Features",
+      "seatCount": "{count} seat | {count} seats",
+      "perSeatMonthly": "{price} per seat per month",
+      "totalForSeats": "{total} total for {seats}"
     },
     "teams": {
       "memberCount": "{count} member | {count} members",
@@ -1109,7 +1117,11 @@
         "annual": "Annual",
         "notAvailable": "N/A",
         "unavailable": "Unavailable",
+        "seatCount": "{count} seat | {count} seats",
+        "quantitySummary": "Billing quantity is bound to {seats}.",
         "pricingSummary": "{monthly}/mo • {annual}/yr",
+        "pricingSummaryPerSeat": "{monthly}/mo per seat • {annual}/yr per seat",
+        "pricingSummaryTotal": "{monthly}/mo total • {annual}/yr total for {seats}",
         "monthlyDescription": "Billed monthly with flexible plan changes.",
         "annualDescription": "Billed yearly with one upfront renewal cycle.",
         "activeSummary": "Current team plan: {plan} ({interval}) • Status: {status}",

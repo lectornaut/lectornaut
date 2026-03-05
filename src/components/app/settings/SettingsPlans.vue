@@ -10,8 +10,10 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCheck, IconChevronDown, IconMinus } from "@/data/icons"
 import {
   BILLING_PLAN_ORDER,
+  countBillableSeatsFromMembers,
   hasActiveLikeBillingStatus,
 } from "@/helpers/billing"
+import { settingsPlanFeatures, settingsPlans } from "@/helpers/defaults"
 import {
   closePendingExternalTab,
   createPendingExternalTab,
@@ -20,7 +22,7 @@ import {
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
-const { canManageBilling, currentTeam } = useTeamActions()
+const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
 const {
   catalog: billingCatalog,
   isCatalogLoading: isPricingLoading,
@@ -110,6 +112,22 @@ const canSave = computed(() => {
   if (!hasActiveSubscription.value) return true
   return hasPendingChanges.value
 })
+
+const seatCount = computed(() => {
+  const subscriptionQuantity = billing.value?.quantity
+  if (
+    typeof subscriptionQuantity === "number" &&
+    Number.isFinite(subscriptionQuantity) &&
+    subscriptionQuantity > 0
+  ) {
+    return Math.floor(subscriptionQuantity)
+  }
+  return countBillableSeatsFromMembers(teamMembers.value)
+})
+
+const seatCountLabel = computed(() =>
+  t("settings.plans.seatCount", { count: seatCount.value })
+)
 
 const saveButtonLabel = computed(() =>
   hasActiveSubscription.value ? "Apply plan change" : "Continue to checkout"
@@ -204,125 +222,19 @@ const getPlanPricePerMonthLabel = (
   return formatCurrencyAmount(normalizedMinorUnits, price.currency)
 }
 
-const availablePlans = computed(() => [
-  {
-    id: "personal" as BillingPlanKey,
-    titleKey: "settings.plans.subscriptionPlan.personal.title",
-    descriptionKey: "settings.plans.subscriptionPlan.personal.description",
-    highlights: ["Personal Workspaces", "10 Agents", "100 Monthly Tasks"],
-  },
-  {
-    id: "professional" as BillingPlanKey,
-    titleKey: "settings.plans.subscriptionPlan.professional.title",
-    descriptionKey: "settings.plans.subscriptionPlan.professional.description",
-    highlights: ["Team Workspaces", "100 Agents", "1000 Monthly Tasks"],
-  },
-  {
-    id: "business" as BillingPlanKey,
-    titleKey: "settings.plans.subscriptionPlan.business.title",
-    descriptionKey: "settings.plans.subscriptionPlan.business.description",
-    highlights: ["Team Workspaces", "500 Agents", "5000 Monthly Tasks"],
-  },
-  {
-    id: "enterprise" as BillingPlanKey,
-    titleKey: "settings.plans.subscriptionPlan.enterprise.title",
-    descriptionKey: "settings.plans.subscriptionPlan.enterprise.description",
-    highlights: ["Team Workspaces", "1000 Agents", "10000 Monthly Tasks"],
-  },
-])
+const getPlanTotalLabel = (
+  planId: BillingPlanKey,
+  cycle: "annually" | "monthly"
+): string => {
+  const interval = getCycleInterval(cycle)
+  const price = billingCatalog.value?.[planId]?.[interval]
+  if (!price?.currency || typeof price.unitAmount !== "number") {
+    return isPricingLoading.value ? "Loading..." : "Unavailable"
+  }
 
-const planFeatures = [
-  {
-    name: "Workspaces",
-    values: {
-      personal: "1",
-      professional: "5",
-      business: "20",
-      enterprise: "Unlimited",
-    },
-  },
-  {
-    name: "Storage",
-    values: {
-      personal: "5 GB",
-      professional: "50 GB",
-      business: "200 GB",
-      enterprise: "1 TB",
-    },
-  },
-  {
-    name: "Support",
-    values: {
-      personal: false,
-      professional: true,
-      business: true,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Custom Domain",
-    values: {
-      personal: false,
-      professional: false,
-      business: true,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Team Members",
-    values: {
-      personal: false,
-      professional: false,
-      business: true,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Advanced Analytics",
-    values: {
-      personal: false,
-      professional: false,
-      business: true,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Priority Support",
-    values: {
-      personal: false,
-      professional: false,
-      business: false,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Account Manager",
-    values: {
-      personal: false,
-      professional: false,
-      business: false,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Custom SLAs",
-    values: {
-      personal: false,
-      professional: false,
-      business: false,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Onboarding Assistance",
-    values: {
-      personal: false,
-      professional: false,
-      business: false,
-      enterprise: true,
-    },
-  },
-]
+  const totalMinorUnits = price.unitAmount * seatCount.value
+  return formatCurrencyAmount(totalMinorUnits, price.currency)
+}
 
 const getPlanStatus = (planId: BillingPlanKey) => {
   if (!hasActiveSubscription.value || !activePlanId.value) {
@@ -418,7 +330,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
               "
             >
               <FieldLabel
-                v-for="plan in availablePlans"
+                v-for="plan in settingsPlans"
                 :key="plan.id"
                 :for="plan.id"
               >
@@ -444,8 +356,19 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                     </li>
                   </ul>
                   <FieldDescription class="text-xs">
-                    {{ getPlanPricePerMonthLabel(plan.id, billingCycle) }} per
-                    user per month <br />
+                    {{
+                      t("settings.plans.perSeatMonthly", {
+                        price: getPlanPricePerMonthLabel(plan.id, billingCycle),
+                      })
+                    }}
+                    <br />
+                    {{
+                      t("settings.plans.totalForSeats", {
+                        total: getPlanTotalLabel(plan.id, billingCycle),
+                        seats: seatCountLabel,
+                      })
+                    }}
+                    <br />
                     Billed {{ billingCycle }}
                   </FieldDescription>
                 </Field>
@@ -477,7 +400,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                             </span>
                           </TableHead>
                           <TableHead
-                            v-for="plan in availablePlans"
+                            v-for="plan in settingsPlans"
                             :key="plan.id"
                             class="w-1/5 p-2"
                             :class="{
@@ -495,7 +418,17 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                                   plan.id,
                                   billingCycle
                                 )
-                              }}/user/mo
+                              }}/seat/mo
+                              <br />
+                              {{
+                                t("settings.plans.totalForSeats", {
+                                  total: getPlanTotalLabel(
+                                    plan.id,
+                                    billingCycle
+                                  ),
+                                  seats: seatCountLabel,
+                                })
+                              }}
                               <br />
                               Billed {{ billingCycle }}
                             </span>
@@ -504,14 +437,14 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                       </TableHeader>
                       <TableBody class="bg-background">
                         <TableRow
-                          v-for="feature in planFeatures"
+                          v-for="feature in settingsPlanFeatures"
                           :key="feature.name"
                         >
                           <TableCell class="p-2 font-medium">
                             {{ feature.name }}
                           </TableCell>
                           <TableCell
-                            v-for="plan in availablePlans"
+                            v-for="plan in settingsPlans"
                             :key="plan.id"
                             :class="{
                               'bg-background after:border-primary relative z-10 p-2 after:absolute after:inset-x-0 after:-inset-y-px after:z-10 after:border-x':
@@ -562,7 +495,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                             </div>
                           </TableCell>
                           <TableCell
-                            v-for="plan in availablePlans"
+                            v-for="plan in settingsPlans"
                             :key="plan.id"
                             :class="{
                               'bg-background after:border-primary relative z-10 rounded-b-lg p-2 after:absolute after:inset-0 after:z-10 after:rounded-b-lg after:border-x after:border-b':

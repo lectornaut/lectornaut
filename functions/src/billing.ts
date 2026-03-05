@@ -1,5 +1,10 @@
 import * as logger from "firebase-functions/logger"
 import {
+  onDocumentCreated,
+  onDocumentDeleted,
+  onDocumentUpdated,
+} from "firebase-functions/v2/firestore"
+import {
   CallableRequest,
   HttpsError,
   onCall,
@@ -18,9 +23,9 @@ import {
 import { admin, db } from "./firebase.js"
 import { makeEventIdempotencyKey } from "./idempotency.js"
 import { can } from "./permissions.js"
-import { CALLABLE_OPTS, SCHEDULED_OPTS } from "./runtimeConfig.js"
+import { CALLABLE_OPTS, SCHEDULED_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
 import { stripeSecretKey, stripeWebhookSecret } from "./secrets.js"
-import { Capabilities, IMembershipRole } from "./types.js"
+import { Capabilities, IMembershipRole, isMembershipRole } from "./types.js"
 
 type PlanChangeTiming = "immediate" | "period_end"
 
@@ -31,6 +36,7 @@ type TeamBillingData = {
   planKey?: PlanKey | null
   interval?: BillingInterval | null
   priceId?: string | null
+  quantity?: number | null
   status?: string | null
   currentPeriodEnd?: number | null
   cancelAtPeriodEnd?: boolean
@@ -45,6 +51,7 @@ interface BillingSummary {
   currentPeriodEnd: number | null
   cancelAtPeriodEnd: boolean
   priceId: string | null
+  quantity: number | null
 }
 
 interface TeamBillingContext {
@@ -72,6 +79,14 @@ const PLAN_KEYS: PlanKey[] = [
   "enterprise",
 ]
 const BILLING_INTERVALS: BillingInterval[] = ["month", "year"]
+const BILLABLE_SEAT_ROLES: readonly IMembershipRole[] = [
+  "owner",
+  "admin",
+  "member",
+]
+const BILLABLE_SEAT_ROLE_SET = new Set<IMembershipRole>(BILLABLE_SEAT_ROLES)
+const BILLING_RECONCILE_BATCH_SIZE = 100
+const BILLING_RECONCILE_STATE_DOC = "systemJobs/billingSeatReconciler"
 
 const activeLikeStatuses = new Set([
   "active",
@@ -237,11 +252,20 @@ function getTeamBillingData(
   return billingRaw as TeamBillingData
 }
 
+function getSubscriptionQuantity(subscription: Stripe.Subscription): number {
+  const item =
+    subscription.items.data.find((candidate) => !!candidate.price) ??
+    subscription.items.data[0]
+  return item?.quantity ?? 1
+}
+
 function summarizeSubscription(
   subscription: Stripe.Subscription,
   overridePriceId?: string | null
 ): BillingSummary {
-  const item = subscription.items.data[0]
+  const item =
+    subscription.items.data.find((candidate) => !!candidate.price) ??
+    subscription.items.data[0]
   const itemPriceId = item?.price?.id ?? null
 
   return {
@@ -249,6 +273,7 @@ function summarizeSubscription(
     currentPeriodEnd: item?.current_period_end ?? null,
     cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
     priceId: overridePriceId ?? itemPriceId,
+    quantity: item?.quantity ?? 1,
   }
 }
 
@@ -263,6 +288,46 @@ function normalizeScheduleId(
   return typeof schedule === "string" ? schedule : schedule.id
 }
 
+function isFirestoreNotFoundError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const code = (error as { code?: unknown }).code
+  return code === 5 || code === "5" || code === "not-found"
+}
+
+function toBillingFieldUpdates(
+  billingPatch: Record<string, unknown>
+): Record<string, unknown> {
+  const updates: Record<string, unknown> = {}
+  for (const [field, value] of Object.entries(billingPatch)) {
+    updates[`billing.${field}`] = value
+  }
+  return updates
+}
+
+async function patchTeamBillingIfExists(args: {
+  teamRef: admin.firestore.DocumentReference
+  teamId: string
+  source: string
+  billingPatch: Record<string, unknown>
+  context?: Record<string, unknown>
+}): Promise<boolean> {
+  const { teamRef, teamId, source, billingPatch, context = {} } = args
+  try {
+    await teamRef.update(toBillingFieldUpdates(billingPatch))
+    return true
+  } catch (error) {
+    if (isFirestoreNotFoundError(error)) {
+      logger.info("[billing] Skipping billing patch for missing team", {
+        teamId,
+        source,
+        ...context,
+      })
+      return false
+    }
+    throw error
+  }
+}
+
 function getPrimarySubscriptionItem(
   subscription: Stripe.Subscription
 ): Stripe.SubscriptionItem {
@@ -274,6 +339,51 @@ function getPrimarySubscriptionItem(
     )
   }
   return item
+}
+
+function normalizeQuantity(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null
+  }
+  const normalized = Math.floor(value)
+  return normalized > 0 ? normalized : null
+}
+
+function normalizeMembershipRole(value: unknown): IMembershipRole | null {
+  return isMembershipRole(value) ? value : null
+}
+
+function isBillableRole(role: IMembershipRole | null): boolean {
+  return !!role && BILLABLE_SEAT_ROLE_SET.has(role)
+}
+
+function hasBillableRoleTransition(
+  beforeRole: IMembershipRole | null,
+  afterRole: IMembershipRole | null
+): boolean {
+  return isBillableRole(beforeRole) !== isBillableRole(afterRole)
+}
+
+function buildQuantitySyncIdempotencyKey(args: {
+  action: string
+  teamId: string
+  subscriptionId: string
+  quantity: number
+  source: string
+}): string {
+  const hash = createHash("sha256").update(JSON.stringify(args)).digest("hex")
+  return `lectornaut_${hash}`
+}
+
+async function countBillableSeats(teamId: string): Promise<number> {
+  const aggregate = await db
+    .collection(`teams/${teamId}/memberships`)
+    .where("role", "in", [...BILLABLE_SEAT_ROLES])
+    .count()
+    .get()
+
+  const count = aggregate.data().count ?? 0
+  return Math.max(count, 1)
 }
 
 async function getTeamBillingContext(
@@ -414,13 +524,18 @@ function toSubscriptionCandidate(
   return candidates[0] ?? null
 }
 
-async function resolveTeamSubscription(
+async function resolveTeamSubscriptionFromBillingData(
   stripe: Stripe,
-  context: TeamBillingContext,
-  customerId: string
+  teamId: string,
+  billing: TeamBillingData,
+  customerIdFallback?: string | null
 ): Promise<StripeSubscriptionReference | null> {
-  const billing = getTeamBillingData(context.teamData)
   const preferredSubscriptionId = billing.stripeSubscriptionId
+  const customerId = billing.stripeCustomerId ?? customerIdFallback ?? null
+
+  if (!customerId && !preferredSubscriptionId) {
+    return null
+  }
 
   if (preferredSubscriptionId) {
     try {
@@ -428,15 +543,25 @@ async function resolveTeamSubscription(
         preferredSubscriptionId
       )
       if (!["canceled", "incomplete_expired"].includes(preferred.status)) {
-        return { subscription: preferred, customerId }
+        const preferredCustomerId =
+          typeof preferred.customer === "string"
+            ? preferred.customer
+            : (customerId ?? null)
+
+        if (!preferredCustomerId) return null
+        return { subscription: preferred, customerId: preferredCustomerId }
       }
     } catch (error) {
       logger.warn("Unable to retrieve preferred Stripe subscription", {
-        teamId: context.teamId,
+        teamId,
         subscriptionId: preferredSubscriptionId,
         message: error instanceof Error ? error.message : String(error),
       })
     }
+  }
+
+  if (!customerId) {
+    return null
   }
 
   const listed = await stripe.subscriptions.list({
@@ -447,6 +572,20 @@ async function resolveTeamSubscription(
 
   const candidate = toSubscriptionCandidate(listed.data)
   return candidate ? { subscription: candidate, customerId } : null
+}
+
+async function resolveTeamSubscription(
+  stripe: Stripe,
+  context: TeamBillingContext,
+  customerId: string
+): Promise<StripeSubscriptionReference | null> {
+  const billing = getTeamBillingData(context.teamData)
+  return resolveTeamSubscriptionFromBillingData(
+    stripe,
+    context.teamId,
+    billing,
+    customerId
+  )
 }
 
 function resolvePlanChangeTiming(
@@ -470,6 +609,7 @@ async function schedulePlanChangeAtPeriodEnd(args: {
   teamId: string
   uid: string
   subscription: Stripe.Subscription
+  quantity: number
   targetPriceId: string
   targetPlanKey: PlanKey
   targetInterval: BillingInterval
@@ -479,6 +619,7 @@ async function schedulePlanChangeAtPeriodEnd(args: {
     teamId,
     uid,
     subscription,
+    quantity,
     targetPriceId,
     targetPlanKey,
     targetInterval,
@@ -486,7 +627,6 @@ async function schedulePlanChangeAtPeriodEnd(args: {
 
   const primaryItem = getPrimarySubscriptionItem(subscription)
   const currentPriceId = primaryItem.price.id
-  const quantity = primaryItem.quantity ?? 1
 
   const currentPeriodStart = primaryItem.current_period_start
   const currentPeriodEnd = primaryItem.current_period_end
@@ -547,6 +687,260 @@ async function schedulePlanChangeAtPeriodEnd(args: {
   )
 
   return updated.id
+}
+
+function getScheduleItemPriceId(
+  item: Stripe.SubscriptionSchedule.Phase.Item
+): string | null {
+  if (typeof item.price === "string") return item.price
+  if (item.price && typeof item.price === "object" && "id" in item.price) {
+    return typeof item.price.id === "string" ? item.price.id : null
+  }
+  return null
+}
+
+function buildSchedulePhasesWithQuantity(
+  schedule: Stripe.SubscriptionSchedule,
+  quantity: number
+): Stripe.SubscriptionScheduleUpdateParams["phases"] {
+  return schedule.phases.map((phase) => {
+    const items = phase.items
+      .map((item) => {
+        const price = getScheduleItemPriceId(item)
+        if (!price) return null
+        return {
+          price,
+          quantity,
+        }
+      })
+      .filter(
+        (item): item is { price: string; quantity: number } => item !== null
+      )
+
+    const mappedPhase: Stripe.SubscriptionScheduleUpdateParams.Phase = {
+      start_date: phase.start_date,
+      items,
+      proration_behavior: phase.proration_behavior ?? "none",
+    }
+
+    if (phase.end_date) {
+      mappedPhase.end_date = phase.end_date
+    }
+
+    return mappedPhase
+  })
+}
+
+async function syncScheduleQuantityToSeats(args: {
+  stripe: Stripe
+  teamId: string
+  subscription: Stripe.Subscription
+  quantity: number
+  source: string
+}): Promise<string | null> {
+  const { stripe, teamId, subscription, quantity, source } = args
+  const scheduleId = normalizeScheduleId(subscription.schedule)
+  if (!scheduleId) return null
+
+  const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId)
+  if (["released", "canceled", "completed"].includes(schedule.status)) {
+    return schedule.id
+  }
+  const needsScheduleUpdate = schedule.phases.some((phase) =>
+    phase.items.some((item) => (item.quantity ?? 1) !== quantity)
+  )
+
+  if (!needsScheduleUpdate) {
+    return schedule.id
+  }
+
+  const phases = buildSchedulePhasesWithQuantity(schedule, quantity) ?? []
+  const hasEmptyPhase = phases.some((phase) => (phase.items?.length ?? 0) === 0)
+  if (phases.length === 0 || hasEmptyPhase) {
+    logger.warn(
+      "[billing.quantity.sync] Skipping schedule quantity sync due to empty phase items",
+      {
+        teamId,
+        subscriptionId: subscription.id,
+        scheduleId: schedule.id,
+        source,
+      }
+    )
+    return schedule.id
+  }
+
+  const updated = await stripe.subscriptionSchedules.update(
+    schedule.id,
+    {
+      end_behavior: schedule.end_behavior ?? "release",
+      metadata: {
+        ...schedule.metadata,
+        teamId,
+      },
+      phases,
+    },
+    {
+      idempotencyKey: buildQuantitySyncIdempotencyKey({
+        action: "subscription.schedule.quantity.sync",
+        teamId,
+        subscriptionId: subscription.id,
+        quantity,
+        source,
+      }),
+    }
+  )
+
+  return updated.id
+}
+
+async function syncSubscriptionQuantityToSeats(args: {
+  stripe: Stripe
+  teamId: string
+  source: string
+  teamData?: Record<string, unknown>
+  prorationBehavior?: Stripe.SubscriptionUpdateParams.ProrationBehavior
+}): Promise<{
+  seatCount: number
+  stripeQuantity: number | null
+  subscriptionId: string | null
+  updated: boolean
+}> {
+  const {
+    stripe,
+    teamId,
+    source,
+    prorationBehavior = "create_prorations",
+  } = args
+  const teamRef = db.doc(`teams/${teamId}`)
+  const teamData =
+    args.teamData ?? ((await teamRef.get()).data() as Record<string, unknown>)
+
+  if (!teamData) {
+    logger.warn("[billing.quantity.sync] Team not found for quantity sync", {
+      teamId,
+      source,
+    })
+    return {
+      seatCount: 1,
+      stripeQuantity: null,
+      subscriptionId: null,
+      updated: false,
+    }
+  }
+
+  const billing = getTeamBillingData(teamData)
+  const seatCount = await countBillableSeats(teamId)
+  const subscriptionRef = await resolveTeamSubscriptionFromBillingData(
+    stripe,
+    teamId,
+    billing,
+    billing.stripeCustomerId
+  )
+
+  if (
+    !subscriptionRef ||
+    !activeLikeStatuses.has(subscriptionRef.subscription.status)
+  ) {
+    await patchTeamBillingIfExists({
+      teamRef,
+      teamId,
+      source,
+      billingPatch: {
+        quantity: seatCount,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      context: { reason: "no_active_subscription" },
+    })
+    logger.info("[billing.quantity.sync] No active subscription to sync", {
+      teamId,
+      source,
+      seatCount,
+    })
+    return {
+      seatCount,
+      stripeQuantity: null,
+      subscriptionId: null,
+      updated: false,
+    }
+  }
+
+  let { subscription } = subscriptionRef
+  const primaryItem = getPrimarySubscriptionItem(subscription)
+  const currentQuantity = primaryItem.quantity ?? 1
+  let updated = false
+
+  if (currentQuantity !== seatCount) {
+    subscription = await stripe.subscriptions.update(
+      subscription.id,
+      {
+        proration_behavior: prorationBehavior,
+        items: [
+          {
+            id: primaryItem.id,
+            quantity: seatCount,
+          },
+        ],
+      },
+      {
+        idempotencyKey: buildQuantitySyncIdempotencyKey({
+          action: "subscription.quantity.sync",
+          teamId,
+          subscriptionId: subscription.id,
+          quantity: seatCount,
+          source,
+        }),
+      }
+    )
+    updated = true
+  }
+
+  const scheduleId = await syncScheduleQuantityToSeats({
+    stripe,
+    teamId,
+    subscription,
+    quantity: seatCount,
+    source,
+  })
+
+  const summary = summarizeSubscription(subscription)
+  const persistedQuantity = summary.quantity ?? seatCount
+
+  await patchTeamBillingIfExists({
+    teamRef,
+    teamId,
+    source,
+    billingPatch: {
+      stripeCustomerId: subscriptionRef.customerId,
+      stripeSubscriptionId: subscription.id,
+      stripeScheduleId:
+        scheduleId ?? normalizeScheduleId(subscription.schedule),
+      planKey: billing.planKey ?? null,
+      interval: billing.interval ?? null,
+      priceId: summary.priceId,
+      status: summary.status,
+      currentPeriodEnd: summary.currentPeriodEnd,
+      cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
+      isEntitled: isEntitledStatus(summary.status),
+      quantity: persistedQuantity,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+  })
+
+  logger.info("[billing.quantity.sync] Quantity sync completed", {
+    teamId,
+    source,
+    subscriptionId: subscription.id,
+    fromQuantity: currentQuantity,
+    toQuantity: persistedQuantity,
+    updated,
+  })
+
+  return {
+    seatCount,
+    stripeQuantity: persistedQuantity,
+    subscriptionId: subscription.id,
+    updated,
+  }
 }
 
 function getTeamIdFromSubscription(
@@ -749,12 +1143,24 @@ async function applySubscriptionEvent(
     })
     return
   }
+  const teamRef = db.doc(`teams/${teamId}`)
+  const teamSnap = await teamRef.get()
+  if (!teamSnap.exists) {
+    logger.info("Skipping subscription webhook event for deleted team", {
+      eventId,
+      teamId,
+      subscriptionId: subscription.id,
+    })
+    return
+  }
+  const teamData = teamSnap.data() as Record<string, unknown>
 
   const primaryItem =
     subscription.items.data.length > 0
       ? getPrimarySubscriptionItem(subscription)
       : null
   const priceId = primaryItem?.price?.id ?? null
+  let quantity = getSubscriptionQuantity(subscription)
   let planInfo: { planKey: PlanKey; interval: BillingInterval } | null = null
 
   if (priceId) {
@@ -773,25 +1179,40 @@ async function applySubscriptionEvent(
     }
   }
 
-  await db.doc(`teams/${teamId}`).set(
-    {
-      billing: {
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscription.id,
-        stripeScheduleId: normalizeScheduleId(subscription.schedule),
-        planKey: planInfo?.planKey ?? null,
-        interval: planInfo?.interval ?? null,
-        priceId,
-        status: subscription.status,
-        currentPeriodEnd: primaryItem?.current_period_end ?? null,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
-        lastStripeEventId: eventId,
-        isEntitled: isEntitledStatus(subscription.status),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
+  if (activeLikeStatuses.has(subscription.status)) {
+    const seatCount = await countBillableSeats(teamId)
+    if (quantity !== seatCount) {
+      const syncResult = await syncSubscriptionQuantityToSeats({
+        stripe,
+        teamId,
+        source: "webhook.subscription",
+        teamData,
+      })
+      quantity = syncResult.stripeQuantity ?? seatCount
+    }
+  }
+
+  await patchTeamBillingIfExists({
+    teamRef,
+    teamId,
+    source: "webhook.subscription",
+    billingPatch: {
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscription.id,
+      stripeScheduleId: normalizeScheduleId(subscription.schedule),
+      planKey: planInfo?.planKey ?? null,
+      interval: planInfo?.interval ?? null,
+      priceId,
+      quantity,
+      status: subscription.status,
+      currentPeriodEnd: primaryItem?.current_period_end ?? null,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+      lastStripeEventId: eventId,
+      isEntitled: isEntitledStatus(subscription.status),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
-    { merge: true }
-  )
+    context: { eventId, subscriptionId: subscription.id },
+  })
 }
 
 async function applyInvoicePaidEvent(
@@ -859,6 +1280,7 @@ async function applyInvoicePaidEvent(
     billingPatch.planKey = planInfo?.planKey ?? null
     billingPatch.interval = planInfo?.interval ?? null
     billingPatch.priceId = priceId
+    billingPatch.quantity = getSubscriptionQuantity(subscription)
     billingPatch.status = subscription.status
     billingPatch.currentPeriodEnd = primaryItem?.current_period_end ?? null
     billingPatch.cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false
@@ -875,12 +1297,13 @@ async function applyInvoicePaidEvent(
     )
   }
 
-  await db.doc(`teams/${teamId}`).set(
-    {
-      billing: billingPatch,
-    },
-    { merge: true }
-  )
+  await patchTeamBillingIfExists({
+    teamRef: db.doc(`teams/${teamId}`),
+    teamId,
+    source: "webhook.invoice.paid",
+    billingPatch,
+    context: { eventId, invoiceId: invoice.id },
+  })
 }
 
 async function applyInvoicePaymentFailedEvent(
@@ -904,21 +1327,22 @@ async function applyInvoicePaymentFailedEvent(
   const customerId =
     typeof invoice.customer === "string" ? invoice.customer : null
 
-  await db.doc(`teams/${teamId}`).set(
-    {
-      billing: {
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        status: "past_due",
-        lastInvoiceId: invoice.id,
-        lastInvoiceStatus: invoice.status ?? "payment_failed",
-        lastStripeEventId: eventId,
-        isEntitled: true,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
+  await patchTeamBillingIfExists({
+    teamRef: db.doc(`teams/${teamId}`),
+    teamId,
+    source: "webhook.invoice.payment_failed",
+    billingPatch: {
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      status: "past_due",
+      lastInvoiceId: invoice.id,
+      lastInvoiceStatus: invoice.status ?? "payment_failed",
+      lastStripeEventId: eventId,
+      isEntitled: true,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
-    { merge: true }
-  )
+    context: { eventId, invoiceId: invoice.id },
+  })
 }
 
 function normalizeBillingStatusPayload(
@@ -931,6 +1355,7 @@ function normalizeBillingStatusPayload(
     planKey: billingData?.planKey ?? null,
     interval: billingData?.interval ?? null,
     priceId: billingData?.priceId ?? null,
+    quantity: normalizeQuantity(billingData?.quantity) ?? null,
     status: billingData?.status ?? null,
     currentPeriodEnd: billingData?.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: billingData?.cancelAtPeriodEnd ?? false,
@@ -990,6 +1415,7 @@ export const createCheckoutSession = onCall(
           : "Unable to resolve Stripe price for selected plan."
       )
     }
+    const seatCount = await countBillableSeats(teamId)
     const idempotencyKey = buildStripeIdempotencyKey(
       "checkout.create",
       context.uid,
@@ -997,6 +1423,7 @@ export const createCheckoutSession = onCall(
       {
         planKey,
         interval,
+        seatCount,
       }
     )
 
@@ -1006,12 +1433,13 @@ export const createCheckoutSession = onCall(
         customer: customerId,
         success_url: returnUrl,
         cancel_url: returnUrl,
-        line_items: [{ price: selectedPriceId, quantity: 1 }],
+        line_items: [{ price: selectedPriceId, quantity: seatCount }],
         metadata: {
           uid: context.uid,
           teamId,
           planKey,
           interval,
+          seatCount: String(seatCount),
           environment: getEnvironmentLabel(),
         },
         subscription_data: {
@@ -1020,6 +1448,7 @@ export const createCheckoutSession = onCall(
             teamId,
             planKey,
             interval,
+            seatCount: String(seatCount),
             environment: getEnvironmentLabel(),
           },
         },
@@ -1033,6 +1462,16 @@ export const createCheckoutSession = onCall(
         "Stripe checkout session did not return a redirect URL."
       )
     }
+
+    await context.teamRef.set(
+      {
+        billing: {
+          quantity: seatCount,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      },
+      { merge: true }
+    )
 
     return { url: session.url }
   }
@@ -1134,6 +1573,7 @@ export const changeSubscriptionPlan = onCall(
     const { subscription } = subscriptionRef
     const primaryItem = getPrimarySubscriptionItem(subscription)
     const currentPriceId = primaryItem.price.id
+    const seatCount = await countBillableSeats(teamId)
     let currentPlan: { planKey: PlanKey; interval: BillingInterval } | null
     try {
       currentPlan = await mapPriceIdToPlan(stripe, currentPriceId)
@@ -1198,7 +1638,9 @@ export const changeSubscriptionPlan = onCall(
         {
           cancel_at_period_end: false,
           proration_behavior: "create_prorations",
-          items: [{ id: primaryItem.id, price: targetPriceId }],
+          items: [
+            { id: primaryItem.id, price: targetPriceId, quantity: seatCount },
+          ],
         },
         {
           idempotencyKey: buildStripeIdempotencyKey(
@@ -1222,6 +1664,7 @@ export const changeSubscriptionPlan = onCall(
             planKey: targetPlanKey,
             interval: targetInterval,
             priceId: summary.priceId,
+            quantity: summary.quantity,
             status: summary.status,
             currentPeriodEnd: summary.currentPeriodEnd,
             cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
@@ -1239,6 +1682,7 @@ export const changeSubscriptionPlan = onCall(
       teamId,
       uid: context.uid,
       subscription,
+      quantity: seatCount,
       targetPriceId,
       targetPlanKey,
       targetInterval,
@@ -1254,6 +1698,7 @@ export const changeSubscriptionPlan = onCall(
           planKey: currentPlan.planKey,
           interval: currentPlan.interval,
           priceId: summary.priceId,
+          quantity: summary.quantity,
           status: summary.status,
           currentPeriodEnd: summary.currentPeriodEnd,
           cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
@@ -1358,6 +1803,7 @@ export const cancelSubscription = onCall(
           planKey: existingBilling.planKey ?? null,
           interval: existingBilling.interval ?? null,
           priceId: summary.priceId,
+          quantity: summary.quantity,
           status: summary.status,
           currentPeriodEnd: summary.currentPeriodEnd,
           cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
@@ -1440,6 +1886,7 @@ export const restoreSubscription = onCall(
           planKey: existingBilling.planKey ?? null,
           interval: existingBilling.interval ?? null,
           priceId: summary.priceId,
+          quantity: summary.quantity,
           status: summary.status,
           currentPeriodEnd: summary.currentPeriodEnd,
           cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
@@ -1487,6 +1934,199 @@ export const getBillingCatalog = onCall(
           : "Unable to resolve Stripe billing catalog."
       )
     }
+  }
+)
+
+/**
+ * HTTP fallback for billing catalog.
+ * Returns callable-compatible JSON so `httpsCallable` can consume it.
+ */
+export const getBillingCatalogHttp = onRequest(
+  {
+    ...CALLABLE_OPTS,
+    invoker: "public",
+    cors: true,
+    secrets: [stripeSecretKey],
+  },
+  async (_request, response) => {
+    const stripe = getStripeClient()
+
+    try {
+      const prices = await resolveBillingCatalogFromStripe(stripe)
+      response.status(200).json({ data: { prices } })
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to resolve Stripe billing catalog."
+      response.status(412).json({
+        error: {
+          status: "FAILED_PRECONDITION",
+          message,
+        },
+      })
+    }
+  }
+)
+
+type BillingReconcileState = {
+  lastSubscriptionId?: string | null
+  lastTeamId?: string | null
+}
+
+async function reconcileSeatQuantitiesBatch(
+  stripe: Stripe
+): Promise<{ processed: number; updated: number; failed: number }> {
+  const stateRef = db.doc(BILLING_RECONCILE_STATE_DOC)
+  const stateSnap = await stateRef.get()
+  const state = (stateSnap.data() ?? {}) as BillingReconcileState
+  const lastSubscriptionId =
+    typeof state.lastSubscriptionId === "string" &&
+    state.lastSubscriptionId.trim().length > 0
+      ? state.lastSubscriptionId
+      : null
+  const lastTeamId =
+    typeof state.lastTeamId === "string" && state.lastTeamId.trim().length > 0
+      ? state.lastTeamId
+      : null
+
+  let query = db
+    .collection("teams")
+    .where("billing.stripeSubscriptionId", "!=", null)
+    .orderBy("billing.stripeSubscriptionId")
+    .orderBy(admin.firestore.FieldPath.documentId())
+    .limit(BILLING_RECONCILE_BATCH_SIZE)
+
+  if (lastSubscriptionId && lastTeamId) {
+    query = query.startAfter(lastSubscriptionId, lastTeamId)
+  }
+
+  const teamsSnap = await query.get()
+  if (teamsSnap.empty) {
+    await stateRef.set(
+      {
+        lastSubscriptionId: null,
+        lastTeamId: null,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    )
+    return { processed: 0, updated: 0, failed: 0 }
+  }
+
+  let processed = 0
+  let updated = 0
+  let failed = 0
+
+  for (const teamDoc of teamsSnap.docs) {
+    try {
+      const result = await syncSubscriptionQuantityToSeats({
+        stripe,
+        teamId: teamDoc.id,
+        source: "scheduler.reconcile",
+        teamData: teamDoc.data() as Record<string, unknown>,
+      })
+      processed += 1
+      if (result.updated) updated += 1
+    } catch (error) {
+      failed += 1
+      logger.error("[billing.quantity.sync] Reconcile failed for team", {
+        teamId: teamDoc.id,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  const hasMore = teamsSnap.size === BILLING_RECONCILE_BATCH_SIZE
+  const lastDoc = teamsSnap.docs[teamsSnap.docs.length - 1]
+  const lastDocBilling = getTeamBillingData(
+    lastDoc.data() as Record<string, unknown>
+  )
+
+  await stateRef.set(
+    {
+      lastSubscriptionId: hasMore
+        ? (lastDocBilling.stripeSubscriptionId ?? null)
+        : null,
+      lastTeamId: hasMore ? lastDoc.id : null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  )
+
+  return { processed, updated, failed }
+}
+
+export const syncBillingQuantityOnMembershipCreated = onDocumentCreated(
+  {
+    document: "teams/{teamId}/memberships/{userId}",
+    secrets: [stripeSecretKey],
+    ...TRIGGER_OPTS,
+  },
+  async (event) => {
+    const { teamId } = event.params
+    const stripe = getStripeClient()
+    await syncSubscriptionQuantityToSeats({
+      stripe,
+      teamId,
+      source: "membership.created",
+    })
+  }
+)
+
+export const syncBillingQuantityOnMembershipDeleted = onDocumentDeleted(
+  {
+    document: "teams/{teamId}/memberships/{userId}",
+    secrets: [stripeSecretKey],
+    ...TRIGGER_OPTS,
+  },
+  async (event) => {
+    const { teamId } = event.params
+    const stripe = getStripeClient()
+    await syncSubscriptionQuantityToSeats({
+      stripe,
+      teamId,
+      source: "membership.deleted",
+    })
+  }
+)
+
+export const syncBillingQuantityOnMembershipUpdated = onDocumentUpdated(
+  {
+    document: "teams/{teamId}/memberships/{userId}",
+    secrets: [stripeSecretKey],
+    ...TRIGGER_OPTS,
+  },
+  async (event) => {
+    if (!event.data) return
+    const beforeRole = normalizeMembershipRole(event.data.before.data()?.role)
+    const afterRole = normalizeMembershipRole(event.data.after.data()?.role)
+    if (!hasBillableRoleTransition(beforeRole, afterRole)) {
+      return
+    }
+
+    const { teamId } = event.params
+    const stripe = getStripeClient()
+    await syncSubscriptionQuantityToSeats({
+      stripe,
+      teamId,
+      source: "membership.role.transition",
+    })
+  }
+)
+
+export const reconcileBillingSeatQuantities = onSchedule(
+  {
+    schedule: "every 1 hours",
+    timeZone: "UTC",
+    retryCount: 1,
+    secrets: [stripeSecretKey],
+    ...SCHEDULED_OPTS,
+  },
+  async () => {
+    const stripe = getStripeClient()
+    const summary = await reconcileSeatQuantitiesBatch(stripe)
+    logger.info("[billing.quantity.sync] Reconcile batch completed", summary)
   }
 )
 

@@ -16,6 +16,7 @@ import {
   IconChevronRight,
   IconCommand,
 } from "@/data/icons"
+import { countBillableSeatsFromMembers } from "@/helpers/billing"
 import {
   closePendingExternalTab,
   createPendingExternalTab,
@@ -37,8 +38,9 @@ useHead({
 const router = useRouter()
 const route = useRoute()
 const isFullscreen = useIsFullscreen()
-const { currentTeam, canManageBilling } = useTeamActions()
+const { currentTeam, canManageBilling, teamMembers } = useTeamActions()
 const {
+  billing,
   catalog: billingCatalog,
   isCatalogLoading: isPricingLoading,
   isEntitled: hasActiveTeamPlan,
@@ -52,6 +54,18 @@ const { t } = useI18n()
 const isCheckingOut = ref(false)
 const selectedPlanKey = ref<BillingPlanKey | null>(null)
 const selectedInterval = ref<BillingInterval | null>(null)
+
+const onboardingSeatCount = computed(() => {
+  const quantity = billing.value?.quantity
+  if (
+    typeof quantity === "number" &&
+    Number.isFinite(quantity) &&
+    quantity > 0
+  ) {
+    return Math.floor(quantity)
+  }
+  return countBillableSeatsFromMembers(teamMembers.value)
+})
 
 const canCheckout = computed(() => {
   if (hasActiveTeamPlan.value) return false
@@ -332,6 +346,7 @@ const handleFinalStepAction = async () => {
             :can-manage-billing="canManageBilling"
             :is-pricing-loading="isPricingLoading"
             :billing-catalog="billingCatalog"
+            :seat-count="onboardingSeatCount"
           />
         </template>
         <template v-else>

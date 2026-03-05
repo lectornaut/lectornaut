@@ -240,9 +240,8 @@
     .bar {
       @apply fixed;
       @apply top-0;
-      @apply left-0;
       @apply w-full;
-      @apply h-0.5;
+      @apply h-1;
       @apply z-50;
 
       background-image: linear-gradient(

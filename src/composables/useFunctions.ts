@@ -321,6 +321,7 @@ export interface BillingSummaryResponse {
   currentPeriodEnd: number | null
   cancelAtPeriodEnd: boolean
   priceId: string | null
+  quantity: number | null
 }
 
 export interface CancelSubscriptionRequest {
@@ -600,7 +601,7 @@ export const getBillingStatus = createTypedCallable<
 export const getBillingCatalog = createTypedCallable<
   GetBillingCatalogRequest,
   GetBillingCatalogResponse
->("getBillingCatalog")
+>("getBillingCatalogHttp")
 
 export const getPublicTeamMembers = createTypedCallable<
   GetPublicTeamMembersRequest,

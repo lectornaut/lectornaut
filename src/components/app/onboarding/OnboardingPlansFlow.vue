@@ -15,6 +15,7 @@ interface Props {
   canManageBilling: boolean
   isPricingLoading: boolean
   billingCatalog: BillingCatalog | null
+  seatCount: number
 }
 
 const props = defineProps<Props>()
@@ -83,6 +84,11 @@ const disableInputs = computed(
   () => props.hasActivePlan || !props.canManageBilling
 )
 
+const normalizedSeatCount = computed(() => Math.max(1, props.seatCount || 1))
+const seatCountLabel = computed(() =>
+  t("pages.welcome.plans.seatCount", { count: normalizedSeatCount.value })
+)
+
 const formatCurrencyAmount = (
   amountInMinorUnits: number,
   currency: string
@@ -110,6 +116,23 @@ const getPriceLabel = (planKey: BillingPlanKey, interval: BillingInterval) => {
 
   return formatCurrencyAmount(price.unitAmount, price.currency)
 }
+
+const getTotalPriceLabel = (
+  planKey: BillingPlanKey,
+  interval: BillingInterval
+) => {
+  const price = props.billingCatalog?.[planKey]?.[interval]
+  if (!price?.currency || typeof price.unitAmount !== "number") {
+    return props.isPricingLoading
+      ? t("states.loading")
+      : t("pages.welcome.plans.unavailable")
+  }
+
+  return formatCurrencyAmount(
+    price.unitAmount * normalizedSeatCount.value,
+    price.currency
+  )
+}
 </script>
 
 <template>
@@ -136,6 +159,12 @@ const getPriceLabel = (planKey: BillingPlanKey, interval: BillingInterval) => {
             }}
             <br />
             {{ t("pages.welcome.plans.activeReadOnly") }}
+            <br />
+            {{
+              t("pages.welcome.plans.quantitySummary", {
+                seats: seatCountLabel,
+              })
+            }}
           </FieldDescription>
           <FieldDescription
             v-else-if="!canManageBilling"
@@ -185,9 +214,18 @@ const getPriceLabel = (planKey: BillingPlanKey, interval: BillingInterval) => {
                 </FieldDescription>
                 <FieldDescription class="text-xs">
                   {{
-                    t("pages.welcome.plans.pricingSummary", {
+                    t("pages.welcome.plans.pricingSummaryPerSeat", {
                       monthly: getPriceLabel(plan.id, "month"),
                       annual: getPriceLabel(plan.id, "year"),
+                    })
+                  }}
+                </FieldDescription>
+                <FieldDescription class="text-xs">
+                  {{
+                    t("pages.welcome.plans.pricingSummaryTotal", {
+                      monthly: getTotalPriceLabel(plan.id, "month"),
+                      annual: getTotalPriceLabel(plan.id, "year"),
+                      seats: seatCountLabel,
                     })
                   }}
                 </FieldDescription>
