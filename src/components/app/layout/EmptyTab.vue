@@ -14,8 +14,8 @@ import { defaultMenu } from "@/helpers/defaults"
       <ItemMedia variant="icon" :class="[item.style.bg, item.style.text]">
         <Component :is="item.icon" />
       </ItemMedia>
-      <ItemContent>
-        <ItemTitle>{{ item.action }}</ItemTitle>
+      <ItemContent class="gap-0.5 truncate">
+        <ItemTitle class="truncate">{{ item.action }}</ItemTitle>
       </ItemContent>
       <ItemActions>
         <Button variant="outline" size="icon" as-child>

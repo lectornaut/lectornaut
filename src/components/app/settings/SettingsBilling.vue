@@ -6,6 +6,7 @@ import {
   restoreSubscription as restoreSubscriptionFn,
 } from "@/composables/useFunctions"
 import { useTeamActions } from "@/composables/useTeamActions"
+import { IconBadgeDollarSign } from "@/data/icons"
 import {
   countBillableSeatsFromMembers,
   hasActiveLikeBillingStatus,
@@ -332,34 +333,35 @@ const handleSubscriptionAction = async (): Promise<void> => {
   <div class="p-6">
     <FieldGroup>
       <FieldSet v-if="canManageBilling">
-        <Card v-if="hasCurrentPlan" class="shadow-none">
-          <CardHeader>
-            <CardTitle>
+        <Item v-if="hasCurrentPlan" variant="muted" size="sm">
+          <ItemMedia variant="icon">
+            <IconBadgeDollarSign />
+          </ItemMedia>
+          <ItemContent class="gap-0.5 truncate">
+            <ItemTitle class="truncate">
               {{ planLabel }}
-              ({{ intervalLabel }})
-            </CardTitle>
-            <CardDescription>
+              {{ intervalLabel }}
+            </ItemTitle>
+            <ItemDescription class="truncate text-xs">
               {{ billingLifecycleLabel }}
               &middot;
-              {{ currentPlanTotalPriceLabel }}
-              <br />
               {{ seatCountLabel }}
-              &middot;
+              ×
               {{
                 t("settings.billing.perSeat", {
                   price: currentPlanUnitPriceLabel,
                 })
               }}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <CardAction>
-              <Button @click="openPlansTab">
-                {{ t("settings.billing.changePlan.upgrade") }}
-              </Button>
-            </CardAction>
-          </CardFooter>
-        </Card>
+              =
+              {{ currentPlanTotalPriceLabel }}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <Button variant="outline" @click="openPlansTab">
+              {{ t("settings.billing.changePlan.upgrade") }}
+            </Button>
+          </ItemActions>
+        </Item>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="current-plan">

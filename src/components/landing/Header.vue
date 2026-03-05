@@ -344,8 +344,8 @@ const { t } = useI18n()
                                         />
                                       </div>
                                     </ItemMedia>
-                                    <ItemContent>
-                                      <ItemTitle>
+                                    <ItemContent class="gap-0.5 truncate">
+                                      <ItemTitle class="truncate">
                                         {{
                                           t(
                                             "landing.menu.items." +
@@ -411,8 +411,8 @@ const { t } = useI18n()
                                           />
                                         </div>
                                       </ItemMedia>
-                                      <ItemContent>
-                                        <ItemTitle>
+                                      <ItemContent class="gap-0.5 truncate">
+                                        <ItemTitle class="truncate">
                                           {{ item.title }}
                                         </ItemTitle>
                                         <ItemDescription
@@ -452,8 +452,8 @@ const { t } = useI18n()
                                         />
                                       </div>
                                     </ItemMedia>
-                                    <ItemContent>
-                                      <ItemTitle>
+                                    <ItemContent class="gap-0.5 truncate">
+                                      <ItemTitle class="truncate">
                                         {{ item.title }}
                                       </ItemTitle>
                                       <ItemDescription
@@ -492,8 +492,8 @@ const { t } = useI18n()
                                         />
                                       </div>
                                     </ItemMedia>
-                                    <ItemContent>
-                                      <ItemTitle>
+                                    <ItemContent class="gap-0.5 truncate">
+                                      <ItemTitle class="truncate">
                                         {{ item.title }}
                                       </ItemTitle>
                                       <ItemDescription
@@ -509,7 +509,7 @@ const { t } = useI18n()
                           </AccordionItem>
                           <Item as-child>
                             <RouterLink to="/pricing">
-                              <ItemTitle>
+                              <ItemTitle class="truncate">
                                 {{ t("landing.menu.pricing") }}
                               </ItemTitle>
                             </RouterLink>
