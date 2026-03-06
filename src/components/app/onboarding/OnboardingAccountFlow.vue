@@ -8,8 +8,8 @@ import {
   IconX,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { updateUserData } from "@/queries/updateUserData"
 import { checkUsernameAvailability, claimUsername } from "@/queries/username"
+import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
 import { useAuthStore } from "@/stores/authStore"
 import {
   deleteUserPhotoFile,
@@ -194,7 +194,7 @@ watch(hasUsername, (hasUser) => {
   if (!hasUser && isPublic.value) {
     const previousIsPublic = isPublic.value
     optimisticIsPublic.value = false
-    updateUserData({ isPublic: false }).catch((error) => {
+    updateCurrentUserProfileVisibility(false).catch((error) => {
       optimisticIsPublic.value = previousIsPublic
       console.error(error)
     })
@@ -214,7 +214,7 @@ const toggleIsPublic = async (value: boolean) => {
   optimisticIsPublic.value = value
 
   try {
-    await updateUserData({ isPublic: value })
+    await updateCurrentUserProfileVisibility(value)
     toast.success("Profile visibility updated")
   } catch (error) {
     optimisticIsPublic.value = previousIsPublic

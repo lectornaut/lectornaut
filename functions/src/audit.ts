@@ -388,7 +388,6 @@ async function cleanupTeamBillingBeforeDelete(
 const PUBLIC_USERNAME_MIN_LENGTH = 3
 const PUBLIC_USERNAME_MAX_LENGTH = 30
 const PUBLIC_USERNAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
-const TEAM_USERNAME_UID_PREFIX = "team_"
 const RESERVED_PUBLIC_USERNAMES = new Set([
   "home",
   "login",
@@ -494,6 +493,39 @@ const RESERVED_PUBLIC_USERNAMES = new Set([
   "internal",
   "external",
 ])
+
+const getUserPreferencesRef = (userId: string) =>
+  db.doc(`users/${userId}/settings/preferences`)
+
+function readSelectedTeamId(
+  snapshot: admin.firestore.DocumentSnapshot
+): string | null | undefined {
+  if (!snapshot.exists) return undefined
+
+  const currentTeamId = snapshot.data()?.currentTeamId
+  if (currentTeamId === null) return null
+  return typeof currentTeamId === "string" ? currentTeamId : undefined
+}
+
+async function getSelectedTeamId(
+  transaction: admin.firestore.Transaction,
+  userId: string
+): Promise<string | null> {
+  const preferencesSnap = await transaction.get(getUserPreferencesRef(userId))
+  return readSelectedTeamId(preferencesSnap) ?? null
+}
+
+async function getSelectedTeamIdDirect(userId: string): Promise<string | null> {
+  const preferencesSnap = await getUserPreferencesRef(userId).get()
+  return readSelectedTeamId(preferencesSnap) ?? null
+}
+
+function isTeamUsernameClaim(
+  data: FirebaseFirestore.DocumentData | undefined,
+  teamId: string
+): boolean {
+  return !!data && data.entityType === "team" && data.entityId === teamId
+}
 
 function normalizePublicUsername(username: string): string {
   let normalized = username.trim().toLowerCase()
@@ -712,11 +744,15 @@ export const createTeam = onCall(CALLABLE_OPTS, async (request) => {
     transaction.set(teamRef, teamData)
     transaction.set(membershipRef, membershipData)
 
-    // Update user's current team
-    transaction.update(userRef, {
-      currentTeamId: teamRef.id,
-      updatedAt: now,
-    })
+    // Store the current team as user-scoped preference state.
+    transaction.set(
+      getUserPreferencesRef(actorId),
+      {
+        currentTeamId: teamRef.id,
+        updatedAt: now,
+      },
+      { merge: true }
+    )
 
     // Log the event
     await logEvent(
@@ -828,8 +864,7 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
 
         if (usernameSnap.exists) {
           const usernameData = usernameSnap.data() ?? {}
-          const isSameTeamOwner =
-            usernameData.entityType === "team" && usernameData.teamId === teamId
+          const isSameTeamOwner = isTeamUsernameClaim(usernameData, teamId)
 
           if (!isSameTeamOwner) {
             throw new HttpsError("already-exists", "Username already taken.")
@@ -837,9 +872,8 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
         }
 
         transaction.set(usernameRef, {
-          uid: `${TEAM_USERNAME_UID_PREFIX}${teamId}`,
           entityType: "team",
-          teamId,
+          entityId: teamId,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         })
       }
@@ -851,8 +885,7 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
 
         if (
           oldUsernameSnap.exists &&
-          oldUsernameData.entityType === "team" &&
-          oldUsernameData.teamId === teamId
+          isTeamUsernameClaim(oldUsernameData, teamId)
         ) {
           transaction.delete(oldUsernameRef)
         }
@@ -991,15 +1024,16 @@ export const deleteTeam = onCall(
     //     /memberships/{userId}             ← was orphaned
     // =========================================================================
 
-    // Update user's current team before deletion
-    const userRef = db.doc(`users/${actorId}`)
-    const userSnap = await userRef.get()
-    if (userSnap.exists && userSnap.data()?.currentTeamId === teamId) {
-      await userRef.update({
-        currentTeamId: null,
-        currentWorkspaceId: null,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      })
+    // Clear the selected team if the deleted team was active for this user.
+    const selectedTeamId = await getSelectedTeamIdDirect(actorId)
+    if (selectedTeamId === teamId) {
+      await getUserPreferencesRef(actorId).set(
+        {
+          currentTeamId: null,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      )
     }
 
     // Recursively delete the entire team document tree (all subcollections)
@@ -1026,11 +1060,7 @@ export const deleteTeam = onCall(
       const usernameRef = db.doc(`usernames/${teamUsername}`)
       const usernameSnap = await usernameRef.get()
       const usernameData = usernameSnap.data() ?? {}
-      if (
-        usernameSnap.exists &&
-        usernameData.entityType === "team" &&
-        usernameData.teamId === teamId
-      ) {
+      if (usernameSnap.exists && isTeamUsernameClaim(usernameData, teamId)) {
         await usernameRef.delete()
       }
     }
@@ -2113,16 +2143,18 @@ export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
     transaction.delete(membershipRef)
 
     // Update user's current team if removing self
-    if (isRemovingSelf) {
-      const userRef = db.doc(`users/${actorId}`)
-      const userSnap = await transaction.get(userRef)
-      if (userSnap.exists && userSnap.data()?.currentTeamId === teamId) {
-        transaction.update(userRef, {
+    if (
+      isRemovingSelf &&
+      (await getSelectedTeamId(transaction, actorId)) === teamId
+    ) {
+      transaction.set(
+        getUserPreferencesRef(actorId),
+        {
           currentTeamId: null,
-          currentWorkspaceId: null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        })
-      }
+        },
+        { merge: true }
+      )
     }
 
     const logRef = await logEvent(
@@ -2269,16 +2301,18 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
     membershipRefs.forEach((ref) => transaction.delete(ref))
 
     // Update user's current team if removing self
-    if (isRemovingSelf) {
-      const userRef = db.doc(`users/${actorId}`)
-      const userSnap = await transaction.get(userRef)
-      if (userSnap.exists && userSnap.data()?.currentTeamId === teamId) {
-        transaction.update(userRef, {
+    if (
+      isRemovingSelf &&
+      (await getSelectedTeamId(transaction, actorId)) === teamId
+    ) {
+      transaction.set(
+        getUserPreferencesRef(actorId),
+        {
           currentTeamId: null,
-          currentWorkspaceId: null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        })
-      }
+        },
+        { merge: true }
+      )
     }
 
     // Log for each removed member

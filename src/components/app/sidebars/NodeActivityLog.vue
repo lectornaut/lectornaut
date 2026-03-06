@@ -139,7 +139,7 @@ useInfiniteScroll(
               v-else-if="!canViewLogs"
               class="text-muted-foreground p-2 text-xs"
             >
-              You do not have access to view activity history.
+              You do not have permission to view activity history.
             </div>
 
             <div v-else-if="loading && logs.length === 0" class="p-2">

@@ -15,7 +15,7 @@ import {
 } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { state } from "@/modules/theme"
-import { updateUserData } from "@/queries/updateUserData"
+import { setCurrentUserOnboardingState } from "@/queries/userSettings"
 import confetti from "canvas-confetti"
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
@@ -202,7 +202,7 @@ const companySizes = [
 const router = useRouter()
 
 const startOnboarding = () => {
-  void updateUserData({ onboarding: true }).catch((error) => {
+  void setCurrentUserOnboardingState(true).catch((error) => {
     console.error("[support] Failed to persist onboarding preference:", error)
   })
   router.push("/welcome")

@@ -618,7 +618,7 @@ export const useMembershipStore = defineStore("memberships", () => {
       ? cloneState(teamMembers.value)
       : []
     const previousMemberships = cloneState(memberships.value)
-    const previousUserProfile = cloneState(userProfile.value)
+    const previousCurrentTeamId = currentTeamId.value
 
     const isRemovingSelf = userId === currentUser.value.uid
     const isRemovingSelfFromCurrentTeam = isRemovingSelf && isCurrentTeamTarget
@@ -650,12 +650,8 @@ export const useMembershipStore = defineStore("memberships", () => {
           optimisticTeamMembers.value = previousTeamMembers
         }
         optimisticMemberships.value = previousMemberships
-        if (
-          isRemovingSelfFromCurrentTeam &&
-          previousUserProfile?.currentTeamId
-        ) {
-          // Restore user's current team through authStore
-          authStore.setCurrentTeamIdLocal(previousUserProfile.currentTeamId)
+        if (isRemovingSelfFromCurrentTeam) {
+          authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
         }
       },
       // Cloud Function call
@@ -711,7 +707,7 @@ export const useMembershipStore = defineStore("memberships", () => {
       ? cloneState(teamMembers.value)
       : []
     const previousMemberships = cloneState(memberships.value)
-    const previousUserProfile = cloneState(userProfile.value)
+    const previousCurrentTeamId = currentTeamId.value
 
     const isRemovingSelf = userIds.includes(currentUserId)
     const isRemovingSelfFromCurrentTeam = isRemovingSelf && isCurrentTeamTarget
@@ -747,11 +743,8 @@ export const useMembershipStore = defineStore("memberships", () => {
             optimisticTeamMembers.value = previousTeamMembers
           }
           optimisticMemberships.value = previousMemberships
-          if (
-            isRemovingSelfFromCurrentTeam &&
-            previousUserProfile?.currentTeamId
-          ) {
-            authStore.setCurrentTeamIdLocal(previousUserProfile.currentTeamId)
+          if (isRemovingSelfFromCurrentTeam) {
+            authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
           }
           throw error
         } finally {

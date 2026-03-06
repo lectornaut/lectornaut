@@ -1,4 +1,5 @@
 import { auth, firestore } from "@/modules/firebase"
+import type { IUsernameClaim } from "@/types/domain"
 import {
   normalizeUsername,
   RESERVED_USERNAMES,
@@ -12,10 +13,18 @@ import {
   serverTimestamp,
 } from "firebase/firestore"
 
-interface UsernameDocData {
-  uid?: string
-  entityType?: string
-  teamId?: string
+type UsernameDocData = Partial<IUsernameClaim>
+
+const resolveUserClaimId = (data: UsernameDocData): string | null => {
+  return data.entityType === "user" && typeof data.entityId === "string"
+    ? data.entityId
+    : null
+}
+
+const resolveTeamClaimId = (data: UsernameDocData): string | null => {
+  return data.entityType === "team" && typeof data.entityId === "string"
+    ? data.entityId
+    : null
 }
 
 /**
@@ -73,7 +82,10 @@ export const claimUsername = async (username: string): Promise<void> => {
     const usernameDoc = await transaction.get(usernameDocRef)
 
     if (usernameDoc.exists()) {
-      throw new Error("Username already taken")
+      const ownerId = resolveUserClaimId(usernameDoc.data() as UsernameDocData)
+      if (ownerId !== user.uid) {
+        throw new Error("Username already taken")
+      }
     }
 
     const oldUsername = userDoc.exists() ? userDoc.data()?.username : null
@@ -81,19 +93,33 @@ export const claimUsername = async (username: string): Promise<void> => {
 
     // 1. Create entry in usernames collection
     transaction.set(usernameDocRef, {
-      uid: user.uid,
+      entityType: "user",
+      entityId: user.uid,
       createdAt: serverTimestamp(),
     })
 
-    // 2. Update user document (use set with merge to handle case where doc doesn't exist)
-    transaction.set(
-      userDocRef,
-      {
+    // 2. Update user document, creating a full account-profile document if needed.
+    if (userDoc.exists()) {
+      transaction.set(
+        userDocRef,
+        {
+          username: normalized,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      )
+    } else {
+      transaction.set(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
         username: normalized,
+        isPublic: false,
+        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    )
+      })
+    }
 
     // 3. If user had an old username, delete it
     if (oldNormalized && oldNormalized !== normalized) {
@@ -148,14 +174,7 @@ export const getUserByUsername = async (
     }
 
     const usernameData = usernameDoc.data() as UsernameDocData
-    if (
-      usernameData.entityType === "team" ||
-      typeof usernameData.teamId === "string"
-    ) {
-      return { status: "not_found" }
-    }
-
-    const uid = typeof usernameData.uid === "string" ? usernameData.uid : null
+    const uid = resolveUserClaimId(usernameData)
     if (!uid) {
       return { status: "not_found" }
     }
@@ -210,14 +229,10 @@ export const getTeamByUsername = async (
     }
 
     const usernameData = usernameDoc.data() as UsernameDocData
-    if (
-      usernameData.entityType !== "team" ||
-      typeof usernameData.teamId !== "string"
-    ) {
+    const teamId = resolveTeamClaimId(usernameData)
+    if (!teamId) {
       return { status: "not_found" }
     }
-
-    const teamId = usernameData.teamId
     const teamDocRef = doc(firestore, "teams", teamId)
     const teamDoc = await getDoc(teamDocRef)
 
@@ -262,7 +277,10 @@ export const releaseUsername = async (username: string): Promise<void> => {
   const usernameDoc = await getDoc(usernameDocRef)
 
   // Only delete if it belongs to the requesting user
-  if (usernameDoc.exists() && usernameDoc.data().uid === user.uid) {
+  if (
+    usernameDoc.exists() &&
+    resolveUserClaimId(usernameDoc.data() as UsernameDocData) === user.uid
+  ) {
     await deleteDoc(usernameDocRef)
   }
 }

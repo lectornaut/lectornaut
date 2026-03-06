@@ -3,16 +3,24 @@
  *
  * Handles:
  * - Firebase authentication state (via VueFire)
- * - User profile CRUD with optimistic updates
- * - Auth state listeners
+ * - User account profile CRUD with optimistic updates
+ * - User-scoped preferences (team selection, onboarding)
+ * - Team-membership-scoped workspace selection
  *
  * Uses VueFire composables for reactive Firestore bindings
  */
 
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
-import type { IUser } from "@/types/domain"
+import type {
+  IMembershipPreferences,
+  IUser,
+  IUserPreferences,
+  IUserProfile,
+} from "@/types/domain"
 import {
+  getMembershipPreferencesRef,
+  getUserPreferencesRef,
   getUserRef,
   updateUserInMemberships,
   uploadUserPhoto,
@@ -33,22 +41,25 @@ import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
 import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
 
-export const useAuthStore = defineStore("auth", () => {
-  // ============================================================================
-  // VueFire Reactive Bindings
-  // ============================================================================
+const defaultUserPreferences = (): IUserPreferences => ({
+  currentTeamId: null,
+  onboarding: false,
+})
 
-  // Auth state from VueFire - automatically syncs with Firebase Auth
-  // Type assertion to break VueFire internal type chain
+const defaultMembershipPreferences = (): IMembershipPreferences => ({
+  currentWorkspaceId: null,
+})
+
+export const useAuthStore = defineStore("auth", () => {
   const currentUser = useCurrentUser() as Ref<User | null>
 
-  // Computed document reference - null when not authenticated
   const userDocRef = computed(() =>
     currentUser.value ? getUserRef(currentUser.value.uid) : null
   )
+  const userPreferencesDocRef = computed(() =>
+    currentUser.value ? getUserPreferencesRef(currentUser.value.uid) : null
+  )
 
-  // VueFire reactive document binding for user profile
-  // Use intermediate variables with type assertions to isolate VueFire types
   const _vuefireUserDoc = useDocument<IUser>(userDocRef)
   const firestoreUserProfile: ComputedRef<IUser | null | undefined> = computed(
     () => _vuefireUserDoc.data.value
@@ -57,22 +68,24 @@ export const useAuthStore = defineStore("auth", () => {
     () => _vuefireUserDoc.pending.value
   )
 
-  // ============================================================================
-  // State (for optimistic updates)
-  // ============================================================================
+  const _vuefireUserPreferencesDoc = useDocument<IUserPreferences>(
+    userPreferencesDocRef
+  )
+  const firestoreUserPreferences: ComputedRef<
+    IUserPreferences | null | undefined
+  > = computed(() => _vuefireUserPreferencesDoc.data.value)
+  const isUserPreferencesLoading: ComputedRef<boolean> = computed(
+    () => _vuefireUserPreferencesDoc.pending.value
+  )
 
-  // Local user profile that can be optimistically updated
-  // Falls back to Firestore data when no pending operations
   const optimisticUserProfile = ref<IUser | null>(null)
+  const optimisticUserPreferences = ref<IUserPreferences | null>(null)
+  const optimisticMembershipPreferences = ref<IMembershipPreferences | null>(
+    null
+  )
 
-  // Pending operation tracking
   const pendingUserIds = shallowRef(createPendingSet())
 
-  // ============================================================================
-  // Computed
-  // ============================================================================
-
-  // Merged user profile: optimistic updates take precedence when pending
   const userProfile = computed({
     get: () => {
       if (
@@ -88,8 +101,73 @@ export const useAuthStore = defineStore("auth", () => {
     },
   })
 
+  const userPreferences = computed({
+    get: () => {
+      if (
+        currentUser.value &&
+        pendingUserIds.value.has(currentUser.value.uid)
+      ) {
+        return (
+          optimisticUserPreferences.value ??
+          firestoreUserPreferences.value ??
+          defaultUserPreferences()
+        )
+      }
+      return (
+        firestoreUserPreferences.value ??
+        optimisticUserPreferences.value ??
+        defaultUserPreferences()
+      )
+    },
+    set: (value) => {
+      optimisticUserPreferences.value = value
+    },
+  })
+
+  const currentTeamId = computed(
+    () => userPreferences.value?.currentTeamId ?? null
+  )
+
+  const membershipPreferencesDocRef = computed(() => {
+    if (!currentUser.value?.uid || !currentTeamId.value) return null
+    return getMembershipPreferencesRef(
+      currentTeamId.value,
+      currentUser.value.uid
+    )
+  })
+
+  const _vuefireMembershipPreferencesDoc = useDocument<IMembershipPreferences>(
+    membershipPreferencesDocRef,
+    {
+      reset: true,
+    }
+  )
+  const firestoreMembershipPreferences: ComputedRef<
+    IMembershipPreferences | null | undefined
+  > = computed(() => _vuefireMembershipPreferencesDoc.data.value)
+
+  const membershipPreferences = computed({
+    get: () => {
+      return (
+        optimisticMembershipPreferences.value ??
+        firestoreMembershipPreferences.value ??
+        defaultMembershipPreferences()
+      )
+    },
+    set: (value) => {
+      optimisticMembershipPreferences.value = value
+    },
+  })
+
+  const currentWorkspaceId = computed(
+    () => membershipPreferences.value?.currentWorkspaceId ?? null
+  )
+  const onboarding = computed(() => userPreferences.value?.onboarding ?? false)
+
   const isLoading = computed(
-    () => isFirestoreLoading.value && !optimisticUserProfile.value
+    () =>
+      (isFirestoreLoading.value || isUserPreferencesLoading.value) &&
+      !optimisticUserProfile.value
   )
 
   const isUserPending = computed(
@@ -97,25 +175,13 @@ export const useAuthStore = defineStore("auth", () => {
   )
 
   const hasAnyPendingOperation = computed(() => pendingUserIds.value.size > 0)
-
   const isAuthenticated = computed(() => !!currentUser.value)
 
-  const currentTeamId = computed(() => userProfile.value?.currentTeamId ?? null)
-  const currentWorkspaceId = computed(
-    () => userProfile.value?.currentWorkspaceId ?? null
-  )
-
-  // ============================================================================
-  // Auto-create User Profile
-  // ============================================================================
-
-  // Watch for new users and create their profile if it doesn't exist
   watch(
     [currentUser, firestoreUserProfile, isFirestoreLoading],
     async ([user, profile, loading]) => {
       if (!user || loading) return
 
-      // User exists but no profile - create one
       if (!profile) {
         try {
           const userRef = getUserRef(user.uid)
@@ -125,8 +191,8 @@ export const useAuthStore = defineStore("auth", () => {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            currentTeamId: null,
-            currentWorkspaceId: null,
+            username: null,
+            isPublic: false,
             createdAt: now,
             updatedAt: now,
           }
@@ -136,7 +202,6 @@ export const useAuthStore = defineStore("auth", () => {
             updatedAt: serverTimestamp(),
           }
           await setDoc(userRef, firestoreUser)
-          // Set optimistic profile immediately
           optimisticUserProfile.value = optimisticUser
         } catch (error) {
           console.error("[authStore] Failed to create user profile:", error)
@@ -147,7 +212,6 @@ export const useAuthStore = defineStore("auth", () => {
     { immediate: true }
   )
 
-  // Sync optimistic profile with Firestore data when not pending
   watch(
     firestoreUserProfile,
     (profile) => {
@@ -162,25 +226,51 @@ export const useAuthStore = defineStore("auth", () => {
     { immediate: true }
   )
 
-  // ============================================================================
-  // Cleanup
-  // ============================================================================
+  watch(
+    firestoreUserPreferences,
+    (preferences) => {
+      if (
+        preferences &&
+        currentUser.value &&
+        !pendingUserIds.value.has(currentUser.value.uid)
+      ) {
+        optimisticUserPreferences.value = preferences
+      }
+    },
+    { immediate: true }
+  )
+
+  watch(
+    firestoreMembershipPreferences,
+    (preferences) => {
+      if (!currentUser.value) {
+        return
+      }
+      optimisticMembershipPreferences.value =
+        preferences ?? defaultMembershipPreferences()
+    },
+    { immediate: true }
+  )
+
+  watch(
+    currentTeamId,
+    () => {
+      optimisticMembershipPreferences.value = defaultMembershipPreferences()
+    },
+    { immediate: true }
+  )
 
   function cleanup() {
     optimisticUserProfile.value = null
-    // VueFire handles subscription cleanup automatically
+    optimisticUserPreferences.value = null
+    optimisticMembershipPreferences.value = null
   }
 
-  // Watch for logout to cleanup
   watch(currentUser, (user) => {
     if (!user) {
       cleanup()
     }
   })
-
-  // ============================================================================
-  // Actions
-  // ============================================================================
 
   let currentTeamMutationChain: Promise<void> = Promise.resolve()
 
@@ -189,45 +279,29 @@ export const useAuthStore = defineStore("auth", () => {
       firestoreUserProfile.value?.updatedAt ?? fallbackUpdatedAt
     )
 
-  /**
-   * Optimistically update current team ID in local state only.
-   * Does not persist to Firestore.
-   */
-  function setCurrentTeamIdLocal(teamId: string | null): void {
-    if (!currentUser.value || !userProfile.value) return
+  const getUserPreferencesUpdatedAtBaseVersion = (fallbackUpdatedAt: unknown) =>
+    buildUpdatedAtBaseVersion(
+      firestoreUserPreferences.value?.updatedAt ?? fallbackUpdatedAt
+    )
 
-    optimisticUserProfile.value = {
-      ...userProfile.value,
+  function setCurrentTeamIdLocal(teamId: string | null): void {
+    if (!currentUser.value) return
+
+    optimisticUserPreferences.value = {
+      ...(userPreferences.value ?? defaultUserPreferences()),
       currentTeamId: teamId,
-      ...(teamId === null ? { currentWorkspaceId: null } : {}),
     }
+    optimisticMembershipPreferences.value = defaultMembershipPreferences()
   }
 
-  /**
-   * Update the current team ID for the user
-   * Used by teamStore when switching/creating teams
-   */
   async function setCurrentTeamId(teamId: string | null): Promise<void> {
     currentTeamMutationChain = currentTeamMutationChain
       .catch(() => undefined)
       .then(async () => {
-        if (!currentUser.value || !userProfile.value) return
-        const shouldClearWorkspaceSelection =
-          teamId === null && userProfile.value.currentWorkspaceId !== null
-        if (
-          userProfile.value.currentTeamId === teamId &&
-          !shouldClearWorkspaceSelection
-        ) {
-          return
-        }
+        if (!currentUser.value) return
+        if (currentTeamId.value === teamId) return
 
-        const previousUserProfile = cloneState(userProfile.value)
-        const mutationData: Record<string, unknown> = {
-          currentTeamId: teamId,
-        }
-        if (teamId === null) {
-          mutationData.currentWorkspaceId = null
-        }
+        const previousUserPreferences = cloneState(userPreferences.value)
 
         await mutateWithCoordinator({
           id: currentUser.value.uid,
@@ -237,15 +311,18 @@ export const useAuthStore = defineStore("auth", () => {
             setCurrentTeamIdLocal(teamId)
           },
           rollbackLocal: () => {
-            optimisticUserProfile.value = previousUserProfile
+            optimisticUserPreferences.value = previousUserPreferences
           },
           mutation: {
             source: "auth.setCurrentTeamId",
-            targetPath: getUserRef(currentUser.value.uid).path,
-            type: "update",
-            data: mutationData,
-            baseVersion: getUserUpdatedAtBaseVersion(
-              previousUserProfile?.updatedAt
+            targetPath: getUserPreferencesRef(currentUser.value.uid).path,
+            type: "set",
+            merge: true,
+            data: {
+              currentTeamId: teamId,
+            },
+            baseVersion: getUserPreferencesUpdatedAtBaseVersion(
+              previousUserPreferences?.updatedAt
             ),
           },
         })
@@ -254,38 +331,27 @@ export const useAuthStore = defineStore("auth", () => {
     return currentTeamMutationChain
   }
 
-  /**
-   * Update the current workspace ID for the user
-   * Used by workspaceStore when switching/creating workspaces
-   */
   function setCurrentWorkspaceId(workspaceId: string | null): void {
-    if (!currentUser.value || !userProfile.value) return
+    if (!currentUser.value) return
 
-    // Optimistically update the workspace ID
-    optimisticUserProfile.value = {
-      ...userProfile.value,
+    optimisticMembershipPreferences.value = {
+      ...(membershipPreferences.value ?? defaultMembershipPreferences()),
       currentWorkspaceId: workspaceId,
     }
   }
 
-  /**
-   * Update user profile with optimistic update
-   */
-  async function updateUserProfile(updates: Partial<IUser>): Promise<void> {
+  async function updateUserProfile(
+    updates: Partial<IUserProfile>
+  ): Promise<void> {
     if (!currentUser.value || !userProfile.value) return
 
     const userId = currentUser.value.uid
     const { photoURL, ...userUpdates } = updates
     const userRef = getUserRef(userId)
-
-    // Normalize photoURL
     const normalizedPhotoURL =
       photoURL === "" || photoURL === null ? null : photoURL
-
-    // Clone previous state for rollback
     const previousUserProfile = cloneState(userProfile.value)
 
-    // Prepare update payload once
     const firestoreUpdates = {
       ...userUpdates,
       ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
@@ -294,7 +360,6 @@ export const useAuthStore = defineStore("auth", () => {
     await withOptimisticUpdate(
       pendingUserIds,
       userId,
-      // Apply optimistic update
       () => {
         optimisticUserProfile.value = {
           ...userProfile.value!,
@@ -302,15 +367,12 @@ export const useAuthStore = defineStore("auth", () => {
           ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
         }
       },
-      // Rollback on error
       () => {
         optimisticUserProfile.value = previousUserProfile
       },
-      // Firestore operation - run independent operations in parallel
       async () => {
         const promises: Promise<unknown>[] = []
 
-        // Update Auth Profile if needed
         if (photoURL !== undefined || userUpdates.displayName !== undefined) {
           const authPhotoURL =
             photoURL === "" || photoURL === null
@@ -328,7 +390,6 @@ export const useAuthStore = defineStore("auth", () => {
           )
         }
 
-        // Update User Document
         if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
           promises.push(
             mutateUpdateDocument(userRef, firestoreUpdates, {
@@ -340,7 +401,6 @@ export const useAuthStore = defineStore("auth", () => {
           )
         }
 
-        // Update all memberships with new user data
         const membershipUpdates = {
           ...userUpdates,
           ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
@@ -349,26 +409,16 @@ export const useAuthStore = defineStore("auth", () => {
           promises.push(updateUserInMemberships(userId, membershipUpdates))
         }
 
-        // Run all updates in parallel
         await Promise.all(promises)
       }
     )
   }
 
-  /**
-   * Upload user profile photo
-   */
   async function uploadProfilePhoto(file: File): Promise<string> {
     if (!currentUser.value) throw new Error("Not authenticated")
     return uploadUserPhoto(currentUser.value.uid, file)
   }
 
-  /**
-   * Delete user account and cleanup resources
-   * - Deletes teams where user is sole owner
-   * - Removes memberships from other teams
-   * - Deletes user auth account (triggers Extension for profile cleanup)
-   */
   async function deleteAccount(): Promise<void> {
     if (!currentUser.value) return
 
@@ -376,13 +426,9 @@ export const useAuthStore = defineStore("auth", () => {
     const teamStore = useTeamStore()
 
     try {
-      // 1. Fetch all memberships for this user
-      // We need to fetch fresh data to be sure
       const allMemberships = await membershipStore.fetchUserMemberships()
 
-      // 2. Process each membership
       for (const membership of allMemberships) {
-        // If owner, check if sole owner
         if (membership.role === "owner") {
           const teamMembers = await membershipStore.getMembersForTeam(
             membership.teamId
@@ -393,17 +439,14 @@ export const useAuthStore = defineStore("auth", () => {
             owners.length === 1 &&
             owners[0]?.userId === currentUser.value.uid
           ) {
-            // Sole owner -> Delete team
             await teamStore.deleteTeam(membership.teamId)
           } else {
-            // Co-owner -> Leave team
             await membershipStore.removeMember(
               membership.teamId,
               currentUser.value.uid
             )
           }
         } else {
-          // Member -> Leave team
           await membershipStore.removeMember(
             membership.teamId,
             currentUser.value.uid
@@ -411,8 +454,6 @@ export const useAuthStore = defineStore("auth", () => {
         }
       }
 
-      // 3. Delete Auth Account
-      // This will trigger the "Delete User Data" extension to clean up 'users/{uid}'
       await currentUser.value.delete()
       cleanup()
     } catch (error) {
@@ -422,22 +463,20 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   return {
-    // State
     currentUser,
     userProfile,
+    userPreferences,
+    onboarding,
     isLoading,
 
-    // Pending state
     pendingUserIds,
 
-    // Computed
     isUserPending,
     hasAnyPendingOperation,
     isAuthenticated,
     currentTeamId,
     currentWorkspaceId,
 
-    // Actions
     setCurrentTeamIdLocal,
     setCurrentTeamId,
     setCurrentWorkspaceId,
@@ -445,7 +484,6 @@ export const useAuthStore = defineStore("auth", () => {
     uploadProfilePhoto,
     deleteAccount,
 
-    // Lifecycle
     cleanup,
   }
 })

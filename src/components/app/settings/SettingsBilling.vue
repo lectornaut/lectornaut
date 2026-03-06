@@ -335,9 +335,17 @@ const handleSubscriptionAction = async (): Promise<void> => {
       <FieldSet>
         <Field v-if="!canManageBilling" orientation="horizontal">
           <FieldContent>
-            <div class="rounded-md border border-dashed p-6 text-sm">
-              You do not have access to manage billing.
-            </div>
+            <Empty class="border border-dashed">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconBadgeDollarSign />
+                </EmptyMedia>
+                <EmptyTitle>No permission</EmptyTitle>
+                <EmptyDescription>
+                  You do not have permission to manage billing.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           </FieldContent>
         </Field>
         <template v-else>

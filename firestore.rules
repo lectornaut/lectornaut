@@ -136,6 +136,57 @@ service cloud.firestore {
         && canManageWorkspaceContent(resource.data.teamId);
     }
 
+    function isNullableStringField(data, field) {
+      return data[field] is string || data[field] == null;
+    }
+
+    function isOptionalBoolField(data, field) {
+      return data[field] is bool || data[field] == null;
+    }
+
+    function isValidUserProfileCreate(userId) {
+      return request.resource.data.keys().hasOnly([
+               "uid",
+               "email",
+               "displayName",
+               "photoURL",
+               "username",
+               "isPublic",
+               "createdAt",
+               "updatedAt"
+             ])
+        && request.resource.data.uid == userId
+        && isNullableStringField(request.resource.data, "email")
+        && isNullableStringField(request.resource.data, "displayName")
+        && isNullableStringField(request.resource.data, "photoURL")
+        && isNullableStringField(request.resource.data, "username")
+        && isOptionalBoolField(request.resource.data, "isPublic");
+    }
+
+    function isValidUserProfileUpdate(userId) {
+      return request.resource.data.uid == userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+             "email",
+             "displayName",
+             "photoURL",
+             "username",
+             "isPublic",
+             "updatedAt"
+           ])
+        && isNullableStringField(request.resource.data, "email")
+        && isNullableStringField(request.resource.data, "displayName")
+        && isNullableStringField(request.resource.data, "photoURL")
+        && isNullableStringField(request.resource.data, "username")
+        && isOptionalBoolField(request.resource.data, "isPublic");
+    }
+
+    function isOwnedUserUsernameClaim(data) {
+      return data.entityType == "user"
+        && data.entityId is string
+        && data.entityId == request.auth.uid;
+    }
+
     match /snapshots/{contentId} {
       allow read: if resource.data.teamId is string
                   && isTeamMember(resource.data.teamId);
@@ -161,9 +212,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if isSelf(userId) && request.resource.data.uid == userId;
+      allow create: if isSelf(userId) && isValidUserProfileCreate(userId);
       allow read: if isSelf(userId) || resource.data.isPublic == true;
-      allow update, delete: if isSelf(userId);
+      allow update: if isSelf(userId) && isValidUserProfileUpdate(userId);
+      allow delete: if isSelf(userId);
 
       match /notifications/{notificationId} {
         allow read: if isSelf(userId);
@@ -180,7 +232,7 @@ service cloud.firestore {
 
       match /settings/{settingId} {
         allow read: if isSelf(userId)
-          && settingId in ["notifications", "themes"];
+          && settingId in ["notifications", "preferences", "themes"];
         allow write: if false;
       }
 
@@ -197,13 +249,16 @@ service cloud.firestore {
     match /usernames/{username} {
       allow read: if true;
       allow create: if isSignedIn()
-                    && request.resource.data.keys().hasOnly(["uid", "createdAt"])
-                    && request.resource.data.uid == request.auth.uid;
+                    && request.resource.data.keys().hasOnly(["entityType", "entityId", "createdAt"])
+                    && request.resource.data.entityType == "user"
+                    && request.resource.data.entityId == request.auth.uid;
       allow update: if isSignedIn()
-                    && resource.data.uid == request.auth.uid
-                    && request.resource.data.keys().hasOnly(["uid", "createdAt"])
-                    && request.resource.data.uid == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+                    && isOwnedUserUsernameClaim(resource.data)
+                    && request.resource.data.keys().hasOnly(["entityType", "entityId", "createdAt"])
+                    && request.resource.data.entityType == "user"
+                    && request.resource.data.entityId == request.auth.uid;
+      allow delete: if isSignedIn()
+                    && isOwnedUserUsernameClaim(resource.data);
     }
 
     match /teams/{teamId} {
@@ -229,6 +284,13 @@ service cloud.firestore {
             allow write: if false;
           }
         }
+
+        match /settings/{settingId} {
+          allow read: if isSelf(userId)
+            && isTeamMember(teamId)
+            && settingId == "preferences";
+          allow write: if false;
+        }
       }
 
       match /workspaces/{workspaceId} {
@@ -237,13 +299,6 @@ service cloud.firestore {
 
         match /{scope}/{nodeId} {
           allow read: if isWorkspaceNodeScope(scope) && isTeamMember(teamId);
-          allow write: if false;
-        }
-
-        match /memberships/{userId} {
-          // Supports collectionGroup("memberships").where("userId", "==", request.auth.uid)
-          // which may include workspace-level memberships alongside team-level memberships.
-          allow read: if (isSelf(userId) && isTeamMember(teamId)) || isOwnMembershipDoc();
           allow write: if false;
         }
       }

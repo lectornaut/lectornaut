@@ -265,7 +265,7 @@ export const useTeamStore = defineStore("teams", () => {
     }
 
     // Clone previous state for rollback
-    const previousUserProfile = cloneState(userProfile.value)
+    const previousCurrentTeamId = currentTeamId.value
     const previousCurrentTeam = cloneState(currentTeam.value)
     const previousMemberships = cloneState(memberships.value)
     const previousTeamMembers = cloneState(teamMembers.value)
@@ -288,9 +288,7 @@ export const useTeamStore = defineStore("teams", () => {
       },
       // Rollback on error
       () => {
-        authStore.setCurrentTeamIdLocal(
-          previousUserProfile?.currentTeamId ?? null
-        )
+        authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
         optimisticCurrentTeam.value = previousCurrentTeam
         membershipStore.rollbackMemberships(previousMemberships)
         membershipStore.rollbackTeamMembers(previousTeamMembers)
@@ -504,7 +502,7 @@ export const useTeamStore = defineStore("teams", () => {
     // Clone previous state for rollback
     const previousMemberships = cloneState(memberships.value)
     const previousCurrentTeam = cloneState(currentTeam.value)
-    const previousUserProfile = cloneState(userProfile.value)
+    const previousCurrentTeamId = currentTeamId.value
 
     await withOptimisticUpdate(
       pendingTeamIds,
@@ -521,9 +519,7 @@ export const useTeamStore = defineStore("teams", () => {
       () => {
         membershipStore.rollbackMemberships(previousMemberships)
         optimisticCurrentTeam.value = previousCurrentTeam
-        authStore.setCurrentTeamIdLocal(
-          previousUserProfile?.currentTeamId ?? null
-        )
+        authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
       },
       // Cloud Function call + Storage cleanup
       async () => {

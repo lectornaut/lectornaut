@@ -36,8 +36,7 @@ async function resolveRole(
     return null
   }
 
-  // Fetch all three docs in parallel to reduce latency (3 round-trips → 1)
-  const [contentSnap, workspaceMemberSnap, teamMemberSnap] = await Promise.all([
+  const [contentSnap, teamMemberSnap] = await Promise.all([
     getDoc(
       doc(
         firestore,
@@ -49,30 +48,11 @@ async function resolveRole(
         input.contentId
       )
     ),
-    getDoc(
-      doc(
-        firestore,
-        "teams",
-        input.teamId,
-        "workspaces",
-        input.workspaceId,
-        "memberships",
-        userId
-      )
-    ),
     getDoc(doc(firestore, "teams", input.teamId, "memberships", userId)),
   ])
 
   if (!contentSnap.exists()) {
     return null
-  }
-
-  // Prefer workspace-level membership over team-level
-  if (workspaceMemberSnap.exists()) {
-    const workspaceRole = workspaceMemberSnap.data()?.role
-    if (isMembershipRole(workspaceRole)) {
-      return workspaceRole
-    }
   }
 
   if (!teamMemberSnap.exists()) {

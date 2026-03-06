@@ -2,20 +2,12 @@
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { IconBell, IconGift } from "@/data/icons"
-import { collection, doc } from "firebase/firestore"
-import { useCurrentUser, useDocument, useFirestore } from "vuefire"
+import { useAuthStore } from "@/stores/authStore"
+import { storeToRefs } from "pinia"
 
 const { open, setOpen, isMobile, setOpenMobile } = useSidebar()
-
-const db = useFirestore()
-const user = useCurrentUser()
-
-const userDocRef = computed(() => {
-  if (!user.value?.uid) return null
-  return doc(collection(db, "users"), user.value.uid)
-})
-
-const { data: userData } = useDocument(userDocRef)
+const authStore = useAuthStore()
+const { onboarding } = storeToRefs(authStore)
 
 const iconDisplay = computed({
   get: () => (open.value ? "text" : "icon"),
@@ -48,7 +40,7 @@ function closeSidebarOnMobile() {
             <Navigation />
           </OverlayScrollbarsWrapper>
         </SidebarContent>
-        <SidebarFooter v-if="userData?.onboarding">
+        <SidebarFooter v-if="onboarding">
           <SidebarMenu id="tour-onboarding">
             <SidebarMenuItem>
               <SidebarMenuButton

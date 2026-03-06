@@ -18,6 +18,19 @@ function normalizeEmail(email: string | null | undefined): string | null {
   return normalized ? normalized : null
 }
 
+const getUserPreferencesRef = (userId: string) =>
+  db.doc(`users/${userId}/settings/preferences`)
+
+function readSelectedTeamId(
+  snapshot: admin.firestore.DocumentSnapshot
+): string | null | undefined {
+  if (!snapshot.exists) return undefined
+
+  const currentTeamId = snapshot.data()?.currentTeamId
+  if (currentTeamId === null) return null
+  return typeof currentTeamId === "string" ? currentTeamId : undefined
+}
+
 /**
  * Generic helper to update or delete multiple notifications in batch.
  * Handles authentication, query building, and batch operations.
@@ -256,14 +269,19 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
 
     transaction.delete(invRef)
 
-    if (userSnap.exists) {
-      const currentTeamId = userSnap.data()?.currentTeamId ?? null
-      if (!currentTeamId) {
-        transaction.update(userRef, {
+    const userPreferencesRef = getUserPreferencesRef(uid)
+    const userPreferencesSnap = await transaction.get(userPreferencesRef)
+    const currentTeamId = readSelectedTeamId(userPreferencesSnap) ?? null
+
+    if (!currentTeamId) {
+      transaction.set(
+        userPreferencesRef,
+        {
           currentTeamId: invitation.teamId,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        })
-      }
+        },
+        { merge: true }
+      )
     }
   })
 

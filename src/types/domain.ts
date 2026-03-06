@@ -47,13 +47,32 @@ export interface IWorkspace {
   updatedAt: Timestamp
 }
 
-export interface IUser {
+export interface IUserProfile {
   readonly uid: string
   email: string | null
   displayName: string | null
   photoURL: string | null
-  currentTeamId: string | null
-  currentWorkspaceId: string | null
+  username: string | null
+  isPublic: boolean
   createdAt: Timestamp
   updatedAt: Timestamp
+}
+
+export type IUser = IUserProfile
+
+export interface IUserPreferences {
+  currentTeamId: string | null
+  onboarding: boolean
+  updatedAt?: Timestamp
+}
+
+export interface IMembershipPreferences {
+  currentWorkspaceId: string | null
+  updatedAt?: Timestamp
+}
+
+export interface IUsernameClaim {
+  entityType: "user" | "team"
+  entityId: string
+  createdAt?: Timestamp
 }

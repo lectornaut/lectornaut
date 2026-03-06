@@ -6,7 +6,13 @@
  */
 
 import { firestore, storage } from "@/modules/firebase"
-import type { ITeam, IUser, IWorkspace } from "@/types/domain"
+import type {
+  IMembershipPreferences,
+  ITeam,
+  IUser,
+  IUserPreferences,
+  IWorkspace,
+} from "@/types/domain"
 import type { IMembershipDocData } from "@/types/membership"
 import {
   collection,
@@ -45,6 +51,18 @@ export const BATCH_SIZE = 450
 export const getUserRef = (userId: string): DocumentReference<IUser> =>
   doc(firestore, "users", userId) as DocumentReference<IUser>
 
+/** Get a reference to a user's preferences document. */
+export const getUserPreferencesRef = (
+  userId: string
+): DocumentReference<IUserPreferences> =>
+  doc(
+    firestore,
+    "users",
+    userId,
+    "settings",
+    "preferences"
+  ) as DocumentReference<IUserPreferences>
+
 /** Get a reference to a team document */
 export const getTeamRef = (teamId: string): DocumentReference<ITeam> =>
   doc(firestore, "teams", teamId) as DocumentReference<ITeam>
@@ -61,6 +79,21 @@ export const getMembershipRef = (
     "memberships",
     userId
   ) as DocumentReference<IMembershipDocData>
+
+/** Get a reference to the membership-scoped preferences document. */
+export const getMembershipPreferencesRef = (
+  teamId: string,
+  userId: string
+): DocumentReference<IMembershipPreferences> =>
+  doc(
+    firestore,
+    "teams",
+    teamId,
+    "memberships",
+    userId,
+    "settings",
+    "preferences"
+  ) as DocumentReference<IMembershipPreferences>
 
 /** Get a reference to a workspace document */
 export const getWorkspaceRef = (
@@ -339,13 +372,6 @@ export function createUserMembershipsQuery(userId: string) {
  */
 export function createTeamMembershipsQuery(teamId: string) {
   return query(getAllMembershipsGroup(), where("teamId", "==", teamId))
-}
-
-/**
- * Create a query for users with a specific currentTeamId
- */
-export function createUsersWithTeamQuery(teamId: string) {
-  return query(getUsersCollection(), where("currentTeamId", "==", teamId))
 }
 
 /**

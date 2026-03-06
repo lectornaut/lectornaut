@@ -3,7 +3,7 @@ import { generateRandomString } from "@/helpers/utilities"
 import { auth } from "@/modules/firebase"
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
-import { updateUserData } from "@/queries/updateUserData"
+import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
 import { invoke } from "@tauri-apps/api/core"
 import type { FirebaseError } from "firebase/app"
 import {
@@ -145,8 +145,8 @@ const finishAuthentication = async (result: UserCredential) => {
     })
     await router.push("/welcome")
   } else {
-    void updateUserData().catch((error) => {
-      console.error("[auth] Failed to refresh user metadata:", error)
+    void syncCurrentUserAccountProfile().catch((error) => {
+      console.error("[auth] Failed to refresh user profile metadata:", error)
     })
 
     const redirect = router.currentRoute.value.query.redirect

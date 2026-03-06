@@ -163,21 +163,8 @@ async function ensureContentExists(
 
 async function resolveRole(
   userId: string,
-  teamId: string,
-  workspaceId: string
+  teamId: string
 ): Promise<IMembershipRole> {
-  const workspaceMemberRef = db.doc(
-    `teams/${teamId}/workspaces/${workspaceId}/memberships/${userId}`
-  )
-  const workspaceMemberSnap = await workspaceMemberRef.get()
-
-  if (workspaceMemberSnap.exists) {
-    const role = workspaceMemberSnap.data()?.role
-    if (isMembershipRole(role)) {
-      return role
-    }
-  }
-
   const teamMemberRef = db.doc(`teams/${teamId}/memberships/${userId}`)
   const teamMemberSnap = await teamMemberRef.get()
 
@@ -214,7 +201,7 @@ function assertCanViewWorkspace(userId: string, role: IMembershipRole): void {
   if (!allowed) {
     throw new HttpsError(
       "permission-denied",
-      "You do not have access to this workspace."
+      "You do not have permission to this workspace."
     )
   }
 }
@@ -363,11 +350,7 @@ export const joinCollabRoom = onCall(CALLABLE_OPTS, async (request) => {
 
   await ensureContentExists(contentId, teamId, workspaceId, scope)
 
-  const membershipRole = await resolveRole(
-    request.auth.uid,
-    teamId,
-    workspaceId
-  )
+  const membershipRole = await resolveRole(request.auth.uid, teamId)
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
   const role = resolveCollabRole(request.auth.uid, membershipRole)
@@ -410,11 +393,7 @@ export const createPeer = onCall(CALLABLE_OPTS, async (request) => {
   const joinToken = assertString(request.data?.joinToken, "joinToken")
 
   const room = await getRoomContext(contentId)
-  const membershipRole = await resolveRole(
-    request.auth.uid,
-    room.teamId,
-    room.workspaceId
-  )
+  const membershipRole = await resolveRole(request.auth.uid, room.teamId)
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
   const role = resolveCollabRole(request.auth.uid, membershipRole)
@@ -483,11 +462,7 @@ export const sendSignal = onCall(CALLABLE_OPTS, async (request) => {
     getPeerSession(contentId, fromPeerId),
     db.doc(`signaling/${contentId}/peers/${toPeerId}`).get(),
   ])
-  const membershipRole = await resolveRole(
-    request.auth.uid,
-    room.teamId,
-    room.workspaceId
-  )
+  const membershipRole = await resolveRole(request.auth.uid, room.teamId)
 
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
@@ -536,11 +511,7 @@ export const deleteSignal = onCall(CALLABLE_OPTS, async (request) => {
   const signalId = assertString(request.data?.signalId, "signalId")
 
   const room = await getRoomContext(contentId)
-  const membershipRole = await resolveRole(
-    request.auth.uid,
-    room.teamId,
-    room.workspaceId
-  )
+  const membershipRole = await resolveRole(request.auth.uid, room.teamId)
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
   await room.roomRef.collection("signals").doc(signalId).delete()
@@ -560,11 +531,7 @@ export const deleteSignals = onCall(CALLABLE_OPTS, async (request) => {
   }
 
   const room = await getRoomContext(contentId)
-  const membershipRole = await resolveRole(
-    request.auth.uid,
-    room.teamId,
-    room.workspaceId
-  )
+  const membershipRole = await resolveRole(request.auth.uid, room.teamId)
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
   const batch = db.batch()

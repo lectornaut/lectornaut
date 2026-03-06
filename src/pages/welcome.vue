@@ -5,7 +5,6 @@ import {
   type BillingInterval,
   type BillingPlanKey,
 } from "@/composables/useFunctions"
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconAperture,
@@ -22,7 +21,7 @@ import {
   createPendingExternalTab,
   openExternalUrl,
 } from "@/helpers/openExternalUrl"
-import { updateUserData } from "@/queries/updateUserData"
+import { setCurrentUserOnboardingState } from "@/queries/userSettings"
 import { toast } from "vue-sonner"
 
 definePage({
@@ -37,7 +36,6 @@ useHead({
 
 const router = useRouter()
 const route = useRoute()
-const isFullscreen = useIsFullscreen()
 const { currentTeam, canManageBilling, teamMembers } = useTeamActions()
 const {
   billing,
@@ -196,7 +194,7 @@ const completeOnboarding = () => {
     return
   }
 
-  void updateUserData({ onboarding: false }).catch((error) => {
+  void setCurrentUserOnboardingState(false).catch((error) => {
     console.error("[welcome] Failed to persist onboarding completion:", error)
   })
   router.push("/start")
@@ -239,159 +237,168 @@ const handleFinalStepAction = async () => {
 </script>
 
 <template>
-  <SidebarProvider :default-open="true">
-    <Sidebar collapsible="none">
-      <SidebarContent
-        data-tauri-drag-region
-        :class="{ 'mt-12': isTauri && !isFullscreen }"
-      >
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            Step {{ Math.min(currentStep, totalSteps) }} of {{ totalSteps }}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <Stepper
-              v-model="currentStep"
-              :linear="false"
-              orientation="vertical"
-              class="flex flex-col"
-            >
-              <StepperItem
-                v-for="step in steps"
-                :key="step.step"
-                v-slot="{ state }"
-                :step="step.step"
-                class="relative"
+  <div class="flex grow flex-col items-center">
+    <PageHeader />
+    <Separator />
+    <SidebarProvider
+      class="h-full min-h-auto overflow-auto overscroll-none scroll-smooth"
+      :default-open="true"
+    >
+      <Sidebar collapsible="none">
+        <SidebarContent data-tauri-drag-region>
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              Step {{ Math.min(currentStep, totalSteps) }} of {{ totalSteps }}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <Stepper
+                v-model="currentStep"
+                :linear="false"
+                orientation="vertical"
+                class="flex flex-col"
               >
-                <SidebarMenuButton as-child :is-active="state === 'active'">
-                  <StepperTrigger class="flex flex-row items-center">
-                    <StepperIndicator
-                      class="size-4 bg-transparent group-data-[state=active]:bg-transparent"
-                    >
-                      <IconCheck v-if="state === 'completed'" class="size-3!" />
-                      <template v-else-if="state === 'active'">
-                        <span
-                          class="relative flex size-4 items-center justify-center"
-                        >
-                          <span class="bg-primary/25 absolute size-4 rounded" />
-                          <span
-                            class="bg-primary relative block size-2 rounded"
-                          />
-                        </span>
-                      </template>
-                      <template v-else>
-                        <span
-                          class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2 rounded"
-                        />
-                      </template>
-                    </StepperIndicator>
-                    <div class="min-w-0 flex-1">
-                      <StepperTitle
-                        :class="{
-                          'text-primary': state === 'active',
-                          'text-foreground': state === 'completed',
-                          'text-muted-foreground': state === 'inactive',
-                        }"
+                <StepperItem
+                  v-for="step in steps"
+                  :key="step.step"
+                  v-slot="{ state }"
+                  :step="step.step"
+                  class="relative"
+                >
+                  <SidebarMenuButton as-child :is-active="state === 'active'">
+                    <StepperTrigger class="flex flex-row items-center">
+                      <StepperIndicator
+                        class="size-4 bg-transparent group-data-[state=active]:bg-transparent"
                       >
-                        {{ step.title }}
-                      </StepperTitle>
-                    </div>
-                  </StepperTrigger>
-                </SidebarMenuButton>
-                <StepperSeparator
-                  v-if="step.step < steps.length"
-                  class="bg-muted group-data-[state=completed]:bg-primary/50 absolute top-7 left-4 h-4 w-px"
-                />
-              </StepperItem>
-            </Stepper>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
-    <Separator orientation="vertical" />
-    <SidebarInset class="bg-background flex min-h-0 flex-1 rounded-none">
-      <div class="border-b p-5 text-left">
-        <h2 class="text-xl font-semibold">
-          {{ activeStep?.title || t("pages.welcome.content.allSet") }}
-        </h2>
-        <p class="text-muted-foreground">
-          {{
-            activeStep?.description ||
-            t("pages.welcome.content.allSetDescription")
-          }}
-        </p>
-      </div>
-
-      <div class="min-h-0 flex-1 overflow-auto text-left">
-        <template v-if="currentStep === 1">
-          <OnboardingAccountFlow />
-        </template>
-        <template v-else-if="currentStep === 2">
-          <OnboardingAppearanceFlow />
-        </template>
-        <template v-else-if="currentStep === 3">
-          <OnboardingTeamWorkspaceFlow />
-        </template>
-        <template v-else-if="currentStep === 4">
-          <OnboardingAppFlow />
-        </template>
-        <template v-else-if="currentStep === 5">
-          <OnboardingPlansFlow
-            v-model:selected-plan-key="selectedPlanKey"
-            v-model:selected-interval="selectedInterval"
-            :has-active-plan="hasActiveTeamPlan"
-            :active-plan-key="activePlanKey"
-            :active-interval="activeInterval"
-            :billing-status="billingStatus"
-            :can-manage-billing="canManageBilling"
-            :is-pricing-loading="isPricingLoading"
-            :billing-catalog="billingCatalog"
-            :seat-count="onboardingSeatCount"
-          />
-        </template>
-        <template v-else>
-          <h2 class="px-6 pt-6 text-xl font-semibold">
-            {{ t("pages.welcome.content.allSet") }}
+                        <IconCheck
+                          v-if="state === 'completed'"
+                          class="size-3!"
+                        />
+                        <template v-else-if="state === 'active'">
+                          <span
+                            class="relative flex size-4 items-center justify-center"
+                          >
+                            <span
+                              class="bg-primary/25 absolute size-4 rounded"
+                            />
+                            <span
+                              class="bg-primary relative block size-2 rounded"
+                            />
+                          </span>
+                        </template>
+                        <template v-else>
+                          <span
+                            class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2 rounded"
+                          />
+                        </template>
+                      </StepperIndicator>
+                      <div class="min-w-0 flex-1">
+                        <StepperTitle
+                          :class="{
+                            'text-primary': state === 'active',
+                            'text-foreground': state === 'completed',
+                            'text-muted-foreground': state === 'inactive',
+                          }"
+                        >
+                          {{ step.title }}
+                        </StepperTitle>
+                      </div>
+                    </StepperTrigger>
+                  </SidebarMenuButton>
+                  <StepperSeparator
+                    v-if="step.step < steps.length"
+                    class="bg-muted group-data-[state=completed]:bg-primary/50 absolute top-7 left-4 h-4 w-px"
+                  />
+                </StepperItem>
+              </Stepper>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+      <Separator orientation="vertical" />
+      <SidebarInset class="bg-background flex min-h-0 flex-1 rounded-none">
+        <div class="border-b p-5 text-left">
+          <h2 class="text-xl font-semibold">
+            {{ activeStep?.title || t("pages.welcome.content.allSet") }}
           </h2>
-          <p class="text-muted-foreground px-6 pb-6">
-            {{ t("pages.welcome.content.allSetDescription") }}
+          <p class="text-muted-foreground">
+            {{
+              activeStep?.description ||
+              t("pages.welcome.content.allSetDescription")
+            }}
           </p>
-        </template>
-      </div>
-
-      <div class="border-t p-3">
-        <div class="flex items-center justify-between gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            :disabled="currentStep === 1"
-            @click="handlePreviousStep"
-          >
-            <IconChevronLeft />
-            Back
-          </Button>
-          <Button
-            v-if="currentStep < totalSteps"
-            size="sm"
-            @click="handleNextStep"
-          >
-            Next
-            <IconChevronRight />
-          </Button>
-          <Button
-            v-else
-            size="sm"
-            :disabled="finalStepActionDisabled"
-            @click="handleFinalStepAction"
-          >
-            <Spinner v-if="isCheckingOut" />
-            <template v-else>
-              {{ finalStepActionLabel }}
-              <IconChevronRight />
-            </template>
-          </Button>
         </div>
-      </div>
-    </SidebarInset>
-  </SidebarProvider>
+
+        <div class="min-h-0 flex-1 overflow-auto text-left">
+          <template v-if="currentStep === 1">
+            <OnboardingAccountFlow />
+          </template>
+          <template v-else-if="currentStep === 2">
+            <OnboardingAppearanceFlow />
+          </template>
+          <template v-else-if="currentStep === 3">
+            <OnboardingTeamWorkspaceFlow />
+          </template>
+          <template v-else-if="currentStep === 4">
+            <OnboardingAppFlow />
+          </template>
+          <template v-else-if="currentStep === 5">
+            <OnboardingPlansFlow
+              v-model:selected-plan-key="selectedPlanKey"
+              v-model:selected-interval="selectedInterval"
+              :has-active-plan="hasActiveTeamPlan"
+              :active-plan-key="activePlanKey"
+              :active-interval="activeInterval"
+              :billing-status="billingStatus"
+              :can-manage-billing="canManageBilling"
+              :is-pricing-loading="isPricingLoading"
+              :billing-catalog="billingCatalog"
+              :seat-count="onboardingSeatCount"
+            />
+          </template>
+          <template v-else>
+            <h2 class="px-6 pt-6 text-xl font-semibold">
+              {{ t("pages.welcome.content.allSet") }}
+            </h2>
+            <p class="text-muted-foreground px-6 pb-6">
+              {{ t("pages.welcome.content.allSetDescription") }}
+            </p>
+          </template>
+        </div>
+
+        <div class="border-t p-3">
+          <div class="flex items-center justify-between gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="currentStep === 1"
+              @click="handlePreviousStep"
+            >
+              <IconChevronLeft />
+              Back
+            </Button>
+            <Button
+              v-if="currentStep < totalSteps"
+              size="sm"
+              @click="handleNextStep"
+            >
+              Next
+              <IconChevronRight />
+            </Button>
+            <Button
+              v-else
+              size="sm"
+              :disabled="finalStepActionDisabled"
+              @click="handleFinalStepAction"
+            >
+              <Spinner v-if="isCheckingOut" />
+              <template v-else>
+                {{ finalStepActionLabel }}
+                <IconChevronRight />
+              </template>
+            </Button>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  </div>
 </template>

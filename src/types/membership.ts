@@ -1,4 +1,4 @@
-import type { ITeam, IUser } from "@/types/domain"
+import type { ITeam, IUserProfile } from "@/types/domain"
 import { Timestamp } from "firebase/firestore"
 
 export const MEMBERSHIP_ROLES = ["owner", "admin", "member", "guest"] as const
@@ -12,22 +12,48 @@ export function isMembershipRole(value: unknown): value is IMembershipRole {
   )
 }
 
-export interface IMembership {
+export interface IMembershipRecord {
   readonly userId: string
   readonly teamId: string
   role: IMembershipRole
-  user: IUser
-  team: ITeam
   createdAt: Timestamp
   updatedAt: Timestamp
 }
 
+export type IMembershipUserSnapshot = Pick<
+  IUserProfile,
+  | "uid"
+  | "email"
+  | "displayName"
+  | "photoURL"
+  | "username"
+  | "isPublic"
+  | "createdAt"
+  | "updatedAt"
+>
+
+export type IMembershipTeamSnapshot = Pick<
+  ITeam,
+  | "id"
+  | "name"
+  | "photoURL"
+  | "username"
+  | "isPublic"
+  | "createdAt"
+  | "updatedAt"
+>
+
+export interface IMembership extends IMembershipRecord {
+  user: IMembershipUserSnapshot
+  team: IMembershipTeamSnapshot
+}
+
 export interface IMembershipDocData {
-  userId: string
-  teamId: string
+  readonly userId: string
+  readonly teamId: string
   role: IMembershipRole
-  user: Partial<IUser>
-  team: Partial<ITeam>
+  user: Partial<IMembershipUserSnapshot>
+  team: Partial<IMembershipTeamSnapshot>
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }

@@ -145,9 +145,17 @@ onMounted(() => {
       <FieldSet>
         <Field v-if="!canViewLogs" orientation="horizontal">
           <FieldContent>
-            <div class="rounded-md border border-dashed p-6 text-sm">
-              You do not have access to view audit logs.
-            </div>
+            <Empty class="border border-dashed">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconAlertTriangle />
+                </EmptyMedia>
+                <EmptyTitle>No permission</EmptyTitle>
+                <EmptyDescription>
+                  You do not have permission to view audit logs.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           </FieldContent>
         </Field>
         <template v-else>

@@ -26,7 +26,7 @@ import type { IWorkspace } from "@/types/domain"
 import {
   createTeamWorkspacesQuery,
   deleteWorkspacePhotoFile,
-  getUserRef,
+  getMembershipPreferencesRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase/firebase-helpers"
 import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
@@ -37,7 +37,7 @@ import {
   removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { mutateUpdateDocument } from "@/utils/firebase/firebase-sync-engine"
+import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
@@ -46,13 +46,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
 
-  const {
-    currentUser,
-    userProfile,
-    pendingUserIds,
-    currentTeamId,
-    currentWorkspaceId,
-  } = storeToRefs(authStore)
+  const { currentUser, pendingUserIds, currentTeamId, currentWorkspaceId } =
+    storeToRefs(authStore)
   const {
     canManageWorkspaces,
     memberships,
@@ -78,7 +73,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   })
 
   // VueFire reactive collection binding for workspaces
-  const _vuefireWorkspaces = useCollection<IWorkspace>(workspacesQueryRef)
+  const _vuefireWorkspaces = useCollection<IWorkspace>(workspacesQueryRef, {
+    reset: true,
+  })
   const firestoreWorkspaces: ComputedRef<IWorkspace[]> = computed(
     () => _vuefireWorkspaces.data.value ?? []
   )
@@ -100,15 +97,16 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   async function persistWorkspaceSelection(
     workspaceId: string | null
   ): Promise<void> {
-    if (!currentUser.value) return
+    if (!currentUser.value || !currentTeamId.value) return
 
-    await mutateUpdateDocument(
-      getUserRef(currentUser.value.uid),
+    await mutateSetDocument(
+      getMembershipPreferencesRef(currentTeamId.value, currentUser.value.uid),
       {
         currentWorkspaceId: workspaceId,
       },
       {
         source: "workspace.persistSelection",
+        merge: true,
       }
     )
   }
@@ -210,7 +208,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       membershipLoading,
     ]) => {
       // If we are loading, or no workspace ID selected, ignore
-      if (!workspaceId || loading || !teamId || membershipLoading) return
+      if (!workspaceId || loading || !teamId || membershipLoading) {
+        return
+      }
 
       // Don't clear during startup before membership resolution is ready.
       const isMember = memberships.value.some((m) => m.teamId === teamId)
@@ -253,24 +253,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   // Watch for team change to cleanup
-  watch(currentTeamId, async (teamId) => {
-    if (!teamId) {
-      cleanup()
-      if (currentWorkspaceId.value === null) return
-      if (isPersistingWorkspaceSelection.value) return
-      isPersistingWorkspaceSelection.value = true
-      try {
-        await persistWorkspaceSelection(null)
-      } catch (error) {
-        console.error(
-          "[workspaceStore] Failed to clear workspace after team reset:",
-          error
-        )
-      } finally {
-        isPersistingWorkspaceSelection.value = false
-      }
-    }
-  })
+  watch(currentTeamId, cleanup)
 
   // ============================================================================
   // Actions
@@ -309,7 +292,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
     // Clone previous state for rollback
     const previousWorkspaces = cloneState(workspaces.value)
-    const previousUserProfile = cloneState(userProfile.value)
+    const previousWorkspaceId = currentWorkspaceId.value
 
     let actualWorkspaceId: string | null = null
 
@@ -326,9 +309,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // Rollback on error
       () => {
         optimisticWorkspaces.value = previousWorkspaces
-        authStore.setCurrentWorkspaceId(
-          previousUserProfile?.currentWorkspaceId ?? null
-        )
+        authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
         removePending(pendingUserIds, currentUser.value!.uid)
       },
       // Cloud Function call
@@ -364,16 +345,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             }
           }
 
-          // Update user's current workspace to the actual ID
-          await mutateUpdateDocument(
-            getUserRef(currentUser.value!.uid),
-            {
-              currentWorkspaceId: actualWorkspaceId,
-            },
-            {
-              source: "workspace.createWorkspace.select",
-            }
-          )
+          // Persist workspace selection in the current team membership scope.
+          await persistWorkspaceSelection(actualWorkspaceId)
 
           // Update local state with actual workspace ID
           authStore.setCurrentWorkspaceId(actualWorkspaceId)
@@ -388,7 +361,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
    * Switch to a different workspace with optimistic update (all members)
    */
   async function switchWorkspace(workspaceId: string): Promise<void> {
-    if (!currentUser.value || !userProfile.value) return
+    if (!currentUser.value || !currentTeamId.value) return
 
     // Verify workspace exists in current team
     const workspace = workspaces.value.find((w) => w.id === workspaceId)
@@ -410,8 +383,12 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       },
       mutation: {
         source: "workspace.switchWorkspace",
-        targetPath: getUserRef(currentUser.value.uid).path,
-        type: "update",
+        targetPath: getMembershipPreferencesRef(
+          currentTeamId.value,
+          currentUser.value.uid
+        ).path,
+        type: "set",
+        merge: true,
         data: {
           currentWorkspaceId: workspaceId,
         },
@@ -528,7 +505,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
     // Clone previous state for rollback
     const previousWorkspaces = cloneState(workspaces.value)
-    const previousUserProfile = cloneState(userProfile.value)
+    const previousWorkspaceId = currentWorkspaceId.value
 
     const isCurrentWorkspace = currentWorkspaceId.value === workspaceId
 
@@ -549,9 +526,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       () => {
         optimisticWorkspaces.value = previousWorkspaces
         if (isCurrentWorkspace) {
-          authStore.setCurrentWorkspaceId(
-            previousUserProfile?.currentWorkspaceId ?? null
-          )
+          authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
         }
       },
       // Cloud Function call

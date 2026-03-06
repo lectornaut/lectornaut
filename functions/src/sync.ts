@@ -162,6 +162,99 @@ const ensureTeamMembership = async (
   }
 }
 
+const assertNullableString = (value: unknown, field: string) => {
+  if (value !== null && typeof value !== "string") {
+    reject("invalid-argument", `${field} must be a string or null`)
+  }
+}
+
+const assertBoolean = (value: unknown, field: string) => {
+  if (typeof value !== "boolean") {
+    reject("invalid-argument", `${field} must be a boolean`)
+  }
+}
+
+const assertAllowedKeys = (
+  payload: Record<string, unknown>,
+  allowedKeys: Set<string>,
+  errorMessage: string
+) => {
+  const keys = Object.keys(payload)
+  if (keys.some((key) => !allowedKeys.has(key))) {
+    reject("permission-denied", errorMessage)
+  }
+}
+
+const validateUserProfilePayload = (
+  path: string[],
+  operation: SyncOperation
+) => {
+  const payload = operation.data ?? {}
+  assertAllowedKeys(
+    payload,
+    new Set([
+      "uid",
+      "email",
+      "displayName",
+      "photoURL",
+      "username",
+      "isPublic",
+    ]),
+    "User profile updates contain blocked fields"
+  )
+
+  if ("uid" in payload && payload.uid !== path[1]) {
+    reject("permission-denied", "User profile uid cannot be changed")
+  }
+  if ("email" in payload) {
+    assertNullableString(payload.email, "users.email")
+  }
+  if ("displayName" in payload) {
+    assertNullableString(payload.displayName, "users.displayName")
+  }
+  if ("photoURL" in payload) {
+    assertNullableString(payload.photoURL, "users.photoURL")
+  }
+  if ("username" in payload) {
+    assertNullableString(payload.username, "users.username")
+  }
+  if ("isPublic" in payload) {
+    assertBoolean(payload.isPublic, "users.isPublic")
+  }
+}
+
+const validateUserPreferencesPayload = (operation: SyncOperation) => {
+  const payload = operation.data ?? {}
+  assertAllowedKeys(
+    payload,
+    new Set(["currentTeamId", "onboarding"]),
+    "User preference updates contain blocked fields"
+  )
+
+  if ("currentTeamId" in payload) {
+    assertNullableString(payload.currentTeamId, "preferences.currentTeamId")
+  }
+  if ("onboarding" in payload) {
+    assertBoolean(payload.onboarding, "preferences.onboarding")
+  }
+}
+
+const validateMembershipPreferencesPayload = (operation: SyncOperation) => {
+  const payload = operation.data ?? {}
+  assertAllowedKeys(
+    payload,
+    new Set(["currentWorkspaceId"]),
+    "Membership preference updates contain blocked fields"
+  )
+
+  if ("currentWorkspaceId" in payload) {
+    assertNullableString(
+      payload.currentWorkspaceId,
+      "preferences.currentWorkspaceId"
+    )
+  }
+}
+
 const validateUserDocumentMutation = (
   path: string[],
   operation: SyncOperation
@@ -170,6 +263,7 @@ const validateUserDocumentMutation = (
   if (operation.type === "delete") {
     reject("permission-denied", "User document cannot be deleted via sync")
   }
+  validateUserProfilePayload(path, operation)
   return true
 }
 
@@ -200,12 +294,20 @@ const validateUserSettingsMutation = (
   if (path[2] !== "settings") return false
 
   const settingId = path[3]
-  if (settingId !== "notifications" && settingId !== "themes") {
+  if (
+    settingId !== "notifications" &&
+    settingId !== "preferences" &&
+    settingId !== "themes"
+  ) {
     reject("permission-denied", "Invalid user settings target")
   }
 
   if (operation.type === "delete") {
     reject("permission-denied", "Settings documents cannot be deleted via sync")
+  }
+
+  if (settingId === "preferences") {
+    validateUserPreferencesPayload(operation)
   }
 
   return true
@@ -281,6 +383,33 @@ const validateTabsLayoutMutation = async (
   return true
 }
 
+const validateMembershipSettingsMutation = async (
+  transaction: admin.firestore.Transaction,
+  path: string[],
+  operation: SyncOperation,
+  userId: string
+) => {
+  if (path.length !== 6) return false
+  if (path[0] !== "teams" || path[2] !== "memberships") return false
+  if (path[4] !== "settings" || path[5] !== "preferences") return false
+
+  const targetUserId = path[3]
+  if (targetUserId !== userId) {
+    reject("permission-denied", "Cannot mutate another member's preferences")
+  }
+
+  if (operation.type === "delete") {
+    reject(
+      "permission-denied",
+      "Membership preference documents cannot be deleted via sync"
+    )
+  }
+
+  validateMembershipPreferencesPayload(operation)
+  await ensureTeamMembership(transaction, path[1], userId)
+  return true
+}
+
 const validateBaseVersion = (
   targetSnap: FirebaseFirestore.DocumentSnapshot,
   baseVersion: SyncBaseVersion | null
@@ -334,19 +463,54 @@ const validateOperationAccess = async (
   )
   if (handledTabsMutation) return
 
+  const handledMembershipSettingsMutation =
+    await validateMembershipSettingsMutation(
+      transaction,
+      path,
+      operation,
+      userId
+    )
+  if (handledMembershipSettingsMutation) return
+
   reject("permission-denied", "Unsupported sync mutation target")
 }
 
 const isUserRootPathForUser = (path: string[], userId: string): boolean =>
   path.length === 2 && path[0] === "users" && path[1] === userId
 
-const withServerManagedUserFields = (
+const isUserPreferencesPathForUser = (
+  path: string[],
+  userId: string
+): boolean =>
+  path.length === 4 &&
+  path[0] === "users" &&
+  path[1] === userId &&
+  path[2] === "settings" &&
+  path[3] === "preferences"
+
+const isMembershipPreferencesPathForUser = (
+  path: string[],
+  userId: string
+): boolean =>
+  path.length === 6 &&
+  path[0] === "teams" &&
+  path[2] === "memberships" &&
+  path[3] === userId &&
+  path[4] === "settings" &&
+  path[5] === "preferences"
+
+const withServerManagedFields = (
   payload: Record<string, unknown>,
   targetSnap: FirebaseFirestore.DocumentSnapshot,
   path: string[],
   userId: string
 ): Record<string, unknown> => {
-  if (!isUserRootPathForUser(path, userId)) {
+  const shouldStampUpdatedAt =
+    isUserRootPathForUser(path, userId) ||
+    isUserPreferencesPathForUser(path, userId) ||
+    isMembershipPreferencesPathForUser(path, userId)
+
+  if (!shouldStampUpdatedAt) {
     return payload
   }
 
@@ -355,7 +519,11 @@ const withServerManagedUserFields = (
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }
 
-  if (!targetSnap.exists && !("createdAt" in nextPayload)) {
+  if (
+    isUserRootPathForUser(path, userId) &&
+    !targetSnap.exists &&
+    !("createdAt" in nextPayload)
+  ) {
     nextPayload.createdAt = admin.firestore.FieldValue.serverTimestamp()
   }
 
@@ -375,7 +543,7 @@ const applyMutation = (
     return
   }
 
-  const payload = withServerManagedUserFields(
+  const payload = withServerManagedFields(
     operation.data ?? {},
     targetSnap,
     path,

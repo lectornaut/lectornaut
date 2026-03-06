@@ -14,8 +14,8 @@ import {
 import { withToast } from "@/helpers/toast"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
-import { updateUserData } from "@/queries/updateUserData"
 import { claimUsername, releaseUsername } from "@/queries/username"
+import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership } from "@/types/membership"
@@ -220,7 +220,7 @@ watch(hasUsername, (hasUser) => {
   if (!hasUser && isPublic.value) {
     const previousIsPublic = isPublic.value
     optimisticIsPublic.value = false
-    updateUserData({ isPublic: false }).catch((error) => {
+    updateCurrentUserProfileVisibility(false).catch((error) => {
       optimisticIsPublic.value = previousIsPublic
       console.error(error)
     })
@@ -241,7 +241,7 @@ const toggleIsPublic = async (value: boolean) => {
   optimisticIsPublic.value = value
 
   try {
-    await updateUserData({ isPublic: value })
+    await updateCurrentUserProfileVisibility(value)
     toast.success("Profile visibility updated")
   } catch (error) {
     optimisticIsPublic.value = previousIsPublic
