@@ -8,15 +8,13 @@ export const BILLING_PLAN_ORDER: readonly BillingPlanKey[] = [
   "enterprise",
 ] as const
 
-export const BILLING_ENTITLED_STATUSES = new Set([
+export const BILLING_ENTITLED_STATUSES = new Set(["active", "trialing"])
+
+export const BILLING_ACTIVE_LIKE_STATUSES = new Set([
   "active",
   "trialing",
   "past_due",
   "unpaid",
-])
-
-export const BILLING_ACTIVE_LIKE_STATUSES = new Set([
-  ...BILLING_ENTITLED_STATUSES,
   "incomplete",
 ])
 const BILLABLE_SEAT_ROLES = new Set<IMembershipRole>([
@@ -37,11 +35,10 @@ export function isTeamBillingEntitled(
   billing: Partial<ITeamBilling> | null | undefined
 ): boolean {
   if (!billing) return false
-  if (billing.isEntitled === true) return true
-  return (
-    typeof billing.status === "string" &&
-    BILLING_ENTITLED_STATUSES.has(billing.status)
-  )
+  if (typeof billing.status === "string") {
+    return BILLING_ENTITLED_STATUSES.has(billing.status)
+  }
+  return billing.isEntitled === true
 }
 
 export function normalizeTeamBilling(
@@ -61,6 +58,10 @@ export function normalizeTeamBilling(
     lastInvoiceId: billing?.lastInvoiceId ?? null,
     lastInvoiceStatus: billing?.lastInvoiceStatus ?? null,
     lastStripeEventId: billing?.lastStripeEventId ?? null,
+    lastStripeEventCreated:
+      typeof billing?.lastStripeEventCreated === "number"
+        ? billing.lastStripeEventCreated
+        : null,
     isEntitled: billing?.isEntitled ?? false,
     updatedAt: billing?.updatedAt,
   }

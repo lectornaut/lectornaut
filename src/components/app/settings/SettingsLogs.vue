@@ -143,19 +143,6 @@ onMounted(() => {
   <div class="p-6">
     <FieldGroup>
       <FieldSet>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel>Audit Logs</FieldLabel>
-            <FieldDescription>
-              View system and activity logs for your team.
-            </FieldDescription>
-          </FieldContent>
-          <Button variant="secondary" @click="refreshLogs">
-            <IconRefreshCw />
-            Refresh
-          </Button>
-        </Field>
-
         <Field v-if="!canViewLogs" orientation="horizontal">
           <FieldContent>
             <div class="rounded-md border border-dashed p-6 text-sm">
@@ -163,8 +150,19 @@ onMounted(() => {
             </div>
           </FieldContent>
         </Field>
-
         <template v-else>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>Audit Logs</FieldLabel>
+              <FieldDescription>
+                View system and activity logs for your team.
+              </FieldDescription>
+            </FieldContent>
+            <Button variant="secondary" @click="refreshLogs">
+              <IconRefreshCw />
+              Refresh
+            </Button>
+          </Field>
           <Field orientation="horizontal">
             <FieldContent>
               <Empty v-if="loading">
@@ -192,7 +190,6 @@ onMounted(() => {
               />
             </FieldContent>
           </Field>
-
           <Field v-if="hasMore && logs.length > 0" orientation="horizontal">
             <FieldContent>
               <div class="flex justify-center">

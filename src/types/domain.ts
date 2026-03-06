@@ -21,6 +21,7 @@ export interface ITeamBilling {
   lastInvoiceId: string | null
   lastInvoiceStatus: string | null
   lastStripeEventId: string | null
+  lastStripeEventCreated: number | null
   isEntitled: boolean
   updatedAt?: Timestamp
 }

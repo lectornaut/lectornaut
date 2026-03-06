@@ -104,6 +104,7 @@
   },
   "states": {
     "loading": "Loading...",
+    "unavailable": "Unavailable",
     "offline": "You are offline",
     "synced": "Synced to cloud",
     "syncing": "Syncing...",

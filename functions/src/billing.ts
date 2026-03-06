@@ -16,6 +16,7 @@ import Stripe from "stripe"
 import {
   BillingInterval,
   PlanKey,
+  getPlanRank,
   getPriceId,
   mapPriceIdToPlan,
   resolveBillingCatalogFromStripe,
@@ -28,6 +29,11 @@ import { stripeSecretKey, stripeWebhookSecret } from "./secrets.js"
 import { Capabilities, IMembershipRole, isMembershipRole } from "./types.js"
 
 type PlanChangeTiming = "immediate" | "period_end"
+type StripeEventMeta = {
+  id: string
+  created: number
+  type: string
+}
 
 type TeamBillingData = {
   stripeCustomerId?: string | null
@@ -43,6 +49,7 @@ type TeamBillingData = {
   lastInvoiceId?: string | null
   lastInvoiceStatus?: string | null
   lastStripeEventId?: string | null
+  lastStripeEventCreated?: number | null
   isEntitled?: boolean
 }
 
@@ -70,7 +77,7 @@ interface StripeSubscriptionReference {
 const STRIPE_IDEMPOTENCY_BUCKET_MS = 5 * 60 * 1000
 const STRIPE_WEBHOOK_LOCK_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const STRIPE_WEBHOOK_STALE_PROCESSING_MS = 10 * 60 * 1000
-const BILLING_RETURN_PATH = "/settings#billing"
+const BILLING_RETURN_PATHNAME = "/pricing"
 
 const PLAN_KEYS: PlanKey[] = [
   "personal",
@@ -95,7 +102,7 @@ const activeLikeStatuses = new Set([
   "unpaid",
   "incomplete",
 ])
-const entitledStatuses = new Set(["active", "trialing", "past_due", "unpaid"])
+const entitledStatuses = new Set(["active", "trialing"])
 
 let stripeClient: Stripe | null = null
 
@@ -171,7 +178,9 @@ function getBillingAppOrigin(): string {
 }
 
 function buildBillingReturnUrl(): string {
-  return `${getBillingAppOrigin()}${BILLING_RETURN_PATH}`
+  const url = new URL(getBillingAppOrigin())
+  url.pathname = BILLING_RETURN_PATHNAME
+  return url.toString()
 }
 
 function assertPlanKey(data: Record<string, unknown>, field: string): PlanKey {
@@ -349,6 +358,18 @@ function normalizeQuantity(value: unknown): number | null {
   return normalized > 0 ? normalized : null
 }
 
+function normalizeEventCreatedSeconds(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null
+  const normalized = Math.floor(value)
+  return normalized > 0 ? normalized : null
+}
+
+function normalizeEventId(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : null
+}
+
 function normalizeMembershipRole(value: unknown): IMembershipRole | null {
   return isMembershipRole(value) ? value : null
 }
@@ -512,16 +533,102 @@ async function ensureStripeCustomer(
   return persistedCustomerId
 }
 
-function toSubscriptionCandidate(
-  subscriptions: Stripe.Subscription[]
-): Stripe.Subscription | null {
-  const candidates = subscriptions
-    .filter(
-      (subscription) =>
-        !["canceled", "incomplete_expired"].includes(subscription.status)
+function isStripeResourceMissingError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const code = (error as { code?: unknown }).code
+  return code === "resource_missing"
+}
+
+function getCustomerMetadataTeamId(
+  customer: Stripe.Customer | Stripe.DeletedCustomer
+): string | null {
+  if ("deleted" in customer) return null
+  if (typeof customer.metadata.teamId === "string") {
+    const teamId = customer.metadata.teamId.trim()
+    return teamId.length > 0 ? teamId : null
+  }
+  return null
+}
+
+async function resolveCustomerMetadataTeamId(
+  stripe: Stripe,
+  customerId: string
+): Promise<string | null> {
+  try {
+    const customer = await stripe.customers.retrieve(customerId)
+    return getCustomerMetadataTeamId(customer)
+  } catch (error) {
+    if (isStripeResourceMissingError(error)) return null
+    throw error
+  }
+}
+
+async function isSubscriptionReferenceValidForTeam(args: {
+  stripe: Stripe
+  teamId: string
+  customerId: string
+  billingCustomerId: string | null
+  subscription: Stripe.Subscription
+  source: string
+}): Promise<boolean> {
+  const {
+    stripe,
+    teamId,
+    customerId,
+    billingCustomerId,
+    subscription,
+    source,
+  } = args
+
+  if (billingCustomerId && billingCustomerId !== customerId) {
+    logger.error("[billing] Stripe customer mismatch for team", {
+      teamId,
+      source,
+      billingCustomerId,
+      resolvedCustomerId: customerId,
+      subscriptionId: subscription.id,
+    })
+    return false
+  }
+
+  const subscriptionTeamId = getTeamIdFromSubscription(subscription)
+  if (subscriptionTeamId && subscriptionTeamId !== teamId) {
+    logger.error("[billing] Stripe subscription metadata team mismatch", {
+      teamId,
+      source,
+      subscriptionId: subscription.id,
+      subscriptionTeamId,
+    })
+    return false
+  }
+
+  try {
+    const customerTeamId = await resolveCustomerMetadataTeamId(
+      stripe,
+      customerId
     )
-    .sort((left, right) => right.created - left.created)
-  return candidates[0] ?? null
+    if (customerTeamId && customerTeamId !== teamId) {
+      logger.error("[billing] Stripe customer metadata team mismatch", {
+        teamId,
+        source,
+        customerId,
+        customerTeamId,
+        subscriptionId: subscription.id,
+      })
+      return false
+    }
+  } catch (error) {
+    logger.warn("[billing] Unable to validate Stripe customer ownership", {
+      teamId,
+      source,
+      customerId,
+      subscriptionId: subscription.id,
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return false
+  }
+
+  return true
 }
 
 async function resolveTeamSubscriptionFromBillingData(
@@ -531,7 +638,8 @@ async function resolveTeamSubscriptionFromBillingData(
   customerIdFallback?: string | null
 ): Promise<StripeSubscriptionReference | null> {
   const preferredSubscriptionId = billing.stripeSubscriptionId
-  const customerId = billing.stripeCustomerId ?? customerIdFallback ?? null
+  const billingCustomerId = billing.stripeCustomerId ?? null
+  const customerId = billingCustomerId ?? customerIdFallback ?? null
 
   if (!customerId && !preferredSubscriptionId) {
     return null
@@ -548,8 +656,19 @@ async function resolveTeamSubscriptionFromBillingData(
             ? preferred.customer
             : (customerId ?? null)
 
-        if (!preferredCustomerId) return null
-        return { subscription: preferred, customerId: preferredCustomerId }
+        if (preferredCustomerId) {
+          const valid = await isSubscriptionReferenceValidForTeam({
+            stripe,
+            teamId,
+            customerId: preferredCustomerId,
+            billingCustomerId,
+            subscription: preferred,
+            source: "preferred_subscription",
+          })
+          if (valid) {
+            return { subscription: preferred, customerId: preferredCustomerId }
+          }
+        }
       }
     } catch (error) {
       logger.warn("Unable to retrieve preferred Stripe subscription", {
@@ -570,8 +689,28 @@ async function resolveTeamSubscriptionFromBillingData(
     limit: 20,
   })
 
-  const candidate = toSubscriptionCandidate(listed.data)
-  return candidate ? { subscription: candidate, customerId } : null
+  const candidates = listed.data
+    .filter(
+      (subscription) =>
+        !["canceled", "incomplete_expired"].includes(subscription.status)
+    )
+    .sort((left, right) => right.created - left.created)
+
+  for (const candidate of candidates) {
+    const valid = await isSubscriptionReferenceValidForTeam({
+      stripe,
+      teamId,
+      customerId,
+      billingCustomerId,
+      subscription: candidate,
+      source: "list_by_customer",
+    })
+    if (valid) {
+      return { subscription: candidate, customerId }
+    }
+  }
+
+  return null
 }
 
 async function resolveTeamSubscription(
@@ -589,9 +728,13 @@ async function resolveTeamSubscription(
 }
 
 function resolvePlanChangeTiming(
-  explicitTiming: PlanChangeTiming | null
+  explicitTiming: PlanChangeTiming | null,
+  currentPlanKey: PlanKey,
+  targetPlanKey: PlanKey
 ): PlanChangeTiming {
-  return explicitTiming ?? "immediate"
+  if (explicitTiming) return explicitTiming
+  const isDowngrade = getPlanRank(targetPlanKey) < getPlanRank(currentPlanKey)
+  return isDowngrade ? "period_end" : "immediate"
 }
 
 async function releaseSubscriptionSchedule(
@@ -1121,9 +1264,128 @@ async function cleanupExpiredStripeWebhookLocks(
   return deleted
 }
 
+async function patchTeamBillingFromWebhookEventIfFresh(args: {
+  teamId: string
+  source: string
+  event: StripeEventMeta
+  billingPatch: Record<string, unknown>
+  context?: Record<string, unknown>
+}): Promise<boolean> {
+  const { teamId, source, event, billingPatch, context = {} } = args
+  const teamRef = db.doc(`teams/${teamId}`)
+  const eventCreated = normalizeEventCreatedSeconds(event.created)
+  if (!eventCreated) {
+    logger.warn("[billing.webhook] Invalid Stripe event created timestamp", {
+      teamId,
+      source,
+      eventId: event.id,
+      eventType: event.type,
+    })
+    return false
+  }
+
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const teamSnap = await transaction.get(teamRef)
+      if (!teamSnap.exists) {
+        logger.info("[billing] Skipping billing patch for missing team", {
+          teamId,
+          source,
+          eventId: event.id,
+          eventType: event.type,
+          ...context,
+        })
+        return false
+      }
+
+      const teamData = teamSnap.data() as Record<string, unknown>
+      const teamBilling = getTeamBillingData(teamData)
+      const latestEventCreated = normalizeEventCreatedSeconds(
+        teamBilling.lastStripeEventCreated
+      )
+      const latestEventId = normalizeEventId(teamBilling.lastStripeEventId)
+
+      const isOlderTimestamp =
+        latestEventCreated !== null && latestEventCreated > eventCreated
+      const isSameSecondButOlderId =
+        latestEventCreated !== null &&
+        latestEventCreated === eventCreated &&
+        latestEventId !== null &&
+        latestEventId.localeCompare(event.id) > 0
+
+      if (isOlderTimestamp || isSameSecondButOlderId) {
+        logger.info("[billing.webhook] Ignored stale Stripe event", {
+          teamId,
+          source,
+          eventId: event.id,
+          eventType: event.type,
+          eventCreated,
+          latestEventCreated,
+          latestEventId,
+          reason: isOlderTimestamp
+            ? "older_created_timestamp"
+            : "same_second_event_id_tiebreak",
+          ...context,
+        })
+        return false
+      }
+
+      transaction.set(
+        teamRef,
+        {
+          billing: {
+            ...billingPatch,
+            lastStripeEventId: event.id,
+            lastStripeEventCreated: eventCreated,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true }
+      )
+      return true
+    })
+  } catch (error) {
+    if (isFirestoreNotFoundError(error)) {
+      logger.info("[billing] Skipping billing patch for missing team", {
+        teamId,
+        source,
+        eventId: event.id,
+        eventType: event.type,
+        ...context,
+      })
+      return false
+    }
+    throw error
+  }
+}
+
+function getCheckoutSessionTeamId(
+  session: Stripe.Checkout.Session
+): string | null {
+  if (typeof session.metadata?.teamId === "string") {
+    const teamId = session.metadata.teamId.trim()
+    if (teamId) return teamId
+  }
+  return null
+}
+
+function getCheckoutSessionSubscriptionId(
+  session: Stripe.Checkout.Session
+): string | null {
+  if (typeof session.subscription === "string") return session.subscription
+  if (
+    session.subscription &&
+    typeof session.subscription === "object" &&
+    typeof session.subscription.id === "string"
+  ) {
+    return session.subscription.id
+  }
+  return null
+}
+
 async function applySubscriptionEvent(
   stripe: Stripe,
-  eventId: string,
+  event: StripeEventMeta,
   subscription: Stripe.Subscription
 ): Promise<void> {
   const teamIdFromMetadata = getTeamIdFromSubscription(subscription)
@@ -1138,7 +1400,8 @@ async function applySubscriptionEvent(
 
   if (!teamId) {
     logger.warn("Unable to map subscription webhook event to a team", {
-      eventId,
+      eventId: event.id,
+      eventType: event.type,
       subscriptionId: subscription.id,
     })
     return
@@ -1147,7 +1410,8 @@ async function applySubscriptionEvent(
   const teamSnap = await teamRef.get()
   if (!teamSnap.exists) {
     logger.info("Skipping subscription webhook event for deleted team", {
-      eventId,
+      eventId: event.id,
+      eventType: event.type,
       teamId,
       subscriptionId: subscription.id,
     })
@@ -1170,7 +1434,8 @@ async function applySubscriptionEvent(
       logger.warn(
         "Unable to resolve Stripe lookup_key for subscription price",
         {
-          eventId,
+          eventId: event.id,
+          eventType: event.type,
           teamId,
           priceId,
           message: error instanceof Error ? error.message : String(error),
@@ -1192,9 +1457,9 @@ async function applySubscriptionEvent(
     }
   }
 
-  await patchTeamBillingIfExists({
-    teamRef,
+  await patchTeamBillingFromWebhookEventIfFresh({
     teamId,
+    event,
     source: "webhook.subscription",
     billingPatch: {
       stripeCustomerId: customerId,
@@ -1207,23 +1472,22 @@ async function applySubscriptionEvent(
       status: subscription.status,
       currentPeriodEnd: primaryItem?.current_period_end ?? null,
       cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
-      lastStripeEventId: eventId,
       isEntitled: isEntitledStatus(subscription.status),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
-    context: { eventId, subscriptionId: subscription.id },
+    context: { subscriptionId: subscription.id },
   })
 }
 
 async function applyInvoicePaidEvent(
   stripe: Stripe,
-  eventId: string,
+  event: StripeEventMeta,
   invoice: Stripe.Invoice
 ): Promise<void> {
   const teamId = await resolveTeamIdForInvoice(stripe, invoice)
   if (!teamId) {
     logger.warn("Unable to map invoice.paid webhook event to a team", {
-      eventId,
+      eventId: event.id,
+      eventType: event.type,
       invoiceId: invoice.id,
     })
     return
@@ -1240,6 +1504,8 @@ async function applyInvoicePaidEvent(
     } catch (error) {
       logger.warn("Unable to retrieve subscription for invoice.paid event", {
         teamId,
+        eventId: event.id,
+        eventType: event.type,
         subscriptionId,
         message: error instanceof Error ? error.message : String(error),
       })
@@ -1258,7 +1524,8 @@ async function applyInvoicePaidEvent(
       planInfo = await mapPriceIdToPlan(stripe, priceId)
     } catch (error) {
       logger.warn("Unable to resolve Stripe lookup_key for invoice price", {
-        eventId,
+        eventId: event.id,
+        eventType: event.type,
         teamId,
         priceId,
         message: error instanceof Error ? error.message : String(error),
@@ -1271,8 +1538,6 @@ async function applyInvoicePaidEvent(
     stripeSubscriptionId: subscriptionId,
     lastInvoiceId: invoice.id,
     lastInvoiceStatus: invoice.status ?? "paid",
-    lastStripeEventId: eventId,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }
 
   if (subscription) {
@@ -1289,7 +1554,8 @@ async function applyInvoicePaidEvent(
     logger.warn(
       "Skipping entitlement update for invoice.paid without subscription context",
       {
-        eventId,
+        eventId: event.id,
+        eventType: event.type,
         teamId,
         invoiceId: invoice.id,
         subscriptionId,
@@ -1297,18 +1563,18 @@ async function applyInvoicePaidEvent(
     )
   }
 
-  await patchTeamBillingIfExists({
-    teamRef: db.doc(`teams/${teamId}`),
+  await patchTeamBillingFromWebhookEventIfFresh({
     teamId,
+    event,
     source: "webhook.invoice.paid",
     billingPatch,
-    context: { eventId, invoiceId: invoice.id },
+    context: { invoiceId: invoice.id },
   })
 }
 
 async function applyInvoicePaymentFailedEvent(
   stripe: Stripe,
-  eventId: string,
+  event: StripeEventMeta,
   invoice: Stripe.Invoice
 ): Promise<void> {
   const teamId = await resolveTeamIdForInvoice(stripe, invoice)
@@ -1316,7 +1582,8 @@ async function applyInvoicePaymentFailedEvent(
     logger.warn(
       "Unable to map invoice.payment_failed webhook event to a team",
       {
-        eventId,
+        eventId: event.id,
+        eventType: event.type,
         invoiceId: invoice.id,
       }
     )
@@ -1327,9 +1594,9 @@ async function applyInvoicePaymentFailedEvent(
   const customerId =
     typeof invoice.customer === "string" ? invoice.customer : null
 
-  await patchTeamBillingIfExists({
-    teamRef: db.doc(`teams/${teamId}`),
+  await patchTeamBillingFromWebhookEventIfFresh({
     teamId,
+    event,
     source: "webhook.invoice.payment_failed",
     billingPatch: {
       stripeCustomerId: customerId,
@@ -1337,11 +1604,104 @@ async function applyInvoicePaymentFailedEvent(
       status: "past_due",
       lastInvoiceId: invoice.id,
       lastInvoiceStatus: invoice.status ?? "payment_failed",
-      lastStripeEventId: eventId,
-      isEntitled: true,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      isEntitled: false,
     },
-    context: { eventId, invoiceId: invoice.id },
+    context: { invoiceId: invoice.id },
+  })
+}
+
+async function applyInvoiceFinalizedEvent(
+  stripe: Stripe,
+  event: StripeEventMeta,
+  invoice: Stripe.Invoice
+): Promise<void> {
+  const teamId = await resolveTeamIdForInvoice(stripe, invoice)
+  if (!teamId) {
+    logger.warn("Unable to map invoice.finalized webhook event to a team", {
+      eventId: event.id,
+      eventType: event.type,
+      invoiceId: invoice.id,
+    })
+    return
+  }
+
+  const subscriptionId = getInvoiceSubscriptionId(invoice)
+  const customerId =
+    typeof invoice.customer === "string" ? invoice.customer : null
+
+  await patchTeamBillingFromWebhookEventIfFresh({
+    teamId,
+    event,
+    source: "webhook.invoice.finalized",
+    billingPatch: {
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      lastInvoiceId: invoice.id,
+      lastInvoiceStatus: invoice.status ?? "finalized",
+    },
+    context: { invoiceId: invoice.id },
+  })
+}
+
+async function applyCheckoutSessionCompletedEvent(
+  stripe: Stripe,
+  event: StripeEventMeta,
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  const teamIdFromMetadata = getCheckoutSessionTeamId(session)
+  const customerId =
+    typeof session.customer === "string" ? session.customer : null
+  const teamId =
+    teamIdFromMetadata ??
+    (customerId
+      ? await findTeamIdByBillingField("billing.stripeCustomerId", customerId)
+      : null)
+
+  if (!teamId) {
+    logger.warn("Unable to map checkout.session.completed webhook event", {
+      eventId: event.id,
+      eventType: event.type,
+      checkoutSessionId: session.id,
+    })
+    return
+  }
+
+  const subscriptionId = getCheckoutSessionSubscriptionId(session)
+  if (subscriptionId) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      await applySubscriptionEvent(stripe, event, subscription)
+      return
+    } catch (error) {
+      logger.warn(
+        "Unable to retrieve subscription for checkout.session.completed",
+        {
+          teamId,
+          eventId: event.id,
+          eventType: event.type,
+          checkoutSessionId: session.id,
+          subscriptionId,
+          message: error instanceof Error ? error.message : String(error),
+        }
+      )
+    }
+  }
+
+  const seatCount = Number.parseInt(session.metadata?.seatCount ?? "", 10)
+  const billingPatch: Record<string, unknown> = {
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscriptionId,
+  }
+  if (Number.isFinite(seatCount) && seatCount > 0) {
+    billingPatch.quantity = Math.floor(seatCount)
+  }
+
+  await patchTeamBillingFromWebhookEventIfFresh({
+    teamId,
+    event,
+    source: "webhook.checkout.session.completed",
+    billingPatch,
+    context: { checkoutSessionId: session.id, subscriptionId },
   })
 }
 
@@ -1362,6 +1722,8 @@ function normalizeBillingStatusPayload(
     lastInvoiceId: billingData?.lastInvoiceId ?? null,
     lastInvoiceStatus: billingData?.lastInvoiceStatus ?? null,
     lastStripeEventId: billingData?.lastStripeEventId ?? null,
+    lastStripeEventCreated:
+      normalizeEventCreatedSeconds(billingData?.lastStripeEventCreated) ?? null,
     isEntitled: billingData?.isEntitled ?? false,
   }
 }
@@ -1608,7 +1970,11 @@ export const changeSubscriptionPlan = onCall(
       return summarizeSubscription(subscription)
     }
 
-    const timing = resolvePlanChangeTiming(explicitTiming)
+    const timing = resolvePlanChangeTiming(
+      explicitTiming,
+      currentPlan.planKey,
+      targetPlanKey
+    )
 
     if (timing === "immediate") {
       await releaseSubscriptionSchedule(
@@ -2198,22 +2564,42 @@ export const stripeWebhook = onRequest(
     }
 
     try {
+      const eventMeta: StripeEventMeta = {
+        id: event.id,
+        created: event.created,
+        type: event.type,
+      }
+
       switch (event.type) {
+        case "checkout.session.completed": {
+          const checkoutSession = event.data.object as Stripe.Checkout.Session
+          await applyCheckoutSessionCompletedEvent(
+            stripe,
+            eventMeta,
+            checkoutSession
+          )
+          break
+        }
         case "customer.subscription.created":
         case "customer.subscription.updated":
         case "customer.subscription.deleted": {
           const subscription = event.data.object as Stripe.Subscription
-          await applySubscriptionEvent(stripe, event.id, subscription)
+          await applySubscriptionEvent(stripe, eventMeta, subscription)
+          break
+        }
+        case "invoice.finalized": {
+          const invoice = event.data.object as Stripe.Invoice
+          await applyInvoiceFinalizedEvent(stripe, eventMeta, invoice)
           break
         }
         case "invoice.paid": {
           const invoice = event.data.object as Stripe.Invoice
-          await applyInvoicePaidEvent(stripe, event.id, invoice)
+          await applyInvoicePaidEvent(stripe, eventMeta, invoice)
           break
         }
         case "invoice.payment_failed": {
           const invoice = event.data.object as Stripe.Invoice
-          await applyInvoicePaymentFailedEvent(stripe, event.id, invoice)
+          await applyInvoicePaymentFailedEvent(stripe, eventMeta, invoice)
           break
         }
         default:

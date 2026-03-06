@@ -40,19 +40,20 @@ const {
   refreshBilling,
 } = useBillingAccess({ loadCatalog: true })
 const actionLoadingPlanId = ref<BillingPlanKey | null>(null)
+type BillingDuration = "monthly" | "annual"
 
 const billingDuration = computed(() => [
   {
     title: t("pages.pricing.billing.monthly"),
-    value: "monthly",
+    value: "monthly" as const,
   },
   {
     title: t("pages.pricing.billing.annual"),
-    value: "annual",
+    value: "annual" as const,
   },
 ])
 
-const activeBillingDuration = ref("monthly")
+const activeBillingDuration = ref<BillingDuration>("monthly")
 
 const selectedInterval = computed<BillingInterval>(() =>
   activeBillingDuration.value === "monthly" ? "month" : "year"
@@ -76,9 +77,12 @@ const isCurrentSelection = (planId: BillingPlanKey): boolean => {
 
 const getActionLabel = (planId: BillingPlanKey): string => {
   if (!user.value) return t("pages.pricing.plans.cta.getStarted")
-  if (isCurrentSelection(planId)) return "Current plan"
-  if (hasActiveSubscription.value) return "Change plan"
-  return "Subscribe"
+  if (!canManageCurrentTeamBilling.value)
+    return t("settings.billing.noPermission")
+  if (isCurrentSelection(planId)) return t("settings.billing.currentPlan.label")
+  if (hasActiveSubscription.value)
+    return t("settings.billing.changePlan.button")
+  return t("settings.billing.currentPlan.subscribeButton")
 }
 
 const isActionDisabled = (planId: BillingPlanKey): boolean => {
@@ -167,7 +171,7 @@ const getDisplayedPrice = (
   if (!price?.currency || typeof price.unitAmount !== "number") {
     return isPricingLoading.value
       ? t("states.loading")
-      : t("pages.welcome.plans.unavailable")
+      : t("states.unavailable")
   }
 
   const suffix = interval === "month" ? "/month" : "/year"
@@ -217,7 +221,7 @@ const pricingPlans = computed(() => [
     monthlyPrice: getDisplayedPrice("enterprise", "month"),
     annualPrice: getDisplayedPrice("enterprise", "year"),
     overview: [
-      // "Everything in Business"
+      t("pages.pricing.features.everythingInBusiness"),
       t("pages.pricing.features.customSLAs"),
       t("pages.pricing.features.dedicatedAccountManager"),
       t("pages.pricing.features.integrationSupport"),
@@ -357,7 +361,7 @@ const comparisonPlans = computed(() => [
           </TabsTrigger>
         </TabsList>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-          <Card v-for="(card, index) in pricingPlans" :key="index">
+          <Card v-for="card in pricingPlans" :key="card.id">
             <CardHeader>
               <CardTitle
                 class="text-2xl leading-tight font-semibold tracking-tight"
@@ -400,39 +404,41 @@ const comparisonPlans = computed(() => [
       </Tabs>
     </div>
     <div class="px-8 py-4">
-      <Table class="table-fixed">
-        <TableHeader>
-          <TableRow>
-            <TableHead> {{ t("pages.pricing.feature") }} </TableHead>
-            <TableHead
-              v-for="plan in pricingPlans"
-              :key="plan.id"
-              class="text-lg font-semibold tracking-tight"
-            >
-              {{ plan.title }}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow v-for="plan in comparisonPlans" :key="plan.feature">
-            <TableCell>
-              {{ plan.feature }}
-            </TableCell>
-            <TableCell>
-              {{ plan.personal }}
-            </TableCell>
-            <TableCell>
-              {{ plan.professional }}
-            </TableCell>
-            <TableCell>
-              {{ plan.business }}
-            </TableCell>
-            <TableCell>
-              {{ plan.enterprise }}
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+      <div class="overflow-x-auto">
+        <Table class="table-fixed">
+          <TableHeader>
+            <TableRow>
+              <TableHead> {{ t("pages.pricing.feature") }} </TableHead>
+              <TableHead
+                v-for="plan in pricingPlans"
+                :key="plan.id"
+                class="text-lg font-semibold tracking-tight"
+              >
+                {{ plan.title }}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="plan in comparisonPlans" :key="plan.feature">
+              <TableCell>
+                {{ plan.feature }}
+              </TableCell>
+              <TableCell>
+                {{ plan.personal }}
+              </TableCell>
+              <TableCell>
+                {{ plan.professional }}
+              </TableCell>
+              <TableCell>
+                {{ plan.business }}
+              </TableCell>
+              <TableCell>
+                {{ plan.enterprise }}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
     </div>
   </div>
 </template>

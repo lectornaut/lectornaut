@@ -332,132 +332,138 @@ const handleSubscriptionAction = async (): Promise<void> => {
 <template>
   <div class="p-6">
     <FieldGroup>
-      <FieldSet v-if="canManageBilling">
-        <Item v-if="hasCurrentPlan" variant="muted" size="sm">
-          <ItemMedia variant="icon">
-            <IconBadgeDollarSign />
-          </ItemMedia>
-          <ItemContent class="gap-0.5 truncate">
-            <ItemTitle class="truncate">
-              {{ planLabel }}
-              {{ intervalLabel }}
-            </ItemTitle>
-            <ItemDescription class="truncate text-xs">
-              {{ billingLifecycleLabel }}
-              &middot;
-              {{ seatCountLabel }}
-              ×
-              {{
-                t("settings.billing.perSeat", {
-                  price: currentPlanUnitPriceLabel,
-                })
-              }}
-              =
-              {{ currentPlanTotalPriceLabel }}
-            </ItemDescription>
-          </ItemContent>
-          <ItemActions>
-            <Button variant="outline" @click="openPlansTab">
-              {{ t("settings.billing.changePlan.upgrade") }}
-            </Button>
-          </ItemActions>
-        </Item>
-        <Field orientation="horizontal">
+      <FieldSet>
+        <Field v-if="!canManageBilling" orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="current-plan">
-              {{ t("settings.billing.currentPlan.label") }}
-            </FieldLabel>
-            <FieldDescription>
-              {{ currentPlanDescriptionLabel }}
-            </FieldDescription>
+            <div class="rounded-md border border-dashed p-6 text-sm">
+              You do not have access to manage billing.
+            </div>
           </FieldContent>
-          <Button
-            variant="outline"
-            :disabled="!canManageBilling"
-            @click="openPlansTab"
-          >
-            {{ currentPlanButtonLabel }}
-          </Button>
         </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="payment-method">
-              {{ t("settings.billing.paymentMethod.label") }}
-            </FieldLabel>
-            <FieldDescription>
-              {{ t("settings.billing.paymentMethod.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Button
-            variant="outline"
-            :disabled="!canManagePortal || billingAction !== null"
-            @click="openBillingPortal"
-          >
-            <Spinner v-if="billingAction === 'portal'" />
-            {{ t("settings.billing.paymentMethod.button") }}
-          </Button>
-        </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="billing-history">
-              {{ t("settings.billing.billingHistory.label") }}
-            </FieldLabel>
-            <FieldDescription>
-              {{ t("settings.billing.billingHistory.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Button
-            variant="outline"
-            :disabled="!canManagePortal || billingAction !== null"
-            @click="openBillingPortal"
-          >
-            <Spinner v-if="billingAction === 'portal'" />
-            {{ t("settings.billing.billingHistory.button") }}
-          </Button>
-        </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="upgrade-plan">
-              {{ t("settings.billing.changePlan.label") }}
-            </FieldLabel>
-            <FieldDescription>
-              {{ t("settings.billing.changePlan.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Button
-            variant="outline"
-            :disabled="!canManageBilling"
-            @click="openPlansTab"
-          >
-            {{ t("settings.billing.changePlan.button") }}
-          </Button>
-        </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="cancel-subscription"
-              >Cancel subscription</FieldLabel
+        <template v-else>
+          <Item v-if="hasCurrentPlan" variant="muted" size="sm">
+            <ItemMedia variant="icon">
+              <IconBadgeDollarSign />
+            </ItemMedia>
+            <ItemContent class="gap-0.5 truncate">
+              <ItemTitle class="truncate">
+                {{ planLabel }}
+                {{ intervalLabel }}
+              </ItemTitle>
+              <ItemDescription class="truncate text-xs">
+                {{ billingLifecycleLabel }}
+                &middot;
+                {{ seatCountLabel }}
+                ×
+                {{
+                  t("settings.billing.perSeat", {
+                    price: currentPlanUnitPriceLabel,
+                  })
+                }}
+                =
+                {{ currentPlanTotalPriceLabel }}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <Button variant="outline" @click="openPlansTab">
+                {{ t("settings.billing.changePlan.upgrade") }}
+              </Button>
+            </ItemActions>
+          </Item>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="current-plan">
+                {{ t("settings.billing.currentPlan.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ currentPlanDescriptionLabel }}
+              </FieldDescription>
+            </FieldContent>
+            <Button
+              variant="outline"
+              :disabled="!canManageBilling"
+              @click="openPlansTab"
             >
-            <FieldDescription>
-              {{ subscriptionActionDescription }}
-            </FieldDescription>
-          </FieldContent>
-          <Button
-            variant="outline"
-            :disabled="!canCancelSubscription && !canRestorePlan"
-            @click="handleSubscriptionAction"
-          >
-            <Spinner
-              v-if="billingAction === 'cancel' || billingAction === 'restore'"
-            />
-            <template v-else>
-              {{ subscriptionActionLabel }}
-            </template>
-          </Button>
-        </Field>
+              {{ currentPlanButtonLabel }}
+            </Button>
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="payment-method">
+                {{ t("settings.billing.paymentMethod.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.billing.paymentMethod.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Button
+              variant="outline"
+              :disabled="!canManagePortal || billingAction !== null"
+              @click="openBillingPortal"
+            >
+              <Spinner v-if="billingAction === 'portal'" />
+              {{ t("settings.billing.paymentMethod.button") }}
+            </Button>
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="billing-history">
+                {{ t("settings.billing.billingHistory.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.billing.billingHistory.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Button
+              variant="outline"
+              :disabled="!canManagePortal || billingAction !== null"
+              @click="openBillingPortal"
+            >
+              <Spinner v-if="billingAction === 'portal'" />
+              {{ t("settings.billing.billingHistory.button") }}
+            </Button>
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="upgrade-plan">
+                {{ t("settings.billing.changePlan.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.billing.changePlan.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Button
+              variant="outline"
+              :disabled="!canManageBilling"
+              @click="openPlansTab"
+            >
+              {{ t("settings.billing.changePlan.button") }}
+            </Button>
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="cancel-subscription"
+                >Cancel subscription</FieldLabel
+              >
+              <FieldDescription>
+                {{ subscriptionActionDescription }}
+              </FieldDescription>
+            </FieldContent>
+            <Button
+              variant="outline"
+              :disabled="!canCancelSubscription && !canRestorePlan"
+              @click="handleSubscriptionAction"
+            >
+              <Spinner
+                v-if="billingAction === 'cancel' || billingAction === 'restore'"
+              />
+              <template v-else>
+                {{ subscriptionActionLabel }}
+              </template>
+            </Button>
+          </Field>
+        </template>
       </FieldSet>
-      <div v-else class="text-muted-foreground py-8 text-center">
-        {{ t("settings.billing.noPermission") }}
-      </div>
     </FieldGroup>
   </div>
 </template>

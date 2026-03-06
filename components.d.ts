@@ -306,7 +306,6 @@ declare module 'vue' {
     SettingsAccount: typeof import('./src/components/app/settings/SettingsAccount.vue')['default']
     SettingsAppearance: typeof import('./src/components/app/settings/SettingsAppearance.vue')['default']
     SettingsBilling: typeof import('./src/components/app/settings/SettingsBilling.vue')['default']
-    SettingsContent: typeof import('./src/components/app/settings/SettingsContent.vue')['default']
     SettingsLogs: typeof import('./src/components/app/settings/SettingsLogs.vue')['default']
     SettingsMembers: typeof import('./src/components/app/settings/SettingsMembers.vue')['default']
     SettingsMenu: typeof import('./src/components/app/layout/SettingsMenu.vue')['default']
