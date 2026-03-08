@@ -12,7 +12,7 @@ const { t } = useI18n()
   <Empty>
     <EmptyHeader>
       <EmptyMedia variant="icon">
-        <IconCreditCard class="text-muted-foreground size-6" />
+        <IconCreditCard />
       </EmptyMedia>
       <EmptyTitle>{{ t("components.teamPlanSelector.title") }}</EmptyTitle>
       <EmptyDescription>

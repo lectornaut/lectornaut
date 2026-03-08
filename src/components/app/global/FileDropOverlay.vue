@@ -1,5 +1,13 @@
 <script lang="ts" setup>
-import { IconFile, IconUpload, IconX } from "@/data/icons"
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import {
+  IconFile,
+  IconMoreHorizontal,
+  IconSettings,
+  IconTrash,
+  IconTrash2,
+  IconUpload,
+} from "@/data/icons"
 import {
   FILE_CAPTURE_WINDOW_LABEL,
   normalizeDroppedPaths,
@@ -33,9 +41,6 @@ const droppedFilesDescription = computed(() => {
 
   return "Review the files below. Drop another set to replace this list."
 })
-const closeButtonLabel = computed(() =>
-  isCaptureWindow ? "Close window" : "Close overlay"
-)
 
 let unlistenDragDrop: UnlistenFn | null = null
 let unlistenNativeDrop: UnlistenFn | null = null
@@ -171,20 +176,74 @@ onBeforeUnmount(() => {
     unlistenCloseRequested = null
   }
 })
+
+const isFullscreen = useIsFullscreen()
 </script>
 
 <template>
-  <div
-    v-if="shouldRender"
-    data-tauri-drag-region
-    class="bg-background/5 fixed inset-0 isolate z-100 grid place-items-center p-2 backdrop-blur-lg"
+  <Transition
+    enter-active-class="transition duration-200 ease-in-out"
+    leave-active-class="transition duration-200 ease-in-out"
+    enter-from-class="opacity-0"
+    leave-to-class="opacity-0"
   >
     <div
-      class="bg-background pointer-events-auto relative w-full max-w-lg rounded-lg p-2 shadow-lg"
+      v-if="shouldRender"
+      data-tauri-drag-region
+      class="bg-background/50 fixed inset-0 isolate z-100 flex flex-col gap-2 p-2 backdrop-blur-lg"
     >
-      <Empty
-        class="flex size-full items-center justify-center rounded-xl border border-dashed p-6 sm:p-8"
+      <div
+        data-tauri-drag-region
+        :class="{ 'pl-20': isTauri && !isFullscreen }"
+        class="flex justify-end"
       >
+        <ButtonGroup>
+          <ButtonGroup>
+            <Button variant="ghost" size="icon-sm">
+              <IconUpload />
+            </Button>
+          </ButtonGroup>
+          <ButtonGroup>
+            <Button size="sm" :disabled="!hasDroppedPaths"> Save </Button>
+          </ButtonGroup>
+        </ButtonGroup>
+      </div>
+      <OverlayScrollbarsWrapper
+        v-if="hasDroppedPaths"
+        class="bg-secondary grow rounded-md"
+      >
+        <ItemGroup class="gap-2 p-2">
+          <Item
+            v-for="path in droppedPaths"
+            :key="path"
+            variant="muted"
+            size="sm"
+            class="group w-full gap-2 p-2"
+          >
+            <ItemMedia variant="icon">
+              <IconFile />
+            </ItemMedia>
+            <ItemContent class="gap-0.5 truncate">
+              <ItemTitle class="truncate">
+                {{ getFileName(path) }}
+              </ItemTitle>
+              <ItemDescription class="line-clamp-1 truncate text-xs">
+                {{ path }}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="hidden group-hover:flex"
+              >
+                <IconTrash />
+              </Button>
+            </ItemActions>
+          </Item>
+        </ItemGroup>
+      </OverlayScrollbarsWrapper>
+      <Empty v-else class="flex grow border border-dashed">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <IconUpload />
@@ -204,35 +263,28 @@ onBeforeUnmount(() => {
             <span>Received files</span>
             <span>{{ droppedPaths.length }}</span>
           </div>
-          <ScrollArea class="max-h-44 rounded-md border">
-            <div class="space-y-2 p-3">
-              <div
-                v-for="path in droppedPaths"
-                :key="path"
-                class="bg-muted/40 flex items-start gap-3 rounded-md border p-3 text-left"
-              >
-                <IconFile
-                  class="text-muted-foreground mt-0.5 size-4 shrink-0"
-                />
-                <div class="min-w-0 space-y-1">
-                  <p class="truncate text-sm font-medium">
-                    {{ getFileName(path) }}
-                  </p>
-                  <p class="text-muted-foreground font-mono text-xs break-all">
-                    {{ path }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </ScrollArea>
         </EmptyContent>
-        <EmptyContent class="w-full max-w-none items-stretch">
-          <Button class="w-full" @click="closeOverlayOrWindow">
-            <IconX />
-            {{ closeButtonLabel }}
-          </Button>
-        </EmptyContent>
+        <EmptyContent class="w-full max-w-none items-stretch"> </EmptyContent>
       </Empty>
+      <div data-tauri-drag-region class="flex justify-between">
+        <ButtonGroup>
+          <Button variant="secondary" size="icon-sm">
+            <IconMoreHorizontal />
+          </Button>
+          <ButtonGroupSeparator />
+          <Button variant="secondary" size="icon-sm">
+            <IconSettings />
+          </Button>
+        </ButtonGroup>
+        <Button
+          :disabled="!hasDroppedPaths"
+          variant="secondary"
+          size="icon-sm"
+          @click="closeOverlayOrWindow"
+        >
+          <IconTrash2 />
+        </Button>
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>

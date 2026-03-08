@@ -39,7 +39,7 @@ const switchTeam = async (teamId: AcceptableValue) => {
   <Empty>
     <EmptyHeader>
       <EmptyMedia variant="icon">
-        <IconUsers class="text-muted-foreground size-6" />
+        <IconUsers />
       </EmptyMedia>
       <EmptyTitle>Teams</EmptyTitle>
       <EmptyDescription> Select a team to continue </EmptyDescription>

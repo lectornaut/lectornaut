@@ -50,7 +50,7 @@ const deselectTeam = async () => {
   <Empty>
     <EmptyHeader>
       <EmptyMedia variant="icon">
-        <IconFolder class="text-muted-foreground size-6" />
+        <IconFolder />
       </EmptyMedia>
       <EmptyTitle>Workspaces</EmptyTitle>
       <EmptyDescription> Select a workspace to continue </EmptyDescription>

@@ -37,7 +37,7 @@ const isCreatingTeamDialogOpen = ref(false)
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <Logo class="text-muted-foreground size-6" />
+            <Logo />
           </EmptyMedia>
           <EmptyTitle>
             {{ t("pages.teams.title") }}

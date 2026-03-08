@@ -24,7 +24,7 @@ const { t } = useI18n()
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <IconChatFill class="text-muted-foreground size-6" />
+            <IconChatFill />
           </EmptyMedia>
           <EmptyTitle> {{ t("pages.start.console") }} </EmptyTitle>
           <EmptyDescription>
@@ -48,7 +48,7 @@ const { t } = useI18n()
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <IconAiFill class="text-muted-foreground size-6" />
+            <IconAiFill />
           </EmptyMedia>
           <EmptyTitle> {{ t("pages.start.getInstantAnswers") }} </EmptyTitle>
           <EmptyDescription>

@@ -923,7 +923,7 @@ const passwordExists = computed(() => {
                   <ItemTitle class="truncate">
                     {{ provider.displayName }}
                   </ItemTitle>
-                  <ItemDescription class="truncate">
+                  <ItemDescription class="truncate text-xs">
                     {{ provider.email }}
                   </ItemDescription>
                 </ItemContent>

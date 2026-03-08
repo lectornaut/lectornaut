@@ -47,7 +47,7 @@ const actionItems: ActionItem[] = [
   <Empty>
     <EmptyHeader>
       <EmptyMedia variant="icon">
-        <Logo class="text-muted-foreground size-6" />
+        <Logo />
       </EmptyMedia>
       <EmptyTitle> Welcome to Lectornaut </EmptyTitle>
       <EmptyDescription>

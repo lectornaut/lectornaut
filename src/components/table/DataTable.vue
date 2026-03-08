@@ -216,7 +216,7 @@ const table = useVueTable({
                 <Empty v-if="!props.data || props.data.length === 0">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
-                      <IconDatabase class="text-muted-foreground size-6" />
+                      <IconDatabase />
                     </EmptyMedia>
                     <EmptyTitle>{{ $t("empty.noData") }}</EmptyTitle>
                     <EmptyDescription>
@@ -227,7 +227,7 @@ const table = useVueTable({
                 <Empty v-else>
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
-                      <IconListFilter class="text-muted-foreground size-6" />
+                      <IconListFilter />
                     </EmptyMedia>
                     <EmptyTitle>{{ $t("empty.noFilteredData") }}</EmptyTitle>
                     <EmptyDescription>

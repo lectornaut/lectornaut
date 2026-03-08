@@ -158,7 +158,7 @@ useInfiniteScroll(
           >
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <IconBell class="text-muted-foreground size-6" />
+                <IconBell />
               </EmptyMedia>
               <EmptyTitle> No notifications </EmptyTitle>
               <EmptyDescription>

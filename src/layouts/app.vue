@@ -614,9 +614,7 @@ const closeTab = (id: string) => {
                               <Empty v-if="source.length === 0">
                                 <EmptyHeader>
                                   <EmptyMedia variant="icon">
-                                    <IconLayerFill
-                                      class="text-muted-foreground size-6"
-                                    />
+                                    <IconLayerFill />
                                   </EmptyMedia>
                                   <EmptyTitle>
                                     {{ t("layouts.app.empty.console.title") }}

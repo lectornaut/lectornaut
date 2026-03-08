@@ -321,7 +321,7 @@ onBeforeUnmount(() => {
     <Empty v-else>
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          <IconFileText class="text-muted-foreground size-6" />
+          <IconFileText />
         </EmptyMedia>
         <EmptyTitle>No document selected</EmptyTitle>
         <EmptyDescription>
