@@ -182,7 +182,7 @@ const route = useRoute()
               class="relative flex h-full grow items-center justify-between gap-2"
             >
               <span
-                class="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center px-3"
+                class="pointer-events-none absolute inset-y-0 inset-s-0 flex items-center justify-center px-3"
               >
                 <IconSearch />
               </span>

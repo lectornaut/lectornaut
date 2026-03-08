@@ -13,6 +13,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Lectornaut",
         "width": 1200,
         "height": 720,
@@ -22,7 +23,7 @@
         "hiddenTitle": true,
         "zoomHotkeysEnabled": true,
         "transparent": true,
-        "dragDropEnabled": false,
+        "dragDropEnabled": true,
         "trafficLightPosition": {
           "x": 16,
           "y": 26

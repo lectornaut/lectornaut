@@ -144,7 +144,7 @@
     "vee-validate": "^4.15.1",
     "vue": "^3.5.29",
     "vue-boring-avatars": "^1.4.0",
-    "vue-i18n": "^11.2.8",
+    "vue-i18n": "^11.3.0",
     "vue-router": "^5.0.3",
     "vue-sonner": "^2.0.9",
     "vuefire": "^3.2.2",

@@ -122,6 +122,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/file-capture': RouteRecordInfo<
+      '/file-capture',
+      '/file-capture',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/home': RouteRecordInfo<
       '/home',
       '/home',
@@ -317,6 +324,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/explore.vue': {
       routes:
         | '/explore'
+      views:
+        | never
+    }
+    'src/pages/file-capture.vue': {
+      routes:
+        | '/file-capture'
       views:
         | never
     }

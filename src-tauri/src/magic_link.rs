@@ -27,8 +27,8 @@ pub async fn listen_magic_link(port: u16) -> Result<String, String> {
     let path_and_query = match parts.next() {
         Some(p) => p,
         None => {
-            let response_body = include_str!("magic_link_failure.html")
-                .replace("{{error}}", "Malformed request");
+            let response_body =
+                include_str!("magic_link_failure.html").replace("{{error}}", "Malformed request");
             let response = format!(
                 "HTTP/1.1 400 Bad Request\r\nContent-Length: {}\r\nContent-Type: text/html\r\n\r\n{}",
                 response_body.len(),

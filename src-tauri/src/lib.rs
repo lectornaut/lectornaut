@@ -5,9 +5,10 @@ use tauri::{
 };
 use window_vibrancy::*;
 
-mod magic_link;
-mod oauth;
 mod app_check;
+mod magic_link;
+mod file_capture;
+mod oauth;
 
 #[derive(Clone, serde::Serialize)]
 struct Payload {
@@ -38,7 +39,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_filter(|label| label != file_capture::FILE_CAPTURE_WINDOW_LABEL)
+                .build(),
+        )
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
@@ -51,7 +56,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             oauth::login_oauth,
             magic_link::listen_magic_link,
-            app_check::build_app_check_proof
+            app_check::build_app_check_proof,
+            file_capture::keep_file_capture_window_open,
+            file_capture::dismiss_file_capture_window
         ])
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
@@ -126,6 +133,8 @@ pub fn run() {
 
             let window = app.get_webview_window("main").unwrap();
 
+            file_capture::setup(app)?;
+
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
@@ -138,11 +147,22 @@ pub fn run() {
         })
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {
+                if window.label() == file_capture::FILE_CAPTURE_WINDOW_LABEL {
+                    api.prevent_close();
+                    let _ = file_capture::dismiss_file_capture_window(
+                        window.app_handle().clone(),
+                    );
+                    return;
+                }
+
+                if window.label() != "main" {
+                    return;
+                }
                 api.prevent_close();
                 window.hide().unwrap();
                 if let Some(tray) = window.app_handle().tray_by_id("main") {
-                    let _ = create_tray_menu(window.app_handle(), true)
-                        .map(|m| tray.set_menu(Some(m)));
+                    let _ =
+                        create_tray_menu(window.app_handle(), true).map(|m| tray.set_menu(Some(m)));
                 }
             }
             _ => {}

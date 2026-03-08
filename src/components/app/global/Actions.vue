@@ -1,9 +1,17 @@
 <script lang="ts" setup>
+import { isTauri } from "@/composables/usePlatform"
+import { FILE_CAPTURE_WINDOW_LABEL } from "@/modules/fileCapture"
 import { emitter } from "@/modules/mitt"
 import { state, store } from "@/modules/theme"
 import type { ThemeMode } from "@/types/settings"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
+
+const currentWindowLabel = shallowRef<string | null>(null)
+const isFileCaptureWindow = computed(
+  () => currentWindowLabel.value === FILE_CAPTURE_WINDOW_LABEL
+)
 
 const visibility = useDocumentVisibility()
 const isDark = usePreferredDark()
@@ -76,6 +84,12 @@ watch(online, (value) => {
   if (value) toast.success("You are online")
   else toast.error("You are offline")
 })
+
+onMounted(async () => {
+  if (!isTauri.value) return
+
+  currentWindowLabel.value = getCurrentWindow().label
+})
 </script>
 
 <template>
@@ -88,4 +102,5 @@ watch(online, (value) => {
   />
   <Shortcuts />
   <ExitTrigger />
+  <FileDropOverlay v-if="!isFileCaptureWindow" />
 </template>

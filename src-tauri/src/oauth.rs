@@ -33,9 +33,13 @@ pub struct OAuthConfig {
 }
 
 #[command]
-pub async fn login_oauth<R: Runtime>(app: AppHandle<R>, config: OAuthConfig) -> Result<OAuthResponse, String> {
+pub async fn login_oauth<R: Runtime>(
+    app: AppHandle<R>,
+    config: OAuthConfig,
+) -> Result<OAuthResponse, String> {
     // 0. Parse port from redirect_uri
-    let redirect_url = Url::parse(&config.redirect_uri).map_err(|e| format!("Invalid redirect_uri: {}", e))?;
+    let redirect_url =
+        Url::parse(&config.redirect_uri).map_err(|e| format!("Invalid redirect_uri: {}", e))?;
     let port = redirect_url.port().unwrap_or(7878);
     let host = redirect_url.host_str().unwrap_or("127.0.0.1");
 
@@ -146,7 +150,7 @@ pub async fn login_oauth<R: Runtime>(app: AppHandle<R>, config: OAuthConfig) -> 
             .find(|(key, _)| key == "error")
             .map(|(_, v)| v.to_string())
             .unwrap_or_else(|| "Unknown error".to_string());
-        
+
         let error_description = parsed_url
             .query_pairs()
             .find(|(key, _)| key == "error_description")
@@ -162,7 +166,7 @@ pub async fn login_oauth<R: Runtime>(app: AppHandle<R>, config: OAuthConfig) -> 
         // Send failure response
         let response_template = include_str!("oauth_failure.html");
         let response_body = response_template.replace("{{error}}", &error_message);
-        
+
         let response = format!(
             "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/html\r\n\r\n{}",
             response_body.len(),
