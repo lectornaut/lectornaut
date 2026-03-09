@@ -6,8 +6,8 @@ use tauri::{
 use window_vibrancy::*;
 
 mod app_check;
-mod magic_link;
 mod file_capture;
+mod magic_link;
 mod oauth;
 
 #[derive(Clone, serde::Serialize)]
@@ -58,7 +58,8 @@ pub fn run() {
             magic_link::listen_magic_link,
             app_check::build_app_check_proof,
             file_capture::keep_file_capture_window_open,
-            file_capture::dismiss_file_capture_window
+            file_capture::dismiss_file_capture_window,
+            file_capture::preview_file_path
         ])
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
@@ -149,9 +150,7 @@ pub fn run() {
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 if window.label() == file_capture::FILE_CAPTURE_WINDOW_LABEL {
                     api.prevent_close();
-                    let _ = file_capture::dismiss_file_capture_window(
-                        window.app_handle().clone(),
-                    );
+                    let _ = file_capture::dismiss_file_capture_window(window.app_handle().clone());
                     return;
                 }
 

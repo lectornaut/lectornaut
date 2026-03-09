@@ -1,75 +1,156 @@
 <script lang="ts" setup>
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { isTauri, platform, useIsFullscreen } from "@/composables/usePlatform"
 import {
-  IconFile,
+  IconArchive,
+  IconEye,
+  IconFileCode,
+  IconFileDelimited,
+  IconFileDocument,
+  IconFileExcel,
+  IconFileImage,
+  IconFileMusic,
+  IconFilePdf,
+  IconFilePowerPoint,
+  IconFileQuestion,
+  IconFileVideo,
+  IconFormatFont,
+  IconGrid2X2,
+  IconList,
   IconMoreHorizontal,
   IconSettings,
+  IconSquareArrowOutUpRight,
   IconTrash,
-  IconTrash2,
   IconUpload,
 } from "@/data/icons"
+import { showErrorToast } from "@/helpers/toast"
 import {
   FILE_CAPTURE_WINDOW_LABEL,
+  type FileCaptureFileKind,
+  clearDroppedPaths,
+  getFileExtensionFromPath,
+  getFileKindFromPath,
+  getFileNameFromPath,
+  mergeDroppedPaths,
   normalizeDroppedPaths,
   publishDroppedPaths,
+  removeDroppedPath,
 } from "@/modules/fileCapture"
-import { invoke } from "@tauri-apps/api/core"
+import { convertFileSrc, invoke } from "@tauri-apps/api/core"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
+import { open } from "@tauri-apps/plugin-dialog"
+import { revealItemInDir } from "@tauri-apps/plugin-opener"
+import type { Component } from "vue"
 
+const { t } = useI18n()
 const currentWindow = getCurrentWindow()
 const isCaptureWindow = currentWindow.label === FILE_CAPTURE_WINDOW_LABEL
-const isMainWindow = currentWindow.label === "main"
 const isVisible = ref(false)
 const hasActiveFileDrag = ref(false)
 const droppedPaths = ref<string[]>([])
+const imagePreviewFailures = ref<Record<string, boolean>>({})
 const hasDroppedPaths = computed(() => droppedPaths.value.length > 0)
 const shouldRender = computed(
-  () => isCaptureWindow || isVisible.value || hasDroppedPaths.value
+  () =>
+    isCaptureWindow ||
+    isVisible.value ||
+    hasActiveFileDrag.value ||
+    hasDroppedPaths.value
 )
-const droppedFilesTitle = computed(() => {
-  if (!hasDroppedPaths.value) return "Drop files here"
 
-  return droppedPaths.value.length === 1
-    ? "1 file ready"
-    : `${droppedPaths.value.length} files ready`
-})
-const droppedFilesDescription = computed(() => {
-  if (!hasDroppedPaths.value) {
-    return "Release to hand file paths back to Lectornaut."
-  }
-
-  return "Review the files below. Drop another set to replace this list."
-})
-
-let unlistenDragDrop: UnlistenFn | null = null
-let unlistenNativeDrop: UnlistenFn | null = null
-let unlistenCloseRequested: UnlistenFn | null = null
-
-const getFileName = (path: string): string => {
-  const segments = path.split(/[/\\]/)
-  return segments.at(-1) || path
+type FileListLayout = "list" | "grid"
+type DroppedFileItem = {
+  path: string
+  name: string
+  extension: string
+  kind: FileCaptureFileKind
+  isImage: boolean
+  previewSrc: string | null
+  icon: Component
 }
 
-const updateDroppedPaths = (paths: string[]): string[] => {
-  const normalized = normalizeDroppedPaths(paths)
+const fileKindIcons: Record<FileCaptureFileKind, Component> = {
+  image: IconFileImage,
+  pdf: IconFilePdf,
+  document: IconFileDocument,
+  spreadsheet: IconFileExcel,
+  delimited: IconFileDelimited,
+  presentation: IconFilePowerPoint,
+  code: IconFileCode,
+  archive: IconArchive,
+  audio: IconFileMusic,
+  video: IconFileVideo,
+  font: IconFormatFont,
+  unknown: IconFileQuestion,
+}
 
-  if (!normalized.length) return normalized
+const fileListLayout = ref<FileListLayout>("list")
+const isGridLayout = computed(() => fileListLayout.value === "grid")
+const revealFileLocationLabel = computed(() =>
+  t(
+    platform.value === "macos"
+      ? "components.fileDropOverlay.locations.finder"
+      : "components.fileDropOverlay.locations.explorer"
+  )
+)
+const revealFileTooltip = computed(() =>
+  t("components.fileDropOverlay.tooltips.revealFile", {
+    location: revealFileLocationLabel.value,
+  })
+)
 
-  droppedPaths.value = normalized
-  isVisible.value = true
+const droppedFileItems = computed<DroppedFileItem[]>(() =>
+  droppedPaths.value.map((path) => {
+    const kind = getFileKindFromPath(path)
+    const isImage = kind === "image"
 
-  return normalized
+    return {
+      path,
+      name: getFileNameFromPath(path),
+      extension: getFileExtensionFromPath(path),
+      kind,
+      isImage,
+      previewSrc: isTauri.value && isImage ? convertFileSrc(path) : null,
+      icon: fileKindIcons[kind],
+    }
+  })
+)
+
+let unlistenDragDrop: UnlistenFn | null = null
+let unlistenCloseRequested: UnlistenFn | null = null
+
+const updateFileListLayout = (value: unknown) => {
+  if (value === "list" || value === "grid") {
+    fileListLayout.value = value
+  }
+}
+
+const applyDroppedPaths = (
+  paths: string[],
+  options: { keepOverlayOpen?: boolean } = {}
+): string[] => {
+  droppedPaths.value = paths
+
+  if (paths.length > 0 || options.keepOverlayOpen) {
+    isVisible.value = true
+  }
+
+  return paths
+}
+
+const syncImagePreviewFailures = (paths: string[]) => {
+  imagePreviewFailures.value = Object.fromEntries(
+    Object.entries(imagePreviewFailures.value).filter(([path]) =>
+      paths.includes(path)
+    )
+  )
 }
 
 const resetOverlay = () => {
   hasActiveFileDrag.value = false
   isVisible.value = false
   droppedPaths.value = []
-}
-
-const forwardDroppedPathsToMain = async (paths: string[]) => {
-  await currentWindow.emitTo("main", "native-file-capture:dropped", paths)
+  imagePreviewFailures.value = {}
 }
 
 const keepCaptureWindowOpen = async () => {
@@ -80,27 +161,103 @@ const dismissCaptureWindow = async () => {
   await invoke("dismiss_file_capture_window")
 }
 
-const handleCaptureDrop = async (paths: string[]) => {
-  const normalized = updateDroppedPaths(paths)
+const syncDroppedPaths = async (
+  paths: string[],
+  options: {
+    keepCaptureWindowOpen?: boolean
+    keepOverlayOpen?: boolean
+  } = {}
+): Promise<string[]> => {
+  const updatedPaths = applyDroppedPaths(normalizeDroppedPaths(paths), {
+    keepOverlayOpen: options.keepOverlayOpen,
+  })
+  syncImagePreviewFailures(updatedPaths)
 
-  if (!normalized.length) return
-
-  await keepCaptureWindowOpen()
-  await forwardDroppedPathsToMain(normalized)
-}
-
-const handleMainDrop = (paths: string[]) => {
-  const normalized = updateDroppedPaths(paths)
-
-  if (!normalized.length) {
-    isVisible.value = false
-    return
+  if (isCaptureWindow) {
+    if (options.keepCaptureWindowOpen && updatedPaths.length) {
+      await keepCaptureWindowOpen()
+    }
+    return updatedPaths
   }
 
-  publishDroppedPaths(normalized)
+  publishDroppedPaths(updatedPaths)
+
+  return updatedPaths
+}
+
+const addDroppedPaths = async (
+  paths: string[],
+  options: {
+    keepCaptureWindowOpen?: boolean
+    keepOverlayOpen?: boolean
+  } = {}
+) => syncDroppedPaths(mergeDroppedPaths(droppedPaths.value, paths), options)
+
+const removeQueuedPath = async (path: string) =>
+  syncDroppedPaths(removeDroppedPath(droppedPaths.value, path), {
+    keepOverlayOpen: true,
+  })
+
+const clearQueuedPaths = async () =>
+  syncDroppedPaths(clearDroppedPaths(), {
+    keepOverlayOpen: true,
+  })
+
+const handleImagePreviewError = (path: string) => {
+  if (imagePreviewFailures.value[path]) return
+
+  imagePreviewFailures.value = {
+    ...imagePreviewFailures.value,
+    [path]: true,
+  }
+}
+
+const selectFiles = async () => {
+  if (!isTauri.value) return
+
+  const selection = await open({
+    multiple: true,
+  })
+
+  if (!selection) return
+
+  const selectedPaths = Array.isArray(selection) ? selection : [selection]
+
+  await addDroppedPaths(selectedPaths, {
+    keepCaptureWindowOpen: isCaptureWindow,
+  })
+}
+
+const previewFile = async (path: string) => {
+  if (!isTauri.value) return
+
+  try {
+    await invoke("preview_file_path", { path })
+  } catch (error) {
+    showErrorToast(
+      t("components.fileDropOverlay.errors.previewFile"),
+      (error as Error).message
+    )
+  }
+}
+
+const revealFile = async (path: string) => {
+  if (!isTauri.value) return
+
+  try {
+    await revealItemInDir(path)
+  } catch (error) {
+    showErrorToast(
+      t("components.fileDropOverlay.errors.revealFile", {
+        location: revealFileLocationLabel.value,
+      }),
+      (error as Error).message
+    )
+  }
 }
 
 const closeOverlayOrWindow = async () => {
+  await clearQueuedPaths()
   resetOverlay()
 
   if (isCaptureWindow) {
@@ -111,23 +268,16 @@ const closeOverlayOrWindow = async () => {
 onMounted(async () => {
   if (isCaptureWindow) {
     unlistenCloseRequested = await currentWindow.onCloseRequested(() => {
-      resetOverlay()
+      clearQueuedPaths()
     })
-  }
-
-  if (isMainWindow) {
-    unlistenNativeDrop = await currentWindow.listen<string[]>(
-      "native-file-capture:dropped",
-      (event) => {
-        publishDroppedPaths(event.payload)
-      }
-    )
   }
 
   unlistenDragDrop = await currentWindow.onDragDropEvent((event) => {
     if (isCaptureWindow) {
       if (event.payload.type === "drop") {
-        void handleCaptureDrop(event.payload.paths)
+        addDroppedPaths(event.payload.paths, {
+          keepCaptureWindowOpen: true,
+        })
       }
 
       return
@@ -136,22 +286,15 @@ onMounted(async () => {
     switch (event.payload.type) {
       case "enter":
         hasActiveFileDrag.value = event.payload.paths.length > 0
-        isVisible.value = hasActiveFileDrag.value || hasDroppedPaths.value
         break
       case "over":
-        if (hasActiveFileDrag.value) {
-          isVisible.value = true
-        }
         break
       case "leave":
         hasActiveFileDrag.value = false
-        if (!hasDroppedPaths.value) {
-          isVisible.value = false
-        }
         break
       case "drop":
         hasActiveFileDrag.value = false
-        handleMainDrop(event.payload.paths)
+        addDroppedPaths(event.payload.paths)
         break
     }
   })
@@ -164,11 +307,6 @@ onBeforeUnmount(() => {
   if (unlistenDragDrop) {
     unlistenDragDrop()
     unlistenDragDrop = null
-  }
-
-  if (unlistenNativeDrop) {
-    unlistenNativeDrop()
-    unlistenNativeDrop = null
   }
 
   if (unlistenCloseRequested) {
@@ -190,99 +328,321 @@ const isFullscreen = useIsFullscreen()
     <div
       v-if="shouldRender"
       data-tauri-drag-region
-      class="bg-background/50 fixed inset-0 isolate z-100 flex flex-col gap-2 p-2 backdrop-blur-lg"
+      class="bg-background/50 fixed inset-0 isolate z-50 flex flex-col gap-2 p-2 backdrop-blur-lg"
     >
       <div
         data-tauri-drag-region
         :class="{ 'pl-20': isTauri && !isFullscreen }"
-        class="flex justify-end"
+        class="flex items-start justify-between gap-2"
       >
+        <TooltipProvider>
+          <ToggleGroup
+            type="single"
+            size="sm"
+            :model-value="fileListLayout"
+            @update:model-value="updateFileListLayout"
+          >
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <ToggleGroupItem
+                  value="list"
+                  variant="outline"
+                  size="sm"
+                  :class="[
+                    'aspect-square',
+                    fileListLayout === 'list' &&
+                      'bg-accent text-accent-foreground',
+                  ]"
+                >
+                  <IconList />
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ t("components.fileDropOverlay.tooltips.listView") }}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <ToggleGroupItem
+                  value="grid"
+                  variant="outline"
+                  size="sm"
+                  :class="[
+                    'aspect-square',
+                    fileListLayout === 'grid' &&
+                      'bg-accent text-accent-foreground',
+                  ]"
+                >
+                  <IconGrid2X2 />
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ t("components.fileDropOverlay.tooltips.gridView") }}
+              </TooltipContent>
+            </Tooltip>
+          </ToggleGroup>
+        </TooltipProvider>
         <ButtonGroup>
           <ButtonGroup>
-            <Button variant="ghost" size="icon-sm">
-              <IconUpload />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    :disabled="!isTauri"
+                    @click="selectFiles()"
+                  >
+                    <IconUpload />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{ t("components.fileDropOverlay.tooltips.uploadFiles") }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </ButtonGroup>
           <ButtonGroup>
-            <Button size="sm" :disabled="!hasDroppedPaths"> Save </Button>
+            <Button size="sm" :disabled="!hasDroppedPaths">
+              {{ t("components.fileDropOverlay.buttons.save") }}
+            </Button>
           </ButtonGroup>
         </ButtonGroup>
       </div>
       <OverlayScrollbarsWrapper
         v-if="hasDroppedPaths"
-        class="bg-secondary grow rounded-md"
+        class="bg-secondary @container grow rounded-md"
       >
-        <ItemGroup class="gap-2 p-2">
+        <ItemGroup v-if="!isGridLayout" class="gap-2 p-2">
           <Item
-            v-for="path in droppedPaths"
-            :key="path"
+            v-for="file in droppedFileItems"
+            :key="file.path"
             variant="muted"
             size="sm"
             class="group w-full gap-2 p-2"
           >
-            <ItemMedia variant="icon">
-              <IconFile />
+            <ItemMedia
+              v-if="
+                file.isImage &&
+                file.previewSrc &&
+                !imagePreviewFailures[file.path]
+              "
+              variant="image"
+            >
+              <img
+                :src="file.previewSrc"
+                :alt="file.name"
+                loading="lazy"
+                @error="handleImagePreviewError(file.path)"
+              />
+            </ItemMedia>
+            <ItemMedia v-else variant="icon">
+              <Component :is="file.icon" />
             </ItemMedia>
             <ItemContent class="gap-0.5 truncate">
               <ItemTitle class="truncate">
-                {{ getFileName(path) }}
+                {{ file.name }}
               </ItemTitle>
               <ItemDescription class="line-clamp-1 truncate text-xs">
-                {{ path }}
+                {{ file.path }}
               </ItemDescription>
             </ItemContent>
-            <ItemActions>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                class="hidden group-hover:flex"
-              >
-                <IconTrash />
-              </Button>
+            <ItemActions class="hidden group-hover:flex">
+              <TooltipProvider>
+                <ButtonGroup>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        :disabled="!isTauri"
+                        @click="previewFile(file.path)"
+                      >
+                        <IconEye />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("components.fileDropOverlay.tooltips.previewFile") }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        :disabled="!isTauri"
+                        @click="revealFile(file.path)"
+                      >
+                        <IconSquareArrowOutUpRight />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{{ revealFileTooltip }}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        @click="removeQueuedPath(file.path)"
+                      >
+                        <IconTrash />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("components.fileDropOverlay.tooltips.removeFile") }}
+                    </TooltipContent>
+                  </Tooltip>
+                </ButtonGroup>
+              </TooltipProvider>
+            </ItemActions>
+          </Item>
+        </ItemGroup>
+        <ItemGroup
+          v-else
+          class="grid grid-cols-2 gap-2 p-2 @sm:grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 @6xl:grid-cols-6"
+        >
+          <Item
+            v-for="file in droppedFileItems"
+            :key="file.path"
+            variant="muted"
+            size="sm"
+            class="group w-full gap-2 p-2"
+          >
+            <ItemHeader>
+              <img
+                v-if="
+                  file.isImage &&
+                  file.previewSrc &&
+                  !imagePreviewFailures[file.path]
+                "
+                :src="file.previewSrc"
+                :alt="file.name"
+                loading="lazy"
+                class="aspect-square size-full rounded object-cover"
+                @error="handleImagePreviewError(file.path)"
+              />
+              <ItemMedia v-else variant="icon" class="aspect-square size-full">
+                <Component :is="file.icon" />
+              </ItemMedia>
+            </ItemHeader>
+            <ItemContent class="gap-0.5 truncate">
+              <ItemTitle class="truncate">
+                {{ file.name }}
+              </ItemTitle>
+              <ItemDescription class="line-clamp-1 truncate text-xs">
+                {{ file.path }}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions class="hidden group-hover:flex">
+              <TooltipProvider>
+                <ButtonGroup>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        :disabled="!isTauri"
+                        @click="previewFile(file.path)"
+                      >
+                        <IconEye />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("components.fileDropOverlay.tooltips.previewFile") }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        :disabled="!isTauri"
+                        @click="revealFile(file.path)"
+                      >
+                        <IconSquareArrowOutUpRight />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{{ revealFileTooltip }}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        @click="removeQueuedPath(file.path)"
+                      >
+                        <IconTrash />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("components.fileDropOverlay.tooltips.removeFile") }}
+                    </TooltipContent>
+                  </Tooltip>
+                </ButtonGroup>
+              </TooltipProvider>
             </ItemActions>
           </Item>
         </ItemGroup>
       </OverlayScrollbarsWrapper>
-      <Empty v-else class="flex grow border border-dashed">
+      <Empty
+        v-else
+        class="flex grow border border-dashed"
+        @click="selectFiles()"
+      >
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <IconUpload />
           </EmptyMedia>
-          <EmptyTitle>{{ droppedFilesTitle }}</EmptyTitle>
+          <EmptyTitle>
+            {{ t("components.fileDropOverlay.empty.title") }}
+          </EmptyTitle>
           <EmptyDescription>
-            {{ droppedFilesDescription }}
+            {{ t("components.fileDropOverlay.empty.description") }}
           </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent
-          v-if="hasDroppedPaths"
-          class="w-full max-w-none items-stretch gap-3"
-        >
-          <div
-            class="text-muted-foreground flex items-center justify-between text-xs uppercase"
-          >
-            <span>Received files</span>
-            <span>{{ droppedPaths.length }}</span>
-          </div>
-        </EmptyContent>
         <EmptyContent class="w-full max-w-none items-stretch"> </EmptyContent>
       </Empty>
       <div data-tauri-drag-region class="flex justify-between">
         <ButtonGroup>
-          <Button variant="secondary" size="icon-sm">
-            <IconMoreHorizontal />
-          </Button>
-          <ButtonGroupSeparator />
-          <Button variant="secondary" size="icon-sm">
-            <IconSettings />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <DropdownMenu>
+                <TooltipTrigger as-child>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="secondary" size="icon-sm">
+                      <IconMoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{ t("components.fileDropOverlay.tooltips.more") }}
+                </TooltipContent>
+                <DropdownMenuContent align="start" side="top" class="w-40">
+                  <DropdownMenuItem
+                    :disabled="!hasDroppedPaths"
+                    @click="clearQueuedPaths()"
+                  >
+                    <IconTrash />
+                    {{ t("components.fileDropOverlay.buttons.deleteAll") }}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Tooltip>
+            <ButtonGroupSeparator />
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="secondary" size="icon-sm">
+                  <IconSettings />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ t("components.fileDropOverlay.tooltips.settings") }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </ButtonGroup>
-        <Button
-          :disabled="!hasDroppedPaths"
-          variant="secondary"
-          size="icon-sm"
-          @click="closeOverlayOrWindow"
-        >
-          <IconTrash2 />
+        <Button variant="secondary" size="sm" @click="closeOverlayOrWindow">
+          {{ t("components.fileDropOverlay.buttons.close") }}
         </Button>
       </div>
     </div>

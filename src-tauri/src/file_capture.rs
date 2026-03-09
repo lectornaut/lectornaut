@@ -1,11 +1,13 @@
 use std::{
+    path::Path,
     sync::Mutex,
     time::{Duration, Instant},
 };
 use tauri::{
-    LogicalPosition, Manager, PhysicalPosition, Position as WindowPosition, Runtime,
-    TitleBarStyle, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+    LogicalPosition, Manager, PhysicalPosition, Position as WindowPosition, Runtime, TitleBarStyle,
+    WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_positioner::{Position as PositionerPosition, WindowExt};
 
 pub const FILE_CAPTURE_WINDOW_LABEL: &str = "file-capture";
@@ -265,6 +267,17 @@ pub fn keep_file_capture_window_open<R: Runtime>(app: tauri::AppHandle<R>) -> ta
 #[tauri::command]
 pub fn dismiss_file_capture_window<R: Runtime>(app: tauri::AppHandle<R>) -> tauri::Result<()> {
     dismiss_file_capture_window_inner(&app)
+}
+
+#[tauri::command]
+pub fn preview_file_path<R: Runtime>(app: tauri::AppHandle<R>, path: String) -> Result<(), String> {
+    if !Path::new(&path).exists() {
+        return Err(format!("File not found: {path}"));
+    }
+
+    app.opener()
+        .open_path(&path, None::<String>)
+        .map_err(|error| error.to_string())
 }
 
 #[cfg(target_os = "macos")]

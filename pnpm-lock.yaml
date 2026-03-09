@@ -100,6 +100,9 @@ importers:
       "@tauri-apps/plugin-dialog":
         specifier: ~2.6.0
         version: 2.6.0
+      "@tauri-apps/plugin-opener":
+        specifier: ~2.5.3
+        version: 2.5.3
       "@tauri-apps/plugin-process":
         specifier: ~2.3.1
         version: 2.3.1
@@ -180,7 +183,7 @@ importers:
         version: 3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1)
       "@tiptap/extension-mathematics":
         specifier: ^3.20.1
-        version: 3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1)(katex@0.16.37)
+        version: 3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1)(katex@0.16.38)
       "@tiptap/extension-paragraph":
         specifier: ^3.20.1
         version: 3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))
@@ -302,8 +305,8 @@ importers:
         specifier: 4.0.2
         version: 4.0.2
       katex:
-        specifier: ^0.16.37
-        version: 0.16.37
+        specifier: ^0.16.38
+        version: 0.16.38
       lib0:
         specifier: ^0.2.117
         version: 0.2.117
@@ -4726,6 +4729,12 @@ packages:
         integrity: sha512-q4Uq3eY87TdcYzXACiYSPhmpBA76shgmQswGkSVio4C82Sz2W4iehe9TnKYwbq7weHiL88Yw19XZm7v28+Micg==,
       }
 
+  "@tauri-apps/plugin-opener@2.5.3":
+    resolution:
+      {
+        integrity: sha512-CCcUltXMOfUEArbf3db3kCE7Ggy1ExBEBl51Ko2ODJ6GDYHRp1nSNlQm5uNCFY5k7/ufaK5Ib3Du/Zir19IYQQ==,
+      }
+
   "@tauri-apps/plugin-process@2.3.1":
     resolution:
       {
@@ -9011,10 +9020,10 @@ packages:
         integrity: sha512-xXDvecyTpGLrqFrvkrUSoxxfJI5AH7U8zxxtVclpsUtMCq4JQ290LY8AW5c7Ggnr/Y/oK+bQMbqK2qmtk3pN4g==,
       }
 
-  katex@0.16.37:
+  katex@0.16.38:
     resolution:
       {
-        integrity: sha512-TIGjO2cCGYono+uUzgkE7RFF329mLLWGuHUlSr6cwIVj9O8f0VQZ783rsanmJpFUo32vvtj7XT04NGRPh+SZFg==,
+        integrity: sha512-cjHooZUmIAUmDsHBN+1n8LaZdpmbj03LtYeYPyuYB7OuloiaeaV6N4LcfjcnHVzGWjVQmKrxxTrpDcmSzEZQwQ==,
       }
     hasBin: true
 
@@ -15307,6 +15316,10 @@ snapshots:
     dependencies:
       "@tauri-apps/api": 2.10.1
 
+  "@tauri-apps/plugin-opener@2.5.3":
+    dependencies:
+      "@tauri-apps/api": 2.10.1
+
   "@tauri-apps/plugin-process@2.3.1":
     dependencies:
       "@tauri-apps/api": 2.10.1
@@ -15479,11 +15492,11 @@ snapshots:
       "@tiptap/core": 3.20.1(@tiptap/pm@3.20.1)
       "@tiptap/pm": 3.20.1
 
-  "@tiptap/extension-mathematics@3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1)(katex@0.16.37)":
+  "@tiptap/extension-mathematics@3.20.1(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1)(katex@0.16.38)":
     dependencies:
       "@tiptap/core": 3.20.1(@tiptap/pm@3.20.1)
       "@tiptap/pm": 3.20.1
-      katex: 0.16.37
+      katex: 0.16.38
 
   "@tiptap/extension-node-range@3.19.0(@tiptap/core@3.20.1(@tiptap/pm@3.20.1))(@tiptap/pm@3.20.1)":
     dependencies:
@@ -18116,7 +18129,7 @@ snapshots:
       readable-stream: 2.3.8
       setimmediate: 1.0.5
 
-  katex@0.16.37:
+  katex@0.16.38:
     dependencies:
       commander: 8.3.0
 

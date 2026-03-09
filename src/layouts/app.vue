@@ -287,7 +287,6 @@ const closeTab = (id: string) => {
                   :max-size="25"
                   :collapsed-size="0"
                   as-child
-                  class="transition-all"
                   :inert="leftPanel?.splitterPanel?.isCollapsed"
                   @collapse="leftPanelCollapsed = true"
                   @expand="leftPanelCollapsed = false"
@@ -349,7 +348,7 @@ const closeTab = (id: string) => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <ResizablePanel :class="'transition-all'">
+            <ResizablePanel>
               <ResizablePanelGroup
                 class="min-w-0 overflow-clip"
                 direction="vertical"
@@ -365,7 +364,6 @@ const closeTab = (id: string) => {
                       :max-size="100"
                       :collapsed-size="0"
                       as-child
-                      class="transition-all"
                       :inert="topPanel?.splitterPanel?.isCollapsed"
                     >
                       <div
@@ -466,7 +464,6 @@ const closeTab = (id: string) => {
                       :max-size="100"
                       :collapsed-size="0"
                       as-child
-                      class="transition-all"
                       :inert="bottomPanel?.splitterPanel?.isCollapsed"
                       @collapse="bottomPanelCollapsed = true"
                       @expand="bottomPanelCollapsed = false"
@@ -477,9 +474,7 @@ const closeTab = (id: string) => {
                             id="bottom-sidebar"
                             class="bg-background flex h-full flex-col overflow-clip overscroll-none"
                           >
-                            <div
-                              class="flex items-stretch gap-2 p-2 transition-all"
-                            >
+                            <div class="flex items-stretch gap-2 p-2">
                               <div
                                 class="relative flex min-w-0 flex-1 items-stretch justify-start gap-2"
                               >
@@ -717,7 +712,6 @@ const closeTab = (id: string) => {
                   :max-size="25"
                   :collapsed-size="0"
                   as-child
-                  class="transition-all"
                   :inert="rightPanel?.splitterPanel?.isCollapsed"
                   @collapse="rightPanelCollapsed = true"
                   @expand="rightPanelCollapsed = false"

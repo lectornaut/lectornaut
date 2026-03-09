@@ -202,6 +202,7 @@ import IconLucideSparkles from "~icons/lucide/sparkles"
 import IconLucideSplit from "~icons/lucide/split"
 import IconLucideSplitSquareHorizontal from "~icons/lucide/split-square-horizontal"
 import IconLucideSquare from "~icons/lucide/square"
+import IconLucideSquareArrowOutUpRight from "~icons/lucide/square-arrow-out-up-right"
 import IconLucideSquareDashed from "~icons/lucide/square-dashed"
 import IconLucideSquareDashedMousePointer from "~icons/lucide/square-dashed-mouse-pointer"
 import IconLucideSquareMousePointer from "~icons/lucide/square-mouse-pointer"
@@ -240,11 +241,24 @@ import IconLucideXCircle from "~icons/lucide/x-circle"
 import IconLucideZap from "~icons/lucide/zap"
 import IconMaterialSymbolsCircle from "~icons/material-symbols/circle"
 import IconMdiApple from "~icons/mdi/apple"
+import IconMdiArchive from "~icons/mdi/archive"
 import IconMdiArrowRightCircle from "~icons/mdi/arrow-right-circle"
 import IconMdiCircle from "~icons/mdi/circle"
 import IconMdiCircleMedium from "~icons/mdi/circle-medium"
 import IconMdiCircleSmall from "~icons/mdi/circle-small"
 import IconMdiDotsCircle from "~icons/mdi/dots-circle"
+import IconMdiFileCode from "~icons/mdi/file-code"
+import IconMdiFileDelimited from "~icons/mdi/file-delimited"
+import IconMdiFileDocument from "~icons/mdi/file-document"
+import IconMdiFileExcelBox from "~icons/mdi/file-excel-box"
+import IconMdiFileImage from "~icons/mdi/file-image"
+import IconMdiFileMusic from "~icons/mdi/file-music"
+import IconMdiFilePdfBox from "~icons/mdi/file-pdf-box"
+import IconMdiFilePowerpointBox from "~icons/mdi/file-powerpoint-box"
+import IconMdiFileQuestion from "~icons/mdi/file-question"
+import IconMdiFileVideo from "~icons/mdi/file-video"
+import IconMdiFileWordBox from "~icons/mdi/file-word-box"
+import IconMdiFormatFont from "~icons/mdi/format-font"
 import IconMdiFormatTextVariant from "~icons/mdi/format-text-variant"
 import IconMdiGoogle from "~icons/mdi/google"
 import IconMdiMicrosoft from "~icons/mdi/microsoft"
@@ -288,6 +302,7 @@ export {
   IconLogosAppleAppStore as IconAppleAppStore,
   IconMdiApple as IconAppleFilled,
   IconMingcuteGridFill as IconApps,
+  IconMdiArchive as IconArchive,
   IconLucideArrowBigUp as IconArrowBigUp,
   IconLucideArrowDown as IconArrowDown,
   IconLucideArrowDownToLine as IconArrowDownToLine,
@@ -374,8 +389,19 @@ export {
   IconLucideEye as IconEye,
   IconLucideEyeOff as IconEyeOff,
   IconLucideFile as IconFile,
+  IconMdiFileCode as IconFileCode,
+  IconMdiFileDelimited as IconFileDelimited,
+  IconMdiFileDocument as IconFileDocument,
+  IconMdiFileExcelBox as IconFileExcel,
+  IconMdiFileImage as IconFileImage,
+  IconMdiFileMusic as IconFileMusic,
+  IconMdiFilePdfBox as IconFilePdf,
   IconLucideFilePlus as IconFilePlus,
+  IconMdiFilePowerpointBox as IconFilePowerPoint,
+  IconMdiFileQuestion as IconFileQuestion,
   IconLucideFileText as IconFileText,
+  IconMdiFileVideo as IconFileVideo,
+  IconMdiFileWordBox as IconFileWord,
   IconSimpleIconsFlathub as IconFlathub,
   IconLucideFolder as IconFolder,
   IconLucideFolderOpen as IconFolderOpen,
@@ -383,6 +409,7 @@ export {
   IconRiFontMono as IconFontMono,
   IconRiFontSans as IconFontSans,
   IconRiFontSansSerif as IconFontSansSerif,
+  IconMdiFormatFont as IconFormatFont,
   IconLucideForward as IconForward,
   IconLucideGalleryHorizontalEnd as IconGalleryHorizontalEnd,
   IconLucideGift as IconGift,
@@ -505,6 +532,7 @@ export {
   IconLucideSplit as IconSplit,
   IconLucideSplitSquareHorizontal as IconSplitSquareHorizontal,
   IconLucideSquare as IconSquare,
+  IconLucideSquareArrowOutUpRight as IconSquareArrowOutUpRight,
   IconLucideSquareDashed as IconSquareDashed,
   IconLucideSquareDashedMousePointer as IconSquareDashedMousePointer,
   IconLucideSquareMousePointer as IconSquareMousePointer,

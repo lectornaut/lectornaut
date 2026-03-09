@@ -17,6 +17,24 @@ export const normalizeDroppedPaths = (paths: string[]): string[] => {
   return normalized
 }
 
+export const mergeDroppedPaths = (
+  currentPaths: string[],
+  nextPaths: string[]
+): string[] => normalizeDroppedPaths([...currentPaths, ...nextPaths])
+
+export const removeDroppedPath = (
+  currentPaths: string[],
+  pathToRemove: string
+): string[] => {
+  const normalizedPathToRemove = pathToRemove.trim()
+
+  return normalizeDroppedPaths(
+    currentPaths.filter((path) => path !== normalizedPathToRemove)
+  )
+}
+
+export const clearDroppedPaths = (): string[] => []
+
 const getDroppedPathsSignature = (paths: string[]): string => paths.join("\n")
 
 const droppedPathsState = shallowRef<string[]>([])
@@ -29,10 +47,6 @@ export const lastDroppedPaths = readonly(droppedPathsState) as Readonly<
 
 export function publishDroppedPaths(paths: string[]): void {
   const normalized = normalizeDroppedPaths(paths)
-
-  if (!normalized.length) {
-    return
-  }
 
   const signature = getDroppedPathsSignature(normalized)
   const publishedAt = Date.now()
@@ -47,3 +61,106 @@ export function publishDroppedPaths(paths: string[]): void {
   lastPublishedSignature = signature
   lastPublishedAt = publishedAt
 }
+
+export type FileCaptureFileKind =
+  | "image"
+  | "pdf"
+  | "document"
+  | "spreadsheet"
+  | "delimited"
+  | "presentation"
+  | "code"
+  | "archive"
+  | "audio"
+  | "video"
+  | "font"
+  | "unknown"
+
+const fileKindExtensions: Record<FileCaptureFileKind, Set<string>> = {
+  image: new Set([
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "webp",
+    "svg",
+    "bmp",
+    "ico",
+    "tif",
+    "tiff",
+    "avif",
+    "heic",
+    "heif",
+  ]),
+  pdf: new Set(["pdf"]),
+  document: new Set(["doc", "docx", "odt", "txt", "md", "markdown", "rtf"]),
+  spreadsheet: new Set(["xls", "xlsx", "ods", "numbers"]),
+  delimited: new Set(["csv", "tsv"]),
+  presentation: new Set(["ppt", "pptx", "odp", "key"]),
+  code: new Set([
+    "js",
+    "ts",
+    "jsx",
+    "tsx",
+    "vue",
+    "html",
+    "css",
+    "scss",
+    "json",
+    "yaml",
+    "yml",
+    "xml",
+    "toml",
+    "ini",
+    "sh",
+    "py",
+    "rs",
+    "go",
+    "java",
+    "kt",
+    "swift",
+    "php",
+    "rb",
+    "sql",
+  ]),
+  archive: new Set(["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "tgz"]),
+  audio: new Set(["mp3", "wav", "flac", "aac", "ogg", "m4a"]),
+  video: new Set(["mp4", "mov", "avi", "mkv", "webm", "m4v"]),
+  font: new Set(["ttf", "otf", "woff", "woff2"]),
+  unknown: new Set(),
+}
+
+export const getFileNameFromPath = (path: string): string => {
+  const segments = path.split(/[/\\]/)
+  return segments.at(-1) || path
+}
+
+export const getFileExtensionFromPath = (path: string): string => {
+  const fileName = getFileNameFromPath(path)
+  const extension = fileName.split(".").at(-1)
+
+  if (!extension || extension === fileName) {
+    return ""
+  }
+
+  return extension.toLowerCase()
+}
+
+export const getFileKindFromPath = (path: string): FileCaptureFileKind => {
+  const extension = getFileExtensionFromPath(path)
+
+  if (!extension) {
+    return "unknown"
+  }
+
+  for (const [kind, extensions] of Object.entries(fileKindExtensions)) {
+    if (extensions.has(extension)) {
+      return kind as FileCaptureFileKind
+    }
+  }
+
+  return "unknown"
+}
+
+export const isImageFilePath = (path: string): boolean =>
+  getFileKindFromPath(path) === "image"

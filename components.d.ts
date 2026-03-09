@@ -192,7 +192,6 @@ declare module 'vue' {
     FieldSet: typeof import('./src/components/ui/field/FieldSet.vue')['default']
     FieldTitle: typeof import('./src/components/ui/field/FieldTitle.vue')['default']
     FileDropOverlay: typeof import('./src/components/app/global/FileDropOverlay.vue')['default']
-    FileDropOverlayController: typeof import('./src/components/app/global/FileDropOverlayController.vue')['default']
     FileTree: typeof import('./src/components/filetree/FileTree.vue')['default']
     FlowActivity: typeof import('./src/components/flow/FlowActivity.vue')['default']
     FlowApp: typeof import('./src/components/flow/FlowApp.vue')['default']

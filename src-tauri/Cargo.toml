@@ -21,7 +21,7 @@ dotenvy = "0.15"
 # - macos-private-api: Required for advanced transparency and vibrancy effects on macOS.
 # - tray-icon: Enables system tray functionality.
 # - image-png: Required for processing PNG icons (like the tray icon).
-tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-png"] }
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
 # https://crates.io/crates/serde/versions
 serde = { version = "1", features = ["derive"] }
 # https://crates.io/crates/serde_json/versions
