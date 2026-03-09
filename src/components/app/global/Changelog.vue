@@ -58,11 +58,11 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       </OverlayScrollbarsWrapper>
       <Separator />
       <SheetFooter>
-        <Button class="justify-start" variant="secondary">
+        <Button variant="secondary" class="justify-start">
           <IconMessageCircle />
           Get support
         </Button>
-        <Button class="justify-start" variant="secondary">
+        <Button variant="secondary" class="justify-start">
           <IconBookOpen />
           Documentation
           <IconArrowUpRight />

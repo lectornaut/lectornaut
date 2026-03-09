@@ -22,6 +22,7 @@ import {
 } from "@/utils/firebase/firebase-errors"
 import type { Extension } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
+import { useEventListener } from "@vueuse/core"
 import { yCollab } from "y-codemirror.next"
 import * as awarenessProtocol from "y-protocols/awareness"
 import { Awareness } from "y-protocols/awareness"
@@ -335,9 +336,10 @@ export async function createYjsCollab(
     sendHeartbeat() // Send first heartbeat immediately so peers see us right away
     restartHeartbeatTimer()
   }
-  if (typeof document !== "undefined") {
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-  }
+  const stopVisibilityChange =
+    typeof document !== "undefined"
+      ? useEventListener(document, "visibilitychange", handleVisibilityChange)
+      : undefined
 
   const unsubscribePeers = subscribePeers(
     options.contentId,
@@ -443,9 +445,7 @@ export async function createYjsCollab(
     if (heartbeatTimer !== null && typeof window !== "undefined") {
       window.clearInterval(heartbeatTimer)
     }
-    if (typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-    }
+    stopVisibilityChange?.()
 
     if (signalDeleteTimer !== null) {
       clearTimeout(signalDeleteTimer)

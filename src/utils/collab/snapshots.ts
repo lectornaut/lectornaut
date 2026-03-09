@@ -1,5 +1,6 @@
 import { firestore } from "@/modules/firebase"
 import { base64ToBytes, bytesToBase64 } from "@/utils/collab/base64"
+import { useEventListener } from "@vueuse/core"
 import {
   doc,
   getDoc,
@@ -184,22 +185,23 @@ export function createSnapshotManager(
     void flush()
   }
 
-  if (typeof window !== "undefined") {
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    window.addEventListener("pagehide", handlePageHide)
-  }
-  if (typeof document !== "undefined") {
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-  }
+  const stopBeforeUnload =
+    typeof window !== "undefined"
+      ? useEventListener(window, "beforeunload", handleBeforeUnload)
+      : undefined
+  const stopPageHide =
+    typeof window !== "undefined"
+      ? useEventListener(window, "pagehide", handlePageHide)
+      : undefined
+  const stopVisibilityChange =
+    typeof document !== "undefined"
+      ? useEventListener(document, "visibilitychange", handleVisibilityChange)
+      : undefined
 
   const destroy = async () => {
-    if (typeof window !== "undefined") {
-      window.removeEventListener("beforeunload", handleBeforeUnload)
-      window.removeEventListener("pagehide", handlePageHide)
-    }
-    if (typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-    }
+    stopBeforeUnload?.()
+    stopPageHide?.()
+    stopVisibilityChange?.()
 
     await flush()
     destroyed = true

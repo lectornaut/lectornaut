@@ -146,11 +146,11 @@ const filteredShortcuts = computed(() => {
       </OverlayScrollbarsWrapper>
       <Separator />
       <SheetFooter>
-        <Button class="justify-start" variant="secondary">
+        <Button variant="secondary" class="justify-start">
           <IconMessageCircle />
           {{ t("components.global.shortcuts.getSupport") }}
         </Button>
-        <Button class="justify-start" variant="secondary">
+        <Button variant="secondary" class="justify-start">
           <IconBookOpen />
           {{ t("components.global.shortcuts.documentation") }}
           <IconArrowUpRight />

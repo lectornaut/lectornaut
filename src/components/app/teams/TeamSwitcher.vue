@@ -154,7 +154,7 @@ const currentPlanLabel = computed(() => {
                 <IconChevronsUpDown />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent class="w-48" align="start" side="right">
+            <DropdownMenuContent class="w-56" align="start" side="right">
               <DropdownMenuLabel>
                 <Item size="sm" class="group w-full gap-2 rounded p-0">
                   <ItemMedia>
@@ -294,7 +294,7 @@ const currentPlanLabel = computed(() => {
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-48">
+        <ContextMenuContent class="w-56">
           <ContextMenuGroup>
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'members')"

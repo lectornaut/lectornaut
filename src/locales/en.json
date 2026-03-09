@@ -1402,6 +1402,15 @@
       "locations": {
         "finder": "Finder",
         "explorer": "Explorer"
+      },
+      "saveSheet": {
+        "title": "Save files",
+        "description": "Choose a name and location for this list of files.",
+        "tabs": {
+          "code": "Code",
+          "write": "Write"
+        },
+        "configure": "Move"
       }
     },
     "languageSwitcher": {

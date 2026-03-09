@@ -1,4 +1,5 @@
 import { useVueFlow } from "@vue-flow/core"
+import { useEventListener } from "@vueuse/core"
 
 let id = 0
 
@@ -31,9 +32,18 @@ const state = {
 
 export default function useDragAndDrop() {
   const { draggedType, isDragOver, isDragging } = state
+  let stopDropListener: (() => void) | undefined
+  let stopDragEndListener: (() => void) | undefined
 
   const { addNodes, screenToFlowCoordinate, onNodesInitialized, updateNode } =
     useVueFlow()
+
+  const stopDocumentDragListeners = () => {
+    stopDropListener?.()
+    stopDropListener = undefined
+    stopDragEndListener?.()
+    stopDragEndListener = undefined
+  }
 
   // Global watcher for cursor style
   watch(state.isDragging, (dragging) => {
@@ -44,8 +54,7 @@ export default function useDragAndDrop() {
 
   // Cleanup event listeners on component unmount to prevent memory leaks
   onUnmounted(() => {
-    document.removeEventListener("drop", onDragEnd)
-    document.removeEventListener("dragend", onDragEnd)
+    stopDocumentDragListeners()
     // Reset state if this component was mid-drag
     if (isDragging.value) {
       isDragging.value = false
@@ -63,8 +72,11 @@ export default function useDragAndDrop() {
     draggedType.value = type
     isDragging.value = true
 
-    document.addEventListener("drop", onDragEnd)
-    document.addEventListener("dragend", onDragEnd)
+    if (typeof document !== "undefined") {
+      stopDocumentDragListeners()
+      stopDropListener = useEventListener(document, "drop", onDragEnd)
+      stopDragEndListener = useEventListener(document, "dragend", onDragEnd)
+    }
   }
 
   /**
@@ -92,8 +104,7 @@ export default function useDragAndDrop() {
     isDragging.value = false
     isDragOver.value = false
     draggedType.value = null
-    document.removeEventListener("drop", onDragEnd)
-    document.removeEventListener("dragend", onDragEnd)
+    stopDocumentDragListeners()
   }
 
   /**
