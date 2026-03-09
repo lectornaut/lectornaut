@@ -1,13 +1,44 @@
 import type { UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
+import {
+  getCurrentWindow,
+  type Window as TauriWindow,
+} from "@tauri-apps/api/window"
 import type { Ref } from "vue"
+
+type TauriWindowMetadata = {
+  currentWindow?: {
+    label?: string
+  }
+}
+
+type TauriInternals = {
+  invoke?: unknown
+  metadata?: TauriWindowMetadata
+}
+
+const getTauriInternals = (): TauriInternals | null => {
+  if (typeof window === "undefined") return null
+
+  const internals = (
+    window as typeof window & {
+      __TAURI_INTERNALS__?: TauriInternals
+    }
+  ).__TAURI_INTERNALS__
+
+  if (!internals || typeof internals !== "object") return null
+
+  return internals
+}
 
 /**
  * Whether the app is running in Tauri (desktop) environment.
  * This is a computed ref that can be used reactively.
  */
-export const isTauri = computed(
-  () => typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
+export const isTauri = computed(() =>
+  Boolean(
+    typeof getTauriInternals()?.invoke === "function" &&
+    getTauriInternals()?.metadata?.currentWindow?.label
+  )
 )
 
 /**
@@ -34,13 +65,28 @@ const isFullscreenState = shallowRef(false)
 let unlisten: UnlistenFn | undefined
 let listenerInitialized = false
 
+export const getCurrentTauriWindow = (): TauriWindow | null => {
+  if (!isTauri.value) return null
+
+  try {
+    return getCurrentWindow()
+  } catch {
+    return null
+  }
+}
+
 const initFullscreenListener = async (): Promise<void> => {
   // Only initialize once and only in Tauri environment
   if (listenerInitialized || !isTauri.value) return
   listenerInitialized = true
 
   try {
-    const win = getCurrentWindow()
+    const win = getCurrentTauriWindow()
+    if (!win) {
+      listenerInitialized = false
+      return
+    }
+
     isFullscreenState.value = await win.isFullscreen()
     unlisten = await win.onResized(async () => {
       isFullscreenState.value = await win.isFullscreen()
@@ -72,7 +118,9 @@ export async function toggleFullscreen(): Promise<void> {
   if (!isTauri.value) return
 
   try {
-    const win = getCurrentWindow()
+    const win = getCurrentTauriWindow()
+    if (!win) return
+
     const isFullscreen = await win.isFullscreen()
     await win.setFullscreen(!isFullscreen)
     isFullscreenState.value = !isFullscreen

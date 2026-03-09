@@ -1,10 +1,9 @@
 <script lang="ts" setup>
-import { isTauri } from "@/composables/usePlatform"
+import { getCurrentTauriWindow, isTauri } from "@/composables/usePlatform"
 import { FILE_CAPTURE_WINDOW_LABEL } from "@/modules/fileCapture"
 import { emitter } from "@/modules/mitt"
 import { state, store } from "@/modules/theme"
 import type { ThemeMode } from "@/types/settings"
-import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
 
@@ -88,7 +87,7 @@ watch(online, (value) => {
 onMounted(async () => {
   if (!isTauri.value) return
 
-  currentWindowLabel.value = getCurrentWindow().label
+  currentWindowLabel.value = getCurrentTauriWindow()?.label ?? null
 })
 </script>
 
