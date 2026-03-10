@@ -7,9 +7,11 @@ import {
   IconMinusSquare,
   IconPenLine,
   IconPencil,
+  IconRefreshCcw,
   IconRotateCcw,
   IconSwitchHorizontal,
   IconTrash2,
+  IconUpload,
 } from "@/data/icons"
 import type { ILogEntry } from "@/types/logs"
 import { DateFormatter } from "@internationalized/date"
@@ -46,6 +48,10 @@ const ACTION_LABELS = {
   "content.archive": "Archived",
   "content.unarchive": "Restored",
   "content.delete": "Deleted",
+  "content.attachment.create": "Uploaded attachment",
+  "content.attachment.rename": "Renamed attachment",
+  "content.attachment.update": "Replaced attachment",
+  "content.attachment.delete": "Deleted attachment",
 } as const
 
 const ACTION_ICONS = {
@@ -56,6 +62,10 @@ const ACTION_ICONS = {
   "content.archive": IconMinusSquare,
   "content.unarchive": IconRotateCcw,
   "content.delete": IconTrash2,
+  "content.attachment.create": IconUpload,
+  "content.attachment.rename": IconPencil,
+  "content.attachment.update": IconRefreshCcw,
+  "content.attachment.delete": IconTrash2,
 } as const
 
 const hasSelectedNode = computed(() =>
@@ -89,6 +99,19 @@ const getActionIcon = (entry: ILogEntry) =>
   ACTION_ICONS[entry.action as keyof typeof ACTION_ICONS] ?? IconHistory
 
 const formatChangeSummary = (entry: ILogEntry) => {
+  if (entry.action === "content.attachment.create") {
+    return "uploaded an attachment"
+  }
+  if (entry.action === "content.attachment.rename") {
+    return "renamed an attachment"
+  }
+  if (entry.action === "content.attachment.update") {
+    return "replaced an attachment"
+  }
+  if (entry.action === "content.attachment.delete") {
+    return "deleted an attachment"
+  }
+
   const fields = entry.changes?.fields?.filter(Boolean) ?? []
   if (!fields.length) return null
 

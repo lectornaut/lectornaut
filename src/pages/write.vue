@@ -417,39 +417,11 @@ onBeforeUnmount(() => {
     </Button>
   </Teleport>
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="w-full">
-      <Tabs default-value="details" class="h-full min-h-0 gap-0">
-        <TabsList class="bg-transparent p-2">
-          <TabsTrigger
-            value="details"
-            class="data-[state=active]:bg-muted rounded-xs p-2! text-xs leading-0 data-[state=active]:shadow-none"
-          >
-            Details
-          </TabsTrigger>
-          <TabsTrigger
-            value="activity"
-            class="data-[state=active]:bg-muted rounded-xs p-2! text-xs leading-0 data-[state=active]:shadow-none"
-          >
-            Activity
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="details" class="h-0 min-h-0 flex-1">
-          <NodeDetails :node="selectedNode" />
-        </TabsContent>
-        <TabsContent value="activity" class="h-0 min-h-0 flex-1">
-          <NodeActivityLog
-            v-if="teamId && workspaceId && selectedNode"
-            :team-id="teamId"
-            :workspace-id="workspaceId"
-            :document-id="selectedNode?.id ?? null"
-          />
-          <div v-else class="p-4">
-            <div class="text-muted-foreground text-xs">
-              Select a document to view activity history.
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </Sidebar>
+    <NodeInspectorSidebar
+      :team-id="teamId"
+      :workspace-id="workspaceId"
+      :scope="nodeScope"
+      :node="selectedNode"
+    />
   </Teleport>
 </template>

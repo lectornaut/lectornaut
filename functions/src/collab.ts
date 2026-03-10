@@ -1,3 +1,4 @@
+import * as logger from "firebase-functions/logger"
 import {
   CallableRequest,
   HttpsError,
@@ -305,6 +306,42 @@ function assertPeerOwnership(
   }
 }
 
+function normalizeSignalPayloadValue(value: unknown): unknown | undefined {
+  if (
+    value == null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => normalizeSignalPayloadValue(entry))
+      .filter((entry) => entry !== undefined)
+  }
+
+  if (typeof value === "object") {
+    const normalized: Record<string, unknown> = {}
+
+    Object.entries(value).forEach(([key, entry]) => {
+      const nextValue = normalizeSignalPayloadValue(entry)
+      if (nextValue !== undefined) {
+        normalized[key] = nextValue
+      }
+    })
+
+    return normalized
+  }
+
+  return undefined
+}
+
+function normalizeSignalPayload(payload: unknown): unknown {
+  return normalizeSignalPayloadValue(payload) ?? null
+}
+
 async function cleanupCollectionGroup(
   collectionId: "signals" | "peers",
   field: "createdAt" | "lastSeenAt",
@@ -474,13 +511,26 @@ export const sendSignal = onCall(CALLABLE_OPTS, async (request) => {
     throw new HttpsError("not-found", "Target peer does not exist.")
   }
 
-  await room.roomRef.collection("signals").add({
-    fromPeerId,
-    toPeerId,
-    type,
-    payload: request.data?.payload ?? null,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  })
+  try {
+    await room.roomRef.collection("signals").add({
+      fromPeerId,
+      toPeerId,
+      type,
+      payload: normalizeSignalPayload(request.data?.payload),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+  } catch (error) {
+    logger.error("[collab:sendSignal] Failed to persist signal", {
+      contentId,
+      fromPeerId,
+      toPeerId,
+      type,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : null,
+    })
+
+    throw new HttpsError("internal", "Unable to persist signaling payload.")
+  }
 
   return { ok: true }
 })

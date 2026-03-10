@@ -195,6 +195,54 @@ export interface UpdateWorkspaceNodeContentResponse {
   logId: string
 }
 
+export interface CreateWorkspaceNodeAttachmentRequest {
+  scope: WorkspaceNodeScope
+  teamId: string
+  workspaceId: string
+  nodeId: string
+  attachmentId: string
+  displayName: string
+  originalName: string
+  storagePath: string
+}
+
+export interface CreateWorkspaceNodeAttachmentResponse {
+  attachmentId: string
+  created: boolean
+  logId: string
+}
+
+export interface UpdateWorkspaceNodeAttachmentRequest {
+  scope: WorkspaceNodeScope
+  teamId: string
+  workspaceId: string
+  nodeId: string
+  attachmentId: string
+  displayName: string
+  storagePath?: string
+  originalName?: string
+}
+
+export interface UpdateWorkspaceNodeAttachmentResponse {
+  attachmentId: string
+  updated: boolean
+  logId?: string
+}
+
+export interface DeleteWorkspaceNodeAttachmentRequest {
+  scope: WorkspaceNodeScope
+  teamId: string
+  workspaceId: string
+  nodeId: string
+  attachmentId: string
+}
+
+export interface DeleteWorkspaceNodeAttachmentResponse {
+  attachmentId: string
+  deleted: boolean
+  logId: string
+}
+
 // =============================================================================
 // Membership Request/Response Types
 // =============================================================================
@@ -507,6 +555,21 @@ export const updateWorkspaceNodeContent = createTypedCallable<
   UpdateWorkspaceNodeContentRequest,
   UpdateWorkspaceNodeContentResponse
 >("updateWorkspaceNodeContent")
+
+export const createWorkspaceNodeAttachment = createTypedCallable<
+  CreateWorkspaceNodeAttachmentRequest,
+  CreateWorkspaceNodeAttachmentResponse
+>("createWorkspaceNodeAttachment")
+
+export const updateWorkspaceNodeAttachment = createTypedCallable<
+  UpdateWorkspaceNodeAttachmentRequest,
+  UpdateWorkspaceNodeAttachmentResponse
+>("updateWorkspaceNodeAttachment")
+
+export const deleteWorkspaceNodeAttachment = createTypedCallable<
+  DeleteWorkspaceNodeAttachmentRequest,
+  DeleteWorkspaceNodeAttachmentResponse
+>("deleteWorkspaceNodeAttachment")
 
 // =============================================================================
 // Membership Functions

@@ -6,6 +6,7 @@ use tauri::{
 use window_vibrancy::*;
 
 mod app_check;
+mod downloads;
 mod file_capture;
 mod magic_link;
 mod oauth;
@@ -37,6 +38,7 @@ pub fn run() {
     let ctx = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
@@ -57,6 +59,7 @@ pub fn run() {
             oauth::login_oauth,
             magic_link::listen_magic_link,
             app_check::build_app_check_proof,
+            downloads::download_url_to_path,
             file_capture::keep_file_capture_window_open,
             file_capture::dismiss_file_capture_window,
             file_capture::preview_file_path

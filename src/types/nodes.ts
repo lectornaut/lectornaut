@@ -2,6 +2,7 @@ import { Timestamp } from "firebase/firestore"
 
 export const ROOT_PARENT_ID = "root"
 export const NODE_NAME_MAX_LENGTH = 128
+export const ATTACHMENT_NAME_MAX_LENGTH = 255
 
 export type NodeType = "folder" | "file"
 export type WorkspaceNodeScope = "code" | "write"
@@ -37,6 +38,22 @@ export interface FileNode extends NodeBase {
 }
 
 export type WorkspaceNode = FolderNode | FileNode
+
+export interface WorkspaceNodeAttachment {
+  readonly id: string
+  readonly workspaceId: string
+  readonly nodeId: string
+  scope: WorkspaceNodeScope
+  displayName: string
+  originalName: string
+  storagePath: string
+  mimeType?: string | null
+  size?: number | null
+  createdAt: Timestamp
+  createdBy: string
+  updatedAt: Timestamp
+  updatedBy: string
+}
 
 export function normalizeName(name: string): string {
   return name.trim().replace(/\s+/g, " ")

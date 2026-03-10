@@ -40,6 +40,8 @@ tauri-plugin-deep-link = "2"
 tauri-plugin-process = "2"
 # https://crates.io/crates/tauri-plugin-dialog/versions
 tauri-plugin-dialog = "2"
+# https://crates.io/crates/tauri-plugin-fs/versions
+tauri-plugin-fs = "2"
 # https://crates.io/crates/tauri-plugin-single-instance/versions
 tauri-plugin-single-instance = "2"
 

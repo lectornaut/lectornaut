@@ -11,6 +11,8 @@
     "core:webview:allow-set-webview-zoom",
     "core:event:default",
     "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:allow-write-file",
     "opener:allow-open-path",
     "opener:allow-reveal-item-in-dir",
     "shell:allow-open",

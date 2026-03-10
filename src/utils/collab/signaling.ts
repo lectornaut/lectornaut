@@ -124,6 +124,42 @@ const deleteSignalsCallable = httpsCallable<DeleteSignalsRequest, { ok: true }>(
   "deleteSignals"
 )
 
+function normalizeSignalPayloadValue(value: unknown): unknown | undefined {
+  if (
+    value == null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => normalizeSignalPayloadValue(entry))
+      .filter((entry) => entry !== undefined)
+  }
+
+  if (typeof value === "object") {
+    const normalized: Record<string, unknown> = {}
+
+    Object.entries(value).forEach(([key, entry]) => {
+      const nextValue = normalizeSignalPayloadValue(entry)
+      if (nextValue !== undefined) {
+        normalized[key] = nextValue
+      }
+    })
+
+    return normalized
+  }
+
+  return undefined
+}
+
+function normalizeSignalPayload(payload: unknown): unknown {
+  return normalizeSignalPayloadValue(payload) ?? null
+}
+
 export async function joinCollabRoom(
   payload: JoinCollabRoomRequest
 ): Promise<JoinCollabRoomResponse> {
@@ -142,7 +178,10 @@ export async function heartbeatPeer(
 }
 
 export async function sendSignal(payload: SendSignalRequest): Promise<void> {
-  await sendSignalCallable(payload)
+  await sendSignalCallable({
+    ...payload,
+    payload: normalizeSignalPayload(payload.payload),
+  })
 }
 
 export async function deletePeer(payload: DeletePeerRequest): Promise<void> {

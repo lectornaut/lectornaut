@@ -22,9 +22,18 @@ service firebase.storage {
       return isTeamMember(teamId) && teamRole(teamId) in ["owner", "admin"];
     }
 
+    function canManageWorkspaceContent(teamId) {
+      return isTeamMember(teamId)
+        && teamRole(teamId) in ["owner", "admin", "member"];
+    }
+
     function isTeamPublic(teamId) {
       return firestore.exists(/databases/(default)/documents/teams/$(teamId))
         && firestore.get(/databases/(default)/documents/teams/$(teamId)).data.isPublic == true;
+    }
+
+    function isWorkspaceNodeScope(scope) {
+      return scope in ["code", "write"];
     }
 
     function isValidImageUpload() {
@@ -50,6 +59,15 @@ service firebase.storage {
       allow read: if isTeamMember(teamId) || isTeamPublic(teamId);
       allow create, update: if canManageTeamAssets(teamId) && isValidImageUpload();
       allow delete: if canManageTeamAssets(teamId);
+    }
+
+    match /attachments/teams/{teamId}/workspaces/{workspaceId}/{scope}/{nodeId}/{attachmentId}/{version}/{fileName} {
+      allow read: if isWorkspaceNodeScope(scope) && isTeamMember(teamId);
+      allow create, update: if isWorkspaceNodeScope(scope)
+        && canManageWorkspaceContent(teamId)
+        && request.resource != null
+        && request.resource.size <= 25 * 1024 * 1024;
+      allow delete: if isWorkspaceNodeScope(scope) && canManageWorkspaceContent(teamId);
     }
   }
 }

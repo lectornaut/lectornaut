@@ -7,6 +7,12 @@ import {
 import Stripe from "stripe"
 import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
+import {
+  ATTACHMENT_NAME_MAX_LENGTH,
+  isWorkspaceNodeAttachmentStoragePath,
+  normalizeAttachmentDisplayName,
+  workspaceNodeAttachmentsCollectionPath,
+} from "./nodeAttachments.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS, DESTRUCTIVE_CALLABLE_OPTS } from "./runtimeConfig.js"
 import { stripeSecretKey } from "./secrets.js"
@@ -673,6 +679,89 @@ function workspaceNodesCollectionPath(
   return `teams/${teamId}/workspaces/${workspaceId}/${scope}`
 }
 
+function workspaceNodeAttachmentDocumentPath(
+  teamId: string,
+  workspaceId: string,
+  scope: WorkspaceNodeScope,
+  nodeId: string,
+  attachmentId: string
+): string {
+  return `${workspaceNodeAttachmentsCollectionPath(teamId, workspaceId, scope, nodeId)}/${attachmentId}`
+}
+
+function assertAttachmentDisplayName(value: unknown, field: string): string {
+  const normalized = normalizeAttachmentDisplayName(assertString(value, field))
+  if (!normalized.length || normalized.length > ATTACHMENT_NAME_MAX_LENGTH) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} must be between 1 and ${ATTACHMENT_NAME_MAX_LENGTH} characters.`
+    )
+  }
+  return normalized
+}
+
+function assertAttachmentStoragePath(
+  value: unknown,
+  params: {
+    teamId: string
+    workspaceId: string
+    scope: WorkspaceNodeScope
+    nodeId: string
+    attachmentId: string
+  }
+): string {
+  const storagePath = assertString(value, "storagePath")
+  if (!isWorkspaceNodeAttachmentStoragePath(storagePath, params)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "storagePath does not match the expected attachment location."
+    )
+  }
+  return storagePath
+}
+
+async function readStorageObjectMetadata(storagePath: string): Promise<{
+  mimeType: string | null
+  size: number | null
+}> {
+  const file = admin.storage().bucket().file(storagePath)
+  const [exists] = await file.exists()
+  if (!exists) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Uploaded attachment file was not found in storage."
+    )
+  }
+
+  const [metadata] = await file.getMetadata()
+  const size =
+    typeof metadata.size === "string" && metadata.size.length > 0
+      ? Number.parseInt(metadata.size, 10)
+      : null
+
+  return {
+    mimeType: metadata.contentType ?? null,
+    size: Number.isFinite(size) ? size : null,
+  }
+}
+
+async function deleteStorageObjectIfExists(
+  storagePath: string | null | undefined
+): Promise<void> {
+  if (!storagePath) return
+
+  try {
+    await admin.storage().bucket().file(storagePath).delete({
+      ignoreNotFound: true,
+    })
+  } catch (error) {
+    logger.warn("Failed to delete attachment storage object", {
+      storagePath,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
 const IN_QUERY_CHUNK_SIZE = 10
 const DELETE_BATCH_SIZE = 450
 
@@ -684,6 +773,41 @@ function chunkArray<T>(items: T[], size: number): T[][] {
     chunks.push(items.slice(i, i + size))
   }
   return chunks
+}
+
+async function collectNodeAttachmentDeletes(
+  nodesCollection: admin.firestore.CollectionReference,
+  nodeIds: string[]
+): Promise<{
+  refs: admin.firestore.DocumentReference[]
+  storagePaths: string[]
+}> {
+  const refs: admin.firestore.DocumentReference[] = []
+  const storagePaths = new Set<string>()
+
+  for (const batchIds of chunkArray(nodeIds, IN_QUERY_CHUNK_SIZE)) {
+    const attachmentSnaps = await Promise.all(
+      batchIds.map((id) =>
+        nodesCollection.doc(id).collection("attachments").get()
+      )
+    )
+
+    attachmentSnaps.forEach((attachmentsSnap) => {
+      attachmentsSnap.docs.forEach((attachmentSnap) => {
+        refs.push(attachmentSnap.ref)
+
+        const storagePath = attachmentSnap.data()?.storagePath
+        if (typeof storagePath === "string" && storagePath.length > 0) {
+          storagePaths.add(storagePath)
+        }
+      })
+    })
+  }
+
+  return {
+    refs,
+    storagePaths: [...storagePaths],
+  }
 }
 
 // =============================================================================
@@ -1829,13 +1953,34 @@ export const deleteWorkspaceNode = onCall(
     }
 
     const deleteIds = [...idsToDelete]
-    const batches = chunkArray(deleteIds, DELETE_BATCH_SIZE)
-    for (const batchIds of batches) {
+    const {
+      refs: attachmentRefsToDelete,
+      storagePaths: attachmentStoragePaths,
+    } = await collectNodeAttachmentDeletes(nodesCollection, deleteIds)
+
+    const refsToDelete = [
+      ...attachmentRefsToDelete,
+      ...deleteIds.map((id) => nodesCollection.doc(id)),
+    ]
+
+    const batches = chunkArray(refsToDelete, DELETE_BATCH_SIZE)
+    for (const batchRefs of batches) {
       const batch = db.batch()
-      batchIds.forEach((id) => {
-        batch.delete(nodesCollection.doc(id))
+      batchRefs.forEach((ref) => {
+        batch.delete(ref)
       })
       await batch.commit()
+    }
+
+    for (const storagePathBatch of chunkArray(
+      attachmentStoragePaths,
+      IN_QUERY_CHUNK_SIZE
+    )) {
+      await Promise.all(
+        storagePathBatch.map((storagePath) =>
+          deleteStorageObjectIfExists(storagePath)
+        )
+      )
     }
 
     const logRef = await logEvent({
@@ -1947,6 +2092,433 @@ export const updateWorkspaceNodeContent = onCall(
         logId: logRef.id,
       }
     })
+  }
+)
+
+export const createWorkspaceNodeAttachment = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const scope = assertWorkspaceNodeScope(request.data?.scope)
+    const nodeId = assertString(request.data?.nodeId, "nodeId")
+    const attachmentId = assertString(
+      request.data?.attachmentId,
+      "attachmentId"
+    )
+    const displayName = assertAttachmentDisplayName(
+      request.data?.displayName,
+      "displayName"
+    )
+    const originalName = assertString(
+      request.data?.originalName,
+      "originalName"
+    )
+    const storagePath = assertAttachmentStoragePath(request.data?.storagePath, {
+      teamId,
+      workspaceId,
+      scope,
+      nodeId,
+      attachmentId,
+    })
+
+    const actorId = request.auth.uid
+    const actorEmail = request.auth.token.email ?? undefined
+    const role = await getTeamRole(teamId, actorId)
+
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage workspace attachments."
+      )
+    }
+
+    const storageMetadata = await readStorageObjectMetadata(storagePath)
+
+    return db.runTransaction(async (transaction) => {
+      const nodeRef = db.doc(
+        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+
+      if (!nodeSnap.exists) {
+        throw new HttpsError("not-found", "Node not found.")
+      }
+
+      const nodeData = nodeSnap.data() ?? {}
+      if (nodeData.isArchived) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Cannot add attachments to an archived node."
+        )
+      }
+
+      const attachmentRef = db.doc(
+        workspaceNodeAttachmentDocumentPath(
+          teamId,
+          workspaceId,
+          scope,
+          nodeId,
+          attachmentId
+        )
+      )
+      const attachmentSnap = await transaction.get(attachmentRef)
+
+      if (attachmentSnap.exists) {
+        throw new HttpsError("already-exists", "Attachment already exists.")
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+
+      transaction.set(attachmentRef, {
+        workspaceId,
+        nodeId,
+        scope,
+        displayName,
+        originalName,
+        storagePath,
+        mimeType: storageMetadata.mimeType,
+        size: storageMetadata.size,
+        createdAt: now,
+        createdBy: actorId,
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+      transaction.update(nodeRef, {
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+
+      const logRef = await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorId, email: actorEmail, role },
+          action: "content.attachment.create",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          context: buildContext(request),
+          changes: {
+            fields: [
+              "attachmentId",
+              "displayName",
+              "originalName",
+              "storagePath",
+            ],
+            after: {
+              attachmentId,
+              displayName,
+              originalName,
+              storagePath,
+            },
+          },
+        },
+        { transaction }
+      )
+
+      return {
+        attachmentId,
+        created: true,
+        logId: logRef.id,
+      }
+    })
+  }
+)
+
+export const updateWorkspaceNodeAttachment = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const scope = assertWorkspaceNodeScope(request.data?.scope)
+    const nodeId = assertString(request.data?.nodeId, "nodeId")
+    const attachmentId = assertString(
+      request.data?.attachmentId,
+      "attachmentId"
+    )
+    const displayName = assertAttachmentDisplayName(
+      request.data?.displayName,
+      "displayName"
+    )
+    const hasReplacement = request.data?.storagePath !== undefined
+
+    if (request.data?.originalName !== undefined && !hasReplacement) {
+      throw new HttpsError(
+        "invalid-argument",
+        "originalName can only be provided when replacing the attachment file."
+      )
+    }
+
+    const nextStoragePath = hasReplacement
+      ? assertAttachmentStoragePath(request.data?.storagePath, {
+          teamId,
+          workspaceId,
+          scope,
+          nodeId,
+          attachmentId,
+        })
+      : undefined
+    const nextOriginalName = hasReplacement
+      ? assertString(request.data?.originalName, "originalName")
+      : undefined
+
+    const actorId = request.auth.uid
+    const actorEmail = request.auth.token.email ?? undefined
+    const role = await getTeamRole(teamId, actorId)
+
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage workspace attachments."
+      )
+    }
+
+    const storageMetadata =
+      hasReplacement && nextStoragePath
+        ? await readStorageObjectMetadata(nextStoragePath)
+        : null
+
+    const result = await db.runTransaction(async (transaction) => {
+      const nodeRef = db.doc(
+        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+
+      if (!nodeSnap.exists) {
+        throw new HttpsError("not-found", "Node not found.")
+      }
+
+      const nodeData = nodeSnap.data() ?? {}
+      if (nodeData.isArchived) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Cannot edit attachments on an archived node."
+        )
+      }
+
+      const attachmentRef = db.doc(
+        workspaceNodeAttachmentDocumentPath(
+          teamId,
+          workspaceId,
+          scope,
+          nodeId,
+          attachmentId
+        )
+      )
+      const attachmentSnap = await transaction.get(attachmentRef)
+
+      if (!attachmentSnap.exists) {
+        throw new HttpsError("not-found", "Attachment not found.")
+      }
+
+      const before = attachmentSnap.data() ?? {}
+      const updates: Record<string, unknown> = {
+        displayName,
+      }
+
+      if (hasReplacement) {
+        updates.originalName = nextOriginalName ?? before.originalName ?? null
+        updates.storagePath = nextStoragePath
+        updates.mimeType = storageMetadata?.mimeType ?? null
+        updates.size = storageMetadata?.size ?? null
+      }
+
+      const changes = buildChanges(before, updates)
+      if (!changes) {
+        return {
+          attachmentId,
+          updated: false,
+          previousStoragePath:
+            typeof before.storagePath === "string" ? before.storagePath : null,
+          nextStoragePath: nextStoragePath ?? null,
+          logId: undefined,
+        }
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      transaction.update(attachmentRef, {
+        ...updates,
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+      transaction.update(nodeRef, {
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+
+      const logRef = await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorId, email: actorEmail, role },
+          action: hasReplacement
+            ? "content.attachment.update"
+            : "content.attachment.rename",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          context: buildContext(request),
+          changes,
+        },
+        { transaction }
+      )
+
+      return {
+        attachmentId,
+        updated: true,
+        previousStoragePath:
+          typeof before.storagePath === "string" ? before.storagePath : null,
+        nextStoragePath: nextStoragePath ?? null,
+        logId: logRef.id,
+      }
+    })
+
+    if (
+      hasReplacement &&
+      result.updated &&
+      result.previousStoragePath &&
+      result.previousStoragePath !== result.nextStoragePath
+    ) {
+      await deleteStorageObjectIfExists(result.previousStoragePath)
+    }
+
+    return {
+      attachmentId,
+      updated: result.updated,
+      logId: result.logId,
+    }
+  }
+)
+
+export const deleteWorkspaceNodeAttachment = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const scope = assertWorkspaceNodeScope(request.data?.scope)
+    const nodeId = assertString(request.data?.nodeId, "nodeId")
+    const attachmentId = assertString(
+      request.data?.attachmentId,
+      "attachmentId"
+    )
+
+    const actorId = request.auth.uid
+    const actorEmail = request.auth.token.email ?? undefined
+    const role = await getTeamRole(teamId, actorId)
+
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage workspace attachments."
+      )
+    }
+
+    const result = await db.runTransaction(async (transaction) => {
+      const nodeRef = db.doc(
+        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+
+      if (!nodeSnap.exists) {
+        throw new HttpsError("not-found", "Node not found.")
+      }
+
+      const nodeData = nodeSnap.data() ?? {}
+      if (nodeData.isArchived) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Cannot delete attachments from an archived node."
+        )
+      }
+
+      const attachmentRef = db.doc(
+        workspaceNodeAttachmentDocumentPath(
+          teamId,
+          workspaceId,
+          scope,
+          nodeId,
+          attachmentId
+        )
+      )
+      const attachmentSnap = await transaction.get(attachmentRef)
+
+      if (!attachmentSnap.exists) {
+        throw new HttpsError("not-found", "Attachment not found.")
+      }
+
+      const before = attachmentSnap.data() ?? {}
+      const storagePath =
+        typeof before.storagePath === "string" ? before.storagePath : null
+      const now = admin.firestore.FieldValue.serverTimestamp()
+
+      transaction.delete(attachmentRef)
+      transaction.update(nodeRef, {
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+
+      const logRef = await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorId, email: actorEmail, role },
+          action: "content.attachment.delete",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          context: buildContext(request),
+          changes: {
+            fields: [
+              "attachmentId",
+              "displayName",
+              "originalName",
+              "storagePath",
+            ],
+            before: {
+              attachmentId,
+              displayName: before.displayName ?? null,
+              originalName: before.originalName ?? null,
+              storagePath,
+            },
+            after: {
+              deleted: true,
+            },
+          },
+        },
+        { transaction }
+      )
+
+      return {
+        attachmentId,
+        deleted: true,
+        storagePath,
+        logId: logRef.id,
+      }
+    })
+
+    await deleteStorageObjectIfExists(result.storagePath)
+
+    return {
+      attachmentId,
+      deleted: result.deleted,
+      logId: result.logId,
+    }
   }
 )
 

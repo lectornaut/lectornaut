@@ -1,5 +1,9 @@
 import { firestore } from "@/modules/firebase"
 import { base64ToBytes, bytesToBase64 } from "@/utils/collab/base64"
+import {
+  FirestoreErrorCodes,
+  hasFirebaseErrorCode,
+} from "@/utils/firebase/firebase-errors"
 import { useEventListener } from "@vueuse/core"
 import {
   doc,
@@ -26,7 +30,20 @@ export async function loadSnapshot(
   contentId: string
 ): Promise<Uint8Array | null> {
   const snapshotRef = doc(firestore, "snapshots", contentId)
-  const snapshot = await getDoc(snapshotRef)
+
+  let snapshot
+
+  try {
+    snapshot = await getDoc(snapshotRef)
+  } catch (error) {
+    // Older rulesets deny reads for missing snapshot docs. Treat that as a miss
+    // so collaboration can still initialize while rules are being rolled out.
+    if (hasFirebaseErrorCode(error, FirestoreErrorCodes.PERMISSION_DENIED)) {
+      return null
+    }
+
+    throw error
+  }
 
   if (!snapshot.exists()) {
     return null

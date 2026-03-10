@@ -30,6 +30,7 @@ export const CALLABLE_OPTS = {
   timeoutSeconds: 60,
   maxInstances: 40,
   concurrency: 80,
+  invoker: "public" as const,
 }
 
 /**
@@ -45,6 +46,7 @@ export const DESTRUCTIVE_CALLABLE_OPTS = {
   timeoutSeconds: 300,
   maxInstances: 5,
   concurrency: 10,
+  invoker: "public" as const,
 }
 
 /**
@@ -104,4 +106,5 @@ export const GENKIT_OPTS = {
   timeoutSeconds: 60,
   maxInstances: 5,
   concurrency: 10,
+  invoker: "public" as const,
 }

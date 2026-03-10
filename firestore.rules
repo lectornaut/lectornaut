@@ -188,8 +188,11 @@ service cloud.firestore {
     }
 
     match /snapshots/{contentId} {
-      allow read: if resource.data.teamId is string
-                  && isTeamMember(resource.data.teamId);
+      allow get: if (!exists(/databases/$(database)/documents/snapshots/$(contentId))
+                     && canViewRoom(contentId))
+                 || (resource.data.teamId is string
+                     && isTeamMember(resource.data.teamId));
+      allow list: if false;
       allow create: if canCreateSnapshot(contentId);
       allow update: if canUpdateSnapshot(contentId);
       allow delete: if false;
@@ -300,6 +303,11 @@ service cloud.firestore {
         match /{scope}/{nodeId} {
           allow read: if isWorkspaceNodeScope(scope) && isTeamMember(teamId);
           allow write: if false;
+
+          match /attachments/{attachmentId} {
+            allow read: if isWorkspaceNodeScope(scope) && isTeamMember(teamId);
+            allow write: if false;
+          }
         }
       }
     }
