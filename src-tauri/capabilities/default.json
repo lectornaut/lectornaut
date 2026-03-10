@@ -12,6 +12,7 @@
     "core:event:default",
     "dialog:allow-open",
     "dialog:allow-save",
+    "fs:read-files",
     "fs:allow-write-file",
     "opener:allow-open-path",
     "opener:allow-reveal-item-in-dir",

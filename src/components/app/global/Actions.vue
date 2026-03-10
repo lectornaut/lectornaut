@@ -84,7 +84,7 @@ watch(online, (value) => {
   else toast.error("You are offline")
 })
 
-onMounted(async () => {
+onMounted(() => {
   if (!isTauri.value) return
 
   currentWindowLabel.value = getCurrentTauriWindow()?.label ?? null
@@ -99,7 +99,6 @@ onMounted(async () => {
     position="bottom-center"
     :theme="sonnerTheme"
   />
-  <Shortcuts />
   <ExitTrigger />
   <FileDropOverlay v-if="!isFileCaptureWindow" />
 </template>

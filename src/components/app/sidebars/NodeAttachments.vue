@@ -1,10 +1,15 @@
 <script lang="ts" setup>
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import {
-  createWorkspaceNodeAttachment,
+  createWorkspaceNodeAttachmentFromFile,
   deleteWorkspaceNodeAttachment,
+  resolveWorkspaceNodeAttachmentCommitState,
+  resolveWorkspaceNodeAttachmentDeletionState,
   updateWorkspaceNodeAttachment,
-} from "@/composables/useFunctions"
+  uploadNodeAttachmentBlob,
+  validateAttachmentDisplayName,
+  type AttachmentMutationContext,
+} from "@/composables/useNodeAttachments"
 import { isTauri } from "@/composables/usePlatform"
 import {
   IconAlertTriangle,
@@ -44,7 +49,6 @@ import {
   getStorageFileRef,
 } from "@/utils/firebase/firebase-helpers"
 import {
-  buildWorkspaceNodeAttachmentStoragePath,
   formatAttachmentSize,
   getWorkspaceNodeAttachmentsCollectionPath,
   NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
@@ -57,15 +61,13 @@ import { save } from "@tauri-apps/plugin-dialog"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
 import {
   collection,
-  doc,
-  getDoc,
   onSnapshot,
   orderBy,
   query,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore"
-import { getDownloadURL, uploadBytes } from "firebase/storage"
+import { getDownloadURL } from "firebase/storage"
 import { storeToRefs } from "pinia"
 import type { Component } from "vue"
 import { toRefs } from "vue"
@@ -75,13 +77,6 @@ interface UploadState {
   name: string
   status: "uploading" | "error"
   error?: string
-}
-
-interface AttachmentMutationContext {
-  teamId: string
-  workspaceId: string
-  nodeId: string
-  scope: WorkspaceNodeScope
 }
 
 const props = defineProps<{
@@ -236,64 +231,6 @@ const getAttachmentDownloadUrl = async (storagePath: string) => {
   return getDownloadURL(getStorageFileRef(storagePath))
 }
 
-const getAttachmentDocRef = (
-  context: AttachmentMutationContext,
-  attachmentId: string
-) =>
-  doc(
-    firestore,
-    getWorkspaceNodeAttachmentsCollectionPath(
-      context.teamId,
-      context.workspaceId,
-      context.scope,
-      context.nodeId
-    ),
-    attachmentId
-  )
-
-const resolveAttachmentCommitState = async (
-  context: AttachmentMutationContext,
-  attachmentId: string,
-  expectedStoragePath: string
-): Promise<boolean | null> => {
-  try {
-    const attachmentSnap = await getDoc(
-      getAttachmentDocRef(context, attachmentId)
-    )
-
-    if (!attachmentSnap.exists()) {
-      return false
-    }
-
-    return attachmentSnap.data()?.storagePath === expectedStoragePath
-  } catch (error) {
-    console.warn(
-      "[NodeAttachments] Failed to verify attachment state after mutation error:",
-      error
-    )
-    return null
-  }
-}
-
-const resolveAttachmentDeletionState = async (
-  context: AttachmentMutationContext,
-  attachmentId: string
-): Promise<boolean | null> => {
-  try {
-    const attachmentSnap = await getDoc(
-      getAttachmentDocRef(context, attachmentId)
-    )
-
-    return !attachmentSnap.exists()
-  } catch (error) {
-    console.warn(
-      "[NodeAttachments] Failed to verify attachment deletion after mutation error:",
-      error
-    )
-    return null
-  }
-}
-
 const resolveAttachmentIcon = (
   attachment: WorkspaceNodeAttachment
 ): Component => {
@@ -363,19 +300,6 @@ const upsertUploadState = (next: UploadState) => {
   uploadStates.value = [...uploadStates.value, next]
 }
 
-const validateAttachmentName = (value: string) => {
-  const normalized = normalizeAttachmentDisplayName(value)
-  if (!normalized.length) {
-    throw new Error("File name is required.")
-  }
-  if (normalized.length > ATTACHMENT_NAME_MAX_LENGTH) {
-    throw new Error(
-      `File name must be ${ATTACHMENT_NAME_MAX_LENGTH} characters or fewer.`
-    )
-  }
-  return normalized
-}
-
 const getMutableContext = (): AttachmentMutationContext => {
   if (!teamId.value || !workspaceId.value || !node.value) {
     throw new Error("Select a node before editing attachments.")
@@ -392,68 +316,6 @@ const getMutableContext = (): AttachmentMutationContext => {
     workspaceId: workspaceId.value,
     nodeId: node.value.id,
     scope: props.scope,
-  }
-}
-
-const uploadAttachmentBlob = async (
-  file: File,
-  attachmentId: string,
-  context: AttachmentMutationContext
-): Promise<string> => {
-  const version = generateId()
-  const storagePath = buildWorkspaceNodeAttachmentStoragePath({
-    teamId: context.teamId,
-    workspaceId: context.workspaceId,
-    scope: context.scope,
-    nodeId: context.nodeId,
-    attachmentId,
-    version,
-    fileName: sanitizeAttachmentFileName(file.name),
-  })
-
-  await uploadBytes(getStorageFileRef(storagePath), file)
-  return storagePath
-}
-
-const createAttachmentFromFile = async (
-  file: File,
-  context: AttachmentMutationContext
-) => {
-  if (file.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
-    throw new Error("Each attachment must be 25 MB or smaller.")
-  }
-
-  const attachmentId = generateId()
-  const displayName = validateAttachmentName(file.name)
-  const storagePath = await uploadAttachmentBlob(file, attachmentId, context)
-
-  try {
-    await createWorkspaceNodeAttachment({
-      scope: context.scope,
-      teamId: context.teamId,
-      workspaceId: context.workspaceId,
-      nodeId: context.nodeId,
-      attachmentId,
-      displayName,
-      originalName: file.name,
-      storagePath,
-    })
-  } catch (uploadError) {
-    const committed = await resolveAttachmentCommitState(
-      context,
-      attachmentId,
-      storagePath
-    )
-
-    if (committed === true) {
-      return
-    }
-
-    if (committed === false) {
-      await deleteStorageFile(storagePath)
-    }
-
-    throw uploadError
   }
 }
 
@@ -488,7 +350,7 @@ const processSelectedFiles = async (files: File[]) => {
     })
 
     try {
-      await createAttachmentFromFile(file, context)
+      await createWorkspaceNodeAttachmentFromFile(file, context)
       dismissUploadState(uploadId)
       successCount += 1
     } catch (uploadError) {
@@ -604,7 +466,7 @@ const handleEditSubmit = async () => {
 
   try {
     const context = getMutableContext()
-    const displayName = validateAttachmentName(editDisplayName.value)
+    const displayName = validateAttachmentDisplayName(editDisplayName.value)
     const nextFile = replacementFile.value
 
     if (!hasEditChanges.value) {
@@ -621,7 +483,7 @@ const handleEditSubmit = async () => {
     let nextStoragePath: string | null = null
 
     if (nextFile) {
-      nextStoragePath = await uploadAttachmentBlob(
+      nextStoragePath = await uploadNodeAttachmentBlob(
         nextFile,
         editingAttachment.value.id,
         context
@@ -648,7 +510,7 @@ const handleEditSubmit = async () => {
         throw updateError
       }
 
-      const committed = await resolveAttachmentCommitState(
+      const committed = await resolveWorkspaceNodeAttachmentCommitState(
         context,
         editingAttachment.value.id,
         nextStoragePath
@@ -663,7 +525,8 @@ const handleEditSubmit = async () => {
       }
 
       throw new Error(
-        "Attachment update status is unclear. Refresh before retrying to avoid a duplicate upload."
+        "Attachment update status is unclear. Refresh before retrying to avoid a duplicate upload.",
+        { cause: updateError }
       )
     }
 
@@ -699,7 +562,10 @@ const handleDeleteConfirm = async (attachment: WorkspaceNodeAttachment) => {
       }
     })()
     const committed = context
-      ? await resolveAttachmentDeletionState(context, attachment.id)
+      ? await resolveWorkspaceNodeAttachmentDeletionState(
+          context,
+          attachment.id
+        )
       : null
 
     if (committed === true) {
@@ -950,7 +816,6 @@ watch(selectedCreateFiles, async (files) => {
                           >
                             <Spinner
                               v-if="downloadingIds.includes(attachment.id)"
-                              class="size-4"
                             />
                             <IconArrowDownToLine v-else />
                           </Button>
@@ -974,10 +839,7 @@ watch(selectedCreateFiles, async (files) => {
                             "
                             @click="openDeleteDialog(attachment)"
                           >
-                            <Spinner
-                              v-if="deletingId === attachment.id"
-                              class="size-4"
-                            />
+                            <Spinner v-if="deletingId === attachment.id" />
                             <IconTrash2 v-else />
                           </Button>
                         </div>

@@ -1034,6 +1034,7 @@ const closeTab = (id: string) => {
     </SidebarInset>
     <CommandK />
     <Changelog />
+    <Shortcuts />
     <Settings />
   </SidebarProvider>
 </template>

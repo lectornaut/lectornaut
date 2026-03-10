@@ -432,7 +432,7 @@ const handleRemoveProfilePicture = async () => {
                 <TooltipProvider>
                   <Tooltip v-if="isCheckingUsername">
                     <TooltipTrigger as-child>
-                      <Spinner class="size-4" />
+                      <Spinner />
                     </TooltipTrigger>
                     <TooltipContent>
                       {{ t("settings.account.username.checking") }}

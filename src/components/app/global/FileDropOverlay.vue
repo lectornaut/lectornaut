@@ -1,5 +1,9 @@
 <script lang="ts" setup>
 import {
+  createWorkspaceNodeAttachmentFromFile,
+  type AttachmentMutationContext,
+} from "@/composables/useNodeAttachments"
+import {
   getCurrentTauriWindow,
   isTauri,
   platform,
@@ -27,29 +31,56 @@ import {
   IconTrash,
   IconUpload,
 } from "@/data/icons"
-import { showErrorToast } from "@/helpers/toast"
+import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import {
   FILE_CAPTURE_WINDOW_LABEL,
-  type FileCaptureFileKind,
   getFileExtensionFromPath,
   getFileKindFromPath,
   getFileNameFromPath,
   normalizeDroppedPaths,
   publishDroppedPaths,
+  resolveMimeTypeForUpload,
+  type FileCaptureFileKind,
 } from "@/modules/fileCapture"
+import { useAuthStore } from "@/stores/authStore"
+import { useFileTreeStore } from "@/stores/fileTreeStore"
+import { useMembershipStore } from "@/stores/membershipStore"
+import { useTeamStore } from "@/stores/teamStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
+import { type WorkspaceNodeScope } from "@/types/nodes"
+import { can, Capabilities } from "@/types/permissions"
+import { NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES } from "@/utils/firebase/firebase-node-attachments"
 import { convertFileSrc, invoke } from "@tauri-apps/api/core"
 import type { UnlistenFn } from "@tauri-apps/api/event"
 import { open } from "@tauri-apps/plugin-dialog"
+import { readFile, stat } from "@tauri-apps/plugin-fs"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
+import { storeToRefs } from "pinia"
 import type { Component } from "vue"
 
 const { t } = useI18n()
+const teamStore = useTeamStore()
+const workspaceStore = useWorkspaceStore()
+const authStore = useAuthStore()
+const membershipStore = useMembershipStore()
+const fileTreeStore = useFileTreeStore()
+const { currentTeam } = storeToRefs(teamStore)
+const { currentWorkspace } = storeToRefs(workspaceStore)
+const { currentUser } = storeToRefs(authStore)
+const { memberships } = storeToRefs(membershipStore)
 const currentWindow = getCurrentTauriWindow()
 const isCaptureWindow = currentWindow?.label === FILE_CAPTURE_WINDOW_LABEL
 const isVisible = ref(false)
 const hasActiveFileDrag = ref(false)
 const queuedFiles = ref<QueuedFile[]>([])
 const imagePreviewFailures = ref<Record<string, boolean>>({})
+const saveSheetOpen = ref(false)
+const activeSaveScope = ref<WorkspaceNodeScope>("code")
+const saveSheetTargetIds = reactive<Record<WorkspaceNodeScope, string | null>>({
+  code: null,
+  write: null,
+})
+const isMoving = ref(false)
 const hasQueuedFiles = computed(() => queuedFiles.value.length > 0)
 const shouldRender = computed(
   () =>
@@ -110,6 +141,90 @@ const revealFileTooltip = computed(() =>
   t("components.fileDropOverlay.tooltips.revealFile", {
     location: revealFileLocationLabel.value,
   })
+)
+const currentTeamId = computed(() => currentTeam.value?.id ?? null)
+const currentWorkspaceId = computed(() => currentWorkspace.value?.id ?? null)
+const currentRole = computed(() => {
+  if (!currentTeamId.value || !currentUser.value) return null
+
+  return (
+    memberships.value.find(
+      (membership) =>
+        membership.teamId === currentTeamId.value &&
+        membership.userId === currentUser.value?.uid
+    )?.role ?? null
+  )
+})
+const canManageAttachments = computed(() =>
+  can(currentUser.value, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+    scope: "workspace",
+    teamRole: currentRole.value,
+  })
+)
+const activeSaveTargetNodeId = computed(
+  () => saveSheetTargetIds[activeSaveScope.value]
+)
+const activeSaveTargetNode = computed(() => {
+  if (
+    !currentTeamId.value ||
+    !currentWorkspaceId.value ||
+    !activeSaveTargetNodeId.value
+  ) {
+    return null
+  }
+
+  return fileTreeStore.getNode(
+    activeSaveScope.value,
+    currentTeamId.value,
+    currentWorkspaceId.value,
+    activeSaveTargetNodeId.value
+  )
+})
+const activeSaveTargetPath = computed(() => {
+  if (
+    !currentTeamId.value ||
+    !currentWorkspaceId.value ||
+    !activeSaveTargetNode.value
+  ) {
+    return ""
+  }
+
+  return fileTreeStore.getFolderPath(
+    activeSaveScope.value,
+    currentTeamId.value,
+    currentWorkspaceId.value,
+    activeSaveTargetNode.value.id
+  )
+})
+const saveSheetStatusMessage = computed(() => {
+  if (!currentTeam.value) {
+    return t("components.fileDropOverlay.saveSheet.noTeam")
+  }
+  if (!currentWorkspace.value) {
+    return t("components.fileDropOverlay.saveSheet.noWorkspace")
+  }
+  if (!canManageAttachments.value) {
+    return t("components.fileDropOverlay.saveSheet.readOnly")
+  }
+  if (activeSaveTargetNode.value?.isArchived) {
+    return t("components.fileDropOverlay.saveSheet.archivedTarget")
+  }
+  if (activeSaveTargetPath.value) {
+    return t("components.fileDropOverlay.saveSheet.selectedTarget", {
+      path: activeSaveTargetPath.value,
+    })
+  }
+  return t("components.fileDropOverlay.saveSheet.noSelection")
+})
+const canMoveQueuedFiles = computed(
+  () =>
+    hasQueuedFiles.value &&
+    Boolean(currentTeamId.value) &&
+    Boolean(currentWorkspaceId.value) &&
+    Boolean(activeSaveTargetNode.value) &&
+    !activeSaveTargetNode.value?.isArchived &&
+    canManageAttachments.value &&
+    !isMoving.value
 )
 
 const formatFileSize = (size: number): string => {
@@ -463,39 +578,256 @@ const syncQueuedFiles = async (
   return updatedFiles
 }
 
+const resetSaveSheetState = () => {
+  saveSheetTargetIds.code = null
+  saveSheetTargetIds.write = null
+}
+
+const seedSaveSheetTargets = () => {
+  if (!currentTeamId.value || !currentWorkspaceId.value) {
+    resetSaveSheetState()
+    return
+  }
+
+  ;(["code", "write"] as const).forEach((scope) => {
+    const selectedNodeId = fileTreeStore.getSelectedNodeId(
+      scope,
+      currentTeamId.value!,
+      currentWorkspaceId.value!
+    )
+
+    saveSheetTargetIds[scope] = selectedNodeId
+
+    if (selectedNodeId) {
+      void fileTreeStore.ensureNodeLoaded(
+        scope,
+        currentTeamId.value!,
+        currentWorkspaceId.value!,
+        selectedNodeId
+      )
+    }
+  })
+}
+
+const handleSaveSheetOpenChange = (open: boolean) => {
+  if (!open) {
+    if (isMoving.value) return
+    saveSheetOpen.value = false
+    resetSaveSheetState()
+    return
+  }
+
+  seedSaveSheetTargets()
+  saveSheetOpen.value = true
+}
+
+const openSaveSheet = () => {
+  if (!hasQueuedFiles.value || isMoving.value) return
+  handleSaveSheetOpenChange(true)
+}
+
+const handleSaveTargetSelect = (
+  scope: WorkspaceNodeScope,
+  node: { id: string }
+) => {
+  saveSheetTargetIds[scope] = node.id
+}
+
+const updateActiveSaveScope = (value: string | number) => {
+  if (value === "code" || value === "write") {
+    activeSaveScope.value = value
+  }
+}
+
+const createSaveContext = (): AttachmentMutationContext => {
+  if (!currentTeamId.value) {
+    throw new Error(t("components.fileDropOverlay.saveSheet.noTeam"))
+  }
+  if (!currentWorkspaceId.value) {
+    throw new Error(t("components.fileDropOverlay.saveSheet.noWorkspace"))
+  }
+  if (!activeSaveTargetNode.value) {
+    throw new Error(t("components.fileDropOverlay.saveSheet.noSelection"))
+  }
+  if (activeSaveTargetNode.value.isArchived) {
+    throw new Error(t("components.fileDropOverlay.saveSheet.archivedTarget"))
+  }
+  if (!canManageAttachments.value) {
+    throw new Error(t("components.fileDropOverlay.saveSheet.readOnly"))
+  }
+
+  return {
+    teamId: currentTeamId.value,
+    workspaceId: currentWorkspaceId.value,
+    scope: activeSaveScope.value,
+    nodeId: activeSaveTargetNode.value.id,
+  }
+}
+
+const materializeQueuedFileForUpload = async (
+  queuedFile: QueuedFile
+): Promise<File> => {
+  if (queuedFile.file) {
+    return queuedFile.file
+  }
+
+  if (!queuedFile.path) {
+    throw new Error(
+      t("components.fileDropOverlay.saveSheet.unavailableFile", {
+        name: getQueuedFileName(queuedFile),
+      })
+    )
+  }
+
+  if (!isTauri.value) {
+    throw new Error(
+      t("components.fileDropOverlay.saveSheet.desktopOnly", {
+        name: getQueuedFileName(queuedFile),
+      })
+    )
+  }
+
+  const fileInfo = await stat(queuedFile.path)
+
+  if (!fileInfo.isFile) {
+    throw new Error(
+      t("components.fileDropOverlay.saveSheet.folderNotSupported", {
+        name: getQueuedFileName(queuedFile),
+      })
+    )
+  }
+
+  if (fileInfo.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
+    throw new Error("Each attachment must be 25 MB or smaller.")
+  }
+
+  const bytes = await readFile(queuedFile.path)
+  const mimeType =
+    resolveMimeTypeForUpload({
+      fileName: getFileNameFromPath(queuedFile.path),
+    }) ?? "application/octet-stream"
+
+  return new File([bytes], getFileNameFromPath(queuedFile.path), {
+    lastModified: fileInfo.mtime?.getTime() ?? Date.now(),
+    type: mimeType,
+  })
+}
+
+const moveQueuedFilesToSelectedNode = async () => {
+  if (!canMoveQueuedFiles.value || isMoving.value) return
+
+  const filesToProcess = [...queuedFiles.value]
+  let context: AttachmentMutationContext
+
+  try {
+    context = createSaveContext()
+  } catch (error) {
+    showErrorToast(
+      t("components.fileDropOverlay.saveSheet.moveFailed"),
+      (error as Error).message
+    )
+    return
+  }
+
+  isMoving.value = true
+
+  let successCount = 0
+  let failureCount = 0
+  let firstFailureMessage: string | null = null
+  const failedFiles: QueuedFile[] = []
+
+  try {
+    for (const queuedFile of filesToProcess) {
+      try {
+        const uploadFile = await materializeQueuedFileForUpload(queuedFile)
+        await createWorkspaceNodeAttachmentFromFile(uploadFile, context)
+        successCount += 1
+      } catch (error) {
+        failureCount += 1
+        failedFiles.push(queuedFile)
+        firstFailureMessage ??= (error as Error).message
+      }
+    }
+
+    await syncQueuedFiles(failedFiles, {
+      keepCaptureWindowOpen: isCaptureWindow,
+      keepOverlayOpen: true,
+    })
+
+    if (successCount > 0) {
+      showSuccessToast(
+        successCount === 1
+          ? t("components.fileDropOverlay.saveSheet.success.single")
+          : t("components.fileDropOverlay.saveSheet.success.multiple", {
+              count: successCount,
+            })
+      )
+    }
+
+    if (failureCount > 0) {
+      showErrorToast(
+        failureCount === 1
+          ? t("components.fileDropOverlay.saveSheet.partialFailure.single")
+          : t("components.fileDropOverlay.saveSheet.partialFailure.multiple", {
+              count: failureCount,
+            }),
+        firstFailureMessage || undefined
+      )
+      return
+    }
+
+    saveSheetOpen.value = false
+    resetSaveSheetState()
+  } finally {
+    isMoving.value = false
+  }
+}
+
 const addDroppedPaths = async (
   paths: string[],
   options: {
     keepCaptureWindowOpen?: boolean
     keepOverlayOpen?: boolean
   } = {}
-) =>
-  syncQueuedFiles(
+) => {
+  if (isMoving.value) return queuedFiles.value
+
+  return syncQueuedFiles(
     mergeQueuedFiles(queuedFiles.value, createQueuedPathFiles(paths)),
     options
   )
+}
 
 const addDroppedBrowserFiles = async (
   files: File[],
   options: { keepOverlayOpen?: boolean } = {}
-) =>
-  syncQueuedFiles(
+) => {
+  if (isMoving.value) return queuedFiles.value
+
+  return syncQueuedFiles(
     mergeQueuedFiles(queuedFiles.value, createQueuedBrowserFiles(files)),
     options
   )
+}
 
-const removeQueuedFile = async (id: string) =>
-  syncQueuedFiles(
+const removeQueuedFile = async (id: string) => {
+  if (isMoving.value) return queuedFiles.value
+
+  return syncQueuedFiles(
     queuedFiles.value.filter((queuedFile) => queuedFile.id !== id),
     {
       keepOverlayOpen: true,
     }
   )
+}
 
-const clearQueuedFiles = async () =>
-  syncQueuedFiles([], {
+const clearQueuedFiles = async () => {
+  if (isMoving.value) return queuedFiles.value
+
+  return syncQueuedFiles([], {
     keepOverlayOpen: true,
   })
+}
 
 const handleImagePreviewError = (id: string) => {
   if (imagePreviewFailures.value[id]) return
@@ -507,6 +839,8 @@ const handleImagePreviewError = (id: string) => {
 }
 
 const selectFiles = async () => {
+  if (isMoving.value) return
+
   if (!isTauri.value) {
     openBrowserFileDialog()
     return
@@ -561,6 +895,8 @@ const revealFile = async (file: DroppedFileItem) => {
 }
 
 const closeOverlayOrWindow = async () => {
+  if (isMoving.value) return
+
   await clearQueuedFiles()
   resetOverlay()
 
@@ -576,6 +912,11 @@ watch(selectedBrowserFiles, async (files) => {
 
   await addDroppedBrowserFiles(nextFiles)
   resetBrowserFileDialog()
+})
+
+watch([currentTeamId, currentWorkspaceId], () => {
+  if (!saveSheetOpen.value) return
+  seedSaveSheetTargets()
 })
 
 onMounted(async () => {
@@ -690,6 +1031,7 @@ const isFullscreen = useIsFullscreen()
                   <Button
                     variant="outline"
                     size="icon-sm"
+                    :disabled="isMoving"
                     @click="selectFiles()"
                   >
                     <IconUpload />
@@ -702,12 +1044,17 @@ const isFullscreen = useIsFullscreen()
             </TooltipProvider>
           </ButtonGroup>
           <ButtonGroup>
-            <Sheet>
-              <SheetTrigger as-child>
-                <Button size="sm" :disabled="!hasQueuedFiles">
-                  {{ t("components.fileDropOverlay.buttons.save") }}
-                </Button>
-              </SheetTrigger>
+            <Sheet
+              :open="saveSheetOpen"
+              @update:open="handleSaveSheetOpenChange"
+            >
+              <Button
+                size="sm"
+                :disabled="!hasQueuedFiles || isMoving"
+                @click="openSaveSheet"
+              >
+                {{ t("components.fileDropOverlay.buttons.save") }}
+              </Button>
               <SheetContent
                 class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded border"
                 :class="{ 'mt-12': isTauri && !isFullscreen }"
@@ -722,41 +1069,93 @@ const isFullscreen = useIsFullscreen()
                 </SheetHeader>
                 <Separator />
                 <OverlayScrollbarsWrapper>
-                  <div class="flex grow flex-col">
-                    <Tabs default-value="code">
-                      <TabsList>
-                        <TabsTrigger value="code">
-                          {{
-                            t("components.fileDropOverlay.saveSheet.tabs.code")
-                          }}
-                        </TabsTrigger>
-                        <TabsTrigger value="write">
-                          {{
-                            t("components.fileDropOverlay.saveSheet.tabs.write")
-                          }}
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="code"> </TabsContent>
-                      <TabsContent value="write"> </TabsContent>
-                    </Tabs>
+                  <TeamSelector v-if="!currentTeamId" />
+                  <WorkspaceSelector v-else-if="!currentWorkspaceId" />
+                  <Tabs
+                    v-else
+                    class="gap-0"
+                    :model-value="activeSaveScope"
+                    @update:model-value="updateActiveSaveScope"
+                  >
+                    <TabsList class="m-2 bg-transparent">
+                      <TabsTrigger value="code">
+                        {{
+                          t("components.fileDropOverlay.saveSheet.tabs.code")
+                        }}
+                      </TabsTrigger>
+                      <TabsTrigger value="write">
+                        {{
+                          t("components.fileDropOverlay.saveSheet.tabs.write")
+                        }}
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="code">
+                      <Sidebar collapsible="none" class="w-full">
+                        <SidebarContent>
+                          <OverlayScrollbarsWrapper>
+                            <FileTree
+                              :scope="'code'"
+                              :team-id="currentTeamId"
+                              :workspace-id="currentWorkspaceId"
+                              :selected-node-id="saveSheetTargetIds.code"
+                              @select="handleSaveTargetSelect('code', $event)"
+                            />
+                          </OverlayScrollbarsWrapper>
+                        </SidebarContent>
+                      </Sidebar>
+                    </TabsContent>
+                    <TabsContent value="write">
+                      <Sidebar collapsible="none" class="w-full">
+                        <SidebarContent>
+                          <OverlayScrollbarsWrapper>
+                            <FileTree
+                              :scope="'write'"
+                              :team-id="currentTeamId"
+                              :workspace-id="currentWorkspaceId"
+                              :selected-node-id="saveSheetTargetIds.write"
+                              @select="handleSaveTargetSelect('write', $event)"
+                            />
+                          </OverlayScrollbarsWrapper>
+                        </SidebarContent>
+                      </Sidebar>
+                    </TabsContent>
+                  </Tabs>
+                  <div
+                    class="text-muted-foreground p-4 text-xs"
+                    :class="{
+                      'text-destructive-foreground': !canMoveQueuedFiles,
+                    }"
+                  >
+                    {{ saveSheetStatusMessage }}
                   </div>
                 </OverlayScrollbarsWrapper>
                 <Separator />
                 <SheetFooter>
                   <ButtonGroup>
                     <ButtonGroup>
-                      <Button class="justify-start">
+                      <Button
+                        class="justify-start"
+                        :disabled="!canMoveQueuedFiles"
+                        @click="moveQueuedFilesToSelectedNode"
+                      >
                         {{
-                          t("components.fileDropOverlay.saveSheet.configure")
+                          isMoving
+                            ? t("components.fileDropOverlay.saveSheet.moving")
+                            : t(
+                                "components.fileDropOverlay.saveSheet.configure"
+                              )
                         }}
                       </Button>
                     </ButtonGroup>
                     <ButtonGroup>
-                      <SheetClose as-child>
-                        <Button variant="outline" class="justify-start">
-                          {{ t("actions.cancel") }}
-                        </Button>
-                      </SheetClose>
+                      <Button
+                        variant="outline"
+                        class="justify-start"
+                        :disabled="isMoving"
+                        @click="handleSaveSheetOpenChange(false)"
+                      >
+                        {{ t("actions.cancel") }}
+                      </Button>
                     </ButtonGroup>
                   </ButtonGroup>
                 </SheetFooter>
@@ -840,6 +1239,7 @@ const isFullscreen = useIsFullscreen()
                       <Button
                         variant="outline"
                         size="icon-sm"
+                        :disabled="isMoving"
                         @click="removeQueuedFile(file.id)"
                       >
                         <IconTrash />
@@ -926,6 +1326,7 @@ const isFullscreen = useIsFullscreen()
                       <Button
                         variant="outline"
                         size="icon-sm"
+                        :disabled="isMoving"
                         @click="removeQueuedFile(file.id)"
                       >
                         <IconTrash />
@@ -944,7 +1345,7 @@ const isFullscreen = useIsFullscreen()
       <Empty
         v-else
         class="flex grow border border-dashed"
-        @click="selectFiles()"
+        @click="!isMoving && selectFiles()"
       >
         <EmptyHeader>
           <EmptyMedia variant="icon">
@@ -976,7 +1377,7 @@ const isFullscreen = useIsFullscreen()
                 </TooltipContent>
                 <DropdownMenuContent align="start" side="top" class="w-40">
                   <DropdownMenuItem
-                    :disabled="!hasQueuedFiles"
+                    :disabled="!hasQueuedFiles || isMoving"
                     @click="clearQueuedFiles()"
                   >
                     <IconTrash />
@@ -998,7 +1399,12 @@ const isFullscreen = useIsFullscreen()
             </Tooltip>
           </TooltipProvider>
         </ButtonGroup>
-        <Button variant="secondary" size="sm" @click="closeOverlayOrWindow">
+        <Button
+          variant="secondary"
+          size="sm"
+          :disabled="isMoving"
+          @click="closeOverlayOrWindow"
+        >
           {{ t("components.fileDropOverlay.buttons.close") }}
         </Button>
       </div>

@@ -1405,12 +1405,31 @@
       },
       "saveSheet": {
         "title": "Save files",
-        "description": "Choose a name and location for this list of files.",
+        "description": "Choose a destination node to attach these files.",
         "tabs": {
           "code": "Code",
           "write": "Write"
         },
-        "configure": "Move"
+        "configure": "Move",
+        "moving": "Moving...",
+        "noTeam": "Select a team to choose a destination node.",
+        "noWorkspace": "Open a workspace to choose a destination node.",
+        "readOnly": "You can browse nodes, but only members, admins, and owners can move attachments.",
+        "noSelection": "Select a node to attach these files.",
+        "selectedTarget": "Selected node: {path}",
+        "archivedTarget": "Archived nodes are read-only. Select another node to continue.",
+        "folderNotSupported": "{name} is a folder. Only files can be attached.",
+        "unavailableFile": "{name} is no longer available. Remove it and try again.",
+        "desktopOnly": "{name} can only be attached from the desktop app.",
+        "moveFailed": "Couldn't move files",
+        "success": {
+          "single": "Attachment added",
+          "multiple": "{count} attachments added"
+        },
+        "partialFailure": {
+          "single": "Move failed",
+          "multiple": "{count} files couldn't be moved"
+        }
       }
     },
     "languageSwitcher": {

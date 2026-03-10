@@ -72,9 +72,10 @@ const switchTeam = async (teamId: AcceptableValue) => {
                 <AvatarImage
                   :src="team.original?.photoURL!"
                   :alt="team.label"
+                  class="size-4"
                   referrerpolicy="no-referrer"
                 />
-                <AvatarFallback>
+                <AvatarFallback class="size-4">
                   {{ getInitials(team.label) }}
                 </AvatarFallback>
               </Avatar>

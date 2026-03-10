@@ -1,4 +1,8 @@
-import { DEFAULT_CHILDREN_PAGE_SIZE, useNodes } from "@/composables/useNodes"
+import {
+  DEFAULT_CHILDREN_PAGE_SIZE,
+  useNodes,
+  type ChildrenResult,
+} from "@/composables/useNodes"
 import {
   NODE_NAME_MAX_LENGTH,
   ROOT_PARENT_ID,
@@ -68,6 +72,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   const expanded = reactive(new Set<string>())
   const loadingParents = reactive(new Set<string>())
   const selectedByWorkspace = reactive<Record<string, string | null>>({})
+  const workspaceRetainCounts = reactive<Record<string, number>>({})
   const pendingNodeIds = shallowRef(createPendingSet())
   const optimisticCreatedIds = new Set<string>()
 
@@ -358,80 +363,90 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
     setParentLoading(scope, teamId, workspaceId, parentId, true)
 
-    const unsubscribe = subscribeChildrenService(
+    let isActive = true
+
+    const applyChildrenResult = (result: ChildrenResult) => {
+      if (!isActive) return
+
+      setParentLoading(scope, teamId, workspaceId, parentId, false)
+      const { nodes: bucket } = getWorkspaceBuckets(key)
+      const mergedNodes: WorkspaceNode[] = []
+      let mergedChildIds: string[] = []
+
+      result.nodes.forEach((node) => {
+        const local = bucket[node.id]
+        if (isProtectedNode(node.id) && local) {
+          mergedNodes.push(local)
+          if (local.parentId === parentId) {
+            mergedChildIds.push(local.id)
+          }
+          return
+        }
+        mergedNodes.push(node)
+        mergedChildIds.push(node.id)
+      })
+
+      Object.values(bucket).forEach((local) => {
+        if (!isProtectedNode(local.id)) return
+        if (local.parentId !== parentId) return
+        if (mergedChildIds.includes(local.id)) return
+        mergedNodes.push(local)
+        mergedChildIds.push(local.id)
+      })
+
+      upsertNodes(scope, teamId, workspaceId, mergedNodes)
+
+      if (mergedChildIds.some((id) => isProtectedNode(id))) {
+        mergedChildIds = sortChildIds(
+          scope,
+          teamId,
+          workspaceId,
+          mergedChildIds
+        )
+      }
+      setChildren(scope, teamId, workspaceId, parentId, mergedChildIds)
+
+      if (optimisticCreatedIds.size) {
+        result.nodes.forEach((node) => {
+          if (optimisticCreatedIds.has(node.id)) {
+            optimisticCreatedIds.delete(node.id)
+          }
+        })
+      }
+
+      updatePagination(scope, teamId, workspaceId, parentId, {
+        lastDoc: result.lastDoc,
+        hasMore: result.hasMore,
+      })
+    }
+
+    const handleChildrenError = (error: Error) => {
+      if (!isActive) return
+
+      console.error("[fileTreeStore] Failed to subscribe to children:", error)
+      setParentLoading(scope, teamId, workspaceId, parentId, false)
+      updatePagination(scope, teamId, workspaceId, parentId, {
+        hasMore: false,
+      })
+    }
+
+    const unsubscribeSnapshot = subscribeChildrenService(
       scope,
       teamId,
       workspaceId,
       parentId,
-      (result) => {
-        setParentLoading(scope, teamId, workspaceId, parentId, false)
-        const { nodes: bucket } = getWorkspaceBuckets(key)
-        const mergedNodes: WorkspaceNode[] = []
-        let mergedChildIds: string[] = []
-
-        result.nodes.forEach((node) => {
-          const local = bucket[node.id]
-          if (isProtectedNode(node.id) && local) {
-            mergedNodes.push(local)
-            if (local.parentId === parentId) {
-              mergedChildIds.push(local.id)
-            }
-            return
-          }
-          mergedNodes.push(node)
-          mergedChildIds.push(node.id)
-        })
-
-        Object.values(bucket).forEach((local) => {
-          if (!isProtectedNode(local.id)) return
-          if (local.parentId !== parentId) return
-          if (mergedChildIds.includes(local.id)) return
-          mergedNodes.push(local)
-          mergedChildIds.push(local.id)
-        })
-
-        upsertNodes(scope, teamId, workspaceId, mergedNodes)
-
-        if (mergedChildIds.some((id) => isProtectedNode(id))) {
-          mergedChildIds = sortChildIds(
-            scope,
-            teamId,
-            workspaceId,
-            mergedChildIds
-          )
-        }
-        setChildren(scope, teamId, workspaceId, parentId, mergedChildIds)
-
-        if (optimisticCreatedIds.size) {
-          result.nodes.forEach((node) => {
-            if (optimisticCreatedIds.has(node.id)) {
-              optimisticCreatedIds.delete(node.id)
-            }
-          })
-        }
-
-        updatePagination(scope, teamId, workspaceId, parentId, {
-          lastDoc: result.lastDoc,
-          hasMore: result.hasMore,
-        })
-      },
+      applyChildrenResult,
       {
         includeArchived: INCLUDE_ARCHIVED,
         limit: DEFAULT_CHILDREN_PAGE_SIZE,
-        onError: (error) => {
-          console.error(
-            "[fileTreeStore] Failed to subscribe to children:",
-            error
-          )
-          setParentLoading(scope, teamId, workspaceId, parentId, false)
-          updatePagination(scope, teamId, workspaceId, parentId, {
-            hasMore: false,
-          })
-        },
+        onError: handleChildrenError,
       }
     )
 
-    subs[parentId] = unsubscribe
+    subs[parentId] = () => {
+      isActive = false
+      unsubscribeSnapshot()
+    }
   }
 
   const unsubscribeChildren = (
@@ -530,13 +545,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     }
   }
 
-  const cleanupWorkspace = (
-    scope: WorkspaceNodeScope,
-    teamId: string,
-    workspaceId: string
-  ) => {
-    const key = workspaceKey(scope, teamId, workspaceId)
-
+  const cleanupWorkspaceState = (key: string) => {
     Object.values(subscriptions[key] ?? {}).forEach((unsubscribe) => {
       unsubscribe()
     })
@@ -556,6 +565,32 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         loadingParents.delete(entry)
       }
     })
+  }
+
+  const retainWorkspace = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string
+  ) => {
+    const key = workspaceKey(scope, teamId, workspaceId)
+    workspaceRetainCounts[key] = (workspaceRetainCounts[key] ?? 0) + 1
+  }
+
+  const releaseWorkspace = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string
+  ) => {
+    const key = workspaceKey(scope, teamId, workspaceId)
+    const nextCount = (workspaceRetainCounts[key] ?? 0) - 1
+
+    if (nextCount > 0) {
+      workspaceRetainCounts[key] = nextCount
+      return
+    }
+
+    delete workspaceRetainCounts[key]
+    cleanupWorkspaceState(key)
   }
 
   const createFolderNode = async (
@@ -1123,13 +1158,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     getSelectedNode,
     setSelectedNode,
     ensureNodeLoaded,
+    retainWorkspace,
+    releaseWorkspace,
     ensureRootSubscribed,
     subscribeChildren,
     unsubscribeChildren,
     expandFolder,
     collapseFolder,
     loadMore,
-    cleanupWorkspace,
     createFolderNode,
     createFileNode,
     renameNodeAction,

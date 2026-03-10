@@ -888,7 +888,7 @@ const handleSubmit = async () => {
                       <TooltipProvider>
                         <Tooltip v-if="isCheckingTeamUsername">
                           <TooltipTrigger as-child>
-                            <Spinner class="size-4" />
+                            <Spinner />
                           </TooltipTrigger>
                           <TooltipContent>
                             {{ t("settings.account.username.checking") }}

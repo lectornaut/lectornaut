@@ -30,6 +30,7 @@
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     font-variation-settings: "GRAD" var(--grade-axis);
+    text-box: trim-both cap alphabetic;
 
     @apply h-dvh;
     @apply w-dvw;

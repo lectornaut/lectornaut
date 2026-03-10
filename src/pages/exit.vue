@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import PageHeader from "@/components/layout/PageHeader.vue"
 import { IconLogOut } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 

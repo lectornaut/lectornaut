@@ -26,6 +26,7 @@ const props = defineProps<{
   teamId: string
   workspaceId: string
   nodeId: string
+  selectedNodeId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -35,9 +36,13 @@ const emit = defineEmits<{
   (e: "archive", node: WorkspaceNode): void
   (e: "unarchive", node: WorkspaceNode): void
   (e: "delete", node: WorkspaceNode): void
+  (e: "select", node: WorkspaceNode): void
 }>()
 
 const store = useFileTreeStore()
+const hasControlledSelection = computed(
+  () => props.selectedNodeId !== undefined
+)
 
 const node = computed(() =>
   store.getNode(props.scope, props.teamId, props.workspaceId, props.nodeId)
@@ -88,7 +93,9 @@ const pagination = computed(() =>
 )
 
 const selectedId = computed(() =>
-  store.getSelectedNodeId(props.scope, props.teamId, props.workspaceId)
+  hasControlledSelection.value
+    ? (props.selectedNodeId ?? null)
+    : store.getSelectedNodeId(props.scope, props.teamId, props.workspaceId)
 )
 
 const isDragOver = ref(false)
@@ -119,6 +126,10 @@ const handleToggle = (open: boolean) => {
 
 const handleSelect = () => {
   if (!node.value) return
+  if (hasControlledSelection.value) {
+    emit("select", node.value)
+    return
+  }
   store.setSelectedNode(
     props.scope,
     props.teamId,
@@ -312,12 +323,14 @@ const showEmptyState = computed(
               :team-id="props.teamId"
               :workspace-id="props.workspaceId"
               :node-id="childId"
+              :selected-node-id="props.selectedNodeId"
               @create-folder="emit('create-folder', $event)"
               @create-file="emit('create-file', $event)"
               @rename="emit('rename', $event)"
               @archive="emit('archive', $event)"
               @unarchive="emit('unarchive', $event)"
               @delete="emit('delete', $event)"
+              @select="emit('select', $event)"
             />
             <SidebarMenuItem v-if="showEmptyState">
               <SidebarMenuButton

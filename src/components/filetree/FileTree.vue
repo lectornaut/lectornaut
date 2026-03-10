@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+import {
+  provideSidebarContext,
+  useSidebar,
+} from "@/components/ui/sidebar/utils"
 import { IconChevronRight, IconFilePlus, IconFolderPlus } from "@/data/icons"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
@@ -14,9 +18,40 @@ const props = defineProps<{
   teamId: string
   workspaceId: string
   scope: WorkspaceNodeScope
+  selectedNodeId?: string | null
+}>()
+
+const emit = defineEmits<{
+  (e: "select", node: WorkspaceNode): void
 }>()
 
 const store = useFileTreeStore()
+const hasControlledSelection = computed(
+  () => props.selectedNodeId !== undefined
+)
+const treeSidebarOpen = ref(true)
+const treeSidebarOpenMobile = ref(false)
+const treeSidebarIsMobile = ref(false)
+const existingSidebarContext = useSidebar(null)
+
+// FileTree can render inside sheets and layoutless routes without the app shell.
+if (!existingSidebarContext) {
+  provideSidebarContext({
+    state: computed(() => (treeSidebarOpen.value ? "expanded" : "collapsed")),
+    open: treeSidebarOpen,
+    setOpen: (value: boolean) => {
+      treeSidebarOpen.value = value
+    },
+    isMobile: treeSidebarIsMobile,
+    openMobile: treeSidebarOpenMobile,
+    setOpenMobile: (value: boolean) => {
+      treeSidebarOpenMobile.value = value
+    },
+    toggleSidebar: () => {
+      treeSidebarOpen.value = !treeSidebarOpen.value
+    },
+  })
+}
 
 const rootChildren = computed(() =>
   store.getChildrenIds(
@@ -125,10 +160,7 @@ const handleUnarchive = async (node: WorkspaceNode) => {
   }
 }
 
-const handleCreated = (nodeId: string) => {
-  if (dialogs.create.type === "file") {
-    store.setSelectedNode(props.scope, props.teamId, props.workspaceId, nodeId)
-  }
+const handleCreated = async (nodeId: string) => {
   if (dialogs.create.parentId !== ROOT_PARENT_ID) {
     store.expandFolder(
       props.scope,
@@ -137,6 +169,25 @@ const handleCreated = (nodeId: string) => {
       dialogs.create.parentId
     )
   }
+
+  if (dialogs.create.type !== "file") return
+
+  if (hasControlledSelection.value) {
+    const createdNode = await store.ensureNodeLoaded(
+      props.scope,
+      props.teamId,
+      props.workspaceId,
+      nodeId
+    )
+
+    if (createdNode) {
+      emit("select", createdNode)
+    }
+
+    return
+  }
+
+  store.setSelectedNode(props.scope, props.teamId, props.workspaceId, nodeId)
 }
 
 const handleCreateSubmit = async () => {
@@ -164,7 +215,7 @@ const handleCreateSubmit = async () => {
     showSuccessToast(
       dialogs.create.type === "folder" ? "Folder created" : "File created"
     )
-    handleCreated(nodeId)
+    await handleCreated(nodeId)
     dialogs.create.open = false
   } catch (error) {
     showErrorToast("Failed to create", (error as Error).message)
@@ -298,21 +349,24 @@ const loadMoreRoot = async () => {
 }
 
 watch(
-  () => [props.teamId, props.workspaceId],
-  ([teamId, workspaceId], previous) => {
-    const [prevTeamId, prevWorkspaceId] = previous ?? []
-    if (prevTeamId && prevWorkspaceId) {
-      store.cleanupWorkspace(props.scope, prevTeamId, prevWorkspaceId)
+  () => [props.scope, props.teamId, props.workspaceId] as const,
+  ([scope, teamId, workspaceId], previous) => {
+    const prevScope = previous?.[0]
+    const prevTeamId = previous?.[1]
+    const prevWorkspaceId = previous?.[2]
+    if (prevScope && prevTeamId && prevWorkspaceId) {
+      store.releaseWorkspace(prevScope, prevTeamId, prevWorkspaceId)
     }
-    if (teamId && workspaceId) {
-      store.ensureRootSubscribed(props.scope, teamId, workspaceId)
+    if (scope && teamId && workspaceId) {
+      store.retainWorkspace(scope, teamId, workspaceId)
+      store.ensureRootSubscribed(scope, teamId, workspaceId)
     }
   },
   { immediate: true }
 )
 
 onBeforeUnmount(() => {
-  store.cleanupWorkspace(props.scope, props.teamId, props.workspaceId)
+  store.releaseWorkspace(props.scope, props.teamId, props.workspaceId)
 })
 </script>
 
@@ -376,12 +430,14 @@ onBeforeUnmount(() => {
               :team-id="props.teamId"
               :workspace-id="props.workspaceId"
               :node-id="childId"
+              :selected-node-id="props.selectedNodeId"
               @create-folder="openCreateDialog('folder', $event.id)"
               @create-file="openCreateDialog('file', $event.id)"
               @rename="openRenameDialog"
               @archive="openArchiveDialog"
               @unarchive="handleUnarchive"
               @delete="openDeleteDialog"
+              @select="emit('select', $event)"
             />
           </SidebarMenu>
           <div v-if="rootLoading" class="text-muted-foreground p-2 text-xs">

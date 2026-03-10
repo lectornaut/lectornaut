@@ -79,7 +79,7 @@ const { t } = useI18n()
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start rounded-t-md p-4"
+                            class="flex size-full items-start justify-start rounded-t p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -88,7 +88,7 @@ const { t } = useI18n()
                             />
                           </div>
                           <div
-                            class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                            class="bg-accent/50 flex w-full flex-col rounded-b p-4"
                           >
                             <span>
                               {{
@@ -141,7 +141,7 @@ const { t } = useI18n()
                           >
                             <RouterLink :to="item.url">
                               <div
-                                class="flex size-full items-start justify-start rounded-t-md p-4"
+                                class="flex size-full items-start justify-start rounded-t p-4"
                                 :class="item.style.bg"
                               >
                                 <Component
@@ -150,7 +150,7 @@ const { t } = useI18n()
                                 />
                               </div>
                               <div
-                                class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                                class="bg-accent/50 flex w-full flex-col rounded-b p-4"
                               >
                                 <span>
                                   {{ item.title }}
@@ -186,7 +186,7 @@ const { t } = useI18n()
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start rounded-t-md p-4"
+                            class="flex size-full items-start justify-start rounded-t p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -195,7 +195,7 @@ const { t } = useI18n()
                             />
                           </div>
                           <div
-                            class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                            class="bg-accent/50 flex w-full flex-col rounded-b p-4"
                           >
                             <span>
                               {{ item.title }}
@@ -229,7 +229,7 @@ const { t } = useI18n()
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start rounded-t-md p-4"
+                            class="flex size-full items-start justify-start rounded-t p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -238,7 +238,7 @@ const { t } = useI18n()
                             />
                           </div>
                           <div
-                            class="bg-accent/50 flex w-full flex-col rounded-b-md p-4"
+                            class="bg-accent/50 flex w-full flex-col rounded-b p-4"
                           >
                             <span>
                               {{ item.title }}
@@ -334,12 +334,11 @@ const { t } = useI18n()
                                   <RouterLink :to="item.url">
                                     <ItemMedia>
                                       <div
-                                        class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                        class="flex size-10 shrink-0 items-center justify-center rounded"
                                         :class="item.style.bg"
                                       >
                                         <Component
                                           :is="item.icon"
-                                          class="size-4"
                                           :class="item.style.text"
                                         />
                                       </div>
@@ -401,12 +400,11 @@ const { t } = useI18n()
                                     <RouterLink :to="item.url">
                                       <ItemMedia>
                                         <div
-                                          class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                          class="flex size-10 shrink-0 items-center justify-center rounded"
                                           :class="item.style.bg"
                                         >
                                           <Component
                                             :is="item.icon"
-                                            class="size-4"
                                             :class="item.style.text"
                                           />
                                         </div>
@@ -442,12 +440,11 @@ const { t } = useI18n()
                                   <RouterLink :to="item.url">
                                     <ItemMedia>
                                       <div
-                                        class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                        class="flex size-10 shrink-0 items-center justify-center rounded"
                                         :class="item.style.bg"
                                       >
                                         <Component
                                           :is="item.icon"
-                                          class="size-4"
                                           :class="item.style.text"
                                         />
                                       </div>
@@ -482,12 +479,11 @@ const { t } = useI18n()
                                   <RouterLink :to="item.url">
                                     <ItemMedia>
                                       <div
-                                        class="flex size-10 shrink-0 items-center justify-center rounded-md"
+                                        class="flex size-10 shrink-0 items-center justify-center rounded"
                                         :class="item.style.bg"
                                       >
                                         <Component
                                           :is="item.icon"
-                                          class="size-4"
                                           :class="item.style.text"
                                         />
                                       </div>

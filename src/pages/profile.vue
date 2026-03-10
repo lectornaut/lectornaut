@@ -95,7 +95,7 @@ const {
       </Badge>
     </div>
     <div class="text-muted-foreground flex items-center gap-1">
-      <IconUsers class="size-4" />
+      <IconUsers />
       <span>
         {{ t("pages.profile.teamCount", { count: memberships.length }) }}
       </span>

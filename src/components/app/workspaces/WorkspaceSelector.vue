@@ -84,9 +84,10 @@ const deselectTeam = async () => {
                 <AvatarImage
                   :src="workspace.original?.photoURL!"
                   :alt="workspace.label"
+                  class="size-4"
                   referrerpolicy="no-referrer"
                 />
-                <AvatarFallback>
+                <AvatarFallback class="size-4">
                   {{ getInitials(workspace.label) }}
                 </AvatarFallback>
               </Avatar>
