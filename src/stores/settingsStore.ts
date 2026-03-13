@@ -8,6 +8,8 @@ import type {
 import {
   defaultAccent,
   defaultBase,
+  defaultCustomAccentColor,
+  defaultCustomBaseColor,
   defaultFont,
   defaultLanguage,
   defaultSize,
@@ -24,6 +26,7 @@ import {
 import type { SettingsThemeDoc, ThemeMode } from "@/types/settings"
 import { withCloudSyncOperation } from "@/utils/firebase/firebase-optimistic"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
+import { normalizeHexColor } from "@/utils/theme/customTheme"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc } from "firebase/firestore"
 import { defineStore } from "pinia"
@@ -43,6 +46,14 @@ export const useSettingsStore = defineStore("settings", () => {
   const mode = useStorage<ThemeMode>("theme", defaultTheme)
   const base = useStorage<BaseId>("base", defaultBase)
   const accent = useStorage<AccentId>("accent", defaultAccent)
+  const customBaseColor = useStorage<string>(
+    "customBaseColor",
+    defaultCustomBaseColor
+  )
+  const customAccentColor = useStorage<string>(
+    "customAccentColor",
+    defaultCustomAccentColor
+  )
   const font = useStorage<FontId>("font", defaultFont)
   const size = useStorage<SizeId>("size", defaultSize)
   const language = useStorage<LanguageId>("language", defaultLanguage)
@@ -51,6 +62,8 @@ export const useSettingsStore = defineStore("settings", () => {
     mode,
     base,
     accent,
+    customBaseColor,
+    customAccentColor,
     font,
     size,
     language,
@@ -90,6 +103,26 @@ export const useSettingsStore = defineStore("settings", () => {
       ) {
         accent.value = themeDoc.accent
       }
+      if ("customBaseColor" in themeDoc) {
+        const nextCustomBaseColor = normalizeHexColor(
+          themeDoc.customBaseColor,
+          defaultCustomBaseColor
+        )
+
+        if (nextCustomBaseColor !== customBaseColor.value) {
+          customBaseColor.value = nextCustomBaseColor
+        }
+      }
+      if ("customAccentColor" in themeDoc) {
+        const nextCustomAccentColor = normalizeHexColor(
+          themeDoc.customAccentColor,
+          defaultCustomAccentColor
+        )
+
+        if (nextCustomAccentColor !== customAccentColor.value) {
+          customAccentColor.value = nextCustomAccentColor
+        }
+      }
       if ("font" in themeDoc && themeDoc.font && themeDoc.font !== font.value) {
         font.value = themeDoc.font
       }
@@ -103,6 +136,24 @@ export const useSettingsStore = defineStore("settings", () => {
       ) {
         language.value = themeDoc.language
       }
+    },
+    { immediate: true }
+  )
+
+  watch(
+    customBaseColor,
+    (value) => {
+      const normalized = normalizeHexColor(value, defaultCustomBaseColor)
+      if (normalized !== value) customBaseColor.value = normalized
+    },
+    { immediate: true }
+  )
+
+  watch(
+    customAccentColor,
+    (value) => {
+      const normalized = normalizeHexColor(value, defaultCustomAccentColor)
+      if (normalized !== value) customAccentColor.value = normalized
     },
     { immediate: true }
   )
@@ -160,6 +211,8 @@ export const useSettingsStore = defineStore("settings", () => {
         mode: mode.value,
         base: base.value,
         accent: accent.value,
+        customBaseColor: customBaseColor.value,
+        customAccentColor: customAccentColor.value,
         font: font.value,
         size: size.value,
         language: language.value,
@@ -204,7 +257,16 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   watchDebounced(
-    [mode, base, accent, font, size, language],
+    [
+      mode,
+      base,
+      accent,
+      customBaseColor,
+      customAccentColor,
+      font,
+      size,
+      language,
+    ],
     () => {
       void persistThemeWithSync()
     },

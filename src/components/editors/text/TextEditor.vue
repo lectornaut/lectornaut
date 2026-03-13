@@ -114,7 +114,9 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string): void
 }>()
 
-const EDITOR_COLORS = accents.filter((accent) => accent.id !== "base")
+const EDITOR_COLORS = accents.filter(
+  (accent) => accent.id !== "base" && accent.id !== "custom"
+)
 
 const TEXT_COLORS: ColorOption[] = EDITOR_COLORS.map((accent) => ({
   id: accent.id,

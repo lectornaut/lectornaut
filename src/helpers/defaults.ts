@@ -78,7 +78,6 @@ export type ThemeId = (typeof themes)[number]["id"]
 export const defaultTheme: ThemeId = "auto"
 
 export const accents = [
-  { id: "base", name: "Base", style: "text-foreground" },
   { id: "red", name: "Red", style: "text-red-500" },
   { id: "orange", name: "Orange", style: "text-orange-500" },
   { id: "amber", name: "Amber", style: "text-amber-500" },
@@ -96,6 +95,8 @@ export const accents = [
   { id: "fuchsia", name: "Fuchsia", style: "text-fuchsia-500" },
   { id: "pink", name: "Pink", style: "text-pink-500" },
   { id: "rose", name: "Rose", style: "text-rose-500" },
+  { id: "base", name: "Base", style: "text-foreground" },
+  { id: "custom", name: "Custom", style: "text-current" },
 ] as const
 
 export type AccentId = (typeof accents)[number]["id"]
@@ -111,12 +112,15 @@ export const bases = [
   { id: "mist", name: "Mist", style: "text-mist-500" },
   { id: "olive", name: "Olive", style: "text-olive-500" },
   { id: "accent", name: "Accent", style: "text-primary" },
+  { id: "custom", name: "Custom", style: "text-current" },
 ] as const
 
 export type BaseId = (typeof bases)[number]["id"]
 
 export const defaultBase: BaseId = "neutral"
 export const defaultAccent: AccentId = "base"
+export const defaultCustomBaseColor = "#737373"
+export const defaultCustomAccentColor = "#2563eb"
 
 export const fonts = [
   { id: "sans", name: "Sans", icon: IconFontSans, style: "font-sans" },

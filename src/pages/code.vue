@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { IconCloudAlert, IconCloudCheck, IconFileText } from "@/data/icons"
+import { useActiveTabIndicator } from "@/composables/useActiveTabIndicator"
+import { IconFileText } from "@/data/icons"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
@@ -25,6 +26,7 @@ const fileTreeStore = useFileTreeStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const { currentWorkspace } = storeToRefs(workspaceStore)
 const { currentUser, userProfile } = storeToRefs(authStore)
@@ -68,6 +70,41 @@ const selectedFile = computed(() => {
   return selectedNode.value
 })
 const selectedFileId = computed(() => selectedFile.value?.id ?? null)
+const tabIndicator = computed(() => {
+  if (!selectedFile.value) return null
+
+  if (isSaving.value) {
+    return {
+      label: t("states.syncing"),
+      tone: "info" as const,
+      spin: true,
+    }
+  }
+
+  if (collabError.value) {
+    return {
+      label: t("states.offline"),
+      tone: "danger" as const,
+    }
+  }
+
+  if (isDirty.value) {
+    return {
+      label: t("common.unsavedChanges"),
+      tone: "warning" as const,
+      pulse: true,
+    }
+  }
+
+  if (collabReady.value) {
+    return {
+      label: t("states.synced"),
+      tone: "success" as const,
+    }
+  }
+
+  return null
+})
 
 const editorContent = ref("")
 const isDirty = ref(false)
@@ -280,6 +317,8 @@ onBeforeUnmount(() => {
     console.error("[collab] Failed to destroy session on unmount", error)
   })
 })
+
+useActiveTabIndicator(tabIndicator)
 </script>
 
 <template>

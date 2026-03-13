@@ -1,9 +1,23 @@
 export type IconDisplay = "icon" | "text"
+export type TabIndicatorTone =
+  | "neutral"
+  | "info"
+  | "success"
+  | "warning"
+  | "danger"
 
 export interface LayoutTab {
   id: string
   name: string
   fullPath: string
+  pinned?: boolean
+}
+
+export interface LayoutTabIndicator {
+  label: string
+  tone?: TabIndicatorTone
+  pulse?: boolean
+  spin?: boolean
 }
 
 export interface NavigationUiState {

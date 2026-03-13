@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import TabIcon from "@/components/app/layout/TabIcon.vue"
 import {
   IconCheck,
   IconChevronDown,
@@ -6,8 +7,9 @@ import {
   IconCopy,
   IconGalleryHorizontalEnd,
   IconHistory,
-  IconLayers,
   IconPenLine,
+  IconPin,
+  IconPinOff,
   IconPlus,
   IconSquarePen,
   IconSquareX,
@@ -22,6 +24,7 @@ import { useLayoutStore } from "@/stores/layoutStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
+import type Sortable from "sortablejs"
 import { useRouter } from "vue-router"
 
 const el = ref<HTMLElement>()
@@ -45,7 +48,11 @@ const {
   closeOtherTabs,
   closeAllTabs,
   duplicateTab,
+  getTabIndicator: getStoredTabIndicator,
+  isTabPending,
+  normalizeTabOrder,
   renameTab,
+  setTabPinned,
   setActiveTab,
   updateActiveTab,
   clearRecentlyClosed,
@@ -57,16 +64,78 @@ const renamingName = ref("")
 
 const isInitialRouteSync = ref(true)
 const previousWorkspaceRoutePath = ref<string | null>(null)
+const pinnedTabCount = computed(
+  () => tabs.value.filter((tab) => tab.pinned).length
+)
+
+function resolveDropIndex(evt: Sortable.MoveEvent) {
+  const siblingTabs = Array.from(evt.to.children)
+  const relatedIndex = siblingTabs.indexOf(evt.related)
+
+  if (relatedIndex === -1) {
+    return siblingTabs.length
+  }
+
+  return evt.willInsertAfter ? relatedIndex + 1 : relatedIndex
+}
+
+function canDropWithinUnpinnedTabs(evt: Sortable.MoveEvent) {
+  return resolveDropIndex(evt) >= pinnedTabCount.value
+}
 
 // Enable drag-and-drop reordering
 useSortable(el, tabs, {
   animation: 150,
   draggable: ".tab-item",
   handle: ".hover-trigger",
+  filter: "[data-pinned='true']",
+  preventOnFilter: false,
+  onMove: (evt) => canDropWithinUnpinnedTabs(evt),
+  onEnd: () => {
+    normalizeTabOrder()
+  },
 })
 
 const workspaceStore = useWorkspaceStore()
 const { currentWorkspace } = storeToRefs(workspaceStore)
+const hasClosableTabs = computed(() => tabs.value.some((tab) => !tab.pinned))
+const canCloseActiveTab = computed(() => {
+  const tab = activeTab.value
+  return Boolean(tab && !tab.pinned)
+})
+const canRenameActiveTab = computed(() => {
+  const tab = activeTab.value
+  return Boolean(tab && !isDefaultRoute(tab))
+})
+
+function isPinnedTab(tab?: { pinned?: boolean } | null) {
+  return Boolean(tab?.pinned)
+}
+
+function canCloseTab(tab?: { pinned?: boolean } | null) {
+  return tab ? !tab.pinned : false
+}
+
+function hasClosableOtherTabs(keepId?: string) {
+  return tabs.value.some((tab) => !tab.pinned && tab.id !== keepId)
+}
+
+function resolveTabIndicator(tab: { id: string }) {
+  const storedIndicator = getStoredTabIndicator(tab.id)
+  if (storedIndicator) {
+    return storedIndicator
+  }
+
+  if (isTabPending(tab.id)) {
+    return {
+      label: t("states.syncing"),
+      tone: "info" as const,
+      spin: true,
+    }
+  }
+
+  return null
+}
 
 // Navigation Helper
 function navigateToTab(tab: { fullPath: string }) {
@@ -248,6 +317,8 @@ async function handleAddTab(fullPath = "/new", name?: string) {
 
 async function handleCloseTab(id: string | undefined) {
   if (!id) return
+  const tab = tabs.value.find((item) => item.id === id)
+  if (!canCloseTab(tab)) return
   // If closing active tab, store calculates next one and updates activeTabId
   // Our activeTabId watcher will then trigger the route change.
   // BUT, we might want to manually push if we know the next path to feel faster?
@@ -293,6 +364,14 @@ function saveRename() {
 function cancelRename() {
   renamingTabId.value = null
   renamingName.value = ""
+}
+
+async function handleToggleTabPinned(id: string | undefined) {
+  if (!id) return
+  const tab = tabs.value.find((item) => item.id === id)
+  if (!tab) return
+
+  await setTabPinned(id, !tab.pinned)
 }
 
 // Select tab by ID or direction
@@ -361,7 +440,15 @@ function onTabsCloseOthers(id?: unknown) {
 
 async function onTabsCloseAll() {
   await closeAllTabs()
-  router.push("/start")
+  const nextPath = activeTab.value?.fullPath
+  if (nextPath && nextPath !== route.fullPath) {
+    router.push(nextPath)
+    return
+  }
+
+  if (!activeTabId.value && route.fullPath !== "/start") {
+    router.push("/start")
+  }
 }
 
 function onTabsSelect(idOrIndex?: unknown) {
@@ -432,8 +519,19 @@ emitter.on("Tabs.Rename", onTabsRename)
             <div
               v-for="(tab, index) in tabs"
               :key="tab.id"
-              class="tab-item w-60 min-w-0 shrink"
-              :class="{ 'min-w-40 transition-all': tab.id === activeTabId }"
+              class="tab-item min-w-0"
+              :data-pinned="isPinnedTab(tab)"
+              :class="[
+                renamingTabId === tab.id
+                  ? 'w-60 shrink'
+                  : isPinnedTab(tab)
+                    ? 'w-9 shrink-0'
+                    : 'w-60 shrink',
+                {
+                  'min-w-40 transition-all':
+                    !isPinnedTab(tab) && tab.id === activeTabId,
+                },
+              ]"
             >
               <InputGroup v-if="renamingTabId === tab.id">
                 <InputGroupAddon>
@@ -470,12 +568,15 @@ emitter.on("Tabs.Rename", onTabsRename)
                         :variant="
                           tab.id === activeTabId ? 'secondary' : 'ghost'
                         "
-                        class="group w-[-webkit-fill-available] min-w-0 pr-1.5!"
-                        :class="
+                        class="group w-[-webkit-fill-available] min-w-0"
+                        :class="[
                           tab.id === activeTabId
                             ? 'text-foreground shadow-none'
-                            : 'text-secondary-foreground/50 bg-secondary/50'
-                        "
+                            : 'text-secondary-foreground/50 bg-secondary/50',
+                          isPinnedTab(tab)
+                            ? 'justify-center px-0!'
+                            : 'pr-1.5! pl-2.5!',
+                        ]"
                         as-child
                       >
                         <RouterLink
@@ -487,11 +588,20 @@ emitter.on("Tabs.Rename", onTabsRename)
                               : null
                           "
                         >
-                          <IconLayers />
-                          <span class="mr-auto truncate">
+                          <TabIcon
+                            :full-path="tab.fullPath"
+                            :indicator="resolveTabIndicator(tab)"
+                          />
+                          <span
+                            v-if="!isPinnedTab(tab)"
+                            class="mr-auto truncate"
+                          >
                             {{ tab.name }}
                           </span>
-                          <TooltipProvider>
+                          <span v-else class="sr-only">
+                            {{ tab.name }}
+                          </span>
+                          <TooltipProvider v-if="canCloseTab(tab)">
                             <Tooltip>
                               <TooltipTrigger as-child>
                                 <InputGroupButton
@@ -532,13 +642,16 @@ emitter.on("Tabs.Rename", onTabsRename)
                       </ContextMenuGroup>
                       <ContextMenuSeparator />
                       <ContextMenuGroup>
-                        <ContextMenuItem @click="handleCloseTab(tab.id)">
+                        <ContextMenuItem
+                          :disabled="!canCloseTab(tab)"
+                          @click="handleCloseTab(tab.id)"
+                        >
                           <IconX />
                           {{ t("common.close") }}
                           <ContextMenuShortcut>⌘W</ContextMenuShortcut>
                         </ContextMenuItem>
                         <ContextMenuItem
-                          :disabled="tabs.length === 0"
+                          :disabled="!hasClosableTabs"
                           @click="emitter.emit('Tabs.Close.All')"
                         >
                           <IconCircleX />
@@ -546,12 +659,25 @@ emitter.on("Tabs.Rename", onTabsRename)
                           <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
                         </ContextMenuItem>
                         <ContextMenuItem
-                          :disabled="tabs.length <= 1"
+                          :disabled="!hasClosableOtherTabs(tab.id)"
                           @click="emitter.emit('Tabs.Close.Others', tab.id)"
                         >
                           <IconSquareX />
                           {{ t("tabs.closeOthers") }}
                           <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                      <ContextMenuSeparator />
+                      <ContextMenuGroup>
+                        <ContextMenuItem @click="handleToggleTabPinned(tab.id)">
+                          <Component
+                            :is="isPinnedTab(tab) ? IconPinOff : IconPin"
+                          />
+                          {{
+                            isPinnedTab(tab)
+                              ? t("actions.unpin")
+                              : t("actions.pin")
+                          }}
                         </ContextMenuItem>
                       </ContextMenuGroup>
                       <ContextMenuSeparator />
@@ -582,7 +708,10 @@ emitter.on("Tabs.Rename", onTabsRename)
                 >
                   <div class="flex items-center justify-between px-1.5 py-1">
                     <span class="flex items-center gap-2">
-                      <IconLayers />
+                      <TabIcon
+                        :full-path="tab.fullPath"
+                        :indicator="resolveTabIndicator(tab)"
+                      />
                       {{ tab.name }}
                     </span>
                     <KbdGroup>
@@ -645,7 +774,7 @@ emitter.on("Tabs.Rename", onTabsRename)
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
                       <DropdownMenuItem
-                        :disabled="!activeTabId"
+                        :disabled="!canCloseActiveTab"
                         @click="handleCloseTab(activeTabId)"
                       >
                         <IconX />
@@ -653,7 +782,7 @@ emitter.on("Tabs.Rename", onTabsRename)
                         <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        :disabled="tabs.length === 0"
+                        :disabled="!hasClosableTabs"
                         @click="emitter.emit('Tabs.Close.All')"
                       >
                         <IconCircleX />
@@ -661,7 +790,9 @@ emitter.on("Tabs.Rename", onTabsRename)
                         <DropdownMenuShortcut>⌘⌥W</DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        :disabled="tabs.length <= 1 || !activeTabId"
+                        :disabled="
+                          !activeTabId || !hasClosableOtherTabs(activeTabId)
+                        "
                         @click="emitter.emit('Tabs.Close.Others', activeTabId)"
                       >
                         <IconSquareX />
@@ -672,7 +803,23 @@ emitter.on("Tabs.Rename", onTabsRename)
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
                       <DropdownMenuItem
-                        :disabled="!activeTabId || isDefaultRoute(activeTab!)"
+                        :disabled="!activeTabId"
+                        @click="handleToggleTabPinned(activeTabId)"
+                      >
+                        <Component
+                          :is="isPinnedTab(activeTab) ? IconPinOff : IconPin"
+                        />
+                        {{
+                          isPinnedTab(activeTab)
+                            ? t("actions.unpin")
+                            : t("actions.pin")
+                        }}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        :disabled="!canRenameActiveTab"
                         @click="handleRenameTab(activeTabId)"
                       >
                         <IconSquarePen />
@@ -680,7 +827,7 @@ emitter.on("Tabs.Rename", onTabsRename)
                         <DropdownMenuShortcut>F2</DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        :disabled="!activeTabId || isDefaultRoute(activeTab!)"
+                        :disabled="!canRenameActiveTab"
                         @click="handleDuplicateTab(activeTabId)"
                       >
                         <IconCopy />
@@ -709,12 +856,15 @@ emitter.on("Tabs.Rename", onTabsRename)
                             :key="tab.id"
                             @click="emitter.emit('Tabs.Select', tab.id)"
                           >
-                            <IconLayers />
+                            <TabIcon
+                              :full-path="tab.fullPath"
+                              :indicator="resolveTabIndicator(tab)"
+                            />
                             {{ tab.name }}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            :disabled="tabs.length === 0"
+                            :disabled="!hasClosableTabs"
                             @click="emitter.emit('Tabs.Close.All')"
                           >
                             <IconTrash />
@@ -741,7 +891,7 @@ emitter.on("Tabs.Rename", onTabsRename)
                             :key="tab.id + tab.fullPath"
                             @click="emitter.emit('Tabs.Reopen', tab)"
                           >
-                            <IconLayers />
+                            <TabIcon :full-path="tab.fullPath" />
                             {{ tab.name }}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />

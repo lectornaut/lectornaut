@@ -134,7 +134,7 @@ const authenticateApple = () =>
       <TabsTrigger value="sign-up"> Sign up </TabsTrigger>
       <TabsTrigger value="sign-in"> Sign in </TabsTrigger>
     </TabsList> -->
-    <div class="bg-background grid gap-8 rounded border p-2">
+    <div class="bg-background grid gap-8 rounded-2xl border p-2">
       <div class="flex flex-col gap-2">
         <InputGroup>
           <InputGroupAddon align="block-start">

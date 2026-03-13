@@ -13,6 +13,8 @@ export interface SettingsThemeDoc {
   mode?: ThemeMode
   base?: BaseId
   accent?: AccentId
+  customBaseColor?: string
+  customAccentColor?: string
   font?: FontId
   size?: SizeId
   language?: LanguageId

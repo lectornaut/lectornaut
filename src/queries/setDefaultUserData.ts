@@ -1,6 +1,8 @@
 import {
   defaultAccent,
   defaultBase,
+  defaultCustomAccentColor,
+  defaultCustomBaseColor,
   defaultFont,
   defaultLanguage,
   defaultSize,
@@ -70,6 +72,8 @@ export const setDefaultUserData = async (): Promise<void> => {
         mode: defaultTheme,
         base: defaultBase,
         accent: defaultAccent,
+        customBaseColor: defaultCustomBaseColor,
+        customAccentColor: defaultCustomAccentColor,
         font: defaultFont,
         size: defaultSize,
         language: defaultLanguage,

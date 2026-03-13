@@ -1,7 +1,19 @@
 import { isTauri } from "@/composables/usePlatform"
 import type { AccentId, BaseId, FontId, SizeId } from "@/helpers/defaults"
+import {
+  defaultCustomAccentColor,
+  defaultCustomBaseColor,
+} from "@/helpers/defaults"
 import { useSettingsStore } from "@/stores/settingsStore"
 import type { ThemeMode } from "@/types/settings"
+import {
+  buildCustomAccentTokens,
+  buildCustomBaseTokens,
+  CUSTOM_ACCENT_TOKEN_NAMES,
+  CUSTOM_BASE_TOKEN_NAMES,
+  normalizeHexColor,
+  type ResolvedThemeMode,
+} from "@/utils/theme/customTheme"
 import { setTheme } from "@tauri-apps/api/app"
 import { storeToRefs } from "pinia"
 
@@ -10,120 +22,176 @@ export const { store, system, state } = useColorMode({
   storageKey: "theme",
 })
 
-// Initialize theme sync
 export const initTheme = () => {
   const settingsStore = useSettingsStore()
   const { themeSettings } = storeToRefs(settingsStore)
 
-  // Sync Mode
   watch(
     () => themeSettings.value.mode,
-    (val) => {
-      if (val && val !== store.value) {
-        store.value = val
+    (value) => {
+      if (value && value !== store.value) {
+        store.value = value
       }
     },
     { immediate: true }
   )
 
-  watch(store, (val) => {
-    if (val && val !== themeSettings.value.mode) {
-      themeSettings.value.mode = val as ThemeMode
+  watch(store, (value) => {
+    if (value && value !== themeSettings.value.mode) {
+      themeSettings.value.mode = value as ThemeMode
     }
   })
 
-  // Sync Accent
   watch(
     () => themeSettings.value.accent,
-    (val) => {
-      document.documentElement.setAttribute("data-accent", val)
+    (value) => {
+      document.documentElement.setAttribute("data-accent", value)
     },
     { immediate: true }
   )
 
-  // Sync Base
   watch(
     () => themeSettings.value.base,
-    (val) => {
-      document.documentElement.setAttribute("data-base", val)
+    (value) => {
+      document.documentElement.setAttribute("data-base", value)
     },
     { immediate: true }
   )
 
-  // Sync Font
   watch(
     () => themeSettings.value.font,
-    (val) => {
-      document.documentElement.setAttribute("data-font", val)
+    (value) => {
+      document.documentElement.setAttribute("data-font", value)
     },
     { immediate: true }
   )
 
-  // Sync Size
   watch(
     () => themeSettings.value.size,
-    (val) => {
-      document.documentElement.setAttribute("data-size", val)
+    (value) => {
+      document.documentElement.setAttribute("data-size", value)
+    },
+    { immediate: true }
+  )
+
+  watch(
+    [
+      state,
+      () => themeSettings.value.base,
+      () => themeSettings.value.accent,
+      () => themeSettings.value.customBaseColor,
+      () => themeSettings.value.customAccentColor,
+    ],
+    ([
+      resolvedTheme,
+      selectedBase,
+      selectedAccent,
+      selectedCustomBaseColor,
+      selectedCustomAccentColor,
+    ]) => {
+      const resolvedMode = toResolvedThemeMode(resolvedTheme)
+      const baseSourceColor = getCustomBaseSourceColor(
+        selectedBase,
+        selectedAccent,
+        selectedCustomBaseColor,
+        selectedCustomAccentColor
+      )
+      const accentSourceColor = getCustomAccentSourceColor(
+        selectedBase,
+        selectedAccent,
+        selectedCustomBaseColor,
+        selectedCustomAccentColor
+      )
+
+      applyManagedThemeTokens(
+        CUSTOM_BASE_TOKEN_NAMES,
+        baseSourceColor
+          ? buildCustomBaseTokens(baseSourceColor, resolvedMode)
+          : null
+      )
+      applyManagedThemeTokens(
+        CUSTOM_ACCENT_TOKEN_NAMES,
+        accentSourceColor
+          ? buildCustomAccentTokens(accentSourceColor, resolvedMode)
+          : null
+      )
     },
     { immediate: true }
   )
 }
 
-// Export writables that proxy to the store
-// We need to use a getter/setter approach or just export the store refs directly if possible,
-// but to maintain API compatibility with usages like `v-model="accent"`, using a computed wrapper is best.
-
-// Helper to create a writable computed for store refs that might be accessed before store init?
-// Actually, `initTheme` is called likely in App setup.
-// But `accent`, `font`, `size` are imported in Settings.vue.
-// If we export them as computed properties accessing the store, we need to ensure pinia is active.
-// It is active in components.
-
 export const accent = computed({
   get: () => {
-    const s = useSettingsStore()
-    return s.themeSettings.accent
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.accent
   },
-  set: (val: AccentId) => {
-    const s = useSettingsStore()
-    s.themeSettings.accent = val
+  set: (value: AccentId) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.accent = value
   },
 })
 
 export const base = computed({
   get: () => {
-    const s = useSettingsStore()
-    return s.themeSettings.base
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.base
   },
-  set: (val: BaseId) => {
-    const s = useSettingsStore()
-    s.themeSettings.base = val
+  set: (value: BaseId) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.base = value
   },
 })
 
 export const font = computed({
   get: () => {
-    const s = useSettingsStore()
-    return s.themeSettings.font
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.font
   },
-  set: (val: FontId) => {
-    const s = useSettingsStore()
-    s.themeSettings.font = val
+  set: (value: FontId) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.font = value
   },
 })
 
 export const size = computed({
   get: () => {
-    const s = useSettingsStore()
-    return s.themeSettings.size
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.size
   },
-  set: (val: SizeId) => {
-    const s = useSettingsStore()
-    s.themeSettings.size = val
+  set: (value: SizeId) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.size = value
   },
 })
 
-// Sync Tauri app window theme with internal theme state
+export const customBaseColor = computed({
+  get: () => {
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.customBaseColor
+  },
+  set: (value: string) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.customBaseColor = normalizeHexColor(
+      value,
+      defaultCustomBaseColor
+    )
+  },
+})
+
+export const customAccentColor = computed({
+  get: () => {
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.customAccentColor
+  },
+  set: (value: string) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.customAccentColor = normalizeHexColor(
+      value,
+      defaultCustomAccentColor
+    )
+  },
+})
+
 if (isTauri.value) {
   watch(store, async (value) => {
     switch (value) {
@@ -141,4 +209,64 @@ if (isTauri.value) {
         break
     }
   })
+}
+
+function applyManagedThemeTokens(
+  tokenNames: readonly string[],
+  tokens: Record<string, string> | null
+) {
+  const root = document.documentElement
+
+  for (const tokenName of tokenNames) {
+    if (tokens) {
+      root.style.setProperty(tokenName, tokens[tokenName] ?? "")
+      continue
+    }
+
+    root.style.removeProperty(tokenName)
+  }
+}
+
+function toResolvedThemeMode(value: string): ResolvedThemeMode {
+  return value === "dark" ? "dark" : "light"
+}
+
+function getCustomBaseSourceColor(
+  selectedBase: BaseId,
+  selectedAccent: AccentId,
+  selectedCustomBaseColor: string,
+  selectedCustomAccentColor: string
+): string | null {
+  if (selectedBase === "custom") {
+    return normalizeHexColor(selectedCustomBaseColor, defaultCustomBaseColor)
+  }
+
+  if (selectedBase === "accent" && selectedAccent === "custom") {
+    return normalizeHexColor(
+      selectedCustomAccentColor,
+      defaultCustomAccentColor
+    )
+  }
+
+  return null
+}
+
+function getCustomAccentSourceColor(
+  selectedBase: BaseId,
+  selectedAccent: AccentId,
+  selectedCustomBaseColor: string,
+  selectedCustomAccentColor: string
+): string | null {
+  if (selectedAccent === "custom") {
+    return normalizeHexColor(
+      selectedCustomAccentColor,
+      defaultCustomAccentColor
+    )
+  }
+
+  if (selectedAccent === "base" && selectedBase === "custom") {
+    return normalizeHexColor(selectedCustomBaseColor, defaultCustomBaseColor)
+  }
+
+  return null
 }

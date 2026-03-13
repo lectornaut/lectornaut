@@ -1,12 +1,41 @@
 <script lang="ts" setup>
 import { IconCircleDot } from "@/data/icons"
 import { accents, bases, languages, themes } from "@/helpers/defaults"
-import { accent, base, store } from "@/modules/theme"
+import {
+  accent,
+  base,
+  customAccentColor,
+  customBaseColor,
+  store,
+} from "@/modules/theme"
 
 const { locale, t } = useI18n()
 
 const isAccentBaseSelected = computed(() => accent.value === "base")
 const isBaseAccentSelected = computed(() => base.value === "accent")
+
+const groupedBaseOptions = bases.filter(
+  (color) => color.id === "accent" || color.id === "custom"
+)
+const baseOptions = bases.filter(
+  (color) => color.id !== "accent" && color.id !== "custom"
+)
+
+const groupedAccentOptions = accents.filter(
+  (color) => color.id === "base" || color.id === "custom"
+)
+const accentOptions = accents.filter(
+  (color) => color.id !== "base" && color.id !== "custom"
+)
+
+const getOptionClass = (optionId: string, fallbackClass: string) =>
+  optionId === "custom" ? "" : fallbackClass
+
+const getBaseOptionStyle = (optionId: string) =>
+  optionId === "custom" ? { color: customBaseColor.value } : undefined
+
+const getAccentOptionStyle = (optionId: string) =>
+  optionId === "custom" ? { color: customAccentColor.value } : undefined
 </script>
 
 <template>
@@ -48,22 +77,52 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               Select the base color for the application.
             </FieldDescription>
           </FieldContent>
-          <Select id="onboarding-base" v-model="base">
-            <SelectTrigger>
-              <SelectValue placeholder="Select a base color" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem
-                v-for="color in bases"
-                :key="color.id"
-                :value="color.id"
-                :disabled="isAccentBaseSelected && color.id === 'accent'"
-              >
-                <IconCircleDot :class="color.style" />
-                {{ color.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <div class="flex items-center gap-2">
+            <input
+              v-if="base === 'custom'"
+              id="onboarding-custom-base-color"
+              v-model="customBaseColor"
+              type="color"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2 shadow-xs"
+            />
+            <Select id="onboarding-base" v-model="base">
+              <SelectTrigger>
+                <SelectValue placeholder="Select a base color" />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectGroup>
+                  <SelectItem
+                    v-for="color in baseOptions"
+                    :key="color.id"
+                    :value="color.id"
+                  >
+                    <IconCircleDot
+                      :class="getOptionClass(color.id, color.style)"
+                      :style="getBaseOptionStyle(color.id)"
+                    />
+                    {{ color.name }}
+                  </SelectItem>
+                </SelectGroup>
+                <SelectSeparator
+                  v-if="groupedBaseOptions.length > 0 && baseOptions.length > 0"
+                />
+                <SelectGroup v-if="groupedBaseOptions.length > 0">
+                  <SelectItem
+                    v-for="color in groupedBaseOptions"
+                    :key="color.id"
+                    :value="color.id"
+                    :disabled="color.id === 'accent' && isAccentBaseSelected"
+                  >
+                    <IconCircleDot
+                      :class="getOptionClass(color.id, color.style)"
+                      :style="getBaseOptionStyle(color.id)"
+                    />
+                    {{ color.name }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </Field>
 
         <Field orientation="horizontal">
@@ -75,24 +134,56 @@ const isBaseAccentSelected = computed(() => base.value === "accent")
               {{ t("settings.preferences.accent.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="onboarding-accent" v-model="accent">
-            <SelectTrigger>
-              <SelectValue
-                :placeholder="t('settings.preferences.accent.placeholder')"
-              />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem
-                v-for="color in accents"
-                :key="color.id"
-                :value="color.id"
-                :disabled="isBaseAccentSelected && color.id === 'base'"
-              >
-                <IconCircleDot :class="color.style" />
-                {{ color.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <div class="flex items-center gap-2">
+            <input
+              v-if="accent === 'custom'"
+              id="onboarding-custom-accent-color"
+              v-model="customAccentColor"
+              type="color"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2 shadow-xs"
+            />
+            <Select id="onboarding-accent" v-model="accent">
+              <SelectTrigger>
+                <SelectValue
+                  :placeholder="t('settings.preferences.accent.placeholder')"
+                />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectGroup v-if="groupedAccentOptions.length > 0">
+                  <SelectItem
+                    v-for="color in groupedAccentOptions"
+                    :key="color.id"
+                    :value="color.id"
+                    :disabled="color.id === 'base' && isBaseAccentSelected"
+                  >
+                    <IconCircleDot
+                      :class="getOptionClass(color.id, color.style)"
+                      :style="getAccentOptionStyle(color.id)"
+                    />
+                    {{ color.name }}
+                  </SelectItem>
+                </SelectGroup>
+                <SelectSeparator
+                  v-if="
+                    groupedAccentOptions.length > 0 && accentOptions.length > 0
+                  "
+                />
+                <SelectGroup>
+                  <SelectItem
+                    v-for="color in accentOptions"
+                    :key="color.id"
+                    :value="color.id"
+                  >
+                    <IconCircleDot
+                      :class="getOptionClass(color.id, color.style)"
+                      :style="getAccentOptionStyle(color.id)"
+                    />
+                    {{ color.name }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </Field>
 
         <Field orientation="horizontal">

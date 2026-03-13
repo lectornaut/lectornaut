@@ -37,8 +37,8 @@
     @apply bg-linear-to-b;
     @apply from-secondary/95;
     @apply to-secondary/90;
-    @apply text-sm;
     @apply text-foreground;
+    @apply text-base;
     @apply font-flex;
     @apply select-none;
     @apply selection:bg-primary/25;

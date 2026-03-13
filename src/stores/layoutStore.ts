@@ -16,6 +16,7 @@ import type {
   IconDisplay,
   LayoutNavigationDoc,
   LayoutTab,
+  LayoutTabIndicator,
   LayoutTabsDoc,
   NavigationUiState,
 } from "@/types/layout"
@@ -47,6 +48,30 @@ const toLayoutTabsDoc = (value: unknown): LayoutTabsDoc | null =>
 
 const toLayoutNavigationDoc = (value: unknown): LayoutNavigationDoc | null =>
   isRecord(value) ? (value as LayoutNavigationDoc) : null
+
+const normalizeTab = (tab: Tab): Tab => ({
+  ...tab,
+  pinned: Boolean(tab.pinned),
+})
+
+const normalizeTabs = (value: Tab[]): Tab[] => {
+  const pinnedTabs: Tab[] = []
+  const regularTabs: Tab[] = []
+
+  for (const tab of value) {
+    const normalizedTab = normalizeTab(tab)
+    if (normalizedTab.pinned) {
+      pinnedTabs.push(normalizedTab)
+      continue
+    }
+
+    regularTabs.push(normalizedTab)
+  }
+
+  return [...pinnedTabs, ...regularTabs]
+}
+
+const normalizeTabHistory = (value: Tab[]): Tab[] => value.map(normalizeTab)
 
 export const useLayoutStore = defineStore("layout", () => {
   const db = useFirestore()
@@ -85,6 +110,7 @@ export const useLayoutStore = defineStore("layout", () => {
   const tabs = ref<Tab[]>([])
   const activeTabId = ref("")
   const recentlyClosed = ref<Tab[]>([])
+  const tabIndicators = ref<Record<string, LayoutTabIndicator>>({})
   const activeNavItems = ref<NavItem[]>([])
   const isHydrated = ref(false)
 
@@ -203,13 +229,15 @@ export const useLayoutStore = defineStore("layout", () => {
         tabs.value = []
         activeTabId.value = ""
         recentlyClosed.value = []
+        tabIndicators.value = {}
         return
       }
 
       const tabsDoc = toLayoutTabsDoc(doc)
-      tabs.value = tabsDoc?.tabs ?? []
+      tabs.value = normalizeTabs(tabsDoc?.tabs ?? [])
       activeTabId.value = tabsDoc?.active ?? ""
-      recentlyClosed.value = tabsDoc?.recentlyClosed ?? []
+      recentlyClosed.value = normalizeTabHistory(tabsDoc?.recentlyClosed ?? [])
+      pruneTabIndicators(tabs.value)
     },
     { immediate: true }
   )
@@ -229,6 +257,7 @@ export const useLayoutStore = defineStore("layout", () => {
         tabs.value = []
         activeTabId.value = ""
         recentlyClosed.value = []
+        tabIndicators.value = {}
       }
     }
   )
@@ -534,21 +563,70 @@ export const useLayoutStore = defineStore("layout", () => {
   // Actions: Tabs (with Optimistic Updates)
   // ============================================================================
 
-  function createTab(fullPath: string, name?: string): Tab {
+  function createTab(
+    fullPath: string,
+    name?: string,
+    options?: { pinned?: boolean }
+  ): Tab {
     if (name) {
-      return { id: generateId(), name, fullPath }
+      return {
+        id: generateId(),
+        name,
+        fullPath,
+        pinned: Boolean(options?.pinned),
+      }
     }
     // Note: Router resolution usually happens in component,
     // but we can pass the resolved name or handle it here if we had access to router.
     // For now, we'll expect the component to pass a name or we use a default.
-    return { id: generateId(), name: "New tab", fullPath }
+    return {
+      id: generateId(),
+      name: "New tab",
+      fullPath,
+      pinned: Boolean(options?.pinned),
+    }
+  }
+
+  function normalizeTabOrder() {
+    tabs.value = normalizeTabs(tabs.value)
+  }
+
+  function pruneTabIndicators(nextTabs = tabs.value) {
+    const validIds = new Set(nextTabs.map((tab) => tab.id))
+    tabIndicators.value = Object.fromEntries(
+      Object.entries(tabIndicators.value).filter(([id]) => validIds.has(id))
+    )
+  }
+
+  function setTabIndicator(id: string, indicator: LayoutTabIndicator) {
+    if (!tabs.value.some((tab) => tab.id === id)) return
+    tabIndicators.value = {
+      ...tabIndicators.value,
+      [id]: indicator,
+    }
+  }
+
+  function clearTabIndicator(id: string) {
+    if (!tabIndicators.value[id]) return
+
+    const remainingIndicators = { ...tabIndicators.value }
+    delete remainingIndicators[id]
+    tabIndicators.value = remainingIndicators
+  }
+
+  function getTabIndicator(id: string) {
+    return tabIndicators.value[id] ?? null
   }
 
   /**
    * Add a new tab with optimistic update
    */
-  async function addTab(fullPath = "/new", name = "New tab"): Promise<Tab> {
-    const newTab = createTab(fullPath, name)
+  async function addTab(
+    fullPath = "/new",
+    name = "New tab",
+    options?: { pinned?: boolean }
+  ): Promise<Tab> {
+    const newTab = createTab(fullPath, name, options)
 
     // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
@@ -559,7 +637,7 @@ export const useLayoutStore = defineStore("layout", () => {
       newTab.id,
       // Apply optimistic update
       () => {
-        tabs.value = [...tabs.value, newTab]
+        tabs.value = normalizeTabs([...tabs.value, newTab])
         activeTabId.value = newTab.id
       },
       // Rollback on error
@@ -581,12 +659,18 @@ export const useLayoutStore = defineStore("layout", () => {
 
   function addToHistory(tab: Tab) {
     const head = recentlyClosed.value[0]
-    if (head?.fullPath === tab.fullPath && head?.name === tab.name) return
+    if (
+      head?.fullPath === tab.fullPath &&
+      head?.name === tab.name &&
+      head?.pinned === Boolean(tab.pinned)
+    )
+      return
     recentlyClosed.value = [
       {
         id: generateId(),
         name: tab.name,
         fullPath: tab.fullPath,
+        pinned: Boolean(tab.pinned),
       },
       ...recentlyClosed.value,
     ].slice(0, 20)
@@ -601,11 +685,13 @@ export const useLayoutStore = defineStore("layout", () => {
 
     const closing = tabs.value[idx]
     if (!closing) return null
+    if (closing.pinned) return null
 
     // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
+    const previousTabIndicators = cloneState(tabIndicators.value)
 
     let nextPathResult: string | null = null
 
@@ -634,14 +720,16 @@ export const useLayoutStore = defineStore("layout", () => {
           }
         }
 
-        tabs.value = newTabs
+        tabs.value = normalizeTabs(newTabs)
         activeTabId.value = nextId
+        pruneTabIndicators(newTabs)
       },
       // Rollback on error
       () => {
         tabs.value = previousTabs
         activeTabId.value = previousActiveTabId
         recentlyClosed.value = previousRecentlyClosed
+        tabIndicators.value = previousTabIndicators
       },
       // Persistence
       async () => {
@@ -666,6 +754,7 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
+    const previousTabIndicators = cloneState(tabIndicators.value)
 
     // Use loop to execute updates for "other" tabs since we don't have a single ID
     // But since we persist the whole tabs collection, we can just use keepId as the pending key
@@ -677,7 +766,11 @@ export const useLayoutStore = defineStore("layout", () => {
     // withOptimisticUpdate only marks one ID.
     // So we will manually mark others, and let withOptimisticUpdate handle the main one.
 
-    const tabsToClose = tabs.value.filter((t) => t.id !== keepId)
+    const tabsToClose = tabs.value.filter((t) => !t.pinned && t.id !== keepId)
+    if (tabsToClose.length === 0) {
+      activeTabId.value = keep.id
+      return
+    }
     tabsToClose.forEach((t) => addPending(pendingTabIds, t.id))
 
     try {
@@ -687,14 +780,19 @@ export const useLayoutStore = defineStore("layout", () => {
         // Apply optimistic update
         () => {
           tabsToClose.forEach(addToHistory)
-          tabs.value = [keep]
+          const remainingTabs = normalizeTabs(
+            tabs.value.filter((t) => t.pinned || t.id === keepId)
+          )
+          tabs.value = remainingTabs
           activeTabId.value = keep.id
+          pruneTabIndicators(remainingTabs)
         },
         // Rollback on error
         () => {
           tabs.value = previousTabs
           activeTabId.value = previousActiveTabId
           recentlyClosed.value = previousRecentlyClosed
+          tabIndicators.value = previousTabIndicators
         },
         // Persistence
         async () => {
@@ -713,14 +811,15 @@ export const useLayoutStore = defineStore("layout", () => {
    * Close all tabs with optimistic update
    */
   async function closeAllTabs(): Promise<void> {
-    if (tabs.value.length === 0) return
+    const tabsToClose = tabs.value.filter((tab) => !tab.pinned)
+    if (tabsToClose.length === 0) return
 
     // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
+    const previousTabIndicators = cloneState(tabIndicators.value)
 
-    const tabsToClose = [...tabs.value]
     // Mark all as pending manually except one to carry the operation?
     // Or we use a special ID like 'all-tabs' but that might not block individual tab clicks if logic checks tab.id
     // It's safer to mark all.
@@ -730,8 +829,15 @@ export const useLayoutStore = defineStore("layout", () => {
       await withCloudSyncOperation(
         async () => {
           tabsToClose.forEach(addToHistory)
-          tabs.value = []
-          activeTabId.value = ""
+          const remainingTabs = normalizeTabs(
+            tabs.value.filter((tab) => tab.pinned)
+          )
+          const nextActiveTab = remainingTabs.find(
+            (tab) => tab.id === activeTabId.value
+          )
+          tabs.value = remainingTabs
+          activeTabId.value = nextActiveTab?.id ?? remainingTabs[0]?.id ?? ""
+          pruneTabIndicators(remainingTabs)
 
           const success = await persistTabs()
           if (!success) throw new Error("Failed to persist closeAllTabs")
@@ -745,6 +851,7 @@ export const useLayoutStore = defineStore("layout", () => {
       tabs.value = previousTabs
       activeTabId.value = previousActiveTabId
       recentlyClosed.value = previousRecentlyClosed
+      tabIndicators.value = previousTabIndicators
       console.error("[layoutStore] closeAllTabs failed:", error)
       throw error
     } finally {
@@ -777,7 +884,8 @@ export const useLayoutStore = defineStore("layout", () => {
 
     const duplicate = createTab(
       tab.fullPath,
-      tab.name.endsWith(" (Copy)") ? tab.name : `${tab.name} (Copy)`
+      tab.name.endsWith(" (Copy)") ? tab.name : `${tab.name} (Copy)`,
+      { pinned: false }
     )
 
     // Clone previous state for rollback
@@ -789,7 +897,7 @@ export const useLayoutStore = defineStore("layout", () => {
       duplicate.id,
       // Apply optimistic update
       () => {
-        tabs.value = [...tabs.value, duplicate]
+        tabs.value = normalizeTabs([...tabs.value, duplicate])
         activeTabId.value = duplicate.id
       },
       // Rollback on error
@@ -837,6 +945,33 @@ export const useLayoutStore = defineStore("layout", () => {
         const success = await persistTabs()
         if (!success) {
           throw new Error("Failed to persist renameTab")
+        }
+      }
+    )
+  }
+
+  async function setTabPinned(id: string, pinned: boolean): Promise<void> {
+    const tab = tabs.value.find((t) => t.id === id)
+    if (!tab) return
+    if (tab.pinned === pinned) return
+
+    const previousTabs = cloneState(tabs.value)
+
+    await withOptimisticUpdate(
+      pendingTabIds,
+      id,
+      () => {
+        tabs.value = normalizeTabs(
+          tabs.value.map((t) => (t.id === id ? { ...t, pinned } : t))
+        )
+      },
+      () => {
+        tabs.value = previousTabs
+      },
+      async () => {
+        const success = await persistTabs()
+        if (!success) {
+          throw new Error("Failed to persist setTabPinned")
         }
       }
     )
@@ -956,6 +1091,7 @@ export const useLayoutStore = defineStore("layout", () => {
     activeTabId,
     activeTab,
     recentlyClosed,
+    tabIndicators,
     activeNavItems,
     headerIconDisplay,
     footerIconDisplay,
@@ -979,6 +1115,10 @@ export const useLayoutStore = defineStore("layout", () => {
     closeAllTabs,
     duplicateTab,
     renameTab,
+    setTabPinned,
+    setTabIndicator,
+    clearTabIndicator,
+    getTabIndicator,
     setActiveTab,
     updateActiveTab,
     toggleNavItem,
@@ -987,5 +1127,6 @@ export const useLayoutStore = defineStore("layout", () => {
     addToHistory,
     clearRecentlyClosed,
     reopenLastClosed,
+    normalizeTabOrder,
   }
 })
