@@ -61,6 +61,8 @@ const {
 
 const renamingTabId = ref<string | null>(null)
 const renamingName = ref("")
+const copiedTabId = ref<string | null>(null)
+const { copy, copied } = useClipboard({ legacy: true })
 
 const isInitialRouteSync = ref(true)
 const previousWorkspaceRoutePath = ref<string | null>(null)
@@ -120,6 +122,22 @@ function isPinnedTab(tab?: { pinned?: boolean } | null) {
 
 function canCloseTab(tab?: { pinned?: boolean } | null) {
   return tab ? !tab.pinned : false
+}
+
+function resolveTabUrl(fullPath: string) {
+  if (typeof window === "undefined") return fullPath
+
+  return new URL(fullPath, window.location.origin).href
+}
+
+async function handleCopyTabUrl(tab: { id: string; fullPath: string }) {
+  copiedTabId.value = tab.id
+
+  try {
+    await copy(resolveTabUrl(tab.fullPath))
+  } catch {
+    copiedTabId.value = null
+  }
 }
 
 function hasClosableOtherTabs(keepId?: string) {
@@ -485,6 +503,12 @@ function onTabsRename(id?: unknown) {
   )
 }
 
+watch(copied, (isCopied) => {
+  if (!isCopied) {
+    copiedTabId.value = null
+  }
+})
+
 emitter.on("Tabs.Add", onTabsAdd)
 emitter.on("Tabs.Close", onTabsClose)
 emitter.on("Tabs.Close.Others", onTabsCloseOthers)
@@ -581,7 +605,7 @@ emitter.on("Tabs.Rename", onTabsRename)
                             : 'text-secondary-foreground/50 bg-secondary/50',
                           isPinnedTab(tab)
                             ? 'justify-center px-0!'
-                            : 'pr-1.5! pl-2.5!',
+                            : 'pr-1.5! pl-2.75!',
                         ]"
                         as-child
                       >
@@ -712,13 +736,30 @@ emitter.on("Tabs.Rename", onTabsRename)
                   :side-offset="12"
                   class="flex w-60 flex-col gap-1.5 p-1.5"
                 >
-                  <div class="flex items-center justify-between px-1.5 py-1">
-                    <span class="flex items-center gap-2">
-                      <TabIcon
-                        :full-path="tab.fullPath"
-                        :indicator="resolveTabIndicator(tab)"
-                      />
-                      {{ tab.name }}
+                  <div class="flex items-center gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <InputGroupButton
+                            variant="ghost"
+                            size="icon-xs"
+                            @click="handleCopyTabUrl(tab)"
+                          >
+                            <IconCopy
+                              v-if="!(copied && copiedTabId === tab.id)"
+                            />
+                            <IconCheck v-else />
+                          </InputGroupButton>
+                        </TooltipTrigger>
+                        <TooltipContent>{{
+                          t("actions.copyURL")
+                        }}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <span
+                      class="text-muted-foreground mr-auto min-w-0 justify-center truncate font-mono text-sm font-medium"
+                    >
+                      {{ tab.fullPath }}
                     </span>
                     <KbdGroup>
                       <Kbd>{{ getPlatformSpecialKey() }}</Kbd>

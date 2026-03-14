@@ -31,10 +31,10 @@ const manual = `
 <strong>Lectornaut CLI</strong> is a command line interface (CLI) to interact with Lectornaut.
 A lightweight, open-source playload transformer and manager built with web technologies.
 
- Website: <a href="https://lectornaut.com" target="_blank" rel="noopener" class="text-primary underline">https://lectornaut.com</a>
- Documentation: <a href="https://lectornaut.com/docs" target="_blank" rel="noopener" class="text-primary underline">https://lectornaut.com/docs</a>
+Website: <a href="https://lectornaut.com" target="_blank" rel="noopener" class="text-primary underline">lectornaut.com</a>
+Documentation: <a href="https://lectornaut.com/docs" target="_blank" rel="noopener" class="text-primary underline">lectornaut.com/docs</a>
 
-<ul class="list-[square] list-inside marker:text-muted-foreground"><li><span class="text-primary">help</span> - show this help menu</li><li><span class="text-primary">js</span> - eval JavaScript code</li><li><span class="text-primary">clear</span> - clear the terminal</li></ul>`
+<ul class="list-[square] list-inside marker:text-muted-foreground"><li><span class="text-destructive">help</span> - <span class="text-muted-foreground">show this help menu</span></li><li><span class="text-destructive">js</span> - <span class="text-muted-foreground">eval JavaScript code</span></li><li><span class="text-destructive">clear</span> - <span class="text-muted-foreground">clear the terminal</span></li></ul>`
 
 const execute = (term: XTerminal, command = "") => {
   if (!command) {

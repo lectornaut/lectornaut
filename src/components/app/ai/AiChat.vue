@@ -53,7 +53,7 @@ const messages = [
             />
             <div
               :class="[
-                'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2',
+                'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2 text-sm',
                 message.role === 'user'
                   ? 'bg-primary text-primary-foreground ml-auto rounded-br-xs'
                   : 'bg-muted rounded-bl-xs',

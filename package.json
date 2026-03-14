@@ -155,7 +155,7 @@
     "xterminal": "^2.2.1",
     "y-codemirror.next": "^0.3.5",
     "y-protocols": "^1.0.7",
-    "yjs": "^13.6.29",
+    "yjs": "^13.6.30",
     "zod": "4.3.6"
   },
   "devDependencies": {
@@ -182,7 +182,7 @@
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.3.3",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",

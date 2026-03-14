@@ -532,7 +532,7 @@ const expandedCard = ref<number | null>(null)
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                       <IconLink class="text-muted-foreground" />
-                      <span>{{ t("actions.copyLink") }}</span>
+                      <span>{{ t("actions.copyURL") }}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <IconArrowUpRight class="text-muted-foreground" />
@@ -778,7 +778,7 @@ const expandedCard = ref<number | null>(null)
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <IconLink />
-                          <span>{{ t("actions.copyLink") }}</span>
+                          <span>{{ t("actions.copyURL") }}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <IconArrowUpRight />

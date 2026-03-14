@@ -25,7 +25,15 @@ const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
 const { billing, catalog, isCatalogLoading, status, refreshBilling } =
   useBillingAccess({ loadCatalog: true })
 
+type BillingActionTrigger =
+  | "payment-method"
+  | "billing-history"
+  | "subscription-action"
+  | "cancel-dialog"
+
 const billingAction = ref<"portal" | "cancel" | "restore" | null>(null)
+const activeBillingActionTrigger = ref<BillingActionTrigger | null>(null)
+const isCancelSubscriptionDialogOpen = ref(false)
 
 const hasActiveSubscription = computed(() => {
   return hasActiveLikeBillingStatus(status.value)
@@ -219,11 +227,24 @@ const subscriptionActionDescription = computed(() => {
   return "No active subscription to cancel."
 })
 
+const cancelSubscriptionConfirmationDescription = computed(() => {
+  const teamName = currentTeam.value?.name?.trim()
+  const subject = teamName ? `${teamName}'s subscription` : "This subscription"
+
+  if (currentPeriodEndLabel.value !== "N/A") {
+    return `${subject} will stay active until ${currentPeriodEndLabel.value} and then cancel automatically.`
+  }
+
+  return `${subject} will cancel automatically at the end of the current billing period.`
+})
+
 const openPlansTab = () => {
   emitter.emit("Dialog.Settings.Open", "plans")
 }
 
-const openBillingPortal = async (): Promise<void> => {
+const openBillingPortal = async (
+  trigger: Extract<BillingActionTrigger, "payment-method" | "billing-history">
+): Promise<void> => {
   if (!currentTeam.value?.id) {
     toast.error("Select a team before opening billing.")
     return
@@ -240,6 +261,7 @@ const openBillingPortal = async (): Promise<void> => {
   }
 
   billingAction.value = "portal"
+  activeBillingActionTrigger.value = trigger
   try {
     const pendingTab = createPendingExternalTab()
     try {
@@ -257,21 +279,25 @@ const openBillingPortal = async (): Promise<void> => {
     })
   } finally {
     billingAction.value = null
+    activeBillingActionTrigger.value = null
   }
 }
 
-const cancelTeamSubscription = async (): Promise<void> => {
+const cancelTeamSubscription = async (
+  trigger: Extract<BillingActionTrigger, "cancel-dialog">
+): Promise<boolean> => {
   if (!currentTeam.value?.id) {
     toast.error("Select a team before cancelling.")
-    return
+    return false
   }
 
   if (!canManageBilling.value) {
     toast.error("You do not have permission to manage billing for this team.")
-    return
+    return false
   }
 
   billingAction.value = "cancel"
+  activeBillingActionTrigger.value = trigger
   try {
     await cancelSubscriptionFn({
       teamId: currentTeam.value.id,
@@ -279,12 +305,15 @@ const cancelTeamSubscription = async (): Promise<void> => {
     })
     await refreshBilling()
     toast.success("Subscription will cancel at period end.")
+    return true
   } catch (error) {
     toast.error("Unable to cancel subscription.", {
       description: error instanceof Error ? error.message : String(error),
     })
+    return false
   } finally {
     billingAction.value = null
+    activeBillingActionTrigger.value = null
   }
 }
 
@@ -301,6 +330,7 @@ const restoreTeamSubscription = async (): Promise<void> => {
 
   if (isCancellationScheduled.value) {
     billingAction.value = "restore"
+    activeBillingActionTrigger.value = "subscription-action"
     try {
       await restoreSubscriptionFn({
         teamId: currentTeam.value.id,
@@ -313,11 +343,19 @@ const restoreTeamSubscription = async (): Promise<void> => {
       })
     } finally {
       billingAction.value = null
+      activeBillingActionTrigger.value = null
     }
     return
   }
 
   openPlansTab()
+}
+
+const confirmCancelSubscription = async (): Promise<void> => {
+  const didCancel = await cancelTeamSubscription("cancel-dialog")
+  if (didCancel) {
+    isCancelSubscriptionDialogOpen.value = false
+  }
 }
 
 const handleSubscriptionAction = async (): Promise<void> => {
@@ -326,7 +364,11 @@ const handleSubscriptionAction = async (): Promise<void> => {
     return
   }
 
-  await cancelTeamSubscription()
+  if (!currentTeam.value?.id || !canCancelSubscription.value) {
+    return
+  }
+
+  isCancelSubscriptionDialogOpen.value = true
 }
 </script>
 <template>
@@ -349,35 +391,37 @@ const handleSubscriptionAction = async (): Promise<void> => {
           </FieldContent>
         </Field>
         <template v-else>
-          <Item v-if="hasCurrentPlan" variant="muted" size="sm">
-            <ItemMedia variant="icon">
-              <IconBadgeDollarSign />
-            </ItemMedia>
-            <ItemContent class="gap-0.5 truncate">
-              <ItemTitle class="truncate">
-                {{ planLabel }}
-                {{ intervalLabel }}
-              </ItemTitle>
-              <ItemDescription class="truncate text-xs">
-                {{ billingLifecycleLabel }}
-                &middot;
-                {{ seatCountLabel }}
-                ×
-                {{
-                  t("settings.billing.perSeat", {
-                    price: currentPlanUnitPriceLabel,
-                  })
-                }}
-                =
-                {{ currentPlanTotalPriceLabel }}
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions>
-              <Button variant="outline" @click="openPlansTab">
-                {{ t("settings.billing.changePlan.upgrade") }}
-              </Button>
-            </ItemActions>
-          </Item>
+          <div v-if="hasCurrentPlan" class="rounded-lg border p-1">
+            <Item variant="outline" size="sm" class="bg-secondary">
+              <ItemMedia variant="icon">
+                <IconBadgeDollarSign />
+              </ItemMedia>
+              <ItemContent class="gap-0.5 truncate">
+                <ItemTitle class="truncate">
+                  {{ planLabel }}
+                  {{ intervalLabel }}
+                </ItemTitle>
+                <ItemDescription class="truncate text-xs">
+                  {{ billingLifecycleLabel }}
+                  &middot;
+                  {{ seatCountLabel }}
+                  ×
+                  {{
+                    t("settings.billing.perSeat", {
+                      price: currentPlanUnitPriceLabel,
+                    })
+                  }}
+                  =
+                  {{ currentPlanTotalPriceLabel }}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Button variant="outline" @click="openPlansTab">
+                  {{ t("settings.billing.changePlan.upgrade") }}
+                </Button>
+              </ItemActions>
+            </Item>
+          </div>
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel for="current-plan">
@@ -407,9 +451,14 @@ const handleSubscriptionAction = async (): Promise<void> => {
             <Button
               variant="outline"
               :disabled="!canManagePortal || billingAction !== null"
-              @click="openBillingPortal"
+              @click="openBillingPortal('payment-method')"
             >
-              <Spinner v-if="billingAction === 'portal'" />
+              <Spinner
+                v-if="
+                  billingAction === 'portal' &&
+                  activeBillingActionTrigger === 'payment-method'
+                "
+              />
               {{ t("settings.billing.paymentMethod.button") }}
             </Button>
           </Field>
@@ -425,9 +474,14 @@ const handleSubscriptionAction = async (): Promise<void> => {
             <Button
               variant="outline"
               :disabled="!canManagePortal || billingAction !== null"
-              @click="openBillingPortal"
+              @click="openBillingPortal('billing-history')"
             >
-              <Spinner v-if="billingAction === 'portal'" />
+              <Spinner
+                v-if="
+                  billingAction === 'portal' &&
+                  activeBillingActionTrigger === 'billing-history'
+                "
+              />
               {{ t("settings.billing.billingHistory.button") }}
             </Button>
           </Field>
@@ -463,7 +517,10 @@ const handleSubscriptionAction = async (): Promise<void> => {
               @click="handleSubscriptionAction"
             >
               <Spinner
-                v-if="billingAction === 'cancel' || billingAction === 'restore'"
+                v-if="
+                  billingAction === 'restore' &&
+                  activeBillingActionTrigger === 'subscription-action'
+                "
               />
               <template v-else>
                 {{ subscriptionActionLabel }}
@@ -474,4 +531,31 @@ const handleSubscriptionAction = async (): Promise<void> => {
       </FieldSet>
     </FieldGroup>
   </div>
+
+  <AlertDialog v-model:open="isCancelSubscriptionDialogOpen">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Cancel subscription</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ cancelSubscriptionConfirmationDescription }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Keep subscription</AlertDialogCancel>
+        <AlertDialogAction
+          variant="destructive"
+          :disabled="billingAction === 'cancel'"
+          @click.prevent="confirmCancelSubscription"
+        >
+          <Spinner
+            v-if="
+              billingAction === 'cancel' &&
+              activeBillingActionTrigger === 'cancel-dialog'
+            "
+          />
+          <template v-else>Cancel subscription</template>
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
