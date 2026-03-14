@@ -1,12 +1,7 @@
 <script lang="ts" setup>
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import {
-  createWorkspaceNodeAttachmentFromFile,
-  deleteWorkspaceNodeAttachment,
-  resolveWorkspaceNodeAttachmentCommitState,
-  resolveWorkspaceNodeAttachmentDeletionState,
-  updateWorkspaceNodeAttachment,
-  uploadNodeAttachmentBlob,
+  useNodeAttachmentsState,
   validateAttachmentDisplayName,
   type AttachmentMutationContext,
 } from "@/composables/useNodeAttachments"
@@ -34,7 +29,6 @@ import {
 } from "@/data/icons"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { generateId } from "@/helpers/utilities"
-import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import {
@@ -44,29 +38,15 @@ import {
   type WorkspaceNodeScope,
 } from "@/types/nodes"
 import { can, Capabilities } from "@/types/permissions"
-import {
-  deleteStorageFile,
-  getStorageFileRef,
-} from "@/utils/firebase/firebase-helpers"
+import { getStorageFileRef } from "@/utils/firebase/firebase-helpers"
 import {
   formatAttachmentSize,
-  getWorkspaceNodeAttachmentsCollectionPath,
-  NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
   normalizeAttachmentDisplayName,
   sanitizeAttachmentFileName,
 } from "@/utils/firebase/firebase-node-attachments"
-import { DateFormatter } from "@internationalized/date"
 import { invoke } from "@tauri-apps/api/core"
 import { save } from "@tauri-apps/plugin-dialog"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  type DocumentData,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore"
 import { getDownloadURL } from "firebase/storage"
 import { storeToRefs } from "pinia"
 import type { Component } from "vue"
@@ -95,15 +75,28 @@ const membershipStore = useMembershipStore()
 const { currentUser } = storeToRefs(authStore)
 const { memberships } = storeToRefs(membershipStore)
 
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
+const attachmentContext = computed<AttachmentMutationContext | null>(() => {
+  if (!teamId.value || !workspaceId.value || !node.value) {
+    return null
+  }
 
-const attachments = ref<WorkspaceNodeAttachment[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
-const reloadToken = ref(0)
+  return {
+    teamId: teamId.value,
+    workspaceId: workspaceId.value,
+    nodeId: node.value.id,
+    scope: props.scope,
+  }
+})
+const {
+  attachments,
+  loading,
+  error,
+  refresh: refreshAttachments,
+  isAttachmentPending,
+  createAttachmentFromFile,
+  updateAttachment,
+  deleteAttachment,
+} = useNodeAttachmentsState(attachmentContext)
 const uploadStates = ref<UploadState[]>([])
 const editDialogOpen = ref(false)
 const editingAttachment = ref<WorkspaceNodeAttachment | null>(null)
@@ -184,16 +177,10 @@ const formatTimestamp = (
     | undefined
 ) => {
   const timestamp = value?.toDate?.()
-  return timestamp ? df.format(timestamp) : "—"
+  return timestamp
+    ? useDateFormat(timestamp, "MMM D, YYYY · h:mm A").value
+    : "—"
 }
-
-const toAttachment = (
-  docSnap: QueryDocumentSnapshot<DocumentData>
-): WorkspaceNodeAttachment =>
-  ({
-    id: docSnap.id,
-    ...(docSnap.data() as Omit<WorkspaceNodeAttachment, "id">),
-  }) as WorkspaceNodeAttachment
 
 const formatMimeType = (value: string | null | undefined) => {
   if (!value) return "Unknown type"
@@ -280,10 +267,6 @@ const resolveAttachmentIcon = (
   return IconFileQuestion
 }
 
-const refreshAttachments = () => {
-  reloadToken.value += 1
-}
-
 const dismissUploadState = (id: string) => {
   uploadStates.value = uploadStates.value.filter((item) => item.id !== id)
 }
@@ -329,10 +312,9 @@ const processSelectedFiles = async (files: File[]) => {
 
   let successCount = 0
   let failureCount = 0
-  let context: AttachmentMutationContext
 
   try {
-    context = getMutableContext()
+    getMutableContext()
   } catch (contextError) {
     showErrorToast(
       "Failed to upload attachment",
@@ -350,7 +332,7 @@ const processSelectedFiles = async (files: File[]) => {
     })
 
     try {
-      await createWorkspaceNodeAttachmentFromFile(file, context)
+      await createAttachmentFromFile(file)
       dismissUploadState(uploadId)
       successCount += 1
     } catch (uploadError) {
@@ -411,7 +393,13 @@ const downloadAttachmentInTauri = async (
 }
 
 const downloadAttachment = async (attachment: WorkspaceNodeAttachment) => {
-  if (downloadingIds.value.includes(attachment.id)) return
+  if (
+    downloadingIds.value.includes(attachment.id) ||
+    isAttachmentPending(attachment.id) ||
+    !attachment.storagePath
+  ) {
+    return
+  }
 
   downloadingIds.value = [...downloadingIds.value, attachment.id]
 
@@ -442,7 +430,7 @@ const closeEditDialog = () => {
 }
 
 const openEditDialog = (attachment: WorkspaceNodeAttachment) => {
-  if (isReadOnly.value) return
+  if (isReadOnly.value || isAttachmentPending(attachment.id)) return
 
   editingAttachment.value = attachment
   editDisplayName.value = attachment.displayName
@@ -465,70 +453,20 @@ const handleEditSubmit = async () => {
   if (!editingAttachment.value) return
 
   try {
-    const context = getMutableContext()
+    getMutableContext()
     const displayName = validateAttachmentDisplayName(editDisplayName.value)
-    const nextFile = replacementFile.value
 
     if (!hasEditChanges.value) {
       closeEditDialog()
       return
     }
 
-    if (nextFile && nextFile.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
-      throw new Error("Replacement files must be 25 MB or smaller.")
-    }
-
     isSavingEdit.value = true
-
-    let nextStoragePath: string | null = null
-
-    if (nextFile) {
-      nextStoragePath = await uploadNodeAttachmentBlob(
-        nextFile,
-        editingAttachment.value.id,
-        context
-      )
-    }
-
-    try {
-      await updateWorkspaceNodeAttachment({
-        scope: context.scope,
-        teamId: context.teamId,
-        workspaceId: context.workspaceId,
-        nodeId: context.nodeId,
-        attachmentId: editingAttachment.value.id,
-        displayName,
-        ...(nextStoragePath && nextFile
-          ? {
-              storagePath: nextStoragePath,
-              originalName: nextFile.name,
-            }
-          : {}),
-      })
-    } catch (updateError) {
-      if (!nextStoragePath) {
-        throw updateError
-      }
-
-      const committed = await resolveWorkspaceNodeAttachmentCommitState(
-        context,
-        editingAttachment.value.id,
-        nextStoragePath
-      )
-
-      if (committed === true) {
-        // The callable may have committed successfully before the client lost
-        // the response. Keep the uploaded replacement intact.
-      } else if (committed === false) {
-        await deleteStorageFile(nextStoragePath)
-        throw updateError
-      }
-
-      throw new Error(
-        "Attachment update status is unclear. Refresh before retrying to avoid a duplicate upload.",
-        { cause: updateError }
-      )
-    }
+    await updateAttachment({
+      attachment: editingAttachment.value,
+      displayName,
+      replacementFile: replacementFile.value,
+    })
 
     showSuccessToast(
       replacementFile.value ? "Attachment updated" : "Attachment renamed"
@@ -543,36 +481,11 @@ const handleEditSubmit = async () => {
 
 const handleDeleteConfirm = async (attachment: WorkspaceNodeAttachment) => {
   try {
-    const context = getMutableContext()
+    getMutableContext()
     deletingId.value = attachment.id
-    await deleteWorkspaceNodeAttachment({
-      scope: context.scope,
-      teamId: context.teamId,
-      workspaceId: context.workspaceId,
-      nodeId: context.nodeId,
-      attachmentId: attachment.id,
-    })
+    await deleteAttachment(attachment)
     showSuccessToast("Attachment deleted")
   } catch (deleteError) {
-    const context = (() => {
-      try {
-        return getMutableContext()
-      } catch {
-        return null
-      }
-    })()
-    const committed = context
-      ? await resolveWorkspaceNodeAttachmentDeletionState(
-          context,
-          attachment.id
-        )
-      : null
-
-    if (committed === true) {
-      showSuccessToast("Attachment deleted")
-      return
-    }
-
     showErrorToast(
       "Failed to delete attachment",
       (deleteError as Error).message
@@ -582,59 +495,10 @@ const handleDeleteConfirm = async (attachment: WorkspaceNodeAttachment) => {
   }
 }
 
-watch(
-  [teamId, workspaceId, nodeId, () => props.scope, reloadToken],
-  (
-    [currentTeamId, currentWorkspaceId, currentNodeId],
-    _oldValue,
-    onCleanup
-  ) => {
-    attachments.value = []
-    error.value = null
-
-    if (!currentTeamId || !currentWorkspaceId || !currentNodeId) {
-      loading.value = false
-      return
-    }
-
-    loading.value = true
-
-    const unsubscribe = onSnapshot(
-      query(
-        collection(
-          firestore,
-          getWorkspaceNodeAttachmentsCollectionPath(
-            currentTeamId,
-            currentWorkspaceId,
-            props.scope,
-            currentNodeId
-          )
-        ),
-        orderBy("updatedAt", "desc")
-      ),
-      (snapshot) => {
-        attachments.value = snapshot.docs.map(toAttachment)
-        error.value = null
-        loading.value = false
-      },
-      (snapshotError) => {
-        console.error("[NodeAttachments] Failed to subscribe:", snapshotError)
-        attachments.value = []
-        error.value = "Failed to load attachments."
-        loading.value = false
-      }
-    )
-
-    onCleanup(() => {
-      unsubscribe()
-    })
-  },
-  { immediate: true }
-)
-
 watch([teamId, workspaceId, nodeId, () => props.scope], () => {
   uploadStates.value = []
   downloadingIds.value = []
+  deletingId.value = null
   resetCreateFileDialog()
   closeEditDialog()
   closeDeleteDialog()
@@ -811,7 +675,11 @@ watch(selectedCreateFiles, async (files) => {
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            :disabled="downloadingIds.includes(attachment.id)"
+                            :disabled="
+                              downloadingIds.includes(attachment.id) ||
+                              isAttachmentPending(attachment.id) ||
+                              !attachment.storagePath
+                            "
                             @click="downloadAttachment(attachment)"
                           >
                             <Spinner
@@ -824,7 +692,9 @@ watch(selectedCreateFiles, async (files) => {
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            :disabled="isReadOnly"
+                            :disabled="
+                              isReadOnly || isAttachmentPending(attachment.id)
+                            "
                             @click="openEditDialog(attachment)"
                           >
                             <IconPencil />
@@ -835,7 +705,9 @@ watch(selectedCreateFiles, async (files) => {
                             variant="ghost"
                             size="icon-sm"
                             :disabled="
-                              isReadOnly || deletingId === attachment.id
+                              isReadOnly ||
+                              deletingId === attachment.id ||
+                              isAttachmentPending(attachment.id)
                             "
                             @click="openDeleteDialog(attachment)"
                           >
@@ -846,6 +718,13 @@ watch(selectedCreateFiles, async (files) => {
                       </div>
 
                       <div class="flex flex-wrap gap-1.5">
+                        <Badge
+                          v-if="isAttachmentPending(attachment.id)"
+                          variant="secondary"
+                        >
+                          <Spinner />
+                          Syncing
+                        </Badge>
                         <Badge variant="outline">
                           <IconArrowDownToLine />
                           {{ formatAttachmentSize(attachment.size) }}
@@ -969,7 +848,12 @@ watch(selectedCreateFiles, async (files) => {
         <AlertDialogAction as-child>
           <Button
             variant="destructive"
-            :disabled="deletingId === attachmentToDelete?.id"
+            :disabled="
+              deletingId === attachmentToDelete?.id ||
+              (attachmentToDelete
+                ? isAttachmentPending(attachmentToDelete.id)
+                : false)
+            "
             @click="
               confirmDelete(async (attachment) => {
                 await handleDeleteConfirm(attachment)

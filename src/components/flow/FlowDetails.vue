@@ -3,6 +3,8 @@ import { dailyActivity } from "@/data/chart"
 import { IconCircleMedium } from "@/data/icons"
 
 const { t } = useI18n()
+const currentDate = new Date()
+const currentDateLabel = useDateFormat(currentDate, "D MMM YYYY")
 
 const stats = [
   {
@@ -154,13 +156,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   First run
                 </span>
                 <span>
-                  {{
-                    new Date().toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  }}
+                  {{ currentDateLabel }}
                 </span>
               </div>
               <div class="flex grow flex-col gap-1">
@@ -168,13 +164,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   Last run
                 </span>
                 <span>
-                  {{
-                    new Date().toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  }}
+                  {{ currentDateLabel }}
                 </span>
               </div>
             </div>

@@ -4,20 +4,16 @@ import { Badge } from "@/components/ui/badge"
 import { useAuditLogs } from "@/composables/useAuditLogs"
 import { IconAlertTriangle, IconRefreshCw } from "@/data/icons"
 import type { ILogEntry } from "@/types/logs"
-import { DateFormatter } from "@internationalized/date"
 import type { Column, ColumnDef } from "@tanstack/vue-table"
 import { computed, h, onMounted } from "vue"
-
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
 
 const { logs, loading, error, hasMore, canViewLogs, fetchLogs } = useAuditLogs()
 
 const formatTimestamp = (entry: ILogEntry) => {
   const timestamp = entry.timestamp?.toDate?.()
-  return timestamp ? df.format(timestamp) : "—"
+  return timestamp
+    ? useDateFormat(timestamp, "MMM D, YYYY · h:mm A").value
+    : "—"
 }
 
 const formatActor = (entry: ILogEntry) =>

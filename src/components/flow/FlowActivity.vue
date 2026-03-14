@@ -12,7 +12,7 @@ import {
   IconPauseCircle,
   IconRefreshCw,
 } from "@/data/icons"
-import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
+import { getLocalTimeZone, today } from "@internationalized/date"
 import type { DateRange } from "reka-ui"
 
 const { t } = useI18n()
@@ -128,10 +128,6 @@ const timeline = [
   },
 ]
 
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-})
-
 const presets = computed(() => [
   {
     id: 0,
@@ -211,6 +207,14 @@ const range = ref({
   start: defaultRange.value.start,
   end: defaultRange.value.end,
 }) as Ref<DateRange>
+
+const formatDate = (
+  value: Date | string | number | null | undefined,
+  format = "MMM D, YYYY"
+) => {
+  if (value == null) return "—"
+  return useDateFormat(value, format).value
+}
 </script>
 
 <template>
@@ -228,13 +232,19 @@ const range = ref({
                   <IconCalendar />
                   {{
                     range.start
-                      ? df.format(range.start.toDate(getLocalTimeZone()))
+                      ? formatDate(
+                          range.start.toDate(getLocalTimeZone()),
+                          "MMM D, YYYY"
+                        )
                       : t("components.flow.activity.startDate")
                   }}
                   -
                   {{
                     range.end
-                      ? df.format(range.end.toDate(getLocalTimeZone()))
+                      ? formatDate(
+                          range.end.toDate(getLocalTimeZone()),
+                          "MMM D, YYYY"
+                        )
                       : t("components.flow.activity.endDate")
                   }}
                 </Button>
@@ -299,7 +309,9 @@ const range = ref({
                       <div
                         class="text-muted-foreground flex items-center text-right text-xs whitespace-nowrap"
                       >
-                        <time :datetime="event.datetime">{{ event.date }}</time>
+                        <time :datetime="event.datetime">
+                          {{ formatDate(event.datetime, "MMM D") }}
+                        </time>
                       </div>
                     </div>
                   </div>

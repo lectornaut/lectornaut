@@ -10,15 +10,10 @@ import {
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import type { IMembershipRole } from "@/types/membership"
-import { DateFormatter } from "@internationalized/date"
 import { useCurrentUser } from "vuefire"
 
 const { t } = useI18n()
 const user = useCurrentUser()
-
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-})
 
 // Use team actions composable - all logic is now self-contained
 const {
@@ -94,6 +89,13 @@ const handleChangeRole = (userId: string, role: IMembershipRole) => {
 
 const handleRemoveMember = (userId: string) => {
   removeMember(userId)
+}
+
+const formatCreatedAt = (
+  value: (typeof teamMembers.value)[number]["createdAt"] | null | undefined
+) => {
+  const date = value?.toDate?.()
+  return date ? useDateFormat(date, "MMM D, YYYY").value : "—"
 }
 </script>
 
@@ -261,7 +263,7 @@ const handleRemoveMember = (userId: string) => {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      {{ df.format(member.createdAt.toDate()) }}
+                      {{ formatCreatedAt(member.createdAt) }}
                     </TableCell>
                     <TableCell class="flex items-center justify-end text-right">
                       <ButtonGroup>

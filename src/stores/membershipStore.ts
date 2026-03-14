@@ -35,6 +35,7 @@ import {
   addPending,
   cloneState,
   createPendingSet,
+  mergeOptimisticCollectionByKey,
   removePending,
   withCloudSyncOperation,
   withOptimisticUpdate,
@@ -47,6 +48,9 @@ import { useCollection } from "vuefire"
 // Helper to get ownership count (used for ownerCount computed property)
 const getOwnerCount = (members: IMembership[]) =>
   members.filter((m) => m.role === "owner").length
+
+const membershipKey = (membership: Pick<IMembership, "teamId" | "userId">) =>
+  `${membership.teamId}-${membership.userId}`
 
 export const useMembershipStore = defineStore("memberships", () => {
   const authStore = useAuthStore()
@@ -114,44 +118,13 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** All memberships for the current user (teams they belong to) */
   const memberships = computed({
-    get: () => {
-      const pending = pendingMembershipIds.value
-      if (pending.size === 0) {
-        return firestoreMemberships.value
-      }
-
-      // Merge Firestore data with optimistic updates
-      const result: IMembership[] = []
-      const firestoreData = firestoreMemberships.value
-
-      // Add Firestore memberships, replacing with optimistic if pending
-      firestoreData.forEach((m) => {
-        const key = `${m.teamId}-${m.userId}`
-        if (pending.has(key)) {
-          const optimistic = optimisticMemberships.value.find(
-            (om) => om.teamId === m.teamId && om.userId === m.userId
-          )
-          if (optimistic) {
-            result.push(optimistic)
-            return
-          }
-        }
-        result.push(m)
-      })
-
-      // Add any optimistically added memberships not yet in Firestore
-      optimisticMemberships.value.forEach((m) => {
-        const key = `${m.teamId}-${m.userId}`
-        if (
-          pending.has(key) &&
-          !result.some((r) => r.teamId === m.teamId && r.userId === m.userId)
-        ) {
-          result.push(m)
-        }
-      })
-
-      return result
-    },
+    get: () =>
+      mergeOptimisticCollectionByKey(
+        firestoreMemberships.value,
+        optimisticMemberships.value,
+        pendingMembershipIds.value,
+        membershipKey
+      ),
     set: (value) => {
       optimisticMemberships.value = value
     },
@@ -159,45 +132,15 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** Members of the currently selected team */
   const teamMembers = computed({
-    get: () => {
-      // Return empty array if no team is selected
-      if (!currentTeamId.value) {
-        return []
-      }
-
-      const pending = pendingMembershipIds.value
-      if (pending.size === 0) {
-        return firestoreTeamMembers.value
-      }
-
-      // Merge Firestore data with optimistic updates
-      const result: IMembership[] = []
-      const firestoreData = firestoreTeamMembers.value
-
-      firestoreData.forEach((m) => {
-        const key = `${m.teamId}-${m.userId}`
-        if (pending.has(key)) {
-          const optimistic = optimisticTeamMembers.value.find(
-            (om) => om.userId === m.userId
+    get: () =>
+      currentTeamId.value
+        ? mergeOptimisticCollectionByKey(
+            firestoreTeamMembers.value,
+            optimisticTeamMembers.value,
+            pendingMembershipIds.value,
+            membershipKey
           )
-          if (optimistic) {
-            result.push(optimistic)
-            return
-          }
-        }
-        result.push(m)
-      })
-
-      // Add optimistically added members
-      optimisticTeamMembers.value.forEach((m) => {
-        const key = `${m.teamId}-${m.userId}`
-        if (pending.has(key) && !result.some((r) => r.userId === m.userId)) {
-          result.push(m)
-        }
-      })
-
-      return result
-    },
+        : [],
     set: (value) => {
       optimisticTeamMembers.value = value
     },
@@ -217,17 +160,26 @@ export const useMembershipStore = defineStore("memberships", () => {
     () => pendingMembershipIds.value.size > 0
   )
 
+  const membershipsByTeamId = computed(
+    () =>
+      new Map(
+        memberships.value.map((membership) => [membership.teamId, membership])
+      )
+  )
+
+  const teamMembersByUserId = computed(
+    () => new Map(teamMembers.value.map((member) => [member.userId, member]))
+  )
+
   /** Get the current user's membership for a specific team */
   const getMembershipForTeam = computed(
-    () => (teamId: string) => memberships.value.find((m) => m.teamId === teamId)
+    () => (teamId: string) => membershipsByTeamId.value.get(teamId)
   )
 
   /** Get the current user's role in the current team */
   const currentUserRole = computed(() => {
     if (!currentUser.value || !currentTeamId.value) return null
-    const membership = teamMembers.value.find(
-      (m) => m.userId === currentUser.value?.uid
-    )
+    const membership = teamMembersByUserId.value.get(currentUser.value.uid)
     return membership?.role ?? null
   })
 
@@ -267,9 +219,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamId: string
   ): IMembershipRole | null | undefined => {
     if (!currentUser.value) return null
-    return memberships.value.find(
-      (m) => m.teamId === teamId && m.userId === currentUser.value?.uid
-    )?.role
+    return membershipsByTeamId.value.get(teamId)?.role
   }
 
   /**
@@ -280,7 +230,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     userId: string
   ): Promise<IMembership | null> => {
     if (currentTeamId.value === teamId) {
-      return teamMembers.value.find((m) => m.userId === userId) ?? null
+      return teamMembersByUserId.value.get(userId) ?? null
     }
 
     const membershipSnap = await getDoc(getMembershipRef(teamId, userId))

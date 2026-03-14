@@ -28,29 +28,52 @@ export interface LoadingResult<T> {
  * ```
  */
 export function useLoadingState<T extends string = string>() {
-  const loadingMap = ref<Record<string, boolean>>({}) as Ref<Record<T, boolean>>
+  const loadingCounts = ref<Record<string, number>>({}) as Ref<
+    Record<T, number>
+  >
+
+  const loadingMap: ComputedRef<Record<T, boolean>> = computed(() => {
+    const next = {} as Record<T, boolean>
+    for (const key in loadingCounts.value) {
+      if ((loadingCounts.value[key as T] ?? 0) > 0) {
+        next[key as T] = true
+      }
+    }
+    return next
+  })
+
+  const startLoading = (key: T): void => {
+    loadingCounts.value[key] = (loadingCounts.value[key] ?? 0) + 1
+  }
+
+  const finishLoading = (key: T): void => {
+    const currentCount = loadingCounts.value[key] ?? 0
+    if (currentCount <= 1) {
+      delete loadingCounts.value[key]
+      return
+    }
+    loadingCounts.value[key] = currentCount - 1
+  }
 
   /**
    * Check if a specific operation is loading.
    * @param key - The operation key to check.
    * @returns True if the operation is in progress.
    */
-  const isLoading = (key: T): boolean => loadingMap.value[key] ?? false
+  const isLoading = (key: T): boolean => (loadingCounts.value[key] ?? 0) > 0
 
   /**
    * Computed ref that returns true if any operation is loading.
    */
-  const isAnyLoading: ComputedRef<boolean> = computed(() =>
-    Object.values(loadingMap.value).some(Boolean)
+  const isAnyLoading: ComputedRef<boolean> = computed(
+    () => Object.keys(loadingCounts.value).length > 0
   )
 
   /**
    * Get all currently loading operation keys.
    */
-  const loadingKeys: ComputedRef<T[]> = computed(() =>
-    Object.entries(loadingMap.value)
-      .filter(([, loading]) => loading)
-      .map(([key]) => key as T)
+  const loadingKeys: ComputedRef<T[]> = computed(
+    () => Object.keys(loadingCounts.value) as T[]
   )
 
   /**
@@ -65,11 +88,11 @@ export function useLoadingState<T extends string = string>() {
     key: T,
     fn: () => Promise<R>
   ): Promise<R | undefined> => {
-    loadingMap.value[key] = true
+    startLoading(key)
     try {
       return await fn()
     } finally {
-      loadingMap.value[key] = false
+      finishLoading(key)
     }
   }
 
@@ -85,14 +108,14 @@ export function useLoadingState<T extends string = string>() {
     key: T,
     fn: () => Promise<R>
   ): Promise<LoadingResult<R>> => {
-    loadingMap.value[key] = true
+    startLoading(key)
     try {
       const data = await fn()
       return { data }
     } catch (error) {
       return { error: error as Error }
     } finally {
-      loadingMap.value[key] = false
+      finishLoading(key)
     }
   }
 
@@ -101,14 +124,18 @@ export function useLoadingState<T extends string = string>() {
    * Useful when you need more control over the loading lifecycle.
    */
   const setLoading = (key: T, loading: boolean): void => {
-    loadingMap.value[key] = loading
+    if (loading) {
+      loadingCounts.value[key] = 1
+      return
+    }
+    delete loadingCounts.value[key]
   }
 
   /**
    * Clear all loading states.
    */
   const clearAll = (): void => {
-    loadingMap.value = {} as Record<T, boolean>
+    loadingCounts.value = {} as Record<T, number>
   }
 
   return {

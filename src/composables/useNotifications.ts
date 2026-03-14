@@ -8,7 +8,8 @@ import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordi
 import {
   cloneState,
   createPendingSet,
-  withCloudSyncOperation,
+  mergeOptimisticCollection,
+  withOptimisticBatchUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import {
   collection,
@@ -23,6 +24,21 @@ import { httpsCallable } from "firebase/functions"
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
 import { useCurrentUser } from "vuefire"
 
+const sortNotifications = (notifications: INotification[]) =>
+  [...notifications].sort(
+    (left, right) => right.createdAt.getTime() - left.createdAt.getTime()
+  )
+
+const toNotification = (
+  id: string,
+  data: Record<string, unknown>
+): INotification => ({
+  id,
+  ...(data as Omit<INotification, "id" | "createdAt">),
+  createdAt:
+    data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+})
+
 export function useNotifications() {
   const user = useCurrentUser()
   const firestoreNotifications = ref<INotification[]>([])
@@ -31,49 +47,68 @@ export function useNotifications() {
   const isLoading = ref(false)
   const limitCount = ref(20)
 
-  // Merged state
-  const notifications = computed(() => {
-    const pending = pendingNotificationIds.value
-    if (pending.size === 0) return firestoreNotifications.value
-
-    const result: INotification[] = []
-    const firestoreData = firestoreNotifications.value
-
-    firestoreData.forEach((n) => {
-      // If notification is pending, check if it was updated or deleted
-      if (n.id && pending.has(n.id)) {
-        const optimistic = optimisticNotifications.value.find(
-          (on) => on.id === n.id
-        )
-        // If found in optimistic, use that version (handles updates)
-        if (optimistic) {
-          result.push(optimistic)
-        }
-        // If NOT found in optimistic, it means it's pending deletion -> skip it
-        return
+  const notifications = computed(() =>
+    mergeOptimisticCollection(
+      firestoreNotifications.value,
+      optimisticNotifications.value,
+      pendingNotificationIds.value,
+      {
+        sort: (left, right) =>
+          right.createdAt.getTime() - left.createdAt.getTime(),
       }
-      result.push(n)
-    })
-
-    return result
-  })
+    )
+  )
 
   let unsubscribe: (() => void) | null = null
 
-  // derived state
-  const unreadCount = computed(
-    () => notifications.value.filter((n) => !n.read).length
-  )
+  const unreadCounts = computed(() => {
+    const counts = {
+      all: 0,
+      inbox: 0,
+      saved: 0,
+      done: 0,
+    }
 
-  const getUnreadCountByStatus = (status: INotificationStatus) =>
-    computed(
-      () =>
-        notifications.value.filter((n) => !n.read && n.status === status).length
+    notifications.value.forEach((notification) => {
+      if (notification.read) return
+
+      counts.all += 1
+      counts[notification.status] += 1
+    })
+
+    return counts
+  })
+
+  const unreadCount = computed(() => unreadCounts.value.all)
+  const inboxUnreadCount = computed(() => unreadCounts.value.inbox)
+  const savedUnreadCount = computed(() => unreadCounts.value.saved)
+  const doneUnreadCount = computed(() => unreadCounts.value.done)
+
+  const setOptimisticNotifications = (next: INotification[]) => {
+    optimisticNotifications.value = sortNotifications(next)
+  }
+
+  const getNotificationSnapshot = (notificationId: string) => {
+    const notification = notifications.value.find(
+      (item) => item.id === notificationId
     )
+    if (!notification) return null
 
-  const inboxUnreadCount = getUnreadCountByStatus("inbox")
-  const savedUnreadCount = getUnreadCountByStatus("saved")
-  const doneUnreadCount = getUnreadCountByStatus("done")
+    return {
+      id: notification.id,
+      read: notification.read,
+      status: notification.status,
+    }
+  }
+
+  const getNotificationSnapshots = (status?: INotificationStatus) =>
+    notifications.value
+      .filter((notification) => !status || notification.status === status)
+      .map((notification) => ({
+        id: notification.id,
+        read: notification.read,
+        status: notification.status,
+      }))
 
   const updateNotification = async (
     notificationId: string,
@@ -88,30 +123,13 @@ export function useNotifications() {
       source: "notifications.update",
       pendingIds: pendingNotificationIds,
       applyLocal: () => {
-        // Special case: if we have it in optimistic list, update it.
-        // If not, we found it in firestore list, so add to optimistic.
-        const existingIndex = optimisticNotifications.value.findIndex(
-          (n) => n.id === notificationId
-        )
-        if (existingIndex !== -1) {
-          optimisticNotifications.value[existingIndex] = {
-            ...optimisticNotifications.value[existingIndex],
-            ...updates,
-          } as INotification
-        } else {
-          const fsIndex = firestoreNotifications.value.findIndex(
-            (n) => n.id === notificationId
+        setOptimisticNotifications(
+          cloneState(notifications.value).map((notification) =>
+            notification.id === notificationId
+              ? ({ ...notification, ...updates } as INotification)
+              : notification
           )
-          if (fsIndex !== -1) {
-            optimisticNotifications.value = [
-              ...optimisticNotifications.value,
-              {
-                ...firestoreNotifications.value[fsIndex],
-                ...updates,
-              } as INotification,
-            ]
-          }
-        }
+        )
       },
       rollbackLocal: () => {
         optimisticNotifications.value = previousOptimistic
@@ -129,66 +147,36 @@ export function useNotifications() {
     })
   }
 
-  // Private helper for batch actions
   const performBatchAction = async (
     actionName: string,
-    status?: INotificationStatus,
-    optimisticUpdate?: (n: INotification) => void
+    status: INotificationStatus | undefined,
+    transform: (items: INotification[]) => INotification[]
   ) => {
-    const previousFirestore = optimisticUpdate
-      ? new Map(firestoreNotifications.value.map((n) => [n.id, cloneState(n)]))
-      : null
-    const previousOptimistic = optimisticUpdate
-      ? new Map(optimisticNotifications.value.map((n) => [n.id, cloneState(n)]))
-      : null
+    const targetIds = notifications.value
+      .filter((notification) => !status || notification.status === status)
+      .map((notification) => notification.id)
 
-    if (optimisticUpdate) {
-      notifications.value.forEach((n) => {
-        if (!status || n.status === status) {
-          optimisticUpdate(n)
-        }
-      })
-    }
+    if (targetIds.length === 0) return
 
-    try {
-      return await withCloudSyncOperation(
-        async () => {
-          const fn = httpsCallable(functions, actionName)
-          return fn({ status })
-        },
-        {
-          id: actionName,
-          source: "notifications.batch",
-        }
-      )
-    } catch (e) {
-      if (optimisticUpdate) {
-        if (previousFirestore) {
-          firestoreNotifications.value = firestoreNotifications.value.map(
-            (n) => previousFirestore.get(n.id) ?? n
-          )
-        }
-        if (previousOptimistic) {
-          optimisticNotifications.value = optimisticNotifications.value.map(
-            (n) => previousOptimistic.get(n.id) ?? n
-          )
-        }
+    const previousOptimistic = cloneState(optimisticNotifications.value)
+
+    await withOptimisticBatchUpdate(
+      pendingNotificationIds,
+      targetIds,
+      () => {
+        setOptimisticNotifications(transform(cloneState(notifications.value)))
+      },
+      () => {
+        optimisticNotifications.value = previousOptimistic
+      },
+      async () => {
+        const fn = httpsCallable(functions, actionName)
+        await fn({ status })
+      },
+      {
+        source: `notifications.batch.${actionName}`,
       }
-      console.error(`Failed to perform batch action ${actionName}`, e)
-      throw e
-    }
-  }
-
-  const getNotificationSnapshot = (notificationId: string) => {
-    const notification = notifications.value.find(
-      (n) => n.id === notificationId
     )
-    if (!notification) return null
-    return {
-      id: notification.id,
-      read: notification.read,
-      status: notification.status,
-    }
   }
 
   const restoreNotification = async (snapshot: {
@@ -243,6 +231,7 @@ export function useNotifications() {
     }
   ) => {
     const snapshot = getNotificationSnapshot(notificationId)
+
     return runNotificationActionWithToast(
       () => updateNotification(notificationId, updates),
       {
@@ -260,7 +249,7 @@ export function useNotifications() {
   const performBatchActionWithToast = async (
     actionName: string,
     status: INotificationStatus | undefined,
-    optimisticUpdate: (n: INotification) => void,
+    transform: (items: INotification[]) => INotification[],
     options: {
       success: string
       error: string
@@ -268,12 +257,10 @@ export function useNotifications() {
       undoErrorMessage?: string
     }
   ) => {
-    const snapshots = notifications.value
-      .filter((n) => !status || n.status === status)
-      .map((n) => ({ id: n.id, read: n.read, status: n.status }))
+    const snapshots = getNotificationSnapshots(status)
 
     return runNotificationActionWithToast(
-      () => performBatchAction(actionName, status, optimisticUpdate),
+      () => performBatchAction(actionName, status, transform),
       {
         success: options.success,
         error: options.error,
@@ -289,10 +276,86 @@ export function useNotifications() {
     )
   }
 
+  const deleteNotificationMutation = async (notificationId: string) => {
+    if (!user.value) return
+
+    const previousOptimistic = cloneState(optimisticNotifications.value)
+    const previousFirestore = cloneState(firestoreNotifications.value)
+
+    await withOptimisticBatchUpdate(
+      pendingNotificationIds,
+      [notificationId],
+      () => {
+        firestoreNotifications.value = firestoreNotifications.value.filter(
+          (notification) => notification.id !== notificationId
+        )
+        setOptimisticNotifications(
+          cloneState(notifications.value).filter(
+            (notification) => notification.id !== notificationId
+          )
+        )
+      },
+      () => {
+        optimisticNotifications.value = previousOptimistic
+        firestoreNotifications.value = previousFirestore
+      },
+      async () => {
+        const fn = httpsCallable(functions, "deleteNotification")
+        await fn({ notificationId })
+      },
+      {
+        source: "notifications.delete",
+      }
+    )
+  }
+
+  const deleteAllNotificationsMutation = async (
+    status?: INotificationStatus
+  ) => {
+    const targetIds = notifications.value
+      .filter((notification) => !status || notification.status === status)
+      .map((notification) => notification.id)
+    const targetIdSet = new Set(targetIds)
+
+    if (targetIds.length === 0) return
+
+    const previousOptimistic = cloneState(optimisticNotifications.value)
+    const previousFirestore = cloneState(firestoreNotifications.value)
+
+    await withOptimisticBatchUpdate(
+      pendingNotificationIds,
+      targetIds,
+      () => {
+        firestoreNotifications.value = firestoreNotifications.value.filter(
+          (notification) => !targetIdSet.has(notification.id)
+        )
+        setOptimisticNotifications(
+          cloneState(notifications.value).filter(
+            (notification) => !targetIdSet.has(notification.id)
+          )
+        )
+      },
+      () => {
+        optimisticNotifications.value = previousOptimistic
+        firestoreNotifications.value = previousFirestore
+      },
+      async () => {
+        const fn = httpsCallable(functions, "deleteAllNotifications")
+        await fn({ status })
+      },
+      {
+        source: "notifications.batch.deleteAllNotifications",
+      }
+    )
+  }
+
   const setupListener = () => {
     if (unsubscribe) unsubscribe()
+
     if (!user.value) {
       firestoreNotifications.value = []
+      optimisticNotifications.value = []
+      pendingNotificationIds.value = createPendingSet()
       isLoading.value = false
       return
     }
@@ -307,17 +370,12 @@ export function useNotifications() {
     unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        firestoreNotifications.value = snapshot.docs.map((doc) => {
-          const data = doc.data()
-          return {
-            id: doc.id,
-            ...data,
-            createdAt:
-              data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate()
-                : new Date(),
-          } as INotification
-        })
+        firestoreNotifications.value = snapshot.docs.map((snapshotDoc) =>
+          toNotification(
+            snapshotDoc.id,
+            snapshotDoc.data() as Record<string, unknown>
+          )
+        )
         isLoading.value = false
       },
       (error) => {
@@ -327,12 +385,10 @@ export function useNotifications() {
     )
   }
 
-  // Watch for user changes or limit changes
   watch([user, limitCount], () => setupListener(), { immediate: true })
 
-  // Sync optimistic state
   watch(firestoreNotifications, (data) => {
-    if (data && pendingNotificationIds.value.size === 0) {
+    if (pendingNotificationIds.value.size === 0) {
       optimisticNotifications.value = cloneState(data)
     }
   })
@@ -341,8 +397,9 @@ export function useNotifications() {
     if (unsubscribe) unsubscribe()
   })
 
-  // Public Actions
-  const loadMore = () => (limitCount.value += 20)
+  const loadMore = () => {
+    limitCount.value += 20
+  }
 
   const markAsRead = (id: string) =>
     updateNotificationWithToast(
@@ -353,6 +410,7 @@ export function useNotifications() {
         error: "Failed to mark as read",
       }
     )
+
   const markAsUnread = (id: string) =>
     updateNotificationWithToast(
       id,
@@ -362,6 +420,7 @@ export function useNotifications() {
         error: "Failed to mark as unread",
       }
     )
+
   const markAsInbox = (id: string) =>
     updateNotificationWithToast(
       id,
@@ -371,6 +430,7 @@ export function useNotifications() {
         error: "Failed to move to inbox",
       }
     )
+
   const markAsDone = (id: string) =>
     updateNotificationWithToast(
       id,
@@ -380,6 +440,7 @@ export function useNotifications() {
         error: "Failed to mark as done",
       }
     )
+
   const markAsSaved = (id: string) =>
     updateNotificationWithToast(
       id,
@@ -394,7 +455,12 @@ export function useNotifications() {
     performBatchActionWithToast(
       "markAllNotificationsRead",
       status,
-      (n) => (n.read = true),
+      (items) =>
+        items.map((notification) =>
+          !status || notification.status === status
+            ? { ...notification, read: true }
+            : notification
+        ),
       {
         success: "Marked all as read",
         error: "Failed to mark all as read",
@@ -405,7 +471,12 @@ export function useNotifications() {
     performBatchActionWithToast(
       "markAllNotificationsUnread",
       status,
-      (n) => (n.read = false),
+      (items) =>
+        items.map((notification) =>
+          !status || notification.status === status
+            ? { ...notification, read: false }
+            : notification
+        ),
       {
         success: "Marked all as unread",
         error: "Failed to mark all as unread",
@@ -416,7 +487,12 @@ export function useNotifications() {
     performBatchActionWithToast(
       "markAllNotificationsDone",
       status,
-      (n) => (n.status = "done"),
+      (items) =>
+        items.map((notification) =>
+          !status || notification.status === status
+            ? { ...notification, status: "done" }
+            : notification
+        ),
       {
         success: "Moved all to done",
         error: "Failed to move all to done",
@@ -427,7 +503,12 @@ export function useNotifications() {
     performBatchActionWithToast(
       "markAllNotificationsSaved",
       status,
-      (n) => (n.status = "saved"),
+      (items) =>
+        items.map((notification) =>
+          !status || notification.status === status
+            ? { ...notification, status: "saved" }
+            : notification
+        ),
       {
         success: "Moved all to saved",
         error: "Failed to move all to saved",
@@ -438,45 +519,17 @@ export function useNotifications() {
     performBatchActionWithToast(
       "markAllNotificationsInbox",
       status,
-      (n) => (n.status = "inbox"),
+      (items) =>
+        items.map((notification) =>
+          !status || notification.status === status
+            ? { ...notification, status: "inbox" }
+            : notification
+        ),
       {
         success: "Moved all to inbox",
         error: "Failed to move all to inbox",
       }
     )
-
-  const deleteNotificationMutation = async (notificationId: string) => {
-    if (!user.value) return
-
-    const previousOptimistic = cloneState(optimisticNotifications.value)
-    const previousFirestore = cloneState(firestoreNotifications.value)
-
-    // Optimistic removal
-    optimisticNotifications.value = optimisticNotifications.value.filter(
-      (n) => n.id !== notificationId
-    )
-    firestoreNotifications.value = firestoreNotifications.value.filter(
-      (n) => n.id !== notificationId
-    )
-
-    try {
-      await withCloudSyncOperation(
-        async () => {
-          const fn = httpsCallable(functions, "deleteNotification")
-          await fn({ notificationId })
-        },
-        {
-          id: notificationId,
-          source: "notifications.delete",
-        }
-      )
-    } catch (error) {
-      // Rollback on failure
-      optimisticNotifications.value = previousOptimistic
-      firestoreNotifications.value = previousFirestore
-      throw error
-    }
-  }
 
   const deleteNotification = (notificationId: string) =>
     runNotificationActionWithToast(
@@ -489,7 +542,7 @@ export function useNotifications() {
 
   const deleteAllNotifications = (status?: INotificationStatus) =>
     runNotificationActionWithToast(
-      () => performBatchAction("deleteAllNotifications", status),
+      () => deleteAllNotificationsMutation(status),
       {
         success: "Deleted notifications",
         error: "Failed to delete notifications",

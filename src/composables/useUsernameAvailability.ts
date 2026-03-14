@@ -30,31 +30,51 @@ export const useUsernameAvailability = (
   const isChecking = ref(false)
   const available = ref<boolean | null>(null)
   const error = ref<string | null>(null)
+  let latestRequestId = 0
 
-  const reset = () => {
+  const clearState = () => {
     available.value = null
     error.value = null
+    isChecking.value = false
+  }
+
+  const invalidatePendingChecks = () => {
+    latestRequestId += 1
+    isChecking.value = false
+  }
+
+  const reset = () => {
+    invalidatePendingChecks()
+    clearState()
   }
 
   const evaluate = async (
     rawUsername: string
   ): Promise<UsernameCheckResult> => {
+    const requestId = ++latestRequestId
     const usernameInput = rawUsername.trim()
 
     if (!usernameInput) {
-      reset()
+      if (requestId === latestRequestId) {
+        clearState()
+      }
       return { state: "empty", normalized: null, error: null }
     }
 
     if (usernamesMatch(usernameInput, options.getCurrentUsername())) {
-      reset()
+      if (requestId === latestRequestId) {
+        clearState()
+      }
       return { state: "unchanged", normalized: null, error: null }
     }
 
     const validation = validateUsername(usernameInput)
     if (!validation.valid || !validation.normalized) {
-      available.value = false
-      error.value = validation.error
+      if (requestId === latestRequestId) {
+        available.value = false
+        error.value = validation.error
+        isChecking.value = false
+      }
       return {
         state: "invalid",
         normalized: null,
@@ -62,10 +82,23 @@ export const useUsernameAvailability = (
       }
     }
 
-    error.value = null
-    isChecking.value = true
+    if (requestId === latestRequestId) {
+      available.value = null
+      error.value = null
+      isChecking.value = true
+    }
     try {
       const isAvailable = await checkUsernameAvailability(validation.normalized)
+      if (requestId !== latestRequestId) {
+        return {
+          state: isAvailable ? "available" : "taken",
+          normalized: validation.normalized,
+          error: isAvailable
+            ? null
+            : (options.takenMessage ?? "Username is already taken"),
+        }
+      }
+
       available.value = isAvailable
 
       if (!isAvailable) {
@@ -84,7 +117,9 @@ export const useUsernameAvailability = (
         error: null,
       }
     } finally {
-      isChecking.value = false
+      if (requestId === latestRequestId) {
+        isChecking.value = false
+      }
     }
   }
 
@@ -93,8 +128,9 @@ export const useUsernameAvailability = (
   }, options.debounceMs ?? 500)
 
   const handleInput = (rawUsername: string) => {
+    invalidatePendingChecks()
     if (!rawUsername.trim()) {
-      reset()
+      clearState()
       return
     }
 

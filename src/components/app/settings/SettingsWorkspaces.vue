@@ -16,11 +16,6 @@ import {
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types/domain"
-import { DateFormatter } from "@internationalized/date"
-
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-})
 
 // Use workspace actions composable - all logic is now self-contained
 const {
@@ -117,6 +112,11 @@ const sortedWorkspaces = computed(() => {
 
   return sorted
 })
+
+const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
+  const date = value?.toDate?.()
+  return date ? useDateFormat(date, "MMM D, YYYY").value : "—"
+}
 </script>
 
 <template>
@@ -297,7 +297,7 @@ const sortedWorkspaces = computed(() => {
                       {{ workspace.description || "No description" }}
                     </TableCell>
                     <TableCell>
-                      {{ df.format(workspace.createdAt.toDate()) }}
+                      {{ formatCreatedAt(workspace.createdAt) }}
                     </TableCell>
                     <TableCell class="flex items-center justify-end text-right">
                       <ButtonGroup>

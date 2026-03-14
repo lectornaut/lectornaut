@@ -34,6 +34,7 @@ import {
   addPending,
   cloneState,
   createPendingSet,
+  mergeOptimisticCollection,
   removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
@@ -117,49 +118,27 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
   /** All workspaces for the current team */
   const workspaces = computed({
-    get: () => {
-      const pending = pendingWorkspaceIds.value
-      if (pending.size === 0) {
-        return firestoreWorkspaces.value
-      }
-
-      // Merge Firestore data with optimistic updates
-      const result: IWorkspace[] = []
-      const firestoreData = firestoreWorkspaces.value
-
-      // Add Firestore workspaces, replacing with optimistic if pending
-      firestoreData.forEach((w) => {
-        if (pending.has(w.id)) {
-          const optimistic = optimisticWorkspaces.value.find(
-            (ow) => ow.id === w.id
-          )
-          if (optimistic) {
-            result.push(optimistic)
-            return
-          }
-        }
-        result.push(w)
-      })
-
-      // Add any optimistically added workspaces not yet in Firestore
-      optimisticWorkspaces.value.forEach((w) => {
-        if (pending.has(w.id) && !result.some((r) => r.id === w.id)) {
-          result.push(w)
-        }
-      })
-
-      return result
-    },
+    get: () =>
+      mergeOptimisticCollection(
+        firestoreWorkspaces.value,
+        optimisticWorkspaces.value,
+        pendingWorkspaceIds.value
+      ),
     set: (value) => {
       optimisticWorkspaces.value = value
     },
   })
 
+  const workspaceById = computed(
+    () =>
+      new Map(workspaces.value.map((workspace) => [workspace.id, workspace]))
+  )
+
   /** Current workspace based on user's selection */
   const currentWorkspace = computed(() => {
     const workspaceId = currentWorkspaceId.value
     if (!workspaceId) return null
-    return workspaces.value.find((w) => w.id === workspaceId) ?? null
+    return workspaceById.value.get(workspaceId) ?? null
   })
 
   const isLoading = computed(() => {

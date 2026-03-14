@@ -372,26 +372,32 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       const { nodes: bucket } = getWorkspaceBuckets(key)
       const mergedNodes: WorkspaceNode[] = []
       let mergedChildIds: string[] = []
+      const mergedChildIdSet = new Set<string>()
 
       result.nodes.forEach((node) => {
         const local = bucket[node.id]
         if (isProtectedNode(node.id) && local) {
           mergedNodes.push(local)
-          if (local.parentId === parentId) {
+          if (local.parentId === parentId && !mergedChildIdSet.has(local.id)) {
             mergedChildIds.push(local.id)
+            mergedChildIdSet.add(local.id)
           }
           return
         }
         mergedNodes.push(node)
-        mergedChildIds.push(node.id)
+        if (!mergedChildIdSet.has(node.id)) {
+          mergedChildIds.push(node.id)
+          mergedChildIdSet.add(node.id)
+        }
       })
 
       Object.values(bucket).forEach((local) => {
         if (!isProtectedNode(local.id)) return
         if (local.parentId !== parentId) return
-        if (mergedChildIds.includes(local.id)) return
+        if (mergedChildIdSet.has(local.id)) return
         mergedNodes.push(local)
         mergedChildIds.push(local.id)
+        mergedChildIdSet.add(local.id)
       })
 
       upsertNodes(scope, teamId, workspaceId, mergedNodes)
@@ -522,14 +528,13 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
       upsertNodes(scope, teamId, workspaceId, mergedNodes)
       const current = getChildrenIds(scope, teamId, workspaceId, parentId)
-      const merged = [...current]
+      const mergedSet = new Set(current)
 
       mergedNodes.forEach((node) => {
-        if (!merged.includes(node.id)) {
-          merged.push(node.id)
-        }
+        mergedSet.add(node.id)
       })
 
+      const merged = [...mergedSet]
       const sorted = merged.some((id) => isProtectedNode(id))
         ? sortChildIds(scope, teamId, workspaceId, merged)
         : merged

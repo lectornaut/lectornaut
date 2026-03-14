@@ -14,6 +14,8 @@ interface UsePhotoUploadOptions {
  */
 export function usePhotoUpload(options: UsePhotoUploadOptions) {
   const itemIdToUpdate = ref<string | null>(null)
+  const isUploading = ref(false)
+  let latestUploadToken = 0
 
   const { files, open, reset } = useFileDialog({
     accept: "image/*",
@@ -21,6 +23,7 @@ export function usePhotoUpload(options: UsePhotoUploadOptions) {
   })
 
   const triggerUpload = (itemId: string) => {
+    if (isUploading.value) return
     if (options.canUpload && !options.canUpload()) return
     itemIdToUpdate.value = itemId
     open()
@@ -42,17 +45,24 @@ export function usePhotoUpload(options: UsePhotoUploadOptions) {
       return
     }
 
+    const uploadToken = ++latestUploadToken
+    isUploading.value = true
+
     try {
       await options.onUpload(itemId, file)
     } catch (error) {
       console.error("[usePhotoUpload] Photo upload failed:", error)
     } finally {
-      reset()
-      itemIdToUpdate.value = null
+      if (uploadToken === latestUploadToken) {
+        reset()
+        itemIdToUpdate.value = null
+        isUploading.value = false
+      }
     }
   })
 
   return {
     triggerUpload,
+    isUploading,
   }
 }

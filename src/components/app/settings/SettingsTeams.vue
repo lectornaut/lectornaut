@@ -18,13 +18,8 @@ import {
 import { getInitials } from "@/helpers/utilities"
 import type { ITeam } from "@/types/domain"
 import type { IMembership } from "@/types/membership"
-import { DateFormatter } from "@internationalized/date"
 
 const { t } = useI18n()
-
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-})
 
 // Use team actions composable - all logic is now self-contained
 const {
@@ -123,6 +118,13 @@ const sortedMemberships = computed(() => {
 
   return sorted
 })
+
+const formatCreatedAt = (
+  value: IMembership["createdAt"] | null | undefined
+) => {
+  const date = value?.toDate?.()
+  return date ? useDateFormat(date, "MMM D, YYYY").value : "—"
+}
 </script>
 
 <template>
@@ -307,7 +309,7 @@ const sortedMemberships = computed(() => {
                       {{ membership.role }}
                     </TableCell>
                     <TableCell>
-                      {{ df.format(membership.createdAt.toDate()) }}
+                      {{ formatCreatedAt(membership.createdAt) }}
                     </TableCell>
                     <TableCell class="flex items-center justify-end text-right">
                       <ButtonGroup>

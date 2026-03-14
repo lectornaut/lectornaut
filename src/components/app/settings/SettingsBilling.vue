@@ -137,7 +137,7 @@ const currentPlanTotalPriceLabel = computed(() => {
 const currentPeriodEndLabel = computed(() => {
   const currentPeriodEnd = billing.value?.currentPeriodEnd
   if (typeof currentPeriodEnd !== "number") return "N/A"
-  return new Date(currentPeriodEnd * 1000).toLocaleDateString()
+  return useDateFormat(currentPeriodEnd * 1000, "MMM D, YYYY").value
 })
 
 const normalizedBillingStatus = computed(() =>

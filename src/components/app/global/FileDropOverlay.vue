@@ -1,5 +1,9 @@
 <script lang="ts" setup>
 import {
+  provideSidebarContext,
+  useSidebar,
+} from "@/components/ui/sidebar/utils"
+import {
   createWorkspaceNodeAttachmentFromFile,
   type AttachmentMutationContext,
 } from "@/composables/useNodeAttachments"
@@ -55,6 +59,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event"
 import { open } from "@tauri-apps/plugin-dialog"
 import { readFile, stat } from "@tauri-apps/plugin-fs"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
+import { useMediaQuery } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import type { Component } from "vue"
 
@@ -70,6 +75,33 @@ const { currentUser } = storeToRefs(authStore)
 const { memberships } = storeToRefs(membershipStore)
 const currentWindow = getCurrentTauriWindow()
 const isCaptureWindow = currentWindow?.label === FILE_CAPTURE_WINDOW_LABEL
+const overlaySidebarOpen = ref(true)
+const overlaySidebarOpenMobile = ref(false)
+const overlaySidebarIsMobile = useMediaQuery("(max-width: 768px)")
+const existingSidebarContext = useSidebar(null)
+
+// FileDropOverlay can render outside the app shell, so it needs its own
+// sidebar context for the file tree sheet in layoutless windows.
+if (!existingSidebarContext) {
+  provideSidebarContext({
+    state: computed(() =>
+      overlaySidebarOpen.value ? "expanded" : "collapsed"
+    ),
+    open: overlaySidebarOpen,
+    setOpen: (value: boolean) => {
+      overlaySidebarOpen.value = value
+    },
+    isMobile: overlaySidebarIsMobile,
+    openMobile: overlaySidebarOpenMobile,
+    setOpenMobile: (value: boolean) => {
+      overlaySidebarOpenMobile.value = value
+    },
+    toggleSidebar: () => {
+      overlaySidebarOpen.value = !overlaySidebarOpen.value
+    },
+  })
+}
+
 const isVisible = ref(false)
 const hasActiveFileDrag = ref(false)
 const queuedFiles = ref<QueuedFile[]>([])

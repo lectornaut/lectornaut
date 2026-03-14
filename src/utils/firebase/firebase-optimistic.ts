@@ -636,6 +636,149 @@ export async function withOptimisticUpdate<T>(
 }
 
 /**
+ * Wraps an async mutation that affects multiple document IDs with optimistic
+ * local state and shared pending tracking.
+ */
+export async function withOptimisticBatchUpdate<T>(
+  pendingIds: PendingCollection,
+  ids: string[],
+  applyOptimistic: () => void,
+  rollback: () => void,
+  operation: () => Promise<T>,
+  options: OptimisticOptions & { source?: string } = {}
+): Promise<T> {
+  const {
+    trackSync = true,
+    pendingReleaseDelayMs = DEFAULT_PENDING_RELEASE_DELAY_MS,
+    source = "withOptimisticBatchUpdate",
+  } = options
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)))
+
+  if (uniqueIds.length === 0) {
+    return await operation()
+  }
+
+  const { pendingRef, pendingSet } = toPendingHandle(pendingIds)
+  const syncToken = trackSync
+    ? beginCloudSyncOperation({
+        id: uniqueIds.length === 1 ? uniqueIds[0] : source,
+        source,
+      })
+    : null
+  let syncError: unknown
+  let applied = false
+
+  const releasePending = () => {
+    uniqueIds.forEach((id) => {
+      removePendingForHandle(pendingRef, pendingSet, id)
+    })
+  }
+
+  try {
+    uniqueIds.forEach((id) => {
+      addPendingForHandle(pendingRef, pendingSet, id)
+    })
+    applyOptimistic()
+    applied = true
+
+    const result = await new Promise<T>((resolve, reject) => {
+      queueMicrotask(() => {
+        void operation().then(resolve).catch(reject)
+      })
+    })
+
+    const releaseDelayMs = Math.max(0, pendingReleaseDelayMs)
+    if (releaseDelayMs > 0) {
+      setTimeout(releasePending, releaseDelayMs)
+    } else {
+      releasePending()
+    }
+
+    return result
+  } catch (error) {
+    syncError = error
+    if (applied) {
+      try {
+        rollback()
+      } catch (rollbackError) {
+        console.error(
+          `[withOptimisticBatchUpdate] Rollback failed for ids "${uniqueIds.join(",")}"`,
+          rollbackError
+        )
+      }
+    }
+    releasePending()
+    throw error
+  } finally {
+    if (syncToken !== null) {
+      endCloudSyncOperation(syncToken, syncError)
+    }
+  }
+}
+
+/**
+ * Merges live snapshot data with optimistic local state.
+ *
+ * - Optimistic entries replace live ones with the same ID.
+ * - Pending deletions are represented by missing optimistic entries.
+ * - Optimistic-only entries stay visible until the live snapshot catches up.
+ */
+export function mergeOptimisticCollectionByKey<T>(
+  persisted: T[],
+  optimistic: T[],
+  pendingIds: ReadonlySet<string>,
+  getKey: (item: T) => string,
+  options: {
+    sort?: (a: T, b: T) => number
+    includeOptimistic?: (item: T) => boolean
+  } = {}
+): T[] {
+  const optimisticByKey = new Map(
+    optimistic
+      .filter((item) => options.includeOptimistic?.(item) ?? true)
+      .map((item) => [getKey(item), item])
+  )
+  const merged: T[] = []
+
+  persisted.forEach((item) => {
+    const key = getKey(item)
+    if (pendingIds.has(key) && !optimisticByKey.has(key)) {
+      return
+    }
+
+    const optimisticItem = optimisticByKey.get(key)
+    merged.push(optimisticItem ?? item)
+    optimisticByKey.delete(key)
+  })
+
+  optimisticByKey.forEach((item, key) => {
+    if (!pendingIds.has(key)) return
+    merged.push(item)
+  })
+
+  if (options.sort) {
+    merged.sort(options.sort)
+  }
+
+  return merged
+}
+
+export function mergeOptimisticCollection<T extends { id: string }>(
+  persisted: T[],
+  optimistic: T[],
+  pendingIds: ReadonlySet<string>,
+  options: { sort?: (a: T, b: T) => number } = {}
+): T[] {
+  return mergeOptimisticCollectionByKey(
+    persisted,
+    optimistic,
+    pendingIds,
+    (item) => item.id,
+    options
+  )
+}
+
+/**
  * Type for array state operations
  */
 export interface ArrayStateHelpers<T extends { id: string }> {

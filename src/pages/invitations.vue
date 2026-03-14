@@ -179,6 +179,13 @@ const handleIgnore = () => {
 const handleLogout = () => {
   emitter.emit("Dialog.Exit.Open")
 }
+
+const formatInvitationTimestamp = (
+  value: IInvitation["createdAt"] | null | undefined
+) => {
+  const date = value?.toDate?.()
+  return date ? useDateFormat(date, "MMM D, YYYY · h:mm A").value : "—"
+}
 </script>
 
 <template>
@@ -216,14 +223,7 @@ const handleLogout = () => {
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     {{ invite.inviterEmail }} on
-                    {{
-                      new Intl.DateTimeFormat("en-US", {
-                        hour: "numeric",
-                        minute: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      }).format(invite.createdAt.toDate())
-                    }}
+                    {{ formatInvitationTimestamp(invite.createdAt) }}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -249,14 +249,7 @@ const handleLogout = () => {
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     {{ invite.inviterEmail }} on
-                    {{
-                      new Intl.DateTimeFormat("en-US", {
-                        hour: "numeric",
-                        minute: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      }).format(invite.createdAt.toDate())
-                    }}
+                    {{ formatInvitationTimestamp(invite.createdAt) }}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -330,14 +323,7 @@ const handleLogout = () => {
             <EmptyContent>
               <span class="text-muted-foreground text-xs">
                 {{ invitation.inviterEmail }} sent this invitation on
-                {{
-                  new Intl.DateTimeFormat("en-US", {
-                    hour: "numeric",
-                    minute: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  }).format(invitation.createdAt.toDate())
-                }}
+                {{ formatInvitationTimestamp(invitation.createdAt) }}
               </span>
               <Badge
                 v-if="invitation.status === 'declined'"

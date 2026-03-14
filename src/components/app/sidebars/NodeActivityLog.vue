@@ -14,7 +14,6 @@ import {
   IconUpload,
 } from "@/data/icons"
 import type { ILogEntry } from "@/types/logs"
-import { DateFormatter } from "@internationalized/date"
 import { toRefs } from "vue"
 
 const props = defineProps<{
@@ -34,11 +33,6 @@ const { logs, loading, error, hasMore, canViewLogs, fetchLogs } =
     workspaceId,
     documentId,
   })
-
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
 
 const ACTION_LABELS = {
   "content.create": "Created",
@@ -72,9 +66,23 @@ const hasSelectedNode = computed(() =>
   Boolean(teamId.value && workspaceId.value && documentId.value)
 )
 
+const resolveTimestamp = (entry: ILogEntry) => entry.timestamp?.toDate?.()
+
 const formatTimestamp = (entry: ILogEntry) => {
+  const timestamp = resolveTimestamp(entry)
+  return timestamp ? useTimeAgo(timestamp).value : "—"
+}
+
+const formatTimestampTitle = (entry: ILogEntry) => {
+  const timestamp = resolveTimestamp(entry)
+  return timestamp
+    ? useDateFormat(timestamp, "MMM D, YYYY · h:mm A").value
+    : undefined
+}
+
+const formatTimestampDateTime = (entry: ILogEntry) => {
   const timestamp = entry.timestamp?.toDate?.()
-  return timestamp ? df.format(timestamp) : "—"
+  return timestamp ? timestamp.toISOString() : undefined
 }
 
 const formatActor = (entry: ILogEntry) =>
@@ -232,7 +240,11 @@ useInfiniteScroll(
                       <p class="text-xs font-medium">
                         {{ formatAction(entry) }}
                       </p>
-                      <time class="text-muted-foreground shrink-0 text-xs">
+                      <time
+                        class="text-muted-foreground shrink-0 text-xs"
+                        :datetime="formatTimestampDateTime(entry)"
+                        :title="formatTimestampTitle(entry)"
+                      >
                         {{ formatTimestamp(entry) }}
                       </time>
                     </div>

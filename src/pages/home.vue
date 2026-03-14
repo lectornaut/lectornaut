@@ -25,7 +25,7 @@ import {
   IconStarOff,
   IconTrash2,
 } from "@/data/icons"
-import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date"
+import { getLocalTimeZone, today } from "@internationalized/date"
 import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue"
 import type { DateRange } from "reka-ui"
 import Avatar from "vue-boring-avatars"
@@ -41,10 +41,6 @@ definePage({
 
 useHead({
   title: "Home",
-})
-
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
 })
 
 const { t } = useI18n()
@@ -139,6 +135,27 @@ const chartData = [
 ]
 
 type Data = (typeof chartData)[number]
+
+const chartMonthLabels = new Map(
+  chartData.map((item) => [
+    item.date.getTime(),
+    useDateFormat(item.date, "MMM").value,
+  ])
+)
+const chartMonthLongLabels = new Map(
+  chartData.map((item) => [
+    item.date.getTime(),
+    useDateFormat(item.date, "MMMM").value,
+  ])
+)
+
+const formatDate = (
+  value: Date | string | number | null | undefined,
+  format = "MMM D, YYYY"
+) => {
+  if (value == null) return "—"
+  return useDateFormat(value, format).value
+}
 
 const chartConfig = computed(
   () =>
@@ -682,13 +699,19 @@ const expandedCard = ref<number | null>(null)
               <TooltipContent>
                 {{
                   range.start
-                    ? df.format(range.start.toDate(getLocalTimeZone()))
+                    ? formatDate(
+                        range.start.toDate(getLocalTimeZone()),
+                        "MMM D, YYYY"
+                      )
                     : "Start date"
                 }}
                 -
                 {{
                   range.end
-                    ? df.format(range.end.toDate(getLocalTimeZone()))
+                    ? formatDate(
+                        range.end.toDate(getLocalTimeZone()),
+                        "MMM D, YYYY"
+                      )
                     : "End date"
                 }}
               </TooltipContent>
@@ -809,9 +832,7 @@ const expandedCard = ref<number | null>(null)
                   :grid-line="false"
                   :tick-format="
                     (d: number) =>
-                      new Date(d).toLocaleDateString('en-US', {
-                        month: 'short',
-                      })
+                      chartMonthLabels.get(new Date(d).getTime()) ?? ''
                   "
                   :tick-values="chartData.map((d) => d.date)"
                 />
@@ -820,9 +841,9 @@ const expandedCard = ref<number | null>(null)
                   :template="
                     componentToString(chartConfig, ChartTooltipContent, {
                       labelFormatter(d) {
-                        return new Date(d).toLocaleDateString('en-US', {
-                          month: 'long',
-                        })
+                        return (
+                          chartMonthLongLabels.get(new Date(d).getTime()) ?? ''
+                        )
                       },
                     })
                   "

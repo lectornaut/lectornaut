@@ -10,7 +10,6 @@ import {
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { ROOT_PARENT_ID, type WorkspaceNode } from "@/types/nodes"
-import { DateFormatter } from "@internationalized/date"
 import { storeToRefs } from "pinia"
 import { toRef } from "vue"
 
@@ -25,11 +24,6 @@ const membershipStore = useMembershipStore()
 const { currentUser, userProfile } = storeToRefs(authStore)
 const { teamMembers } = storeToRefs(membershipStore)
 
-const df = new DateFormatter("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
-
 const formatTimestamp = (
   value:
     | {
@@ -39,7 +33,9 @@ const formatTimestamp = (
     | undefined
 ) => {
   const timestamp = value?.toDate?.()
-  return timestamp ? df.format(timestamp) : "—"
+  return timestamp
+    ? useDateFormat(timestamp, "MMM D, YYYY · h:mm A").value
+    : "—"
 }
 
 const formatActor = (userId: string | null | undefined) => {

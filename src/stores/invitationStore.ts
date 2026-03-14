@@ -45,6 +45,7 @@ import {
   cloneState,
   createPendingSet,
   generateOperationId,
+  mergeOptimisticCollectionByKey,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import {
@@ -146,32 +147,17 @@ export const useInvitationStore = defineStore("invitations", () => {
     firestoreData: IInvitation[] | undefined,
     includeOptimistic: (invitation: IInvitation) => boolean
   ): IInvitation[] => {
-    const pending = pendingInvitationIds.value
     const base = firestoreData || []
-    if (pending.size === 0) return base
-
-    const optimisticById = new Map<string, IInvitation>()
-    optimisticInvitations.value.forEach((invitation) => {
-      if (!invitation.id || !pending.has(invitation.id)) return
-      if (!includeOptimistic(invitation)) return
-      optimisticById.set(invitation.id, invitation)
-    })
-
-    const merged = base.map((invitation) => {
-      if (!invitation.id) return invitation
-      return optimisticById.get(invitation.id) ?? invitation
-    })
-    const mergedIds = new Set(
-      merged.map((invitation) => invitation.id).filter(Boolean)
-    )
-
-    optimisticById.forEach((invitation, id) => {
-      if (!mergedIds.has(id)) {
-        merged.push(invitation)
+    return mergeOptimisticCollectionByKey(
+      base,
+      optimisticInvitations.value,
+      pendingInvitationIds.value,
+      (invitation) => invitation.id ?? "",
+      {
+        includeOptimistic: (invitation) =>
+          Boolean(invitation.id) && includeOptimistic(invitation),
       }
-    })
-
-    return merged
+    )
   }
 
   /** Merged team invitations (live + optimistic) */
@@ -194,6 +180,17 @@ export const useInvitationStore = defineStore("invitations", () => {
     )
   })
 
+  const invitationsById = computed(() => {
+    const index = new Map<string, IInvitation>()
+    teamInvitations.value.forEach((invitation) => {
+      if (invitation.id) index.set(invitation.id, invitation)
+    })
+    userInvitations.value.forEach((invitation) => {
+      if (invitation.id) index.set(invitation.id, invitation)
+    })
+    return index
+  })
+
   // ============================================================================
   // Helpers
   // ============================================================================
@@ -205,15 +202,7 @@ export const useInvitationStore = defineStore("invitations", () => {
   }
 
   const findInvitationById = (invitationId: string) =>
-    optimisticInvitations.value.find(
-      (invitation) => invitation.id === invitationId
-    ) ||
-    firestoreTeamInvitations.value?.find(
-      (invitation) => invitation.id === invitationId
-    ) ||
-    firestoreUserInvitations.value?.find(
-      (invitation) => invitation.id === invitationId
-    )
+    invitationsById.value.get(invitationId)
 
   async function resolveMembershipForTeam(
     teamId: string,
