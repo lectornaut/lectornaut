@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { IconCircleDot } from "@/data/icons"
 import type {
   AccentId,
   BaseId,
@@ -110,10 +109,14 @@ const getOptionClass = (optionId: BaseId | AccentId, fallbackClass: string) =>
   optionId === "custom" ? "" : fallbackClass
 
 const getBaseOptionStyle = (optionId: BaseId) =>
-  optionId === "custom" ? { color: selectedCustomBaseColor.value } : undefined
+  optionId === "custom"
+    ? { backgroundColor: selectedCustomBaseColor.value }
+    : undefined
 
 const getAccentOptionStyle = (optionId: AccentId) =>
-  optionId === "custom" ? { color: selectedCustomAccentColor.value } : undefined
+  optionId === "custom"
+    ? { backgroundColor: selectedCustomAccentColor.value }
+    : undefined
 </script>
 
 <template>
@@ -160,7 +163,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               id="custom-base-color"
               v-model="selectedCustomBaseColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2 shadow-xs"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2.75 shadow-xs"
             />
             <Select id="base" v-model="selectedBase">
               <SelectTrigger>
@@ -173,7 +176,8 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :key="color.id"
                     :value="color.id"
                   >
-                    <IconCircleDot
+                    <span
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getBaseOptionStyle(color.id)"
                     />
@@ -190,7 +194,8 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :value="color.id"
                     :disabled="color.id === 'accent' && isAccentBaseSelected"
                   >
-                    <IconCircleDot
+                    <span
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getBaseOptionStyle(color.id)"
                     />
@@ -216,7 +221,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               id="custom-accent-color"
               v-model="selectedCustomAccentColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2 shadow-xs"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2.75 shadow-xs"
             />
             <Select id="accent" v-model="selectedAccent">
               <SelectTrigger>
@@ -232,7 +237,8 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :value="color.id"
                     :disabled="color.id === 'base' && isBaseAccentSelected"
                   >
-                    <IconCircleDot
+                    <span
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getAccentOptionStyle(color.id)"
                     />
@@ -250,7 +256,8 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :key="color.id"
                     :value="color.id"
                   >
-                    <IconCircleDot
+                    <span
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getAccentOptionStyle(color.id)"
                     />

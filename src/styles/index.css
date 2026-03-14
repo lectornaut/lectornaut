@@ -199,9 +199,9 @@
   --spacing-titlebar-bottom: env(titlebar-area-y);
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
-  --font-sans: "Roboto Flex Variable", "sans-serif";
-  --font-serif: "Roboto Serif Variable", "serif";
-  --font-mono: "Roboto Mono Variable", "monospace";
+  --font-sans: "Geist Variable", "sans-serif";
+  --font-serif: "EB Garamond Variable", "serif";
+  --font-mono: "Geist Mono Variable", "monospace";
   --font-display: "Playfair Display Variable", "serif";
   --font-flex: var(--flex);
   --text-size: var(--size);
@@ -391,3 +391,12 @@
   @apply border;
   @apply border-red-500;
 } */
+
+::-webkit-color-swatch-wrapper {
+  @apply p-0;
+}
+
+::-webkit-color-swatch {
+  @apply border-0;
+  @apply rounded-xs;
+}

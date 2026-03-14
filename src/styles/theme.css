@@ -10,15 +10,15 @@
      Typography & Scale
      ============================================ */
   :root[data-font="sans"] {
-    --flex: "Roboto Flex Variable", "sans-serif";
+    --flex: "Geist Variable", "sans-serif";
   }
 
   :root[data-font="serif"] {
-    --flex: "Roboto Serif Variable", "serif";
+    --flex: "EB Garamond Variable", "serif";
   }
 
   :root[data-font="mono"] {
-    --flex: "Roboto Mono Variable", "monospace";
+    --flex: "Geist Mono Variable", "monospace";
   }
 
   :root[data-size="xs"] {

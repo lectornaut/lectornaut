@@ -1703,9 +1703,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     color: var(--foreground);
-    font-family:
-      var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
-      Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: var(--font-mono);
     margin: 1rem 0;
     overflow-x: auto;
     padding: 0.75rem 0.9rem;

@@ -79,8 +79,16 @@ function resolveDropIndex(evt: Sortable.MoveEvent) {
   return evt.willInsertAfter ? relatedIndex + 1 : relatedIndex
 }
 
-function canDropWithinUnpinnedTabs(evt: Sortable.MoveEvent) {
-  return resolveDropIndex(evt) >= pinnedTabCount.value
+function isPinnedTabElement(element?: Element | null) {
+  return element instanceof HTMLElement && element.dataset.pinned === "true"
+}
+
+function canDropWithinTabBoundary(evt: Sortable.MoveEvent) {
+  const dropIndex = resolveDropIndex(evt)
+
+  return isPinnedTabElement(evt.dragged)
+    ? dropIndex <= pinnedTabCount.value
+    : dropIndex >= pinnedTabCount.value
 }
 
 // Enable drag-and-drop reordering
@@ -88,9 +96,7 @@ useSortable(el, tabs, {
   animation: 150,
   draggable: ".tab-item",
   handle: ".hover-trigger",
-  filter: "[data-pinned='true']",
-  preventOnFilter: false,
-  onMove: (evt) => canDropWithinUnpinnedTabs(evt),
+  onMove: (evt) => canDropWithinTabBoundary(evt),
   onEnd: () => {
     normalizeTabOrder()
   },
@@ -860,7 +866,15 @@ emitter.on("Tabs.Rename", onTabsRename)
                               :full-path="tab.fullPath"
                               :indicator="resolveTabIndicator(tab)"
                             />
-                            {{ tab.name }}
+                            <span class="min-w-0 truncate">
+                              {{ tab.name }}
+                            </span>
+                            <DropdownMenuShortcut
+                              v-if="isPinnedTab(tab)"
+                              class="tracking-normal"
+                            >
+                              <IconPin />
+                            </DropdownMenuShortcut>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
