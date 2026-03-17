@@ -8,10 +8,8 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 min-w-0 grow flex-col">
-    <div class="min-h-0 min-w-0 grow">
-      <AiChat />
-    </div>
+  <div class="flex h-full w-full flex-col">
+    <AiChat />
     <div class="bg-secondary mx-2 mb-2 rounded-lg border p-0.5">
       <div class="py-0.5">
         <Badge

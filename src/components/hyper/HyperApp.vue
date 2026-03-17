@@ -269,7 +269,7 @@ const randomIndex = () => {
           loop: true,
         }"
       >
-        <CarouselContent class="m-0 max-h-dvh min-h-0 min-w-0">
+        <CarouselContent class="m-0 size-full max-h-dvh min-h-0 min-w-0">
           <CarouselItem
             v-for="(__, rowIndex) in 15"
             :key="rowIndex"

@@ -315,7 +315,9 @@ const handleFinalStepAction = async () => {
         </SidebarContent>
       </Sidebar>
       <Separator orientation="vertical" />
-      <SidebarInset class="bg-background flex min-h-0 min-w-0 grow rounded-none">
+      <SidebarInset
+        class="bg-background flex min-h-0 min-w-0 grow rounded-none"
+      >
         <div class="border-b p-5 text-left">
           <h2 class="text-xl font-semibold">
             {{ activeStep?.title || t("pages.welcome.content.allSet") }}
@@ -328,7 +330,7 @@ const handleFinalStepAction = async () => {
           </p>
         </div>
 
-        <div class="min-h-0 min-w-0 grow overflow-auto text-left">
+        <div class="flex min-h-0 min-w-0 grow overflow-auto text-left">
           <template v-if="currentStep === 1">
             <OnboardingAccountFlow />
           </template>

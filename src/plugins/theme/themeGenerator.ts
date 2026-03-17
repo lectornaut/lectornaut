@@ -59,13 +59,13 @@ const DARK_CONTRAST_CSS_VALUE = paletteVar(DEFAULT_BASE_FAMILY, 950)
 const LIGHT_ACCENT_SHADES = {
   primary: 300,
   destructive: 200,
-  ring: 200,
+  ring: 400,
   charts: [300, 500, 700, 800, 900],
 } as const
 const DARK_ACCENT_SHADES = {
   primary: 700,
   destructive: 800,
-  ring: 800,
+  ring: 600,
   charts: [700, 500, 300, 200, 100],
 } as const
 
