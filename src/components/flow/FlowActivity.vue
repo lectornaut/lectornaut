@@ -297,7 +297,7 @@ const formatDate = (
                         <Component :is="event.icon" />
                       </span>
                     </div>
-                    <div class="flex min-w-0 flex-1 justify-between space-x-4">
+                    <div class="flex min-w-0 grow justify-between space-x-4">
                       <div>
                         <p>
                           {{ event.content }}

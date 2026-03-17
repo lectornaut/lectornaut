@@ -50,7 +50,8 @@
     "unpin": "Unpin",
     "update": "Update",
     "upload": "Upload",
-    "view": "View"
+    "view": "View",
+    "resetFilters": "Reset"
   },
   "labels": {
     "account": "Account",

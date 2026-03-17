@@ -291,7 +291,7 @@ const handleFinalStepAction = async () => {
                           />
                         </template>
                       </StepperIndicator>
-                      <div class="min-w-0 flex-1">
+                      <div class="min-w-0 grow">
                         <StepperTitle
                           :class="{
                             'text-primary': state === 'active',
@@ -315,7 +315,7 @@ const handleFinalStepAction = async () => {
         </SidebarContent>
       </Sidebar>
       <Separator orientation="vertical" />
-      <SidebarInset class="bg-background flex min-h-0 flex-1 rounded-none">
+      <SidebarInset class="bg-background flex min-h-0 min-w-0 grow rounded-none">
         <div class="border-b p-5 text-left">
           <h2 class="text-xl font-semibold">
             {{ activeStep?.title || t("pages.welcome.content.allSet") }}
@@ -328,7 +328,7 @@ const handleFinalStepAction = async () => {
           </p>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-auto text-left">
+        <div class="min-h-0 min-w-0 grow overflow-auto text-left">
           <template v-if="currentStep === 1">
             <OnboardingAccountFlow />
           </template>

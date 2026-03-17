@@ -253,7 +253,7 @@ const closeTab = (id: string) => {
 
 <template>
   <SidebarProvider v-model:open="sidebarOpen">
-    <SidebarInset class="min-h-0 overflow-hidden bg-transparent">
+    <SidebarInset class="min-h-0 min-w-0 overflow-hidden bg-transparent">
       <Headerbar />
       <div
         data-tauri-drag-region
@@ -370,7 +370,7 @@ const closeTab = (id: string) => {
                       :inert="topPanel?.splitterPanel?.isCollapsed"
                     >
                       <div
-                        class="bg-background/80 flex h-full min-h-0 flex-1 flex-col overflow-clip"
+                        class="bg-background/80 flex h-full min-h-0 min-w-0 grow flex-col overflow-clip"
                       >
                         <!-- Non-scrollable header -->
                         <div class="flex shrink-0 flex-col">
@@ -379,7 +379,7 @@ const closeTab = (id: string) => {
                         </div>
                         <!-- Scrollable content area - isolate scroll context -->
                         <div
-                          class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [overflow-anchor:none] [scrollbar-gutter:stable]"
+                          class="relative flex min-h-0 min-w-0 grow flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [overflow-anchor:none] [scrollbar-gutter:stable]"
                         >
                           <div
                             class="bg-sidebar/95 shadow-muted-foreground/5 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
@@ -390,7 +390,7 @@ const closeTab = (id: string) => {
                               class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
                             ></div>
                           </div>
-                          <div class="flex min-h-0 flex-1 flex-col">
+                          <div class="flex min-h-0 min-w-0 grow flex-col">
                             <RouterView />
                           </div>
                         </div>
@@ -473,15 +473,15 @@ const closeTab = (id: string) => {
                       @collapse="bottomPanelCollapsed = true"
                       @expand="bottomPanelCollapsed = false"
                     >
-                      <Tabs v-model="activeTab" class="min-h-0">
-                        <div class="h-full min-h-0">
+                      <Tabs v-model="activeTab" class="min-h-0 min-w-0">
+                        <div class="h-full min-h-0 min-w-0">
                           <div
                             id="bottom-sidebar"
-                            class="bg-background flex h-full min-h-0 flex-col overflow-clip overscroll-none"
+                            class="bg-background flex h-full min-h-0 min-w-0 flex-col overflow-clip overscroll-none"
                           >
                             <div class="flex items-stretch gap-2 p-2">
                               <div
-                                class="relative flex min-w-0 flex-1 items-stretch justify-start gap-2"
+                                class="relative flex min-w-0 grow items-stretch justify-start gap-2"
                               >
                                 <TabsList
                                   v-if="source.length > 0"
@@ -502,7 +502,7 @@ const closeTab = (id: string) => {
                                   >
                                     <IconTerminal />
                                     <span
-                                      class="flex-1 items-center justify-start truncate text-left"
+                                      class="grow items-center justify-start truncate text-left"
                                     >
                                       {{ tab.label }}
                                     </span>

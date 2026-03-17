@@ -225,7 +225,7 @@ useInfiniteScroll(
                     <StepperSeparator
                       v-if="index < logs.length - 1"
                       orientation="vertical"
-                      class="bg-border w-px flex-1"
+                      class="bg-border w-px grow"
                     />
                   </div>
 

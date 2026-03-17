@@ -989,9 +989,9 @@ const handleSubmit = async () => {
           <ButtonGroup
             v-for="member in activeMembers"
             :key="member.id"
-            class="flex-1"
+            class="grow"
           >
-            <ButtonGroup class="flex-1">
+            <ButtonGroup class="grow">
               <InputGroup>
                 <InputGroupInput :model-value="member.email" disabled />
               </InputGroup>
@@ -1091,8 +1091,8 @@ const handleSubmit = async () => {
             {{ t("components.teamDialog.labels.invite") }}
           </FieldLabel>
           <!-- Input Form -->
-          <ButtonGroup class="flex-1">
-            <ButtonGroup class="flex-1">
+          <ButtonGroup class="grow">
+            <ButtonGroup class="grow">
               <InputGroup>
                 <TooltipProvider>
                   <Tooltip>
@@ -1190,9 +1190,9 @@ const handleSubmit = async () => {
           <ButtonGroup
             v-for="(member, index) in stagedInvites"
             :key="`staged-${index}`"
-            class="flex-1"
+            class="grow"
           >
-            <ButtonGroup class="flex-1">
+            <ButtonGroup class="grow">
               <InputGroup>
                 <InputGroupInput
                   v-model="member.email"
@@ -1273,9 +1273,9 @@ const handleSubmit = async () => {
             <ButtonGroup
               v-for="invite in visibleTeamInvitations"
               :key="invite.id"
-              class="flex-1"
+              class="grow"
             >
-              <ButtonGroup class="flex-1">
+              <ButtonGroup class="grow">
                 <InputGroup>
                   <InputGroupInput
                     :model-value="invite.email"

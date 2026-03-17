@@ -20,7 +20,7 @@ useHead({
   <AiChatShell />
   <Teleport defer to="#right-sidebar">
     <Sidebar collapsible="none" class="w-full">
-      <Tabs default-value="details" class="h-full min-h-0 gap-0">
+      <Tabs default-value="details" class="h-full min-h-0 min-w-0 gap-0">
         <TabsList class="bg-transparent p-2">
           <TabsTrigger
             value="details"
@@ -35,10 +35,10 @@ useHead({
             Actions
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="details" class="h-0 min-h-0 flex-1">
+        <TabsContent value="details" class="h-0 min-h-0 min-w-0 grow">
           <BotChatDetails />
         </TabsContent>
-        <TabsContent value="actions" class="h-0 min-h-0 flex-1">
+        <TabsContent value="actions" class="h-0 min-h-0 min-w-0 grow">
           <BotChatActions />
         </TabsContent>
       </Tabs>

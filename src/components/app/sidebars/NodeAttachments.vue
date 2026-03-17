@@ -583,7 +583,7 @@ watch(selectedCreateFiles, async (files) => {
                     class="text-destructive mt-0.5 size-3.5 shrink-0"
                   />
 
-                  <div class="min-w-0 flex-1">
+                  <div class="min-w-0 grow">
                     <p class="truncate text-xs font-medium">{{ item.name }}</p>
                     <p class="text-muted-foreground text-xs">
                       {{
@@ -659,7 +659,7 @@ watch(selectedCreateFiles, async (files) => {
                       />
                     </div>
 
-                    <div class="min-w-0 flex-1 space-y-3">
+                    <div class="min-w-0 grow space-y-3">
                       <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                           <p class="truncate text-sm font-medium">

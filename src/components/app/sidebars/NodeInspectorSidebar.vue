@@ -11,7 +11,7 @@ defineProps<{
 
 <template>
   <Sidebar collapsible="none" class="w-full">
-    <Tabs default-value="details" class="h-full min-h-0 gap-0">
+    <Tabs default-value="details" class="h-full min-h-0 min-w-0 gap-0">
       <TabsList class="bg-transparent p-2">
         <TabsTrigger
           value="details"
@@ -33,11 +33,11 @@ defineProps<{
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="details" class="h-0 min-h-0 flex-1">
+      <TabsContent value="details" class="h-0 min-h-0 min-w-0 grow">
         <NodeDetails :node="node" />
       </TabsContent>
 
-      <TabsContent value="attachments" class="h-0 min-h-0 flex-1">
+      <TabsContent value="attachments" class="h-0 min-h-0 min-w-0 grow">
         <NodeAttachments
           :team-id="teamId"
           :workspace-id="workspaceId"
@@ -46,7 +46,7 @@ defineProps<{
         />
       </TabsContent>
 
-      <TabsContent value="activity" class="h-0 min-h-0 flex-1">
+      <TabsContent value="activity" class="h-0 min-h-0 min-w-0 grow">
         <NodeActivityLog
           v-if="teamId && workspaceId && node"
           :team-id="teamId"

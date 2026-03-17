@@ -258,7 +258,7 @@ const discardChanges = () => {
 </script>
 
 <template>
-  <div class="flex flex-1 flex-col justify-between">
+  <div class="flex grow flex-col justify-between">
     <div class="p-6">
       <FieldGroup>
         <FieldSet>

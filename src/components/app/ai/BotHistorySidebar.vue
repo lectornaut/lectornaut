@@ -72,7 +72,7 @@ const previousHistory = [
                   class="h-auto items-start gap-2 py-2"
                 >
                   <IconMessageCircleMore class="mt-0.5 shrink-0" />
-                  <span class="flex min-w-0 flex-1 flex-col">
+                  <span class="flex min-w-0 grow flex-col">
                     <span class="truncate text-sm">{{ item.title }}</span>
                     <span class="text-muted-foreground line-clamp-1 text-xs">
                       {{ item.preview }}
@@ -98,7 +98,7 @@ const previousHistory = [
               >
                 <SidebarMenuButton class="h-auto items-start gap-2 py-2">
                   <IconMessageCircleMore class="mt-0.5 shrink-0" />
-                  <span class="flex min-w-0 flex-1 flex-col">
+                  <span class="flex min-w-0 grow flex-col">
                     <span class="truncate text-sm">{{ item.title }}</span>
                     <span class="text-muted-foreground line-clamp-1 text-xs">
                       {{ item.preview }}

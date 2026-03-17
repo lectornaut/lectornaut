@@ -107,7 +107,7 @@ const table = useVueTable({
 </script>
 
 <template>
-  <div class="grid min-h-0 grow grid-cols-1 divide-y">
+  <div class="flex min-h-0 min-w-0 grow flex-col divide-y">
     <DataTableToolbar
       v-if="props.showToolbar"
       :table="table"
