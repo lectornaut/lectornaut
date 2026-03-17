@@ -253,9 +253,12 @@ const closeTab = (id: string) => {
 
 <template>
   <SidebarProvider v-model:open="sidebarOpen">
-    <SidebarInset class="bg-transparent">
+    <SidebarInset class="min-h-0 overflow-hidden bg-transparent">
       <Headerbar />
-      <div data-tauri-drag-region class="grid min-h-0 min-w-0 grow">
+      <div
+        data-tauri-drag-region
+        class="grid min-h-0 min-w-0 grow overflow-hidden"
+      >
         <Spinner v-if="isLoading" class="m-auto" />
         <TeamSelector v-else-if="!currentTeam" />
         <WorkspaceSelector v-else-if="!currentWorkspace" />
@@ -273,7 +276,7 @@ const closeTab = (id: string) => {
             class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-lg border shadow empty:hidden"
           ></div>
           <ResizablePanelGroup
-            class="shadow-muted-foreground/5 min-w-0 overflow-clip rounded-lg border shadow"
+            class="shadow-muted-foreground/5 min-h-0 min-w-0 overflow-clip rounded-lg border shadow"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -350,7 +353,7 @@ const closeTab = (id: string) => {
             </TooltipProvider>
             <ResizablePanel>
               <ResizablePanelGroup
-                class="min-w-0 overflow-clip"
+                class="min-h-0 min-w-0 overflow-clip"
                 direction="vertical"
                 auto-save-id="app-vertical-layout"
               >
@@ -367,7 +370,7 @@ const closeTab = (id: string) => {
                       :inert="topPanel?.splitterPanel?.isCollapsed"
                     >
                       <div
-                        class="bg-background/80 flex min-h-0 flex-1 flex-col overflow-clip"
+                        class="bg-background/80 flex h-full min-h-0 flex-1 flex-col overflow-clip"
                       >
                         <!-- Non-scrollable header -->
                         <div class="flex shrink-0 flex-col">
@@ -376,7 +379,7 @@ const closeTab = (id: string) => {
                         </div>
                         <!-- Scrollable content area - isolate scroll context -->
                         <div
-                          class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [scrollbar-gutter:stable]"
+                          class="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth [overflow-anchor:none] [scrollbar-gutter:stable]"
                         >
                           <div
                             class="bg-sidebar/95 shadow-muted-foreground/5 sticky top-0 z-20 mx-2 flex shrink-0 items-center justify-between overflow-hidden rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
@@ -387,7 +390,9 @@ const closeTab = (id: string) => {
                               class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
                             ></div>
                           </div>
-                          <RouterView />
+                          <div class="flex min-h-0 flex-1 flex-col">
+                            <RouterView />
+                          </div>
                         </div>
                       </div>
                     </ResizablePanel>
@@ -468,11 +473,11 @@ const closeTab = (id: string) => {
                       @collapse="bottomPanelCollapsed = true"
                       @expand="bottomPanelCollapsed = false"
                     >
-                      <Tabs v-model="activeTab">
-                        <div class="h-full">
+                      <Tabs v-model="activeTab" class="min-h-0">
+                        <div class="h-full min-h-0">
                           <div
                             id="bottom-sidebar"
-                            class="bg-background flex h-full flex-col overflow-clip overscroll-none"
+                            class="bg-background flex h-full min-h-0 flex-col overflow-clip overscroll-none"
                           >
                             <div class="flex items-stretch gap-2 p-2">
                               <div

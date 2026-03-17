@@ -22,6 +22,7 @@ import { ViteImageOptimizer } from "vite-plugin-image-optimizer"
 import { VitePWA } from "vite-plugin-pwa"
 import Sitemap from "vite-plugin-sitemap"
 import Layouts from "vite-plugin-vue-layouts"
+import { generateThemesCssPlugin } from "./src/plugins/theme"
 
 const host = process.env.TAURI_DEV_HOST
 const file = fileURLToPath(new URL("package.json", import.meta.url))
@@ -41,6 +42,9 @@ export default defineConfig({
     include: ["workbox-window"],
   },
   plugins: [
+    generateThemesCssPlugin({
+      outFile: "./styles/theme.css",
+    }),
     VueRouter(),
     Vue(),
     VitePWA({

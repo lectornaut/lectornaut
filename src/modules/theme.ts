@@ -22,7 +22,12 @@ export const { store, system, state } = useColorMode({
   storageKey: "theme",
 })
 
+let hasInitializedTheme = false
+
 export const initTheme = () => {
+  if (hasInitializedTheme) return
+  hasInitializedTheme = true
+
   const settingsStore = useSettingsStore()
   const { themeSettings } = storeToRefs(settingsStore)
 
@@ -33,45 +38,17 @@ export const initTheme = () => {
         store.value = value
       }
     },
-    { immediate: true }
-  )
-
-  watch(store, (value) => {
-    if (value && value !== themeSettings.value.mode) {
-      themeSettings.value.mode = value as ThemeMode
-    }
-  })
-
-  watch(
-    () => themeSettings.value.accent,
-    (value) => {
-      document.documentElement.setAttribute("data-accent", value)
-    },
-    { immediate: true }
+    { immediate: true, flush: "sync" }
   )
 
   watch(
-    () => themeSettings.value.base,
+    store,
     (value) => {
-      document.documentElement.setAttribute("data-base", value)
+      if (value && value !== themeSettings.value.mode) {
+        themeSettings.value.mode = value as ThemeMode
+      }
     },
-    { immediate: true }
-  )
-
-  watch(
-    () => themeSettings.value.font,
-    (value) => {
-      document.documentElement.setAttribute("data-font", value)
-    },
-    { immediate: true }
-  )
-
-  watch(
-    () => themeSettings.value.size,
-    (value) => {
-      document.documentElement.setAttribute("data-size", value)
-    },
-    { immediate: true }
+    { flush: "sync" }
   )
 
   watch(
@@ -79,6 +56,8 @@ export const initTheme = () => {
       state,
       () => themeSettings.value.base,
       () => themeSettings.value.accent,
+      () => themeSettings.value.font,
+      () => themeSettings.value.size,
       () => themeSettings.value.customBaseColor,
       () => themeSettings.value.customAccentColor,
     ],
@@ -86,9 +65,18 @@ export const initTheme = () => {
       resolvedTheme,
       selectedBase,
       selectedAccent,
+      selectedFont,
+      selectedSize,
       selectedCustomBaseColor,
       selectedCustomAccentColor,
     ]) => {
+      applyThemeAttributes({
+        base: selectedBase,
+        accent: selectedAccent,
+        font: selectedFont,
+        size: selectedSize,
+      })
+
       const resolvedMode = toResolvedThemeMode(resolvedTheme)
       const baseSourceColor = getCustomBaseSourceColor(
         selectedBase,
@@ -116,8 +104,104 @@ export const initTheme = () => {
           : null
       )
     },
-    { immediate: true }
+    { immediate: true, flush: "sync" }
   )
+
+  if (isTauri.value) {
+    watch(
+      store,
+      (value) => {
+        void syncTauriTheme(value)
+      },
+      { immediate: true, flush: "sync" }
+    )
+  }
+}
+
+function applyManagedThemeTokens(
+  tokenNames: readonly string[],
+  tokens: Record<string, string> | null
+) {
+  const root = document.documentElement
+
+  for (const tokenName of tokenNames) {
+    if (tokens) {
+      root.style.setProperty(tokenName, tokens[tokenName] ?? "")
+      continue
+    }
+
+    root.style.removeProperty(tokenName)
+  }
+}
+
+function applyThemeAttributes(attributes: Record<string, string>) {
+  const root = document.documentElement
+
+  for (const [name, value] of Object.entries(attributes)) {
+    const attributeName = `data-${name}`
+
+    if (root.getAttribute(attributeName) !== value) {
+      root.setAttribute(attributeName, value)
+    }
+  }
+}
+
+function toResolvedThemeMode(value: string): ResolvedThemeMode {
+  return value === "dark" ? "dark" : "light"
+}
+
+async function syncTauriTheme(value: string) {
+  switch (value) {
+    case "light":
+      await setTheme("light")
+      return
+    case "dark":
+      await setTheme("dark")
+      return
+    case "auto":
+    default:
+      await setTheme(null)
+  }
+}
+
+function getCustomBaseSourceColor(
+  selectedBase: BaseId,
+  selectedAccent: AccentId,
+  selectedCustomBaseColor: string,
+  selectedCustomAccentColor: string
+): string | null {
+  if (selectedBase === "custom") {
+    return normalizeHexColor(selectedCustomBaseColor, defaultCustomBaseColor)
+  }
+
+  if (selectedBase === "accent" && selectedAccent === "custom") {
+    return normalizeHexColor(
+      selectedCustomAccentColor,
+      defaultCustomAccentColor
+    )
+  }
+
+  return null
+}
+
+function getCustomAccentSourceColor(
+  selectedBase: BaseId,
+  selectedAccent: AccentId,
+  selectedCustomBaseColor: string,
+  selectedCustomAccentColor: string
+): string | null {
+  if (selectedAccent === "custom") {
+    return normalizeHexColor(
+      selectedCustomAccentColor,
+      defaultCustomAccentColor
+    )
+  }
+
+  if (selectedAccent === "base" && selectedBase === "custom") {
+    return normalizeHexColor(selectedCustomBaseColor, defaultCustomBaseColor)
+  }
+
+  return null
 }
 
 export const accent = computed({
@@ -191,82 +275,3 @@ export const customAccentColor = computed({
     )
   },
 })
-
-if (isTauri.value) {
-  watch(store, async (value) => {
-    switch (value) {
-      case "light":
-        await setTheme("light")
-        break
-      case "dark":
-        await setTheme("dark")
-        break
-      case "auto":
-        await setTheme(null)
-        break
-      default:
-        await setTheme(null)
-        break
-    }
-  })
-}
-
-function applyManagedThemeTokens(
-  tokenNames: readonly string[],
-  tokens: Record<string, string> | null
-) {
-  const root = document.documentElement
-
-  for (const tokenName of tokenNames) {
-    if (tokens) {
-      root.style.setProperty(tokenName, tokens[tokenName] ?? "")
-      continue
-    }
-
-    root.style.removeProperty(tokenName)
-  }
-}
-
-function toResolvedThemeMode(value: string): ResolvedThemeMode {
-  return value === "dark" ? "dark" : "light"
-}
-
-function getCustomBaseSourceColor(
-  selectedBase: BaseId,
-  selectedAccent: AccentId,
-  selectedCustomBaseColor: string,
-  selectedCustomAccentColor: string
-): string | null {
-  if (selectedBase === "custom") {
-    return normalizeHexColor(selectedCustomBaseColor, defaultCustomBaseColor)
-  }
-
-  if (selectedBase === "accent" && selectedAccent === "custom") {
-    return normalizeHexColor(
-      selectedCustomAccentColor,
-      defaultCustomAccentColor
-    )
-  }
-
-  return null
-}
-
-function getCustomAccentSourceColor(
-  selectedBase: BaseId,
-  selectedAccent: AccentId,
-  selectedCustomBaseColor: string,
-  selectedCustomAccentColor: string
-): string | null {
-  if (selectedAccent === "custom") {
-    return normalizeHexColor(
-      selectedCustomAccentColor,
-      defaultCustomAccentColor
-    )
-  }
-
-  if (selectedAccent === "base" && selectedBase === "custom") {
-    return normalizeHexColor(selectedCustomBaseColor, defaultCustomBaseColor)
-  }
-
-  return null
-}

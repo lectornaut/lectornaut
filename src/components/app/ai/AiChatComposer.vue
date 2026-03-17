@@ -20,7 +20,7 @@ const inputPlaceholder = computed(
 </script>
 
 <template>
-  <InputGroup class="bg-background shadow-md">
+  <InputGroup class="bg-background">
     <InputGroupTextarea v-model="userInput" :placeholder="inputPlaceholder" />
     <InputGroupAddon align="block-end">
       <InputGroupButton variant="outline" size="icon-xs">

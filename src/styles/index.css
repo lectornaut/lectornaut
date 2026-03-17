@@ -10,6 +10,10 @@
 @plugin "@tailwindcss/forms";
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
+@view-transition {
+  navigation: auto;
+}
+
 /*
   Base layer
   - Global resets, body defaults, accessibility-aware tweaks,
