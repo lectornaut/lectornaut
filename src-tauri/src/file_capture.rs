@@ -349,15 +349,19 @@ mod macos {
         }
 
         let is_drag_button_pressed = (NSEvent::pressedMouseButtons() & 1) == 1;
-        let Some(change_count) = current_drag_file_change_count() else {
-            handle_drag_end(app);
-            return;
-        };
 
+        // Only access the drag pasteboard when the mouse button is actually pressed.
+        // This avoids repeated macOS system log warnings ("Couldn't get a file system
+        // path for a URL") caused by polling stale file-reference URLs on the pasteboard.
         if !is_drag_button_pressed {
             handle_drag_end(app);
             return;
         }
+
+        let Some(change_count) = current_drag_file_change_count() else {
+            handle_drag_end(app);
+            return;
+        };
 
         let should_show = {
             let state = app.state::<FileCaptureState>();

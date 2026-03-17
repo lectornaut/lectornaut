@@ -8,19 +8,17 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex h-full w-full flex-col">
-    <AiChat />
-    <div class="bg-secondary mx-2 mb-2 rounded-lg border p-0.5">
-      <div class="py-0.5">
-        <Badge
-          variant="secondary"
-          size="icon-xs"
-          class="text-muted-foreground/50"
-        >
-          <IconAiFill />
-        </Badge>
-      </div>
-      <AiChatComposer :placeholder="placeholder" :usage-label="usageLabel" />
+  <AiChat />
+  <div class="bg-secondary mx-2 mb-2 rounded-lg border p-0.5">
+    <div class="py-0.5">
+      <Badge
+        variant="secondary"
+        size="icon-xs"
+        class="text-muted-foreground/50"
+      >
+        <IconAiFill />
+      </Badge>
     </div>
+    <AiChatComposer :placeholder="placeholder" :usage-label="usageLabel" />
   </div>
 </template>

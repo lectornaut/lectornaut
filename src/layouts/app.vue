@@ -383,14 +383,16 @@ const closeTab = (id: string) => {
                         <div
                           class="relative flex min-h-0 min-w-0 grow flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth"
                         >
-                          <div
-                            class="bg-sidebar/95 shadow-muted-foreground/5 sticky top-0 z-20 container mx-auto flex shrink-0 items-center justify-between overflow-hidden rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
-                          >
-                            <SubNavigation />
+                          <div class="sticky top-0 z-20 container mx-auto">
                             <div
-                              id="cta-dock"
-                              class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
-                            ></div>
+                              class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-hidden rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
+                            >
+                              <SubNavigation />
+                              <div
+                                id="cta-dock"
+                                class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
+                              ></div>
+                            </div>
                           </div>
                           <div
                             class="container mx-auto flex min-h-0 min-w-0 grow flex-col"

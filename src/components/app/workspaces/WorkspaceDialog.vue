@@ -4,6 +4,7 @@ import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconX } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types/domain"
+import { toast } from "vue-sonner"
 
 const props = defineProps<{
   open?: boolean
@@ -101,6 +102,11 @@ watch(isOpen, (val) => {
 
 const handleSubmit = async () => {
   if (!workspaceName.value.trim()) return
+
+  if (props.mode === "create" && !canCreateWorkspace.value) {
+    toast.error(t(getCannotCreateWorkspaceReason.value || ""))
+    return
+  }
 
   isLoading.value = true
   try {
@@ -323,12 +329,7 @@ const handleSubmit = async () => {
           </Button>
         </DialogClose>
         <Button
-          :disabled="
-            isLoading ||
-            !workspaceName.trim() ||
-            (!canCreateWorkspace && mode === 'create') ||
-            (!canUpdateWorkspace && mode === 'edit')
-          "
+          :disabled="isLoading || (!canUpdateWorkspace && mode === 'edit')"
           @click="handleSubmit"
         >
           <Spinner v-if="isLoading" />
