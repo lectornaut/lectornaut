@@ -523,11 +523,12 @@ onMounted(() => {
   initializeEditor()
 })
 
-// Watch for modelValue changes
+// Watch for modelValue changes (skip when collaborative extensions manage the doc)
 watch(
   () => props.modelValue,
   (value) => {
     if (!view.value) return
+    if (props.extensions.length > 0) return
     try {
       const current = view.value.state.doc.toString()
       if ((value ?? "") === current) return
@@ -650,18 +651,18 @@ watch(
 
 // Cleanup on unmount
 onBeforeUnmount(() => {
-  isUnmounting = true
-
   if (modelEmitTimer !== null) {
     clearTimeout(modelEmitTimer)
     modelEmitTimer = null
   }
 
   // Flush any pending model updates before destroying
-  if (pendingModelValue !== null && !isUnmounting) {
+  if (pendingModelValue !== null) {
     emit("update:modelValue", pendingModelValue)
   }
   pendingModelValue = null
+
+  isUnmounting = true
 
   if (view.value) {
     try {

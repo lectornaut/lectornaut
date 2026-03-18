@@ -20,10 +20,7 @@ import {
   hasFirebaseErrorCode,
   isRetryableFirebaseError,
 } from "@/utils/firebase/firebase-errors"
-import type { Extension } from "@codemirror/state"
-import { EditorView } from "@codemirror/view"
 import { useEventListener } from "@vueuse/core"
-import { yCollab } from "y-codemirror.next"
 import * as awarenessProtocol from "y-protocols/awareness"
 import { Awareness } from "y-protocols/awareness"
 import * as Y from "yjs"
@@ -51,7 +48,6 @@ export interface CreateYjsCollabOptions {
   teamId: string
   workspaceId: string
   scope: WorkspaceNodeScope
-  initialContent?: string
   user: CollabUser
 }
 
@@ -60,8 +56,10 @@ export interface YjsCollabSession {
   peerId: string
   awareness: Awareness
   ydoc: Y.Doc
-  getExtensions: () => Extension[]
-  getText: () => string
+  /** Whether a snapshot was loaded from persistence */
+  hasSnapshot: boolean
+  /** Notify the snapshot manager that the document has changed */
+  scheduleSave: () => void
   destroy: () => Promise<void>
 }
 
@@ -78,7 +76,6 @@ export async function createYjsCollab(
   })
 
   const ydoc = new Y.Doc()
-  const ytext = ydoc.getText("codemirror")
   let hasSnapshot = false
 
   try {
@@ -89,10 +86,6 @@ export async function createYjsCollab(
     }
   } catch (error) {
     console.error("[collab] Failed to load snapshot", error)
-  }
-
-  if (!hasSnapshot && options.initialContent && ytext.length === 0) {
-    ytext.insert(0, options.initialContent)
   }
 
   const awareness = new Awareness(ydoc)
@@ -109,13 +102,6 @@ export async function createYjsCollab(
       role: join.role,
     },
   })
-
-  const undoManager = new Y.UndoManager(ytext)
-  const extensions: Extension[] = [yCollab(ytext, awareness, { undoManager })]
-
-  if (join.role === "viewer") {
-    extensions.push(EditorView.editable.of(false))
-  }
 
   const snapshotManager = createSnapshotManager({
     contentId: options.contentId,
@@ -487,8 +473,8 @@ export async function createYjsCollab(
     peerId,
     awareness,
     ydoc,
-    getExtensions: () => extensions,
-    getText: () => ytext.toString(),
+    hasSnapshot,
+    scheduleSave: () => snapshotManager.scheduleSave(),
     destroy,
   }
 }

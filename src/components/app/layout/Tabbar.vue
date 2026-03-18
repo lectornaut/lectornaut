@@ -16,7 +16,7 @@ import {
   IconTrash,
   IconX,
 } from "@/data/icons"
-import { resolveRouteName } from "@/helpers/route"
+import { resolveRouteName } from "@/helpers/breadcrumber"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"

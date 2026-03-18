@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
-import { useBillingAccess } from "@/composables/useBillingAccess"
 import { isTauri } from "@/composables/usePlatform"
 import {
   IconArrowBigUp,
@@ -30,6 +29,7 @@ import {
 } from "@/data/icons"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
+import { useBillingStore } from "@/stores/billingStore"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
@@ -53,7 +53,8 @@ const {
 
 const { t } = useI18n()
 const router = useRouter()
-const { canUseFeature } = useBillingAccess()
+const billingStore = useBillingStore()
+const { canUseFeature } = billingStore
 
 const hasPaidPlan = computed(() => canUseFeature("paid"))
 
@@ -254,12 +255,12 @@ const closeTab = (id: string) => {
 <template>
   <SidebarProvider v-model:open="sidebarOpen">
     <SidebarInset
-      class="size-full min-h-0 min-w-0 overflow-hidden bg-transparent"
+      class="size-full min-h-0 min-w-0 overflow-clip bg-transparent"
     >
       <Headerbar />
       <div
         data-tauri-drag-region
-        class="flex min-h-0 min-w-0 grow overflow-hidden"
+        class="flex min-h-0 min-w-0 grow overflow-clip"
       >
         <Spinner v-if="isLoading" class="m-auto" />
         <TeamSelector v-else-if="!currentTeam" />
@@ -278,7 +279,8 @@ const closeTab = (id: string) => {
             class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-lg border shadow empty:hidden"
           ></div>
           <ResizablePanelGroup
-            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 overflow-clip rounded-lg border shadow"
+            :style="{ overflow: 'clip' }"
+            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-lg border shadow"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -355,7 +357,8 @@ const closeTab = (id: string) => {
             </TooltipProvider>
             <ResizablePanel>
               <ResizablePanelGroup
-                class="size-full min-h-0 min-w-0 overflow-clip"
+                :style="{ overflow: 'clip' }"
+                class="size-full min-h-0 min-w-0"
                 direction="vertical"
                 auto-save-id="app-vertical-layout"
               >
@@ -381,11 +384,11 @@ const closeTab = (id: string) => {
                         </div>
                         <!-- Scrollable content area - isolate scroll context -->
                         <div
-                          class="relative flex min-h-0 min-w-0 grow flex-col overflow-x-hidden overflow-y-auto overscroll-none scroll-smooth"
+                          class="relative flex min-h-0 min-w-0 grow flex-col overflow-x-clip overflow-y-auto overscroll-none scroll-smooth"
                         >
                           <div class="sticky top-0 z-20 container mx-auto">
                             <div
-                              class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-hidden rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
+                              class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
                             >
                               <SubNavigation />
                               <div
@@ -511,7 +514,7 @@ const closeTab = (id: string) => {
                                   >
                                     <IconTerminal />
                                     <span
-                                      class="grow items-center justify-start truncate text-left"
+                                      class="flex grow items-center justify-start truncate"
                                     >
                                       {{ tab.label }}
                                     </span>
@@ -783,7 +786,7 @@ const closeTab = (id: string) => {
                             height: `${observedSize.height}px`,
                           }
                     "
-                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-hidden rounded border will-change-transform"
+                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded border will-change-transform"
                     :class="
                       isPoppedOutMinimized
                         ? 'border-foreground shadow-md ring-1'

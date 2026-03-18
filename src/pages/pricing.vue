@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useBillingAccess } from "@/composables/useBillingAccess"
 import {
   changeSubscriptionPlan as changeSubscriptionPlanFn,
   createCheckoutSession as createCheckoutSessionFn,
@@ -14,6 +13,8 @@ import {
   createPendingExternalTab,
   openExternalUrl,
 } from "@/helpers/openExternalUrl"
+import { useBillingStore } from "@/stores/billingStore"
+import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
@@ -31,14 +32,16 @@ const { t } = useI18n()
 const router = useRouter()
 const user = useCurrentUser()
 const { canManageBilling, currentTeam } = useTeamActions()
+const billingStore = useBillingStore()
+void billingStore.ensureCatalogLoaded()
 const {
   catalog: billingCatalog,
   isCatalogLoading: isPricingLoading,
   planKey: activePlanKey,
   interval: activeInterval,
   status,
-  refreshBilling,
-} = useBillingAccess({ loadCatalog: true })
+} = storeToRefs(billingStore)
+const { refreshBilling } = billingStore
 const actionLoadingPlanId = ref<BillingPlanKey | null>(null)
 type BillingDuration = "monthly" | "annual"
 

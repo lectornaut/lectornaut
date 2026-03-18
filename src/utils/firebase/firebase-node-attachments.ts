@@ -4,7 +4,13 @@ export const NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 export const NODE_ATTACHMENTS_STORAGE_ROOT = "attachments"
 
 const INVALID_STORAGE_FILENAME_CHARS = /[\\/:*?"<>|]+/g
-const CONTROL_CHARS = /[\u0000-\u001f\u007f]+/g
+
+const isControlChar = (code: number) => code <= 0x1f || code === 0x7f
+
+const stripControlChars = (value: string): string =>
+  Array.from(value)
+    .filter((ch) => !isControlChar(ch.charCodeAt(0)))
+    .join("")
 
 export interface WorkspaceNodeAttachmentPathParams {
   teamId: string
@@ -23,9 +29,7 @@ export const normalizeAttachmentDisplayName = (value: string): string =>
   value.trim().replace(/\s+/g, " ")
 
 export const sanitizeAttachmentFileName = (value: string): string => {
-  const sanitized = value
-    .trim()
-    .replace(CONTROL_CHARS, "")
+  const sanitized = stripControlChars(value.trim())
     .replace(INVALID_STORAGE_FILENAME_CHARS, "-")
     .replace(/\s+/g, " ")
 

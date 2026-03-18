@@ -13,56 +13,52 @@
 
 import { isRetryableFirebaseError } from "@/utils/firebase/firebase-errors"
 import type { ComputedRef, Ref } from "vue"
-import { computed, isRef, ref, shallowRef } from "vue"
+import { computed, isRef, ref, shallowRef, toRaw } from "vue"
 
 // ============================================================================
 // State Cloning
 // ============================================================================
 
 /**
- * Deep clones an object to preserve previous state for rollback
- * Optimized for Firestore data structures
- *
- * @param state - The state to clone
- * @returns A deep copy of the state
+ * Recursively unwraps Vue reactive proxies so that structuredClone can
+ * process the resulting plain object tree.
+ */
+function deepToRaw<T>(value: T): T {
+  const raw = toRaw(value)
+
+  if (raw == null || typeof raw !== "object") return raw
+
+  // Firestore Timestamp-like objects are immutable — return as-is
+  if ("seconds" in (raw as object) && "nanoseconds" in (raw as object)) {
+    return raw
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.map(deepToRaw) as T
+  }
+
+  const result: Record<string, unknown> = {}
+  for (const key of Object.keys(raw as Record<string, unknown>)) {
+    result[key] = deepToRaw((raw as Record<string, unknown>)[key])
+  }
+  return result as T
+}
+
+/**
+ * Deep clones an object to preserve previous state for rollback.
+ * Firestore Timestamp-like objects are treated as immutable and returned as-is.
  */
 export function cloneState<T>(state: T): T {
-  // Fast path for null/undefined
-  if (state == null) return state
+  if (state == null || typeof state !== "object") return state
 
-  // Fast path for primitives
-  if (typeof state !== "object") return state
-
-  // Handle Date objects (including Firestore Timestamps with toDate())
-  if (state instanceof Date) {
-    return new Date(state.getTime()) as T
-  }
-
-  // Handle Arrays - use map for better performance than structuredClone
-  if (Array.isArray(state)) {
-    return state.map((item) => cloneState(item)) as T
-  }
-
-  // Handle Firestore Timestamp-like objects (immutable, no need to clone)
-  if ("seconds" in state && "nanoseconds" in state) {
+  // Firestore Timestamp-like objects are immutable — no need to clone
+  if ("seconds" in (state as object) && "nanoseconds" in (state as object)) {
     return state
   }
 
-  // Handle plain objects - try structuredClone first (fastest for large objects)
-  try {
-    return structuredClone(state)
-  } catch {
-    // Fallback for objects that can't be cloned (e.g., with functions)
-    const cloned = {} as T
-    for (const key in state) {
-      if (Object.prototype.hasOwnProperty.call(state, key)) {
-        ;(cloned as Record<string, unknown>)[key] = cloneState(
-          (state as Record<string, unknown>)[key]
-        )
-      }
-    }
-    return cloned
-  }
+  // Deeply unwrap Vue reactive proxies before cloning — structuredClone
+  // cannot handle Proxy objects and throws DataCloneError.
+  return structuredClone(deepToRaw(state))
 }
 
 /**

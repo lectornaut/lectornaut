@@ -70,15 +70,6 @@ export const useBillingStore = defineStore("billing", () => {
       billingError.value = null
       lastBillingLoadedAt.value = Date.now()
     },
-    { immediate: true, deep: true }
-  )
-
-  watch(
-    currentTeamId,
-    (teamId, previousTeamId) => {
-      if (!teamId || teamId === previousTeamId) return
-      void refreshBilling(teamId)
-    },
     { immediate: true }
   )
 
@@ -193,6 +184,15 @@ export const useBillingStore = defineStore("billing", () => {
 
     return billing.value
   }
+
+  watch(
+    currentTeamId,
+    (teamId, previousTeamId) => {
+      if (!teamId || teamId === previousTeamId) return
+      void refreshBilling(teamId)
+    },
+    { immediate: true }
+  )
 
   return {
     catalog,

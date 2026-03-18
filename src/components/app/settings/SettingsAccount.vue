@@ -777,7 +777,7 @@ const passwordExists = computed(() => {
               {{ t("settings.account.email.verify") }}
             </Button>
             <Dialog>
-              <DialogTrigger>
+              <DialogTrigger as-child>
                 <Button variant="outline">
                   {{ t("settings.account.email.change") }}
                 </Button>
@@ -822,7 +822,7 @@ const passwordExists = computed(() => {
               </FieldDescription>
             </FieldContent>
             <Dialog>
-              <DialogTrigger>
+              <DialogTrigger as-child>
                 <Button variant="outline">
                   <span>
                     {{

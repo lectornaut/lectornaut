@@ -29,7 +29,8 @@
       "@intlify/unplugin-vue-i18n/messages"
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["./shared/*"]
     }
   },
   "include": [
@@ -38,6 +39,7 @@
     "./src/**/*.tsx",
     "./src/**/*.vue",
     "./src/**/*.json",
+    "./shared/**/*.ts",
     "./vite.config.ts"
   ],
   "files": ["./components.d.ts", "./auto-imports.d.ts", "./typed-router.d.ts"]

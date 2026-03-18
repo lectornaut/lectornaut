@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useBillingAccess } from "@/composables/useBillingAccess"
 import {
   cancelSubscription as cancelSubscriptionFn,
   createBillingPortalSession as createBillingPortalSessionFn,
@@ -18,12 +17,16 @@ import {
   openExternalUrl,
 } from "@/helpers/openExternalUrl"
 import { emitter } from "@/modules/mitt"
+import { useBillingStore } from "@/stores/billingStore"
+import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
-const { billing, catalog, isCatalogLoading, status, refreshBilling } =
-  useBillingAccess({ loadCatalog: true })
+const billingStore = useBillingStore()
+void billingStore.ensureCatalogLoaded()
+const { billing, catalog, isCatalogLoading, status } = storeToRefs(billingStore)
+const { refreshBilling } = billingStore
 
 type BillingActionTrigger =
   | "payment-method"
@@ -391,8 +394,13 @@ const handleSubscriptionAction = async (): Promise<void> => {
           </FieldContent>
         </Field>
         <template v-else>
-          <div v-if="hasCurrentPlan" class="rounded-lg border p-1">
-            <Item variant="outline" size="sm" class="bg-secondary">
+          <div class="rounded-lg border p-1">
+            <Item
+              v-if="hasCurrentPlan"
+              variant="outline"
+              size="sm"
+              class="bg-secondary"
+            >
               <ItemMedia variant="icon">
                 <IconBadgeDollarSign />
               </ItemMedia>
@@ -418,6 +426,22 @@ const handleSubscriptionAction = async (): Promise<void> => {
               <ItemActions>
                 <Button variant="outline" @click="openPlansTab">
                   {{ t("settings.billing.changePlan.upgrade") }}
+                </Button>
+              </ItemActions>
+            </Item>
+            <Item v-else variant="outline" size="sm" class="bg-secondary">
+              <ItemMedia variant="icon">
+                <IconBadgeDollarSign />
+              </ItemMedia>
+              <ItemContent class="gap-0.5 truncate">
+                <ItemTitle class="truncate"> No active plan </ItemTitle>
+                <ItemDescription class="truncate text-xs">
+                  Subscribe to a plan to get started.
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Button variant="outline" @click="openPlansTab">
+                  {{ t("settings.billing.currentPlan.subscribeButton") }}
                 </Button>
               </ItemActions>
             </Item>

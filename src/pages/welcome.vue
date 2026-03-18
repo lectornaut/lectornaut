@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useBillingAccess } from "@/composables/useBillingAccess"
 import {
   createCheckoutSession as createCheckoutSessionFn,
   type BillingInterval,
@@ -22,6 +21,8 @@ import {
   openExternalUrl,
 } from "@/helpers/openExternalUrl"
 import { setCurrentUserOnboardingState } from "@/queries/userSettings"
+import { useBillingStore } from "@/stores/billingStore"
+import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
 definePage({
@@ -37,6 +38,8 @@ useHead({
 const router = useRouter()
 const route = useRoute()
 const { currentTeam, canManageBilling, teamMembers } = useTeamActions()
+const billingStore = useBillingStore()
+void billingStore.ensureCatalogLoaded()
 const {
   billing,
   catalog: billingCatalog,
@@ -45,7 +48,7 @@ const {
   planKey: activePlanKey,
   interval: activeInterval,
   status: billingStatus,
-} = useBillingAccess({ loadCatalog: true })
+} = storeToRefs(billingStore)
 
 const { t } = useI18n()
 
@@ -318,7 +321,7 @@ const handleFinalStepAction = async () => {
       <SidebarInset
         class="bg-background flex min-h-0 min-w-0 grow rounded-none"
       >
-        <div class="border-b p-5 text-left">
+        <div class="border-b p-5">
           <h2 class="text-xl font-semibold">
             {{ activeStep?.title || t("pages.welcome.content.allSet") }}
           </h2>
@@ -330,7 +333,7 @@ const handleFinalStepAction = async () => {
           </p>
         </div>
 
-        <div class="flex min-h-0 min-w-0 grow overflow-auto text-left">
+        <div class="flex min-h-0 min-w-0 grow flex-col overflow-auto">
           <template v-if="currentStep === 1">
             <OnboardingAccountFlow />
           </template>

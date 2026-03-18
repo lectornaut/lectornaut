@@ -37,3 +37,6 @@ dev-dist
 
 # Environment variables
 .env
+
+# Build-time copies of shared source (canonical files live in /shared/)
+functions/src/shared

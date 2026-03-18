@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useBillingAccess } from "@/composables/useBillingAccess"
 import {
   changeSubscriptionPlan as changeSubscriptionPlanFn,
   createCheckoutSession as createCheckoutSessionFn,
@@ -7,7 +6,12 @@ import {
   type BillingPlanKey,
 } from "@/composables/useFunctions"
 import { useTeamActions } from "@/composables/useTeamActions"
-import { IconCheck, IconChevronDown, IconMinus } from "@/data/icons"
+import {
+  IconBadgeDollarSign,
+  IconCheck,
+  IconChevronDown,
+  IconMinus,
+} from "@/data/icons"
 import {
   BILLING_PLAN_ORDER,
   countBillableSeatsFromMembers,
@@ -19,25 +23,29 @@ import {
   createPendingExternalTab,
   openExternalUrl,
 } from "@/helpers/openExternalUrl"
+import { useBillingStore } from "@/stores/billingStore"
+import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
+const billingStore = useBillingStore()
+void billingStore.ensureCatalogLoaded()
 const {
   catalog: billingCatalog,
   isCatalogLoading: isPricingLoading,
   billing,
   status,
-  refreshBilling,
-} = useBillingAccess({ loadCatalog: true })
+} = storeToRefs(billingStore)
+const { refreshBilling } = billingStore
 
 const orderedPlans: readonly BillingPlanKey[] = BILLING_PLAN_ORDER
 
 // Subscription Plans Logic
-const billingCycle = ref<"annually" | "monthly">("annually")
+const billingCycle = ref<"annually" | "monthly" | null>(null)
 const activeBillingCycle = ref<"annually" | "monthly">("annually")
 const activePlanId = ref<BillingPlanKey | null>(null)
-const selectedPlanId = ref<BillingPlanKey>("personal")
+const selectedPlanId = ref<BillingPlanKey | null>(null)
 
 const isSaving = ref(false)
 const hasActiveSubscription = computed(() => {
@@ -77,8 +85,8 @@ watch(
 
     activePlanId.value = null
     if (!isSaving.value) {
-      selectedPlanId.value = "personal"
-      billingCycle.value = "annually"
+      selectedPlanId.value = null
+      billingCycle.value = null
     }
   },
   { immediate: true }
@@ -86,8 +94,9 @@ watch(
 
 const hasPendingChanges = computed(() => {
   if (!canManageBilling.value) return false
-  if (!hasActiveSubscription.value) return true
-  if (!activePlanId.value) return true
+  if (!hasActiveSubscription.value)
+    return !!selectedPlanId.value && !!billingCycle.value
+  if (!activePlanId.value) return !!selectedPlanId.value && !!billingCycle.value
 
   return (
     selectedPlanId.value !== activePlanId.value ||
@@ -106,7 +115,13 @@ const currentPlanSummary = computed(() => {
 })
 
 const canSave = computed(() => {
-  if (!canManageBilling.value || !currentTeam.value?.id || isSaving.value) {
+  if (
+    !canManageBilling.value ||
+    !currentTeam.value?.id ||
+    isSaving.value ||
+    !selectedPlanId.value ||
+    !billingCycle.value
+  ) {
     return false
   }
   if (!hasActiveSubscription.value) return true
@@ -134,7 +149,13 @@ const saveButtonLabel = computed(() =>
 )
 
 const saveChanges = async () => {
-  if (!canSave.value || !currentTeam.value?.id) return
+  if (
+    !canSave.value ||
+    !currentTeam.value?.id ||
+    !selectedPlanId.value ||
+    !billingCycle.value
+  )
+    return
 
   isSaving.value = true
   try {
@@ -181,8 +202,8 @@ const discardChanges = () => {
     return
   }
 
-  selectedPlanId.value = "personal"
-  billingCycle.value = "annually"
+  selectedPlanId.value = null
+  billingCycle.value = null
 }
 
 const selectPlan = (planId: BillingPlanKey) => {
@@ -209,8 +230,9 @@ const formatCurrencyAmount = (
 
 const getPlanPricePerMonthLabel = (
   planId: BillingPlanKey,
-  cycle: "annually" | "monthly"
+  cycle: "annually" | "monthly" | null
 ): string => {
+  if (!cycle) return isPricingLoading.value ? "Loading..." : "—"
   const interval = getCycleInterval(cycle)
   const price = billingCatalog.value?.[planId]?.[interval]
   if (!price?.currency || typeof price.unitAmount !== "number") {
@@ -224,8 +246,9 @@ const getPlanPricePerMonthLabel = (
 
 const getPlanTotalLabel = (
   planId: BillingPlanKey,
-  cycle: "annually" | "monthly"
+  cycle: "annually" | "monthly" | null
 ): string => {
+  if (!cycle) return isPricingLoading.value ? "Loading..." : "—"
   const interval = getCycleInterval(cycle)
   const price = billingCatalog.value?.[planId]?.[interval]
   if (!price?.currency || typeof price.unitAmount !== "number") {
@@ -255,7 +278,7 @@ const getPlanStatus = (planId: BillingPlanKey) => {
   }
   const targetPlan = {
     planKey: planId,
-    interval: toInterval(billingCycle.value),
+    interval: toInterval(billingCycle.value ?? activeBillingCycle.value),
   }
 
   const currentPrice =
@@ -284,6 +307,8 @@ const getButtonVariant = (planId: BillingPlanKey) => {
     hasActiveSubscription.value && activePlanId.value
       ? activePlanId.value
       : selectedPlanId.value
+
+  if (!referencePlanId) return "outline"
 
   const referenceIndex = orderedPlans.indexOf(referencePlanId)
   const planIndex = orderedPlans.indexOf(planId)
@@ -321,6 +346,22 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                 {{ currentPlanSummary }}
               </FieldDescription>
             </FieldContent>
+            <div
+              v-if="!hasActiveSubscription && !selectedPlanId"
+              class="rounded-lg border p-1"
+            >
+              <Item variant="outline" size="sm" class="bg-secondary">
+                <ItemMedia variant="icon">
+                  <IconBadgeDollarSign />
+                </ItemMedia>
+                <ItemContent class="gap-0.5 truncate">
+                  <ItemTitle class="truncate"> No active plan </ItemTitle>
+                  <ItemDescription class="truncate text-xs">
+                    Select a plan below to get started.
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
+            </div>
             <RadioGroup
               :model-value="selectedPlanId"
               class="grid grid-cols-4 gap-2"
@@ -368,8 +409,10 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                         seats: seatCountLabel,
                       })
                     }}
-                    <br />
-                    Billed {{ billingCycle }}
+                    <template v-if="billingCycle">
+                      <br />
+                      Billed {{ billingCycle }}
+                    </template>
                   </FieldDescription>
                 </Field>
               </FieldLabel>
@@ -391,7 +434,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                 </CollapsibleTrigger>
                 <CollapsibleContent class="rounded-lg border p-1.5">
                   <div class="overflow-clip rounded border">
-                    <Table class="bg-secondary overflow-hidden">
+                    <Table class="bg-secondary overflow-clip">
                       <TableHeader class="bg-secondary">
                         <TableRow class="hover:bg-transparent">
                           <TableHead class="w-1/5 p-2">
@@ -429,8 +472,10 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                                   seats: seatCountLabel,
                                 })
                               }}
-                              <br />
-                              Billed {{ billingCycle }}
+                              <template v-if="billingCycle">
+                                <br />
+                                Billed {{ billingCycle }}
+                              </template>
                             </span>
                           </TableHead>
                         </TableRow>
@@ -580,9 +625,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
         class="relative"
         @click="saveChanges"
       >
-        <span v-if="isSaving" class="absolute inset-0 grid place-items-center">
-          <Spinner />
-        </span>
+        <Spinner v-if="isSaving" />
         {{ saveButtonLabel }}
       </Button>
     </DialogFooter>

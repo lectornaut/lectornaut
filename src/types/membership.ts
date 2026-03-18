@@ -1,16 +1,15 @@
 import type { ITeam, IUserProfile } from "@/types/domain"
 import { Timestamp } from "firebase/firestore"
 
-export const MEMBERSHIP_ROLES = ["owner", "admin", "member", "guest"] as const
+// Re-export role primitives from the shared module so existing imports
+// like `import { IMembershipRole } from "@/types/membership"` keep working.
+export {
+  isMembershipRole,
+  MEMBERSHIP_ROLES,
+  type IMembershipRole,
+} from "@shared/permissions"
 
-export type IMembershipRole = (typeof MEMBERSHIP_ROLES)[number]
-
-export function isMembershipRole(value: unknown): value is IMembershipRole {
-  return (
-    typeof value === "string" &&
-    (MEMBERSHIP_ROLES as readonly string[]).includes(value)
-  )
-}
+import type { IMembershipRole } from "@shared/permissions"
 
 export interface IMembershipRecord {
   readonly userId: string

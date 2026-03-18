@@ -7,6 +7,7 @@ import {
   type SlashCommandItem,
   type SlashCommandPanelState,
 } from "@/components/editors/text/extensions/slashCommand"
+import { useTiptapCollab } from "@/composables/useTiptapCollab"
 import {
   IconBold,
   IconBraces,
@@ -37,8 +38,6 @@ import { accents } from "@/helpers/defaults"
 import { showErrorToast } from "@/helpers/toast"
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
-import Collaboration from "@tiptap/extension-collaboration"
-import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import {
   Details,
   DetailsContent,
@@ -376,76 +375,10 @@ const slashPanelPosition = computed(() =>
   getPanelPosition(slashPanelState.value?.clientRect ?? null)
 )
 
-type CollaborationProvider = {
-  awareness: Awareness
-  on: (event: string, listener: () => void) => void
-  off: (event: string, listener: () => void) => void
-}
-
-const createCollaborationProvider = (
-  awareness: Awareness
-): CollaborationProvider => {
-  const syncedListeners = new Set<() => void>()
-
-  const scheduleSynced = (listener: () => void) => {
-    queueMicrotask(() => {
-      if (syncedListeners.has(listener)) {
-        listener()
-      }
-    })
-  }
-
-  return {
-    awareness,
-    on: (event, listener) => {
-      if (event !== "synced") {
-        return
-      }
-      syncedListeners.add(listener)
-      scheduleSynced(listener)
-    },
-    off: (event, listener) => {
-      if (event !== "synced") {
-        return
-      }
-      syncedListeners.delete(listener)
-    },
-  }
-}
-
-const collaborationProvider = props.collaborationAwareness
-  ? createCollaborationProvider(props.collaborationAwareness)
-  : null
-
-const getCollaborationUser = () => {
-  const localState = props.collaborationAwareness?.getLocalState() as {
-    user?: {
-      [key: string]: unknown
-      name?: unknown
-      color?: unknown
-    }
-  } | null
-
-  const currentUser = localState?.user ?? {}
-
-  const name =
-    typeof localState?.user?.name === "string" &&
-    localState.user.name.trim().length
-      ? localState.user.name.trim()
-      : "Anonymous"
-
-  const color =
-    typeof localState?.user?.color === "string" &&
-    localState.user.color.trim().length
-      ? localState.user.color
-      : "#3b82f6"
-
-  return {
-    ...currentUser,
-    name,
-    color,
-  }
-}
+const tiptapCollab =
+  props.collaborationDoc && props.collaborationAwareness
+    ? useTiptapCollab(props.collaborationDoc, props.collaborationAwareness)
+    : null
 
 const openLinkDialog = () => {
   const currentEditor = editor.value
@@ -717,23 +650,8 @@ const extensions = [
   slashCommandExtension,
 ]
 
-if (props.collaborationDoc) {
-  extensions.push(
-    Collaboration.configure({
-      document: props.collaborationDoc,
-      field: "tiptap",
-      provider: collaborationProvider,
-    })
-  )
-
-  if (collaborationProvider) {
-    extensions.push(
-      CollaborationCaret.configure({
-        provider: collaborationProvider,
-        user: getCollaborationUser(),
-      })
-    )
-  }
+if (tiptapCollab) {
+  extensions.push(...(tiptapCollab.extensions as (typeof extensions)[number][]))
 }
 
 const clearPendingModelEmit = () => {
@@ -885,6 +803,12 @@ watch(
   (value) => {
     const currentEditor = editor.value
     if (!currentEditor) {
+      return
+    }
+
+    // When collaboration is active, Yjs owns the document state — skip
+    // external modelValue writes to avoid clobbering collaborative edits
+    if (props.collaborationDoc) {
       return
     }
 

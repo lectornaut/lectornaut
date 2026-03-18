@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { useNodeBreadcrumb } from "@/composables/useNodeBreadcrumb"
+import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
 
 definePage({
   meta: {

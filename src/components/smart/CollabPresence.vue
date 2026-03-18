@@ -83,12 +83,10 @@ watch(
   (nextAwareness, previousAwareness) => {
     if (previousAwareness) {
       previousAwareness.off("change", syncUsers)
-      previousAwareness.off("update", syncUsers)
     }
 
     if (nextAwareness) {
       nextAwareness.on("change", syncUsers)
-      nextAwareness.on("update", syncUsers)
       syncUsers()
       return
     }
@@ -104,7 +102,6 @@ onBeforeUnmount(() => {
   }
 
   props.awareness.off("change", syncUsers)
-  props.awareness.off("update", syncUsers)
 })
 </script>
 

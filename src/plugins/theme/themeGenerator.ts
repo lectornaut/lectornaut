@@ -272,10 +272,9 @@ export function generateThemeCss() {
       ),
       "",
     ]),
-    "}",
   ]
 
-  return `${trimTrailingEmptyLines(sections).join("\n")}\n`
+  return `${trimTrailingEmptyLines(sections).join("\n")}\n}\n`
 }
 
 function buildRootFallbackTokens(): ThemeTokens {

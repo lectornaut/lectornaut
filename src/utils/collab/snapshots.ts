@@ -1,5 +1,4 @@
 import { firestore } from "@/modules/firebase"
-import { base64ToBytes, bytesToBase64 } from "@/utils/collab/base64"
 import {
   FirestoreErrorCodes,
   hasFirebaseErrorCode,
@@ -12,6 +11,10 @@ import {
   setDoc,
   type Timestamp,
 } from "firebase/firestore"
+import {
+  fromBase64 as base64ToBytes,
+  toBase64 as bytesToBase64,
+} from "lib0/buffer"
 import * as Y from "yjs"
 
 const DEFAULT_SNAPSHOT_DEBOUNCE_MS = 10_000 // 10s - balance between cost and data safety

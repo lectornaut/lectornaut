@@ -146,95 +146,35 @@ export const normalizeComparable = (value: unknown): number | string | null => {
 }
 
 // ============================================================================
-// Permission Types
+// Permission & Role Types — re-exported from shared single source of truth.
+// The shared/ directory is copied into src/shared/ at build time.
 // ============================================================================
 
-export const MEMBERSHIP_ROLES = ["owner", "admin", "member", "guest"] as const
+export {
+  Capabilities,
+  hasExactRole,
+  isMembershipRole,
+  MEMBERSHIP_ROLES,
+  MembershipRoleLabels,
+  MembershipRoles,
+  normalizeMembershipRole,
+  roleCan,
+  RoleGroups,
+  type Capability,
+  type IMembershipRole,
+  type PermissionContext,
+  type Scope,
+} from "./shared/permissions.js"
 
-export type IMembershipRole = (typeof MEMBERSHIP_ROLES)[number]
+import type { IMembershipRole } from "./shared/permissions.js"
+
+// Types that are only used in functions (not shared with client)
 export type NodeType = "folder" | "file"
 export type WorkspaceNodeScope = "code" | "write"
-
-export type Scope = "global" | "team" | "workspace"
-
-export const Capabilities = {
-  // Global Scope
-  CREATE_TEAM: "create_team",
-
-  // Team Scope
-  EDIT_TEAM: "edit_team",
-  DELETE_TEAM: "delete_team",
-  INVITE_MEMBER: "invite_member",
-  UPDATE_MEMBER_ROLE: "update_member_role",
-  REMOVE_MEMBER: "remove_member",
-  READ_TEAM: "read_team",
-  MANAGE_BILLING: "manage_billing",
-  READ_AUDIT_LOGS: "read_audit_logs",
-
-  // Workspace Scope
-  CREATE_WORKSPACE: "create_workspace",
-  EDIT_WORKSPACE: "edit_workspace",
-  DELETE_WORKSPACE: "delete_workspace",
-  READ_WORKSPACE: "read_workspace",
-  MANAGE_WORKSPACE_CONTENT: "manage_workspace_content",
-} as const
-
-export type Capability = (typeof Capabilities)[keyof typeof Capabilities]
-
-export interface PermissionContext {
-  scope: Scope
-  teamRole?: IMembershipRole | null
-}
 
 // ============================================================================
 // Team Types
 // ============================================================================
-
-export const MembershipRoles = {
-  OWNER: "owner" as IMembershipRole,
-  ADMIN: "admin" as IMembershipRole,
-  MEMBER: "member" as IMembershipRole,
-  GUEST: "guest" as IMembershipRole,
-} as const
-
-export function isMembershipRole(value: unknown): value is IMembershipRole {
-  return (
-    typeof value === "string" &&
-    (MEMBERSHIP_ROLES as readonly string[]).includes(value)
-  )
-}
-
-export function normalizeMembershipRole(
-  value: unknown,
-  fallback: IMembershipRole = MembershipRoles.MEMBER
-): IMembershipRole {
-  return isMembershipRole(value) ? value : fallback
-}
-
-export const MembershipRoleLabels: Record<IMembershipRole, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  member: "Member",
-  guest: "Guest",
-}
-
-export const RoleGroups = {
-  /** Owners and admins - users with administrative capabilities */
-  ADMINS: [MembershipRoles.OWNER, MembershipRoles.ADMIN],
-  /** All full members (excludes guests) */
-  MEMBERS: [
-    MembershipRoles.OWNER,
-    MembershipRoles.ADMIN,
-    MembershipRoles.MEMBER,
-  ],
-  /** Everyone including guests */
-  ALL: [
-    MembershipRoles.OWNER,
-    MembershipRoles.ADMIN,
-    MembershipRoles.MEMBER,
-    MembershipRoles.GUEST,
-  ],
-} as const
 
 export interface TeamMember {
   userId: string

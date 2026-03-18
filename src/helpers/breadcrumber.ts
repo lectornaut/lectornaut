@@ -1,8 +1,53 @@
-import { resolveRouteName } from "@/helpers/route"
+import { useFileTreeStore } from "@/stores/fileTreeStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
+import type { WorkspaceNodeScope } from "@/types/nodes"
+import { storeToRefs } from "pinia"
 import type {
   RouteLocationNormalizedLoaded,
   RouteLocationRaw,
 } from "vue-router"
+
+export const resolveRouteName = (
+  route: RouteLocationNormalizedLoaded
+): string => {
+  const breadcrumb = route.meta?.breadcrumb
+
+  if (typeof breadcrumb === "function") {
+    try {
+      return String(breadcrumb(route))
+    } catch (error) {
+      console.error("Failed to resolve breadcrumb function:", error)
+    }
+  }
+
+  if (breadcrumb) {
+    return String(breadcrumb)
+  }
+
+  return (route.name as string) || "New tab"
+}
+
+export const useNodeBreadcrumb = (
+  fallback: string,
+  scope: WorkspaceNodeScope
+) => {
+  const workspaceStore = useWorkspaceStore()
+  const fileTreeStore = useFileTreeStore()
+  const { currentWorkspace } = storeToRefs(workspaceStore)
+
+  return (route: { params?: { nodeId?: unknown } }) => {
+    const rawNodeId = route.params?.nodeId
+    const nodeId =
+      typeof rawNodeId === "string" && rawNodeId.length ? rawNodeId : null
+    const teamId = currentWorkspace.value?.teamId
+    const workspaceId = currentWorkspace.value?.id
+
+    if (!nodeId || !teamId || !workspaceId) return fallback
+
+    const node = fileTreeStore.getNode(scope, teamId, workspaceId, nodeId)
+    return node?.name || fallback
+  }
+}
 
 export interface BreadcrumbItem {
   breadcrumb: string
