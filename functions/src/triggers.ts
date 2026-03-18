@@ -5,6 +5,7 @@ import {
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore"
 import { beforeUserCreated } from "firebase-functions/v2/identity"
+import { sendEmailInternal } from "./email.js"
 import { auth, db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
 import { sendNotification, sendNotificationToMany } from "./notifier.js"
@@ -113,7 +114,6 @@ async function sendInvitationNotification(
     })
   } else {
     // User doesn't exist - send email only
-    const { sendEmailInternal } = await import("./email.js")
     try {
       await sendEmailInternal({
         email,

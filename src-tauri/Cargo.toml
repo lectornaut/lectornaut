@@ -44,6 +44,8 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 # https://crates.io/crates/tauri-plugin-single-instance/versions
 tauri-plugin-single-instance = "2"
+# https://crates.io/crates/tauri-plugin-notification/versions
+tauri-plugin-notification = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 # https://crates.io/crates/tauri-plugin-positioner/versions
@@ -52,6 +54,8 @@ tauri-plugin-positioner = "2"
 tauri-plugin-updater = "2"
 # https://crates.io/crates/tauri-plugin-window-state/versions
 tauri-plugin-window-state = "2"
+# https://crates.io/crates/tauri-plugin-autostart/versions
+tauri-plugin-autostart = "2"
 
 # HTTP client for token exchange
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }

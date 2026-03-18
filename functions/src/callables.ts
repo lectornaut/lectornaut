@@ -4,8 +4,10 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { sendEmailInternal } from "./email.js"
 import { admin, db } from "./firebase.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
+import { postmarkApiKey } from "./secrets.js"
 import {
   InvitationData,
   NotificationStatus,
@@ -174,6 +176,72 @@ export const deleteNotification = onCall(CALLABLE_OPTS, async (request) => {
   await notificationRef.delete()
   return { success: true }
 })
+
+/**
+ * Send a test notification to the calling user via a specific channel.
+ */
+export const sendTestNotification = onCall(
+  { ...CALLABLE_OPTS, secrets: [postmarkApiKey] },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "The function must be called while authenticated."
+      )
+    }
+
+    const channel = request.data?.channel
+    if (
+      typeof channel !== "string" ||
+      !["email", "inApp", "native"].includes(channel)
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Channel must be one of: email, inApp, native."
+      )
+    }
+
+    const uid = request.auth.uid
+    const userEmail = request.auth.token.email
+
+    if (channel === "email") {
+      if (!userEmail) {
+        throw new HttpsError(
+          "failed-precondition",
+          "No email address associated with this account."
+        )
+      }
+
+      await sendEmailInternal({
+        email: userEmail,
+        subject: "Test notification",
+        template: "notification.test",
+        data: {
+          title: "Test notification",
+          description:
+            "This is a test email notification. Everything is working!",
+          ctaUrl: "https://lectornaut.com/settings/notifications",
+        },
+      })
+    } else if (channel === "inApp") {
+      await db.collection(`users/${uid}/notifications`).add({
+        type: "notification.test",
+        title: "Test notification",
+        description:
+          "This is a test in-app notification. Everything is working!",
+        url: "/settings/notifications",
+        status: "inbox",
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+    } else if (channel === "native") {
+      // Native notifications are triggered from the client side.
+      // Return success so the client knows it can fire the native notification.
+    }
+
+    return { success: true, channel }
+  }
+)
 
 // ============================================================================
 // Invitation Helpers

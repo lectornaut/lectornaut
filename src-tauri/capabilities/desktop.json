@@ -5,6 +5,10 @@
   "permissions": [
     "positioner:default",
     "window-state:default",
-    "updater:default"
+    "updater:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
+    "notification:default"
   ]
 }

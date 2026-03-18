@@ -1,19 +1,21 @@
 import admin from "firebase-admin"
 
 // Notification Channel Types
-export type NotificationChannel = "in-app" | "email"
+export type NotificationChannel = "inApp" | "email" | "native"
 export type NotificationCategory = "communication" | "marketing" | "security"
 export type NotificationFrequency = "immediate" | "daily" | "weekly" | "none"
 
 export interface ChannelConfig {
   inApp: boolean
   email: boolean
+  native: boolean
   category: NotificationCategory
 }
 
 export type NotificationStatus = "inbox" | "saved" | "done"
 export type NotificationType =
   | "user.welcome"
+  | "notification.test"
   | "invitation.received"
   | "invitation.declined"
   | "member.joined"
@@ -28,6 +30,7 @@ export interface NotificationCategorySettings {
 export interface NotificationChannelSettings {
   email: boolean
   inApp: boolean
+  native: boolean
 }
 
 export interface NotificationSettings {
@@ -46,6 +49,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   channels: {
     email: true,
     inApp: true,
+    native: true,
   },
 }
 
@@ -54,26 +58,37 @@ export const NotificationTypeConfig: Record<NotificationType, ChannelConfig> = {
   "user.welcome": {
     inApp: true,
     email: true,
+    native: false,
     category: "marketing",
+  },
+  "notification.test": {
+    inApp: true,
+    email: true,
+    native: true,
+    category: "communication",
   },
   "invitation.received": {
     inApp: true,
     email: true,
+    native: true,
     category: "communication",
   },
   "invitation.declined": {
     inApp: true,
-    email: true,
+    email: false,
+    native: false,
     category: "communication",
   },
   "member.joined": {
     inApp: true,
-    email: true,
+    email: false,
+    native: false,
     category: "communication",
   },
   "member.removed": {
     inApp: true,
     email: true,
+    native: true,
     category: "security",
   },
 }

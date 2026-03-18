@@ -1,4 +1,5 @@
 import { isTauri } from "@/composables/usePlatform"
+import { open } from "@tauri-apps/plugin-shell"
 
 export function createPendingExternalTab(): Window | null {
   if (typeof window === "undefined" || isTauri.value) return null
@@ -18,7 +19,6 @@ export async function openExternalUrl(
   pendingTab?: Window | null
 ): Promise<void> {
   if (isTauri.value) {
-    const { open } = await import("@tauri-apps/plugin-shell")
     await open(url)
     return
   }

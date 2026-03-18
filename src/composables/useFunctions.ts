@@ -407,6 +407,19 @@ export interface GetBillingCatalogResponse {
 }
 
 // =============================================================================
+// Test Notification Types
+// =============================================================================
+
+export interface SendTestNotificationRequest {
+  channel: "email" | "inApp" | "native"
+}
+
+export interface SendTestNotificationResponse {
+  success: boolean
+  channel: string
+}
+
+// =============================================================================
 // Public Profile Functions
 // =============================================================================
 
@@ -666,6 +679,11 @@ export const getBillingCatalog = createTypedCallable<
   GetBillingCatalogResponse
 >("getBillingCatalogHttp")
 
+export const sendTestNotification = createTypedCallable<
+  SendTestNotificationRequest,
+  SendTestNotificationResponse
+>("sendTestNotification")
+
 export const getPublicTeamMembers = createTypedCallable<
   GetPublicTeamMembersRequest,
   GetPublicTeamMembersResponse
@@ -751,6 +769,9 @@ export function useFunctions() {
     restoreSubscription,
     getBillingStatus,
     getBillingCatalog,
+
+    // Notification operations
+    sendTestNotification,
 
     // Public profile operations
     getPublicTeamMembers,

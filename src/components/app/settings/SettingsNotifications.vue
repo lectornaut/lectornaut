@@ -1,16 +1,22 @@
 <script lang="ts" setup>
+import { isTauri } from "@/composables/usePlatform"
+import { IconBellRing } from "@/data/icons"
 import { useSettingsStore } from "@/stores/settingsStore"
 import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
 
 const settingsStore = useSettingsStore()
-const { notificationSettings, isUpdatingNotifications } =
-  storeToRefs(settingsStore)
+const {
+  notificationSettings,
+  isUpdatingNotifications,
+  isSendingTestNotification,
+} = storeToRefs(settingsStore)
 const {
   updateNotificationCategory,
   updateNotificationFrequency,
   updateNotificationChannel,
+  sendTestNotification,
 } = settingsStore
 
 const toBoolean = (value: unknown): boolean => value === true
@@ -130,14 +136,37 @@ const toBoolean = (value: unknown): boolean => value === true
               {{ t("settings.notifications.channels.email.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="email-notifications"
-            :disabled="isUpdatingNotifications"
-            :model-value="notificationSettings.channels.email"
-            @update:model-value="
-              updateNotificationChannel('email', toBoolean($event))
-            "
-          />
+          <ButtonGroup>
+            <ButtonGroup>
+              <InputGroupButton
+                variant="ghost"
+                size="icon-xs"
+                :disabled="
+                  isUpdatingNotifications ||
+                  !notificationSettings.channels.email ||
+                  isSendingTestNotification !== null
+                "
+                :aria-label="
+                  t('settings.notifications.channels.test', {
+                    channel: t('settings.notifications.channels.email.label'),
+                  })
+                "
+                @click="sendTestNotification('email')"
+              >
+                <IconBellRing />
+              </InputGroupButton>
+            </ButtonGroup>
+            <ButtonGroup class="items-center">
+              <Switch
+                id="email-notifications"
+                :disabled="isUpdatingNotifications"
+                :model-value="notificationSettings.channels.email"
+                @update:model-value="
+                  updateNotificationChannel('email', toBoolean($event))
+                "
+              />
+            </ButtonGroup>
+          </ButtonGroup>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -148,14 +177,78 @@ const toBoolean = (value: unknown): boolean => value === true
               {{ t("settings.notifications.channels.inApp.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="inapp-notifications"
-            :disabled="isUpdatingNotifications"
-            :model-value="notificationSettings.channels.inApp"
-            @update:model-value="
-              updateNotificationChannel('inApp', toBoolean($event))
-            "
-          />
+          <ButtonGroup>
+            <ButtonGroup>
+              <InputGroupButton
+                variant="ghost"
+                size="icon-xs"
+                :disabled="
+                  isUpdatingNotifications ||
+                  !notificationSettings.channels.inApp ||
+                  isSendingTestNotification !== null
+                "
+                :aria-label="
+                  t('settings.notifications.channels.test', {
+                    channel: t('settings.notifications.channels.inApp.label'),
+                  })
+                "
+                @click="sendTestNotification('inApp')"
+              >
+                <IconBellRing />
+              </InputGroupButton>
+            </ButtonGroup>
+            <ButtonGroup class="items-center">
+              <Switch
+                id="inapp-notifications"
+                :disabled="isUpdatingNotifications"
+                :model-value="notificationSettings.channels.inApp"
+                @update:model-value="
+                  updateNotificationChannel('inApp', toBoolean($event))
+                "
+              />
+            </ButtonGroup>
+          </ButtonGroup>
+        </Field>
+        <Field v-if="isTauri" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="app-notifications">
+              {{ t("settings.notifications.channels.native.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.notifications.channels.native.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <ButtonGroup>
+            <ButtonGroup>
+              <InputGroupButton
+                variant="ghost"
+                size="icon-xs"
+                :disabled="
+                  isUpdatingNotifications ||
+                  !notificationSettings.channels.native ||
+                  isSendingTestNotification !== null
+                "
+                :aria-label="
+                  t('settings.notifications.channels.test', {
+                    channel: t('settings.notifications.channels.native.label'),
+                  })
+                "
+                @click="sendTestNotification('native')"
+              >
+                <IconBellRing />
+              </InputGroupButton>
+            </ButtonGroup>
+            <ButtonGroup class="items-center">
+              <Switch
+                id="app-notifications"
+                :disabled="isUpdatingNotifications"
+                :model-value="notificationSettings.channels.native"
+                @update:model-value="
+                  updateNotificationChannel('native', toBoolean($event))
+                "
+              />
+            </ButtonGroup>
+          </ButtonGroup>
         </Field>
       </FieldSet>
     </FieldGroup>

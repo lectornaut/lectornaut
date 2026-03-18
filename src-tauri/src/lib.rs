@@ -11,6 +11,15 @@ mod file_capture;
 mod magic_link;
 mod oauth;
 
+#[tauri::command]
+fn set_tray_visible(app: tauri::AppHandle, visible: bool) -> Result<(), String> {
+    if let Some(tray) = app.tray_by_id("main") {
+        tray.set_visible(visible).map_err(|e| e.to_string())
+    } else {
+        Err("Tray not found".into())
+    }
+}
+
 #[derive(Clone, serde::Serialize)]
 struct Payload {
     args: Vec<String>,
@@ -47,9 +56,14 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_positioner::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.emit("single-instance", Payload { args: argv, cwd })
@@ -62,7 +76,8 @@ pub fn run() {
             downloads::download_url_to_path,
             file_capture::keep_file_capture_window_open,
             file_capture::dismiss_file_capture_window,
-            file_capture::preview_file_path
+            file_capture::preview_file_path,
+            set_tray_visible
         ])
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]

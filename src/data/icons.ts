@@ -42,6 +42,7 @@ import IconLucideBadgeCheck from "~icons/lucide/badge-check"
 import IconLucideBadgeDollarSign from "~icons/lucide/badge-dollar-sign"
 import IconLucideBan from "~icons/lucide/ban"
 import IconLucideBell from "~icons/lucide/bell"
+import IconLucideBellRing from "~icons/lucide/bell-ring"
 import IconLucideBlocks from "~icons/lucide/blocks"
 import IconLucideBold from "~icons/lucide/bold"
 import IconLucideBolt from "~icons/lucide/bolt"
@@ -321,6 +322,7 @@ export {
   IconLucideBadgeDollarSign as IconBadgeDollarSign,
   IconLucideBan as IconBan,
   IconLucideBell as IconBell,
+  IconLucideBellRing as IconBellRing,
   IconLucideBlocks as IconBlocks,
   IconLucideBold as IconBold,
   IconLucideBolt as IconBolt,

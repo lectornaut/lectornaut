@@ -16,6 +16,7 @@ export interface NotificationCategorySettings {
 export interface NotificationChannelSettings {
   email: boolean
   inApp: boolean
+  native: boolean
 }
 
 export interface UserNotificationSettings {
@@ -34,6 +35,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: UserNotificationSettings = {
   channels: {
     email: true,
     inApp: true,
+    native: true,
   },
 }
 
@@ -63,6 +65,7 @@ export const cloneNotificationSettings = (
   channels: {
     email: value.channels.email,
     inApp: value.channels.inApp,
+    native: value.channels.native,
   },
 })
 
@@ -99,6 +102,10 @@ export const normalizeNotificationSettings = (
         channels.inApp,
         DEFAULT_NOTIFICATION_SETTINGS.channels.inApp
       ),
+      native: normalizeBoolean(
+        channels.native,
+        DEFAULT_NOTIFICATION_SETTINGS.channels.native
+      ),
     },
   }
 }
@@ -112,4 +119,5 @@ export const areNotificationSettingsEqual = (
   left.categories.marketing === right.categories.marketing &&
   left.categories.security === right.categories.security &&
   left.channels.email === right.channels.email &&
-  left.channels.inApp === right.channels.inApp
+  left.channels.inApp === right.channels.inApp &&
+  left.channels.native === right.channels.native

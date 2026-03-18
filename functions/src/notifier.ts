@@ -69,6 +69,10 @@ const normalizeNotificationSettings = (
         channels.inApp,
         DEFAULT_NOTIFICATION_SETTINGS.channels.inApp
       ),
+      native: normalizeBoolean(
+        channels.native,
+        DEFAULT_NOTIFICATION_SETTINGS.channels.native
+      ),
     },
   }
 }
@@ -182,6 +186,7 @@ const sendEmailNotification = async (
 export async function sendNotification(payload: NotificationPayload): Promise<{
   inApp: boolean
   email: boolean
+  native: boolean
 }> {
   const { userId, userEmail, type } = payload
   const channelConfig = NotificationTypeConfig[type]
@@ -190,6 +195,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
   const result = {
     inApp: false,
     email: false,
+    native: false,
   }
 
   const settings = await getUserNotificationSettings(userId)
@@ -217,6 +223,11 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
   const shouldSendEmail =
     channelConfig.email && settings.channels.email && immediateExternalDelivery
 
+  const shouldSendNative =
+    channelConfig.native &&
+    (isSecurityNotification || settings.channels.native) &&
+    immediateExternalDelivery
+
   if (shouldSendInApp) {
     result.inApp = await createInAppNotification(userId, {
       type: payload.type,
@@ -234,6 +245,10 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
       `Email channel configured for ${type} but no email provided for user ${userId}`
     )
   }
+
+  // Native desktop notifications are delivered client-side.
+  // This flag signals to the client whether a native notification should fire.
+  result.native = shouldSendNative
 
   return result
 }

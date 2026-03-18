@@ -1,3 +1,5 @@
+import { sendTestNotification as sendTestNotificationCallable } from "@/composables/useFunctions"
+import { isTauri } from "@/composables/usePlatform"
 import type {
   AccentId,
   BaseId,
@@ -27,6 +29,13 @@ import type { SettingsThemeDoc, ThemeMode } from "@/types/settings"
 import { withCloudSyncOperation } from "@/utils/firebase/firebase-optimistic"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
+import { invoke } from "@tauri-apps/api/core"
+import { disable, enable } from "@tauri-apps/plugin-autostart"
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification as sendNativeNotification,
+} from "@tauri-apps/plugin-notification"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc } from "firebase/firestore"
 import { defineStore } from "pinia"
@@ -388,7 +397,7 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   async function updateNotificationChannel(
-    channel: "email" | "inApp",
+    channel: "email" | "inApp" | "native",
     value: boolean
   ): Promise<boolean> {
     return persistNotificationSettings(
@@ -404,6 +413,50 @@ export const useSettingsStore = defineStore("settings", () => {
         error: "Failed to update notification channel",
       }
     )
+  }
+
+  const isSendingTestNotification = ref<"email" | "inApp" | "native" | null>(
+    null
+  )
+
+  async function sendTestNotification(
+    channel: "email" | "inApp" | "native"
+  ): Promise<boolean> {
+    if (isSendingTestNotification.value) return false
+
+    isSendingTestNotification.value = channel
+
+    try {
+      await sendTestNotificationCallable({ channel })
+
+      if (channel === "native" && isTauri.value) {
+        let granted = await isPermissionGranted()
+        if (!granted) {
+          const permission = await requestPermission()
+          granted = permission === "granted"
+        }
+
+        if (granted) {
+          sendNativeNotification({
+            title: "Test notification",
+            body: "This is a test desktop notification. Everything is working!",
+          })
+        } else {
+          toast.error("Desktop notification permission denied")
+          return false
+        }
+      }
+
+      toast.success("Test notification sent")
+      return true
+    } catch (error) {
+      toast.error("Failed to send test notification", {
+        description: (error as Error).message,
+      })
+      return false
+    } finally {
+      isSendingTestNotification.value = null
+    }
   }
 
   const isThemeLoading = computed(() => themePending.value)
@@ -439,6 +492,34 @@ export const useSettingsStore = defineStore("settings", () => {
   )
 
   const isUpdatingPreferences = ref(false)
+
+  async function applyTauriPreference(
+    key: "runOnStartup" | "menuBar",
+    value: boolean
+  ): Promise<void> {
+    if (!isTauri.value) return
+
+    try {
+      if (key === "runOnStartup") {
+        if (value) await enable()
+        else await disable()
+      } else if (key === "menuBar") {
+        await invoke("set_tray_visible", { visible: value })
+      }
+    } catch (error) {
+      console.error(`[settingsStore] Failed to apply ${key}:`, error)
+    }
+  }
+
+  // Sync Tauri state when preferences load from Firestore
+  watch(
+    [runOnStartup, menuBar],
+    ([newRunOnStartup, newMenuBar]) => {
+      void applyTauriPreference("runOnStartup", newRunOnStartup)
+      void applyTauriPreference("menuBar", newMenuBar)
+    },
+    { immediate: true }
+  )
 
   async function updatePreference(
     key: "runOnStartup" | "menuBar",
@@ -486,6 +567,8 @@ export const useSettingsStore = defineStore("settings", () => {
     updateNotificationCategory,
     updateNotificationFrequency,
     updateNotificationChannel,
+    sendTestNotification,
+    isSendingTestNotification,
     runOnStartup,
     menuBar,
     isUpdatingPreferences,

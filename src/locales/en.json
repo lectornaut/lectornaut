@@ -415,7 +415,12 @@
         "inApp": {
           "label": "In-app notifications",
           "description": "Choose which updates appear in the app."
-        }
+        },
+        "native": {
+          "label": "App notifications",
+          "description": "Receive native desktop notifications. Only available in the desktop app."
+        },
+        "test": "Send test {channel}"
       }
     },
     "billing": {

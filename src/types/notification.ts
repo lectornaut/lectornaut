@@ -2,6 +2,7 @@ export type INotificationStatus = "inbox" | "saved" | "done"
 
 export type INotificationType =
   | "user.welcome"
+  | "notification.test"
   | "invitation.received"
   | "invitation.declined"
   | "member.joined"

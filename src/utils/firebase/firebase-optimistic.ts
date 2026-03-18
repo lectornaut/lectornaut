@@ -33,6 +33,11 @@ function deepToRaw<T>(value: T): T {
     return raw
   }
 
+  // Date objects must be preserved — structuredClone handles them correctly
+  if (raw instanceof Date) {
+    return raw
+  }
+
   if (Array.isArray(raw)) {
     return raw.map(deepToRaw) as T
   }
