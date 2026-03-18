@@ -29,7 +29,7 @@
     --sidebar-border: var(--muted);
     --primary: var(--color-neutral-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-neutral-200);
+    --destructive: var(--color-neutral-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-neutral-400);
     --sidebar-ring: var(--color-neutral-400);
@@ -519,7 +519,7 @@
   :root[data-theme="light"][data-accent="red"] {
     --primary: var(--color-red-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-red-200);
+    --destructive: var(--color-red-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-red-400);
     --sidebar-ring: var(--color-red-400);
@@ -547,7 +547,7 @@
   :root[data-theme="light"][data-accent="orange"] {
     --primary: var(--color-orange-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-orange-200);
+    --destructive: var(--color-orange-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-orange-400);
     --sidebar-ring: var(--color-orange-400);
@@ -575,7 +575,7 @@
   :root[data-theme="light"][data-accent="amber"] {
     --primary: var(--color-amber-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-amber-200);
+    --destructive: var(--color-amber-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-amber-400);
     --sidebar-ring: var(--color-amber-400);
@@ -603,7 +603,7 @@
   :root[data-theme="light"][data-accent="yellow"] {
     --primary: var(--color-yellow-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-yellow-200);
+    --destructive: var(--color-yellow-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-yellow-400);
     --sidebar-ring: var(--color-yellow-400);
@@ -631,7 +631,7 @@
   :root[data-theme="light"][data-accent="lime"] {
     --primary: var(--color-lime-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-lime-200);
+    --destructive: var(--color-lime-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-lime-400);
     --sidebar-ring: var(--color-lime-400);
@@ -659,7 +659,7 @@
   :root[data-theme="light"][data-accent="green"] {
     --primary: var(--color-green-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-green-200);
+    --destructive: var(--color-green-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-green-400);
     --sidebar-ring: var(--color-green-400);
@@ -687,7 +687,7 @@
   :root[data-theme="light"][data-accent="emerald"] {
     --primary: var(--color-emerald-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-emerald-200);
+    --destructive: var(--color-emerald-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-emerald-400);
     --sidebar-ring: var(--color-emerald-400);
@@ -715,7 +715,7 @@
   :root[data-theme="light"][data-accent="teal"] {
     --primary: var(--color-teal-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-teal-200);
+    --destructive: var(--color-teal-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-teal-400);
     --sidebar-ring: var(--color-teal-400);
@@ -743,7 +743,7 @@
   :root[data-theme="light"][data-accent="cyan"] {
     --primary: var(--color-cyan-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-cyan-200);
+    --destructive: var(--color-cyan-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-cyan-400);
     --sidebar-ring: var(--color-cyan-400);
@@ -771,7 +771,7 @@
   :root[data-theme="light"][data-accent="sky"] {
     --primary: var(--color-sky-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-sky-200);
+    --destructive: var(--color-sky-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-sky-400);
     --sidebar-ring: var(--color-sky-400);
@@ -799,7 +799,7 @@
   :root[data-theme="light"][data-accent="blue"] {
     --primary: var(--color-blue-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-blue-200);
+    --destructive: var(--color-blue-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-blue-400);
     --sidebar-ring: var(--color-blue-400);
@@ -827,7 +827,7 @@
   :root[data-theme="light"][data-accent="indigo"] {
     --primary: var(--color-indigo-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-indigo-200);
+    --destructive: var(--color-indigo-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-indigo-400);
     --sidebar-ring: var(--color-indigo-400);
@@ -855,7 +855,7 @@
   :root[data-theme="light"][data-accent="violet"] {
     --primary: var(--color-violet-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-violet-200);
+    --destructive: var(--color-violet-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-violet-400);
     --sidebar-ring: var(--color-violet-400);
@@ -883,7 +883,7 @@
   :root[data-theme="light"][data-accent="purple"] {
     --primary: var(--color-purple-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-purple-200);
+    --destructive: var(--color-purple-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-purple-400);
     --sidebar-ring: var(--color-purple-400);
@@ -911,7 +911,7 @@
   :root[data-theme="light"][data-accent="fuchsia"] {
     --primary: var(--color-fuchsia-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-fuchsia-200);
+    --destructive: var(--color-fuchsia-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-fuchsia-400);
     --sidebar-ring: var(--color-fuchsia-400);
@@ -939,7 +939,7 @@
   :root[data-theme="light"][data-accent="pink"] {
     --primary: var(--color-pink-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-pink-200);
+    --destructive: var(--color-pink-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-pink-400);
     --sidebar-ring: var(--color-pink-400);
@@ -967,7 +967,7 @@
   :root[data-theme="light"][data-accent="rose"] {
     --primary: var(--color-rose-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-rose-200);
+    --destructive: var(--color-rose-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-rose-400);
     --sidebar-ring: var(--color-rose-400);
@@ -996,7 +996,7 @@
   :root[data-theme="light"][data-base="slate"][data-accent="base"] {
     --primary: var(--color-slate-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-slate-200);
+    --destructive: var(--color-slate-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-slate-400);
     --sidebar-ring: var(--color-slate-400);
@@ -1024,7 +1024,7 @@
   :root[data-theme="light"][data-base="gray"][data-accent="base"] {
     --primary: var(--color-gray-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-gray-200);
+    --destructive: var(--color-gray-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-gray-400);
     --sidebar-ring: var(--color-gray-400);
@@ -1052,7 +1052,7 @@
   :root[data-theme="light"][data-base="zinc"][data-accent="base"] {
     --primary: var(--color-zinc-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-zinc-200);
+    --destructive: var(--color-zinc-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-zinc-400);
     --sidebar-ring: var(--color-zinc-400);
@@ -1080,7 +1080,7 @@
   :root[data-theme="light"][data-base="neutral"][data-accent="base"] {
     --primary: var(--color-neutral-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-neutral-200);
+    --destructive: var(--color-neutral-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-neutral-400);
     --sidebar-ring: var(--color-neutral-400);
@@ -1108,7 +1108,7 @@
   :root[data-theme="light"][data-base="stone"][data-accent="base"] {
     --primary: var(--color-stone-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-stone-200);
+    --destructive: var(--color-stone-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-stone-400);
     --sidebar-ring: var(--color-stone-400);
@@ -1136,7 +1136,7 @@
   :root[data-theme="light"][data-base="taupe"][data-accent="base"] {
     --primary: var(--color-taupe-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-taupe-200);
+    --destructive: var(--color-taupe-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-taupe-400);
     --sidebar-ring: var(--color-taupe-400);
@@ -1164,7 +1164,7 @@
   :root[data-theme="light"][data-base="mauve"][data-accent="base"] {
     --primary: var(--color-mauve-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-mauve-200);
+    --destructive: var(--color-mauve-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-mauve-400);
     --sidebar-ring: var(--color-mauve-400);
@@ -1192,7 +1192,7 @@
   :root[data-theme="light"][data-base="mist"][data-accent="base"] {
     --primary: var(--color-mist-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-mist-200);
+    --destructive: var(--color-mist-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-mist-400);
     --sidebar-ring: var(--color-mist-400);
@@ -1220,7 +1220,7 @@
   :root[data-theme="light"][data-base="olive"][data-accent="base"] {
     --primary: var(--color-olive-300);
     --primary-foreground: var(--color-neutral-950);
-    --destructive: var(--color-olive-200);
+    --destructive: var(--color-olive-400);
     --destructive-foreground: var(--color-neutral-950);
     --ring: var(--color-olive-400);
     --sidebar-ring: var(--color-olive-400);
