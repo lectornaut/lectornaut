@@ -126,9 +126,7 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
             <Separator />
 
             <TabsContent :class="tabContentClass" value="preferences">
-              <div class="p-6 text-sm">
-                Select a settings category from the sidebar.
-              </div>
+              <SettingsPreferences />
             </TabsContent>
 
             <TabsContent :class="tabContentClass" value="account">

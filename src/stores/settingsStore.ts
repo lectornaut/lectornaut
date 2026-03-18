@@ -409,6 +409,73 @@ export const useSettingsStore = defineStore("settings", () => {
   const isThemeLoading = computed(() => themePending.value)
   const isNotificationLoading = computed(() => notificationPending.value)
 
+  // Preferences: Run on startup & Menu bar
+  const preferencesDocRef = computed(() => {
+    if (!user.value?.uid) return null
+    return doc(db, "users", user.value.uid, "settings", "preferences")
+  })
+
+  const { data: preferencesDocData, pending: preferencesPending } =
+    useDocument(preferencesDocRef)
+
+  const runOnStartup = useStorage<boolean>("runOnStartup", false)
+  const menuBar = useStorage<boolean>("menuBar", true)
+
+  watch(
+    preferencesDocData,
+    (docData) => {
+      if (!isRecord(docData)) return
+      if (
+        "runOnStartup" in docData &&
+        typeof docData.runOnStartup === "boolean"
+      ) {
+        runOnStartup.value = docData.runOnStartup
+      }
+      if ("menuBar" in docData && typeof docData.menuBar === "boolean") {
+        menuBar.value = docData.menuBar
+      }
+    },
+    { immediate: true }
+  )
+
+  const isUpdatingPreferences = ref(false)
+
+  async function updatePreference(
+    key: "runOnStartup" | "menuBar",
+    value: boolean
+  ): Promise<boolean> {
+    if (!preferencesDocRef.value || isUpdatingPreferences.value) return false
+
+    const previousValue =
+      key === "runOnStartup" ? runOnStartup.value : menuBar.value
+
+    if (key === "runOnStartup") runOnStartup.value = value
+    else menuBar.value = value
+
+    isUpdatingPreferences.value = true
+
+    try {
+      await mutateSetDocument(
+        preferencesDocRef.value,
+        { [key]: value },
+        { source: "settings.preferences.persist", merge: true }
+      )
+      toast.success("Preference updated")
+      return true
+    } catch (error) {
+      if (key === "runOnStartup") runOnStartup.value = previousValue
+      else menuBar.value = previousValue
+      toast.error("Failed to update preference", {
+        description: (error as Error).message,
+      })
+      return false
+    } finally {
+      isUpdatingPreferences.value = false
+    }
+  }
+
+  const isPreferencesLoading = computed(() => preferencesPending.value)
+
   return {
     themeSettings,
     pendingTheme,
@@ -419,5 +486,10 @@ export const useSettingsStore = defineStore("settings", () => {
     updateNotificationCategory,
     updateNotificationFrequency,
     updateNotificationChannel,
+    runOnStartup,
+    menuBar,
+    isUpdatingPreferences,
+    isPreferencesLoading,
+    updatePreference,
   }
 })

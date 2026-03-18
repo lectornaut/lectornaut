@@ -372,6 +372,14 @@
         "label": "Zoom",
         "description": "Use Ctrl/Cmd +/- to change zoom while you work.",
         "placeholder": "Select zoom level"
+      },
+      "runOnStartup": {
+        "label": "Run on startup",
+        "description": "Automatically start app when you log in to your computer."
+      },
+      "menuBar": {
+        "label": "Menu bar",
+        "description": "Show app in the menu bar."
       }
     },
     "notifications": {

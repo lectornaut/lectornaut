@@ -315,6 +315,7 @@ declare module 'vue' {
     SettingsNotifications: typeof import('./src/components/app/settings/SettingsNotifications.vue')['default']
     SettingsOverview: typeof import('./src/components/app/settings/SettingsOverview.vue')['default']
     SettingsPlans: typeof import('./src/components/app/settings/SettingsPlans.vue')['default']
+    SettingsPreferences: typeof import('./src/components/app/settings/SettingsPreferences.vue')['default']
     SettingsTeams: typeof import('./src/components/app/settings/SettingsTeams.vue')['default']
     SettingsWorkspaces: typeof import('./src/components/app/settings/SettingsWorkspaces.vue')['default']
     Sheet: typeof import('./src/components/ui/sheet/Sheet.vue')['default']
