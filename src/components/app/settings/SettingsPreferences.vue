@@ -5,7 +5,7 @@ import { storeToRefs } from "pinia"
 const { t } = useI18n()
 
 const settingsStore = useSettingsStore()
-const { runOnStartup, menuBar, isUpdatingPreferences } =
+const { runOnStartup, menuBar, badgeCount, isUpdatingPreferences } =
   storeToRefs(settingsStore)
 const { updatePreference } = settingsStore
 
@@ -48,6 +48,24 @@ const toBoolean = (value: unknown): boolean => value === true
             :disabled="isUpdatingPreferences"
             :model-value="menuBar"
             @update:model-value="updatePreference('menuBar', toBoolean($event))"
+          />
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="badge-count">
+              {{ t("settings.preferences.badgeCount.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.badgeCount.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="badge-count"
+            :disabled="isUpdatingPreferences"
+            :model-value="badgeCount"
+            @update:model-value="
+              updatePreference('badgeCount', toBoolean($event))
+            "
           />
         </Field>
       </FieldSet>

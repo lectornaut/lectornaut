@@ -130,6 +130,32 @@ export async function toggleFullscreen(): Promise<void> {
 }
 
 /**
+ * Update the app badge count on the app icon.
+ * Uses Tauri's window API in desktop, or the Badging API in PWA/browser.
+ * Passing 0 or null clears the badge.
+ */
+export async function setBadgeCount(count: number | null): Promise<void> {
+  const hasCount = count != null && count > 0
+
+  try {
+    if (isTauri.value) {
+      const win = getCurrentTauriWindow()
+      if (!win) return
+
+      await win.setBadgeCount(hasCount ? count : undefined)
+    } else if (navigator.setAppBadge) {
+      if (hasCount) {
+        await navigator.setAppBadge(count)
+      } else {
+        await navigator.clearAppBadge()
+      }
+    }
+  } catch (e) {
+    console.error("Failed to set badge count:", e)
+  }
+}
+
+/**
  * Cleanup function for fullscreen listener.
  * Call this when the app is being destroyed.
  */

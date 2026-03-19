@@ -412,8 +412,8 @@ const authenticateApple = () =>
       <div class="relative">
         <Separator />
         <Badge
-          variant="outline"
-          class="bg-muted text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          variant="secondary"
+          class="text-muted-foreground/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         >
           {{ t("enter.orContinueWith") }}
         </Badge>
@@ -435,11 +435,7 @@ const authenticateApple = () =>
           <TooltipProvider v-if="lastAuthProvider === 'google'">
             <Tooltip>
               <TooltipTrigger as-child>
-                <Badge
-                  variant="destructive"
-                  tabindex="-1"
-                  class="absolute -top-3 right-3"
-                >
+                <Badge tabindex="-1" class="absolute -top-3 right-3">
                   <IconDisc /> {{ t("enter.magicLink.recent") }}
                 </Badge>
               </TooltipTrigger>

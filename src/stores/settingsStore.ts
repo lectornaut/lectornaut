@@ -29,7 +29,8 @@ import type { SettingsThemeDoc, ThemeMode } from "@/types/settings"
 import { withCloudSyncOperation } from "@/utils/firebase/firebase-optimistic"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
-import { invoke } from "@tauri-apps/api/core"
+import { convertFileSrc, invoke } from "@tauri-apps/api/core"
+import { resolveResource } from "@tauri-apps/api/path"
 import { disable, enable } from "@tauri-apps/plugin-autostart"
 import {
   isPermissionGranted,
@@ -437,9 +438,26 @@ export const useSettingsStore = defineStore("settings", () => {
         }
 
         if (granted) {
+          let iconPath: string | undefined
+          try {
+            iconPath = await resolveResource("icons/icon.png")
+          } catch {
+            // Resource not available in dev mode
+          }
+
           sendNativeNotification({
             title: "Test notification",
             body: "This is a test desktop notification. Everything is working!",
+            sound: "default",
+            ...(iconPath && {
+              icon: iconPath,
+              attachments: [
+                {
+                  id: "icon",
+                  url: convertFileSrc(iconPath),
+                },
+              ],
+            }),
           })
         } else {
           toast.error("Desktop notification permission denied")
@@ -473,6 +491,7 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const runOnStartup = useStorage<boolean>("runOnStartup", false)
   const menuBar = useStorage<boolean>("menuBar", true)
+  const badgeCount = useStorage<boolean>("badgeCount", true)
 
   watch(
     preferencesDocData,
@@ -486,6 +505,9 @@ export const useSettingsStore = defineStore("settings", () => {
       }
       if ("menuBar" in docData && typeof docData.menuBar === "boolean") {
         menuBar.value = docData.menuBar
+      }
+      if ("badgeCount" in docData && typeof docData.badgeCount === "boolean") {
+        badgeCount.value = docData.badgeCount
       }
     },
     { immediate: true }
@@ -522,16 +544,15 @@ export const useSettingsStore = defineStore("settings", () => {
   )
 
   async function updatePreference(
-    key: "runOnStartup" | "menuBar",
+    key: "runOnStartup" | "menuBar" | "badgeCount",
     value: boolean
   ): Promise<boolean> {
     if (!preferencesDocRef.value || isUpdatingPreferences.value) return false
 
-    const previousValue =
-      key === "runOnStartup" ? runOnStartup.value : menuBar.value
+    const prefMap = { runOnStartup, menuBar, badgeCount }
+    const previousValue = prefMap[key].value
 
-    if (key === "runOnStartup") runOnStartup.value = value
-    else menuBar.value = value
+    prefMap[key].value = value
 
     isUpdatingPreferences.value = true
 
@@ -544,8 +565,7 @@ export const useSettingsStore = defineStore("settings", () => {
       toast.success("Preference updated")
       return true
     } catch (error) {
-      if (key === "runOnStartup") runOnStartup.value = previousValue
-      else menuBar.value = previousValue
+      prefMap[key].value = previousValue
       toast.error("Failed to update preference", {
         description: (error as Error).message,
       })
@@ -571,6 +591,7 @@ export const useSettingsStore = defineStore("settings", () => {
     isSendingTestNotification,
     runOnStartup,
     menuBar,
+    badgeCount,
     isUpdatingPreferences,
     isPreferencesLoading,
     updatePreference,

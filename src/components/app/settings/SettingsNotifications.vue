@@ -138,23 +138,41 @@ const toBoolean = (value: unknown): boolean => value === true
           </FieldContent>
           <ButtonGroup>
             <ButtonGroup>
-              <InputGroupButton
-                variant="ghost"
-                size="icon-xs"
-                :disabled="
-                  isUpdatingNotifications ||
-                  !notificationSettings.channels.email ||
-                  isSendingTestNotification !== null
-                "
-                :aria-label="
-                  t('settings.notifications.channels.test', {
-                    channel: t('settings.notifications.channels.email.label'),
-                  })
-                "
-                @click="sendTestNotification('email')"
-              >
-                <IconBellRing />
-              </InputGroupButton>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <InputGroupButton
+                      variant="ghost"
+                      size="icon-xs"
+                      :disabled="
+                        isUpdatingNotifications ||
+                        !notificationSettings.channels.email ||
+                        isSendingTestNotification !== null
+                      "
+                      :aria-label="
+                        t('settings.notifications.channels.test', {
+                          channel: t(
+                            'settings.notifications.channels.email.label'
+                          ),
+                        })
+                      "
+                      @click="sendTestNotification('email')"
+                    >
+                      <Spinner v-if="isSendingTestNotification === 'email'" />
+                      <IconBellRing v-else />
+                    </InputGroupButton>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{
+                      t("settings.notifications.channels.test", {
+                        channel: t(
+                          "settings.notifications.channels.email.label"
+                        ),
+                      })
+                    }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </ButtonGroup>
             <ButtonGroup class="items-center">
               <Switch
@@ -179,23 +197,41 @@ const toBoolean = (value: unknown): boolean => value === true
           </FieldContent>
           <ButtonGroup>
             <ButtonGroup>
-              <InputGroupButton
-                variant="ghost"
-                size="icon-xs"
-                :disabled="
-                  isUpdatingNotifications ||
-                  !notificationSettings.channels.inApp ||
-                  isSendingTestNotification !== null
-                "
-                :aria-label="
-                  t('settings.notifications.channels.test', {
-                    channel: t('settings.notifications.channels.inApp.label'),
-                  })
-                "
-                @click="sendTestNotification('inApp')"
-              >
-                <IconBellRing />
-              </InputGroupButton>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <InputGroupButton
+                      variant="ghost"
+                      size="icon-xs"
+                      :disabled="
+                        isUpdatingNotifications ||
+                        !notificationSettings.channels.inApp ||
+                        isSendingTestNotification !== null
+                      "
+                      :aria-label="
+                        t('settings.notifications.channels.test', {
+                          channel: t(
+                            'settings.notifications.channels.inApp.label'
+                          ),
+                        })
+                      "
+                      @click="sendTestNotification('inApp')"
+                    >
+                      <Spinner v-if="isSendingTestNotification === 'inApp'" />
+                      <IconBellRing v-else />
+                    </InputGroupButton>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{
+                      t("settings.notifications.channels.test", {
+                        channel: t(
+                          "settings.notifications.channels.inApp.label"
+                        ),
+                      })
+                    }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </ButtonGroup>
             <ButtonGroup class="items-center">
               <Switch
@@ -220,23 +256,41 @@ const toBoolean = (value: unknown): boolean => value === true
           </FieldContent>
           <ButtonGroup>
             <ButtonGroup>
-              <InputGroupButton
-                variant="ghost"
-                size="icon-xs"
-                :disabled="
-                  isUpdatingNotifications ||
-                  !notificationSettings.channels.native ||
-                  isSendingTestNotification !== null
-                "
-                :aria-label="
-                  t('settings.notifications.channels.test', {
-                    channel: t('settings.notifications.channels.native.label'),
-                  })
-                "
-                @click="sendTestNotification('native')"
-              >
-                <IconBellRing />
-              </InputGroupButton>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <InputGroupButton
+                      variant="ghost"
+                      size="icon-xs"
+                      :disabled="
+                        isUpdatingNotifications ||
+                        !notificationSettings.channels.native ||
+                        isSendingTestNotification !== null
+                      "
+                      :aria-label="
+                        t('settings.notifications.channels.test', {
+                          channel: t(
+                            'settings.notifications.channels.native.label'
+                          ),
+                        })
+                      "
+                      @click="sendTestNotification('native')"
+                    >
+                      <Spinner v-if="isSendingTestNotification === 'native'" />
+                      <IconBellRing v-else />
+                    </InputGroupButton>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{
+                      t("settings.notifications.channels.test", {
+                        channel: t(
+                          "settings.notifications.channels.native.label"
+                        ),
+                      })
+                    }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </ButtonGroup>
             <ButtonGroup class="items-center">
               <Switch

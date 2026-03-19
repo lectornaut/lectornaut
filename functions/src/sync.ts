@@ -227,7 +227,13 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
   const payload = operation.data ?? {}
   assertAllowedKeys(
     payload,
-    new Set(["currentTeamId", "onboarding", "runOnStartup", "menuBar"]),
+    new Set([
+      "currentTeamId",
+      "onboarding",
+      "runOnStartup",
+      "menuBar",
+      "badgeCount",
+    ]),
     "User preference updates contain blocked fields"
   )
 
@@ -242,6 +248,9 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
   }
   if ("menuBar" in payload) {
     assertBoolean(payload.menuBar, "preferences.menuBar")
+  }
+  if ("badgeCount" in payload) {
+    assertBoolean(payload.badgeCount, "preferences.badgeCount")
   }
 }
 

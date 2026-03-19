@@ -380,6 +380,10 @@
       "menuBar": {
         "label": "Menu bar",
         "description": "Show app in the menu bar."
+      },
+      "badgeCount": {
+        "label": "Badge count",
+        "description": "Show unread inbox notification count on the app icon."
       }
     },
     "notifications": {

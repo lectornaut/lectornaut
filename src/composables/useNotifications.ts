@@ -1,5 +1,7 @@
+import { setBadgeCount } from "@/composables/usePlatform"
 import { withToast } from "@/helpers/toast"
 import { firestore as db, functions } from "@/modules/firebase"
+import { useSettingsStore } from "@/stores/settingsStore"
 import {
   type INotification,
   type INotificationStatus,
@@ -21,7 +23,7 @@ import {
   Timestamp,
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
-import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
+import { computed, onUnmounted, ref, shallowRef, watch, watchEffect } from "vue"
 import { useCurrentUser } from "vuefire"
 
 const sortNotifications = (notifications: INotification[]) =>
@@ -395,6 +397,13 @@ export function useNotifications() {
 
   onUnmounted(() => {
     if (unsubscribe) unsubscribe()
+    void setBadgeCount(null)
+  })
+
+  const settingsStore = useSettingsStore()
+
+  watchEffect(() => {
+    void setBadgeCount(settingsStore.badgeCount ? inboxUnreadCount.value : null)
   })
 
   const loadMore = () => {

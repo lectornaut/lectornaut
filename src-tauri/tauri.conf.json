@@ -60,6 +60,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "icons/icon.png": "icons/icon.png"
+    },
     "macOS": {
       "dmg": {
         "background": "icons/dmg/background.png"
