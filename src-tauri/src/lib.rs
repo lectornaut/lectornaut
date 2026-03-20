@@ -184,6 +184,24 @@ pub fn run() {
             }
             _ => {}
         })
-        .run(ctx)
-        .expect("error while running tauri application");
+        .build(ctx)
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Reopen {
+                has_visible_windows,
+                ..
+            } = event
+            {
+                if !has_visible_windows {
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                    if let Some(tray) = app_handle.tray_by_id("main") {
+                        let _ = create_tray_menu(app_handle, false)
+                            .map(|m| tray.set_menu(Some(m)));
+                    }
+                }
+            }
+        });
 }

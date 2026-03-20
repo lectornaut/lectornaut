@@ -75,6 +75,7 @@ export type FileCaptureFileKind =
   | "audio"
   | "video"
   | "font"
+  | "folder"
   | "unknown"
 
 const fileKindExtensions: Record<FileCaptureFileKind, Set<string>> = {
@@ -128,6 +129,7 @@ const fileKindExtensions: Record<FileCaptureFileKind, Set<string>> = {
   audio: new Set(["mp3", "wav", "flac", "aac", "ogg", "m4a"]),
   video: new Set(["mp4", "mov", "avi", "mkv", "webm", "m4v"]),
   font: new Set(["ttf", "otf", "woff", "woff2"]),
+  folder: new Set(),
   unknown: new Set(),
 }
 

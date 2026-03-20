@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { isTauri } from "@/composables/usePlatform"
 import { IconBellRing } from "@/data/icons"
 import { useSettingsStore } from "@/stores/settingsStore"
 import { storeToRefs } from "pinia"
@@ -245,7 +244,7 @@ const toBoolean = (value: unknown): boolean => value === true
             </ButtonGroup>
           </ButtonGroup>
         </Field>
-        <Field v-if="isTauri" orientation="horizontal">
+        <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="app-notifications">
               {{ t("settings.notifications.channels.native.label") }}

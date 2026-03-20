@@ -350,28 +350,36 @@ mod macos {
 
         let is_drag_button_pressed = (NSEvent::pressedMouseButtons() & 1) == 1;
 
-        // Only access the drag pasteboard when the mouse button is actually pressed.
-        // This avoids repeated macOS system log warnings ("Couldn't get a file system
-        // path for a URL") caused by polling stale file-reference URLs on the pasteboard.
         if !is_drag_button_pressed {
             handle_drag_end(app);
             return;
         }
 
-        let Some(change_count) = current_drag_file_change_count() else {
-            handle_drag_end(app);
-            return;
-        };
+        // Read the change count first — this is cheap and does not resolve
+        // file-reference URLs, so it won't trigger macOS pasteboard warnings.
+        let change_count = current_drag_pasteboard_change_count();
 
         let should_show = {
             let state = app.state::<FileCaptureState>();
             let mut state = state.0.lock().unwrap();
-            let is_active_drag = state.active_drag_change_count == Some(change_count);
-            let is_new_drag = state.last_observed_drag_change_count != Some(change_count);
 
-            state.last_observed_drag_change_count = Some(change_count);
-
-            is_active_drag || is_new_drag
+            if state.active_drag_change_count == Some(change_count) {
+                // Already tracking this drag session — no need to re-inspect
+                // the pasteboard contents.
+                true
+            } else if state.last_observed_drag_change_count == Some(change_count) {
+                // The change count has not changed since the last poll and this
+                // is not an active drag — skip the expensive file-type check.
+                false
+            } else {
+                // A new change count appeared. Update the observed count and
+                // check whether the pasteboard actually contains dragged files.
+                // This is the only path that reads pasteboard contents and may
+                // trigger URL resolution warnings, but it runs at most once per
+                // new drag session rather than every poll cycle.
+                state.last_observed_drag_change_count = Some(change_count);
+                drag_pasteboard_has_files()
+            }
         };
 
         if !should_show {
@@ -427,15 +435,15 @@ mod macos {
     }
 
     #[allow(deprecated)]
-    fn current_drag_file_change_count() -> Option<isize> {
+    fn drag_pasteboard_has_files() -> bool {
         let pasteboard = NSPasteboard::pasteboardWithName(unsafe { NSPasteboardNameDrag });
         let file_types = NSArray::arrayWithObject(unsafe { NSFilenamesPboardType });
 
         if pasteboard.availableTypeFromArray(&file_types).is_none() {
-            return None;
+            return false;
         }
 
-        extract_drag_paths(&pasteboard).map(|_| pasteboard.changeCount())
+        extract_drag_paths(&pasteboard).is_some()
     }
 
     #[allow(deprecated)]

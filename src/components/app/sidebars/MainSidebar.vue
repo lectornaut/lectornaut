@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconBell, IconGift } from "@/data/icons"
+import { IconChevronRight, IconGift } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
 import { storeToRefs } from "pinia"
 
@@ -52,9 +52,7 @@ function closeSidebarOnMobile() {
                   <IconGift />
                   <span class="truncate"> Complete onboarding </span>
                   <SidebarMenuBadge>
-                    <Badge variant="destructive" size="sm">
-                      <IconBell />
-                    </Badge>
+                    <IconChevronRight />
                   </SidebarMenuBadge>
                 </RouterLink>
               </SidebarMenuButton>

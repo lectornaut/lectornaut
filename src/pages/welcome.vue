@@ -297,9 +297,9 @@ const handleFinalStepAction = async () => {
                       <div class="min-w-0 grow">
                         <StepperTitle
                           :class="{
-                            'text-primary': state === 'active',
-                            'text-foreground': state === 'completed',
+                            'text-foreground': state === 'active',
                             'text-muted-foreground': state === 'inactive',
+                            'text-muted-foreground/75': state === 'completed',
                           }"
                         >
                           {{ step.title }}

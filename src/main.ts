@@ -44,7 +44,13 @@ await router.isReady()
 app.mount("#app")
 
 if (isTauri.value) {
-  initUpdater()
+  const automaticUpdates = useStorage<boolean>("automaticUpdates", true)
+  if (automaticUpdates.value) {
+    const lastUpdateCheck = useStorage<number>("lastUpdateCheck", 0)
+    initUpdater().then(() => {
+      lastUpdateCheck.value = Date.now()
+    })
+  }
 }
 
 initTheme()

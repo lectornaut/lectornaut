@@ -26,6 +26,7 @@ import {
   IconFilePowerPoint,
   IconFileQuestion,
   IconFileVideo,
+  IconFolder,
   IconFormatFont,
   IconGrid2X2,
   IconList,
@@ -130,6 +131,7 @@ type QueuedFile = {
   path: string | null
   file: File | null
   objectUrl: string | null
+  isDirectory: boolean
 }
 type DroppedFileItem = {
   id: string
@@ -157,6 +159,7 @@ const fileKindIcons: Record<FileCaptureFileKind, Component> = {
   audio: IconFileMusic,
   video: IconFileVideo,
   font: IconFormatFont,
+  folder: IconFolder,
   unknown: IconFileQuestion,
 }
 
@@ -316,6 +319,7 @@ const createQueuedPathFiles = (paths: string[]): QueuedFile[] =>
     path,
     file: null,
     objectUrl: null,
+    isDirectory: false,
   }))
 
 const createQueuedBrowserFiles = (files: File[]): QueuedFile[] =>
@@ -329,6 +333,7 @@ const createQueuedBrowserFiles = (files: File[]): QueuedFile[] =>
         path,
         file: null,
         objectUrl: null,
+        isDirectory: false,
       }
     }
 
@@ -338,8 +343,26 @@ const createQueuedBrowserFiles = (files: File[]): QueuedFile[] =>
       path: null,
       file,
       objectUrl: URL.createObjectURL(file),
+      isDirectory: false,
     }
   })
+
+const resolveDirectoryFlags = async (files: QueuedFile[]): Promise<void> => {
+  if (!isTauri.value) return
+
+  await Promise.all(
+    files.map(async (queuedFile) => {
+      if (queuedFile.source !== "tauri" || !queuedFile.path) return
+
+      try {
+        const fileInfo = await stat(queuedFile.path)
+        queuedFile.isDirectory = fileInfo.isDirectory
+      } catch {
+        // Leave as false if stat fails
+      }
+    })
+  )
+}
 
 const mergeQueuedFiles = (
   currentFiles: QueuedFile[],
@@ -365,7 +388,9 @@ const droppedFileItems = computed<DroppedFileItem[]>(() =>
   queuedFiles.value.map((queuedFile) => {
     const name = getQueuedFileName(queuedFile)
     const path = queuedFile.path
-    const kind = getFileKindFromPath(path || name)
+    const kind = queuedFile.isDirectory
+      ? "folder"
+      : getFileKindFromPath(path || name)
     const isImage = kind === "image"
 
     return {
@@ -824,10 +849,10 @@ const addDroppedPaths = async (
 ) => {
   if (isMoving.value) return queuedFiles.value
 
-  return syncQueuedFiles(
-    mergeQueuedFiles(queuedFiles.value, createQueuedPathFiles(paths)),
-    options
-  )
+  const newFiles = createQueuedPathFiles(paths)
+  await resolveDirectoryFlags(newFiles)
+
+  return syncQueuedFiles(mergeQueuedFiles(queuedFiles.value, newFiles), options)
 }
 
 const addDroppedBrowserFiles = async (
@@ -836,10 +861,10 @@ const addDroppedBrowserFiles = async (
 ) => {
   if (isMoving.value) return queuedFiles.value
 
-  return syncQueuedFiles(
-    mergeQueuedFiles(queuedFiles.value, createQueuedBrowserFiles(files)),
-    options
-  )
+  const newFiles = createQueuedBrowserFiles(files)
+  await resolveDirectoryFlags(newFiles)
+
+  return syncQueuedFiles(mergeQueuedFiles(queuedFiles.value, newFiles), options)
 }
 
 const removeQueuedFile = async (id: string) => {

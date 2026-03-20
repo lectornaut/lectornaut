@@ -233,6 +233,7 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
       "runOnStartup",
       "menuBar",
       "badgeCount",
+      "automaticUpdates",
     ]),
     "User preference updates contain blocked fields"
   )
@@ -251,6 +252,9 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
   }
   if ("badgeCount" in payload) {
     assertBoolean(payload.badgeCount, "preferences.badgeCount")
+  }
+  if ("automaticUpdates" in payload) {
+    assertBoolean(payload.automaticUpdates, "preferences.automaticUpdates")
   }
 }
 

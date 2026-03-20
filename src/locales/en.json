@@ -373,6 +373,12 @@
         "description": "Use Ctrl/Cmd +/- to change zoom while you work.",
         "placeholder": "Select zoom level"
       },
+      "system": {
+        "label": "System"
+      },
+      "updates": {
+        "label": "Updates"
+      },
       "runOnStartup": {
         "label": "Run on startup",
         "description": "Automatically start app when you log in to your computer."
@@ -384,6 +390,19 @@
       "badgeCount": {
         "label": "Badge count",
         "description": "Show unread inbox notification count on the app icon."
+      },
+      "automaticUpdates": {
+        "label": "Automatic updates",
+        "description": "Last checked: {timeAgo}"
+      },
+      "checkForUpdates": {
+        "label": "Check for updates",
+        "labelUpToDate": "You're up to date",
+        "labelUpdateAvailable": "Update available",
+        "description": "Current version: {version}",
+        "descriptionAvailable": "Available version: {version}",
+        "action": "Check for updates",
+        "actionUpdate": "Update now"
       }
     },
     "notifications": {

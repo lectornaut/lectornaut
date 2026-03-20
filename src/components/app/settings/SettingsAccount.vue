@@ -960,7 +960,7 @@ const passwordExists = computed(() => {
               <AlertDialogTrigger as-child>
                 <Button variant="destructive">
                   <Spinner v-if="deletingAccount" />
-                  <span>{{ t("settings.account.deleteAccount.title") }}</span>
+                  {{ t("settings.account.deleteAccount.title") }}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

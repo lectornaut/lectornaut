@@ -21,7 +21,7 @@
 */
 @layer base {
   * {
-    @apply border-border/75 outline-ring/75;
+    @apply border-border outline-ring;
 
     /* @apply border;
     @apply border-red-500; */

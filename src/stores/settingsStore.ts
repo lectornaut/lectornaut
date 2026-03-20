@@ -492,6 +492,8 @@ export const useSettingsStore = defineStore("settings", () => {
   const runOnStartup = useStorage<boolean>("runOnStartup", false)
   const menuBar = useStorage<boolean>("menuBar", true)
   const badgeCount = useStorage<boolean>("badgeCount", true)
+  const automaticUpdates = useStorage<boolean>("automaticUpdates", true)
+  const lastUpdateCheck = useStorage<number>("lastUpdateCheck", 0)
 
   watch(
     preferencesDocData,
@@ -508,6 +510,12 @@ export const useSettingsStore = defineStore("settings", () => {
       }
       if ("badgeCount" in docData && typeof docData.badgeCount === "boolean") {
         badgeCount.value = docData.badgeCount
+      }
+      if (
+        "automaticUpdates" in docData &&
+        typeof docData.automaticUpdates === "boolean"
+      ) {
+        automaticUpdates.value = docData.automaticUpdates
       }
     },
     { immediate: true }
@@ -544,12 +552,12 @@ export const useSettingsStore = defineStore("settings", () => {
   )
 
   async function updatePreference(
-    key: "runOnStartup" | "menuBar" | "badgeCount",
+    key: "runOnStartup" | "menuBar" | "badgeCount" | "automaticUpdates",
     value: boolean
   ): Promise<boolean> {
     if (!preferencesDocRef.value || isUpdatingPreferences.value) return false
 
-    const prefMap = { runOnStartup, menuBar, badgeCount }
+    const prefMap = { runOnStartup, menuBar, badgeCount, automaticUpdates }
     const previousValue = prefMap[key].value
 
     prefMap[key].value = value
@@ -592,6 +600,8 @@ export const useSettingsStore = defineStore("settings", () => {
     runOnStartup,
     menuBar,
     badgeCount,
+    automaticUpdates,
+    lastUpdateCheck,
     isUpdatingPreferences,
     isPreferencesLoading,
     updatePreference,
