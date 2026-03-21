@@ -58,9 +58,9 @@ tauri-plugin-updater = "2"
 tauri-plugin-window-state = "2"
 # https://crates.io/crates/tauri-plugin-autostart/versions
 tauri-plugin-autostart = "2"
+# https://crates.io/crates/tauri-plugin-http/versions
+tauri-plugin-http = { version = "2", features = ["json"] }
 
-# HTTP client for token exchange
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 # URL parsing
 url = "2.5"
 # Async runtime utilities (if needed explicitly, though Tauri provides the runtime)

@@ -18,6 +18,11 @@
     "opener:allow-open-path",
     "opener:allow-reveal-item-in-dir",
     "shell:allow-open",
-    "deep-link:default"
+    "deep-link:default",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://**" }],
+      "deny": []
+    }
   ]
 }

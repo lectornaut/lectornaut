@@ -217,11 +217,7 @@ const authenticateApple = () =>
                     <AlertDialogCancel>
                       {{ t("enter.cancel") }}
                     </AlertDialogCancel>
-                    <Button
-                      :disabled="!email"
-                      variant="destructive"
-                      @click="authenticateEmail"
-                    >
+                    <Button :disabled="!email" @click="authenticateEmail">
                       <Spinner v-if="authenticateEmailInProgress" />
                       {{ t("enter.magicLink.send") }}
                     </Button>
@@ -308,14 +304,10 @@ const authenticateApple = () =>
                     />
                   </div>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>{{
-                      t("enter.cancel")
-                    }}</AlertDialogCancel>
-                    <Button
-                      :disabled="!email"
-                      variant="destructive"
-                      @click="resetPassword"
-                    >
+                    <AlertDialogCancel>
+                      {{ t("enter.cancel") }}
+                    </AlertDialogCancel>
+                    <Button :disabled="!email" @click="resetPassword">
                       <Spinner v-if="resettingPassword" />
                       {{ t("enter.forgotPassword.send") }}
                     </Button>

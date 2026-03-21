@@ -1,4 +1,4 @@
-use reqwest::Client;
+use tauri_plugin_http::reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tauri::{command, AppHandle, Runtime};
 use tauri_plugin_opener::OpenerExt;

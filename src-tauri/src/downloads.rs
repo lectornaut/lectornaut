@@ -1,4 +1,4 @@
-use reqwest::Url;
+use tauri_plugin_http::reqwest::Url;
 use tauri::command;
 use tokio::io::AsyncWriteExt;
 
@@ -15,7 +15,7 @@ pub async fn download_url_to_path(url: String, target_path: String) -> Result<()
         scheme => return Err(format!("Unsupported download URL scheme: {scheme}")),
     }
 
-    let mut response = reqwest::Client::new()
+    let mut response = tauri_plugin_http::reqwest::Client::new()
         .get(parsed_url)
         .send()
         .await
