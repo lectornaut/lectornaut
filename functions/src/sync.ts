@@ -230,13 +230,9 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
     new Set([
       "currentTeamId",
       "onboarding",
-      "runOnStartup",
-      "menuBar",
       "badgeCount",
-      "automaticUpdates",
       "fileDropOverlayDragDrop",
       "fileDropOverlayShortcut",
-      "fileDropOverlayShortcutKeys",
     ]),
     "User preference updates contain blocked fields"
   )
@@ -247,17 +243,8 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
   if ("onboarding" in payload) {
     assertBoolean(payload.onboarding, "preferences.onboarding")
   }
-  if ("runOnStartup" in payload) {
-    assertBoolean(payload.runOnStartup, "preferences.runOnStartup")
-  }
-  if ("menuBar" in payload) {
-    assertBoolean(payload.menuBar, "preferences.menuBar")
-  }
   if ("badgeCount" in payload) {
     assertBoolean(payload.badgeCount, "preferences.badgeCount")
-  }
-  if ("automaticUpdates" in payload) {
-    assertBoolean(payload.automaticUpdates, "preferences.automaticUpdates")
   }
   if ("fileDropOverlayDragDrop" in payload) {
     assertBoolean(
@@ -269,12 +256,6 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
     assertBoolean(
       payload.fileDropOverlayShortcut,
       "preferences.fileDropOverlayShortcut"
-    )
-  }
-  if ("fileDropOverlayShortcutKeys" in payload) {
-    assertNullableString(
-      payload.fileDropOverlayShortcutKeys,
-      "preferences.fileDropOverlayShortcutKeys"
     )
   }
 }

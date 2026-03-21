@@ -18,10 +18,6 @@ import {
   defaultTheme,
 } from "@/helpers/defaults"
 import {
-  register as registerGlobalShortcut,
-  unregister as unregisterGlobalShortcut,
-} from "@tauri-apps/plugin-global-shortcut"
-import {
   areNotificationSettingsEqual,
   cloneNotificationSettings,
   normalizeNotificationFrequency,
@@ -36,6 +32,10 @@ import { normalizeHexColor } from "@/utils/theme/customTheme"
 import { convertFileSrc, invoke } from "@tauri-apps/api/core"
 import { resolveResource } from "@tauri-apps/api/path"
 import { disable, enable } from "@tauri-apps/plugin-autostart"
+import {
+  register as registerGlobalShortcut,
+  unregister as unregisterGlobalShortcut,
+} from "@tauri-apps/plugin-global-shortcut"
 import {
   isPermissionGranted,
   requestPermission,
@@ -512,27 +512,14 @@ export const useSettingsStore = defineStore("settings", () => {
     "cmd+shift+d"
   )
 
+  const openInDesktopApp = useStorage<boolean>("openInDesktopApp", true)
+
   watch(
     preferencesDocData,
     (docData) => {
       if (!isRecord(docData)) return
-      if (
-        "runOnStartup" in docData &&
-        typeof docData.runOnStartup === "boolean"
-      ) {
-        runOnStartup.value = docData.runOnStartup
-      }
-      if ("menuBar" in docData && typeof docData.menuBar === "boolean") {
-        menuBar.value = docData.menuBar
-      }
       if ("badgeCount" in docData && typeof docData.badgeCount === "boolean") {
         badgeCount.value = docData.badgeCount
-      }
-      if (
-        "automaticUpdates" in docData &&
-        typeof docData.automaticUpdates === "boolean"
-      ) {
-        automaticUpdates.value = docData.automaticUpdates
       }
       if (
         "fileDropOverlayDragDrop" in docData &&
@@ -545,12 +532,6 @@ export const useSettingsStore = defineStore("settings", () => {
         typeof docData.fileDropOverlayShortcut === "boolean"
       ) {
         fileDropOverlayShortcut.value = docData.fileDropOverlayShortcut
-      }
-      if (
-        "fileDropOverlayShortcutKeys" in docData &&
-        typeof docData.fileDropOverlayShortcutKeys === "string"
-      ) {
-        fileDropOverlayShortcutKeys.value = docData.fileDropOverlayShortcutKeys
       }
     },
     { immediate: true }
@@ -688,42 +669,25 @@ export const useSettingsStore = defineStore("settings", () => {
   })
 
   type BooleanPreferenceKey =
-    | "runOnStartup"
-    | "menuBar"
     | "badgeCount"
-    | "automaticUpdates"
     | "fileDropOverlayDragDrop"
     | "fileDropOverlayShortcut"
-
-  type StringPreferenceKey = "fileDropOverlayShortcutKeys"
 
   async function updatePreference(
     key: BooleanPreferenceKey,
     value: boolean
-  ): Promise<boolean>
-  async function updatePreference(
-    key: StringPreferenceKey,
-    value: string
-  ): Promise<boolean>
-  async function updatePreference(
-    key: BooleanPreferenceKey | StringPreferenceKey,
-    value: boolean | string
   ): Promise<boolean> {
     if (!preferencesDocRef.value || isUpdatingPreferences.value) return false
 
     const prefMap = {
-      runOnStartup,
-      menuBar,
       badgeCount,
-      automaticUpdates,
       fileDropOverlayDragDrop,
       fileDropOverlayShortcut,
-      fileDropOverlayShortcutKeys,
     }
     const prefRef = prefMap[key]
     const previousValue = prefRef.value
 
-    ;(prefRef as { value: boolean | string }).value = value
+    prefRef.value = value
 
     isUpdatingPreferences.value = true
 
@@ -736,7 +700,7 @@ export const useSettingsStore = defineStore("settings", () => {
       toast.success("Preference updated")
       return true
     } catch (error) {
-      ;(prefRef as { value: boolean | string }).value = previousValue
+      prefRef.value = previousValue
       toast.error("Failed to update preference", {
         description: (error as Error).message,
       })
@@ -768,6 +732,7 @@ export const useSettingsStore = defineStore("settings", () => {
     fileDropOverlayDragDrop,
     fileDropOverlayShortcut,
     fileDropOverlayShortcutKeys,
+    openInDesktopApp,
     isUpdatingPreferences,
     isPreferencesLoading,
     updatePreference,

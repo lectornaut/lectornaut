@@ -1,6 +1,7 @@
 import App from "@/App.vue"
 import { isTauri } from "@/composables/usePlatform"
 import { createAppCheckModule } from "@/modules/appCheck"
+import { initDeepLink } from "@/modules/deepLink"
 import { firebaseApp } from "@/modules/firebase"
 import { initHotkeys } from "@/modules/hotkeys"
 import { i18n, initLanguage } from "@/modules/i18n"
@@ -53,6 +54,7 @@ if (isTauri.value) {
   }
 }
 
+initDeepLink()
 initTheme()
 initLanguage()
 initHotkeys()

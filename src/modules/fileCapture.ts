@@ -1,4 +1,4 @@
-import { lookup as lookupMimeType } from "mime-types"
+import mime from "mime"
 import type { ShallowRef } from "vue"
 
 export const FILE_CAPTURE_WINDOW_LABEL = "file-capture"
@@ -173,8 +173,7 @@ const GENERIC_BINARY_MIME_TYPE = "application/octet-stream"
 export const resolveMimeTypeFromFileName = (
   fileName: string
 ): string | null => {
-  const mimeType = lookupMimeType(fileName)
-  return typeof mimeType === "string" ? mimeType : null
+  return mime.getType(fileName)
 }
 
 export const resolveMimeTypeForUpload = (input: {

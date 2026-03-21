@@ -391,6 +391,10 @@
         "label": "Badge count",
         "description": "Show unread inbox notification count on the app icon."
       },
+      "openInDesktopApp": {
+        "label": "Open in desktop app",
+        "description": "Automatically open links in the Lectornaut desktop app when available."
+      },
       "automaticUpdates": {
         "label": "Automatic updates",
         "description": "Last checked: {timeAgo}"

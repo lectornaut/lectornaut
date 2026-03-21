@@ -24,6 +24,7 @@ const {
   fileDropOverlayDragDrop,
   fileDropOverlayShortcut,
   fileDropOverlayShortcutKeys,
+  openInDesktopApp,
   isUpdatingPreferences,
 } = storeToRefs(settingsStore)
 const { updatePreference } = settingsStore
@@ -129,7 +130,7 @@ const handleRecorderKeydown = (event: KeyboardEvent) => {
 
   const hotkeyString = parts.join("+")
   isRecording.value = false
-  updatePreference("fileDropOverlayShortcutKeys", hotkeyString)
+  fileDropOverlayShortcutKeys.value = hotkeyString
 }
 
 const startRecording = () => {
@@ -162,14 +163,7 @@ const stopRecording = () => {
               {{ t("settings.preferences.runOnStartup.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="run-on-startup"
-            :disabled="isUpdatingPreferences"
-            :model-value="runOnStartup"
-            @update:model-value="
-              updatePreference('runOnStartup', toBoolean($event))
-            "
-          />
+          <Switch id="run-on-startup" v-model="runOnStartup" />
         </Field>
         <Field v-if="isTauri" orientation="horizontal">
           <FieldContent>
@@ -180,12 +174,7 @@ const stopRecording = () => {
               {{ t("settings.preferences.menuBar.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="menu-bar"
-            :disabled="isUpdatingPreferences"
-            :model-value="menuBar"
-            @update:model-value="updatePreference('menuBar', toBoolean($event))"
-          />
+          <Switch id="menu-bar" v-model="menuBar" />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -204,6 +193,17 @@ const stopRecording = () => {
               updatePreference('badgeCount', toBoolean($event))
             "
           />
+        </Field>
+        <Field v-if="!isTauri" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="open-in-desktop-app">
+              {{ t("settings.preferences.openInDesktopApp.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.openInDesktopApp.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch id="open-in-desktop-app" v-model="openInDesktopApp" />
         </Field>
       </FieldSet>
       <template v-if="isTauri">
@@ -374,14 +374,7 @@ const stopRecording = () => {
                 }}
               </FieldDescription>
             </FieldContent>
-            <Switch
-              id="automatic-updates"
-              :disabled="isUpdatingPreferences"
-              :model-value="automaticUpdates"
-              @update:model-value="
-                updatePreference('automaticUpdates', toBoolean($event))
-              "
-            />
+            <Switch id="automatic-updates" v-model="automaticUpdates" />
           </Field>
         </FieldSet>
       </template>

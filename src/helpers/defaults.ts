@@ -1021,4 +1021,12 @@ export const defaultSettingsTabs = [
 
 export const defaultSettingsTab = "preferences"
 
+export const deepLinkExcludedPaths = [
+  "/",
+  "/enter",
+  "/deeplink",
+  "/welcome",
+  "/pricing",
+] as const
+
 export const defaultTeamRole = "member"
