@@ -60,6 +60,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -76,6 +77,7 @@ pub fn run() {
             downloads::download_url_to_path,
             file_capture::keep_file_capture_window_open,
             file_capture::dismiss_file_capture_window,
+            file_capture::set_file_capture_drag_enabled,
             file_capture::preview_file_path,
             set_tray_visible
         ])

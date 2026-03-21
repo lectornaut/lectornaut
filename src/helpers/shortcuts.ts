@@ -31,7 +31,7 @@ import type { Component } from "vue"
 // Platform Detection (cached for performance)
 // ============================================================================
 
-const IS_APPLE_DEVICE =
+export const IS_APPLE_DEVICE =
   typeof navigator !== "undefined" &&
   /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
 

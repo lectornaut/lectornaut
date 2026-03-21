@@ -403,6 +403,23 @@
         "descriptionAvailable": "Available version: {version}",
         "action": "Check for updates",
         "actionUpdate": "Update now"
+      },
+      "shortcuts": {
+        "label": "Shortcuts"
+      },
+      "fileDropOverlayDragDrop": {
+        "label": "Global drag and drop",
+        "description": "Show the file drop overlay window when dragging files anywhere on the desktop."
+      },
+      "fileDropOverlayShortcut": {
+        "label": "Keyboard shortcut",
+        "description": "Enable a global keyboard shortcut to open the file drop overlay window."
+      },
+      "fileDropOverlayShortcutKeys": {
+        "label": "Shortcut keys",
+        "description": "Press a key combination to set the shortcut.",
+        "placeholder": "Click to record shortcut",
+        "recording": "Press keys..."
       }
     },
     "notifications": {

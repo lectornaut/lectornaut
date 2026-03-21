@@ -19,13 +19,26 @@ const FILE_CAPTURE_DROP_SETTLE_DELAY: Duration = Duration::from_millis(350);
 #[cfg(target_os = "macos")]
 const FILE_CAPTURE_SHOW_ANIMATION_DURATION: f64 = 0.18;
 
-#[derive(Default)]
 struct FileCaptureWindowState {
+    drag_enabled: bool,
     drag_active: bool,
     keep_open: bool,
     pending_hide_until: Option<Instant>,
     active_drag_change_count: Option<isize>,
     last_observed_drag_change_count: Option<isize>,
+}
+
+impl Default for FileCaptureWindowState {
+    fn default() -> Self {
+        Self {
+            drag_enabled: true,
+            drag_active: false,
+            keep_open: false,
+            pending_hide_until: None,
+            active_drag_change_count: None,
+            last_observed_drag_change_count: None,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -270,6 +283,30 @@ pub fn dismiss_file_capture_window<R: Runtime>(app: tauri::AppHandle<R>) -> taur
 }
 
 #[tauri::command]
+pub fn set_file_capture_drag_enabled<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    enabled: bool,
+) -> tauri::Result<()> {
+    let state = app.state::<FileCaptureState>();
+    let mut state = state.0.lock().unwrap();
+    state.drag_enabled = enabled;
+
+    if !enabled {
+        state.drag_active = false;
+        state.active_drag_change_count = None;
+        state.pending_hide_until = None;
+    }
+
+    drop(state);
+
+    if !enabled {
+        hide_file_capture_window(&app);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn preview_file_path<R: Runtime>(app: tauri::AppHandle<R>, path: String) -> Result<(), String> {
     if !Path::new(&path).exists() {
         return Err(format!("File not found: {path}"));
@@ -339,6 +376,10 @@ mod macos {
         {
             let state = app.state::<FileCaptureState>();
             let mut state = state.0.lock().unwrap();
+
+            if !state.drag_enabled {
+                return;
+            }
 
             if state.keep_open {
                 state.drag_active = false;

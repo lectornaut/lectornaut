@@ -396,6 +396,10 @@
   @apply border-red-500;
 } */
 
+:where(button, [role="button"]):not([disabled]) {
+  cursor: pointer;
+}
+
 ::-webkit-color-swatch-wrapper {
   @apply p-0;
 }

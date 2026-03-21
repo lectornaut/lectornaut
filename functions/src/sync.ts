@@ -234,6 +234,9 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
       "menuBar",
       "badgeCount",
       "automaticUpdates",
+      "fileDropOverlayDragDrop",
+      "fileDropOverlayShortcut",
+      "fileDropOverlayShortcutKeys",
     ]),
     "User preference updates contain blocked fields"
   )
@@ -255,6 +258,24 @@ const validateUserPreferencesPayload = (operation: SyncOperation) => {
   }
   if ("automaticUpdates" in payload) {
     assertBoolean(payload.automaticUpdates, "preferences.automaticUpdates")
+  }
+  if ("fileDropOverlayDragDrop" in payload) {
+    assertBoolean(
+      payload.fileDropOverlayDragDrop,
+      "preferences.fileDropOverlayDragDrop"
+    )
+  }
+  if ("fileDropOverlayShortcut" in payload) {
+    assertBoolean(
+      payload.fileDropOverlayShortcut,
+      "preferences.fileDropOverlayShortcut"
+    )
+  }
+  if ("fileDropOverlayShortcutKeys" in payload) {
+    assertNullableString(
+      payload.fileDropOverlayShortcutKeys,
+      "preferences.fileDropOverlayShortcutKeys"
+    )
   }
 }
 

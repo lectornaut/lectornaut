@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import { isTauri } from "@/composables/usePlatform"
+import { IconCheck, IconKeyboard } from "@/data/icons"
+import { getPlatformSpecialKey, IS_APPLE_DEVICE } from "@/helpers/shortcuts"
 import {
   checkForUpdates,
   downloadAndInstallUpdate,
@@ -19,6 +21,9 @@ const {
   badgeCount,
   automaticUpdates,
   lastUpdateCheck,
+  fileDropOverlayDragDrop,
+  fileDropOverlayShortcut,
+  fileDropOverlayShortcutKeys,
   isUpdatingPreferences,
 } = storeToRefs(settingsStore)
 const { updatePreference } = settingsStore
@@ -52,6 +57,92 @@ const handleUpdateNow = async () => {
   if (lastCheckResult.value?.update) {
     await downloadAndInstallUpdate(lastCheckResult.value.update)
   }
+}
+
+// Keyboard shortcut recorder
+const isRecording = ref(false)
+const recorderRef = ref<{ $el: HTMLElement } | null>(null)
+
+const DISPLAY_KEY_MAP: Record<string, string> = {
+  arrowup: "↑",
+  arrowdown: "↓",
+  arrowleft: "←",
+  arrowright: "→",
+  escape: "Esc",
+  enter: "↩",
+  backspace: "⌫",
+  delete: "⌦",
+  tab: "⇥",
+  " ": "Space",
+}
+
+const hotkeyToDisplayKeys = (hotkey: string): string[] => {
+  const parts = hotkey.split("+")
+  return parts.map((part) => {
+    switch (part) {
+      case "cmd":
+        return IS_APPLE_DEVICE ? "⌘" : getPlatformSpecialKey()
+      case "ctrl":
+        return IS_APPLE_DEVICE ? "⌃" : "Ctrl"
+      case "shift":
+        return IS_APPLE_DEVICE ? "⇧" : "Shift"
+      case "alt":
+        return IS_APPLE_DEVICE ? "⌥" : "Alt"
+      default:
+        return DISPLAY_KEY_MAP[part] ?? part.toUpperCase()
+    }
+  })
+}
+
+const displayKeys = computed(() =>
+  hotkeyToDisplayKeys(fileDropOverlayShortcutKeys.value)
+)
+
+const handleRecorderKeydown = (event: KeyboardEvent) => {
+  if (!isRecording.value) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  // Ignore lone modifier presses
+  if (["Control", "Shift", "Alt", "Meta", "OS"].includes(event.key)) {
+    return
+  }
+
+  // Require at least one modifier
+  if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+    return
+  }
+
+  const parts: string[] = []
+  if (event.metaKey) parts.push("cmd")
+  if (event.ctrlKey) parts.push("ctrl")
+  if (event.altKey) parts.push("alt")
+  if (event.shiftKey) parts.push("shift")
+
+  // For single printable characters, use the character directly.
+  // For named keys (Arrow*, Escape, etc.), use event.key which gives
+  // the standard name that toTauriShortcut can uppercase for Tauri.
+  const key =
+    event.key.length === 1 ? event.key.toLowerCase() : event.key.toLowerCase()
+  parts.push(key)
+
+  const hotkeyString = parts.join("+")
+  isRecording.value = false
+  updatePreference("fileDropOverlayShortcutKeys", hotkeyString)
+}
+
+const startRecording = () => {
+  isRecording.value = true
+  nextTick(() => {
+    const el = recorderRef.value?.$el
+    if (el instanceof HTMLInputElement) el.focus()
+    else el?.querySelector?.("input")?.focus()
+  })
+}
+
+const stopRecording = () => {
+  isRecording.value = false
 }
 </script>
 
@@ -116,6 +207,100 @@ const handleUpdateNow = async () => {
         </Field>
       </FieldSet>
       <template v-if="isTauri">
+        <FieldSeparator />
+        <FieldSet>
+          <FieldLabel>
+            {{ t("settings.preferences.shortcuts.label") }}
+          </FieldLabel>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="file-drop-overlay-drag-drop">
+                {{ t("settings.preferences.fileDropOverlayDragDrop.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{
+                  t("settings.preferences.fileDropOverlayDragDrop.description")
+                }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="file-drop-overlay-drag-drop"
+              :disabled="isUpdatingPreferences"
+              :model-value="fileDropOverlayDragDrop"
+              @update:model-value="
+                updatePreference('fileDropOverlayDragDrop', toBoolean($event))
+              "
+            />
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="file-drop-overlay-shortcut">
+                {{ t("settings.preferences.fileDropOverlayShortcut.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{
+                  t("settings.preferences.fileDropOverlayShortcut.description")
+                }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="file-drop-overlay-shortcut"
+              :disabled="isUpdatingPreferences"
+              :model-value="fileDropOverlayShortcut"
+              @update:model-value="
+                updatePreference('fileDropOverlayShortcut', toBoolean($event))
+              "
+            />
+          </Field>
+          <Field v-if="fileDropOverlayShortcut" orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="file-drop-overlay-shortcut-keys">
+                {{
+                  t("settings.preferences.fileDropOverlayShortcutKeys.label")
+                }}
+              </FieldLabel>
+              <FieldDescription>
+                {{
+                  t(
+                    "settings.preferences.fileDropOverlayShortcutKeys.description"
+                  )
+                }}
+              </FieldDescription>
+            </FieldContent>
+            <InputGroup class="w-min" :data-disabled="isUpdatingPreferences">
+              <InputGroupAddon>
+                <KbdGroup>
+                  <Kbd v-for="key in displayKeys" :key="key">
+                    {{ key }}
+                  </Kbd>
+                </KbdGroup>
+              </InputGroupAddon>
+              <InputGroupInput
+                ref="recorderRef"
+                readonly
+                :disabled="isUpdatingPreferences"
+                :placeholder="
+                  t(
+                    'settings.preferences.fileDropOverlayShortcutKeys.placeholder'
+                  )
+                "
+                @focus="startRecording"
+                @click="startRecording"
+                @keydown="handleRecorderKeydown"
+                @blur="stopRecording"
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  size="icon-xs"
+                  :disabled="isUpdatingPreferences"
+                >
+                  <IconCheck v-if="isRecording" />
+                  <IconKeyboard v-else />
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
+          </Field>
+        </FieldSet>
         <FieldSeparator />
         <FieldSet>
           <FieldLabel>

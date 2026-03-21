@@ -18,6 +18,10 @@ import {
   defaultTheme,
 } from "@/helpers/defaults"
 import {
+  register as registerGlobalShortcut,
+  unregister as unregisterGlobalShortcut,
+} from "@tauri-apps/plugin-global-shortcut"
+import {
   areNotificationSettingsEqual,
   cloneNotificationSettings,
   normalizeNotificationFrequency,
@@ -495,6 +499,19 @@ export const useSettingsStore = defineStore("settings", () => {
   const automaticUpdates = useStorage<boolean>("automaticUpdates", true)
   const lastUpdateCheck = useStorage<number>("lastUpdateCheck", 0)
 
+  const fileDropOverlayDragDrop = useStorage<boolean>(
+    "fileDropOverlayDragDrop",
+    true
+  )
+  const fileDropOverlayShortcut = useStorage<boolean>(
+    "fileDropOverlayShortcut",
+    false
+  )
+  const fileDropOverlayShortcutKeys = useStorage<string>(
+    "fileDropOverlayShortcutKeys",
+    "cmd+shift+d"
+  )
+
   watch(
     preferencesDocData,
     (docData) => {
@@ -516,6 +533,24 @@ export const useSettingsStore = defineStore("settings", () => {
         typeof docData.automaticUpdates === "boolean"
       ) {
         automaticUpdates.value = docData.automaticUpdates
+      }
+      if (
+        "fileDropOverlayDragDrop" in docData &&
+        typeof docData.fileDropOverlayDragDrop === "boolean"
+      ) {
+        fileDropOverlayDragDrop.value = docData.fileDropOverlayDragDrop
+      }
+      if (
+        "fileDropOverlayShortcut" in docData &&
+        typeof docData.fileDropOverlayShortcut === "boolean"
+      ) {
+        fileDropOverlayShortcut.value = docData.fileDropOverlayShortcut
+      }
+      if (
+        "fileDropOverlayShortcutKeys" in docData &&
+        typeof docData.fileDropOverlayShortcutKeys === "string"
+      ) {
+        fileDropOverlayShortcutKeys.value = docData.fileDropOverlayShortcutKeys
       }
     },
     { immediate: true }
@@ -551,16 +586,144 @@ export const useSettingsStore = defineStore("settings", () => {
     { immediate: true }
   )
 
+  // Sync file drop overlay drag-and-drop preference to native side
+  watch(
+    fileDropOverlayDragDrop,
+    (enabled) => {
+      if (!isTauri.value) return
+      void invoke("set_file_capture_drag_enabled", { enabled }).catch(
+        (error: unknown) => {
+          console.error(
+            "[settingsStore] Failed to sync drag-drop preference:",
+            error
+          )
+        }
+      )
+    },
+    { immediate: true }
+  )
+
+  // Register/unregister file drop overlay OS-level global shortcut
+  let currentGlobalShortcut: string | null = null
+
+  // Maps from our internal hotkey format (e.g. "cmd+shift+d") to Tauri
+  // accelerator format (e.g. "CommandOrControl+Shift+D").
+  // See: https://docs.rs/global-hotkey/latest/global_hotkey/hotkey/struct.HotKey.html
+  const TAURI_KEY_MAP: Record<string, string> = {
+    arrowup: "Up",
+    arrowdown: "Down",
+    arrowleft: "Left",
+    arrowright: "Right",
+    escape: "Escape",
+    enter: "Enter",
+    backspace: "Backspace",
+    delete: "Delete",
+    tab: "Tab",
+    " ": "Space",
+  }
+
+  const toTauriShortcut = (hotkey: string): string =>
+    hotkey
+      .split("+")
+      .map((part) => {
+        switch (part.trim().toLowerCase()) {
+          case "cmd":
+            return "CommandOrControl"
+          case "ctrl":
+            return "Control"
+          case "shift":
+            return "Shift"
+          case "alt":
+            return "Alt"
+          default: {
+            const normalized = part.trim().toLowerCase()
+            return TAURI_KEY_MAP[normalized] ?? part.trim().toUpperCase()
+          }
+        }
+      })
+      .join("+")
+
+  const syncGlobalShortcut = async (enabled: boolean, keys: string) => {
+    if (!isTauri.value) return
+
+    if (currentGlobalShortcut) {
+      try {
+        await unregisterGlobalShortcut(currentGlobalShortcut)
+      } catch {
+        // Shortcut may already be unregistered
+      }
+      currentGlobalShortcut = null
+    }
+
+    if (enabled && keys) {
+      const tauriShortcut = toTauriShortcut(keys)
+      try {
+        await registerGlobalShortcut(tauriShortcut, () => {
+          void invoke("keep_file_capture_window_open")
+        })
+        currentGlobalShortcut = tauriShortcut
+      } catch (error) {
+        console.error(
+          "[settingsStore] Failed to register global shortcut:",
+          error
+        )
+      }
+    }
+  }
+
+  watch(
+    [fileDropOverlayShortcut, fileDropOverlayShortcutKeys],
+    ([enabled, keys]) => {
+      void syncGlobalShortcut(enabled, keys)
+    },
+    { immediate: true }
+  )
+
+  // Clean up OS-level shortcut when the store's effect scope is disposed (e.g. HMR)
+  onScopeDispose(() => {
+    if (currentGlobalShortcut) {
+      void unregisterGlobalShortcut(currentGlobalShortcut).catch(() => {})
+      currentGlobalShortcut = null
+    }
+  })
+
+  type BooleanPreferenceKey =
+    | "runOnStartup"
+    | "menuBar"
+    | "badgeCount"
+    | "automaticUpdates"
+    | "fileDropOverlayDragDrop"
+    | "fileDropOverlayShortcut"
+
+  type StringPreferenceKey = "fileDropOverlayShortcutKeys"
+
   async function updatePreference(
-    key: "runOnStartup" | "menuBar" | "badgeCount" | "automaticUpdates",
+    key: BooleanPreferenceKey,
     value: boolean
+  ): Promise<boolean>
+  async function updatePreference(
+    key: StringPreferenceKey,
+    value: string
+  ): Promise<boolean>
+  async function updatePreference(
+    key: BooleanPreferenceKey | StringPreferenceKey,
+    value: boolean | string
   ): Promise<boolean> {
     if (!preferencesDocRef.value || isUpdatingPreferences.value) return false
 
-    const prefMap = { runOnStartup, menuBar, badgeCount, automaticUpdates }
-    const previousValue = prefMap[key].value
+    const prefMap = {
+      runOnStartup,
+      menuBar,
+      badgeCount,
+      automaticUpdates,
+      fileDropOverlayDragDrop,
+      fileDropOverlayShortcut,
+      fileDropOverlayShortcutKeys,
+    }
+    const prefRef = prefMap[key]
+    const previousValue = prefRef.value
 
-    prefMap[key].value = value
+    ;(prefRef as { value: boolean | string }).value = value
 
     isUpdatingPreferences.value = true
 
@@ -573,7 +736,7 @@ export const useSettingsStore = defineStore("settings", () => {
       toast.success("Preference updated")
       return true
     } catch (error) {
-      prefMap[key].value = previousValue
+      ;(prefRef as { value: boolean | string }).value = previousValue
       toast.error("Failed to update preference", {
         description: (error as Error).message,
       })
@@ -602,6 +765,9 @@ export const useSettingsStore = defineStore("settings", () => {
     badgeCount,
     automaticUpdates,
     lastUpdateCheck,
+    fileDropOverlayDragDrop,
+    fileDropOverlayShortcut,
+    fileDropOverlayShortcutKeys,
     isUpdatingPreferences,
     isPreferencesLoading,
     updatePreference,
