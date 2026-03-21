@@ -4,9 +4,11 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri::{
-    LogicalPosition, Manager, PhysicalPosition, Position as WindowPosition, Runtime, TitleBarStyle,
-    WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+    Manager, PhysicalPosition, Position as WindowPosition, Runtime, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder,
 };
+#[cfg(target_os = "macos")]
+use tauri::{LogicalPosition, TitleBarStyle};
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_positioner::{Position as PositionerPosition, WindowExt};
 

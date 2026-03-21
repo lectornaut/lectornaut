@@ -3,6 +3,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use window_vibrancy::*;
 
 mod app_check;
@@ -188,19 +189,20 @@ pub fn run() {
         })
         .build(ctx)
         .expect("error while building tauri application")
-        .run(|app_handle, event| {
+        .run(|_app_handle, _event| {
+            #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen {
                 has_visible_windows,
                 ..
-            } = event
+            } = _event
             {
                 if !has_visible_windows {
-                    if let Some(window) = app_handle.get_webview_window("main") {
+                    if let Some(window) = _app_handle.get_webview_window("main") {
                         let _ = window.show();
                         let _ = window.set_focus();
                     }
-                    if let Some(tray) = app_handle.tray_by_id("main") {
-                        let _ = create_tray_menu(app_handle, false)
+                    if let Some(tray) = _app_handle.tray_by_id("main") {
+                        let _ = create_tray_menu(_app_handle, false)
                             .map(|m| tray.set_menu(Some(m)));
                     }
                 }

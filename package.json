@@ -164,7 +164,7 @@
   "devDependencies": {
     "@eslint/css": "^1.0.0",
     "@eslint/js": "^10.0.1",
-    "@iconify/json": "^2.2.452",
+    "@iconify/json": "^2.2.453",
     "@intlify/eslint-plugin-vue-i18n": "^4.3.0",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
     "@tailwindcss/forms": "^0.5.11",
