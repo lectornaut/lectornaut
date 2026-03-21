@@ -5,6 +5,7 @@ import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
 import { invoke } from "@tauri-apps/api/core"
+import { onOpenUrl } from "@tauri-apps/plugin-deep-link"
 import type { FirebaseError } from "firebase/app"
 import {
   createUserWithEmailAndPassword,
@@ -53,21 +54,15 @@ export const emailForSignIn = useStorage("emailForSignIn", "")
 export const lastAuthProvider = useStorage("lastAuthProvider", "")
 
 /**
- * Loopback mechanism for Tauri (no remote deep link)
- * Starts a local server to listen for the magic link callback
+ * Sends a magic link email for authentication
+ * Tauri: uses deep-link (lectornaut://verify) to receive the callback
+ * Web: redirects to /enter where authenticateEmail() handles it
  */
 export const sendAuthenticateEmail = async (email: string) => {
-  const port = 7878
-  let magicLinkPromise: Promise<string> | null = null
-
-  if (isTauri.value) {
-    // Start listening BEFORE sending email, but don't await yet
-    magicLinkPromise = invoke<string>("listen_magic_link", { port })
-  }
-
   let urlObj: URL
   if (isTauri.value) {
-    urlObj = new URL(`http://localhost:${port}/verify`)
+    urlObj = new URL("https://lectornaut.com/deeplink")
+    urlObj.searchParams.append("target", "tauri")
   } else {
     urlObj = new URL(`${window.location.origin}/enter`)
     urlObj.searchParams.append("target", "web")
@@ -78,10 +73,8 @@ export const sendAuthenticateEmail = async (email: string) => {
     urlObj.searchParams.append("redirect", redirect)
   }
 
-  const url = urlObj.toString()
-
   const actionCodeSettings = {
-    url,
+    url: urlObj.toString(),
     handleCodeInApp: true,
   }
 
@@ -91,21 +84,20 @@ export const sendAuthenticateEmail = async (email: string) => {
       lastAuthProvider.value = "email-link"
       toast.success("Authentication email sent")
 
-      // If Tauri, wait for the link to be clicked WITHOUT blocking the return
-      if (isTauri.value && magicLinkPromise) {
-        // Show waiting toast with persistent ID
+      if (isTauri.value) {
         toast.loading("Waiting for email verification...", {
           id: "magic-link-wait",
           duration: Infinity,
         })
 
-        // We do NOT await this block, so the function returns immediately related to the UI state
-        ;(async () => {
+        const unlisten = await onOpenUrl(async (urls) => {
+          const link = urls.find((u) => u.startsWith("lectornaut://verify"))
+          if (!link) return
+
+          unlisten()
+          toast.dismiss("magic-link-wait")
+
           try {
-            const fullUrl = await magicLinkPromise
-            toast.dismiss("magic-link-wait")
-            // Process the returned URL
-            const link = new URL(fullUrl).href
             if (isSignInWithEmailLink(auth, link)) {
               const result = await signInWithEmailLink(auth, email, link)
               emailForSignIn.value = null
@@ -114,11 +106,10 @@ export const sendAuthenticateEmail = async (email: string) => {
               toast.error("Invalid sign-in link received")
             }
           } catch (error) {
-            toast.dismiss("magic-link-wait")
-            console.error("Magic link listener failed:", error)
+            console.error("Magic link verification failed:", error)
             toast.error("Magic link verification failed. Please try again.")
           }
-        })()
+        })
       }
     })
     .catch((error) => handleAuthError(error, "sendAuthenticateEmail"))

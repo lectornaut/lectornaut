@@ -101,6 +101,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/deeplink': RouteRecordInfo<
+      '/deeplink',
+      '/deeplink',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/enter': RouteRecordInfo<
       '/enter',
       '/enter',
@@ -306,6 +313,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/create.vue': {
       routes:
         | '/create'
+      views:
+        | never
+    }
+    'src/pages/deeplink.vue': {
+      routes:
+        | '/deeplink'
       views:
         | never
     }

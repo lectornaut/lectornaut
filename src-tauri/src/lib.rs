@@ -9,7 +9,6 @@ use window_vibrancy::*;
 mod app_check;
 mod downloads;
 mod file_capture;
-mod magic_link;
 mod oauth;
 
 #[tauri::command]
@@ -74,7 +73,6 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![
             oauth::login_oauth,
-            magic_link::listen_magic_link,
             app_check::build_app_check_proof,
             downloads::download_url_to_path,
             file_capture::keep_file_capture_window_open,
