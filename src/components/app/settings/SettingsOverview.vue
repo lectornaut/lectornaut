@@ -438,38 +438,47 @@ const discardChanges = () => {
                 Allow anyone with the link to view this team.
               </FieldDescription>
             </FieldContent>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <span class="inline-block">
-                    <Switch
-                      id="team-is-public"
-                      :model-value="isPublic"
-                      :disabled="
-                        !currentTeam ||
-                        !canUpdateTeam ||
-                        isUpdatingOverview ||
-                        (!isPublic && !hasValidUsername)
-                      "
-                      @update:model-value="toggleIsPublic"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{
-                    !canUpdateTeam
-                      ? getCannotUpdateTeamReason
-                      : isPublic
-                        ? publicPath
-                          ? `Public at /${publicPath}`
-                          : "Public team is enabled"
-                        : !hasUsername
-                          ? "Set a username to enable public access"
-                          : "Turn on to make this team public"
-                  }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <ButtonGroup>
+              <ButtonGroup v-if="isUpdatingOverview">
+                <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                  <Spinner />
+                </InputGroupButton>
+              </ButtonGroup>
+              <ButtonGroup>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <span class="inline-block">
+                        <Switch
+                          id="team-is-public"
+                          :model-value="isPublic"
+                          :disabled="
+                            !currentTeam ||
+                            !canUpdateTeam ||
+                            isUpdatingOverview ||
+                            (!isPublic && !hasValidUsername)
+                          "
+                          @update:model-value="toggleIsPublic"
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        !canUpdateTeam
+                          ? getCannotUpdateTeamReason
+                          : isPublic
+                            ? publicPath
+                              ? `Public at /${publicPath}`
+                              : "Public team is enabled"
+                            : !hasUsername
+                              ? "Set a username to enable public access"
+                              : "Turn on to make this team public"
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ButtonGroup>
+            </ButtonGroup>
           </Field>
         </FieldSet>
       </FieldGroup>

@@ -227,6 +227,8 @@ watch(hasUsername, (hasUser) => {
   }
 })
 
+const isUpdatingPublicProfile = ref(false)
+
 const toggleIsPublic = async (value: boolean) => {
   // Only allow enabling public profile if username is set
   if (value && !hasUsername.value) {
@@ -239,6 +241,7 @@ const toggleIsPublic = async (value: boolean) => {
 
   const previousIsPublic = isPublic.value
   optimisticIsPublic.value = value
+  isUpdatingPublicProfile.value = true
 
   try {
     await updateCurrentUserProfileVisibility(value)
@@ -248,6 +251,8 @@ const toggleIsPublic = async (value: boolean) => {
     toast.error("Failed to update profile visibility", {
       description: (error as Error).message,
     })
+  } finally {
+    isUpdatingPublicProfile.value = false
   }
 }
 
@@ -716,31 +721,40 @@ const passwordExists = computed(() => {
                 {{ t("settings.account.publicProfile.description") }}
               </FieldDescription>
             </FieldContent>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <span class="inline-block">
-                    <Switch
-                      id="is-public"
-                      :model-value="isPublic"
-                      :disabled="!hasUsername"
-                      @update:model-value="toggleIsPublic"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{
-                    !hasUsername
-                      ? t("settings.account.publicProfile.requiresUsername")
-                      : isPublic
-                        ? t("settings.account.publicProfile.availableAt", {
-                            url: `/@${localUsername}`,
-                          })
-                        : t("settings.account.publicProfile.turnOnToEnable")
-                  }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <ButtonGroup>
+              <ButtonGroup v-if="isUpdatingPublicProfile">
+                <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                  <Spinner />
+                </InputGroupButton>
+              </ButtonGroup>
+              <ButtonGroup>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <span class="inline-block">
+                        <Switch
+                          id="is-public"
+                          :model-value="isPublic"
+                          :disabled="!hasUsername || isUpdatingPublicProfile"
+                          @update:model-value="toggleIsPublic"
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        !hasUsername
+                          ? t("settings.account.publicProfile.requiresUsername")
+                          : isPublic
+                            ? t("settings.account.publicProfile.availableAt", {
+                                url: `/@${localUsername}`,
+                              })
+                            : t("settings.account.publicProfile.turnOnToEnable")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ButtonGroup>
+            </ButtonGroup>
           </Field>
         </FieldSet>
         <FieldSeparator />

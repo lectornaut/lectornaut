@@ -39,14 +39,23 @@ const toBoolean = (value: unknown): boolean => value === true
               }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="communication-notifications"
-            :disabled="isUpdatingNotifications"
-            :model-value="notificationSettings.categories.communication"
-            @update:model-value="
-              updateNotificationCategory('communication', toBoolean($event))
-            "
-          />
+          <ButtonGroup>
+            <ButtonGroup v-if="isUpdatingNotifications === 'communication'">
+              <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                <Spinner />
+              </InputGroupButton>
+            </ButtonGroup>
+            <ButtonGroup>
+              <Switch
+                id="communication-notifications"
+                :disabled="isUpdatingNotifications !== null"
+                :model-value="notificationSettings.categories.communication"
+                @update:model-value="
+                  updateNotificationCategory('communication', toBoolean($event))
+                "
+              />
+            </ButtonGroup>
+          </ButtonGroup>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -57,14 +66,23 @@ const toBoolean = (value: unknown): boolean => value === true
               {{ t("settings.notifications.categories.marketing.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="marketing-notifications"
-            :disabled="isUpdatingNotifications"
-            :model-value="notificationSettings.categories.marketing"
-            @update:model-value="
-              updateNotificationCategory('marketing', toBoolean($event))
-            "
-          />
+          <ButtonGroup>
+            <ButtonGroup v-if="isUpdatingNotifications === 'marketing'">
+              <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                <Spinner />
+              </InputGroupButton>
+            </ButtonGroup>
+            <ButtonGroup>
+              <Switch
+                id="marketing-notifications"
+                :disabled="isUpdatingNotifications !== null"
+                :model-value="notificationSettings.categories.marketing"
+                @update:model-value="
+                  updateNotificationCategory('marketing', toBoolean($event))
+                "
+              />
+            </ButtonGroup>
+          </ButtonGroup>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -91,7 +109,7 @@ const toBoolean = (value: unknown): boolean => value === true
           {{ t("settings.notifications.frequency.description") }}
         </FieldDescription>
         <RadioGroup
-          :disabled="isUpdatingNotifications"
+          :disabled="isUpdatingNotifications !== null"
           :model-value="notificationSettings.frequency"
           @update:model-value="updateNotificationFrequency"
         >
@@ -157,7 +175,12 @@ const toBoolean = (value: unknown): boolean => value === true
                       "
                       @click="sendTestNotification('email')"
                     >
-                      <Spinner v-if="isSendingTestNotification === 'email'" />
+                      <Spinner
+                        v-if="
+                          isSendingTestNotification === 'email' ||
+                          isUpdatingNotifications === 'email'
+                        "
+                      />
                       <IconBellRing v-else />
                     </InputGroupButton>
                   </TooltipTrigger>
@@ -173,10 +196,10 @@ const toBoolean = (value: unknown): boolean => value === true
                 </Tooltip>
               </TooltipProvider>
             </ButtonGroup>
-            <ButtonGroup class="items-center">
+            <ButtonGroup>
               <Switch
                 id="email-notifications"
-                :disabled="isUpdatingNotifications"
+                :disabled="isUpdatingNotifications !== null"
                 :model-value="notificationSettings.channels.email"
                 @update:model-value="
                   updateNotificationChannel('email', toBoolean($event))
@@ -216,7 +239,12 @@ const toBoolean = (value: unknown): boolean => value === true
                       "
                       @click="sendTestNotification('inApp')"
                     >
-                      <Spinner v-if="isSendingTestNotification === 'inApp'" />
+                      <Spinner
+                        v-if="
+                          isSendingTestNotification === 'inApp' ||
+                          isUpdatingNotifications === 'inApp'
+                        "
+                      />
                       <IconBellRing v-else />
                     </InputGroupButton>
                   </TooltipTrigger>
@@ -232,10 +260,10 @@ const toBoolean = (value: unknown): boolean => value === true
                 </Tooltip>
               </TooltipProvider>
             </ButtonGroup>
-            <ButtonGroup class="items-center">
+            <ButtonGroup>
               <Switch
                 id="inapp-notifications"
-                :disabled="isUpdatingNotifications"
+                :disabled="isUpdatingNotifications !== null"
                 :model-value="notificationSettings.channels.inApp"
                 @update:model-value="
                   updateNotificationChannel('inApp', toBoolean($event))
@@ -275,7 +303,12 @@ const toBoolean = (value: unknown): boolean => value === true
                       "
                       @click="sendTestNotification('native')"
                     >
-                      <Spinner v-if="isSendingTestNotification === 'native'" />
+                      <Spinner
+                        v-if="
+                          isSendingTestNotification === 'native' ||
+                          isUpdatingNotifications === 'native'
+                        "
+                      />
                       <IconBellRing v-else />
                     </InputGroupButton>
                   </TooltipTrigger>
@@ -291,10 +324,10 @@ const toBoolean = (value: unknown): boolean => value === true
                 </Tooltip>
               </TooltipProvider>
             </ButtonGroup>
-            <ButtonGroup class="items-center">
+            <ButtonGroup>
               <Switch
                 id="app-notifications"
-                :disabled="isUpdatingNotifications"
+                :disabled="isUpdatingNotifications !== null"
                 :model-value="notificationSettings.channels.native"
                 @update:model-value="
                   updateNotificationChannel('native', toBoolean($event))

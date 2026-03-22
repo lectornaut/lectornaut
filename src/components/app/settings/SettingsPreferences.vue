@@ -185,14 +185,23 @@ const stopRecording = () => {
               {{ t("settings.preferences.badgeCount.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="badge-count"
-            :disabled="isUpdatingPreferences"
-            :model-value="badgeCount"
-            @update:model-value="
-              updatePreference('badgeCount', toBoolean($event))
-            "
-          />
+          <ButtonGroup>
+            <ButtonGroup v-if="isUpdatingPreferences === 'badgeCount'">
+              <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                <Spinner />
+              </InputGroupButton>
+            </ButtonGroup>
+            <ButtonGroup>
+              <Switch
+                id="badge-count"
+                :disabled="isUpdatingPreferences !== null"
+                :model-value="badgeCount"
+                @update:model-value="
+                  updatePreference('badgeCount', toBoolean($event))
+                "
+              />
+            </ButtonGroup>
+          </ButtonGroup>
         </Field>
         <Field v-if="!isTauri" orientation="horizontal">
           <FieldContent>
@@ -223,14 +232,28 @@ const stopRecording = () => {
                 }}
               </FieldDescription>
             </FieldContent>
-            <Switch
-              id="file-drop-overlay-drag-drop"
-              :disabled="isUpdatingPreferences"
-              :model-value="fileDropOverlayDragDrop"
-              @update:model-value="
-                updatePreference('fileDropOverlayDragDrop', toBoolean($event))
-              "
-            />
+            <ButtonGroup>
+              <ButtonGroup
+                v-if="isUpdatingPreferences === 'fileDropOverlayDragDrop'"
+              >
+                <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                  <Spinner />
+                </InputGroupButton>
+              </ButtonGroup>
+              <ButtonGroup>
+                <Switch
+                  id="file-drop-overlay-drag-drop"
+                  :disabled="isUpdatingPreferences !== null"
+                  :model-value="fileDropOverlayDragDrop"
+                  @update:model-value="
+                    updatePreference(
+                      'fileDropOverlayDragDrop',
+                      toBoolean($event)
+                    )
+                  "
+                />
+              </ButtonGroup>
+            </ButtonGroup>
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
@@ -243,14 +266,28 @@ const stopRecording = () => {
                 }}
               </FieldDescription>
             </FieldContent>
-            <Switch
-              id="file-drop-overlay-shortcut"
-              :disabled="isUpdatingPreferences"
-              :model-value="fileDropOverlayShortcut"
-              @update:model-value="
-                updatePreference('fileDropOverlayShortcut', toBoolean($event))
-              "
-            />
+            <ButtonGroup>
+              <ButtonGroup
+                v-if="isUpdatingPreferences === 'fileDropOverlayShortcut'"
+              >
+                <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                  <Spinner />
+                </InputGroupButton>
+              </ButtonGroup>
+              <ButtonGroup>
+                <Switch
+                  id="file-drop-overlay-shortcut"
+                  :disabled="isUpdatingPreferences !== null"
+                  :model-value="fileDropOverlayShortcut"
+                  @update:model-value="
+                    updatePreference(
+                      'fileDropOverlayShortcut',
+                      toBoolean($event)
+                    )
+                  "
+                />
+              </ButtonGroup>
+            </ButtonGroup>
           </Field>
           <Field v-if="fileDropOverlayShortcut" orientation="horizontal">
             <FieldContent>
@@ -267,7 +304,10 @@ const stopRecording = () => {
                 }}
               </FieldDescription>
             </FieldContent>
-            <InputGroup class="w-min" :data-disabled="isUpdatingPreferences">
+            <InputGroup
+              class="w-min"
+              :data-disabled="isUpdatingPreferences !== null"
+            >
               <InputGroupAddon>
                 <KbdGroup>
                   <Kbd v-for="key in displayKeys" :key="key">
@@ -278,7 +318,7 @@ const stopRecording = () => {
               <InputGroupInput
                 ref="recorderRef"
                 readonly
-                :disabled="isUpdatingPreferences"
+                :disabled="isUpdatingPreferences !== null"
                 :placeholder="
                   t(
                     'settings.preferences.fileDropOverlayShortcutKeys.placeholder'
@@ -292,7 +332,7 @@ const stopRecording = () => {
               <InputGroupAddon align="inline-end">
                 <InputGroupButton
                   size="icon-xs"
-                  :disabled="isUpdatingPreferences"
+                  :disabled="isUpdatingPreferences !== null"
                 >
                   <IconCheck v-if="isRecording" />
                   <IconKeyboard v-else />

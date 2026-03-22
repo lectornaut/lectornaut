@@ -759,7 +759,7 @@ const expandedCard = ref<number | null>(null)
       </div>
     </Teleport>
     <TabsContent value="overview" class="@container">
-      <div class="mx-2 grid gap-8 py-8">
+      <div class="grid gap-8 p-2">
         <div
           v-for="group in dashboardData"
           :key="group.title"

@@ -925,12 +925,6 @@ export const defaultSettingsTabs = [
         id: "appearance",
         description: "settings.descriptions.appearance",
       },
-      {
-        name: "settings.titles.security",
-        icon: IconLock,
-        id: "security",
-        description: "settings.descriptions.security",
-      },
     ],
   },
   {
@@ -954,6 +948,12 @@ export const defaultSettingsTabs = [
         icon: IconUsersRound,
         id: "members",
         description: "settings.descriptions.members",
+      },
+      {
+        name: "settings.titles.security",
+        icon: IconLock,
+        id: "security",
+        description: "settings.descriptions.security",
       },
       {
         name: "settings.titles.agents",

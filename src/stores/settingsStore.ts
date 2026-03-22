@@ -298,7 +298,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const optimisticNotificationSettings = ref<UserNotificationSettings | null>(
     null
   )
-  const isUpdatingNotifications = ref(false)
+  const isUpdatingNotifications = ref<string | null>(null)
 
   const notificationSettings = computed(() =>
     optimisticNotificationSettings.value
@@ -323,13 +323,17 @@ export const useSettingsStore = defineStore("settings", () => {
   )
 
   async function persistNotificationSettings(
+    key: string,
     updater: (current: UserNotificationSettings) => UserNotificationSettings,
     messages: {
       success: string
       error: string
     }
   ): Promise<boolean> {
-    if (!notificationSettingsDocRef.value || isUpdatingNotifications.value) {
+    if (
+      !notificationSettingsDocRef.value ||
+      isUpdatingNotifications.value !== null
+    ) {
       return false
     }
 
@@ -341,7 +345,7 @@ export const useSettingsStore = defineStore("settings", () => {
     }
 
     optimisticNotificationSettings.value = next
-    isUpdatingNotifications.value = true
+    isUpdatingNotifications.value = key
 
     try {
       await mutateSetDocument(
@@ -361,7 +365,7 @@ export const useSettingsStore = defineStore("settings", () => {
       })
       return false
     } finally {
-      isUpdatingNotifications.value = false
+      isUpdatingNotifications.value = null
     }
   }
 
@@ -370,6 +374,7 @@ export const useSettingsStore = defineStore("settings", () => {
     value: boolean
   ): Promise<boolean> {
     return persistNotificationSettings(
+      category,
       (current) => ({
         ...current,
         categories: {
@@ -390,6 +395,7 @@ export const useSettingsStore = defineStore("settings", () => {
       normalizeNotificationFrequency(value)
 
     return persistNotificationSettings(
+      "frequency",
       (current) => ({
         ...current,
         frequency,
@@ -406,6 +412,7 @@ export const useSettingsStore = defineStore("settings", () => {
     value: boolean
   ): Promise<boolean> {
     return persistNotificationSettings(
+      channel,
       (current) => ({
         ...current,
         channels: {
@@ -537,7 +544,7 @@ export const useSettingsStore = defineStore("settings", () => {
     { immediate: true }
   )
 
-  const isUpdatingPreferences = ref(false)
+  const isUpdatingPreferences = ref<string | null>(null)
 
   async function applyTauriPreference(
     key: "runOnStartup" | "menuBar",
@@ -677,7 +684,8 @@ export const useSettingsStore = defineStore("settings", () => {
     key: BooleanPreferenceKey,
     value: boolean
   ): Promise<boolean> {
-    if (!preferencesDocRef.value || isUpdatingPreferences.value) return false
+    if (!preferencesDocRef.value || isUpdatingPreferences.value !== null)
+      return false
 
     const prefMap = {
       badgeCount,
@@ -689,7 +697,7 @@ export const useSettingsStore = defineStore("settings", () => {
 
     prefRef.value = value
 
-    isUpdatingPreferences.value = true
+    isUpdatingPreferences.value = key
 
     try {
       await mutateSetDocument(
@@ -706,7 +714,7 @@ export const useSettingsStore = defineStore("settings", () => {
       })
       return false
     } finally {
-      isUpdatingPreferences.value = false
+      isUpdatingPreferences.value = null
     }
   }
 
