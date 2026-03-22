@@ -257,6 +257,18 @@
       "plans": "Compare plans and update this team's subscription."
     },
     "account": {
+      "profile": {
+        "label": "Profile",
+        "description": "Manage your name and profile picture."
+      },
+      "publicIdentity": {
+        "label": "Public identity",
+        "description": "Control your username and public profile visibility."
+      },
+      "signIn": {
+        "label": "Sign-in",
+        "description": "Manage your email address and password."
+      },
       "profilePicture": {
         "label": "Profile picture",
         "description": "Upload or remove the photo shown on your profile.",
@@ -331,6 +343,27 @@
         "google": "Google.com",
         "password": "Password"
       },
+      "devices": {
+        "label": "Devices",
+        "description": "Manage your active sessions across devices.",
+        "logoutAllDescription": "Log out of active sessions on all your devices, other than this one.",
+        "logoutAllButton": "Log out all",
+        "logoutDevice": "Log out",
+        "thisDevice": "This device",
+        "ipAddress": "IP address {ip}",
+        "originalSignIn": "Signed in {date}",
+        "noSessions": "No active sessions found.",
+        "logoutAllConfirmTitle": "Log out all devices?",
+        "logoutAllConfirmDescription": "This will end all sessions except your current one. You'll need to log in again on those devices.",
+        "logoutDeviceConfirmTitle": "Log out this device?",
+        "logoutDeviceConfirmDescription": "This will end the session on {device}.",
+        "loggedOutAll": "Logged out all devices",
+        "loggedOutAllDesc": "Logged out of {count} device(s).",
+        "loggedOutDevice": "Device logged out",
+        "loggedOutDeviceDesc": "The session has been ended.",
+        "failedLogoutAll": "Couldn't log out all devices",
+        "failedLogoutDevice": "Couldn't log out device"
+      },
       "deleteAccount": {
         "label": "Delete account",
         "description": "Permanently delete this account and its data.",
@@ -373,11 +406,18 @@
         "description": "Use Ctrl/Cmd +/- to change zoom while you work.",
         "placeholder": "Select zoom level"
       },
+      "base": {
+        "label": "Base",
+        "description": "Select the base color for the application.",
+        "placeholder": "Select a base color"
+      },
       "system": {
-        "label": "System"
+        "label": "System",
+        "description": "Configure startup, menu bar, and desktop behavior."
       },
       "updates": {
-        "label": "Updates"
+        "label": "Updates",
+        "description": "Check for new versions and configure automatic updates."
       },
       "runOnStartup": {
         "label": "Run on startup",
@@ -409,7 +449,8 @@
         "actionUpdate": "Update now"
       },
       "shortcuts": {
-        "label": "Shortcuts"
+        "label": "Shortcuts",
+        "description": "Set up keyboard shortcuts and drag-and-drop behavior."
       },
       "fileDropOverlayDragDrop": {
         "label": "Global drag and drop",
@@ -429,6 +470,7 @@
     "notifications": {
       "categories": {
         "label": "Notification Categories",
+        "description": "Choose which types of notifications you want to receive.",
         "communication": {
           "label": "Communication",
           "description": "Messages, mentions, and other team communication."
@@ -452,6 +494,7 @@
       },
       "channels": {
         "label": "Notification Channels",
+        "description": "Pick how you want to receive notifications.",
         "email": {
           "label": "Email notifications",
           "description": "Choose which updates we send by email."
@@ -498,6 +541,10 @@
         "button": "Change plan",
         "upgrade": "Update plan"
       },
+      "cancelSubscription": {
+        "label": "Cancel subscription",
+        "description": "Cancel this subscription at the end of the current billing period."
+      },
       "noPermission": "Billing access required"
     },
     "plans": {
@@ -531,6 +578,56 @@
       "seatCount": "{count} seat | {count} seats",
       "perSeatMonthly": "{price} per seat per month",
       "totalForSeats": "{total} total for {seats}"
+    },
+    "logs": {
+      "auditLogs": {
+        "label": "Audit Logs",
+        "description": "View system and activity logs for your team."
+      }
+    },
+    "appearance": {
+      "customization": {
+        "label": "Customization",
+        "description": "Adjust theme, colors, fonts, and display preferences."
+      }
+    },
+    "overview": {
+      "teamProfile": {
+        "label": "Team profile",
+        "description": "Manage your team's photo and display name."
+      },
+      "teamPhoto": {
+        "label": "Team photo",
+        "description": "Upload a photo to represent your team.",
+        "upload": "Upload team photo",
+        "uploading": "Uploading...",
+        "remove": "Remove team photo"
+      },
+      "teamName": {
+        "label": "Team name",
+        "description": "Update the display name of your team.",
+        "placeholder": "Team name",
+        "editPrompt": "Edit team name"
+      },
+      "publicIdentity": {
+        "label": "Public identity",
+        "description": "Control your team's username and public visibility."
+      },
+      "username": {
+        "label": "Username",
+        "description": "Set a public handle for your team.",
+        "checkingAvailability": "Checking availability",
+        "available": "Username is available",
+        "usernameHint": "Use lowercase letters, numbers, and hyphens"
+      },
+      "publicTeam": {
+        "label": "Public team",
+        "description": "Allow anyone with the link to view this team.",
+        "publicAt": "Public at /{path}",
+        "enabled": "Public team is enabled",
+        "requiresUsername": "Set a username to enable public access",
+        "turnOnToEnable": "Turn on to make this team public"
+      }
     },
     "teams": {
       "memberCount": "{count} member | {count} members",
@@ -2052,5 +2149,13 @@
   },
   "mainSidebar": {
     "createNew": "Create"
+  },
+  "open_in_app": {
+    "title": "Lectornaut desktop app",
+    "description": "Open in the desktop app for the best experience.",
+    "open": "Open",
+    "not_found_title": "Desktop app not found",
+    "not_found_description": "Get the Lectornaut desktop app for the best experience.",
+    "download": "Get desktop app"
   }
 }

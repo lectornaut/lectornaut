@@ -115,7 +115,7 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
 
           <Separator orientation="vertical" />
 
-          <div class="flex grow flex-col">
+          <div class="container mx-auto flex grow flex-col">
             <DialogHeader class="m-6">
               <DialogTitle>{{ t(resolvedTabConfig?.name ?? "") }}</DialogTitle>
               <DialogDescription>

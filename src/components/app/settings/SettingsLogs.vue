@@ -157,9 +157,9 @@ onMounted(() => {
         <template v-else>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel>Audit Logs</FieldLabel>
+              <FieldLabel>{{ $t("settings.logs.auditLogs.label") }}</FieldLabel>
               <FieldDescription>
-                View system and activity logs for your team.
+                {{ $t("settings.logs.auditLogs.description") }}
               </FieldDescription>
             </FieldContent>
             <Button variant="secondary" @click="refreshLogs">

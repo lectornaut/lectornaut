@@ -19,6 +19,7 @@
     "opener:allow-reveal-item-in-dir",
     "shell:allow-open",
     "deep-link:default",
+    "os:default",
     {
       "identifier": "http:default",
       "allow": [{ "url": "https://**" }],

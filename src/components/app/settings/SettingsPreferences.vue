@@ -151,9 +151,16 @@ const stopRecording = () => {
   <div class="p-6">
     <FieldGroup>
       <FieldSet>
-        <FieldLabel>
-          {{ t("settings.preferences.system.label") }}
-        </FieldLabel>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.preferences.system.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.system.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
         <Field v-if="isTauri" orientation="horizontal">
           <FieldContent>
             <FieldLabel for="run-on-startup">
@@ -218,9 +225,16 @@ const stopRecording = () => {
       <template v-if="isTauri">
         <FieldSeparator />
         <FieldSet>
-          <FieldLabel>
-            {{ t("settings.preferences.shortcuts.label") }}
-          </FieldLabel>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.preferences.shortcuts.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.preferences.shortcuts.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel for="file-drop-overlay-drag-drop">
@@ -343,9 +357,16 @@ const stopRecording = () => {
         </FieldSet>
         <FieldSeparator />
         <FieldSet>
-          <FieldLabel>
-            {{ t("settings.preferences.updates.label") }}
-          </FieldLabel>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.preferences.updates.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.preferences.updates.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel>

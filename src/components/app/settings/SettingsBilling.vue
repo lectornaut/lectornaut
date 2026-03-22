@@ -528,9 +528,9 @@ const handleSubscriptionAction = async (): Promise<void> => {
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel for="cancel-subscription"
-                >Cancel subscription</FieldLabel
-              >
+              <FieldLabel for="cancel-subscription">
+                {{ t("settings.billing.cancelSubscription.label") }}
+              </FieldLabel>
               <FieldDescription>
                 {{ subscriptionActionDescription }}
               </FieldDescription>

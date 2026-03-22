@@ -1,3 +1,7 @@
+import {
+  registerSession,
+  removeCurrentSession,
+} from "@/composables/useDeviceSessions"
 import { isTauri } from "@/composables/usePlatform"
 import { generateRandomString } from "@/helpers/utilities"
 import { auth } from "@/modules/firebase"
@@ -129,6 +133,11 @@ export const sendResetEmailPassword = async (email: string) => {
 
 const finishAuthentication = async (result: UserCredential) => {
   toast.success("Logged in")
+
+  // Register device session (fire-and-forget)
+  void registerSession(result.user.uid).catch((error) => {
+    console.error("[auth] Failed to register session:", error)
+  })
 
   if (getAdditionalUserInfo(result)?.isNewUser) {
     void setDefaultUserData().catch((error) => {
@@ -439,6 +448,14 @@ export const signInWithApple = async () => {
  * Logs out the current user and redirects to the home page
  */
 export const logout = async () => {
+  // Remove current session before signing out
+  const currentUid = auth.currentUser?.uid
+  if (currentUid) {
+    await removeCurrentSession(currentUid).catch((error) => {
+      console.error("[auth] Failed to remove session:", error)
+    })
+  }
+
   return auth
     .signOut()
     .then(async () => {

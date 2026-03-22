@@ -263,6 +263,7 @@ declare module 'vue' {
     OnboardingAppFlow: typeof import('./src/components/app/onboarding/OnboardingAppFlow.vue')['default']
     OnboardingPlansFlow: typeof import('./src/components/app/onboarding/OnboardingPlansFlow.vue')['default']
     OnboardingTeamWorkspaceFlow: typeof import('./src/components/app/onboarding/OnboardingTeamWorkspaceFlow.vue')['default']
+    OpenInAppBanner: typeof import('./src/components/app/global/OpenInAppBanner.vue')['default']
     OverlayScrollbarsWrapper: typeof import('./src/components/smart/OverlayScrollbarsWrapper.vue')['default']
     Overview: typeof import('./src/components/landing/Overview.vue')['default']
     PageHeader: typeof import('./src/components/layout/PageHeader.vue')['default']

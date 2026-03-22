@@ -695,6 +695,59 @@ export const getPublicTeamsForUser = createTypedCallable<
 >("getPublicTeamsForUser")
 
 // =============================================================================
+// Session Types
+// =============================================================================
+
+export interface RegisterSessionRequest {
+  sessionId: string
+  deviceName: string
+  browser: string
+  os: string
+  deviceType: "desktop" | "mobile" | "tablet"
+}
+
+export interface RegisterSessionResponse {
+  registered: boolean
+  ip: string
+}
+
+export interface RevokeAllSessionsRequest {
+  currentSessionId: string
+}
+
+export interface RevokeAllSessionsResponse {
+  revoked: boolean
+  count: number
+}
+
+export interface RevokeSessionRequest {
+  sessionId: string
+}
+
+export interface RevokeSessionResponse {
+  revoked: boolean
+}
+
+// =============================================================================
+// Session Functions
+// =============================================================================
+
+export const registerSessionCallable = createTypedCallable<
+  RegisterSessionRequest,
+  RegisterSessionResponse
+>("registerSession")
+
+export const revokeAllSessions = createTypedCallable<
+  RevokeAllSessionsRequest,
+  RevokeAllSessionsResponse
+>("revokeAllSessions")
+
+export const revokeSession = createTypedCallable<
+  RevokeSessionRequest,
+  RevokeSessionResponse
+>("revokeSession")
+
+// =============================================================================
 // Composable Hook
 // =============================================================================
 
@@ -776,5 +829,10 @@ export function useFunctions() {
     // Public profile operations
     getPublicTeamMembers,
     getPublicTeamsForUser,
+
+    // Session operations
+    registerSessionCallable,
+    revokeAllSessions,
+    revokeSession,
   }
 }

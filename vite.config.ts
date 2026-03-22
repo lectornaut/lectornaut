@@ -56,15 +56,15 @@ export default defineConfig({
         overrideManifestIcons: true,
       },
       manifest: {
-        name: "template",
-        short_name: "template",
-        description: "template description.",
+        name: "Lectornaut",
+        short_name: "Lectornaut",
+        description: "Lectornaut",
         background_color: "#ffffff",
         theme_color: "#ffffff",
-        id: "com.template.app",
+        id: "com.lectornaut.com",
         protocol_handlers: [
           {
-            protocol: "web+template",
+            protocol: "web+lectornaut",
             url: "/%s",
           },
         ],

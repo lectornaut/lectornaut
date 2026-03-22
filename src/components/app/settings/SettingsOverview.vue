@@ -264,9 +264,21 @@ const discardChanges = () => {
         <FieldSet>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel for="team-photo">Team Photo</FieldLabel>
+              <FieldLabel>
+                {{ t("settings.overview.teamProfile.label") }}
+              </FieldLabel>
               <FieldDescription>
-                Upload a photo to represent your team.
+                {{ t("settings.overview.teamProfile.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="team-photo">
+                {{ t("settings.overview.teamPhoto.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.overview.teamPhoto.description") }}
               </FieldDescription>
             </FieldContent>
             <div class="group relative">
@@ -304,8 +316,8 @@ const discardChanges = () => {
                     {{
                       canUpdateTeam
                         ? isTeamPhotoLoading
-                          ? "Uploading..."
-                          : "Upload team photo"
+                          ? t("settings.overview.teamPhoto.uploading")
+                          : t("settings.overview.teamPhoto.upload")
                         : getCannotUpdateTeamReason
                     }}
                   </TooltipContent>
@@ -321,7 +333,7 @@ const discardChanges = () => {
                       <IconX />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Remove team photo</TooltipContent>
+                  <TooltipContent>{{ t("settings.overview.teamPhoto.remove") }}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -329,9 +341,11 @@ const discardChanges = () => {
 
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel for="team-name">Team Name</FieldLabel>
+              <FieldLabel for="team-name">
+                {{ t("settings.overview.teamName.label") }}
+              </FieldLabel>
               <FieldDescription>
-                Update the display name of your team.
+                {{ t("settings.overview.teamName.description") }}
               </FieldDescription>
             </FieldContent>
             <TooltipProvider>
@@ -342,7 +356,7 @@ const discardChanges = () => {
                       <InputGroupInput
                         id="team-name"
                         v-model="localTeamName"
-                        placeholder="Team name"
+                        :placeholder="t('settings.overview.teamName.placeholder')"
                         :disabled="!canUpdateTeam || !currentTeam"
                         @keyup.enter="saveChanges"
                       />
@@ -355,7 +369,7 @@ const discardChanges = () => {
                 <TooltipContent v-if="!canUpdateTeam">
                   {{ getCannotUpdateTeamReason }}
                 </TooltipContent>
-                <TooltipContent v-else>Edit team name</TooltipContent>
+                <TooltipContent v-else>{{ t("settings.overview.teamName.editPrompt") }}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Field>
@@ -366,9 +380,21 @@ const discardChanges = () => {
         <FieldSet>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel for="team-username">Username</FieldLabel>
+              <FieldLabel>
+                {{ t("settings.overview.publicIdentity.label") }}
+              </FieldLabel>
               <FieldDescription>
-                Set a public handle for your team.
+                {{ t("settings.overview.publicIdentity.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="team-username">
+                {{ t("settings.overview.username.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.overview.username.description") }}
               </FieldDescription>
             </FieldContent>
             <TooltipProvider>
@@ -394,16 +420,16 @@ const discardChanges = () => {
                               <Spinner />
                             </TooltipTrigger>
                             <TooltipContent>
-                              Checking availability
+                              {{ t("settings.overview.username.checkingAvailability") }}
                             </TooltipContent>
                           </Tooltip>
                           <Tooltip v-else-if="usernameAvailable === true">
                             <TooltipTrigger as-child>
                               <IconCheck class="text-green-500" />
                             </TooltipTrigger>
-                            <TooltipContent
-                              >Username is available</TooltipContent
-                            >
+                            <TooltipContent>
+                              {{ t("settings.overview.username.available") }}
+                            </TooltipContent>
                           </Tooltip>
                           <Tooltip v-else-if="usernameAvailable === false">
                             <TooltipTrigger as-child>
@@ -416,7 +442,7 @@ const discardChanges = () => {
                               <IconAtSign />
                             </TooltipTrigger>
                             <TooltipContent>
-                              Use lowercase letters, numbers, and hyphens
+                              {{ t("settings.overview.username.usernameHint") }}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -433,9 +459,11 @@ const discardChanges = () => {
 
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel for="team-is-public">Public Team</FieldLabel>
+              <FieldLabel for="team-is-public">
+                {{ t("settings.overview.publicTeam.label") }}
+              </FieldLabel>
               <FieldDescription>
-                Allow anyone with the link to view this team.
+                {{ t("settings.overview.publicTeam.description") }}
               </FieldDescription>
             </FieldContent>
             <ButtonGroup>
@@ -468,11 +496,11 @@ const discardChanges = () => {
                           ? getCannotUpdateTeamReason
                           : isPublic
                             ? publicPath
-                              ? `Public at /${publicPath}`
-                              : "Public team is enabled"
+                              ? t("settings.overview.publicTeam.publicAt", { path: publicPath })
+                              : t("settings.overview.publicTeam.enabled")
                             : !hasUsername
-                              ? "Set a username to enable public access"
-                              : "Turn on to make this team public"
+                              ? t("settings.overview.publicTeam.requiresUsername")
+                              : t("settings.overview.publicTeam.turnOnToEnable")
                       }}
                     </TooltipContent>
                   </Tooltip>

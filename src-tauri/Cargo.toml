@@ -46,6 +46,8 @@ tauri-plugin-fs = "2"
 tauri-plugin-single-instance = "2"
 # https://crates.io/crates/tauri-plugin-notification/versions
 tauri-plugin-notification = "2"
+# https://crates.io/crates/tauri-plugin-os/versions
+tauri-plugin-os = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 # https://crates.io/crates/tauri-plugin-global-shortcut/versions

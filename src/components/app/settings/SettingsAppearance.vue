@@ -125,6 +125,16 @@ const getAccentOptionStyle = (optionId: AccentId) =>
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
+            <FieldLabel>
+              {{ t("settings.appearance.customization.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.customization.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
             <FieldLabel for="theme">{{
               t("settings.preferences.theme.label")
             }}</FieldLabel>
@@ -152,9 +162,11 @@ const getAccentOptionStyle = (optionId: AccentId) =>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="base">Base</FieldLabel>
+            <FieldLabel for="base">
+              {{ t("settings.preferences.base.label") }}
+            </FieldLabel>
             <FieldDescription>
-              Select the base color for the application.
+              {{ t("settings.preferences.base.description") }}
             </FieldDescription>
           </FieldContent>
           <div class="flex items-center gap-2">
@@ -167,7 +179,9 @@ const getAccentOptionStyle = (optionId: AccentId) =>
             />
             <Select id="base" v-model="selectedBase">
               <SelectTrigger>
-                <SelectValue placeholder="Select a base color" />
+                <SelectValue
+                  :placeholder="t('settings.preferences.base.placeholder')"
+                />
               </SelectTrigger>
               <SelectContent align="end">
                 <SelectGroup>

@@ -247,6 +247,16 @@ service cloud.firestore {
                       && isValidSyncOperationRetry(userId);
         allow delete: if false;
       }
+
+      match /sessions/{sessionId} {
+        allow read: if isSelf(userId);
+        allow create: if false;
+        allow update: if isSelf(userId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                           "lastActiveAt"
+                         ]);
+        allow delete: if isSelf(userId);
+      }
     }
 
     match /usernames/{username} {

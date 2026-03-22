@@ -133,6 +133,7 @@ import IconLucideItalic from "~icons/lucide/italic"
 import IconLucideKeyRound from "~icons/lucide/key-round"
 import IconLucideKeyboard from "~icons/lucide/keyboard"
 import IconLucideLanguages from "~icons/lucide/languages"
+import IconLucideLaptop from "~icons/lucide/laptop"
 import IconLucideLayers from "~icons/lucide/layers"
 import IconLucideLeaf from "~icons/lucide/leaf"
 import IconLucideLifeBuoy from "~icons/lucide/life-buoy"
@@ -197,6 +198,7 @@ import IconLucideShieldCheck from "~icons/lucide/shield-check"
 import IconLucideSignalHigh from "~icons/lucide/signal-high"
 import IconLucideSignalLow from "~icons/lucide/signal-low"
 import IconLucideSignalMedium from "~icons/lucide/signal-medium"
+import IconLucideSmartphone from "~icons/lucide/smartphone"
 import IconLucideSmile from "~icons/lucide/smile"
 import IconLucideSparkle from "~icons/lucide/sparkle"
 import IconLucideSparkles from "~icons/lucide/sparkles"
@@ -220,6 +222,7 @@ import IconLucideSun from "~icons/lucide/sun"
 import IconLucideSunMoon from "~icons/lucide/sun-moon"
 import IconLucideSuperscript from "~icons/lucide/superscript"
 import IconLucideTable from "~icons/lucide/table"
+import IconLucideTablet from "~icons/lucide/tablet"
 import IconLucideTerminal from "~icons/lucide/terminal"
 import IconLucideText from "~icons/lucide/text"
 import IconLucideTrash from "~icons/lucide/trash"
@@ -444,6 +447,7 @@ export {
   IconLucideKeyboard as IconKeyboard,
   IconLucideKeyRound as IconKeyRound,
   IconLucideLanguages as IconLanguages,
+  IconLucideLaptop as IconLaptop,
   IconMingcuteLayerFill as IconLayerFill,
   IconLucideLayers as IconLayers,
   IconLucideLeaf as IconLeaf,
@@ -528,6 +532,7 @@ export {
   IconLucideSignalLow as IconSignalLow,
   IconLucideSignalMedium as IconSignalMedium,
   IconMingcuteSignatureFill as IconSignatureFill,
+  IconLucideSmartphone as IconSmartphone,
   IconLucideSmile as IconSmile,
   IconLucideSparkle as IconSparkle,
   IconLucideSparkles as IconSparkles,
@@ -549,6 +554,7 @@ export {
   IconLucideSuperscript as IconSuperscript,
   IconLucideArrowLeftRight as IconSwitchHorizontal,
   IconLucideTable as IconTable,
+  IconLucideTablet as IconTablet,
   IconLucideTerminal as IconTerminal,
   IconLucideText as IconText,
   IconLucideTrash as IconTrash,

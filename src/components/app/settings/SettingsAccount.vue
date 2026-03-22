@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useDeviceSessions } from "@/composables/useDeviceSessions"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
 import {
@@ -8,12 +9,16 @@ import {
   IconCheck,
   IconGoogleIcon,
   IconKeyRound,
+  IconMonitor,
   IconPencil,
+  IconSmartphone,
+  IconTablet,
   IconX,
 } from "@/data/icons"
 import { withToast } from "@/helpers/toast"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
+import { emitter } from "@/modules/mitt"
 import { claimUsername, releaseUsername } from "@/queries/username"
 import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
 import { useAuthStore } from "@/stores/authStore"
@@ -553,6 +558,79 @@ const passwordExists = computed(() => {
     (provider: UserInfo) => provider.providerId === "password"
   )
 })
+
+// ============================================================================
+// Device Sessions
+// ============================================================================
+const {
+  sessions,
+  isCurrentSession,
+  revokeAllOtherSessions,
+  revokeSingleSession,
+} = useDeviceSessions()
+
+const revokingAll = ref(false)
+const revokingSessionMap = ref<Record<string, boolean>>({})
+
+const handleRevokeAll = async () => {
+  revokingAll.value = true
+  try {
+    const result = await revokeAllOtherSessions()
+    toast.success(t("settings.account.devices.loggedOutAll"), {
+      description: t("settings.account.devices.loggedOutAllDesc", {
+        count: result.data.count,
+      }),
+    })
+  } catch (error) {
+    toast.error(t("settings.account.devices.failedLogoutAll"), {
+      description: (error as Error).message,
+    })
+  } finally {
+    revokingAll.value = false
+  }
+}
+
+const handleRevokeSession = async (sessionId: string) => {
+  revokingSessionMap.value = { ...revokingSessionMap.value, [sessionId]: true }
+  try {
+    await revokeSingleSession(sessionId)
+    toast.success(t("settings.account.devices.loggedOutDevice"), {
+      description: t("settings.account.devices.loggedOutDeviceDesc"),
+    })
+  } catch (error) {
+    toast.error(t("settings.account.devices.failedLogoutDevice"), {
+      description: (error as Error).message,
+    })
+  } finally {
+    revokingSessionMap.value = {
+      ...revokingSessionMap.value,
+      [sessionId]: false,
+    }
+  }
+}
+
+const getDeviceIcon = (deviceType: string) => {
+  switch (deviceType) {
+    case "mobile":
+      return IconSmartphone
+    case "tablet":
+      return IconTablet
+    default:
+      return IconMonitor
+  }
+}
+
+const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
+  if (!timestamp) return ""
+  const date =
+    timestamp instanceof Date ? timestamp : new Date(timestamp.seconds * 1000)
+  if (Number.isNaN(date.getTime())) return ""
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+}
 </script>
 
 <template>
@@ -560,6 +638,16 @@ const passwordExists = computed(() => {
     <div class="p-6">
       <FieldGroup>
         <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.account.profile.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.account.profile.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel for="profile-picture">
@@ -655,6 +743,16 @@ const passwordExists = computed(() => {
         </FieldSet>
         <FieldSeparator />
         <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.account.publicIdentity.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.account.publicIdentity.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel for="username">
@@ -759,6 +857,16 @@ const passwordExists = computed(() => {
         </FieldSet>
         <FieldSeparator />
         <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.account.signIn.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.account.signIn.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel for="email">
@@ -957,6 +1065,133 @@ const passwordExists = computed(() => {
             class="text-muted-foreground"
           >
             {{ t("settings.account.identityProviders.noAccounts") }}
+          </div>
+        </FieldSet>
+        <FieldSeparator />
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.account.devices.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.account.devices.logoutAllDescription") }}
+              </FieldDescription>
+            </FieldContent>
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button
+                  variant="outline"
+                  :disabled="revokingAll || sessions.length <= 1"
+                >
+                  <Spinner v-if="revokingAll" />
+                  {{ t("settings.account.devices.logoutAllButton") }}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {{ t("settings.account.devices.logoutAllConfirmTitle") }}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {{
+                      t("settings.account.devices.logoutAllConfirmDescription")
+                    }}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    {{ t("common.cancel") }}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    :disabled="revokingAll"
+                    @click="handleRevokeAll"
+                  >
+                    <Spinner v-if="revokingAll" />
+                    {{ t("settings.account.devices.logoutAllButton") }}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </Field>
+          <Field
+            v-for="session in sessions"
+            :key="session.id"
+            orientation="horizontal"
+          >
+            <FieldContent>
+              <Item size="sm" class="p-0">
+                <ItemMedia>
+                  <component :is="getDeviceIcon(session.deviceType)" />
+                </ItemMedia>
+                <ItemContent class="gap-0.5 truncate">
+                  <ItemTitle class="truncate">
+                    {{ session.deviceName }}
+                  </ItemTitle>
+                  <ItemDescription class="truncate text-xs">
+                    {{ session.ip }}
+                    ·
+                    {{
+                      t("settings.account.devices.originalSignIn", {
+                        date: formatSessionDate(session.createdAt),
+                      })
+                    }}
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
+            </FieldContent>
+            <template v-if="isCurrentSession(session.id)">
+              <Badge variant="secondary">
+                {{ t("settings.account.devices.thisDevice") }}
+              </Badge>
+              <Button
+                variant="secondary"
+                @click="emitter.emit('Dialog.Exit.Open')"
+              >
+                {{ t("settings.account.devices.logoutDevice") }}
+              </Button>
+            </template>
+            <AlertDialog v-else>
+              <AlertDialogTrigger as-child>
+                <Button
+                  variant="secondary"
+                  :disabled="revokingSessionMap[session.id]"
+                >
+                  <Spinner v-if="revokingSessionMap[session.id]" />
+                  {{ t("settings.account.devices.logoutDevice") }}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {{ t("settings.account.devices.logoutDeviceConfirmTitle") }}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {{
+                      t(
+                        "settings.account.devices.logoutDeviceConfirmDescription",
+                        { device: session.deviceName }
+                      )
+                    }}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    {{ t("common.cancel") }}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    :disabled="revokingSessionMap[session.id]"
+                    @click="handleRevokeSession(session.id)"
+                  >
+                    <Spinner v-if="revokingSessionMap[session.id]" />
+                    {{ t("settings.account.devices.logoutDevice") }}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </Field>
+          <div v-if="sessions.length === 0" class="text-muted-foreground">
+            {{ t("settings.account.devices.noSessions") }}
           </div>
         </FieldSet>
         <FieldSeparator />

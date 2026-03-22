@@ -25,9 +25,16 @@ const toBoolean = (value: unknown): boolean => value === true
   <div class="p-6">
     <FieldGroup>
       <FieldSet>
-        <FieldLabel>
-          {{ t("settings.notifications.categories.label") }}
-        </FieldLabel>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.notifications.categories.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.notifications.categories.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="communication-notifications">
@@ -102,12 +109,16 @@ const toBoolean = (value: unknown): boolean => value === true
       </FieldSet>
       <FieldSeparator />
       <FieldSet>
-        <FieldLabel>{{
-          t("settings.notifications.frequency.label")
-        }}</FieldLabel>
-        <FieldDescription>
-          {{ t("settings.notifications.frequency.description") }}
-        </FieldDescription>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.notifications.frequency.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.notifications.frequency.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
         <RadioGroup
           :disabled="isUpdatingNotifications !== null"
           :model-value="notificationSettings.frequency"
@@ -115,35 +126,50 @@ const toBoolean = (value: unknown): boolean => value === true
         >
           <Field orientation="horizontal">
             <RadioGroupItem id="notify-immediate" value="immediate" />
-            <FieldLabel for="notify-immediate">
-              {{ t("settings.notifications.frequency.immediate") }}
-            </FieldLabel>
+            <FieldContent>
+              <FieldLabel for="notify-immediate">
+                {{ t("settings.notifications.frequency.immediate") }}
+              </FieldLabel>
+            </FieldContent>
           </Field>
           <Field orientation="horizontal">
             <RadioGroupItem id="notify-daily" value="daily" />
-            <FieldLabel for="notify-daily">
-              {{ t("settings.notifications.frequency.daily") }}
-            </FieldLabel>
+            <FieldContent>
+              <FieldLabel for="notify-daily">
+                {{ t("settings.notifications.frequency.daily") }}
+              </FieldLabel>
+            </FieldContent>
           </Field>
           <Field orientation="horizontal">
             <RadioGroupItem id="notify-weekly" value="weekly" />
-            <FieldLabel for="notify-weekly">
-              {{ t("settings.notifications.frequency.weekly") }}
-            </FieldLabel>
+            <FieldContent>
+              <FieldLabel for="notify-weekly">
+                {{ t("settings.notifications.frequency.weekly") }}
+              </FieldLabel>
+            </FieldContent>
           </Field>
           <Field orientation="horizontal">
             <RadioGroupItem id="notify-none" value="none" />
-            <FieldLabel for="notify-none">
-              {{ t("settings.notifications.frequency.none") }}
-            </FieldLabel>
+            <FieldContent>
+              <FieldLabel for="notify-none">
+                {{ t("settings.notifications.frequency.none") }}
+              </FieldLabel>
+            </FieldContent>
           </Field>
         </RadioGroup>
       </FieldSet>
       <FieldSeparator />
       <FieldSet>
-        <FieldLabel>{{
-          t("settings.notifications.channels.label")
-        }}</FieldLabel>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.notifications.channels.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.notifications.channels.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="email-notifications">
