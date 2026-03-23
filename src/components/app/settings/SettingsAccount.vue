@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useDeviceSessions } from "@/composables/useDeviceSessions"
+import { useLoadingState } from "@/composables/useLoadingState"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
 import {
@@ -565,48 +566,45 @@ const passwordExists = computed(() => {
 // ============================================================================
 const {
   sessions,
+  pending: sessionsPending,
   isCurrentSession,
   revokeAllOtherSessions,
   revokeSingleSession,
 } = useDeviceSessions()
 
-const revokingAll = ref(false)
-const revokingSessionMap = ref<Record<string, boolean>>({})
+const { isLoading: isRevoking, withLoadingResult } = useLoadingState<string>()
+
+const otherSessionCount = computed(() => Math.max(0, sessions.value.length - 1))
 
 const handleRevokeAll = async () => {
-  revokingAll.value = true
-  try {
-    const result = await revokeAllOtherSessions()
+  const { data: result, error } = await withLoadingResult("revokeAll", () =>
+    revokeAllOtherSessions()
+  )
+  if (error) {
+    toast.error(t("settings.account.devices.failedLogoutAll"), {
+      description: error.message,
+    })
+  } else if (result) {
     toast.success(t("settings.account.devices.loggedOutAll"), {
       description: t("settings.account.devices.loggedOutAllDesc", {
         count: result.data.count,
       }),
     })
-  } catch (error) {
-    toast.error(t("settings.account.devices.failedLogoutAll"), {
-      description: (error as Error).message,
-    })
-  } finally {
-    revokingAll.value = false
   }
 }
 
 const handleRevokeSession = async (sessionId: string) => {
-  revokingSessionMap.value = { ...revokingSessionMap.value, [sessionId]: true }
-  try {
-    await revokeSingleSession(sessionId)
+  const { error } = await withLoadingResult(sessionId, () =>
+    revokeSingleSession(sessionId)
+  )
+  if (error) {
+    toast.error(t("settings.account.devices.failedLogoutDevice"), {
+      description: error.message,
+    })
+  } else {
     toast.success(t("settings.account.devices.loggedOutDevice"), {
       description: t("settings.account.devices.loggedOutDeviceDesc"),
     })
-  } catch (error) {
-    toast.error(t("settings.account.devices.failedLogoutDevice"), {
-      description: (error as Error).message,
-    })
-  } finally {
-    revokingSessionMap.value = {
-      ...revokingSessionMap.value,
-      [sessionId]: false,
-    }
   }
 }
 
@@ -621,16 +619,12 @@ const getDeviceIcon = (deviceType: string) => {
   }
 }
 
-const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
+const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
   if (!timestamp) return ""
   const date =
     timestamp instanceof Date ? timestamp : new Date(timestamp.seconds * 1000)
   if (Number.isNaN(date.getTime())) return ""
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  return useTimeAgo(date).value
 }
 </script>
 
@@ -1083,9 +1077,9 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
               <AlertDialogTrigger as-child>
                 <Button
                   variant="outline"
-                  :disabled="revokingAll || sessions.length <= 1"
+                  :disabled="isRevoking('revokeAll') || sessions.length <= 1"
                 >
-                  <Spinner v-if="revokingAll" />
+                  <Spinner v-if="isRevoking('revokeAll')" />
                   {{ t("settings.account.devices.logoutAllButton") }}
                 </Button>
               </AlertDialogTrigger>
@@ -1096,7 +1090,12 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                   </AlertDialogTitle>
                   <AlertDialogDescription>
                     {{
-                      t("settings.account.devices.logoutAllConfirmDescription")
+                      t(
+                        "settings.account.devices.logoutAllConfirmDescription",
+                        {
+                          count: otherSessionCount,
+                        }
+                      )
                     }}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -1105,10 +1104,10 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                     {{ t("common.cancel") }}
                   </AlertDialogCancel>
                   <AlertDialogAction
-                    :disabled="revokingAll"
+                    :disabled="isRevoking('revokeAll')"
                     @click="handleRevokeAll"
                   >
-                    <Spinner v-if="revokingAll" />
+                    <Spinner v-if="isRevoking('revokeAll')" />
                     {{ t("settings.account.devices.logoutAllButton") }}
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -1133,8 +1132,8 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                     {{ session.ip }}
                     ·
                     {{
-                      t("settings.account.devices.originalSignIn", {
-                        date: formatSessionDate(session.createdAt),
+                      t("settings.account.devices.lastActive", {
+                        time: formatRelativeTime(session.lastActiveAt),
                       })
                     }}
                   </ItemDescription>
@@ -1158,9 +1157,9 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                 <AlertDialogTrigger as-child>
                   <Button
                     variant="secondary"
-                    :disabled="revokingSessionMap[session.id]"
+                    :disabled="isRevoking(session.id)"
                   >
-                    <Spinner v-if="revokingSessionMap[session.id]" />
+                    <Spinner v-if="isRevoking(session.id)" />
                     {{ t("settings.account.devices.logoutDevice") }}
                   </Button>
                 </AlertDialogTrigger>
@@ -1185,10 +1184,10 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                       {{ t("common.cancel") }}
                     </AlertDialogCancel>
                     <AlertDialogAction
-                      :disabled="revokingSessionMap[session.id]"
+                      :disabled="isRevoking(session.id)"
                       @click="handleRevokeSession(session.id)"
                     >
-                      <Spinner v-if="revokingSessionMap[session.id]" />
+                      <Spinner v-if="isRevoking(session.id)" />
                       {{ t("settings.account.devices.logoutDevice") }}
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -1196,7 +1195,14 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
               </AlertDialog>
             </div>
           </Field>
-          <div v-if="sessions.length === 0" class="text-muted-foreground">
+          <div
+            v-if="sessionsPending"
+            class="text-muted-foreground flex items-center gap-2"
+          >
+            <Spinner />
+            {{ t("common.loading") }}
+          </div>
+          <div v-else-if="sessions.length === 0" class="text-muted-foreground">
             {{ t("settings.account.devices.noSessions") }}
           </div>
         </FieldSet>

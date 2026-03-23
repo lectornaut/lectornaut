@@ -28,11 +28,15 @@ interface RevokeAllSessionsResponse {
 
 interface RevokeSessionRequest {
   sessionId: string
+  currentSessionId?: string
 }
 
 interface RevokeSessionResponse {
   revoked: boolean
 }
+
+const VALID_DEVICE_TYPES = new Set(["desktop", "mobile", "tablet"])
+const MAX_SESSIONS = 20
 
 function validateSessionId(id: unknown): asserts id is string {
   if (!id || typeof id !== "string" || !SESSION_ID_RE.test(id)) {
@@ -41,6 +45,15 @@ function validateSessionId(id: unknown): asserts id is string {
       "sessionId must be 8-128 alphanumeric characters."
     )
   }
+}
+
+function sanitizeString(
+  value: unknown,
+  maxLength: number,
+  fallback: string
+): string {
+  if (!value || typeof value !== "string") return fallback
+  return value.trim().slice(0, maxLength) || fallback
 }
 
 /**
@@ -70,6 +83,13 @@ export const registerSession = onCall(CALLABLE_OPTS, async (request) => {
     request.rawRequest?.ip ||
     "unknown"
 
+  const deviceName = sanitizeString(data.deviceName, 200, "Unknown Device")
+  const browser = sanitizeString(data.browser, 100, "Unknown Browser")
+  const os = sanitizeString(data.os, 100, "Unknown OS")
+  const deviceType = VALID_DEVICE_TYPES.has(data.deviceType)
+    ? data.deviceType
+    : "desktop"
+
   const sessionRef = db.doc(`users/${uid}/sessions/${data.sessionId}`)
   const now = admin.firestore.FieldValue.serverTimestamp()
 
@@ -77,10 +97,10 @@ export const registerSession = onCall(CALLABLE_OPTS, async (request) => {
 
   await sessionRef.set(
     {
-      deviceName: data.deviceName || "Unknown Device",
-      browser: data.browser || "Unknown Browser",
-      os: data.os || "Unknown OS",
-      deviceType: data.deviceType || "desktop",
+      deviceName,
+      browser,
+      os,
+      deviceType,
       ip,
       // Only set createdAt on first registration
       ...(existing.exists ? {} : { createdAt: now }),
@@ -88,6 +108,19 @@ export const registerSession = onCall(CALLABLE_OPTS, async (request) => {
     },
     { merge: true }
   )
+
+  // Evict oldest sessions if the user exceeds the limit
+  const sessionsRef = db.collection(`users/${uid}/sessions`)
+  const allSessions = await sessionsRef.orderBy("lastActiveAt", "asc").get()
+
+  if (allSessions.size > MAX_SESSIONS) {
+    const batch = db.batch()
+    const toEvict = allSessions.docs.slice(0, allSessions.size - MAX_SESSIONS)
+    for (const d of toEvict) {
+      if (d.id !== data.sessionId) batch.delete(d.ref)
+    }
+    await batch.commit()
+  }
 
   return { registered: true, ip } satisfies RegisterSessionResponse
 })
@@ -151,6 +184,14 @@ export const revokeSession = onCall(CALLABLE_OPTS, async (request) => {
   const data = request.data as RevokeSessionRequest
 
   validateSessionId(data.sessionId)
+
+  // Prevent self-revocation — the caller should not revoke their own active session
+  if (data.currentSessionId && data.sessionId === data.currentSessionId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Cannot revoke your own active session."
+    )
+  }
 
   const sessionRef = db.doc(`users/${uid}/sessions/${data.sessionId}`)
   const sessionDoc = await sessionRef.get()

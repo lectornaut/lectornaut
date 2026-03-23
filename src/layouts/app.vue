@@ -276,7 +276,7 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div
             id="left-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-lg border shadow empty:hidden"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-lg border shadow empty:hidden"
           ></div>
           <ResizablePanelGroup
             :style="{ overflow: 'clip' }"
@@ -878,7 +878,7 @@ const closeTab = (id: string) => {
           </Transition>
           <div
             id="right-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 overflow-clip rounded-l-lg border shadow"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-lg border shadow"
           ></div>
         </main>
       </div>

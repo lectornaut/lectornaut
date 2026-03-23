@@ -722,6 +722,7 @@ export interface RevokeAllSessionsResponse {
 
 export interface RevokeSessionRequest {
   sessionId: string
+  currentSessionId: string
 }
 
 export interface RevokeSessionResponse {

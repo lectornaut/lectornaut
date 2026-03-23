@@ -62,7 +62,9 @@ function startGlobalHeartbeat(uid: string) {
     )
   }
 
-  tick()
+  // Skip immediate tick — registerSession already sets lastActiveAt via the
+  // cloud function, and an immediate updateDoc could race with Firestore
+  // propagation, causing a spurious not-found → false revocation event.
   heartbeatInterval = setInterval(tick, 5 * 60 * 1000) // 5 min
 }
 
@@ -187,6 +189,7 @@ export async function removeCurrentSession(uid: string) {
     sessionId
   )
   await deleteDoc(sessionRef)
+  clearPersistedSessionId()
 }
 
 /**
@@ -208,9 +211,16 @@ export function useDeviceSessions() {
     )
   })
 
-  const { data: sessionsData } = useCollection<IUserSession>(sessionsQueryRef)
+  const { data: sessionsData, pending } =
+    useCollection<IUserSession>(sessionsQueryRef)
 
-  const sessions = computed(() => sessionsData.value ?? [])
+  // Sort current device to the front, keep the rest sorted by lastActiveAt desc
+  const sessions = computed(() => {
+    const all = sessionsData.value ?? []
+    const current = all.filter((s) => s.id === currentSessionId)
+    const others = all.filter((s) => s.id !== currentSessionId)
+    return [...current, ...others]
+  })
 
   const isCurrentSession = (sessionId: string) => sessionId === currentSessionId
 
@@ -221,11 +231,12 @@ export function useDeviceSessions() {
   }
 
   async function revokeSingleSession(sessionId: string) {
-    return revokeSession({ sessionId })
+    return revokeSession({ sessionId, currentSessionId })
   }
 
   return {
     sessions,
+    pending,
     currentSessionId,
     isCurrentSession,
     revokeAllOtherSessions,

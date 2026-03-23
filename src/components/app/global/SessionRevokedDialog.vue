@@ -10,14 +10,16 @@ async function handleLogout() {
   await logoutRevoked()
 }
 
+const handleRevoked = () => {
+  open.value = true
+}
+
 onMounted(() => {
-  emitter.on("session:revoked", () => {
-    open.value = true
-  })
+  emitter.on("session:revoked", handleRevoked)
 })
 
 onUnmounted(() => {
-  emitter.off("session:revoked")
+  emitter.off("session:revoked", handleRevoked)
 })
 </script>
 
