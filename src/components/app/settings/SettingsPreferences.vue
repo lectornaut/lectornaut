@@ -121,12 +121,7 @@ const handleRecorderKeydown = (event: KeyboardEvent) => {
   if (event.altKey) parts.push("alt")
   if (event.shiftKey) parts.push("shift")
 
-  // For single printable characters, use the character directly.
-  // For named keys (Arrow*, Escape, etc.), use event.key which gives
-  // the standard name that toTauriShortcut can uppercase for Tauri.
-  const key =
-    event.key.length === 1 ? event.key.toLowerCase() : event.key.toLowerCase()
-  parts.push(key)
+  parts.push(event.key.toLowerCase())
 
   const hotkeyString = parts.join("+")
   isRecording.value = false

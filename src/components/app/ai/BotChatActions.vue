@@ -85,7 +85,10 @@ const controls = ref([
 
       <SidebarGroup>
         <SidebarGroupContent class="p-2 pt-0">
-          <Button variant="destructive" class="w-full justify-start">
+          <Button
+            variant="destructive"
+            class="w-full justify-start text-current"
+          >
             <IconTrash2 />
             Clear conversation
           </Button>

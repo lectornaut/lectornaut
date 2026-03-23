@@ -563,6 +563,7 @@ onBeforeUnmount(() => {
         <AlertDialogAction as-child>
           <Button
             variant="destructive"
+            class="text-current"
             :disabled="isArchiving"
             @click="handleArchiveConfirm"
           >
@@ -595,6 +596,7 @@ onBeforeUnmount(() => {
         <AlertDialogAction as-child>
           <Button
             variant="destructive"
+            class="text-current"
             :disabled="isDeleting"
             @click="handleDeleteConfirm"
           >

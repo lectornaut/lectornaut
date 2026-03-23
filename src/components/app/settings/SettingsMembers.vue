@@ -342,6 +342,7 @@ const formatCreatedAt = (
                                         >
                                         <AlertDialogAction
                                           variant="destructive"
+                                          class="text-current"
                                           :disabled="
                                             teamLoading.member.isLoading(
                                               member.userId

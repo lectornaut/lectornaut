@@ -333,7 +333,9 @@ const discardChanges = () => {
                       <IconX />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{{ t("settings.overview.teamPhoto.remove") }}</TooltipContent>
+                  <TooltipContent>{{
+                    t("settings.overview.teamPhoto.remove")
+                  }}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -351,12 +353,14 @@ const discardChanges = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <div class="flex">
+                  <div class="flex items-center gap-2">
                     <InputGroup>
                       <InputGroupInput
                         id="team-name"
                         v-model="localTeamName"
-                        :placeholder="t('settings.overview.teamName.placeholder')"
+                        :placeholder="
+                          t('settings.overview.teamName.placeholder')
+                        "
                         :disabled="!canUpdateTeam || !currentTeam"
                         @keyup.enter="saveChanges"
                       />
@@ -369,7 +373,9 @@ const discardChanges = () => {
                 <TooltipContent v-if="!canUpdateTeam">
                   {{ getCannotUpdateTeamReason }}
                 </TooltipContent>
-                <TooltipContent v-else>{{ t("settings.overview.teamName.editPrompt") }}</TooltipContent>
+                <TooltipContent v-else>{{
+                  t("settings.overview.teamName.editPrompt")
+                }}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Field>
@@ -400,7 +406,7 @@ const discardChanges = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <div class="flex">
+                  <div class="flex items-center gap-2">
                     <InputGroup>
                       <InputGroupInput
                         id="team-username"
@@ -420,7 +426,11 @@ const discardChanges = () => {
                               <Spinner />
                             </TooltipTrigger>
                             <TooltipContent>
-                              {{ t("settings.overview.username.checkingAvailability") }}
+                              {{
+                                t(
+                                  "settings.overview.username.checkingAvailability"
+                                )
+                              }}
                             </TooltipContent>
                           </Tooltip>
                           <Tooltip v-else-if="usernameAvailable === true">
@@ -496,10 +506,14 @@ const discardChanges = () => {
                           ? getCannotUpdateTeamReason
                           : isPublic
                             ? publicPath
-                              ? t("settings.overview.publicTeam.publicAt", { path: publicPath })
+                              ? t("settings.overview.publicTeam.publicAt", {
+                                  path: publicPath,
+                                })
                               : t("settings.overview.publicTeam.enabled")
                             : !hasUsername
-                              ? t("settings.overview.publicTeam.requiresUsername")
+                              ? t(
+                                  "settings.overview.publicTeam.requiresUsername"
+                                )
                               : t("settings.overview.publicTeam.turnOnToEnable")
                       }}
                     </TooltipContent>

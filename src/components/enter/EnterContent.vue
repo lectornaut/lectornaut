@@ -185,7 +185,7 @@ const authenticateApple = () =>
                           <Badge
                             variant="destructive"
                             tabindex="-1"
-                            class="absolute -top-3 right-3"
+                            class="absolute -top-3 right-3 text-current"
                           >
                             <IconDisc /> {{ t("enter.magicLink.recent") }}
                           </Badge>
@@ -388,7 +388,7 @@ const authenticateApple = () =>
                   <Badge
                     variant="destructive"
                     tabindex="-1"
-                    class="absolute -top-3 right-3"
+                    class="absolute -top-3 right-3 text-current"
                   >
                     <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
@@ -456,7 +456,7 @@ const authenticateApple = () =>
                 <Badge
                   variant="destructive"
                   tabindex="-1"
-                  class="absolute -top-3 right-3"
+                  class="absolute -top-3 right-3 text-current"
                 >
                   <IconDisc /> {{ t("enter.magicLink.recent") }}
                 </Badge>
@@ -486,7 +486,7 @@ const authenticateApple = () =>
                 <Badge
                   variant="destructive"
                   tabindex="-1"
-                  class="absolute -top-3 right-3"
+                  class="absolute -top-3 right-3 text-current"
                 >
                   <IconDisc /> {{ t("enter.magicLink.recent") }}
                 </Badge>

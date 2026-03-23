@@ -419,9 +419,9 @@ const teams = [
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button variant="destructive" size="sm">{{
-              t("components.flow.settings.danger.delete")
-            }}</Button>
+            <Button variant="destructive" size="sm" class="text-current">
+              {{ t("components.flow.settings.danger.delete") }}
+            </Button>
           </CardFooter>
         </Card>
       </SidebarGroupContent>

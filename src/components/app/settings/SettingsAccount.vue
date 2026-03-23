@@ -7,6 +7,7 @@ import {
   IconAtSign,
   IconBadgeCheck,
   IconCheck,
+  IconCircleDot,
   IconGoogleIcon,
   IconKeyRound,
   IconMonitor,
@@ -717,7 +718,7 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                 {{ t("settings.account.preferredName.description") }}
               </FieldDescription>
             </FieldContent>
-            <div class="flex">
+            <div class="flex items-center gap-2">
               <InputGroup>
                 <InputGroupInput
                   id="name"
@@ -762,7 +763,7 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                 {{ t("settings.account.username.description") }}
               </FieldDescription>
             </FieldContent>
-            <div class="flex">
+            <div class="flex items-center gap-2">
               <InputGroup>
                 <InputGroupInput
                   id="username"
@@ -1122,7 +1123,7 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
             <FieldContent>
               <Item size="sm" class="p-0">
                 <ItemMedia>
-                  <component :is="getDeviceIcon(session.deviceType)" />
+                  <Component :is="getDeviceIcon(session.deviceType)" />
                 </ItemMedia>
                 <ItemContent class="gap-0.5 truncate">
                   <ItemTitle class="truncate">
@@ -1140,55 +1141,60 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                 </ItemContent>
               </Item>
             </FieldContent>
-            <template v-if="isCurrentSession(session.id)">
-              <Badge variant="secondary">
-                {{ t("settings.account.devices.thisDevice") }}
-              </Badge>
-              <Button
-                variant="secondary"
-                @click="emitter.emit('Dialog.Exit.Open')"
-              >
-                {{ t("settings.account.devices.logoutDevice") }}
-              </Button>
-            </template>
-            <AlertDialog v-else>
-              <AlertDialogTrigger as-child>
+            <div class="flex items-center gap-2">
+              <template v-if="isCurrentSession(session.id)">
+                <Badge variant="destructive" class="text-current">
+                  <IconCircleDot class="-ml-1" />
+                  {{ t("settings.account.devices.thisDevice") }}
+                </Badge>
                 <Button
                   variant="secondary"
-                  :disabled="revokingSessionMap[session.id]"
+                  @click="emitter.emit('Dialog.Exit.Open')"
                 >
-                  <Spinner v-if="revokingSessionMap[session.id]" />
                   {{ t("settings.account.devices.logoutDevice") }}
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {{ t("settings.account.devices.logoutDeviceConfirmTitle") }}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {{
-                      t(
-                        "settings.account.devices.logoutDeviceConfirmDescription",
-                        { device: session.deviceName }
-                      )
-                    }}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>
-                    {{ t("common.cancel") }}
-                  </AlertDialogCancel>
-                  <AlertDialogAction
+              </template>
+              <AlertDialog v-else>
+                <AlertDialogTrigger as-child>
+                  <Button
+                    variant="secondary"
                     :disabled="revokingSessionMap[session.id]"
-                    @click="handleRevokeSession(session.id)"
                   >
                     <Spinner v-if="revokingSessionMap[session.id]" />
                     {{ t("settings.account.devices.logoutDevice") }}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {{
+                        t("settings.account.devices.logoutDeviceConfirmTitle")
+                      }}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {{
+                        t(
+                          "settings.account.devices.logoutDeviceConfirmDescription",
+                          { device: session.deviceName }
+                        )
+                      }}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>
+                      {{ t("common.cancel") }}
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      :disabled="revokingSessionMap[session.id]"
+                      @click="handleRevokeSession(session.id)"
+                    >
+                      <Spinner v-if="revokingSessionMap[session.id]" />
+                      {{ t("settings.account.devices.logoutDevice") }}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </Field>
           <div v-if="sessions.length === 0" class="text-muted-foreground">
             {{ t("settings.account.devices.noSessions") }}
@@ -1207,7 +1213,7 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
             </FieldContent>
             <AlertDialog>
               <AlertDialogTrigger as-child>
-                <Button variant="destructive">
+                <Button variant="destructive" class="text-current">
                   <Spinner v-if="deletingAccount" />
                   {{ t("settings.account.deleteAccount.title") }}
                 </Button>
@@ -1230,12 +1236,13 @@ const formatSessionDate = (timestamp: Date | { seconds: number } | null) => {
                   :disabled="deletingAccount"
                 />
                 <AlertDialogFooter>
-                  <AlertDialogCancel @click="deleteAccountInput = ''">{{
-                    t("common.cancel")
-                  }}</AlertDialogCancel>
+                  <AlertDialogCancel @click="deleteAccountInput = ''">
+                    {{ t("common.cancel") }}
+                  </AlertDialogCancel>
                   <AlertDialogAction
                     :disabled="deletingAccount || !isDeleteAccountInputValid"
                     variant="destructive"
+                    class="text-current"
                     @click="deleteAccount"
                   >
                     <Spinner v-if="deletingAccount" />

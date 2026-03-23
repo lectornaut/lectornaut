@@ -100,5 +100,6 @@ onMounted(() => {
     :theme="sonnerTheme"
   />
   <ExitTrigger />
+  <SessionRevokedDialog />
   <FileDropOverlay v-if="!isFileCaptureWindow" />
 </template>

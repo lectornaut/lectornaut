@@ -139,7 +139,7 @@
     "maplibre-gl": "^5.21.0",
     "mime": "^4.1.0",
     "mitt": "^3.0.1",
-    "motion-v": "2.1.0",
+    "motion-v": "2.2.0",
     "nprogress": "^0.2.0",
     "overlayscrollbars": "^2.14.0",
     "overlayscrollbars-vue": "^0.5.9",

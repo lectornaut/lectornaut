@@ -422,6 +422,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
         <AlertDialogCancel>Cancel</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
+          class="text-current"
           :disabled="
             deleteWorkspaceDialog.item.value &&
             workspaceLoading.isLoading(

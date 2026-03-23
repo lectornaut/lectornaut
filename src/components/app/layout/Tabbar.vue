@@ -275,6 +275,10 @@ watch(
     // Ignore updates until hydrated
     if (!isHydrated.value) return
 
+    // During initial sync, let the Route→Store watcher be the authority.
+    // This prevents restoring the old active tab over a redirect URL.
+    if (isInitialRouteSync.value) return
+
     // If no active tab, maybe go to start?
     if (!activeTabId.value) {
       if (route.fullPath !== "/start" && tabs.value.length === 0) {

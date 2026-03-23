@@ -468,6 +468,7 @@ const formatCreatedAt = (
         <AlertDialogCancel>Cancel</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
+          class="text-current"
           :disabled="
             exitTeamDialog.item.value &&
             teamLoading.team.isLoading(`exit-${exitTeamDialog.item.value.id}`)
@@ -504,6 +505,7 @@ const formatCreatedAt = (
         <AlertDialogCancel>Cancel</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
+          class="text-current"
           :disabled="
             deleteTeamDialog.item.value &&
             teamLoading.team.isLoading(

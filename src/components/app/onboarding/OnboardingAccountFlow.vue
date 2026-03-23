@@ -382,7 +382,7 @@ const handleRemoveProfilePicture = async () => {
               {{ t("settings.account.preferredName.description") }}
             </FieldDescription>
           </FieldContent>
-          <div class="flex">
+          <div class="flex items-center gap-2">
             <InputGroup>
               <InputGroupInput
                 id="onboarding-preferred-name"
@@ -419,7 +419,7 @@ const handleRemoveProfilePicture = async () => {
               {{ t("settings.account.username.description") }}
             </FieldDescription>
           </FieldContent>
-          <div class="flex">
+          <div class="flex items-center gap-2">
             <InputGroup>
               <InputGroupInput
                 id="onboarding-username"

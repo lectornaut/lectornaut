@@ -330,7 +330,11 @@ const formatDate = (
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="destructive" class="w-full" size="sm">
+                <Button
+                  variant="destructive"
+                  class="w-full text-current"
+                  size="sm"
+                >
                   {{ t("components.flow.activity.upgrade") }}
                 </Button>
               </CardContent>

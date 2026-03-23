@@ -568,6 +568,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
         <AlertDialogCancel>Keep subscription</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
+          class="text-current"
           :disabled="billingAction === 'cancel'"
           @click.prevent="confirmCancelSubscription"
         >

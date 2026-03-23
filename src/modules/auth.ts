@@ -1,4 +1,6 @@
 import {
+  cleanupSessionState,
+  clearPersistedSessionId,
   registerSession,
   removeCurrentSession,
 } from "@/composables/useDeviceSessions"
@@ -464,4 +466,27 @@ export const logout = async () => {
       await router.push("/enter")
     })
     .catch((error) => handleAuthError(error, "logout"))
+}
+
+/**
+ * Force-logout when the current session was revoked from another device.
+ * Skips session doc removal (already deleted) and toast (dialog handles UX).
+ */
+let loggingOutRevoked = false
+
+export const logoutRevoked = async () => {
+  if (loggingOutRevoked) return
+  loggingOutRevoked = true
+
+  cleanupSessionState()
+  clearPersistedSessionId()
+
+  try {
+    await auth.signOut()
+    await router.push("/enter")
+  } catch (error) {
+    handleAuthError(error as FirebaseError, "logoutRevoked")
+  } finally {
+    loggingOutRevoked = false
+  }
 }

@@ -655,6 +655,10 @@ export const useSettingsStore = defineStore("settings", () => {
           "[settingsStore] Failed to register global shortcut:",
           error
         )
+        toast.error("Failed to register global shortcut", {
+          description:
+            "The shortcut may conflict with a system or app shortcut. Try a different combination.",
+        })
       }
     }
   }

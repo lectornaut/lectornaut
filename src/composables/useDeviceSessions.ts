@@ -6,11 +6,13 @@ import {
 import { parseUserAgent } from "@/helpers/device"
 import { generateRandomString } from "@/helpers/utilities"
 import { firestore } from "@/modules/firebase"
+import { emitter } from "@/modules/mitt"
 import type { IUserSession } from "@/types/session"
 import {
   collection,
   deleteDoc,
   doc,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -32,6 +34,9 @@ function getOrCreateSessionId(): string {
 // ── Global heartbeat (runs once per app, not per component) ──────────────
 
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null
+let unsubscribeSnapshot: (() => void) | null = null
+let sessionRevoked = false
+let registrationInProgress = false
 
 function startGlobalHeartbeat(uid: string) {
   stopGlobalHeartbeat()
@@ -42,9 +47,19 @@ function startGlobalHeartbeat(uid: string) {
   )
 
   const tick = () => {
-    updateDoc(sessionRef, { lastActiveAt: serverTimestamp() }).catch(() => {
-      // Silently ignore — session may not exist yet
-    })
+    updateDoc(sessionRef, { lastActiveAt: serverTimestamp() }).catch(
+      (error) => {
+        if (
+          !sessionRevoked &&
+          !registrationInProgress &&
+          (error?.code === "not-found" || error?.code === "permission-denied")
+        ) {
+          sessionRevoked = true
+          stopGlobalHeartbeat()
+          emitter.emit("session:revoked")
+        }
+      }
+    )
   }
 
   tick()
@@ -58,24 +73,102 @@ function stopGlobalHeartbeat() {
   }
 }
 
+// ── Session watcher (detects revocation in real-time) ────────────────────
+
+function startSessionWatcher(uid: string, isResume = false) {
+  stopSessionWatcher()
+
+  const sessionId = getOrCreateSessionId()
+  const sessionRef = doc(
+    collection(firestore, "users", uid, "sessions"),
+    sessionId
+  )
+
+  let initialSnapshotReceived = false
+
+  unsubscribeSnapshot = onSnapshot(sessionRef, (snapshot) => {
+    if (!initialSnapshotReceived) {
+      initialSnapshotReceived = true
+      // On resume (page refresh), a missing doc means the session was revoked
+      // while the page was closed. On fresh login, the doc may not exist yet.
+      if (!snapshot.exists() && isResume) {
+        sessionRevoked = true
+        stopGlobalHeartbeat()
+        emitter.emit("session:revoked")
+      }
+      return
+    }
+
+    if (!snapshot.exists() && !sessionRevoked) {
+      sessionRevoked = true
+      stopGlobalHeartbeat()
+      emitter.emit("session:revoked")
+    }
+  })
+}
+
+function stopSessionWatcher() {
+  if (unsubscribeSnapshot) {
+    unsubscribeSnapshot()
+    unsubscribeSnapshot = null
+  }
+}
+
+/**
+ * Cleans up all session-related state: heartbeat, snapshot listener, flags.
+ * Called during logout (both normal and revoked).
+ */
+export function cleanupSessionState() {
+  stopGlobalHeartbeat()
+  stopSessionWatcher()
+  sessionRevoked = false
+}
+
+/**
+ * Clears the persisted session ID from localStorage.
+ * Called after revoked logout to prevent stale session checks on refresh.
+ */
+export function clearPersistedSessionId() {
+  localStorage.removeItem(SESSION_ID_KEY)
+}
+
+/**
+ * Resumes the session watcher and heartbeat for an already-authenticated user.
+ * Called on app startup (page refresh) to detect sessions revoked while offline.
+ */
+export function resumeSessionWatcher(uid: string) {
+  if (registrationInProgress) return // Fresh login in progress — registerSession handles it
+  const sessionId = localStorage.getItem(SESSION_ID_KEY)
+  if (!sessionId) return // No persisted session — nothing to resume
+
+  startGlobalHeartbeat(uid)
+  startSessionWatcher(uid, true)
+}
+
 /**
  * Registers a new session for the given user and starts the heartbeat.
  * Called after successful authentication.
  */
 export async function registerSession(uid: string) {
-  const sessionId = getOrCreateSessionId()
-  const device = await parseUserAgent()
+  registrationInProgress = true
+  try {
+    const sessionId = getOrCreateSessionId()
+    const device = await parseUserAgent()
 
-  await registerSessionCallable({
-    sessionId,
-    deviceName: device.deviceName,
-    browser: device.browser,
-    os: device.os,
-    deviceType: device.deviceType,
-  })
+    await registerSessionCallable({
+      sessionId,
+      deviceName: device.deviceName,
+      browser: device.browser,
+      os: device.os,
+      deviceType: device.deviceType,
+    })
 
-  // Start heartbeat only after the session doc exists
-  startGlobalHeartbeat(uid)
+    // Start heartbeat and watcher only after the session doc exists
+    startGlobalHeartbeat(uid)
+    startSessionWatcher(uid)
+  } finally {
+    registrationInProgress = false
+  }
 }
 
 /**
@@ -84,7 +177,7 @@ export async function registerSession(uid: string) {
  * since this runs outside Vue component context.
  */
 export async function removeCurrentSession(uid: string) {
-  stopGlobalHeartbeat()
+  cleanupSessionState()
 
   const sessionId = localStorage.getItem(SESSION_ID_KEY)
   if (!sessionId) return

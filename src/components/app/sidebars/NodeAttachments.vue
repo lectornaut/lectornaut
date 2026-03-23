@@ -848,6 +848,7 @@ watch(selectedCreateFiles, async (files) => {
         <AlertDialogAction as-child>
           <Button
             variant="destructive"
+            class="text-current"
             :disabled="
               deletingId === attachmentToDelete?.id ||
               (attachmentToDelete
