@@ -97,6 +97,10 @@ export const APP_CHECK_OPTS = {
   maxInstances: 10,
 }
 
+/** Default sender address for outbound emails (override via EMAIL_FROM_ADDRESS) */
+export const EMAIL_FROM =
+  process.env.EMAIL_FROM_ADDRESS || "hello@lectornaut.com"
+
 /**
  * AI generation workloads are CPU/memory heavier than regular CRUD callables.
  */

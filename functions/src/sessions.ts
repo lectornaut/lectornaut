@@ -1,8 +1,9 @@
 import { HttpsError, onCall } from "firebase-functions/v2/https"
+import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
 
-const SESSION_ID_RE = /^[A-Za-z0-9]{8,128}$/
+const SESSION_ID_RE = /^[A-Za-z0-9-]{8,128}$/
 
 interface RegisterSessionRequest {
   sessionId: string
@@ -36,13 +37,13 @@ interface RevokeSessionResponse {
 }
 
 const VALID_DEVICE_TYPES = new Set(["desktop", "mobile", "tablet"])
-const MAX_SESSIONS = 20
+const MAX_SESSIONS = COST_BUDGET.MAX_SESSIONS
 
 function validateSessionId(id: unknown): asserts id is string {
   if (!id || typeof id !== "string" || !SESSION_ID_RE.test(id)) {
     throw new HttpsError(
       "invalid-argument",
-      "sessionId must be 8-128 alphanumeric characters."
+      "sessionId must be 8-128 alphanumeric or hyphen characters."
     )
   }
 }
@@ -74,7 +75,8 @@ export const registerSession = onCall(CALLABLE_OPTS, async (request) => {
 
   validateSessionId(data.sessionId)
 
-  // Extract client IP from request headers
+  // Firebase Cloud Functions always run behind Google's load balancer,
+  // so x-forwarded-for is trustworthy and contains the real client IP first.
   const ip =
     request.rawRequest?.headers?.["x-forwarded-for"]
       ?.toString()
@@ -111,15 +113,24 @@ export const registerSession = onCall(CALLABLE_OPTS, async (request) => {
 
   // Evict oldest sessions if the user exceeds the limit
   const sessionsRef = db.collection(`users/${uid}/sessions`)
-  const allSessions = await sessionsRef.orderBy("lastActiveAt", "asc").get()
+  const allSessions = await sessionsRef
+    .orderBy("lastActiveAt", "asc")
+    .limit(MAX_SESSIONS + 1)
+    .get()
 
   if (allSessions.size > MAX_SESSIONS) {
     const batch = db.batch()
-    const toEvict = allSessions.docs.slice(0, allSessions.size - MAX_SESSIONS)
+    // Filter out current session before slicing to avoid under-eviction
+    // when the current session is among the oldest
+    const candidates = allSessions.docs.filter((d) => d.id !== data.sessionId)
+    const excess = allSessions.size - MAX_SESSIONS
+    const toEvict = candidates.slice(0, excess)
     for (const d of toEvict) {
-      if (d.id !== data.sessionId) batch.delete(d.ref)
+      batch.delete(d.ref)
     }
-    await batch.commit()
+    if (toEvict.length > 0) {
+      await batch.commit()
+    }
   }
 
   return { registered: true, ip } satisfies RegisterSessionResponse
@@ -152,7 +163,7 @@ export const revokeAllSessions = onCall(CALLABLE_OPTS, async (request) => {
   )
 
   // Firestore batch limit is 500 — chunk if needed
-  const BATCH_LIMIT = 500
+  const BATCH_LIMIT = COST_BUDGET.MAX_BATCH_SIZE
   for (let i = 0; i < docsToDelete.length; i += BATCH_LIMIT) {
     const batch = db.batch()
     const chunk = docsToDelete.slice(i, i + BATCH_LIMIT)

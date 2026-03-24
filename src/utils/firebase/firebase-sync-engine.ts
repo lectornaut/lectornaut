@@ -1,3 +1,4 @@
+import { generateId } from "@/helpers/utilities"
 import { auth, firestore } from "@/modules/firebase"
 import type {
   SyncBaseVersion,
@@ -17,9 +18,11 @@ import {
   getDoc,
   onSnapshot,
   query,
+  serverTimestamp,
   setDoc,
   where,
   type DocumentData,
+  type FieldValue,
   type Unsubscribe,
 } from "firebase/firestore"
 import type { ComputedRef } from "vue"
@@ -66,6 +69,7 @@ interface RemoteSyncOperationDocument {
   baseVersion: SyncBaseVersion | null
   status: "pending" | "ack" | "reject"
   attempts: number
+  createdAt: FieldValue
   createdAtClient: number
   updatedAtClient: number
   sentAtClient: number | null
@@ -214,12 +218,7 @@ const persistOutbox = (operations: SyncOutboxOperation[]) => {
   window.localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(operations))
 }
 
-const createId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID()
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
-}
+const createId = () => generateId()
 
 const getOrCreateClientId = (): string => {
   if (!hasWindow()) return "server"
@@ -714,6 +713,7 @@ const toRemoteDocument = (
     status:
       operation.status === "acked" ? "ack" : isRejected ? "reject" : "pending",
     attempts: operation.attempts,
+    createdAt: serverTimestamp(),
     createdAtClient: operation.createdAt,
     updatedAtClient: operation.updatedAt,
     sentAtClient: operation.sentAt ?? null,
@@ -1261,25 +1261,10 @@ export const syncEngine = {
   subscribeCanonical,
 }
 
-const toMillis = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (value instanceof Date) return value.getTime()
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "toMillis" in value &&
-    typeof (value as { toMillis?: unknown }).toMillis === "function"
-  ) {
-    const millis = (value as { toMillis: () => number }).toMillis()
-    return Number.isFinite(millis) ? millis : null
-  }
-  return null
-}
-
 export const buildUpdatedAtBaseVersion = (
   updatedAt: unknown
 ): SyncBaseVersion | null => {
-  const millis = toMillis(updatedAt)
+  const millis = toComparableMillis(updatedAt)
   if (millis == null) return null
   return {
     field: "updatedAt",

@@ -88,25 +88,50 @@ function startSessionWatcher(uid: string, isResume = false) {
 
   let initialSnapshotReceived = false
 
-  unsubscribeSnapshot = onSnapshot(sessionRef, (snapshot) => {
-    if (!initialSnapshotReceived) {
-      initialSnapshotReceived = true
-      // On resume (page refresh), a missing doc means the session was revoked
-      // while the page was closed. On fresh login, the doc may not exist yet.
-      if (!snapshot.exists() && isResume) {
+  unsubscribeSnapshot = onSnapshot(
+    sessionRef,
+    { includeMetadataChanges: true },
+    (snapshot) => {
+      if (!initialSnapshotReceived) {
+        // On resume, a missing doc from cache is not authoritative — the
+        // session doc was created server-side (cloud function) and may not
+        // be in the local IndexedDB cache. Wait for the server-confirmed
+        // snapshot before deciding on revocation.
+        if (isResume && !snapshot.exists() && snapshot.metadata.fromCache) {
+          return
+        }
+
+        initialSnapshotReceived = true
+
+        if (!snapshot.exists() && isResume) {
+          sessionRevoked = true
+          stopGlobalHeartbeat()
+          emitter.emit("session:revoked")
+        }
+        return
+      }
+
+      // After initial snapshot, only react to server-confirmed deletions
+      if (snapshot.metadata.fromCache) return
+
+      if (!snapshot.exists() && !sessionRevoked) {
         sessionRevoked = true
         stopGlobalHeartbeat()
         emitter.emit("session:revoked")
       }
-      return
+    },
+    (error) => {
+      if (
+        !sessionRevoked &&
+        !registrationInProgress &&
+        (error?.code === "permission-denied" || error?.code === "not-found")
+      ) {
+        sessionRevoked = true
+        stopGlobalHeartbeat()
+        emitter.emit("session:revoked")
+      }
     }
-
-    if (!snapshot.exists() && !sessionRevoked) {
-      sessionRevoked = true
-      stopGlobalHeartbeat()
-      emitter.emit("session:revoked")
-    }
-  })
+  )
 }
 
 function stopSessionWatcher() {

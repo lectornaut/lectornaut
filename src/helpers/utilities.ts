@@ -1,4 +1,5 @@
 import { defaultRoutes } from "@/helpers/defaults"
+import { normalizeTabPath } from "@/helpers/tabIcons"
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid"
 
 /**
@@ -13,10 +14,10 @@ export const generateId = () => {
 /**
  * Generates a cryptographically secure random string using UUID v4
  * Best for: OAuth state/nonce, CSRF tokens, session tokens
- * @returns A random string (UUID v4 without hyphens)
+ * @returns A random UUID v4 string
  */
 export const generateRandomString = () => {
-  return uuidv4().replace(/-/g, "")
+  return uuidv4()
 }
 
 /**
@@ -43,15 +44,6 @@ export const getInitials = (name: string) => {
  * @returns True if the tab is a default route, false otherwise
  */
 export const isDefaultRoute = (tab: { fullPath: string }) => {
-  const normalizePath = (value: string) => {
-    const [path] = value.split(/[?#]/)
-    const normalizedPath = path || value
-    if (normalizedPath === "/") {
-      return normalizedPath
-    }
-    return normalizedPath.replace(/\/+$/, "")
-  }
-
-  const tabPath = normalizePath(tab.fullPath)
-  return defaultRoutes.some((route) => normalizePath(route) === tabPath)
+  const tabPath = normalizeTabPath(tab.fullPath)
+  return defaultRoutes.some((route) => normalizeTabPath(route) === tabPath)
 }

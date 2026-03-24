@@ -454,7 +454,7 @@ function onTabsAdd(raw?: unknown) {
     | { fullPath?: string; path?: string; url?: string; name?: string }
     | undefined
   const path = data?.fullPath || data?.path || data?.url || "/new"
-  handleAddTab(path, data?.name)
+  handleAddTab(path, data?.name).catch(() => {})
 }
 
 function onTabsClose(id?: unknown) {

@@ -1,4 +1,6 @@
+import * as logger from "firebase-functions/logger"
 import { onDocumentCreated } from "firebase-functions/v2/firestore"
+import { onSchedule } from "firebase-functions/v2/scheduler"
 import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
 import { cleanupExpiredIdempotencyLocks } from "./idempotency.js"
@@ -28,6 +30,12 @@ interface SyncOperation {
   status: SyncOperationStatus
 }
 
+/**
+ * Custom error for sync operation rejections. Uses a subset of HttpsError codes
+ * but is intentionally NOT an HttpsError because sync operations run inside
+ * Firestore triggers (not HTTP callables). The trigger handler catches these
+ * and writes the rejection status back to the operation document.
+ */
 class SyncRejectError extends Error {
   constructor(
     readonly code:
@@ -676,18 +684,25 @@ export const onSyncOperationCreated = onDocumentCreated(
       })
     } catch (error) {
       const rejectDetails = toRejectDetails(error)
-      await operationRef.set(
-        {
-          status: "reject",
-          ack: {
-            code: rejectDetails.code,
-            message: rejectDetails.message,
-            atMs: Date.now(),
+      // Wrap in a conditional transaction to prevent overwriting a successful
+      // "ack" if this invocation races with a retry (retry: true is set on trigger)
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(operationRef)
+        if (!snap.exists || snap.data()?.status !== "pending") return
+        tx.set(
+          operationRef,
+          {
+            status: "reject",
+            ack: {
+              code: rejectDetails.code,
+              message: rejectDetails.message,
+              atMs: Date.now(),
+            },
+            processedAt: admin.firestore.FieldValue.serverTimestamp(),
           },
-          processedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      )
+          { merge: true }
+        )
+      })
     }
   }
 )
@@ -695,9 +710,6 @@ export const onSyncOperationCreated = onDocumentCreated(
 // ============================================================================
 // Cleanup: Remove settled sync operations older than 24 hours
 // ============================================================================
-
-import * as logger from "firebase-functions/logger"
-import { onSchedule } from "firebase-functions/v2/scheduler"
 
 const SYNC_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 const CLEANUP_BATCH_SIZE = COST_BUDGET.MAX_BATCH_SIZE

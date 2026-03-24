@@ -1,6 +1,6 @@
 <script lang="ts" setup generic="TData">
+import { valueUpdater } from "@/components/ui/table/utils"
 import { IconChevronRight, IconDatabase, IconListFilter } from "@/data/icons"
-import { valueUpdater } from "@/lib/utils"
 import type {
   ColumnDef,
   ColumnFiltersState,

@@ -1,4 +1,5 @@
 import { isTauri } from "@/composables/usePlatform"
+import { generateRandomString } from "@/helpers/utilities"
 import { invoke } from "@tauri-apps/api/core"
 import { CustomProvider, ReCaptchaEnterpriseProvider } from "firebase/app-check"
 import { VueFireAppCheck } from "vuefire"
@@ -25,9 +26,7 @@ const getExchangeUrl = () => {
   return `https://${DEFAULT_FUNCTIONS_REGION}-${import.meta.env.VITE_PROJECT_ID}.cloudfunctions.net/${APP_CHECK_EXCHANGE_FUNCTION_NAME}`
 }
 
-const createNonce = () =>
-  globalThis.crypto?.randomUUID?.() ||
-  `${Date.now()}-${Math.random().toString(36).slice(2)}`
+const createNonce = () => generateRandomString()
 
 const createTauriProvider = () =>
   new CustomProvider({

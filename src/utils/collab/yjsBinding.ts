@@ -1,3 +1,4 @@
+import { generateId } from "@/helpers/utilities"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { colorFromUserId } from "@/utils/collab/colors"
 import {
@@ -66,7 +67,7 @@ export interface YjsCollabSession {
 export async function createYjsCollab(
   options: CreateYjsCollabOptions
 ): Promise<YjsCollabSession> {
-  const peerId = crypto.randomUUID()
+  const peerId = generateId()
 
   const join = await joinCollabRoom({
     contentId: options.contentId,

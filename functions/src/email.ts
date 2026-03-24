@@ -1,7 +1,7 @@
 import * as logger from "firebase-functions/logger"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { ServerClient } from "postmark"
-import { EMAIL_OPTS } from "./runtimeConfig.js"
+import { EMAIL_FROM, EMAIL_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import { EmailData } from "./types.js"
 
@@ -28,7 +28,14 @@ async function ensureEmailRendererLoaded(): Promise<void> {
   }
 
   await _renderEmailLoader
+
+  if (!_renderEmail) {
+    throw new Error(
+      "Email renderer module loaded but renderEmail export is missing"
+    )
+  }
 }
+
 function getPostmarkClient(): ServerClient {
   const key = postmarkApiKey.value()
   if (!key) {
@@ -59,7 +66,9 @@ export async function sendEmailInternal(data: EmailData) {
   if (template && templateData) {
     try {
       await ensureEmailRendererLoaded()
-      htmlBody = _renderEmail!(template, templateData)
+      // Local binding for type narrowing — ensureEmailRendererLoaded guarantees non-null
+      const render = _renderEmail!
+      htmlBody = render(template, templateData)
     } catch (error) {
       logger.error(`Error rendering email template ${template}`, error)
       throw new Error(`Error rendering email template: ${error}`)
@@ -74,7 +83,7 @@ export async function sendEmailInternal(data: EmailData) {
 
   try {
     await client.sendEmail({
-      From: "hello@lectornaut.com",
+      From: EMAIL_FROM,
       To: email,
       Subject: subject,
       HtmlBody: htmlBody,
@@ -83,7 +92,8 @@ export async function sendEmailInternal(data: EmailData) {
     return { success: true }
   } catch (error) {
     logger.error("Error sending email", error)
-    throw new Error("Error sending email")
+    const detail = error instanceof Error ? error.message : String(error)
+    throw new Error(`Error sending email: ${detail}`)
   }
 }
 
@@ -91,8 +101,15 @@ export async function sendEmailInternal(data: EmailData) {
  * Callable function to send emails
  */
 export const sendEmail = onCall(
-  { ...EMAIL_OPTS, secrets: [postmarkApiKey] },
+  { ...EMAIL_OPTS, secrets: [postmarkApiKey], enforceAppCheck: true },
   async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "The function must be called while authenticated."
+      )
+    }
+
     try {
       return await sendEmailInternal(request.data)
     } catch (error: unknown) {

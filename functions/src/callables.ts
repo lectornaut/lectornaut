@@ -4,6 +4,7 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
 import { admin, db } from "./firebase.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
@@ -60,7 +61,7 @@ async function batchUpdateNotifications(
     q = q.where("status", "==", status)
   }
 
-  const snap = await q.limit(500).get()
+  const snap = await q.limit(COST_BUDGET.QUERY_MAX_LIMIT).get()
 
   if (snap.empty) {
     return { count: 0 }
@@ -401,6 +402,7 @@ async function getPublicMembersForTeam(teamId: string): Promise<{
   const membershipsSnap = await db
     .collection(`teams/${teamId}/memberships`)
     .select("userId", "user")
+    .limit(COST_BUDGET.QUERY_MAX_LIMIT)
     .get()
 
   const members = membershipsSnap.docs

@@ -35,6 +35,9 @@ export const COST_BUDGET = {
   /** TTL for in-memory notification preference cache (ms) */
   PREFERENCE_CACHE_TTL_MS: envInt("COST_PREFERENCE_CACHE_TTL_MS", 60_000),
 
+  /** Maximum device sessions per user before oldest are evicted */
+  MAX_SESSIONS: envInt("COST_MAX_SESSIONS", 20),
+
   /** Maximum number of owner-check reads (only need 2 to know if >1) */
   OWNER_CHECK_LIMIT: 2,
 

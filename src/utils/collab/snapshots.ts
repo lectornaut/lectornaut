@@ -223,7 +223,13 @@ export function createSnapshotManager(
     stopPageHide?.()
     stopVisibilityChange?.()
 
-    await flush()
+    if (saveTimer) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+
+    // Final flush before marking as destroyed
+    await runSave()
     destroyed = true
   }
 

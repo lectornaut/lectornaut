@@ -28,8 +28,7 @@ service firebase.storage {
     }
 
     function isTeamPublic(teamId) {
-      return firestore.exists(/databases/(default)/documents/teams/$(teamId))
-        && firestore.get(/databases/(default)/documents/teams/$(teamId)).data.isPublic == true;
+      return firestore.get(/databases/(default)/documents/teams/$(teamId)).data.isPublic == true;
     }
 
     function isWorkspaceNodeScope(scope) {
@@ -38,8 +37,17 @@ service firebase.storage {
 
     function isValidImageUpload() {
       return request.resource != null
-        && request.resource.contentType.matches("image/.*")
+        && request.resource.contentType.matches("image/(png|jpeg|gif|webp|avif|bmp|tiff)")
         && request.resource.size <= 5 * 1024 * 1024;
+    }
+
+    function isBlockedAttachmentType() {
+      return request.resource.contentType.matches("text/html")
+        || request.resource.contentType.matches("application/xhtml.*")
+        || request.resource.contentType.matches("image/svg.*")
+        || request.resource.contentType.matches("application/x-shockwave-flash")
+        || request.resource.contentType.matches("text/javascript")
+        || request.resource.contentType.matches("application/javascript");
     }
 
     match /images/users/{userId}/profilePhoto {
@@ -66,7 +74,8 @@ service firebase.storage {
       allow create, update: if isWorkspaceNodeScope(scope)
         && canManageWorkspaceContent(teamId)
         && request.resource != null
-        && request.resource.size <= 25 * 1024 * 1024;
+        && request.resource.size <= 25 * 1024 * 1024
+        && !isBlockedAttachmentType();
       allow delete: if isWorkspaceNodeScope(scope) && canManageWorkspaceContent(teamId);
     }
   }

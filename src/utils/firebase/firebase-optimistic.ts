@@ -11,6 +11,7 @@
  * - Snapshot protection to prevent VueFire overwrites
  */
 
+import { generateId } from "@/helpers/utilities"
 import { isRetryableFirebaseError } from "@/utils/firebase/firebase-errors"
 import type { ComputedRef, Ref } from "vue"
 import { computed, isRef, ref, shallowRef, toRaw } from "vue"
@@ -896,5 +897,5 @@ export function createSnapshotGuard<T>(
  * Utility to generate a unique operation ID for new documents
  */
 export function generateOperationId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+  return generateId()
 }

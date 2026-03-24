@@ -13,7 +13,16 @@ const compiledTemplateCache = new Map<
 >()
 
 function getTemplatePath(templateName: string): string {
-  return path.join(templatesDir, `${templateName}.mjml`)
+  if (!/^[a-z0-9._-]+$/i.test(templateName)) {
+    throw new Error(`Invalid template name: ${templateName}`)
+  }
+
+  const resolved = path.resolve(templatesDir, `${templateName}.mjml`)
+  if (!resolved.startsWith(templatesDir)) {
+    throw new Error(`Invalid template name: ${templateName}`)
+  }
+
+  return resolved
 }
 
 function getTemplateContent(templateName: string): string {
@@ -68,7 +77,6 @@ export const renderEmail = (
   templateName: string,
   data: Record<string, unknown>
 ): string => {
-  const templatePath = getTemplatePath(templateName)
   const compiledMjmlTemplate = getCompiledMjmlTemplate(templateName)
 
   // Add global variables
@@ -82,7 +90,7 @@ export const renderEmail = (
   const mjmlContent = compiledMjmlTemplate(templateData)
 
   const { html, errors } = mjml2html(mjmlContent, {
-    filePath: path.dirname(templatePath),
+    filePath: templatesDir,
   })
 
   if (errors?.length) {

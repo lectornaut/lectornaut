@@ -33,8 +33,10 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core"
 import { resolveResource } from "@tauri-apps/api/path"
 import { disable, enable } from "@tauri-apps/plugin-autostart"
 import {
+  isRegistered as isShortcutRegistered,
   register as registerGlobalShortcut,
   unregister as unregisterGlobalShortcut,
+  unregisterAll as unregisterAllGlobalShortcuts,
 } from "@tauri-apps/plugin-global-shortcut"
 import {
   isPermissionGranted,
@@ -591,12 +593,22 @@ export const useSettingsStore = defineStore("settings", () => {
     { immediate: true }
   )
 
-  // Register/unregister file drop overlay OS-level global shortcut
+  // ── File drop overlay OS-level global shortcut ──────────────────────
+  //
+  // Converts our internal format ("cmd+shift+d") to the Tauri accelerator
+  // format ("CommandOrControl+Shift+D") documented at:
+  // https://v2.tauri.app/plugin/global-shortcut/
+  //
+  // Key rules:
+  //  - The handler receives a ShortcutEvent with { state: "Pressed" | "Released" }
+  //    and must only act on "Pressed" to avoid double-firing.
+  //  - In dev mode (HMR), the plugin may already have the shortcut registered
+  //    from a previous hot-reload. Always unregisterAll before re-registering.
+  //  - Wrap all Tauri calls in try/catch — the plugin throws if it isn't
+  //    available (web builds) or if the shortcut is claimed by the OS.
+
   let currentGlobalShortcut: string | null = null
 
-  // Maps from our internal hotkey format (e.g. "cmd+shift+d") to Tauri
-  // accelerator format (e.g. "CommandOrControl+Shift+D").
-  // See: https://docs.rs/global-hotkey/latest/global_hotkey/hotkey/struct.HotKey.html
   const TAURI_KEY_MAP: Record<string, string> = {
     arrowup: "Up",
     arrowdown: "Down",
@@ -614,7 +626,8 @@ export const useSettingsStore = defineStore("settings", () => {
     hotkey
       .split("+")
       .map((part) => {
-        switch (part.trim().toLowerCase()) {
+        const key = part.trim().toLowerCase()
+        switch (key) {
           case "cmd":
             return "CommandOrControl"
           case "ctrl":
@@ -623,43 +636,61 @@ export const useSettingsStore = defineStore("settings", () => {
             return "Shift"
           case "alt":
             return "Alt"
-          default: {
-            const normalized = part.trim().toLowerCase()
-            return TAURI_KEY_MAP[normalized] ?? part.trim().toUpperCase()
-          }
+          default:
+            return TAURI_KEY_MAP[key] ?? part.trim().toUpperCase()
         }
       })
       .join("+")
 
+  const toDisplayShortcut = (hotkey: string): string =>
+    hotkey
+      .split("+")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join("+")
+
+  const cleanupGlobalShortcut = async () => {
+    if (!currentGlobalShortcut) return
+    try {
+      if (await isShortcutRegistered(currentGlobalShortcut)) {
+        await unregisterGlobalShortcut(currentGlobalShortcut)
+      }
+    } catch {
+      // Shortcut may already be unregistered or plugin unavailable
+    }
+    currentGlobalShortcut = null
+  }
+
   const syncGlobalShortcut = async (enabled: boolean, keys: string) => {
     if (!isTauri.value) return
 
-    if (currentGlobalShortcut) {
-      try {
-        await unregisterGlobalShortcut(currentGlobalShortcut)
-      } catch {
-        // Shortcut may already be unregistered
-      }
-      currentGlobalShortcut = null
-    }
+    await cleanupGlobalShortcut()
 
-    if (enabled && keys) {
-      const tauriShortcut = toTauriShortcut(keys)
-      try {
-        await registerGlobalShortcut(tauriShortcut, () => {
-          void invoke("keep_file_capture_window_open")
-        })
-        currentGlobalShortcut = tauriShortcut
-      } catch (error) {
-        console.error(
-          "[settingsStore] Failed to register global shortcut:",
-          error
-        )
-        toast.error("Failed to register global shortcut", {
-          description:
-            "The shortcut may conflict with a system or app shortcut. Try a different combination.",
-        })
+    if (!enabled || !keys) return
+
+    const tauriShortcut = toTauriShortcut(keys)
+
+    try {
+      // In dev mode (HMR), the shortcut may still be registered from a
+      // previous module instance. Check first to avoid a registration panic.
+      if (await isShortcutRegistered(tauriShortcut)) {
+        await unregisterGlobalShortcut(tauriShortcut)
       }
+
+      await registerGlobalShortcut(tauriShortcut, (event) => {
+        if (event.state === "Pressed") {
+          void invoke("keep_file_capture_window_open")
+        }
+      })
+      currentGlobalShortcut = tauriShortcut
+    } catch (error) {
+      console.error(
+        "[settingsStore] Failed to register global shortcut:",
+        error
+      )
+      toast.error(`Failed to register ${toDisplayShortcut(keys)}`, {
+        description:
+          "This shortcut conflicts with a system or app shortcut. Try a different combination.",
+      })
     }
   }
 
@@ -671,12 +702,12 @@ export const useSettingsStore = defineStore("settings", () => {
     { immediate: true }
   )
 
-  // Clean up OS-level shortcut when the store's effect scope is disposed (e.g. HMR)
+  // Clean up all OS-level shortcuts when the store's effect scope is
+  // disposed (e.g. HMR reload). unregisterAll is safer than tracking
+  // individual shortcuts across hot-reloads.
   onScopeDispose(() => {
-    if (currentGlobalShortcut) {
-      void unregisterGlobalShortcut(currentGlobalShortcut).catch(() => {})
-      currentGlobalShortcut = null
-    }
+    void unregisterAllGlobalShortcuts().catch(() => {})
+    currentGlobalShortcut = null
   })
 
   type BooleanPreferenceKey =

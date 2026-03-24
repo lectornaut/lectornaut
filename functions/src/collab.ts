@@ -5,16 +5,22 @@ import {
   onCall,
 } from "firebase-functions/v2/https"
 import { onSchedule } from "firebase-functions/v2/scheduler"
-import { randomUUID } from "node:crypto"
+import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS, SCHEDULED_OPTS } from "./runtimeConfig.js"
-import { Capabilities, IMembershipRole, WorkspaceNodeScope } from "./types.js"
+import {
+  Capabilities,
+  IMembershipRole,
+  isMembershipRole,
+  WorkspaceNodeScope,
+} from "./types.js"
+import { generateRandomString } from "./utilities.js"
 
 const JOIN_TOKEN_TTL_MS = 10 * 60 * 1000
 const STALE_SIGNAL_MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - signals are cleaned by clients, this is fallback
 const STALE_PEER_MAX_AGE_MS = 10 * 60 * 1000 // 10 minutes - accounts for missed heartbeats
-const CLEANUP_BATCH_SIZE = 500 // Firestore batch limit
+const CLEANUP_BATCH_SIZE = COST_BUDGET.MAX_BATCH_SIZE
 
 type CollabRole = "editor" | "viewer"
 type SignalType = "offer" | "answer" | "ice"
@@ -111,15 +117,6 @@ function sanitizeColor(value: unknown): string {
   return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback
 }
 
-function isMembershipRole(value: unknown): value is IMembershipRole {
-  return (
-    value === "owner" ||
-    value === "admin" ||
-    value === "member" ||
-    value === "guest"
-  )
-}
-
 function assertSignalType(value: unknown): SignalType {
   if (value !== "offer" && value !== "answer" && value !== "ice") {
     throw new HttpsError(
@@ -143,7 +140,7 @@ function assertWorkspaceNodeScope(value: unknown): WorkspaceNodeScope {
 }
 
 function mintJoinToken(): string {
-  return `${Date.now().toString(36)}.${randomUUID().replace(/-/g, "")}`
+  return `${Date.now().toString(36)}.${generateRandomString()}`
 }
 
 async function ensureContentExists(
@@ -604,7 +601,7 @@ export const cleanupCollabSignaling = onSchedule(
       cleanupCollectionGroup("peers", "lastSeenAt", STALE_PEER_MAX_AGE_MS),
     ])
 
-    console.info("[collab:cleanup] Deleted stale docs", {
+    logger.info("[collab:cleanup] Deleted stale docs", {
       signalsDeleted,
       peersDeleted,
     })

@@ -77,6 +77,17 @@ const DISPLAY_KEY_MAP: Record<string, string> = {
   " ": "Space",
 }
 
+// System shortcuts that cannot be registered as global hotkeys
+const SYSTEM_SHORTCUTS = new Set([
+  "cmd+h", // Hide window
+  "cmd+m", // Minimize
+  "cmd+q", // Quit
+  "cmd+w", // Close window
+  "cmd+tab", // App switcher
+  "cmd+space", // Spotlight
+  "cmd+i", // Get Info (Finder)
+])
+
 const hotkeyToDisplayKeys = (hotkey: string): string[] => {
   const parts = hotkey.split("+")
   return parts.map((part) => {
@@ -125,6 +136,15 @@ const handleRecorderKeydown = (event: KeyboardEvent) => {
 
   const hotkeyString = parts.join("+")
   isRecording.value = false
+
+  if (SYSTEM_SHORTCUTS.has(hotkeyString)) {
+    toast.error(
+      `${hotkeyToDisplayKeys(hotkeyString).join("")} is reserved by the system`,
+      { description: "Choose a different combination." }
+    )
+    return
+  }
+
   fileDropOverlayShortcutKeys.value = hotkeyString
 }
 

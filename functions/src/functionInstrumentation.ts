@@ -17,7 +17,7 @@
  */
 
 import * as logger from "firebase-functions/logger"
-import { randomUUID } from "node:crypto"
+import { generateId } from "./utilities.js"
 
 export interface InstrumentationContext {
   correlationId: string
@@ -33,7 +33,7 @@ export function withInstrumentation<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => Promise<TResult>
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
-    const correlationId = randomUUID()
+    const correlationId = generateId()
     const startTime = Date.now()
     const startMemory = process.memoryUsage()
 

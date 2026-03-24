@@ -3,6 +3,7 @@ import { h, render } from "vue"
 import type { ChartConfig } from "."
 
 // Simple cache using a Map to store serialized object keys
+const MAX_CACHE_SIZE = 500
 const cache = new Map<string, string>()
 
 // Convert object to a consistent string key
@@ -42,6 +43,10 @@ export function componentToString<P>(
     const vnode = h<unknown>(component, { ...props, payload: data, config, x })
     const div = document.createElement("div")
     render(vnode, div)
+
+    if (cache.size >= MAX_CACHE_SIZE) {
+      cache.clear()
+    }
     cache.set(serializedKey, div.innerHTML)
     return div.innerHTML
   }
