@@ -12,6 +12,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -37,6 +38,84 @@ let heartbeatInterval: ReturnType<typeof setInterval> | null = null
 let unsubscribeSnapshot: (() => void) | null = null
 let sessionRevoked = false
 let registrationInProgress = false
+let verificationInProgress = false
+
+/**
+ * Verifies whether the session was genuinely revoked before emitting the event.
+ * Firebase Auth tokens expire every ~60 min; during the brief refresh window,
+ * Firestore operations can fail with `permission-denied` even though the
+ * session doc is perfectly valid. This gate prevents those false positives.
+ */
+async function verifyRevocation(uid: string) {
+  if (sessionRevoked || verificationInProgress) return
+  verificationInProgress = true
+
+  const sessionId = getOrCreateSessionId()
+  const sessionRef = doc(
+    collection(firestore, "users", uid, "sessions"),
+    sessionId
+  )
+
+  const confirmRevoked = () => {
+    sessionRevoked = true
+    stopGlobalHeartbeat()
+    stopSessionWatcher()
+    emitter.emit("session:revoked")
+  }
+
+  const tryGetDoc = async (): Promise<boolean | null> => {
+    try {
+      const snap = await getDoc(sessionRef)
+      return snap.exists()
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code
+      if (code === "not-found") return false
+      if (code === "permission-denied") return null // indeterminate
+      return null
+    }
+  }
+
+  try {
+    // Wait for a potential in-flight token refresh to complete
+    await new Promise((r) => setTimeout(r, 2000))
+    if (sessionRevoked) return
+
+    const exists = await tryGetDoc()
+    if (sessionRevoked) return
+
+    if (exists === true) {
+      // False positive — session is valid, restart listeners
+      console.warn(
+        "[session] Verification confirmed session exists — false positive avoided"
+      )
+      startGlobalHeartbeat(uid)
+      startSessionWatcher(uid, true)
+      return
+    }
+
+    if (exists === false) {
+      confirmRevoked()
+      return
+    }
+
+    // Indeterminate (permission-denied) — retry once after another delay
+    await new Promise((r) => setTimeout(r, 3000))
+    if (sessionRevoked) return
+
+    const retryExists = await tryGetDoc()
+    if (retryExists === true) {
+      console.warn(
+        "[session] Verification retry confirmed session exists — false positive avoided"
+      )
+      startGlobalHeartbeat(uid)
+      startSessionWatcher(uid, true)
+    } else {
+      confirmRevoked()
+    }
+  } finally {
+    verificationInProgress = false
+  }
+}
 
 function startGlobalHeartbeat(uid: string) {
   stopGlobalHeartbeat()
@@ -54,9 +133,7 @@ function startGlobalHeartbeat(uid: string) {
           !registrationInProgress &&
           (error?.code === "not-found" || error?.code === "permission-denied")
         ) {
-          sessionRevoked = true
-          stopGlobalHeartbeat()
-          emitter.emit("session:revoked")
+          verifyRevocation(uid)
         }
       }
     )
@@ -104,9 +181,7 @@ function startSessionWatcher(uid: string, isResume = false) {
         initialSnapshotReceived = true
 
         if (!snapshot.exists() && isResume) {
-          sessionRevoked = true
-          stopGlobalHeartbeat()
-          emitter.emit("session:revoked")
+          verifyRevocation(uid)
         }
         return
       }
@@ -115,9 +190,7 @@ function startSessionWatcher(uid: string, isResume = false) {
       if (snapshot.metadata.fromCache) return
 
       if (!snapshot.exists() && !sessionRevoked) {
-        sessionRevoked = true
-        stopGlobalHeartbeat()
-        emitter.emit("session:revoked")
+        verifyRevocation(uid)
       }
     },
     (error) => {
@@ -126,9 +199,7 @@ function startSessionWatcher(uid: string, isResume = false) {
         !registrationInProgress &&
         (error?.code === "permission-denied" || error?.code === "not-found")
       ) {
-        sessionRevoked = true
-        stopGlobalHeartbeat()
-        emitter.emit("session:revoked")
+        verifyRevocation(uid)
       }
     }
   )
@@ -149,6 +220,7 @@ export function cleanupSessionState() {
   stopGlobalHeartbeat()
   stopSessionWatcher()
   sessionRevoked = false
+  verificationInProgress = false
 }
 
 /**

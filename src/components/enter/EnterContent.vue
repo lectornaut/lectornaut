@@ -22,7 +22,11 @@ import {
   signInWithMicrosoft,
   signUpWithEmailPassword,
 } from "@/modules/auth"
-import { getAuthErrorMessage } from "@/utils/firebase/firebase-errors"
+import {
+  AuthErrorCodes,
+  getAuthErrorMessage,
+} from "@/utils/firebase/firebase-errors"
+import type { FirebaseError } from "firebase/app"
 
 const { t } = useI18n()
 
@@ -49,7 +53,11 @@ const handleAuth = async (
       lastAuthProvider.value = providerName
     }
   } catch (error) {
-    authenticateError.value = getAuthErrorMessage(error)
+    // MFA_REQUIRED is handled by MfaResolverDialog (mounted globally in Actions.vue)
+    // via the emitter event — do not show a form error for it.
+    if ((error as FirebaseError)?.code !== AuthErrorCodes.MFA_REQUIRED) {
+      authenticateError.value = getAuthErrorMessage(error)
+    }
   } finally {
     loadingState.value = false
   }

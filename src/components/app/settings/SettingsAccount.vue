@@ -20,6 +20,7 @@ import {
 import { withToast } from "@/helpers/toast"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
+import { auth } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import { claimUsername, releaseUsername } from "@/queries/username"
 import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
@@ -31,19 +32,29 @@ import {
   deleteUserPhotoFile,
   getUserPhotoStorageRef,
 } from "@/utils/firebase/firebase-helpers"
+import { verifyPhoneNumberWithRecaptcha } from "@/utils/firebase/firebase-phone-recaptcha"
 import {
   USERNAME_MAX_LENGTH,
   usernamesMatch,
 } from "@/utils/firebase/firebase-username"
 import {
   deleteUser,
+  multiFactor,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator,
   sendEmailVerification,
+  TotpMultiFactorGenerator,
   unlink,
   updatePassword,
   verifyBeforeUpdateEmail,
+  type MultiFactorInfo,
+  type PhoneInfoOptions,
+  type TotpSecret,
   type UserInfo,
 } from "firebase/auth"
 import { collection, deleteDoc, doc, getDocs } from "firebase/firestore"
+import QRCode from "qrcode"
+import { REGEXP_ONLY_DIGITS } from "vue-input-otp"
 import { toast } from "vue-sonner"
 import {
   useCurrentUser,
@@ -299,11 +310,12 @@ const sendVerificationEmail = async () => {
 }
 
 // Helper function to handle auth errors that require recent login
-const handleAuthError = async (
-  error: { code?: string; message?: string },
-  defaultMessage: string
-) => {
-  if (error.code === "auth/requires-recent-login") {
+const handleAuthError = async (error: unknown, defaultMessage: string) => {
+  if (
+    error instanceof Error &&
+    "code" in error &&
+    (error as { code: string }).code === "auth/requires-recent-login"
+  ) {
     toast.error("Re-authentication required", {
       description:
         "For security reasons, you need to log in again before performing this action.",
@@ -317,8 +329,9 @@ const handleAuthError = async (
     })
     return true
   }
+  const description = error instanceof Error ? error.message : undefined
   toast.error(defaultMessage, {
-    description: error.message,
+    description,
   })
   return false
 }
@@ -441,10 +454,7 @@ const deleteAccount = async () => {
       description: "Your account has been successfully deleted.",
     })
   } catch (error) {
-    handleAuthError(
-      error as { code?: string; message?: string },
-      "Failed to delete account"
-    )
+    handleAuthError(error, "Failed to delete account")
   } finally {
     deletingAccount.value = false
     deleteAccountInput.value = ""
@@ -560,6 +570,238 @@ const passwordExists = computed(() => {
     (provider: UserInfo) => provider.providerId === "password"
   )
 })
+
+// ============================================================================
+// Multi-Factor Authentication
+// ============================================================================
+const mfaVersion = ref(0)
+const enrolledFactors = computed<MultiFactorInfo[]>(() =>
+  mfaVersion.value !== undefined && user.value
+    ? multiFactor(user.value).enrolledFactors
+    : []
+)
+
+const isMfaEnabled = computed(() => enrolledFactors.value.length > 0)
+
+const hasTotpFactor = computed(() =>
+  enrolledFactors.value.some(
+    (f) => f.factorId === TotpMultiFactorGenerator.FACTOR_ID
+  )
+)
+
+const hasSmsFactor = computed(() =>
+  enrolledFactors.value.some(
+    (f) => f.factorId === PhoneMultiFactorGenerator.FACTOR_ID
+  )
+)
+
+const disablingMfa = ref(false)
+
+const disableAllMfa = async () => {
+  disablingMfa.value = true
+  try {
+    const mfa = multiFactor(user.value!)
+    for (const factor of [...mfa.enrolledFactors]) {
+      await mfa.unenroll(factor)
+    }
+    await user.value!.reload()
+    mfaVersion.value++
+    toast.success(t("settings.account.mfa.disabled"))
+  } catch (error) {
+    handleAuthError(error, t("settings.account.mfa.failedDisable"))
+  } finally {
+    disablingMfa.value = false
+  }
+}
+
+const handleMfaToggle = (value: boolean) => {
+  if (value) {
+    // Can't enable without enrolling a factor — prompt user
+    toast.info(t("settings.account.mfa.enrollFirst"))
+  }
+  // Turning off is handled by the AlertDialog on the switch
+}
+
+// TOTP enrollment
+const totpDialogOpen = ref(false)
+const totpStep = ref<"qr" | "verify">("qr")
+const totpSecret = shallowRef<TotpSecret | null>(null)
+const totpQrDataUrl = ref("")
+const totpSecretKey = ref("")
+const totpCode = ref("")
+const totpDisplayName = ref("Authenticator app")
+const totpLoading = ref(false)
+
+const startTotpEnrollment = async () => {
+  totpStep.value = "qr"
+  totpCode.value = ""
+  totpSecretKey.value = ""
+  totpQrDataUrl.value = ""
+  totpDisplayName.value = "Authenticator app"
+  totpDialogOpen.value = true
+  totpLoading.value = true
+
+  try {
+    const session = await multiFactor(user.value!).getSession()
+    const secret = await TotpMultiFactorGenerator.generateSecret(session)
+    totpSecret.value = secret
+    totpSecretKey.value = secret.secretKey
+    const qrUrl = secret.generateQrCodeUrl(
+      user.value!.email ?? "",
+      "Lectornaut"
+    )
+    totpQrDataUrl.value = await QRCode.toDataURL(qrUrl, {
+      width: 200,
+      margin: 1,
+    })
+  } catch (error) {
+    handleAuthError(error, "Failed to generate authenticator secret")
+    totpDialogOpen.value = false
+  } finally {
+    totpLoading.value = false
+  }
+}
+
+const verifyTotpEnrollment = async () => {
+  if (totpLoading.value) return
+  totpLoading.value = true
+  try {
+    const assertion = TotpMultiFactorGenerator.assertionForEnrollment(
+      totpSecret.value!,
+      totpCode.value
+    )
+    await multiFactor(user.value!).enroll(assertion, totpDisplayName.value)
+    await user.value!.reload()
+    mfaVersion.value++
+    toast.success(t("settings.account.mfa.totpEnrolled"))
+    totpDialogOpen.value = false
+  } catch (error) {
+    handleAuthError(error, t("settings.account.mfa.failedTotpEnroll"))
+  } finally {
+    totpLoading.value = false
+  }
+}
+
+// SMS enrollment
+const smsDialogOpen = ref(false)
+const smsStep = ref<"phone" | "verify">("phone")
+const smsPhoneNumber = ref("")
+const smsVerificationId = ref("")
+const smsCode = ref("")
+const smsDisplayName = ref("Phone")
+const smsLoading = ref(false)
+const smsRecaptchaContainerId = "settings-account-sms-recaptcha"
+const startSmsEnrollment = () => {
+  smsStep.value = "phone"
+  smsPhoneNumber.value = ""
+  smsCode.value = ""
+  smsDisplayName.value = "Phone"
+  smsDialogOpen.value = true
+}
+
+const sendSmsVerification = async () => {
+  const phone = smsPhoneNumber.value.trim()
+  if (!phone.startsWith("+") || phone.length < 8) {
+    toast.error(t("settings.account.mfa.invalidPhoneNumber"))
+    return
+  }
+  smsLoading.value = true
+  try {
+    const session = await multiFactor(user.value!).getSession()
+    const phoneInfoOptions: PhoneInfoOptions = {
+      phoneNumber: phone,
+      session,
+    }
+
+    smsVerificationId.value = await verifyPhoneNumberWithRecaptcha(
+      auth,
+      phoneInfoOptions,
+      smsRecaptchaContainerId
+    )
+    smsStep.value = "verify"
+  } catch (error) {
+    handleAuthError(error, t("settings.account.mfa.failedSmsSend"))
+  } finally {
+    smsLoading.value = false
+  }
+}
+
+const verifySmsEnrollment = async () => {
+  if (smsLoading.value) return
+  smsLoading.value = true
+  try {
+    const cred = PhoneAuthProvider.credential(
+      smsVerificationId.value,
+      smsCode.value
+    )
+    const assertion = PhoneMultiFactorGenerator.assertion(cred)
+    await multiFactor(user.value!).enroll(assertion, smsDisplayName.value)
+    await user.value!.reload()
+    mfaVersion.value++
+    toast.success(t("settings.account.mfa.smsEnrolled"))
+    smsDialogOpen.value = false
+  } catch (error) {
+    handleAuthError(error, t("settings.account.mfa.failedSmsEnroll"))
+  } finally {
+    smsLoading.value = false
+  }
+}
+
+// Unenroll
+const unenrollingFactorUid = ref<string | null>(null)
+
+const getPhoneFactorNumber = (factor: MultiFactorInfo) =>
+  (factor as { phoneNumber?: string }).phoneNumber
+
+const getFactorTypeLabel = (factor: MultiFactorInfo) => {
+  if (factor.factorId === TotpMultiFactorGenerator.FACTOR_ID) {
+    return t("settings.account.mfa.authenticatorApp")
+  }
+  if (factor.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
+    return t("settings.account.mfa.phone")
+  }
+  return factor.factorId
+}
+
+const getFactorTitle = (factor: MultiFactorInfo) => {
+  if (factor.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
+    return getFactorTypeLabel(factor)
+  }
+  return factor.displayName || getFactorTypeLabel(factor)
+}
+
+const getFactorDescription = (factor: MultiFactorInfo) => {
+  if (factor.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
+    const phoneNumber = getPhoneFactorNumber(factor)
+    const displayName = factor.displayName?.trim()
+
+    if (phoneNumber && displayName) {
+      return `${phoneNumber} (${displayName})`
+    }
+
+    return phoneNumber || displayName || getFactorTypeLabel(factor)
+  }
+
+  return getFactorTypeLabel(factor)
+}
+
+const unenrollFactor = async (factor: MultiFactorInfo) => {
+  unenrollingFactorUid.value = factor.uid
+  try {
+    await multiFactor(user.value!).unenroll(factor)
+    await user.value!.reload()
+    mfaVersion.value++
+    toast.success(
+      t("settings.account.mfa.factorRemoved", {
+        name: getFactorTitle(factor),
+      })
+    )
+  } catch (error) {
+    handleAuthError(error, t("settings.account.mfa.failedUnenroll"))
+  } finally {
+    unenrollingFactorUid.value = null
+  }
+}
 
 // ============================================================================
 // Device Sessions
@@ -1062,6 +1304,356 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
             {{ t("settings.account.identityProviders.noAccounts") }}
           </div>
         </FieldSet>
+        <FieldSeparator />
+        <!-- Multi-Factor Authentication -->
+        <FieldSet>
+          <!-- MFA enable/disable switch -->
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.account.mfa.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.account.mfa.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <ButtonGroup>
+              <ButtonGroup v-if="disablingMfa">
+                <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                  <Spinner />
+                </InputGroupButton>
+              </ButtonGroup>
+              <ButtonGroup>
+                <!-- When enabled, wrap switch in AlertDialog for disable confirmation -->
+                <AlertDialog v-if="isMfaEnabled">
+                  <AlertDialogTrigger as-child>
+                    <span class="inline-block">
+                      <Switch :model-value="true" :disabled="disablingMfa" />
+                    </span>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {{ t("settings.account.mfa.disableConfirmTitle") }}
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {{
+                          t("settings.account.mfa.disableConfirmDescription")
+                        }}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>
+                        {{ t("common.cancel") }}
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        :disabled="disablingMfa"
+                        @click="disableAllMfa"
+                      >
+                        <Spinner v-if="disablingMfa" />
+                        {{ t("settings.account.mfa.disable") }}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <!-- When disabled, switch prompts to enroll first -->
+                <TooltipProvider v-else>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <span class="inline-block">
+                        <Switch
+                          :model-value="false"
+                          @update:model-value="handleMfaToggle"
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("settings.account.mfa.enrollFirst") }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ButtonGroup>
+            </ButtonGroup>
+          </Field>
+
+          <!-- Enrolled factors -->
+          <Field
+            v-for="factor in enrolledFactors"
+            :key="factor.uid"
+            orientation="horizontal"
+          >
+            <FieldContent>
+              <FieldLabel>
+                {{ getFactorTitle(factor) }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ getFactorDescription(factor) }}
+              </FieldDescription>
+            </FieldContent>
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button
+                  variant="secondary"
+                  :disabled="unenrollingFactorUid === factor.uid"
+                >
+                  <Spinner v-if="unenrollingFactorUid === factor.uid" />
+                  {{ t("common.remove") }}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {{ t("settings.account.mfa.removeConfirmTitle") }}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {{
+                      t("settings.account.mfa.removeConfirmDescription", {
+                        name: getFactorTitle(factor),
+                      })
+                    }}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    {{ t("common.cancel") }}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    :disabled="unenrollingFactorUid === factor.uid"
+                    @click="unenrollFactor(factor)"
+                  >
+                    <Spinner v-if="unenrollingFactorUid === factor.uid" />
+                    {{ t("common.remove") }}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </Field>
+
+          <!-- Add authenticator app (only if not already enrolled) -->
+          <Field v-if="!hasTotpFactor" orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.account.mfa.addAuthenticator") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.account.mfa.addAuthenticatorDescription") }}
+              </FieldDescription>
+            </FieldContent>
+            <Button variant="outline" @click="startTotpEnrollment">
+              {{ t("common.add") }}
+            </Button>
+          </Field>
+
+          <!-- Add phone number (only if not already enrolled) -->
+          <Field v-if="!hasSmsFactor" orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.account.mfa.addPhone") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.account.mfa.addPhoneDescription") }}
+              </FieldDescription>
+            </FieldContent>
+            <Button variant="outline" @click="startSmsEnrollment">
+              {{ t("common.add") }}
+            </Button>
+          </Field>
+        </FieldSet>
+
+        <!-- TOTP Enrollment Dialog -->
+        <Dialog v-model:open="totpDialogOpen">
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {{ t("settings.account.mfa.totpDialogTitle") }}
+              </DialogTitle>
+              <DialogDescription>
+                {{ t("settings.account.mfa.totpDialogDescription") }}
+              </DialogDescription>
+            </DialogHeader>
+
+            <!-- QR code step -->
+            <div
+              v-if="totpStep === 'qr'"
+              class="flex flex-col items-center gap-4"
+            >
+              <div
+                v-if="totpLoading"
+                class="flex size-50 items-center justify-center"
+              >
+                <Spinner />
+              </div>
+              <img v-else :src="totpQrDataUrl" alt="QR Code" class="rounded" />
+              <p class="text-muted-foreground text-center text-sm">
+                {{ t("settings.account.mfa.scanQrDescription") }}
+              </p>
+              <!-- Manual entry fallback -->
+              <div
+                v-if="totpSecretKey && !totpLoading"
+                class="w-full text-center"
+              >
+                <p class="text-muted-foreground mb-1 text-xs">
+                  {{ t("settings.account.mfa.manualEntry") }}
+                </p>
+                <code
+                  class="bg-muted rounded px-2 py-1 text-xs break-all select-all"
+                >
+                  {{ totpSecretKey }}
+                </code>
+              </div>
+            </div>
+
+            <!-- Verify step -->
+            <div v-if="totpStep === 'verify'" class="flex flex-col gap-4">
+              <Field class="grid gap-2">
+                <FieldLabel class="text-secondary-foreground text-xs">
+                  {{ t("settings.account.mfa.enterTotpCode") }}
+                </FieldLabel>
+                <InputOTP
+                  v-model="totpCode"
+                  :maxlength="6"
+                  :pattern="REGEXP_ONLY_DIGITS"
+                  @complete="verifyTotpEnrollment"
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot :index="0" />
+                    <InputOTPSlot :index="1" />
+                    <InputOTPSlot :index="2" />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot :index="3" />
+                    <InputOTPSlot :index="4" />
+                    <InputOTPSlot :index="5" />
+                  </InputOTPGroup>
+                </InputOTP>
+              </Field>
+              <Field class="grid gap-2">
+                <FieldLabel class="text-secondary-foreground text-xs">
+                  {{ t("settings.account.mfa.displayNamePlaceholder") }}
+                </FieldLabel>
+                <Input
+                  v-model="totpDisplayName"
+                  :placeholder="
+                    t('settings.account.mfa.displayNamePlaceholder')
+                  "
+                />
+              </Field>
+            </div>
+
+            <DialogFooter>
+              <Button
+                v-if="totpStep === 'qr'"
+                :disabled="totpLoading"
+                @click="totpStep = 'verify'"
+              >
+                {{ t("common.next") }}
+              </Button>
+              <Button
+                v-if="totpStep === 'verify'"
+                :disabled="totpCode.length < 6 || totpLoading"
+                @click="verifyTotpEnrollment"
+              >
+                <Spinner v-if="totpLoading" />
+                {{ t("settings.account.mfa.verify") }}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <!-- SMS Enrollment Dialog -->
+        <Dialog v-model:open="smsDialogOpen">
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {{ t("settings.account.mfa.smsDialogTitle") }}
+              </DialogTitle>
+              <DialogDescription>
+                {{ t("settings.account.mfa.smsDialogDescription") }}
+              </DialogDescription>
+            </DialogHeader>
+
+            <!-- Phone number step -->
+            <div v-if="smsStep === 'phone'" class="flex flex-col gap-4">
+              <Field class="grid gap-2">
+                <FieldLabel class="text-secondary-foreground text-xs">
+                  {{ t("settings.account.mfa.phone") }}
+                </FieldLabel>
+                <Input
+                  v-model="smsPhoneNumber"
+                  :placeholder="t('settings.account.mfa.phonePlaceholder')"
+                  type="tel"
+                  @keydown.enter="
+                    smsPhoneNumber && !smsLoading && sendSmsVerification()
+                  "
+                />
+              </Field>
+              <div :id="smsRecaptchaContainerId" class="hidden" />
+            </div>
+
+            <!-- Verify step -->
+            <div v-if="smsStep === 'verify'" class="flex flex-col gap-4">
+              <Field class="grid gap-2">
+                <FieldLabel class="text-secondary-foreground text-xs">
+                  {{
+                    t("settings.account.mfa.enterSmsCode", {
+                      phone: smsPhoneNumber,
+                    })
+                  }}
+                </FieldLabel>
+                <InputOTP
+                  v-model="smsCode"
+                  :maxlength="6"
+                  :pattern="REGEXP_ONLY_DIGITS"
+                  @complete="verifySmsEnrollment"
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot :index="0" />
+                    <InputOTPSlot :index="1" />
+                    <InputOTPSlot :index="2" />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot :index="3" />
+                    <InputOTPSlot :index="4" />
+                    <InputOTPSlot :index="5" />
+                  </InputOTPGroup>
+                </InputOTP>
+              </Field>
+              <Field class="grid gap-2">
+                <FieldLabel class="text-secondary-foreground text-xs">
+                  {{ t("settings.account.mfa.displayNamePlaceholder") }}
+                </FieldLabel>
+                <Input
+                  v-model="smsDisplayName"
+                  :placeholder="
+                    t('settings.account.mfa.displayNamePlaceholder')
+                  "
+                />
+              </Field>
+            </div>
+
+            <DialogFooter>
+              <Button
+                v-if="smsStep === 'phone'"
+                :disabled="!smsPhoneNumber || smsLoading"
+                @click="sendSmsVerification"
+              >
+                <Spinner v-if="smsLoading" />
+                {{ t("settings.account.mfa.sendCode") }}
+              </Button>
+              <Button
+                v-if="smsStep === 'verify'"
+                :disabled="smsCode.length < 6 || smsLoading"
+                @click="verifySmsEnrollment"
+              >
+                <Spinner v-if="smsLoading" />
+                {{ t("settings.account.mfa.verify") }}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <FieldSeparator />
         <FieldSet>
           <Field orientation="horizontal">

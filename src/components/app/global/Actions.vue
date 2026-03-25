@@ -101,5 +101,6 @@ onMounted(() => {
   />
   <ExitTrigger />
   <SessionRevokedDialog />
+  <MfaResolverDialog />
   <FileDropOverlay v-if="!isFileCaptureWindow" />
 </template>

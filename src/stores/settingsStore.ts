@@ -35,8 +35,8 @@ import { disable, enable } from "@tauri-apps/plugin-autostart"
 import {
   isRegistered as isShortcutRegistered,
   register as registerGlobalShortcut,
-  unregister as unregisterGlobalShortcut,
   unregisterAll as unregisterAllGlobalShortcuts,
+  unregister as unregisterGlobalShortcut,
 } from "@tauri-apps/plugin-global-shortcut"
 import {
   isPermissionGranted,

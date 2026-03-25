@@ -19,6 +19,10 @@ export const AuthErrorCodes = {
   POPUP_CLOSED: "auth/popup-closed-by-user",
   REQUIRES_RECENT_LOGIN: "auth/requires-recent-login",
   USER_DISABLED: "auth/user-disabled",
+  MFA_REQUIRED: "auth/multi-factor-auth-required",
+  INVALID_VERIFICATION_CODE: "auth/invalid-verification-code",
+  MISSING_MFA_INFO: "auth/missing-multi-factor-info",
+  MFA_INFO_NOT_FOUND: "auth/multi-factor-info-not-found",
 } as const
 
 export type AuthErrorCode = (typeof AuthErrorCodes)[keyof typeof AuthErrorCodes]
@@ -127,6 +131,14 @@ export const getAuthErrorMessage = (error: unknown): string => {
         return "Please log in again to continue."
       case AuthErrorCodes.USER_DISABLED:
         return "This account has been disabled."
+      case AuthErrorCodes.INVALID_VERIFICATION_CODE:
+        return "Invalid verification code. Please try again."
+      case AuthErrorCodes.MISSING_MFA_INFO:
+        return "Missing multi-factor authentication information."
+      case AuthErrorCodes.MFA_INFO_NOT_FOUND:
+        return "Multi-factor authentication method not found."
+      // MFA_REQUIRED is intentionally omitted — the MfaResolverDialog handles it
+      // before any error message is shown to the user.
       default:
         return error.message
     }

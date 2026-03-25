@@ -7,6 +7,7 @@ import {
 import { isTauri } from "@/composables/usePlatform"
 import { generateRandomString } from "@/helpers/utilities"
 import { auth } from "@/modules/firebase"
+import { emitter } from "@/modules/mitt"
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
 import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
@@ -16,6 +17,7 @@ import type { FirebaseError } from "firebase/app"
 import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
+  getMultiFactorResolver,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   OAuthProvider,
@@ -24,6 +26,7 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signInWithEmailLink,
+  type MultiFactorError,
   type UserCredential,
 } from "firebase/auth"
 import { toast } from "vue-sonner"
@@ -35,15 +38,32 @@ interface OAuthResponse {
 }
 
 /**
+ * Check if an error is a Firebase MFA challenge
+ */
+const isMfaError = (error: unknown): error is MultiFactorError => {
+  return (
+    error instanceof Error &&
+    (error as FirebaseError).code === "auth/multi-factor-auth-required"
+  )
+}
+
+/**
  * Unified error handler for authentication errors
  * Provides consistent error messaging across Tauri and Web
+ * Intercepts MFA challenges and emits resolver dialog event
  */
 const handleAuthError = (error: unknown, context: string): never => {
   console.error(`Error in ${context}:`, error)
 
+  // Intercept MFA challenge — open the resolver dialog instead of showing an error
+  if (isMfaError(error)) {
+    const resolver = getMultiFactorResolver(auth, error)
+    emitter.emit("Dialog.MfaResolver.Open", resolver)
+    throw error
+  }
+
   let message: string
   if (error instanceof Error) {
-    // Handle Firebase errors with code property
     const firebaseError = error as FirebaseError
     message = firebaseError.message || error.toString()
   } else if (typeof error === "string") {
@@ -133,8 +153,8 @@ export const sendResetEmailPassword = async (email: string) => {
     .catch((error) => handleAuthError(error, "sendResetEmailPassword"))
 }
 
-const finishAuthentication = async (result: UserCredential) => {
-  toast.success("Logged in")
+export const finishAuthentication = async (result: UserCredential) => {
+  toast.success("Logged in", { id: "auth-logged-in" })
 
   // Register device session (fire-and-forget)
   void registerSession(result.user.uid).catch((error) => {
@@ -252,8 +272,11 @@ const openAuthPopup = (url: URL, providerName: string) => {
             finishAuthentication(result)
             resolve()
           } catch (error) {
-            console.error(`Error in signInWith${providerName}:`, error)
-            toast.error((error as FirebaseError).message)
+            try {
+              handleAuthError(error, `signInWith${providerName}`)
+            } catch {
+              // handleAuthError always throws — fall through to reject
+            }
             reject(error)
           }
         }
