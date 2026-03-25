@@ -18,14 +18,17 @@ import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
   getMultiFactorResolver,
+  getRedirectResult,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   OAuthProvider,
+  SAMLAuthProvider,
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
   signInWithEmailLink,
+  signInWithRedirect,
   type MultiFactorError,
   type UserCredential,
 } from "firebase/auth"
@@ -467,6 +470,55 @@ export const signInWithApple = async () => {
 
     return openAuthPopup(url, "apple")
   }
+}
+
+/**
+ * Initiates an SSO redirect-based sign-in flow for SAML or OIDC providers.
+ * @param providerId - Firebase provider ID (e.g., "saml.abc123" or "oidc.abc123")
+ * @param loginHint - Optional email to pre-fill at the IdP (OIDC only)
+ */
+export const signInWithSsoRedirect = async (
+  providerId: string,
+  loginHint?: string
+) => {
+  const provider = providerId.startsWith("saml.")
+    ? new SAMLAuthProvider(providerId)
+    : new OAuthProvider(providerId)
+
+  if (loginHint && provider instanceof OAuthProvider) {
+    provider.setCustomParameters({ login_hint: loginHint })
+  }
+
+  await signInWithRedirect(auth, provider)
+}
+
+/**
+ * Handles the redirect result after returning from an SSO IdP.
+ * Should be called once on app mount (enter page).
+ * Returns true if a redirect sign-in was completed.
+ */
+export const handleSsoRedirectResult = async (): Promise<boolean> => {
+  try {
+    const result = await getRedirectResult(auth)
+    if (result) {
+      lastAuthProvider.value = "sso"
+      await finishAuthentication(result)
+      return true
+    }
+  } catch (error) {
+    if (isMfaError(error)) {
+      const resolver = getMultiFactorResolver(auth, error)
+      emitter.emit("Dialog.MfaResolver.Open", resolver)
+    } else {
+      console.error("SSO redirect result error:", error)
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "SSO sign-in failed. Please try again."
+      )
+    }
+  }
+  return false
 }
 
 /**

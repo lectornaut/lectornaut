@@ -83,6 +83,9 @@ export const Capabilities = {
   MANAGE_BILLING: "manage_billing",
   READ_AUDIT_LOGS: "read_audit_logs",
 
+  // Security Scope
+  MANAGE_SECURITY: "manage_security",
+
   // Workspace Scope
   CREATE_WORKSPACE: "create_workspace",
   EDIT_WORKSPACE: "edit_workspace",
@@ -109,6 +112,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.READ_TEAM,
     Capabilities.READ_AUDIT_LOGS,
     Capabilities.MANAGE_BILLING,
+    Capabilities.MANAGE_SECURITY,
     Capabilities.CREATE_WORKSPACE,
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,
@@ -123,6 +127,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.READ_TEAM,
     Capabilities.READ_AUDIT_LOGS,
     Capabilities.MANAGE_BILLING,
+    Capabilities.MANAGE_SECURITY,
     Capabilities.CREATE_WORKSPACE,
     Capabilities.EDIT_WORKSPACE,
     Capabilities.DELETE_WORKSPACE,

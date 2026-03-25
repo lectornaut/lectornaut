@@ -342,7 +342,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
               <FieldDescription>
                 {{ t("settings.plans.subscriptionPlan.description") }}
               </FieldDescription>
-              <FieldDescription class="text-xs">
+              <FieldDescription>
                 {{ currentPlanSummary }}
               </FieldDescription>
             </FieldContent>
@@ -396,7 +396,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                       {{ highlight }}
                     </li>
                   </ul>
-                  <FieldDescription class="text-xs">
+                  <FieldDescription>
                     {{
                       t("settings.plans.perSeatMonthly", {
                         price: getPlanPricePerMonthLabel(plan.id, billingCycle),

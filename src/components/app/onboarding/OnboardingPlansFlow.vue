@@ -212,7 +212,7 @@ const getTotalPriceLabel = (
                 <FieldDescription>
                   {{ t(plan.descriptionKey) }}
                 </FieldDescription>
-                <FieldDescription class="text-xs">
+                <FieldDescription>
                   {{
                     t("pages.welcome.plans.pricingSummaryPerSeat", {
                       monthly: getPriceLabel(plan.id, "month"),
@@ -220,7 +220,7 @@ const getTotalPriceLabel = (
                     })
                   }}
                 </FieldDescription>
-                <FieldDescription class="text-xs">
+                <FieldDescription>
                   {{
                     t("pages.welcome.plans.pricingSummaryTotal", {
                       monthly: getTotalPriceLabel(plan.id, "month"),

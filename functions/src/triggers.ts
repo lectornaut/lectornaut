@@ -4,9 +4,12 @@ import {
   onDocumentDeleted,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore"
-import { beforeUserCreated } from "firebase-functions/v2/identity"
+import {
+  beforeUserCreated,
+  beforeUserSignedIn,
+} from "firebase-functions/v2/identity"
 import { sendEmailInternal } from "./email.js"
-import { auth, db } from "./firebase.js"
+import { admin, auth, db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
 import { sendNotification, sendNotificationToMany } from "./notifier.js"
 import { REGION, TRIGGER_OPTS } from "./runtimeConfig.js"
@@ -417,5 +420,99 @@ export const onMembershipDeleted = onDocumentDeleted(
         },
       })
     })
+  }
+)
+
+// ============================================================================
+// Firebase Auth Triggers — SSO Enforcement & Auto-Provisioning
+// ============================================================================
+
+/**
+ * Trigger: Enforce SSO policy and auto-provision memberships on sign-in.
+ *
+ * When a user signs in:
+ * 1. Extract their email domain
+ * 2. Check if a team enforces SSO for that domain
+ * 3. If enforced and the sign-in provider doesn't match, block the sign-in
+ * 4. If auto-provisioning is enabled and user has no membership, create one
+ */
+export const onUserSignedIn = beforeUserSignedIn(
+  {
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
+  },
+  async (event) => {
+    const user = event.data
+    if (!user?.email) return
+
+    const domain = user.email.split("@")[1]?.toLowerCase()
+    if (!domain) return
+
+    const domainSnap = await db.doc(`sso-domains/${domain}`).get()
+    if (!domainSnap.exists) return
+
+    const domainData = domainSnap.data()
+    if (!domainData?.teamId || !domainData?.providerId) return
+
+    const teamId = domainData.teamId as string
+    const expectedProviderId = domainData.providerId as string
+    const enforced = Boolean(domainData.enforced)
+
+    // Determine the sign-in provider from the event
+    const signInProvider =
+      event.credential?.providerId ??
+      event.additionalUserInfo?.providerId ??
+      undefined
+
+    // Enforce SSO: block non-SSO sign-ins if enforced
+    if (enforced && signInProvider !== expectedProviderId) {
+      throw new Error(
+        "Your organization requires SSO login. Please sign in using your organization's SSO provider."
+      )
+    }
+
+    // Auto-provisioning: create membership for first-time SSO users
+    if (signInProvider === expectedProviderId) {
+      const securitySnap = await db
+        .doc(`teams/${teamId}/settings/security`)
+        .get()
+      const ssoConfig = securitySnap.data()?.sso
+
+      if (ssoConfig?.autoProvision && user.uid) {
+        const membershipRef = db.doc(`teams/${teamId}/memberships/${user.uid}`)
+        const membershipSnap = await membershipRef.get()
+
+        if (!membershipSnap.exists) {
+          const defaultRole =
+            ssoConfig.defaultRole === "guest" ? "guest" : "member"
+          const teamSnap = await db.doc(`teams/${teamId}`).get()
+          const teamData = teamSnap.data()
+
+          await membershipRef.set({
+            userId: user.uid,
+            teamId,
+            role: defaultRole,
+            user: {
+              displayName: user.displayName || null,
+              email: user.email || null,
+              photoURL: user.photoURL || null,
+            },
+            team: {
+              name: teamData?.name || null,
+              photoURL: teamData?.photoURL || null,
+            },
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          })
+
+          logger.info(
+            `Auto-provisioned membership for ${user.email} in team ${teamId} with role ${defaultRole}`
+          )
+        }
+      }
+    }
   }
 )

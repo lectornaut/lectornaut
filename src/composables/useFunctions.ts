@@ -695,6 +695,128 @@ export const getPublicTeamsForUser = createTypedCallable<
 >("getPublicTeamsForUser")
 
 // =============================================================================
+// SSO Types
+// =============================================================================
+
+export interface ConfigureSsoRequest {
+  teamId: string
+  protocol: "saml" | "oidc"
+  domains: string[]
+  enforced: boolean
+  autoProvision: boolean
+  defaultRole: "member" | "guest"
+  saml?: {
+    idpEntityId: string
+    ssoUrl: string
+    certificate: string
+  }
+  oidc?: {
+    issuer: string
+    clientId: string
+    clientSecret: string
+  }
+}
+
+export interface ConfigureSsoResponse {
+  success: boolean
+  providerId: string
+}
+
+export interface DeleteSsoRequest {
+  teamId: string
+}
+
+export interface DeleteSsoResponse {
+  success: boolean
+}
+
+export interface TestSsoConnectionRequest {
+  teamId: string
+  protocol: "saml" | "oidc"
+  saml?: {
+    ssoUrl: string
+    certificate: string
+  }
+  oidc?: {
+    issuer: string
+  }
+}
+
+export interface TestSsoConnectionResponse {
+  valid: boolean
+  error?: string
+}
+
+export interface ResolveSsoProviderRequest {
+  email: string
+}
+
+export interface ResolveSsoProviderResponse {
+  sso: boolean
+  providerId?: string
+  enforced?: boolean
+}
+
+export interface UpdateTeamLoginMethodsRequest {
+  teamId: string
+  loginMethods: {
+    emailPassword: boolean
+    magicLink: boolean
+    google: boolean
+    microsoft: boolean
+    apple: boolean
+    sso: boolean
+  }
+}
+
+export interface UpdateTeamLoginMethodsResponse {
+  success: boolean
+}
+
+export interface UpdateTeamApprovedDomainsRequest {
+  teamId: string
+  approvedDomains: string[]
+}
+
+export interface UpdateTeamApprovedDomainsResponse {
+  success: boolean
+}
+
+// =============================================================================
+// SSO Functions
+// =============================================================================
+
+export const configureSso = createTypedCallable<
+  ConfigureSsoRequest,
+  ConfigureSsoResponse
+>("configureSso")
+
+export const deleteSso = createTypedCallable<
+  DeleteSsoRequest,
+  DeleteSsoResponse
+>("deleteSso")
+
+export const testSsoConnection = createTypedCallable<
+  TestSsoConnectionRequest,
+  TestSsoConnectionResponse
+>("testSsoConnection")
+
+export const resolveSsoProvider = createTypedCallable<
+  ResolveSsoProviderRequest,
+  ResolveSsoProviderResponse
+>("resolveSsoProvider")
+
+export const updateTeamLoginMethods = createTypedCallable<
+  UpdateTeamLoginMethodsRequest,
+  UpdateTeamLoginMethodsResponse
+>("updateTeamLoginMethods")
+
+export const updateTeamApprovedDomains = createTypedCallable<
+  UpdateTeamApprovedDomainsRequest,
+  UpdateTeamApprovedDomainsResponse
+>("updateTeamApprovedDomains")
+
+// =============================================================================
 // Session Types
 // =============================================================================
 
@@ -830,6 +952,14 @@ export function useFunctions() {
     // Public profile operations
     getPublicTeamMembers,
     getPublicTeamsForUser,
+
+    // SSO operations
+    configureSso,
+    deleteSso,
+    testSsoConnection,
+    resolveSsoProvider,
+    updateTeamLoginMethods,
+    updateTeamApprovedDomains,
 
     // Session operations
     registerSessionCallable,

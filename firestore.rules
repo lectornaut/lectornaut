@@ -274,9 +274,19 @@ service cloud.firestore {
                     && isOwnedUserUsernameClaim(resource.data);
     }
 
+    match /sso-domains/{domain} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     match /teams/{teamId} {
       allow read: if isTeamMember(teamId) || resource.data.isPublic == true;
       allow write: if false;
+
+      match /settings/security {
+        allow read: if isTeamAdmin(teamId);
+        allow write: if false;
+      }
 
       match /memberships/{userId} {
         allow read: if isTeamMember(teamId) || isOwnMembershipDoc();

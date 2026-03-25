@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 import { IconChevronLeft } from "@/data/icons"
-import { authenticateEmail, authenticateOAuth } from "@/modules/auth"
+import {
+  authenticateEmail,
+  authenticateOAuth,
+  handleSsoRedirectResult,
+} from "@/modules/auth"
 
 definePage({
   meta: {
@@ -21,10 +25,11 @@ onMounted(async () => {
   authenticateInProgress.value = true
   authenticateError.value = false
 
-  await Promise.all([authenticateEmail(), authenticateOAuth()])
-    .then(() => {
-      authenticateInProgress.value = true
-    })
+  await Promise.all([
+    handleSsoRedirectResult(),
+    authenticateEmail(),
+    authenticateOAuth(),
+  ])
     .catch((error) => {
       authenticateError.value = error
     })

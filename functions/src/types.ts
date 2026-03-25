@@ -234,7 +234,12 @@ export interface NotificationPayload {
 // Audit Log Types
 // ============================================================================
 
-export type LogResourceType = "team" | "workspace" | "content" | "membership"
+export type LogResourceType =
+  | "team"
+  | "workspace"
+  | "content"
+  | "membership"
+  | "security"
 
 export interface Actor {
   userId: string

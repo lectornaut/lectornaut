@@ -165,6 +165,10 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
               <SettingsPlans />
             </TabsContent>
 
+            <TabsContent :class="tabContentClass" value="security">
+              <SettingsSecurity />
+            </TabsContent>
+
             <TabsContent :class="tabContentClass" value="logs">
               <SettingsLogs />
             </TabsContent>
