@@ -246,7 +246,7 @@ const handleSubmit = async () => {
         </div>
 
         <!-- Workspace Name -->
-        <Field>
+        <Field orientation="horizontal">
           <FieldLabel class="text-secondary-foreground text-xs" for="name">
             Workspace Name
           </FieldLabel>
@@ -283,7 +283,7 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Workspace Description -->
-        <Field>
+        <Field orientation="horizontal">
           <FieldLabel
             class="text-secondary-foreground text-xs"
             for="description"

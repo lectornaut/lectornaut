@@ -243,7 +243,7 @@
       "account": "Update your profile, sign-in methods, and account details.",
       "notifications": "Choose which updates you receive and how often.",
       "appearance": "Adjust the app's theme, colors, and typography.",
-      "security": "Review password, sign-in, and account security settings.",
+      "security": "Domain allowlist, password, and multi-factor authentication settings.",
       "agents": "Review the agents available in this workspace.",
       "members": "Review members, roles, and access.",
       "overview": "Review team details, visibility, and access.",

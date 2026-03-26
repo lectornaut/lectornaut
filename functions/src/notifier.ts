@@ -263,5 +263,24 @@ export async function sendNotificationToMany(
     )
   }
 
-  await Promise.all(capped.map((payload) => sendNotification(payload)))
+  const results = await Promise.allSettled(
+    capped.map((payload) => sendNotification(payload))
+  )
+
+  const failures = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected"
+  )
+
+  if (failures.length > 0) {
+    logger.error("Notification fan-out completed with failures", {
+      requested: payloads.length,
+      attempted: capped.length,
+      failed: failures.length,
+      errors: failures.map((failure) =>
+        failure.reason instanceof Error
+          ? failure.reason.message
+          : String(failure.reason)
+      ),
+    })
+  }
 }

@@ -44,6 +44,7 @@ export const useUsernameAvailability = (
   }
 
   const reset = () => {
+    cancelDebouncedEvaluate()
     invalidatePendingChecks()
     clearState()
   }
@@ -127,7 +128,16 @@ export const useUsernameAvailability = (
     void evaluate(rawUsername)
   }, options.debounceMs ?? 500)
 
+  const cancelDebouncedEvaluate = () => {
+    ;(
+      debouncedEvaluate as typeof debouncedEvaluate & {
+        cancel?: () => void
+      }
+    ).cancel?.()
+  }
+
   const handleInput = (rawUsername: string) => {
+    cancelDebouncedEvaluate()
     invalidatePendingChecks()
     if (!rawUsername.trim()) {
       clearState()
@@ -145,6 +155,11 @@ export const useUsernameAvailability = (
     if (!usernameInput) return false
     return validateUsername(usernameInput).valid
   }
+
+  onUnmounted(() => {
+    cancelDebouncedEvaluate()
+    invalidatePendingChecks()
+  })
 
   return {
     isChecking,

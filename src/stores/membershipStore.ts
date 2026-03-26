@@ -40,7 +40,14 @@ import {
   withCloudSyncOperation,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { getDoc, getDocs, query, Timestamp, where } from "firebase/firestore"
+import {
+  getCountFromServer,
+  getDoc,
+  getDocs,
+  query,
+  Timestamp,
+  where,
+} from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { computed, ref, shallowRef } from "vue"
 import { useCollection } from "vuefire"
@@ -51,6 +58,14 @@ const getOwnerCount = (members: IMembership[]) =>
 
 const membershipKey = (membership: Pick<IMembership, "teamId" | "userId">) =>
   `${membership.teamId}-${membership.userId}`
+
+const isPermissionDeniedError = (error: unknown) =>
+  Boolean(
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    error.code === "permission-denied"
+  )
 
 export const useMembershipStore = defineStore("memberships", () => {
   const authStore = useAuthStore()
@@ -271,6 +286,32 @@ export const useMembershipStore = defineStore("memberships", () => {
     return teamMemberCounts.value[teamId] ?? 1
   }
 
+  const fetchSingleTeamMemberCount = async (
+    teamId: string
+  ): Promise<number> => {
+    const membersCollection = getTeamMembershipsCollection(teamId)
+
+    try {
+      const countSnapshot = await getCountFromServer(membersCollection)
+      return Math.max(countSnapshot.data().count, 1)
+    } catch (error) {
+      if (isPermissionDeniedError(error)) {
+        return 1
+      }
+
+      try {
+        const membersSnapshot = await getDocs(membersCollection)
+        return Math.max(membersSnapshot.size, 1)
+      } catch (fallbackError) {
+        if (isPermissionDeniedError(fallbackError)) {
+          return 1
+        }
+
+        throw fallbackError
+      }
+    }
+  }
+
   /** Fetch member counts for all teams the user is a member of */
   async function fetchTeamMemberCounts() {
     const requestId = ++latestMemberCountRequestId
@@ -294,17 +335,9 @@ export const useMembershipStore = defineStore("memberships", () => {
     await Promise.all(
       teamIds.map(async (teamId) => {
         try {
-          const membersSnapshot = await getDocs(
-            getTeamMembershipsCollection(teamId)
-          )
-          counts[teamId] = Math.max(membersSnapshot.size, 1)
+          counts[teamId] = await fetchSingleTeamMemberCount(teamId)
         } catch (error) {
-          if (
-            error &&
-            typeof error === "object" &&
-            "code" in error &&
-            error.code === "permission-denied"
-          ) {
+          if (isPermissionDeniedError(error)) {
             counts[teamId] = 1
             return
           }
@@ -755,6 +788,10 @@ export const useMembershipStore = defineStore("memberships", () => {
    * Get members for a specific team (without switching current team)
    */
   async function getMembersForTeam(teamId: string): Promise<IMembership[]> {
+    if (currentTeamId.value === teamId && !_vuefireTeamMembers.pending.value) {
+      return cloneState(teamMembers.value)
+    }
+
     try {
       const membersSnapshot = await getDocs(
         getTeamMembershipsCollection(teamId)

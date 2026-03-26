@@ -49,6 +49,11 @@ export const useBillingStore = defineStore("billing", () => {
 
   let catalogRequestId = 0
   let billingRequestId = 0
+  let catalogLoadPromise: Promise<BillingCatalog | null> | null = null
+  const billingLoadPromises = new Map<
+    string,
+    Promise<BillingStatusData | null>
+  >()
 
   const currentTeamId = computed(() => currentTeam.value?.id ?? null)
 
@@ -125,64 +130,113 @@ export const useBillingStore = defineStore("billing", () => {
       return catalog.value
     }
 
-    catalogRequestId += 1
-    const activeRequestId = catalogRequestId
-    isCatalogLoading.value = true
-    catalogError.value = null
-
-    try {
-      const { data } = await getBillingCatalog({})
-      if (activeRequestId !== catalogRequestId) return catalog.value
-      catalog.value = data.prices ?? null
-      lastLoadedAt.value = Date.now()
-    } catch (error) {
-      if (activeRequestId !== catalogRequestId) return catalog.value
-      catalog.value = null
-      catalogError.value =
-        error instanceof Error ? error.message : String(error)
-    } finally {
-      if (activeRequestId === catalogRequestId) {
-        isCatalogLoading.value = false
-      }
+    if (catalogLoadPromise && !options.force) {
+      return catalogLoadPromise
     }
 
-    return catalog.value
+    catalogRequestId += 1
+    const activeRequestId = catalogRequestId
+    const request = (async () => {
+      isCatalogLoading.value = true
+      catalogError.value = null
+
+      try {
+        const { data } = await getBillingCatalog({})
+        if (activeRequestId !== catalogRequestId) return catalog.value
+        catalog.value = data.prices ?? null
+        lastLoadedAt.value = Date.now()
+      } catch (error) {
+        if (activeRequestId !== catalogRequestId) return catalog.value
+        catalog.value = null
+        catalogError.value =
+          error instanceof Error ? error.message : String(error)
+      } finally {
+        if (activeRequestId === catalogRequestId) {
+          isCatalogLoading.value = false
+        }
+      }
+
+      return catalog.value
+    })()
+
+    catalogLoadPromise = request
+
+    try {
+      return await request
+    } finally {
+      if (catalogLoadPromise === request) {
+        catalogLoadPromise = null
+      }
+    }
   }
 
   const ensureCatalogLoaded = async (): Promise<BillingCatalog | null> => {
-    if (catalog.value || isCatalogLoading.value) return catalog.value
+    if (catalog.value) return catalog.value
+    if (catalogLoadPromise) return catalogLoadPromise
     return refreshCatalog()
   }
 
   const refreshBilling = async (
-    teamId = currentTeamId.value
+    teamId = currentTeamId.value,
+    options: { force?: boolean } = {}
   ): Promise<BillingStatusData | null> => {
     if (!teamId) return null
 
-    billingRequestId += 1
-    const activeRequestId = billingRequestId
-    isBillingLoading.value = true
-    billingError.value = null
-
-    try {
-      const { data } = await getBillingStatus({ teamId })
-      if (activeRequestId !== billingRequestId) return billing.value
-      if (teamId === currentTeamId.value) {
-        billingSnapshotTeamId.value = teamId
-        billingSnapshot.value = normalizeTeamBilling(data.billing)
-        lastBillingLoadedAt.value = Date.now()
-      }
-    } catch (error) {
-      if (activeRequestId !== billingRequestId) return billing.value
-      billingError.value =
-        error instanceof Error ? error.message : String(error)
-    } finally {
-      if (activeRequestId === billingRequestId) {
-        isBillingLoading.value = false
-      }
+    const existingRequest = billingLoadPromises.get(teamId)
+    if (existingRequest && !options.force) {
+      return existingRequest
     }
 
-    return billing.value
+    billingRequestId += 1
+    const activeRequestId = billingRequestId
+    const request = (async () => {
+      isBillingLoading.value = true
+      if (teamId === currentTeamId.value) {
+        billingError.value = null
+      }
+
+      try {
+        const { data } = await getBillingStatus({ teamId })
+        const normalizedBilling = normalizeTeamBilling(data.billing)
+
+        if (activeRequestId !== billingRequestId) {
+          return teamId === currentTeamId.value
+            ? billing.value
+            : normalizedBilling
+        }
+
+        if (teamId === currentTeamId.value) {
+          billingSnapshotTeamId.value = teamId
+          billingSnapshot.value = normalizedBilling
+          lastBillingLoadedAt.value = Date.now()
+        }
+
+        return normalizedBilling
+      } catch (error) {
+        if (activeRequestId !== billingRequestId) return billing.value
+
+        if (teamId === currentTeamId.value) {
+          billingError.value =
+            error instanceof Error ? error.message : String(error)
+        }
+
+        return teamId === currentTeamId.value ? billing.value : null
+      } finally {
+        if (activeRequestId === billingRequestId) {
+          isBillingLoading.value = false
+        }
+      }
+    })()
+
+    billingLoadPromises.set(teamId, request)
+
+    try {
+      return await request
+    } finally {
+      if (billingLoadPromises.get(teamId) === request) {
+        billingLoadPromises.delete(teamId)
+      }
+    }
   }
 
   watch(

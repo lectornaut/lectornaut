@@ -1459,7 +1459,6 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
             </Button>
           </Field>
         </FieldSet>
-
         <!-- TOTP Enrollment Dialog -->
         <Dialog v-model:open="totpDialogOpen">
           <DialogContent>
@@ -1560,7 +1559,6 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
         <!-- SMS Enrollment Dialog -->
         <Dialog v-model:open="smsDialogOpen">
           <DialogContent>
@@ -1653,7 +1651,6 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
         <FieldSeparator />
         <FieldSet>
           <Field orientation="horizontal">
@@ -1853,7 +1850,6 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
         </FieldSet>
       </FieldGroup>
     </div>
-
     <!-- Footer with Save/Cancel -->
     <DialogFooter
       v-if="hasPendingChanges"
