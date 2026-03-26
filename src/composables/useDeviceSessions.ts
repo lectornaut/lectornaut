@@ -4,15 +4,26 @@ import {
   revokeSession,
 } from "@/composables/useFunctions"
 import { parseUserAgent } from "@/helpers/device"
+import {
+  getSessionVerificationDecision,
+  isSessionMonitorRecoveryCode,
+  type SessionVerificationStatus,
+} from "@/helpers/session"
 import { generateRandomString } from "@/helpers/utilities"
-import { firestore } from "@/modules/firebase"
+import { auth, firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import type { IUserSession } from "@/types/session"
+import {
+  useDocumentVisibility,
+  useEventListener,
+  useOnline,
+  useWindowFocus,
+} from "@vueuse/core"
 import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
+  getDocFromServer,
   onSnapshot,
   orderBy,
   query,
@@ -22,6 +33,20 @@ import {
 import { useCollection, useCurrentUser, useFirestore } from "vuefire"
 
 const SESSION_ID_KEY = "lectornaut.session.id"
+const SESSION_REGISTERED_KEY = "lectornaut.session.registered"
+const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000
+const SESSION_TOUCH_THROTTLE_MS = 30_000
+const REGISTER_RETRY_DELAYS_MS = [1_000, 2_500]
+const VERIFICATION_DELAYS_MS = [1_500, 4_000]
+const isOnline = useOnline()
+const isWindowFocused = useWindowFocus()
+const documentVisibility = useDocumentVisibility()
+
+interface SessionMonitorContext {
+  uid: string
+  sessionId: string
+  generation: number
+}
 
 function getOrCreateSessionId(): string {
   let sessionId = localStorage.getItem(SESSION_ID_KEY)
@@ -32,183 +57,355 @@ function getOrCreateSessionId(): string {
   return sessionId
 }
 
+function markSessionRegistered(sessionId: string) {
+  localStorage.setItem(SESSION_REGISTERED_KEY, sessionId)
+}
+
+function isSessionRegistered(sessionId: string): boolean {
+  return localStorage.getItem(SESSION_REGISTERED_KEY) === sessionId
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 // ── Global heartbeat (runs once per app, not per component) ──────────────
 
-let heartbeatInterval: ReturnType<typeof setInterval> | null = null
-let unsubscribeSnapshot: (() => void) | null = null
-let sessionRevoked = false
-let registrationInProgress = false
-let verificationInProgress = false
+const sessionMonitor = {
+  heartbeatInterval: null as ReturnType<typeof setInterval> | null,
+  unsubscribeSnapshot: null as (() => void) | null,
+  cleanupActivityListeners: null as (() => void) | null,
+  sessionRevoked: false,
+  registrationInProgress: false,
+  verificationPromise: null as Promise<void> | null,
+  generation: 0,
+  activeUid: null as string | null,
+  activeSessionId: null as string | null,
+  lastTouchedAt: 0,
+}
 
-/**
- * Verifies whether the session was genuinely revoked before emitting the event.
- * Firebase Auth tokens expire every ~60 min; during the brief refresh window,
- * Firestore operations can fail with `permission-denied` even though the
- * session doc is perfectly valid. This gate prevents those false positives.
- */
-async function verifyRevocation(uid: string) {
-  if (sessionRevoked || verificationInProgress) return
-  verificationInProgress = true
+function stopGlobalHeartbeat() {
+  if (sessionMonitor.heartbeatInterval) {
+    clearInterval(sessionMonitor.heartbeatInterval)
+    sessionMonitor.heartbeatInterval = null
+  }
+}
 
-  const sessionId = getOrCreateSessionId()
-  const sessionRef = doc(
-    collection(firestore, "users", uid, "sessions"),
-    sessionId
+function stopSessionWatcher() {
+  if (sessionMonitor.unsubscribeSnapshot) {
+    sessionMonitor.unsubscribeSnapshot()
+    sessionMonitor.unsubscribeSnapshot = null
+  }
+}
+
+function stopActivityListeners() {
+  if (sessionMonitor.cleanupActivityListeners) {
+    sessionMonitor.cleanupActivityListeners()
+    sessionMonitor.cleanupActivityListeners = null
+  }
+}
+
+function resetMonitoringInternals() {
+  stopGlobalHeartbeat()
+  stopSessionWatcher()
+  stopActivityListeners()
+  sessionMonitor.lastTouchedAt = 0
+}
+
+function buildSessionRef(context: SessionMonitorContext) {
+  return doc(
+    collection(firestore, "users", context.uid, "sessions"),
+    context.sessionId
   )
+}
 
-  const confirmRevoked = () => {
-    sessionRevoked = true
-    stopGlobalHeartbeat()
-    stopSessionWatcher()
-    emitter.emit("session:revoked")
+function isContextActive(context: SessionMonitorContext): boolean {
+  return (
+    !sessionMonitor.sessionRevoked &&
+    sessionMonitor.generation === context.generation &&
+    sessionMonitor.activeUid === context.uid &&
+    sessionMonitor.activeSessionId === context.sessionId
+  )
+}
+
+function confirmRevoked(context: SessionMonitorContext) {
+  if (!isContextActive(context)) return
+
+  sessionMonitor.sessionRevoked = true
+  resetMonitoringInternals()
+  emitter.emit("session:revoked")
+}
+
+function startSessionMonitoring(
+  uid: string,
+  options: {
+    forceRestart?: boolean
+    persistedOnly?: boolean
+    sessionId?: string
+  } = {}
+): SessionMonitorContext | null {
+  const sessionId =
+    options.sessionId ??
+    (options.persistedOnly
+      ? localStorage.getItem(SESSION_ID_KEY)
+      : getOrCreateSessionId())
+
+  if (!sessionId) return null
+
+  const hasActiveMonitor =
+    !!sessionMonitor.heartbeatInterval || !!sessionMonitor.unsubscribeSnapshot
+  const sameContext =
+    sessionMonitor.activeUid === uid &&
+    sessionMonitor.activeSessionId === sessionId
+
+  if (sameContext && hasActiveMonitor && !options.forceRestart) {
+    return {
+      uid,
+      sessionId,
+      generation: sessionMonitor.generation,
+    }
   }
 
-  const tryGetDoc = async (): Promise<boolean | null> => {
+  sessionMonitor.generation += 1
+  sessionMonitor.activeUid = uid
+  sessionMonitor.activeSessionId = sessionId
+  sessionMonitor.sessionRevoked = false
+  sessionMonitor.verificationPromise = null
+
+  resetMonitoringInternals()
+
+  const context: SessionMonitorContext = {
+    uid,
+    sessionId,
+    generation: sessionMonitor.generation,
+  }
+
+  startGlobalHeartbeat(context)
+  startSessionWatcher(context)
+  startActivityListeners(context)
+
+  return context
+}
+
+async function readSessionStatus(
+  context: SessionMonitorContext,
+  refreshToken = false
+): Promise<SessionVerificationStatus> {
+  if (!isContextActive(context)) return "indeterminate"
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return "indeterminate"
+  }
+
+  const currentUser = auth.currentUser
+  if (!currentUser || currentUser.uid !== context.uid) {
+    return "indeterminate"
+  }
+
+  if (refreshToken) {
     try {
-      const snap = await getDoc(sessionRef)
-      return snap.exists()
-    } catch (e: unknown) {
-      const code = (e as { code?: string })?.code
-      if (code === "not-found") return false
-      if (code === "permission-denied") return null // indeterminate
-      return null
+      await currentUser.getIdToken(true)
+    } catch {
+      return "indeterminate"
     }
   }
 
   try {
-    // Wait for a potential in-flight token refresh to complete
-    await new Promise((r) => setTimeout(r, 2000))
-    if (sessionRevoked) return
-
-    const exists = await tryGetDoc()
-    if (sessionRevoked) return
-
-    if (exists === true) {
-      // False positive — session is valid, restart listeners
-      console.warn(
-        "[session] Verification confirmed session exists — false positive avoided"
-      )
-      startGlobalHeartbeat(uid)
-      startSessionWatcher(uid, true)
-      return
-    }
-
-    if (exists === false) {
-      confirmRevoked()
-      return
-    }
-
-    // Indeterminate (permission-denied) — retry once after another delay
-    await new Promise((r) => setTimeout(r, 3000))
-    if (sessionRevoked) return
-
-    const retryExists = await tryGetDoc()
-    if (retryExists === true) {
-      console.warn(
-        "[session] Verification retry confirmed session exists — false positive avoided"
-      )
-      startGlobalHeartbeat(uid)
-      startSessionWatcher(uid, true)
-    } else {
-      confirmRevoked()
-    }
-  } finally {
-    verificationInProgress = false
+    const snapshot = await getDocFromServer(buildSessionRef(context))
+    return snapshot.exists() ? "exists" : "missing"
+  } catch (error: unknown) {
+    const code = (error as { code?: string })?.code
+    if (code === "not-found") return "missing"
+    return "indeterminate"
   }
 }
 
-function startGlobalHeartbeat(uid: string) {
-  stopGlobalHeartbeat()
-  const sessionId = getOrCreateSessionId()
-  const sessionRef = doc(
-    collection(firestore, "users", uid, "sessions"),
-    sessionId
-  )
+function restartMonitoring(context: SessionMonitorContext) {
+  if (!isContextActive(context)) return
+  startSessionMonitoring(context.uid, {
+    forceRestart: true,
+    sessionId: context.sessionId,
+  })
+}
 
-  const tick = () => {
-    updateDoc(sessionRef, { lastActiveAt: serverTimestamp() }).catch(
-      (error) => {
-        if (
-          !sessionRevoked &&
-          !registrationInProgress &&
-          (error?.code === "not-found" || error?.code === "permission-denied")
-        ) {
-          verifyRevocation(uid)
-        }
-      }
-    )
+function verifyRevocation(context: SessionMonitorContext) {
+  if (
+    sessionMonitor.sessionRevoked ||
+    sessionMonitor.verificationPromise ||
+    !isContextActive(context)
+  ) {
+    return sessionMonitor.verificationPromise
   }
+
+  const verificationTask = (async () => {
+    const statuses: SessionVerificationStatus[] = []
+
+    for (let attempt = 0; attempt <= VERIFICATION_DELAYS_MS.length; attempt++) {
+      if (attempt > 0) {
+        await delay(VERIFICATION_DELAYS_MS[attempt - 1])
+      }
+
+      if (!isContextActive(context)) return
+
+      const status = await readSessionStatus(context, attempt > 0)
+      statuses.push(status)
+
+      const decision = getSessionVerificationDecision(statuses)
+      if (decision === "recover") {
+        console.warn(
+          "[session] Verification confirmed session exists — keeping session active"
+        )
+        restartMonitoring(context)
+        return
+      }
+
+      if (decision === "revoke") {
+        confirmRevoked(context)
+        return
+      }
+    }
+
+    if (!isContextActive(context)) return
+
+    console.warn(
+      "[session] Verification stayed inconclusive — keeping session active"
+    )
+    restartMonitoring(context)
+  })()
+
+  sessionMonitor.verificationPromise = verificationTask
+  void verificationTask.finally(() => {
+    if (sessionMonitor.verificationPromise === verificationTask) {
+      sessionMonitor.verificationPromise = null
+    }
+  })
+
+  return verificationTask
+}
+
+function shouldCheckRevocationOnWrite(error: unknown): boolean {
+  const code = (error as { code?: string })?.code
+  return (
+    code === "not-found" ||
+    code === "permission-denied" ||
+    code === "unauthenticated"
+  )
+}
+
+async function touchSessionActivity(
+  context: SessionMonitorContext,
+  force = false
+) {
+  if (!isContextActive(context) || sessionMonitor.registrationInProgress) return
+
+  const now = Date.now()
+  if (
+    !force &&
+    now - sessionMonitor.lastTouchedAt < SESSION_TOUCH_THROTTLE_MS
+  ) {
+    return
+  }
+
+  sessionMonitor.lastTouchedAt = now
+
+  try {
+    await updateDoc(buildSessionRef(context), {
+      lastActiveAt: serverTimestamp(),
+    })
+  } catch (error) {
+    if (shouldCheckRevocationOnWrite(error)) {
+      void verifyRevocation(context)
+    }
+  }
+}
+
+function startGlobalHeartbeat(context: SessionMonitorContext) {
+  stopGlobalHeartbeat()
 
   // Skip immediate tick — registerSession already sets lastActiveAt via the
   // cloud function, and an immediate updateDoc could race with Firestore
   // propagation, causing a spurious not-found → false revocation event.
-  heartbeatInterval = setInterval(tick, 5 * 60 * 1000) // 5 min
-}
-
-function stopGlobalHeartbeat() {
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval)
-    heartbeatInterval = null
-  }
+  sessionMonitor.heartbeatInterval = setInterval(() => {
+    void touchSessionActivity(context, true)
+  }, HEARTBEAT_INTERVAL_MS)
 }
 
 // ── Session watcher (detects revocation in real-time) ────────────────────
 
-function startSessionWatcher(uid: string, isResume = false) {
+function startSessionWatcher(context: SessionMonitorContext) {
   stopSessionWatcher()
 
-  const sessionId = getOrCreateSessionId()
-  const sessionRef = doc(
-    collection(firestore, "users", uid, "sessions"),
-    sessionId
-  )
+  let hasServerSnapshot = false
 
-  let initialSnapshotReceived = false
-
-  unsubscribeSnapshot = onSnapshot(
-    sessionRef,
+  sessionMonitor.unsubscribeSnapshot = onSnapshot(
+    buildSessionRef(context),
     { includeMetadataChanges: true },
     (snapshot) => {
-      if (!initialSnapshotReceived) {
-        // On resume, a missing doc from cache is not authoritative — the
-        // session doc was created server-side (cloud function) and may not
-        // be in the local IndexedDB cache. Wait for the server-confirmed
-        // snapshot before deciding on revocation.
-        if (isResume && !snapshot.exists() && snapshot.metadata.fromCache) {
-          return
-        }
+      if (!isContextActive(context)) return
 
-        initialSnapshotReceived = true
-
-        if (!snapshot.exists() && isResume) {
-          verifyRevocation(uid)
-        }
+      if (
+        !snapshot.exists() &&
+        snapshot.metadata.fromCache &&
+        !hasServerSnapshot
+      ) {
         return
       }
 
-      // After initial snapshot, only react to server-confirmed deletions
-      if (snapshot.metadata.fromCache) return
+      if (!snapshot.metadata.fromCache) {
+        hasServerSnapshot = true
+      }
 
-      if (!snapshot.exists() && !sessionRevoked) {
-        verifyRevocation(uid)
+      if (!snapshot.exists() && !snapshot.metadata.fromCache) {
+        void verifyRevocation(context)
       }
     },
     (error) => {
-      if (
-        !sessionRevoked &&
-        !registrationInProgress &&
-        (error?.code === "permission-denied" || error?.code === "not-found")
-      ) {
-        verifyRevocation(uid)
+      if (!isContextActive(context) || sessionMonitor.registrationInProgress) {
+        return
+      }
+
+      if (isSessionMonitorRecoveryCode((error as { code?: string })?.code)) {
+        void verifyRevocation(context)
       }
     }
   )
 }
 
-function stopSessionWatcher() {
-  if (unsubscribeSnapshot) {
-    unsubscribeSnapshot()
-    unsubscribeSnapshot = null
+function startActivityListeners(context: SessionMonitorContext) {
+  stopActivityListeners()
+
+  if (typeof window === "undefined" || typeof document === "undefined") return
+
+  const wakeSession = () => {
+    if (!isContextActive(context)) return
+    if (documentVisibility.value === "hidden") return
+
+    void touchSessionActivity(context)
+  }
+
+  const stopVisibilityWatch = watch(documentVisibility, (visibilityState) => {
+    if (visibilityState === "visible") {
+      wakeSession()
+    }
+  })
+  const stopFocusWatch = watch(isWindowFocused, (focused) => {
+    if (focused) {
+      wakeSession()
+    }
+  })
+  const stopOnlineWatch = watch(isOnline, (online) => {
+    if (online) {
+      wakeSession()
+    }
+  })
+  const stopPageShowListener = useEventListener(window, "pageshow", () => {
+    wakeSession()
+  })
+
+  sessionMonitor.cleanupActivityListeners = () => {
+    stopVisibilityWatch()
+    stopFocusWatch()
+    stopOnlineWatch()
+    stopPageShowListener()
   }
 }
 
@@ -217,10 +414,13 @@ function stopSessionWatcher() {
  * Called during logout (both normal and revoked).
  */
 export function cleanupSessionState() {
-  stopGlobalHeartbeat()
-  stopSessionWatcher()
-  sessionRevoked = false
-  verificationInProgress = false
+  sessionMonitor.generation += 1
+  sessionMonitor.sessionRevoked = false
+  sessionMonitor.registrationInProgress = false
+  sessionMonitor.verificationPromise = null
+  sessionMonitor.activeUid = null
+  sessionMonitor.activeSessionId = null
+  resetMonitoringInternals()
 }
 
 /**
@@ -229,6 +429,7 @@ export function cleanupSessionState() {
  */
 export function clearPersistedSessionId() {
   localStorage.removeItem(SESSION_ID_KEY)
+  localStorage.removeItem(SESSION_REGISTERED_KEY)
 }
 
 /**
@@ -236,12 +437,20 @@ export function clearPersistedSessionId() {
  * Called on app startup (page refresh) to detect sessions revoked while offline.
  */
 export function resumeSessionWatcher(uid: string) {
-  if (registrationInProgress) return // Fresh login in progress — registerSession handles it
+  if (sessionMonitor.registrationInProgress) return
   const sessionId = localStorage.getItem(SESSION_ID_KEY)
-  if (!sessionId) return // No persisted session — nothing to resume
+  if (!sessionId) return
 
-  startGlobalHeartbeat(uid)
-  startSessionWatcher(uid, true)
+  if (!isSessionRegistered(sessionId)) {
+    void registerSession(uid).catch((error) => {
+      console.error("[session] Failed to re-register persisted session:", error)
+    })
+    return
+  }
+
+  startSessionMonitoring(uid, {
+    sessionId,
+  })
 }
 
 /**
@@ -249,24 +458,58 @@ export function resumeSessionWatcher(uid: string) {
  * Called after successful authentication.
  */
 export async function registerSession(uid: string) {
-  registrationInProgress = true
+  sessionMonitor.registrationInProgress = true
   try {
     const sessionId = getOrCreateSessionId()
     const device = await parseUserAgent()
 
-    await registerSessionCallable({
-      sessionId,
-      deviceName: device.deviceName,
-      browser: device.browser,
-      os: device.os,
-      deviceType: device.deviceType,
-    })
+    let lastError: unknown = null
 
-    // Start heartbeat and watcher only after the session doc exists
-    startGlobalHeartbeat(uid)
-    startSessionWatcher(uid)
+    for (
+      let attempt = 0;
+      attempt <= REGISTER_RETRY_DELAYS_MS.length;
+      attempt++
+    ) {
+      try {
+        if (attempt > 0) {
+          await auth.currentUser?.getIdToken(true).catch(() => undefined)
+        }
+
+        await registerSessionCallable({
+          sessionId,
+          deviceName: device.deviceName,
+          browser: device.browser,
+          os: device.os,
+          deviceType: device.deviceType,
+        })
+
+        markSessionRegistered(sessionId)
+        startSessionMonitoring(uid, {
+          forceRestart: true,
+          sessionId,
+        })
+        return
+      } catch (error) {
+        lastError = error
+
+        if (
+          attempt === REGISTER_RETRY_DELAYS_MS.length ||
+          !isSessionMonitorRecoveryCode((error as { code?: string })?.code)
+        ) {
+          throw error
+        }
+
+        await delay(REGISTER_RETRY_DELAYS_MS[attempt])
+
+        if (auth.currentUser?.uid !== uid) {
+          return
+        }
+      }
+    }
+
+    throw lastError
   } finally {
-    registrationInProgress = false
+    sessionMonitor.registrationInProgress = false
   }
 }
 
@@ -279,6 +522,7 @@ export async function removeCurrentSession(uid: string) {
   cleanupSessionState()
 
   const sessionId = localStorage.getItem(SESSION_ID_KEY)
+  clearPersistedSessionId()
   if (!sessionId) return
 
   const sessionRef = doc(
@@ -286,7 +530,6 @@ export async function removeCurrentSession(uid: string) {
     sessionId
   )
   await deleteDoc(sessionRef)
-  clearPersistedSessionId()
 }
 
 /**

@@ -352,6 +352,8 @@
         "logoutAllButton": "Revoke all",
         "logoutDevice": "Revoke",
         "thisDevice": "Current session",
+        "lastActive": "Last active {time}",
+        "lastActiveUnknown": "unavailable",
         "ipAddress": "IP address {ip}",
         "originalSignIn": "Signed in {date}",
         "noSessions": "No active sessions found.",

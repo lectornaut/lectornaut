@@ -37,6 +37,7 @@ import {
   USERNAME_MAX_LENGTH,
   usernamesMatch,
 } from "@/utils/firebase/firebase-username"
+import { formatTimeAgoIntl } from "@vueuse/core"
 import {
   deleteUser,
   multiFactor,
@@ -63,7 +64,7 @@ import {
   useStorageFile,
 } from "vuefire"
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const db = useFirestore()
 const user = useCurrentUser()
@@ -815,8 +816,37 @@ const {
 } = useDeviceSessions()
 
 const { isLoading: isRevoking, withLoadingResult } = useLoadingState<string>()
+const sessionNow = useNow({ interval: 60_000 })
+const sessionTimeAgoOptions = computed(() => ({
+  locale: locale.value,
+  relativeTimeFormatOptions: {
+    numeric: "auto" as const,
+  },
+}))
 
-const otherSessionCount = computed(() => Math.max(0, sessions.value.length - 1))
+const sessionRows = computed(() =>
+  sessions.value.map((session) => {
+    const isCurrent = isCurrentSession(session.id)
+    const lastActiveAt = session.lastActiveAt?.toDate?.()
+
+    return {
+      ...session,
+      deviceIcon: getDeviceIcon(session.deviceType),
+      isCurrent,
+      lastActiveLabel: lastActiveAt
+        ? formatTimeAgoIntl(
+            lastActiveAt,
+            sessionTimeAgoOptions.value,
+            sessionNow.value
+          )
+        : t("settings.account.devices.lastActiveUnknown"),
+    }
+  })
+)
+
+const otherSessionCount = computed(
+  () => sessionRows.value.filter((session) => !session.isCurrent).length
+)
 
 const handleRevokeAll = async () => {
   const { data: result, error } = await withLoadingResult("revokeAll", () =>
@@ -859,14 +889,6 @@ const getDeviceIcon = (deviceType: string) => {
     default:
       return IconMonitor
   }
-}
-
-const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
-  if (!timestamp) return ""
-  const date =
-    timestamp instanceof Date ? timestamp : new Date(timestamp.seconds * 1000)
-  if (Number.isNaN(date.getTime())) return ""
-  return useTimeAgo(date).value
 }
 </script>
 
@@ -1666,7 +1688,7 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
               <AlertDialogTrigger as-child>
                 <Button
                   variant="outline"
-                  :disabled="isRevoking('revokeAll') || sessions.length <= 1"
+                  :disabled="isRevoking('revokeAll') || otherSessionCount === 0"
                 >
                   <Spinner v-if="isRevoking('revokeAll')" />
                   {{ t("settings.account.devices.logoutAllButton") }}
@@ -1704,14 +1726,14 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
             </AlertDialog>
           </Field>
           <Field
-            v-for="session in sessions"
+            v-for="session in sessionRows"
             :key="session.id"
             orientation="horizontal"
           >
             <FieldContent>
               <Item size="sm" class="p-0">
                 <ItemMedia>
-                  <Component :is="getDeviceIcon(session.deviceType)" />
+                  <Component :is="session.deviceIcon" />
                 </ItemMedia>
                 <ItemContent class="gap-0.5 truncate">
                   <ItemTitle class="truncate">
@@ -1722,7 +1744,7 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
                     ·
                     {{
                       t("settings.account.devices.lastActive", {
-                        time: formatRelativeTime(session.lastActiveAt),
+                        time: session.lastActiveLabel,
                       })
                     }}
                   </ItemDescription>
@@ -1730,7 +1752,7 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
               </Item>
             </FieldContent>
             <div class="flex items-center gap-2">
-              <template v-if="isCurrentSession(session.id)">
+              <template v-if="session.isCurrent">
                 <Badge variant="destructive" class="text-current">
                   <IconCircleDot class="-ml-1" />
                   {{ t("settings.account.devices.thisDevice") }}
@@ -1791,7 +1813,10 @@ const formatRelativeTime = (timestamp: Date | { seconds: number } | null) => {
             <Spinner />
             {{ t("common.loading") }}
           </div>
-          <div v-else-if="sessions.length === 0" class="text-muted-foreground">
+          <div
+            v-else-if="sessionRows.length === 0"
+            class="text-muted-foreground"
+          >
             {{ t("settings.account.devices.noSessions") }}
           </div>
         </FieldSet>
