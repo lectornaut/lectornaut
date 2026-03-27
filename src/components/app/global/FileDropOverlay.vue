@@ -13,6 +13,8 @@ import {
   platform,
   useIsFullscreen,
 } from "@/composables/usePlatform"
+import { useTeamActions } from "@/composables/useTeamActions"
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconArchive,
   IconEye,
@@ -50,8 +52,6 @@ import {
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import { useTeamStore } from "@/stores/teamStore"
-import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { type WorkspaceNodeScope } from "@/types/nodes"
 import { can, Capabilities } from "@/types/permissions"
 import { NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES } from "@/utils/firebase/firebase-node-attachments"
@@ -65,13 +65,11 @@ import { storeToRefs } from "pinia"
 import type { Component } from "vue"
 
 const { t } = useI18n()
-const teamStore = useTeamStore()
-const workspaceStore = useWorkspaceStore()
+const { currentTeam } = useTeamActions()
+const { currentWorkspace } = useWorkspaceActions()
 const authStore = useAuthStore()
 const membershipStore = useMembershipStore()
 const fileTreeStore = useFileTreeStore()
-const { currentTeam } = storeToRefs(teamStore)
-const { currentWorkspace } = storeToRefs(workspaceStore)
 const { currentUser } = storeToRefs(authStore)
 const { memberships } = storeToRefs(membershipStore)
 const currentWindow = getCurrentTauriWindow()

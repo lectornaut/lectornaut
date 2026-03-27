@@ -1,20 +1,23 @@
 <script lang="ts" setup>
+import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconCirclePlus, IconFolder, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { useTeamStore } from "@/stores/teamStore"
-import { useWorkspaceStore } from "@/stores/workspaceStore"
-import { storeToRefs } from "pinia"
 import type { AcceptableValue } from "reka-ui"
 import { toast } from "vue-sonner"
 
-const workspaceStore = useWorkspaceStore()
-const { workspaces, isLoading, currentWorkspace } = storeToRefs(workspaceStore)
+const { t } = useI18n()
 
-const teamStore = useTeamStore()
-const { currentTeam } = storeToRefs(teamStore)
-const { canCreateWorkspace, getCannotCreateWorkspaceReason } =
-  useWorkspaceActions()
+const {
+  workspaces,
+  isLoading,
+  currentWorkspace,
+  canCreateWorkspace,
+  getCannotCreateWorkspaceReason,
+  switchWorkspace,
+} = useWorkspaceActions()
+
+const { currentTeam, clearCurrentTeam } = useTeamActions()
 
 const isCreatingWorkspaceDialogOpen = ref(false)
 
@@ -26,22 +29,17 @@ const computedWorkspaces = computed(() =>
   }))
 )
 
-const switchWorkspace = async (workspaceId: AcceptableValue) => {
+const handleSwitchWorkspace = async (workspaceId: AcceptableValue) => {
   if (typeof workspaceId !== "string") return
-
-  try {
-    await workspaceStore.switchWorkspace(workspaceId)
-  } catch (_error) {
-    toast.error("Failed to switch workspace")
-  }
+  await switchWorkspace(workspaceId)
 }
 
 const deselectTeam = async () => {
   try {
-    await teamStore.clearCurrentTeam()
+    await clearCurrentTeam()
   } catch (error) {
     console.error("[WorkspaceSelector] Failed to deselect team:", error)
-    toast.error("Failed to deselect team")
+    toast.error(t("components.workspaceSelector.changeTeam"))
   }
 }
 </script>
@@ -52,8 +50,10 @@ const deselectTeam = async () => {
       <EmptyMedia variant="icon">
         <IconFolder />
       </EmptyMedia>
-      <EmptyTitle>Workspaces</EmptyTitle>
-      <EmptyDescription> Select a workspace to continue </EmptyDescription>
+      <EmptyTitle>{{ t("components.workspaceSelector.title") }}</EmptyTitle>
+      <EmptyDescription>
+        {{ t("components.workspaceSelector.description") }}
+      </EmptyDescription>
     </EmptyHeader>
     <EmptyContent
       class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-lg border p-2"
@@ -65,14 +65,16 @@ const deselectTeam = async () => {
         v-else
         :model-value="currentWorkspace?.id"
         :disabled="!currentTeam"
-        @update:model-value="switchWorkspace"
+        @update:model-value="handleSwitchWorkspace"
       >
         <SelectTrigger class="w-full">
-          <SelectValue placeholder="Select workspace" />
+          <SelectValue
+            :placeholder="t('components.workspaceSelector.placeholder')"
+          />
         </SelectTrigger>
         <SelectContent>
           <SelectLabel v-if="computedWorkspaces.length === 0">
-            No workspaces available
+            {{ t("components.workspaceSelector.noWorkspaces") }}
           </SelectLabel>
           <SelectItem
             v-for="workspace in computedWorkspaces"
@@ -107,14 +109,14 @@ const deselectTeam = async () => {
                 @click="isCreatingWorkspaceDialogOpen = true"
               >
                 <IconCirclePlus />
-                Create workspace
+                {{ t("components.workspaceSelector.createWorkspace") }}
               </Button>
             </div>
           </TooltipTrigger>
           <TooltipContent v-if="!currentTeam || !canCreateWorkspace">
             {{
               !currentTeam
-                ? "Select a team to create a workspace"
+                ? t("components.workspaceSelector.selectTeamToCreate")
                 : getCannotCreateWorkspaceReason
             }}
           </TooltipContent>
@@ -123,7 +125,7 @@ const deselectTeam = async () => {
     </EmptyContent>
     <Button variant="outline" size="sm" @click="deselectTeam">
       <IconUsers />
-      Change team
+      {{ t("components.workspaceSelector.changeTeam") }}
     </Button>
     <WorkspaceDialog
       v-model:open="isCreatingWorkspaceDialogOpen"

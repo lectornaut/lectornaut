@@ -166,11 +166,11 @@ const handleSubmit = async () => {
 
       <div class="mt-4 grid gap-4">
         <!-- Workspace Profile Picture -->
-        <div class="grid gap-2">
+        <Field class="grid gap-2">
           <div class="flex flex-col items-center gap-2">
-            <Label class="text-secondary-foreground text-xs">
+            <FieldLabel class="text-secondary-foreground text-xs">
               Workspace Photo
-            </Label>
+            </FieldLabel>
             <div class="group relative">
               <TooltipProvider>
                 <Tooltip>
@@ -243,10 +243,10 @@ const handleSubmit = async () => {
               {{ photoPreview ? "Click to change" : "Click to upload" }}
             </p>
           </div>
-        </div>
+        </Field>
 
         <!-- Workspace Name -->
-        <Field orientation="horizontal">
+        <Field class="grid gap-2">
           <FieldLabel class="text-secondary-foreground text-xs" for="name">
             Workspace Name
           </FieldLabel>
@@ -283,7 +283,7 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Workspace Description -->
-        <Field orientation="horizontal">
+        <Field class="grid gap-2">
           <FieldLabel
             class="text-secondary-foreground text-xs"
             for="description"

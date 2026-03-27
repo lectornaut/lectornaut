@@ -933,52 +933,59 @@ const handleSubmit = async () => {
           </p>
         </Field>
 
-        <Field v-if="mode === 'create' || mode === 'edit'" class="grid gap-2">
-          <FieldLabel
-            class="text-secondary-foreground text-xs"
-            for="team-is-public"
-          >
-            {{ t("components.teamDialog.labels.publicTeam") }}
-          </FieldLabel>
-          <p class="text-muted-foreground text-xs">
-            {{
-              teamIsPublic
-                ? t("components.teamDialog.tooltips.publicTeamUrl", {
-                    url: `/${teamUsername.trim()}`,
-                  })
-                : t("components.teamDialog.tooltips.turnOnPublicTeam")
-            }}
-          </p>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <span class="inline-block">
-                  <Switch
-                    id="team-is-public"
-                    :model-value="teamIsPublic"
-                    :disabled="
-                      !hasValidTeamUsername ||
-                      (!canUpdateTeam && mode === 'edit')
-                    "
-                    @update:model-value="toggleTeamIsPublic"
-                  />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                {{
-                  !canUpdateTeam && mode === "edit"
-                    ? t(getCannotUpdateTeamReason || "")
-                    : !hasTeamUsername
-                      ? t("components.teamDialog.tooltips.requiresHandle")
-                      : teamIsPublic
-                        ? t("components.teamDialog.tooltips.publicTeamUrl", {
-                            url: `/${teamUsername.trim()}`,
-                          })
-                        : t("components.teamDialog.tooltips.turnOnPublicTeam")
-                }}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <Field
+          v-if="mode === 'create' || mode === 'edit'"
+          orientation="horizontal"
+        >
+          <FieldContent>
+            <FieldLabel
+              for="team-is-public"
+              class="text-secondary-foreground text-xs"
+            >
+              {{ t("components.teamDialog.labels.publicTeam") }}
+            </FieldLabel>
+            <FieldDescription class="text-xs">
+              {{
+                teamIsPublic
+                  ? t("components.teamDialog.tooltips.publicTeamUrl", {
+                      url: `/${teamUsername.trim()}`,
+                    })
+                  : t("components.teamDialog.tooltips.turnOnPublicTeam")
+              }}
+            </FieldDescription>
+          </FieldContent>
+          <ButtonGroup>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <span class="inline-block">
+                    <Switch
+                      id="team-is-public"
+                      :model-value="teamIsPublic"
+                      :disabled="
+                        !hasValidTeamUsername ||
+                        (!canUpdateTeam && mode === 'edit')
+                      "
+                      @update:model-value="toggleTeamIsPublic"
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{
+                    !canUpdateTeam && mode === "edit"
+                      ? t(getCannotUpdateTeamReason || "")
+                      : !hasTeamUsername
+                        ? t("components.teamDialog.tooltips.requiresHandle")
+                        : teamIsPublic
+                          ? t("components.teamDialog.tooltips.publicTeamUrl", {
+                              url: `/${teamUsername.trim()}`,
+                            })
+                          : t("components.teamDialog.tooltips.turnOnPublicTeam")
+                  }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </ButtonGroup>
         </Field>
 
         <!-- 1. MEMBERS SECTION (Active) -->

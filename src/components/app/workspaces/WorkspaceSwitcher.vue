@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconBlocks,
@@ -8,31 +9,22 @@ import {
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
-import { useTeamStore } from "@/stores/teamStore"
-import { useWorkspaceStore } from "@/stores/workspaceStore"
-import { storeToRefs } from "pinia"
-import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
-const workspaceStore = useWorkspaceStore()
-const { workspaces, currentWorkspace, isLoading } = storeToRefs(workspaceStore)
-const { canCreateWorkspace, getCannotCreateWorkspaceReason } =
-  useWorkspaceActions()
+const {
+  workspaces,
+  currentWorkspace,
+  isLoading,
+  canCreateWorkspace,
+  getCannotCreateWorkspaceReason,
+  switchWorkspace,
+} = useWorkspaceActions()
 
-const teamStore = useTeamStore()
-const { currentTeam } = storeToRefs(teamStore)
+const { currentTeam } = useTeamActions()
 
 const isCreatingWorkspaceDialogOpen = ref(false)
 const isWorkspaceSwitcherOpen = ref(false)
-
-const switchWorkspace = async (workspaceId: string) => {
-  try {
-    await workspaceStore.switchWorkspace(workspaceId)
-  } catch (_error) {
-    toast.error("Failed to switch workspace")
-  }
-}
 
 const openWorkspaceSwitcher = () => {
   if (!currentTeam.value) return
@@ -40,6 +32,10 @@ const openWorkspaceSwitcher = () => {
 }
 
 emitter.on("Workspace.Switch", openWorkspaceSwitcher)
+
+onUnmounted(() => {
+  emitter.off("Workspace.Switch", openWorkspaceSwitcher)
+})
 </script>
 
 <template>

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -7,15 +8,12 @@ import {
 } from "@/data/icons"
 import { useRouteBreadcrumbs } from "@/helpers/breadcrumber"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
-import { useWorkspaceStore } from "@/stores/workspaceStore"
-import { storeToRefs } from "pinia"
 
 const breadcrumbs = useRouteBreadcrumbs()
 const router = useRouter()
 const route = useRoute()
-const workspaceStore = useWorkspaceStore()
+const { currentWorkspace } = useWorkspaceActions()
 const fileTreeStore = useFileTreeStore()
-const { currentWorkspace } = storeToRefs(workspaceStore)
 
 const selectedRouteNodeName = computed(() => {
   let scope: "code" | "write" | null = null

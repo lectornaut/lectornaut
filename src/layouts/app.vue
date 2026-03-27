@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { ResizablePanel } from "@/components/ui/resizable"
 import { isTauri } from "@/composables/usePlatform"
+import { useTeamActions } from "@/composables/useTeamActions"
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconArrowBigUp,
   IconArrowDown,
@@ -31,17 +33,13 @@ import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useBillingStore } from "@/stores/billingStore"
 import { useLayoutStore } from "@/stores/layoutStore"
-import { useTeamStore } from "@/stores/teamStore"
-import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { listen } from "@tauri-apps/api/event"
 import { UseDraggable as Draggable } from "@vueuse/components"
 import { storeToRefs } from "pinia"
 
-const teamStore = useTeamStore()
-const { currentTeam, isLoading } = storeToRefs(teamStore)
+const { currentTeam, isLoading } = useTeamActions()
 
-const workspaceStore = useWorkspaceStore()
-const { currentWorkspace } = storeToRefs(workspaceStore)
+const { currentWorkspace } = useWorkspaceActions()
 const layoutStore = useLayoutStore()
 const {
   footerIconDisplay,
@@ -878,7 +876,7 @@ const closeTab = (id: string) => {
           </Transition>
           <div
             id="right-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-lg border shadow"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-lg border-y border-l shadow"
           ></div>
         </main>
       </div>

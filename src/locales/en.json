@@ -1469,6 +1469,14 @@
       "groupBy": "Group by",
       "sortBy": "Sort by"
     },
+    "teamSelector": {
+      "title": "Teams",
+      "description": "Select a team to continue",
+      "placeholder": "Select team",
+      "noTeams": "No teams available",
+      "createTeam": "Create team",
+      "logout": "Log out"
+    },
     "teamSwitcher": {
       "switchTeam": "Switch teams",
       "members": "{count} member | {count} members",
@@ -2084,6 +2092,15 @@
         "searchPlaceholder": "Ask, Search or Chat...",
         "mode": "Mode"
       }
+    },
+    "workspaceSelector": {
+      "title": "Workspaces",
+      "description": "Select a workspace to continue",
+      "placeholder": "Select workspace",
+      "noWorkspaces": "No workspaces available",
+      "createWorkspace": "Create workspace",
+      "changeTeam": "Change team",
+      "selectTeamToCreate": "Select a team to create a workspace"
     },
     "workspaceSwitcher": {
       "noOtherWorkspaces": "No workspaces yet",

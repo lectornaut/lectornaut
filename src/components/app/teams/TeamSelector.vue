@@ -3,13 +3,18 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCirclePlus, IconLogOut, IconUsers } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
-import { useTeamStore } from "@/stores/teamStore"
-import { storeToRefs } from "pinia"
 import type { AcceptableValue } from "reka-ui"
-import { toast } from "vue-sonner"
 
-const teamStore = useTeamStore()
-const { memberships, isLoading } = storeToRefs(teamStore)
+const { t } = useI18n()
+
+const {
+  currentTeam,
+  memberships,
+  isLoading,
+  canCreateTeam,
+  getCannotCreateTeamReason,
+  switchTeam,
+} = useTeamActions()
 
 const isCreatingTeamDialogOpen = ref(false)
 
@@ -21,17 +26,9 @@ const computedTeams = computed(() =>
   }))
 )
 
-const { currentTeam, canCreateTeam, getCannotCreateTeamReason } =
-  useTeamActions()
-
-const switchTeam = async (teamId: AcceptableValue) => {
+const handleSwitchTeam = async (teamId: AcceptableValue) => {
   if (typeof teamId !== "string") return
-
-  try {
-    await teamStore.switchTeam(teamId)
-  } catch (_error) {
-    toast.error("Failed to switch team")
-  }
+  await switchTeam(teamId)
 }
 </script>
 
@@ -41,8 +38,10 @@ const switchTeam = async (teamId: AcceptableValue) => {
       <EmptyMedia variant="icon">
         <IconUsers />
       </EmptyMedia>
-      <EmptyTitle>Teams</EmptyTitle>
-      <EmptyDescription> Select a team to continue </EmptyDescription>
+      <EmptyTitle>{{ t("components.teamSelector.title") }}</EmptyTitle>
+      <EmptyDescription>
+        {{ t("components.teamSelector.description") }}
+      </EmptyDescription>
     </EmptyHeader>
     <EmptyContent
       class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-lg border p-2"
@@ -53,14 +52,16 @@ const switchTeam = async (teamId: AcceptableValue) => {
       <Select
         v-else
         :model-value="currentTeam?.id"
-        @update:model-value="switchTeam"
+        @update:model-value="handleSwitchTeam"
       >
         <SelectTrigger class="w-full">
-          <SelectValue placeholder="Select team" />
+          <SelectValue
+            :placeholder="t('components.teamSelector.placeholder')"
+          />
         </SelectTrigger>
         <SelectContent>
           <SelectLabel v-if="computedTeams.length === 0">
-            No teams available
+            {{ t("components.teamSelector.noTeams") }}
           </SelectLabel>
           <SelectItem
             v-for="team in computedTeams"
@@ -95,7 +96,7 @@ const switchTeam = async (teamId: AcceptableValue) => {
                 @click="isCreatingTeamDialogOpen = true"
               >
                 <IconCirclePlus />
-                Create team
+                {{ t("components.teamSelector.createTeam") }}
               </Button>
             </div>
           </TooltipTrigger>
@@ -111,7 +112,7 @@ const switchTeam = async (teamId: AcceptableValue) => {
       @click="emitter.emit('Dialog.Exit.Open')"
     >
       <IconLogOut />
-      Log out
+      {{ t("components.teamSelector.logout") }}
     </Button>
     <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
   </Empty>

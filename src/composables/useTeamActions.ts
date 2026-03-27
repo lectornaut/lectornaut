@@ -259,6 +259,12 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     })
   }
 
+  const clearCurrentTeam = async () =>
+    teamActions.run("clear", () => teamStore.clearCurrentTeam(), {
+      success: "Team deselected",
+      error: "Failed to deselect team",
+    })
+
   const exitTeam = async (teamId: string) =>
     teamActions.run(
       `exit-${teamId}`,
@@ -455,6 +461,7 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     changeRole,
     removeMember,
     switchTeam,
+    clearCurrentTeam,
     exitTeam,
     deleteTeam,
     createTeam,

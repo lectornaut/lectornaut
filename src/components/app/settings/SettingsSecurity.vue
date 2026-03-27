@@ -544,7 +544,9 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
           </FieldSet>
           <!-- SSO Configuration Dialog -->
           <Dialog v-model:open="ssoConfigDialogOpen">
-            <DialogContent class="max-h-[85vh] max-w-2xl overflow-y-auto">
+            <DialogContent
+              class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth"
+            >
               <DialogHeader>
                 <DialogTitle class="flex items-center gap-2">
                   SSO Configuration
@@ -557,210 +559,217 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   Configure SAML or OIDC single sign-on for your organization.
                 </DialogDescription>
               </DialogHeader>
+              <OverlayScrollbarsWrapper
+                class="-mx-6 w-[-webkit-fill-available] border-y p-6"
+              >
+                <FieldGroup>
+                  <FieldSet>
+                    <!-- Protocol Selector -->
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel>Protocol</FieldLabel>
+                        <FieldDescription>
+                          Choose your identity provider protocol.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Select v-model="ssoProtocol">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="saml">SAML</SelectItem>
+                          <SelectItem value="oidc">OIDC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </FieldSet>
+                  <FieldSeparator />
+                  <FieldSet>
+                    <!-- SAML Fields -->
+                    <template v-if="ssoProtocol === 'saml'">
+                      <Field>
+                        <FieldContent>
+                          <FieldLabel>IdP Entity ID</FieldLabel>
+                          <FieldDescription>
+                            The entity ID of your SAML identity provider.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Input
+                          v-model="samlIdpEntityId"
+                          placeholder="https://idp.example.com/entity"
+                        />
+                      </Field>
 
-              <FieldSet class="grid gap-4">
-                <!-- Protocol Selector -->
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel>Protocol</FieldLabel>
-                    <FieldDescription>
-                      Choose your identity provider protocol.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Select v-model="ssoProtocol">
-                    <SelectTrigger class="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="saml">SAML</SelectItem>
-                      <SelectItem value="oidc">OIDC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
+                      <Field>
+                        <FieldContent>
+                          <FieldLabel>SSO URL</FieldLabel>
+                          <FieldDescription>
+                            The single sign-on URL of your identity provider.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Input
+                          v-model="samlSsoUrl"
+                          placeholder="https://idp.example.com/sso"
+                        />
+                      </Field>
 
-                <!-- SAML Fields -->
-                <template v-if="ssoProtocol === 'saml'">
-                  <Field orientation="horizontal">
-                    <FieldContent>
-                      <FieldLabel>IdP Entity ID</FieldLabel>
-                      <FieldDescription>
-                        The entity ID of your SAML identity provider.
-                      </FieldDescription>
-                    </FieldContent>
-                    <Input
-                      v-model="samlIdpEntityId"
-                      placeholder="https://idp.example.com/entity"
-                    />
-                  </Field>
-
-                  <Field orientation="horizontal">
-                    <FieldContent>
-                      <FieldLabel>SSO URL</FieldLabel>
-                      <FieldDescription>
-                        The single sign-on URL of your identity provider.
-                      </FieldDescription>
-                    </FieldContent>
-                    <Input
-                      v-model="samlSsoUrl"
-                      placeholder="https://idp.example.com/sso"
-                    />
-                  </Field>
-
-                  <Field orientation="horizontal">
-                    <FieldContent>
-                      <FieldLabel>Certificate</FieldLabel>
-                      <FieldDescription>
-                        The X.509 signing certificate from your identity
-                        provider (PEM format).
-                      </FieldDescription>
-                    </FieldContent>
-                    <Textarea
-                      v-model="samlCertificate"
-                      placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
-                      class="font-mono text-xs"
-                      rows="6"
-                    />
-                  </Field>
-                </template>
-
-                <!-- OIDC Fields -->
-                <template v-if="ssoProtocol === 'oidc'">
-                  <Field orientation="horizontal">
-                    <FieldContent>
-                      <FieldLabel>Issuer URL</FieldLabel>
-                      <FieldDescription>
-                        The OIDC issuer URL (must support
-                        /.well-known/openid-configuration).
-                      </FieldDescription>
-                    </FieldContent>
-                    <Input
-                      v-model="oidcIssuer"
-                      placeholder="https://accounts.example.com"
-                    />
-                  </Field>
-
-                  <Field orientation="horizontal">
-                    <FieldContent>
-                      <FieldLabel>Client ID</FieldLabel>
-                      <FieldDescription>
-                        The OIDC client ID registered with your identity
-                        provider.
-                      </FieldDescription>
-                    </FieldContent>
-                    <Input v-model="oidcClientId" placeholder="client-id" />
-                  </Field>
-
-                  <Field orientation="horizontal">
-                    <FieldContent>
-                      <FieldLabel>Client Secret</FieldLabel>
-                      <FieldDescription>
-                        The OIDC client secret. This is stored securely and
-                        never exposed to the client.
-                      </FieldDescription>
-                    </FieldContent>
-                    <Input
-                      v-model="oidcClientSecret"
-                      type="password"
-                      placeholder="client-secret"
-                    />
-                  </Field>
-                </template>
-
-                <!-- Shared SSO Settings -->
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel>Email Domains</FieldLabel>
-                    <FieldDescription>
-                      Add email domains that should use SSO (e.g., acme.com).
-                    </FieldDescription>
-                  </FieldContent>
-                  <TagsInput
-                    :model-value="ssoDomains"
-                    :add-on-paste="true"
-                    :delimiter="','"
-                    class="w-full"
-                    @update:model-value="
-                      ssoDomains = filterValidDomains($event as string[])
-                    "
-                  >
-                    <TagsInputItem
-                      v-for="domain in ssoDomains"
-                      :key="domain"
-                      :value="domain"
-                    >
-                      <TagsInputItemText />
-                      <TagsInputItemDelete />
-                    </TagsInputItem>
-                    <TagsInputInput placeholder="Add domain..." />
-                  </TagsInput>
-                </Field>
-
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel>Enforce SSO</FieldLabel>
-                    <FieldDescription>
-                      When enabled, users with matching email domains must use
-                      SSO. Password and social logins will be blocked for these
-                      users.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Switch v-model="ssoEnforced" />
-                </Field>
-
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel> Auto-provision Members </FieldLabel>
-                    <FieldDescription>
-                      Automatically create a team membership when a user signs
-                      in via SSO for the first time.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Switch v-model="ssoAutoProvision" />
-                </Field>
-
-                <Field v-if="ssoAutoProvision" orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel>Default Role</FieldLabel>
-                    <FieldDescription>
-                      The role assigned to auto-provisioned members.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Select v-model="ssoDefaultRole">
-                    <SelectTrigger class="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="guest">Guest</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-
-                <!-- Delete SSO -->
-                <Field v-if="hasSso" orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel class="text-destructive text-sm">
-                      Remove SSO
-                    </FieldLabel>
-                    <FieldDescription>
-                      Remove SSO configuration. Users will fall back to other
-                      login methods.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Button
-                    variant="destructive"
-                    :disabled="deleting"
-                    @click="deleteSsoDialog.open(null)"
-                  >
-                    <Spinner v-if="deleting" />
-                    <template v-else>
-                      <IconTrash />
-                      Remove SSO
+                      <Field>
+                        <FieldContent>
+                          <FieldLabel>Certificate</FieldLabel>
+                          <FieldDescription>
+                            The X.509 signing certificate from your identity
+                            provider (PEM format).
+                          </FieldDescription>
+                        </FieldContent>
+                        <Textarea
+                          v-model="samlCertificate"
+                          placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                          class="font-mono text-xs"
+                          rows="6"
+                        />
+                      </Field>
                     </template>
-                  </Button>
-                </Field>
-              </FieldSet>
 
+                    <!-- OIDC Fields -->
+                    <template v-if="ssoProtocol === 'oidc'">
+                      <Field>
+                        <FieldContent>
+                          <FieldLabel>Issuer URL</FieldLabel>
+                          <FieldDescription>
+                            The OIDC issuer URL (must support
+                            /.well-known/openid-configuration).
+                          </FieldDescription>
+                        </FieldContent>
+                        <Input
+                          v-model="oidcIssuer"
+                          placeholder="https://accounts.example.com"
+                        />
+                      </Field>
+
+                      <Field>
+                        <FieldContent>
+                          <FieldLabel>Client ID</FieldLabel>
+                          <FieldDescription>
+                            The OIDC client ID registered with your identity
+                            provider.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Input v-model="oidcClientId" placeholder="client-id" />
+                      </Field>
+
+                      <Field>
+                        <FieldContent>
+                          <FieldLabel>Client Secret</FieldLabel>
+                          <FieldDescription>
+                            The OIDC client secret. This is stored securely and
+                            never exposed to the client.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Input
+                          v-model="oidcClientSecret"
+                          type="password"
+                          placeholder="client-secret"
+                        />
+                      </Field>
+                    </template>
+                  </FieldSet>
+                  <FieldSeparator />
+                  <FieldSet>
+                    <!-- Shared SSO Settings -->
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>Email Domains</FieldLabel>
+                        <FieldDescription>
+                          Add email domains that should use SSO (e.g.,
+                          acme.com).
+                        </FieldDescription>
+                      </FieldContent>
+                      <TagsInput
+                        :model-value="ssoDomains"
+                        :add-on-paste="true"
+                        :delimiter="','"
+                        @update:model-value="
+                          ssoDomains = filterValidDomains($event as string[])
+                        "
+                      >
+                        <TagsInputItem
+                          v-for="domain in ssoDomains"
+                          :key="domain"
+                          :value="domain"
+                        >
+                          <TagsInputItemText />
+                          <TagsInputItemDelete />
+                        </TagsInputItem>
+                        <TagsInputInput
+                          placeholder="Add domain..."
+                          class="border-none p-0 focus:border-inherit focus:ring-0"
+                        />
+                      </TagsInput>
+                    </Field>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel>Enforce SSO</FieldLabel>
+                        <FieldDescription>
+                          When enabled, users with matching email domains must
+                          use SSO. Password and social logins will be blocked
+                          for these users.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Switch v-model="ssoEnforced" />
+                    </Field>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel> Auto-provision Members </FieldLabel>
+                        <FieldDescription>
+                          Automatically create a team membership when a user
+                          signs in via SSO for the first time.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Switch v-model="ssoAutoProvision" />
+                    </Field>
+                    <Field v-if="ssoAutoProvision" orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel>Default Role</FieldLabel>
+                        <FieldDescription>
+                          The role assigned to auto-provisioned members.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Select v-model="ssoDefaultRole">
+                        <SelectTrigger class="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="guest">Guest</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <!-- Delete SSO -->
+                    <Field v-if="hasSso" orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel class="text-destructive text-sm">
+                          Remove SSO
+                        </FieldLabel>
+                        <FieldDescription>
+                          Remove SSO configuration. Users will fall back to
+                          other login methods.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Button
+                        variant="destructive"
+                        :disabled="deleting"
+                        @click="deleteSsoDialog.open(null)"
+                      >
+                        <Spinner v-if="deleting" />
+                        <template v-else>
+                          <IconTrash />
+                          Remove SSO
+                        </template>
+                      </Button>
+                    </Field>
+                  </FieldSet>
+                </FieldGroup>
+              </OverlayScrollbarsWrapper>
               <DialogFooter class="flex-row justify-between sm:justify-between">
                 <Button
                   variant="outline"

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import TabIcon from "@/components/app/layout/TabIcon.vue"
+import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconCheck,
   IconChevronDown,
@@ -21,7 +22,6 @@ import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useLayoutStore } from "@/stores/layoutStore"
-import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
 import type Sortable from "sortablejs"
@@ -104,8 +104,7 @@ useSortable(el, tabs, {
   },
 })
 
-const workspaceStore = useWorkspaceStore()
-const { currentWorkspace } = storeToRefs(workspaceStore)
+const { currentWorkspace } = useWorkspaceActions()
 const hasClosableTabs = computed(() => tabs.value.some((tab) => !tab.pinned))
 const canCloseActiveTab = computed(() => {
   const tab = activeTab.value
@@ -343,6 +342,10 @@ async function handleAddTab(fullPath = "/new", name?: string) {
   if (newTab) navigateToTab(newTab)
 }
 
+function openNewTab() {
+  void handleAddTab()
+}
+
 async function handleCloseTab(id: string | undefined) {
   if (!id) return
   const tab = tabs.value.find((item) => item.id === id)
@@ -513,15 +516,29 @@ watch(copied, (isCopied) => {
   }
 })
 
-emitter.on("Tabs.Add", onTabsAdd)
-emitter.on("Tabs.Close", onTabsClose)
-emitter.on("Tabs.Close.Others", onTabsCloseOthers)
-emitter.on("Tabs.Close.All", onTabsCloseAll)
-emitter.on("Tabs.Select", onTabsSelect)
-emitter.on("Tabs.ReopenLast", onTabsReopenLast)
-emitter.on("Tabs.Reopen", onTabsReopen)
-emitter.on("Tabs.Duplicate", onTabsDuplicate)
-emitter.on("Tabs.Rename", onTabsRename)
+onMounted(() => {
+  emitter.on("Tabs.Add", onTabsAdd)
+  emitter.on("Tabs.Close", onTabsClose)
+  emitter.on("Tabs.Close.Others", onTabsCloseOthers)
+  emitter.on("Tabs.Close.All", onTabsCloseAll)
+  emitter.on("Tabs.Select", onTabsSelect)
+  emitter.on("Tabs.ReopenLast", onTabsReopenLast)
+  emitter.on("Tabs.Reopen", onTabsReopen)
+  emitter.on("Tabs.Duplicate", onTabsDuplicate)
+  emitter.on("Tabs.Rename", onTabsRename)
+})
+
+onUnmounted(() => {
+  emitter.off("Tabs.Add", onTabsAdd)
+  emitter.off("Tabs.Close", onTabsClose)
+  emitter.off("Tabs.Close.Others", onTabsCloseOthers)
+  emitter.off("Tabs.Close.All", onTabsCloseAll)
+  emitter.off("Tabs.Select", onTabsSelect)
+  emitter.off("Tabs.ReopenLast", onTabsReopenLast)
+  emitter.off("Tabs.Reopen", onTabsReopen)
+  emitter.off("Tabs.Duplicate", onTabsDuplicate)
+  emitter.off("Tabs.Rename", onTabsRename)
+})
 </script>
 
 <template>
@@ -543,7 +560,7 @@ emitter.on("Tabs.Rename", onTabsRename)
             <Button
               variant="outline"
               class="w-60 min-w-0 shrink-0 justify-start border-dashed shadow-none"
-              @click="emitter.emit('Tabs.Add')"
+              @click="openNewTab"
             >
               <IconPlus />
               {{ t("tabs.newTab") }}
@@ -663,15 +680,10 @@ emitter.on("Tabs.Rename", onTabsRename)
                     </ContextMenuTrigger>
                     <ContextMenuContent class="w-56">
                       <ContextMenuGroup>
-                        <ContextMenuItem
-                          as-child
-                          @click="emitter.emit('Tabs.Add')"
-                        >
-                          <RouterLink to="/new">
-                            <IconPlus />
-                            {{ t("tabs.newTab") }}
-                            <ContextMenuShortcut>⌘T</ContextMenuShortcut>
-                          </RouterLink>
+                        <ContextMenuItem @click="openNewTab">
+                          <IconPlus />
+                          {{ t("tabs.newTab") }}
+                          <ContextMenuShortcut>⌘T</ContextMenuShortcut>
                         </ContextMenuItem>
                       </ContextMenuGroup>
                       <ContextMenuSeparator />
@@ -783,15 +795,8 @@ emitter.on("Tabs.Rename", onTabsRename)
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  as-child
-                  @click="emitter.emit('Tabs.Add')"
-                >
-                  <RouterLink to="/new">
-                    <IconPlus />
-                  </RouterLink>
+                <Button variant="ghost" size="icon" @click="openNewTab">
+                  <IconPlus />
                 </Button>
               </TooltipTrigger>
               <TooltipContent> {{ t("tabs.newTab") }} </TooltipContent>
@@ -811,15 +816,10 @@ emitter.on("Tabs.Rename", onTabsRename)
                   <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
                   <DropdownMenuContent align="end" side="bottom">
                     <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        as-child
-                        @click="emitter.emit('Tabs.Add')"
-                      >
-                        <RouterLink to="/new">
-                          <IconPlus />
-                          {{ t("tabs.newTab") }}
-                          <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
-                        </RouterLink>
+                      <DropdownMenuItem @click="openNewTab">
+                        <IconPlus />
+                        {{ t("tabs.newTab") }}
+                        <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
@@ -974,12 +974,10 @@ emitter.on("Tabs.Rename", onTabsRename)
     </ContextMenuTrigger>
     <ContextMenuContent class="w-56" align="start" side="bottom">
       <ContextMenuGroup>
-        <ContextMenuItem as-child @click="emitter.emit('Tabs.Add')">
-          <RouterLink to="/new">
-            <IconPlus />
-            {{ t("tabs.newTab") }}
-            <ContextMenuShortcut>⌘T</ContextMenuShortcut>
-          </RouterLink>
+        <ContextMenuItem @click="openNewTab">
+          <IconPlus />
+          {{ t("tabs.newTab") }}
+          <ContextMenuShortcut>⌘T</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuGroup>
       <ContextMenuSeparator />
