@@ -22,7 +22,7 @@ const props = withDefaults(
 
 <template>
   <div
-    class="flex shrink-0 grow items-center justify-between gap-2 overflow-x-auto p-2"
+    class="flex shrink-0 items-center justify-between gap-2 overflow-x-auto p-2"
   >
     <div class="flex shrink-0 items-center gap-2">
       <DataTableSearchOptions v-if="props.showSearch" :table="table" />

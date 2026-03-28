@@ -380,27 +380,20 @@ const closeTab = (id: string) => {
                           <Tabbar />
                           <Separator />
                         </div>
-                        <!-- Scrollable content area - isolate scroll context -->
+                        <!-- Non-scrollable sub-header with backdrop blur -->
                         <div
-                          class="relative flex min-h-0 min-w-0 grow flex-col overflow-x-clip overflow-y-auto overscroll-none scroll-smooth"
+                          class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
                         >
-                          <div class="sticky top-0 z-20 container mx-auto">
-                            <div
-                              class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
-                            >
-                              <SubNavigation />
-                              <div
-                                id="cta-dock"
-                                class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
-                              ></div>
-                            </div>
-                          </div>
+                          <SubNavigation />
                           <div
-                            class="container mx-auto flex min-h-0 min-w-0 grow flex-col"
-                          >
-                            <RouterView />
-                          </div>
+                            id="cta-dock"
+                            class="flex shrink-0 items-center justify-end gap-2 empty:hidden"
+                          ></div>
                         </div>
+                        <!-- Scrollable content area -->
+                        <OverlayScrollbarsWrapper>
+                          <RouterView />
+                        </OverlayScrollbarsWrapper>
                       </div>
                     </ResizablePanel>
                   </ContextMenuTrigger>
