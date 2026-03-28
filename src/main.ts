@@ -16,6 +16,7 @@ import { InferSeoMetaPlugin } from "@unhead/addons"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
 import "maplibre-gl/dist/maplibre-gl.css"
+import { ClickScrollPlugin, OverlayScrollbars } from "overlayscrollbars"
 import "overlayscrollbars/overlayscrollbars.css"
 import { createPinia } from "pinia"
 import "unfonts.css"
@@ -23,6 +24,8 @@ import "vue-sonner/style.css"
 import { VueFire, VueFireAuth } from "vuefire"
 import "xterminal/dist/xterminal.css"
 import "~console/theme-detect"
+
+OverlayScrollbars.plugin(ClickScrollPlugin)
 
 const head = createHead({
   plugins: [InferSeoMetaPlugin()],

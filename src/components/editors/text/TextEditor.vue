@@ -1458,11 +1458,11 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         > span {
           width: 1rem;
           height: 1rem;
-          border: 1px solid var(--input);
+          border: 1px solid var(--color-input);
           border-radius: 4px;
-          background-color: var(--background);
-          color: var(--primary-foreground);
-          box-shadow: inset 0 0 0 0 var(--primary);
+          background-color: var(--color-background);
+          color: var(--color-primary-foreground);
+          box-shadow: inset 0 0 0 0 var(--color-primary);
           transition:
             background-color 0.15s ease,
             border-color 0.15s ease,
@@ -1483,14 +1483,14 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         }
 
         input[type="checkbox"]:focus-visible + span {
-          border-color: var(--ring);
+          border-color: var(--color-ring);
           box-shadow: 0 0 0 3px
-            color-mix(in oklab, var(--ring) 35%, transparent);
+            color-mix(in oklab, var(--color-ring) 35%, transparent);
         }
 
         input[type="checkbox"]:checked + span {
-          border-color: var(--primary);
-          background-color: var(--primary);
+          border-color: var(--color-primary);
+          background-color: var(--color-primary);
         }
 
         input[type="checkbox"]:checked + span::after {
@@ -1512,7 +1512,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       }
 
       &[data-checked="true"] > div {
-        color: var(--muted-foreground);
+        color: var(--color-muted-foreground);
         text-decoration: line-through;
         text-decoration-thickness: 1px;
       }
@@ -1534,7 +1534,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     display: flex;
     gap: 0.25rem;
     margin: 1.25rem 0;
-    border: 1px solid var(--border);
+    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     padding: 0.5rem;
 
@@ -1556,7 +1556,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       width: 1.25rem;
 
       &:hover {
-        background-color: var(--muted);
+        background-color: var(--color-muted);
       }
 
       &::before {
@@ -1584,7 +1584,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
   th,
   td {
-    border: 1px solid var(--border);
+    border: 1px solid var(--color-border);
     box-sizing: border-box;
     min-width: 1em;
     padding: 0.5rem 0.625rem;
@@ -1593,7 +1593,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   th {
-    background: color-mix(in oklab, var(--muted) 80%, transparent);
+    background: color-mix(in oklab, var(--color-muted) 80%, transparent);
     font-weight: 600;
     text-align: left;
   }
@@ -1604,7 +1604,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   .selectedCell::after {
-    background: color-mix(in oklab, var(--accent) 24%, transparent);
+    background: color-mix(in oklab, var(--color-accent) 24%, transparent);
     content: "";
     inset: 0;
     pointer-events: none;
@@ -1613,7 +1613,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   .column-resize-handle {
-    background: var(--ring);
+    background: var(--color-ring);
     bottom: -2px;
     pointer-events: none;
     position: absolute;
@@ -1623,10 +1623,10 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   pre {
-    background: color-mix(in oklab, var(--muted) 70%, transparent);
-    border: 1px solid var(--border);
+    background: color-mix(in oklab, var(--color-muted) 70%, transparent);
+    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
-    color: var(--foreground);
+    color: var(--color-foreground);
     font-family: var(--font-mono);
     margin: 1rem 0;
     overflow-x: auto;
@@ -1634,7 +1634,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   code {
-    background: color-mix(in oklab, var(--muted) 70%, transparent);
+    background: color-mix(in oklab, var(--color-muted) 70%, transparent);
     border-radius: 0.25rem;
     font-size: 0.85em;
     padding: 0.1rem 0.35rem;
@@ -1646,7 +1646,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   .editor-image-node {
-    border: 1px solid var(--border);
+    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     margin: 1rem 0;
     max-width: 100%;

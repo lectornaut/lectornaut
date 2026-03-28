@@ -150,7 +150,7 @@ useInfiniteScroll(
         </div>
         <OverlayScrollbarsWrapper
           ref="scrollableContainer"
-          class="bg-sidebar aspect-square w-md rounded-md p-2"
+          class="bg-sidebar aspect-square w-md rounded-md"
         >
           <Empty
             v-if="filteredNotifications.length === 0 && !isLoading"
@@ -270,7 +270,7 @@ useInfiniteScroll(
     <OverlayScrollbarsWrapper>
       <div class="grid size-full w-full min-w-64 grid-cols-1">
         <div
-          class="size-full bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+          class="size-full bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
         >
           Sample Content
         </div>

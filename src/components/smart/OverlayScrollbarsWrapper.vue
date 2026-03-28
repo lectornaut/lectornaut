@@ -6,66 +6,39 @@ import {
   type OverlayScrollbarsComponentRef,
 } from "overlayscrollbars-vue"
 
-const props = withDefaults(
-  defineProps<{
-    scrollHint?: boolean
-  }>(),
-  { scrollHint: true }
-)
-
 const overlayScrollbars =
   useTemplateRef<OverlayScrollbarsComponentRef>("overlayScrollbars")
 const showTopHint = ref(false)
 const showBottomHint = ref(false)
 
-const updateScrollHints = (instance?: OverlayScrollbars | null) => {
-  if (!props.scrollHint) {
-    showTopHint.value = false
-    showBottomHint.value = false
-    return
-  }
+const osOptions = computed(() => ({
+  scrollbars: {
+    theme: state.value === "light" ? "os-theme-dark" : "os-theme-light",
+    autoHide: "scroll" as const,
+    autoHideDelay: 800,
+    clickScroll: true,
+  },
+}))
 
+const updateScrollHints = (instance?: OverlayScrollbars | null) => {
   const currentInstance = instance ?? overlayScrollbars.value?.osInstance()
-  if (!currentInstance) {
-    return
-  }
+  if (!currentInstance) return
 
   const { scrollOffsetElement } = currentInstance.elements()
-  const maxScrollTop = Math.max(
-    scrollOffsetElement.scrollHeight - scrollOffsetElement.clientHeight,
-    0
-  )
   const scrollTop = scrollOffsetElement.scrollTop
+  const maxScrollTop =
+    scrollOffsetElement.scrollHeight - scrollOffsetElement.clientHeight
 
-  showTopHint.value = scrollTop > 1
-  showBottomHint.value = maxScrollTop - scrollTop > 1
+  const top = scrollTop > 1
+  const bottom = maxScrollTop - scrollTop > 1
+
+  if (showTopHint.value !== top) showTopHint.value = top
+  if (showBottomHint.value !== bottom) showBottomHint.value = bottom
 }
 
 const handleInitialized = (instance: OverlayScrollbars) => {
   nextTick(() => updateScrollHints(instance))
 }
-
-const handleUpdated = (instance: OverlayScrollbars) => {
-  updateScrollHints(instance)
-}
-
-const handleScroll = (instance: OverlayScrollbars) => {
-  updateScrollHints(instance)
-}
-
-watch(
-  () => props.scrollHint,
-  (scrollHint) => {
-    if (!scrollHint) {
-      showTopHint.value = false
-      showBottomHint.value = false
-      return
-    }
-
-    nextTick(() => updateScrollHints())
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
@@ -73,19 +46,14 @@ watch(
     ref="overlayScrollbars"
     class="overlay-scrollbars-wrapper relative size-full min-h-0 min-w-0 grow overflow-auto"
     :class="{
-      'show-top-hint': props.scrollHint && showTopHint,
-      'show-bottom-hint': props.scrollHint && showBottomHint,
+      'show-top-hint': showTopHint,
+      'show-bottom-hint': showBottomHint,
     }"
     defer
-    :options="{
-      scrollbars: {
-        theme: state === 'light' ? 'os-theme-dark' : 'os-theme-light',
-        autoHide: 'scroll',
-      },
-    }"
+    :options="osOptions"
     @os-initialized="handleInitialized"
-    @os-scroll="handleScroll"
-    @os-updated="handleUpdated"
+    @os-scroll="updateScrollHints"
+    @os-updated="updateScrollHints"
   >
     <slot />
   </OverlayScrollbarsComponent>
@@ -93,16 +61,7 @@ watch(
 
 <style scoped>
 :deep([data-overlayscrollbars-initialize]),
-:deep(.os-host) {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  width: 100%;
-  height: 100%;
-  flex: 1 1 0%;
-  flex-direction: column;
-}
-
+:deep(.os-host),
 :deep([data-overlayscrollbars-contents]) {
   display: flex;
   min-width: 0;
@@ -113,16 +72,22 @@ watch(
   flex-direction: column;
 }
 
+.overlay-scrollbars-wrapper {
+  contain: layout style;
+}
+
 .overlay-scrollbars-wrapper::before,
 .overlay-scrollbars-wrapper::after {
   content: "";
   position: absolute;
   inset-inline: 0;
-  height: 16px;
+  height: 20px;
   pointer-events: none;
   z-index: 1;
   opacity: 0;
   transition: opacity 200ms ease;
+  will-change: opacity;
+  backface-visibility: hidden;
 }
 
 .overlay-scrollbars-wrapper::before {
@@ -136,10 +101,10 @@ watch(
 }
 
 .overlay-scrollbars-wrapper.show-top-hint::before {
-  opacity: 0.9;
+  opacity: 0.75;
 }
 
 .overlay-scrollbars-wrapper.show-bottom-hint::after {
-  opacity: 0.9;
+  opacity: 0.75;
 }
 </style>

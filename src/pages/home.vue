@@ -162,11 +162,11 @@ const chartConfig = computed(
     ({
       desktop: {
         label: t("pages.home.chart.desktop"),
-        color: "var(--chart-1)",
+        color: "var(--color-chart-1)",
       },
       mobile: {
         label: t("pages.home.chart.mobile"),
-        color: "var(--chart-3)",
+        color: "var(--color-chart-3)",
       },
     }) satisfies ChartConfig
 )
@@ -550,11 +550,11 @@ const expandedCard = ref<number | null>(null)
                     variant="beam"
                     :name="item.name"
                     :colors="[
-                      'var(--chart-1)',
-                      'var(--chart-2)',
-                      'var(--chart-3)',
-                      'var(--chart-4)',
-                      'var(--chart-5)',
+                      'var(--color-chart-1)',
+                      'var(--color-chart-2)',
+                      'var(--color-chart-3)',
+                      'var(--color-chart-4)',
+                      'var(--color-chart-5)',
                     ]"
                   />
                   <span>{{ item.name }}</span>
@@ -613,11 +613,11 @@ const expandedCard = ref<number | null>(null)
                       <Avatar
                         :name="team.name"
                         :colors="[
-                          'var(--chart-1)',
-                          'var(--chart-2)',
-                          'var(--chart-3)',
-                          'var(--chart-4)',
-                          'var(--chart-5)',
+                          'var(--color-chart-1)',
+                          'var(--color-chart-2)',
+                          'var(--color-chart-3)',
+                          'var(--color-chart-4)',
+                          'var(--color-chart-5)',
                         ]"
                       />
                       <span>{{ team.name }}</span>
@@ -643,11 +643,11 @@ const expandedCard = ref<number | null>(null)
                             <Avatar
                               :name="page.name"
                               :colors="[
-                                'var(--chart-1)',
-                                'var(--chart-2)',
-                                'var(--chart-3)',
-                                'var(--chart-4)',
-                                'var(--chart-5)',
+                                'var(--color-chart-1)',
+                                'var(--color-chart-2)',
+                                'var(--color-chart-3)',
+                                'var(--color-chart-4)',
+                                'var(--color-chart-5)',
                               ]"
                             />
                             <span>{{ page.name }}</span>

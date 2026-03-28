@@ -338,11 +338,11 @@ const route = useRoute()
                               variant="beam"
                               :name="`Agent ${index + 1}`"
                               :colors="[
-                                'var(--chart-1)',
-                                'var(--chart-2)',
-                                'var(--chart-3)',
-                                'var(--chart-4)',
-                                'var(--chart-5)',
+                                'var(--color-chart-1)',
+                                'var(--color-chart-2)',
+                                'var(--color-chart-3)',
+                                'var(--color-chart-4)',
+                                'var(--color-chart-5)',
                               ]"
                               class="rounded"
                             />
@@ -436,11 +436,11 @@ const route = useRoute()
                       <Avatar
                         :name="`Agent ${index + 1}`"
                         :colors="[
-                          'var(--chart-1)',
-                          'var(--chart-2)',
-                          'var(--chart-3)',
-                          'var(--chart-4)',
-                          'var(--chart-5)',
+                          'var(--color-chart-1)',
+                          'var(--color-chart-2)',
+                          'var(--color-chart-3)',
+                          'var(--color-chart-4)',
+                          'var(--color-chart-5)',
                         ]"
                         class="rounded"
                       />
@@ -490,11 +490,11 @@ const route = useRoute()
                       <Avatar
                         :name="`Agent ${index + 1}`"
                         :colors="[
-                          'var(--chart-1)',
-                          'var(--chart-2)',
-                          'var(--chart-3)',
-                          'var(--chart-4)',
-                          'var(--chart-5)',
+                          'var(--color-chart-1)',
+                          'var(--color-chart-2)',
+                          'var(--color-chart-3)',
+                          'var(--color-chart-4)',
+                          'var(--color-chart-5)',
                         ]"
                       />
                       Agent {{ index + 1 }}

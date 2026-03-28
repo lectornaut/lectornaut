@@ -36,7 +36,7 @@ onConnect(addEdges)
           <IconMinus />
         </template>
       </Controls>
-      <MiniMap pannable zoomable node-color="var(--primary)" />
+      <MiniMap pannable zoomable node-color="var(--color-primary)" />
       <Background
         :class="{ 'bg-muted': isDragOver }"
         class="relative transition"

@@ -91,15 +91,15 @@
     --vis-tooltip-shadow-color: none;
     --vis-tooltip-backdrop-filter: none;
     --vis-tooltip-padding: none;
-    --vis-primary-color: var(--primary);
-    --vis-secondary-color: var(--secondary);
-    --vis-text-color: var(--foreground);
-    --vf-node-color: var(--foreground);
-    --vf-box-shadow: var(--foreground);
-    --vf-node-bg: var(--background);
-    --vf-node-text: var(--foreground);
-    --vf-handle: var(--border);
-    --vf-connection-path: var(--border);
+    --vis-primary-color: var(--color-primary);
+    --vis-secondary-color: var(--color-secondary);
+    --vis-text-color: var(--color-foreground);
+    --vf-node-color: var(--color-foreground);
+    --vf-box-shadow: var(--color-foreground);
+    --vf-node-bg: var(--color-background);
+    --vf-node-text: var(--color-foreground);
+    --vf-handle: var(--color-border);
+    --vf-connection-path: var(--color-border);
 
     font-synthesis: none;
     text-rendering: optimizelegibility;

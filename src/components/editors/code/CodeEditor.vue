@@ -163,7 +163,7 @@ const getIndentGuidesExtension = (): Extension => {
   return EditorView.theme({
     ".cm-line": {
       backgroundImage:
-        "repeating-linear-gradient(to right, transparent, transparent calc(var(--indent-marker-width) - 1px), var(--border) calc(var(--indent-marker-width) - 1px), var(--border) var(--indent-marker-width))",
+        "repeating-linear-gradient(to right, transparent, transparent calc(var(--indent-marker-width) - 1px), var(--color-border) calc(var(--indent-marker-width) - 1px), var(--color-border) var(--indent-marker-width))",
       backgroundSize: "var(--indent-marker-width) 100%",
       backgroundPosition: "left top",
     },
@@ -178,40 +178,40 @@ const getIndentGuidesExtension = (): Extension => {
  */
 const themeSpec = {
   "&": {
-    background: "var(--background)",
-    color: "var(--foreground)",
+    background: "var(--color-background)",
+    color: "var(--color-foreground)",
   },
   ".cm-scroller": {
     fontFamily: "var(--font-mono)",
   },
   ".cm-content": {
-    caretColor: "var(--foreground)",
+    caretColor: "var(--color-foreground)",
   },
   "&.cm-focused": {
     outline: "none",
   },
   ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--primary)",
+    borderLeftColor: "var(--color-primary)",
   },
   ".cm-selectionBackground, .cm-content ::selection": {
-    background: "color-mix(in srgb, var(--primary) 24%, transparent)",
+    background: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
   },
   ".cm-gutters": {
-    background: "var(--card)",
-    color: "var(--muted-foreground)",
-    borderRight: "1px solid var(--border)",
+    background: "var(--color-card)",
+    color: "var(--color-muted-foreground)",
+    borderRight: "1px solid var(--color-border)",
   },
   ".cm-activeLineGutter": {
-    background: "color-mix(in srgb, var(--accent) 40%, transparent)",
-    color: "var(--foreground)",
+    background: "color-mix(in srgb, var(--color-accent) 40%, transparent)",
+    color: "var(--color-foreground)",
   },
   ".cm-activeLine": {
-    background: "color-mix(in srgb, var(--accent) 35%, transparent)",
+    background: "color-mix(in srgb, var(--color-accent) 35%, transparent)",
   },
   ".cm-panels": {
-    background: "var(--popover)",
-    color: "var(--popover-foreground)",
-    borderTop: "1px solid var(--border)",
+    background: "var(--color-popover)",
+    color: "var(--color-popover-foreground)",
+    borderTop: "1px solid var(--color-border)",
   },
   ".cm-panel.cm-search": {
     display: "flex",
@@ -233,9 +233,9 @@ const themeSpec = {
     height: "2.25rem",
     minWidth: "10rem",
     borderRadius: "var(--radius)",
-    border: "1px solid var(--input)",
-    background: "color-mix(in srgb, var(--background) 92%, transparent)",
-    color: "var(--foreground)",
+    border: "1px solid var(--color-input)",
+    background: "color-mix(in srgb, var(--color-background) 92%, transparent)",
+    color: "var(--color-foreground)",
     padding: "0 0.75rem",
     fontFamily: "var(--font-sans)",
     fontSize: "0.875rem",
@@ -244,17 +244,18 @@ const themeSpec = {
     transition: "border-color 120ms ease, box-shadow 120ms ease",
   },
   ".cm-panel.cm-search .cm-textfield::placeholder": {
-    color: "var(--muted-foreground)",
+    color: "var(--color-muted-foreground)",
   },
   ".cm-panel.cm-search .cm-textfield:focus": {
-    borderColor: "var(--ring)",
-    boxShadow: "0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent)",
+    borderColor: "var(--color-ring)",
+    boxShadow:
+      "0 0 0 3px color-mix(in srgb, var(--color-ring) 35%, transparent)",
   },
   ".cm-panel.cm-search label": {
     display: "inline-flex",
     alignItems: "center",
     gap: "0.375rem",
-    color: "var(--muted-foreground)",
+    color: "var(--color-muted-foreground)",
     whiteSpace: "nowrap",
     fontFamily: "var(--font-sans)",
     fontSize: "0.75rem",
@@ -264,15 +265,15 @@ const themeSpec = {
     width: "0.875rem",
     height: "0.875rem",
     margin: "0",
-    accentColor: "var(--primary)",
+    accentColor: "var(--color-primary)",
   },
   ".cm-panel.cm-search .cm-button": {
     textTransform: "capitalize",
     height: "2.25rem",
     borderRadius: "var(--radius)",
-    border: "1px solid var(--border)",
-    background: "var(--background)",
-    color: "var(--foreground)",
+    border: "1px solid var(--color-border)",
+    background: "var(--color-background)",
+    color: "var(--color-foreground)",
     padding: "0 0.75rem",
     fontFamily: "var(--font-sans)",
     fontSize: "0.8125rem",
@@ -283,13 +284,14 @@ const themeSpec = {
       "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
   },
   ".cm-panel.cm-search .cm-button:hover": {
-    background: "var(--accent)",
-    color: "var(--accent-foreground)",
+    background: "var(--color-accent)",
+    color: "var(--color-accent-foreground)",
   },
   ".cm-panel.cm-search .cm-button:focus-visible": {
     outline: "none",
-    borderColor: "var(--ring)",
-    boxShadow: "0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent)",
+    borderColor: "var(--color-ring)",
+    boxShadow:
+      "0 0 0 3px color-mix(in srgb, var(--color-ring) 35%, transparent)",
   },
   ".cm-panel.cm-search [name=close]": {
     position: "static",
@@ -299,7 +301,7 @@ const themeSpec = {
     borderRadius: "var(--radius)",
     border: "1px solid transparent",
     background: "transparent",
-    color: "var(--muted-foreground)",
+    color: "var(--color-muted-foreground)",
     fontFamily: "var(--font-sans)",
     fontSize: "1rem",
     lineHeight: "1",
@@ -311,29 +313,30 @@ const themeSpec = {
       "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
   },
   ".cm-panel.cm-search [name=close]:hover": {
-    background: "var(--accent)",
-    color: "var(--accent-foreground)",
+    background: "var(--color-accent)",
+    color: "var(--color-accent-foreground)",
   },
   ".cm-panel.cm-search [name=close]:focus-visible": {
     outline: "none",
-    borderColor: "var(--ring)",
-    boxShadow: "0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent)",
+    borderColor: "var(--color-ring)",
+    boxShadow:
+      "0 0 0 3px color-mix(in srgb, var(--color-ring) 35%, transparent)",
   },
   ".cm-searchMatch": {
-    background: "color-mix(in srgb, var(--ring) 25%, transparent)",
-    outline: "1px solid var(--ring)",
+    background: "color-mix(in srgb, var(--color-ring) 25%, transparent)",
+    outline: "1px solid var(--color-ring)",
   },
   ".cm-searchMatch.cm-searchMatch-selected": {
-    background: "color-mix(in srgb, var(--primary) 30%, transparent)",
+    background: "color-mix(in srgb, var(--color-primary) 30%, transparent)",
   },
   ".cm-tooltip": {
-    background: "var(--popover)",
-    color: "var(--popover-foreground)",
-    border: "1px solid var(--border)",
+    background: "var(--color-popover)",
+    color: "var(--color-popover-foreground)",
+    border: "1px solid var(--color-border)",
   },
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-    background: "color-mix(in srgb, var(--accent) 35%, transparent)",
-    color: "var(--foreground)",
+    background: "color-mix(in srgb, var(--color-accent) 35%, transparent)",
+    color: "var(--color-foreground)",
   },
   ".cm-ySelectionInfo": {
     opacity: "1",

@@ -841,7 +841,7 @@ const closeTab = (id: string) => {
                       class="bg-background mx-2 mb-2 grow rounded border p-2"
                     >
                       <div
-                        class="size-full rounded bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
+                        class="size-full rounded bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
                       >
                         Sample Content
                       </div>

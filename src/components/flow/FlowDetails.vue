@@ -129,11 +129,11 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
               index="day"
               :categories="['runs', 'jobs', 'errors', 'duration']"
               :colors="[
-                'var(--chart-1)',
-                'var(--chart-2)',
-                'var(--chart-3)',
-                'var(--chart-4)',
-                'var(--chart-5)',
+                'var(--color-chart-1)',
+                'var(--color-chart-2)',
+                'var(--color-chart-3)',
+                'var(--color-chart-4)',
+                'var(--color-chart-5)',
               ]"
               :y-formatter="
                 (tick: string | number | bigint) => {

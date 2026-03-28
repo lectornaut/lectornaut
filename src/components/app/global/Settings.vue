@@ -112,9 +112,7 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
               </SidebarContent>
             </TabsList>
           </Sidebar>
-
           <Separator orientation="vertical" />
-
           <div class="container mx-auto flex grow flex-col">
             <DialogHeader class="m-6">
               <DialogTitle>{{ t(resolvedTabConfig?.name ?? "") }}</DialogTitle>
@@ -122,55 +120,66 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 {{ t(resolvedTabConfig?.description ?? "") }}
               </DialogDescription>
             </DialogHeader>
-
             <Separator />
-
             <TabsContent :class="tabContentClass" value="preferences">
-              <SettingsPreferences />
+              <OverlayScrollbarsWrapper>
+                <SettingsPreferences />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="account">
-              <SettingsAccount />
+              <OverlayScrollbarsWrapper>
+                <SettingsAccount />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="appearance">
-              <SettingsAppearance />
+              <OverlayScrollbarsWrapper>
+                <SettingsAppearance />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="notifications">
-              <SettingsNotifications />
+              <OverlayScrollbarsWrapper>
+                <SettingsNotifications />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="members">
-              <SettingsMembers />
+              <OverlayScrollbarsWrapper>
+                <SettingsMembers />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="overview">
-              <SettingsOverview />
+              <OverlayScrollbarsWrapper>
+                <SettingsOverview />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="teams">
-              <SettingsTeams />
+              <OverlayScrollbarsWrapper>
+                <SettingsTeams />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="workspaces">
-              <SettingsWorkspaces />
+              <OverlayScrollbarsWrapper>
+                <SettingsWorkspaces />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="billing">
-              <SettingsBilling />
+              <OverlayScrollbarsWrapper>
+                <SettingsBilling />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="plans">
-              <SettingsPlans />
+              <OverlayScrollbarsWrapper>
+                <SettingsPlans />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="security">
-              <SettingsSecurity />
+              <OverlayScrollbarsWrapper>
+                <SettingsSecurity />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
-
             <TabsContent :class="tabContentClass" value="logs">
-              <SettingsLogs />
+              <OverlayScrollbarsWrapper>
+                <SettingsLogs />
+              </OverlayScrollbarsWrapper>
             </TabsContent>
           </div>
         </SidebarProvider>

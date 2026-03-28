@@ -240,7 +240,7 @@ const authenticateApple = () =>
     <Alert
       v-if="ssoError"
       variant="destructive"
-      class="mt-4 bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+      class="mt-4 bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
     >
       <IconCircleAlert />
       <AlertTitle>{{ t("enter.uhoh") }}</AlertTitle>
@@ -634,7 +634,7 @@ const authenticateApple = () =>
     <Alert
       v-if="authenticateError"
       variant="destructive"
-      class="bg-[repeating-linear-gradient(45deg,var(--muted)_0,var(--muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+      class="bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
     >
       <IconCircleAlert />
       <AlertTitle> {{ t("enter.uhoh") }} </AlertTitle>
