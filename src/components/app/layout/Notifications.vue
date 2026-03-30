@@ -18,6 +18,10 @@ import {
 } from "@/data/icons"
 import type { INotificationStatus } from "@/types/notification"
 
+type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
+  getScrollElement: () => HTMLElement | undefined
+}>
+
 defineProps<{
   iconDisplay?: "icon" | "text"
 }>()
@@ -44,7 +48,7 @@ const {
   deleteAllNotifications,
 } = useNotifications()
 
-const scrollableContainer = useTemplateRef<ComponentPublicInstance>(
+const scrollableContainer = useTemplateRef<OverlayScrollbarsWrapperRef>(
   "scrollableContainer"
 )
 const activeTab = ref<INotificationStatus>("inbox")
@@ -68,7 +72,7 @@ const filteredNotifications = computed(() => {
 
 // Infinite scroll
 useInfiniteScroll(
-  () => scrollableContainer.value?.$el as HTMLElement,
+  () => scrollableContainer.value?.getScrollElement(),
   () => {
     loadMore()
   },

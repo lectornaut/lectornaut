@@ -256,10 +256,7 @@ const closeTab = (id: string) => {
       class="size-full min-h-0 min-w-0 overflow-clip bg-transparent"
     >
       <Headerbar />
-      <div
-        data-tauri-drag-region
-        class="flex min-h-0 min-w-0 grow overflow-clip"
-      >
+      <div data-tauri-drag-region class="flex min-h-0 min-w-0 grow">
         <Spinner v-if="isLoading" class="m-auto" />
         <TeamSelector v-else-if="!currentTeam" />
         <WorkspaceSelector v-else-if="!currentWorkspace" />

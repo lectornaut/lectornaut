@@ -9,6 +9,13 @@ import { computed, h, onMounted } from "vue"
 
 const { logs, loading, error, hasMore, canViewLogs, fetchLogs } = useAuditLogs()
 
+const fetchAllLogs = async (reset = true) => {
+  await fetchLogs(reset)
+  while (hasMore.value) {
+    await fetchLogs(false)
+  }
+}
+
 const formatTimestamp = (entry: ILogEntry) => {
   const timestamp = entry.timestamp?.toDate?.()
   return timestamp
@@ -127,11 +134,10 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
     enablePinning: false,
   },
 ])
-const refreshLogs = () => fetchLogs(true)
-const loadMore = () => fetchLogs(false)
+const refreshLogs = () => fetchAllLogs(true)
 
 onMounted(() => {
-  fetchLogs(true)
+  fetchAllLogs(true)
 })
 </script>
 
@@ -192,19 +198,6 @@ onMounted(() => {
                 :columns="columns"
                 class="overflow-clip rounded-md border"
               />
-            </FieldContent>
-          </Field>
-          <Field v-if="hasMore && logs.length > 0" orientation="horizontal">
-            <FieldContent>
-              <div class="flex justify-center">
-                <Button
-                  variant="secondary"
-                  :disabled="loading"
-                  @click="loadMore"
-                >
-                  Load More
-                </Button>
-              </div>
             </FieldContent>
           </Field>
         </template>

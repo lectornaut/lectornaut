@@ -4,6 +4,7 @@ import { IconChevronRight, IconDatabase, IconListFilter } from "@/data/icons"
 import type {
   ColumnDef,
   ColumnFiltersState,
+  ColumnPinningState,
   ExpandedState,
   GroupingState,
   SortingState,
@@ -26,6 +27,8 @@ const props = withDefaults(
   defineProps<{
     columns: ColumnDef<TData, unknown>[]
     data: TData[]
+    columnPinning?: ColumnPinningState
+    stickyHeader?: boolean
     showToolbar?: boolean
     showPagination?: boolean
     paginate?: boolean
@@ -36,6 +39,11 @@ const props = withDefaults(
     showViewOptions?: boolean
   }>(),
   {
+    columnPinning: () => ({
+      left: ["select"],
+      right: ["actions"],
+    }),
+    stickyHeader: false,
     showToolbar: true,
     showPagination: true,
     paginate: true,
@@ -80,9 +88,8 @@ const table = useVueTable({
     get grouping() {
       return grouping.value
     },
-    columnPinning: {
-      left: ["select"],
-      right: ["actions"],
+    get columnPinning() {
+      return props.columnPinning
     },
   },
   enableRowSelection: true,
@@ -104,6 +111,8 @@ const table = useVueTable({
   getExpandedRowModel: getExpandedRowModel(),
   getGroupedRowModel: getGroupedRowModel(),
 })
+
+defineExpose({ table })
 </script>
 
 <template>
@@ -117,9 +126,12 @@ const table = useVueTable({
       :show-sorting="props.showSorting"
       :show-view-options="props.showViewOptions"
     />
-    <OverlayScrollbarsWrapper>
+    <OverlayScrollbarsWrapper
+      show-inline-hints
+      target-selector="[data-slot='table-container']"
+    >
       <Table>
-        <TableHeader>
+        <TableHeader :class="props.stickyHeader && 'sticky top-0 z-20'">
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
@@ -129,12 +141,15 @@ const table = useVueTable({
               :key="header.id"
               :data-pinned="header.column.getIsPinned()"
               :class="[
+                props.stickyHeader && 'bg-background top-0',
                 {
                   'from-card/50 sticky from-50%': header.column.getIsPinned(),
                 },
                 header.column.getIsPinned() === 'left'
                   ? 'left-0 bg-linear-to-r'
-                  : 'right-0 bg-linear-to-l',
+                  : header.column.getIsPinned() === 'right'
+                    ? 'right-0 bg-linear-to-l'
+                    : '',
               ]"
             >
               <FlexRender
@@ -167,7 +182,9 @@ const table = useVueTable({
                     },
                     cell.column.getIsPinned() === 'left'
                       ? 'left-0 bg-linear-to-r'
-                      : 'right-0 bg-linear-to-l',
+                      : cell.column.getIsPinned() === 'right'
+                        ? 'right-0 bg-linear-to-l'
+                        : '',
                   ]"
                 >
                   <template v-if="cell.getIsGrouped()">
@@ -187,18 +204,6 @@ const table = useVueTable({
                         :class="{ 'rotate-90': row.getIsExpanded() }"
                       />
                     </Button>
-                  </template>
-                  <template v-else-if="cell.getIsAggregated()">
-                    <FlexRender
-                      :render="cell.column.columnDef.cell"
-                      :props="cell.getContext()"
-                    />
-                  </template>
-                  <template v-else-if="cell.getIsPlaceholder()">
-                    <FlexRender
-                      :render="cell.column.columnDef.cell"
-                      :props="cell.getContext()"
-                    />
                   </template>
                   <template v-else>
                     <FlexRender
@@ -251,3 +256,12 @@ const table = useVueTable({
     <DataTablePagination v-if="props.showPagination" :table="table" />
   </div>
 </template>
+
+<style scoped>
+:deep([data-slot="table-container"]) {
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+</style>

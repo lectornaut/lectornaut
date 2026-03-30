@@ -16,6 +16,10 @@ import {
 import type { ILogEntry } from "@/types/logs"
 import { toRefs } from "vue"
 
+type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
+  getScrollElement: () => HTMLElement | undefined
+}>
+
 const props = defineProps<{
   teamId: string | null
   workspaceId: string | null
@@ -23,7 +27,7 @@ const props = defineProps<{
 }>()
 
 const { teamId, workspaceId, documentId } = toRefs(props)
-const scrollableContainer = useTemplateRef<ComponentPublicInstance>(
+const scrollableContainer = useTemplateRef<OverlayScrollbarsWrapperRef>(
   "scrollableContainer"
 )
 
@@ -138,7 +142,7 @@ const refreshLogs = () => fetchLogs(true)
 const loadMore = () => fetchLogs(false)
 
 useInfiniteScroll(
-  () => scrollableContainer.value?.$el as HTMLElement,
+  () => scrollableContainer.value?.getScrollElement(),
   () => {
     loadMore()
   },

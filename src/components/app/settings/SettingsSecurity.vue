@@ -488,7 +488,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
               <FieldContent>
                 <FieldLabel>SSO</FieldLabel>
                 <FieldDescription>
-                  Enterprise Single Sign-On (SAML / OIDC).
+                  Enable Single Sign-On with SAML or OIDC identity providers.
                 </FieldDescription>
               </FieldContent>
               <ButtonGroup>
@@ -564,6 +564,125 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
               >
                 <FieldGroup>
                   <FieldSet>
+                    <!-- Shared SSO Settings -->
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>Email Domains</FieldLabel>
+                        <FieldDescription>
+                          Add email domains that should use SSO (e.g.,
+                          acme.com).
+                        </FieldDescription>
+                      </FieldContent>
+                      <TagsInput
+                        :model-value="ssoDomains"
+                        :add-on-paste="true"
+                        :delimiter="','"
+                        class="group"
+                        @update:model-value="
+                          ssoDomains = filterValidDomains($event as string[])
+                        "
+                      >
+                        <InputGroupButton
+                          variant="ghost"
+                          size="icon-xs"
+                          disabled
+                        >
+                          <IconGlobe />
+                        </InputGroupButton>
+                        <TagsInputItem
+                          v-for="domain in ssoDomains"
+                          :key="domain"
+                          :value="domain"
+                        >
+                          <TagsInputItemText />
+                          <TagsInputItemDelete />
+                        </TagsInputItem>
+                        <TagsInputInput
+                          placeholder="acme.com"
+                          type="url"
+                          class="border-none p-0 focus:border-inherit focus:ring-0"
+                        />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <InputGroupButton
+                                variant="ghost"
+                                size="icon-xs"
+                                class="invisible group-focus-within:visible"
+                                disabled
+                              >
+                                <IconCheck />
+                              </InputGroupButton>
+                            </TooltipTrigger>
+                            <TooltipContent>Save</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TagsInput>
+                    </Field>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel>Enforce SSO</FieldLabel>
+                        <FieldDescription>
+                          When enabled, users with matching email domains must
+                          use SSO. Password and social logins will be blocked
+                          for these users.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Switch v-model="ssoEnforced" />
+                    </Field>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel> Auto-provision Members </FieldLabel>
+                        <FieldDescription>
+                          Automatically create a team membership when a user
+                          signs in via SSO for the first time.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Switch v-model="ssoAutoProvision" />
+                    </Field>
+                    <Field v-if="ssoAutoProvision" orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel>Default Role</FieldLabel>
+                        <FieldDescription>
+                          The role assigned to auto-provisioned members.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Select v-model="ssoDefaultRole">
+                        <SelectTrigger class="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="guest">Guest</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <!-- Delete SSO -->
+                    <Field v-if="hasSso" orientation="horizontal">
+                      <FieldContent>
+                        <FieldLabel class="text-destructive text-sm">
+                          Remove SSO
+                        </FieldLabel>
+                        <FieldDescription>
+                          Remove SSO configuration. Users will fall back to
+                          other login methods.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Button
+                        variant="destructive"
+                        :disabled="deleting"
+                        @click="deleteSsoDialog.open(null)"
+                      >
+                        <Spinner v-if="deleting" />
+                        <template v-else>
+                          <IconTrash />
+                          Remove SSO
+                        </template>
+                      </Button>
+                    </Field>
+                  </FieldSet>
+                  <FieldSeparator />
+                  <FieldSet>
                     <!-- Protocol Selector -->
                     <Field orientation="horizontal">
                       <FieldContent>
@@ -576,7 +695,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent align="end">
                           <SelectItem value="saml">SAML</SelectItem>
                           <SelectItem value="oidc">OIDC</SelectItem>
                         </SelectContent>
@@ -672,101 +791,6 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         />
                       </Field>
                     </template>
-                  </FieldSet>
-                  <FieldSeparator />
-                  <FieldSet>
-                    <!-- Shared SSO Settings -->
-                    <Field>
-                      <FieldContent>
-                        <FieldLabel>Email Domains</FieldLabel>
-                        <FieldDescription>
-                          Add email domains that should use SSO (e.g.,
-                          acme.com).
-                        </FieldDescription>
-                      </FieldContent>
-                      <TagsInput
-                        :model-value="ssoDomains"
-                        :add-on-paste="true"
-                        :delimiter="','"
-                        @update:model-value="
-                          ssoDomains = filterValidDomains($event as string[])
-                        "
-                      >
-                        <TagsInputItem
-                          v-for="domain in ssoDomains"
-                          :key="domain"
-                          :value="domain"
-                        >
-                          <TagsInputItemText />
-                          <TagsInputItemDelete />
-                        </TagsInputItem>
-                        <TagsInputInput
-                          placeholder="Add domain..."
-                          class="border-none p-0 focus:border-inherit focus:ring-0"
-                        />
-                      </TagsInput>
-                    </Field>
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel>Enforce SSO</FieldLabel>
-                        <FieldDescription>
-                          When enabled, users with matching email domains must
-                          use SSO. Password and social logins will be blocked
-                          for these users.
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch v-model="ssoEnforced" />
-                    </Field>
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel> Auto-provision Members </FieldLabel>
-                        <FieldDescription>
-                          Automatically create a team membership when a user
-                          signs in via SSO for the first time.
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch v-model="ssoAutoProvision" />
-                    </Field>
-                    <Field v-if="ssoAutoProvision" orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel>Default Role</FieldLabel>
-                        <FieldDescription>
-                          The role assigned to auto-provisioned members.
-                        </FieldDescription>
-                      </FieldContent>
-                      <Select v-model="ssoDefaultRole">
-                        <SelectTrigger class="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="guest">Guest</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <!-- Delete SSO -->
-                    <Field v-if="hasSso" orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel class="text-destructive text-sm">
-                          Remove SSO
-                        </FieldLabel>
-                        <FieldDescription>
-                          Remove SSO configuration. Users will fall back to
-                          other login methods.
-                        </FieldDescription>
-                      </FieldContent>
-                      <Button
-                        variant="destructive"
-                        :disabled="deleting"
-                        @click="deleteSsoDialog.open(null)"
-                      >
-                        <Spinner v-if="deleting" />
-                        <template v-else>
-                          <IconTrash />
-                          Remove SSO
-                        </template>
-                      </Button>
-                    </Field>
                   </FieldSet>
                 </FieldGroup>
               </OverlayScrollbarsWrapper>
