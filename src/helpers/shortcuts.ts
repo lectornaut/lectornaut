@@ -183,6 +183,101 @@ export const getFlatShortcuts = (options?: FilterOptions): Shortcut[] => {
 }
 
 // ============================================================================
+// Display & Validation Utilities (shared across recorder UIs)
+// ============================================================================
+
+/** Map of special key names to their display symbols */
+export const DISPLAY_KEY_MAP: Record<string, string> = {
+  arrowup: "↑",
+  arrowdown: "↓",
+  arrowleft: "←",
+  arrowright: "→",
+  escape: "Esc",
+  enter: "↩",
+  backspace: "⌫",
+  delete: "⌦",
+  tab: "⇥",
+  " ": "Space",
+}
+
+/** System shortcuts that cannot be registered as global hotkeys */
+export const SYSTEM_SHORTCUTS = new Set([
+  "cmd+h", // Hide window
+  "cmd+m", // Minimize
+  "cmd+q", // Quit
+  "cmd+w", // Close window
+  "cmd+tab", // App switcher
+  "cmd+space", // Spotlight
+  "cmd+i", // Get Info (Finder)
+])
+
+/** Convert a hotkeys-js binding string to platform-specific display keys */
+export const hotkeyToDisplayKeys = (hotkey: string): string[] => {
+  const parts = hotkey.split("+")
+  return parts.map((part) => {
+    switch (part) {
+      case "cmd":
+        return IS_APPLE_DEVICE ? "⌘" : getPlatformSpecialKey()
+      case "ctrl":
+        return IS_APPLE_DEVICE ? "⌃" : "Ctrl"
+      case "shift":
+        return IS_APPLE_DEVICE ? "⇧" : "Shift"
+      case "alt":
+        return IS_APPLE_DEVICE ? "⌥" : "Alt"
+      default:
+        return DISPLAY_KEY_MAP[part] ?? part.toUpperCase()
+    }
+  })
+}
+
+/** Stable identifier for storing per-shortcut overrides */
+export const getShortcutId = (
+  shortcut: Pick<Shortcut, "event" | "parameters">
+): string =>
+  shortcut.parameters === undefined
+    ? shortcut.event
+    : `${shortcut.event}::${String(shortcut.parameters)}`
+
+/** Look up a shortcut by its stable identifier */
+export const getShortcutById = (shortcutId: string): Shortcut | undefined =>
+  shortcuts
+    .flatMap((category) => category.shortcuts)
+    .find((shortcut) => getShortcutId(shortcut) === shortcutId)
+
+/** Get the default hotkeys binding for a shortcut identifier */
+export const getDefaultHotkeys = (shortcutId: string): string | undefined =>
+  getShortcutById(shortcutId)?.hotkeys
+
+/**
+ * Normalize a hotkey combo string for comparison.
+ * Splits modifiers, sorts them, lowercases everything.
+ * e.g. "shift+cmd+k" → "cmd+k+shift"
+ */
+export const normalizeHotkeyCombo = (combo: string): string => {
+  const parts = combo.toLowerCase().split("+")
+  const modifiers = parts.filter((p) =>
+    ["cmd", "ctrl", "shift", "alt", "meta"].includes(p)
+  )
+  const keys = parts.filter(
+    (p) => !["cmd", "ctrl", "shift", "alt", "meta"].includes(p)
+  )
+  return [...modifiers.sort(), ...keys].join("+")
+}
+
+/**
+ * Generate cross-platform hotkey string from a single recorded combo.
+ * On Mac: cmd+k → "cmd+k,ctrl+k" (so it works on both platforms)
+ * On non-Mac: ctrl+k → "ctrl+k" (cmd bindings aren't needed)
+ */
+export const toCrossPlatformHotkeys = (hotkey: string): string => {
+  if (IS_APPLE_DEVICE && hotkey.includes("cmd") && !hotkey.includes("ctrl")) {
+    const ctrlVariant = hotkey.replace(/\bcmd\b/g, "ctrl")
+    return `${hotkey},${ctrlVariant}`
+  }
+  return hotkey
+}
+
+// ============================================================================
 // Shortcut Generators (reduce repetition)
 // ============================================================================
 
@@ -365,7 +460,7 @@ export const shortcuts: ShortcutCategory[] = [
       // Summary entry for shortcuts panel (no hotkey registration)
       {
         description: ["Select Nth tab"],
-        keys: [[getPlatformSpecialKey(), "1-9"]],
+        keys: [[getPlatformSpecialKey(), "1...9"]],
         event: "Tabs.Select",
         icon: IconCheckSquare2,
         tags: ["tab", "select", "number"],

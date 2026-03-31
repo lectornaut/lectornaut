@@ -12,11 +12,15 @@ import {
   defaultBase,
   defaultCustomAccentColor,
   defaultCustomBaseColor,
+  defaultFileDropOverlayShortcutKeys,
   defaultFont,
   defaultLanguage,
+  defaultShortcutOverrides,
   defaultSize,
   defaultTheme,
 } from "@/helpers/defaults"
+import { getDefaultHotkeys } from "@/helpers/shortcuts"
+import { rebindHotkeys } from "@/modules/hotkeys"
 import {
   areNotificationSettingsEqual,
   cloneNotificationSettings,
@@ -518,7 +522,7 @@ export const useSettingsStore = defineStore("settings", () => {
   )
   const fileDropOverlayShortcutKeys = useStorage<string>(
     "fileDropOverlayShortcutKeys",
-    "cmd+shift+d"
+    defaultFileDropOverlayShortcutKeys
   )
 
   const openInDesktopApp = useStorage<boolean>("openInDesktopApp", true)
@@ -755,6 +759,91 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const isPreferencesLoading = computed(() => preferencesPending.value)
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Custom Shortcut Overrides
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const shortcutOverrides = useStorage<Record<string, string>>(
+    "shortcutOverrides",
+    { ...defaultShortcutOverrides }
+  )
+
+  const shortcutsDocRef = computed(() => {
+    if (!user.value?.uid) return null
+    return doc(db, "users", user.value.uid, "settings", "shortcuts")
+  })
+
+  const { data: shortcutsDocData, pending: shortcutsPending } =
+    useDocument(shortcutsDocRef)
+
+  // Incoming sync: Firestore → localStorage
+  let isShortcutSyncPending = false
+
+  watch(
+    shortcutsDocData,
+    (docData) => {
+      if (!isRecord(docData)) return
+      if ("overrides" in docData && isRecord(docData.overrides)) {
+        isShortcutSyncPending = true
+        shortcutOverrides.value = docData.overrides as Record<string, string>
+        nextTick(() => {
+          isShortcutSyncPending = false
+        })
+      }
+    },
+    { immediate: true }
+  )
+
+  // Outgoing sync: localStorage → Firestore (debounced)
+  watchDebounced(
+    shortcutOverrides,
+    (overrides) => {
+      if (isShortcutSyncPending) return
+      if (!shortcutsDocRef.value) return
+      void mutateSetDocument(
+        shortcutsDocRef.value,
+        { overrides },
+        { source: "settings.shortcuts.persist", merge: true }
+      ).catch((error: unknown) => {
+        console.error(
+          "[settingsStore] Failed to sync shortcut overrides:",
+          error
+        )
+      })
+    },
+    { debounce: 500, deep: true }
+  )
+
+  // Re-register hotkeys-js bindings when overrides change
+  watch(shortcutOverrides, () => rebindHotkeys(), { deep: true })
+
+  function updateShortcutOverride(shortcutId: string, hotkeys: string): void {
+    if (hotkeys === getDefaultHotkeys(shortcutId)) {
+      resetShortcutOverride(shortcutId)
+      return
+    }
+
+    shortcutOverrides.value = {
+      ...shortcutOverrides.value,
+      [shortcutId]: hotkeys,
+    }
+  }
+
+  function resetShortcutOverride(shortcutId: string): void {
+    const { [shortcutId]: _, ...rest } = shortcutOverrides.value
+    shortcutOverrides.value = rest
+  }
+
+  function resetAllShortcutOverrides(): void {
+    shortcutOverrides.value = { ...defaultShortcutOverrides }
+  }
+
+  const isShortcutsLoading = computed(() => shortcutsPending.value)
+
+  const hasCustomShortcuts = computed(
+    () => Object.keys(shortcutOverrides.value).length > 0
+  )
+
   return {
     themeSettings,
     pendingTheme,
@@ -779,5 +868,11 @@ export const useSettingsStore = defineStore("settings", () => {
     isUpdatingPreferences,
     isPreferencesLoading,
     updatePreference,
+    shortcutOverrides,
+    updateShortcutOverride,
+    resetShortcutOverride,
+    resetAllShortcutOverrides,
+    isShortcutsLoading,
+    hasCustomShortcuts,
   }
 })

@@ -130,6 +130,11 @@ export const fonts = [
 
 export type FontId = (typeof fonts)[number]["id"]
 
+export const defaultFileDropOverlayShortcutKeys = "cmd+shift+d"
+
+/** Empty map = all shortcuts use their built-in defaults */
+export const defaultShortcutOverrides: Record<string, string> = {}
+
 export const defaultFont: FontId = "sans"
 
 export const sizes = [

@@ -515,7 +515,8 @@
         "label": "Shortcut keys",
         "description": "Press a key combination to set the shortcut.",
         "placeholder": "Click to record shortcut",
-        "recording": "Press keys..."
+        "recording": "Change",
+        "restoreDefault": "Restore default"
       }
     },
     "notifications": {
@@ -2079,7 +2080,15 @@
         "search": "Search",
         "noShortcuts": "No shortcuts found.",
         "getSupport": "Get support",
-        "documentation": "Documentation"
+        "documentation": "Documentation",
+        "edit": "Edit shortcut",
+        "recording": "Change",
+        "restoreDefault": "Restore default",
+        "resetAll": "Reset all shortcuts",
+        "conflict": "Already used by \"{shortcut}\"",
+        "customized": "Customized",
+        "save": "Save",
+        "uneditable": "Disabled"
       },
       "commandK": {
         "placeholder": "Search or run a command",

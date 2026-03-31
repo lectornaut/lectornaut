@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 import { isTauri } from "@/composables/usePlatform"
-import { IconCheck, IconKeyboard } from "@/data/icons"
-import { getPlatformSpecialKey, IS_APPLE_DEVICE } from "@/helpers/shortcuts"
+import {
+  type ShortcutRecorderTarget,
+  useShortcutRecorder,
+} from "@/composables/useShortcutRecorder"
+import { IconCheck, IconRotateCcw, IconSettings2 } from "@/data/icons"
+import { defaultFileDropOverlayShortcutKeys } from "@/helpers/defaults"
+import { hotkeyToDisplayKeys } from "@/helpers/shortcuts"
 import {
   checkForUpdates,
   downloadAndInstallUpdate,
@@ -60,105 +65,46 @@ const handleUpdateNow = async () => {
   }
 }
 
-// Keyboard shortcut recorder
-const isRecording = ref(false)
-const recorderRef = ref<{ $el: HTMLElement } | null>(null)
+// Keyboard shortcut recorder (using shared composable)
+const recorderRef = ref<ShortcutRecorderTarget>(null)
 
-const DISPLAY_KEY_MAP: Record<string, string> = {
-  arrowup: "↑",
-  arrowdown: "↓",
-  arrowleft: "←",
-  arrowright: "→",
-  escape: "Esc",
-  enter: "↩",
-  backspace: "⌫",
-  delete: "⌦",
-  tab: "⇥",
-  " ": "Space",
+const {
+  isRecording,
+  startRecording: startRecordingBase,
+  handleRecorderFocus,
+  handleRecorderBlur,
+  handleRecorderClick,
+  handleRecorderKeydown,
+} = useShortcutRecorder({
+  onRecord: (hotkeys) => {
+    // For file drop overlay, store only the first combo (single-platform Tauri shortcut)
+    fileDropOverlayShortcutKeys.value = hotkeys.split(",")[0]
+  },
+})
+
+const startRecording = () => {
+  startRecordingBase(recorderRef.value)
 }
 
-// System shortcuts that cannot be registered as global hotkeys
-const SYSTEM_SHORTCUTS = new Set([
-  "cmd+h", // Hide window
-  "cmd+m", // Minimize
-  "cmd+q", // Quit
-  "cmd+w", // Close window
-  "cmd+tab", // App switcher
-  "cmd+space", // Spotlight
-  "cmd+i", // Get Info (Finder)
-])
+const handleRecorderGroupClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest("button, a, [role='button']")) {
+    return
+  }
 
-const hotkeyToDisplayKeys = (hotkey: string): string[] => {
-  const parts = hotkey.split("+")
-  return parts.map((part) => {
-    switch (part) {
-      case "cmd":
-        return IS_APPLE_DEVICE ? "⌘" : getPlatformSpecialKey()
-      case "ctrl":
-        return IS_APPLE_DEVICE ? "⌃" : "Ctrl"
-      case "shift":
-        return IS_APPLE_DEVICE ? "⇧" : "Shift"
-      case "alt":
-        return IS_APPLE_DEVICE ? "⌥" : "Alt"
-      default:
-        return DISPLAY_KEY_MAP[part] ?? part.toUpperCase()
-    }
-  })
+  startRecordingBase(event.currentTarget)
 }
 
 const displayKeys = computed(() =>
   hotkeyToDisplayKeys(fileDropOverlayShortcutKeys.value)
 )
 
-const handleRecorderKeydown = (event: KeyboardEvent) => {
-  if (!isRecording.value) return
+const isDefaultShortcut = computed(
+  () => fileDropOverlayShortcutKeys.value === defaultFileDropOverlayShortcutKeys
+)
 
-  event.preventDefault()
-  event.stopPropagation()
-
-  // Ignore lone modifier presses
-  if (["Control", "Shift", "Alt", "Meta", "OS"].includes(event.key)) {
-    return
-  }
-
-  // Require at least one modifier
-  if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
-    return
-  }
-
-  const parts: string[] = []
-  if (event.metaKey) parts.push("cmd")
-  if (event.ctrlKey) parts.push("ctrl")
-  if (event.altKey) parts.push("alt")
-  if (event.shiftKey) parts.push("shift")
-
-  parts.push(event.key.toLowerCase())
-
-  const hotkeyString = parts.join("+")
-  isRecording.value = false
-
-  if (SYSTEM_SHORTCUTS.has(hotkeyString)) {
-    toast.error(
-      `${hotkeyToDisplayKeys(hotkeyString).join("")} is reserved by the system`,
-      { description: "Choose a different combination." }
-    )
-    return
-  }
-
-  fileDropOverlayShortcutKeys.value = hotkeyString
-}
-
-const startRecording = () => {
-  isRecording.value = true
-  nextTick(() => {
-    const el = recorderRef.value?.$el
-    if (el instanceof HTMLInputElement) el.focus()
-    else el?.querySelector?.("input")?.focus()
-  })
-}
-
-const stopRecording = () => {
-  isRecording.value = false
+const restoreDefaultShortcut = () => {
+  fileDropOverlayShortcutKeys.value = defaultFileDropOverlayShortcutKeys
 }
 </script>
 
@@ -334,8 +280,9 @@ const stopRecording = () => {
               </FieldDescription>
             </FieldContent>
             <InputGroup
-              class="w-min"
+              class="w-min gap-1"
               :data-disabled="isUpdatingPreferences !== null"
+              @click="handleRecorderGroupClick"
             >
               <InputGroupAddon>
                 <KbdGroup>
@@ -346,27 +293,78 @@ const stopRecording = () => {
               </InputGroupAddon>
               <InputGroupInput
                 ref="recorderRef"
+                class="p-0!"
                 readonly
                 :disabled="isUpdatingPreferences !== null"
                 :placeholder="
                   t(
-                    'settings.preferences.fileDropOverlayShortcutKeys.placeholder'
+                    'settings.preferences.fileDropOverlayShortcutKeys.recording'
                   )
                 "
-                @focus="startRecording"
-                @click="startRecording"
+                @focus="handleRecorderFocus"
+                @click="handleRecorderClick"
                 @keydown="handleRecorderKeydown"
-                @blur="stopRecording"
+                @blur="handleRecorderBlur"
               />
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton
-                  size="icon-xs"
-                  :disabled="isUpdatingPreferences !== null"
-                >
-                  <IconCheck v-if="isRecording" />
-                  <IconKeyboard v-else />
-                </InputGroupButton>
-              </InputGroupAddon>
+              <TooltipProvider>
+                <InputGroupAddon align="inline-end" class="gap-1">
+                  <Tooltip v-if="!isDefaultShortcut">
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        :disabled="isUpdatingPreferences !== null"
+                        @mousedown.prevent
+                        @click="restoreDefaultShortcut"
+                      >
+                        <IconRotateCcw />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        t(
+                          "settings.preferences.fileDropOverlayShortcutKeys.restoreDefault"
+                        )
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip v-if="isRecording">
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        :disabled="isUpdatingPreferences !== null"
+                      >
+                        <IconCheck />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        t(
+                          "settings.preferences.fileDropOverlayShortcutKeys.recording"
+                        )
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip v-else>
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        :disabled="isUpdatingPreferences !== null"
+                        @mousedown.prevent
+                        @click="startRecording"
+                      >
+                        <IconSettings2 />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        t(
+                          "settings.preferences.fileDropOverlayShortcutKeys.recording"
+                        )
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </InputGroupAddon>
+              </TooltipProvider>
             </InputGroup>
           </Field>
         </FieldSet>
