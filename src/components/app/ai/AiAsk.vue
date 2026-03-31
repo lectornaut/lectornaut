@@ -60,11 +60,7 @@ const { t } = useI18n()
         >
           <SheetHeader>
             <SheetTitle> {{ t("pages.start.askAi") }} </SheetTitle>
-            <SheetDescription>
-              Chat with our AI assistant to get help with your tasks.
-            </SheetDescription>
           </SheetHeader>
-          <Separator />
           <AiChatShell :placeholder="t('ai.placeholder')" />
         </SheetContent>
       </Tooltip>

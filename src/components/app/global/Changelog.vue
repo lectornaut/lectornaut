@@ -25,7 +25,6 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       <SheetHeader>
         <SheetTitle>Changelog</SheetTitle>
       </SheetHeader>
-      <Separator />
       <OverlayScrollbarsWrapper>
         <div class="flex grow flex-col">
           <Accordion
@@ -56,7 +55,6 @@ emitter.on("Dialog.Changelog.Open", (id) => {
           </Accordion>
         </div>
       </OverlayScrollbarsWrapper>
-      <Separator />
       <SheetFooter>
         <Button variant="secondary" class="justify-start">
           <IconMessageCircle />

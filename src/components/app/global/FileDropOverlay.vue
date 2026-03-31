@@ -1122,7 +1122,6 @@ const isFullscreen = useIsFullscreen()
                     {{ t("components.fileDropOverlay.saveSheet.description") }}
                   </SheetDescription>
                 </SheetHeader>
-                <Separator />
                 <OverlayScrollbarsWrapper>
                   <TeamSelector v-if="!currentTeamId" />
                   <WorkspaceSelector v-else-if="!currentWorkspaceId" />
@@ -1184,7 +1183,6 @@ const isFullscreen = useIsFullscreen()
                     {{ saveSheetStatusMessage }}
                   </div>
                 </OverlayScrollbarsWrapper>
-                <Separator />
                 <SheetFooter>
                   <ButtonGroup>
                     <ButtonGroup>

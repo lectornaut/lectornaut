@@ -21,7 +21,7 @@
 */
 @layer base {
   * {
-    @apply border-border outline-ring;
+    @apply border-border outline-ring/50;
 
     /* @apply border;
     @apply border-red-500; */
@@ -143,6 +143,15 @@
   ::-webkit-scrollbar-thumb:active {
     @apply bg-muted;
   } */
+
+  ::-webkit-color-swatch-wrapper {
+    @apply p-0;
+  }
+
+  ::-webkit-color-swatch {
+    @apply border-0;
+    @apply rounded-xs;
+  }
 }
 
 /*
@@ -185,7 +194,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --radius-xs: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 2px);
-  --radius: 8px;
+  --radius: 18px;
   --radius-md: calc(var(--radius) + 2px);
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 6px);
@@ -399,12 +408,3 @@
 /* :where(button, [role="button"]):not([disabled]) {
   cursor: pointer;
 } */
-
-::-webkit-color-swatch-wrapper {
-  @apply p-0;
-}
-
-::-webkit-color-swatch {
-  @apply border-0;
-  @apply rounded-xs;
-}

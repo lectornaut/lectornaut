@@ -64,17 +64,10 @@ const emit = defineEmits<{
             <IconCheck class="size-3" />
           </span>
         </Button>
+        <Button variant="ghost" size="icon-sm" @click="emit('clear')">
+          <IconX />
+        </Button>
       </div>
-      <Separator class="my-2" />
-      <Button
-        variant="ghost"
-        size="sm"
-        class="w-full justify-start"
-        @click="emit('clear')"
-      >
-        <IconX />
-        Clear
-      </Button>
     </PopoverContent>
   </Popover>
 </template>

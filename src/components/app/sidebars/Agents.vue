@@ -46,11 +46,7 @@ const agents = [
       >
         <SheetHeader>
           <SheetTitle>{{ agent.name }}</SheetTitle>
-          <SheetDescription>
-            Chat with {{ agent.name }} to get assistance with your tasks.
-          </SheetDescription>
         </SheetHeader>
-        <Separator />
         <AiChatShell />
       </SheetContent>
     </Sheet>

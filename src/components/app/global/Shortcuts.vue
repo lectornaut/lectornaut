@@ -266,7 +266,6 @@ const isEditing = (shortcut: Shortcut): boolean =>
           </InputGroup>
         </SheetDescription>
       </SheetHeader>
-      <Separator />
       <OverlayScrollbarsWrapper>
         <Accordion
           collapsible
@@ -428,7 +427,6 @@ const isEditing = (shortcut: Shortcut): boolean =>
           </div>
         </Accordion>
       </OverlayScrollbarsWrapper>
-      <Separator />
       <SheetFooter>
         <Button
           v-if="hasCustomShortcuts"
