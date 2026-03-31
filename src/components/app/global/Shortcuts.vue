@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
-  type ShortcutRecorderTarget,
   useShortcutRecorder,
+  type ShortcutRecorderTarget,
 } from "@/composables/useShortcutRecorder"
 import {
   IconArrowUpRight,
@@ -22,6 +22,7 @@ import {
   getShortcutId,
   hotkeyToDisplayKeys,
   normalizeHotkeyCombo,
+  splitHotkeyBindings,
   type Shortcut,
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
@@ -107,7 +108,8 @@ const getEffectiveHotkeys = (shortcut: Shortcut): string | undefined =>
 const getDisplayKeys = (shortcut: Shortcut): string[] => {
   const effective = getEffectiveHotkeys(shortcut)
   if (!effective) return []
-  return hotkeyToDisplayKeys(effective.split(",")[0])
+  const primaryCombo = splitHotkeyBindings(effective)[0]
+  return primaryCombo ? hotkeyToDisplayKeys(primaryCombo) : []
 }
 
 /** Check if a shortcut has a custom override */
@@ -122,18 +124,18 @@ const getConflict = (
   candidateHotkeys: string,
   excludeShortcutId: string
 ): string | null => {
-  const candidateCombos = candidateHotkeys
-    .split(",")
-    .map((c) => normalizeHotkeyCombo(c.trim()))
+  const candidateCombos = splitHotkeyBindings(candidateHotkeys).map((combo) =>
+    normalizeHotkeyCombo(combo)
+  )
 
   const allShortcuts = getFlatShortcuts(filterOptions.value)
   for (const shortcut of allShortcuts) {
     if (getShortcutId(shortcut) === excludeShortcutId) continue
     const effective = getEffectiveHotkeys(shortcut)
     if (!effective) continue
-    const existingCombos = effective
-      .split(",")
-      .map((c) => normalizeHotkeyCombo(c.trim()))
+    const existingCombos = splitHotkeyBindings(effective).map((combo) =>
+      normalizeHotkeyCombo(combo)
+    )
     for (const combo of candidateCombos) {
       if (existingCombos.includes(combo)) {
         return shortcut.description.join(" > ")
@@ -281,29 +283,32 @@ const isEditing = (shortcut: Shortcut): boolean =>
               {{ category.title }}
             </AccordionTrigger>
             <AccordionContent>
-              <div
+              <Item
                 v-for="(shortcut, shortcutIndex) in category.shortcuts"
                 :key="shortcutIndex"
-                class="flex items-center justify-between gap-2 py-2"
+                size="sm"
+                class="p-0"
               >
-                <div class="text-muted-foreground flex items-center gap-2">
-                  <template
-                    v-for="(step, stepIndex) in shortcut.description"
-                    :key="stepIndex"
-                  >
-                    <span>
-                      {{ step }}
-                    </span>
-                    <span v-if="stepIndex < shortcut.description.length - 1">
-                      <IconChevronRight />
-                    </span>
-                  </template>
-                </div>
-                <div class="flex items-center gap-1">
+                <ItemContent>
+                  <ItemDescription class="flex gap-1">
+                    <template
+                      v-for="(step, stepIndex) in shortcut.description"
+                      :key="stepIndex"
+                    >
+                      <span>
+                        {{ step }}
+                      </span>
+                      <span v-if="stepIndex < shortcut.description.length - 1">
+                        <IconChevronRight />
+                      </span>
+                    </template>
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions class="p-0.5">
                   <!-- Editable shortcut: inline InputGroup recorder -->
                   <template v-if="shortcut.hotkeys">
                     <InputGroup
-                      class="w-min gap-1"
+                      class="bg-background w-min gap-1"
                       :data-disabled="isShortcutsLoading"
                       @click="handleShortcutGroupClick(shortcut, $event)"
                     >
@@ -386,7 +391,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
                   </template>
                   <!-- Non-editable shortcut: display-only keys -->
                   <template v-else>
-                    <InputGroup class="w-min gap-1" data-disabled>
+                    <InputGroup class="bg-background w-min gap-1" data-disabled>
                       <InputGroupAddon>
                         <KbdGroup
                           v-for="keys in shortcut.keys"
@@ -412,8 +417,8 @@ const isEditing = (shortcut: Shortcut): boolean =>
                       </InputGroupAddon>
                     </InputGroup>
                   </template>
-                </div>
-              </div>
+                </ItemActions>
+              </Item>
             </AccordionContent>
           </AccordionItem>
           <div v-if="filteredShortcuts.length === 0">

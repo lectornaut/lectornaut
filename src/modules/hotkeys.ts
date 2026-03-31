@@ -1,5 +1,9 @@
 import { isTauri } from "@/composables/usePlatform"
-import { getFilteredShortcuts, getShortcutId } from "@/helpers/shortcuts"
+import {
+  getFilteredShortcuts,
+  getShortcutId,
+  splitHotkeyBindings,
+} from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 import hotkeys from "hotkeys-js"
 
@@ -55,9 +59,8 @@ export const initHotkeys = () => {
  */
 export const teardownHotkeys = () => {
   for (const binding of registeredBindings) {
-    // hotkeys-js requires unbinding each comma-separated combo individually
-    for (const combo of binding.split(",")) {
-      hotkeys.unbind(combo.trim())
+    for (const combo of splitHotkeyBindings(binding)) {
+      hotkeys.unbind(combo)
     }
   }
   registeredBindings.clear()

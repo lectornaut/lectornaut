@@ -6,7 +6,7 @@ import {
 } from "@/composables/useShortcutRecorder"
 import { IconCheck, IconRotateCcw, IconSettings2 } from "@/data/icons"
 import { defaultFileDropOverlayShortcutKeys } from "@/helpers/defaults"
-import { hotkeyToDisplayKeys } from "@/helpers/shortcuts"
+import { hotkeyToDisplayKeys, splitHotkeyBindings } from "@/helpers/shortcuts"
 import {
   checkForUpdates,
   downloadAndInstallUpdate,
@@ -78,7 +78,7 @@ const {
 } = useShortcutRecorder({
   onRecord: (hotkeys) => {
     // For file drop overlay, store only the first combo (single-platform Tauri shortcut)
-    fileDropOverlayShortcutKeys.value = hotkeys.split(",")[0]
+    fileDropOverlayShortcutKeys.value = splitHotkeyBindings(hotkeys)[0] ?? ""
   },
 })
 

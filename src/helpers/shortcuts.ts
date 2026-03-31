@@ -211,6 +211,26 @@ export const SYSTEM_SHORTCUTS = new Set([
   "cmd+i", // Get Info (Finder)
 ])
 
+/**
+ * Split a hotkeys-js binding string into combos while preserving literal comma
+ * keys, e.g. "cmd+,,ctrl+," -> ["cmd+,", "ctrl+,"]
+ */
+export const splitHotkeyBindings = (binding: string): string[] => {
+  const normalizedBinding = binding.replace(/\s/g, "")
+  if (!normalizedBinding) return []
+
+  const combos = normalizedBinding.split(",")
+  let index = combos.lastIndexOf("")
+
+  while (index > 0) {
+    combos[index - 1] += ","
+    combos.splice(index, 1)
+    index = combos.lastIndexOf("")
+  }
+
+  return combos.filter(Boolean)
+}
+
 /** Convert a hotkeys-js binding string to platform-specific display keys */
 export const hotkeyToDisplayKeys = (hotkey: string): string[] => {
   const parts = hotkey.split("+")
