@@ -271,11 +271,11 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div
             id="left-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-lg border shadow empty:hidden"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-2xl border shadow empty:hidden"
           ></div>
           <ResizablePanelGroup
             :style="{ overflow: 'clip' }"
-            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-lg border shadow"
+            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-2xl border shadow"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -866,7 +866,7 @@ const closeTab = (id: string) => {
           </Transition>
           <div
             id="right-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-lg border-y border-l shadow"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-2xl border-y border-l shadow"
           ></div>
         </main>
       </div>

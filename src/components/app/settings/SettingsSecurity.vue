@@ -560,9 +560,9 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                 </DialogDescription>
               </DialogHeader>
               <OverlayScrollbarsWrapper
-                class="-mx-6 w-[-webkit-fill-available] border-y p-6"
+                class="-mx-6 w-[-webkit-fill-available]"
               >
-                <FieldGroup>
+                <FieldGroup class="p-6">
                   <FieldSet>
                     <!-- Shared SSO Settings -->
                     <Field>
@@ -744,7 +744,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                           v-model="samlCertificate"
                           placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
                           class="font-mono text-xs"
-                          rows="6"
+                          rows="8"
                         />
                       </Field>
                     </template>
