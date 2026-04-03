@@ -38,9 +38,7 @@ const osOptions = computed(() => ({
 }))
 
 // Computed for lazy evaluation: breaks circular dependency since
-// handleInitialized/updateScrollHints are defined after useOverlayScrollbars.
-// Arrow wrappers prevent Vue from tracking internal reactive state of
-// useThrottleFn inside the computed's dependency collection.
+// handleInitialized / updateScrollHints are defined after useOverlayScrollbars.
 const osEvents = computed(() => ({
   initialized: [(instance: OverlayScrollbars) => handleInitialized(instance)],
   scroll: [(instance: OverlayScrollbars) => updateScrollHints(instance)],
@@ -83,6 +81,9 @@ const updateScrollHints = useThrottleFn(
 
       if (showTopHint.value !== top) showTopHint.value = top
       if (showBottomHint.value !== bottom) showBottomHint.value = bottom
+    } else {
+      if (showTopHint.value) showTopHint.value = false
+      if (showBottomHint.value) showBottomHint.value = false
     }
 
     if (props.showInlineHints) {
@@ -95,6 +96,9 @@ const updateScrollHints = useThrottleFn(
 
       if (showLeftHint.value !== left) showLeftHint.value = left
       if (showRightHint.value !== right) showRightHint.value = right
+    } else {
+      if (showLeftHint.value) showLeftHint.value = false
+      if (showRightHint.value) showRightHint.value = false
     }
   },
   16
@@ -138,6 +142,14 @@ defineExpose({
 <template>
   <div
     class="overlay-scrollbars-wrapper relative flex size-full min-h-0 min-w-0 grow overflow-hidden"
+    :class="{
+      'overlay-scrollbars-wrapper--block-hints': props.showBlockHints,
+      'overlay-scrollbars-wrapper--inline-hints': props.showInlineHints,
+      'overlay-scrollbars-wrapper--show-top-hint': showTopHint,
+      'overlay-scrollbars-wrapper--show-bottom-hint': showBottomHint,
+      'overlay-scrollbars-wrapper--show-left-hint': showLeftHint,
+      'overlay-scrollbars-wrapper--show-right-hint': showRightHint,
+    }"
   >
     <OverlayScrollbarsComponent
       v-if="!props.targetSelector"
@@ -159,34 +171,58 @@ defineExpose({
     >
       <slot />
     </div>
-    <div
-      v-if="props.showBlockHints"
-      aria-hidden="true"
-      class="overlay-scrollbars-wrapper__hint overlay-scrollbars-wrapper__hint--top"
-      :class="{ 'is-visible': showTopHint }"
-    />
-    <div
-      v-if="props.showBlockHints"
-      aria-hidden="true"
-      class="overlay-scrollbars-wrapper__hint overlay-scrollbars-wrapper__hint--bottom"
-      :class="{ 'is-visible': showBottomHint }"
-    />
-    <div
-      v-if="props.showInlineHints"
-      aria-hidden="true"
-      class="overlay-scrollbars-wrapper__hint overlay-scrollbars-wrapper__hint--left"
-      :class="{ 'is-visible': showLeftHint }"
-    />
-    <div
-      v-if="props.showInlineHints"
-      aria-hidden="true"
-      class="overlay-scrollbars-wrapper__hint overlay-scrollbars-wrapper__hint--right"
-      :class="{ 'is-visible': showRightHint }"
-    />
   </div>
 </template>
 
 <style scoped>
+@property --overlay-scrollbars-fade-top-start {
+  syntax: "<length-percentage>";
+  initial-value: 0px;
+  inherits: false;
+}
+
+@property --overlay-scrollbars-fade-top-end {
+  syntax: "<length-percentage>";
+  initial-value: 0px;
+  inherits: false;
+}
+
+@property --overlay-scrollbars-fade-bottom-start {
+  syntax: "<length-percentage>";
+  initial-value: 100%;
+  inherits: false;
+}
+
+@property --overlay-scrollbars-fade-bottom-end {
+  syntax: "<length-percentage>";
+  initial-value: 100%;
+  inherits: false;
+}
+
+@property --overlay-scrollbars-fade-left-start {
+  syntax: "<length-percentage>";
+  initial-value: 0px;
+  inherits: false;
+}
+
+@property --overlay-scrollbars-fade-left-end {
+  syntax: "<length-percentage>";
+  initial-value: 0px;
+  inherits: false;
+}
+
+@property --overlay-scrollbars-fade-right-start {
+  syntax: "<length-percentage>";
+  initial-value: 100%;
+  inherits: false;
+}
+
+@property --overlay-scrollbars-fade-right-end {
+  syntax: "<length-percentage>";
+  initial-value: 100%;
+  inherits: false;
+}
+
 :deep([data-overlayscrollbars-initialize]),
 :deep(.os-host),
 :deep([data-overlayscrollbars-contents]) {
@@ -211,59 +247,96 @@ defineExpose({
 
 .overlay-scrollbars-wrapper {
   contain: layout style;
+  --overlay-scrollbars-block-fade-stop: 16px;
+  --overlay-scrollbars-inline-fade-stop: 16px;
 }
 
-.overlay-scrollbars-wrapper__hint {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 200ms ease;
-  backface-visibility: hidden;
-}
-
-.overlay-scrollbars-wrapper__hint.is-visible {
-  opacity: 0.75;
-  will-change: opacity;
-}
-
-.overlay-scrollbars-wrapper__hint--top,
-.overlay-scrollbars-wrapper__hint--bottom {
-  inset-inline: 0;
-  height: 16px;
-}
-
-.overlay-scrollbars-wrapper__hint--top {
-  top: 0;
-  background-image: linear-gradient(var(--color-background), transparent);
-}
-
-.overlay-scrollbars-wrapper__hint--bottom {
-  bottom: 0;
-  background-image: linear-gradient(transparent, var(--color-background));
-}
-
-.overlay-scrollbars-wrapper__hint--left,
-.overlay-scrollbars-wrapper__hint--right {
-  inset-block: 0;
-  width: 16px;
-}
-
-.overlay-scrollbars-wrapper__hint--left {
-  left: 0;
-  background-image: linear-gradient(
+:deep([data-overlayscrollbars-viewport]) {
+  --overlay-scrollbars-block-mask: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent var(--overlay-scrollbars-fade-top-start),
+    black var(--overlay-scrollbars-fade-top-end),
+    black var(--overlay-scrollbars-fade-bottom-start),
+    transparent var(--overlay-scrollbars-fade-bottom-end),
+    transparent 100%
+  );
+  --overlay-scrollbars-inline-mask: linear-gradient(
     to right,
-    var(--color-background),
-    transparent
+    transparent 0%,
+    transparent var(--overlay-scrollbars-fade-left-start),
+    black var(--overlay-scrollbars-fade-left-end),
+    black var(--overlay-scrollbars-fade-right-start),
+    transparent var(--overlay-scrollbars-fade-right-end),
+    transparent 100%
+  );
+  --overlay-scrollbars-fade-top-start: 0px;
+  --overlay-scrollbars-fade-top-end: 0px;
+  --overlay-scrollbars-fade-bottom-start: 100%;
+  --overlay-scrollbars-fade-bottom-end: 100%;
+  --overlay-scrollbars-fade-left-start: 0px;
+  --overlay-scrollbars-fade-left-end: 0px;
+  --overlay-scrollbars-fade-right-start: 100%;
+  --overlay-scrollbars-fade-right-end: 100%;
+  transition:
+    --overlay-scrollbars-fade-top-end 200ms ease,
+    --overlay-scrollbars-fade-bottom-start 200ms ease,
+    --overlay-scrollbars-fade-left-end 200ms ease,
+    --overlay-scrollbars-fade-right-start 200ms ease;
+}
+
+.overlay-scrollbars-wrapper--block-hints:not(
+    .overlay-scrollbars-wrapper--inline-hints
+  )
+  :deep([data-overlayscrollbars-viewport]) {
+  mask-image: var(--overlay-scrollbars-block-mask);
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+}
+
+.overlay-scrollbars-wrapper--inline-hints:not(
+    .overlay-scrollbars-wrapper--block-hints
+  )
+  :deep([data-overlayscrollbars-viewport]) {
+  mask-image: var(--overlay-scrollbars-inline-mask);
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+}
+
+.overlay-scrollbars-wrapper--block-hints.overlay-scrollbars-wrapper--inline-hints
+  :deep([data-overlayscrollbars-viewport]) {
+  mask-image:
+    var(--overlay-scrollbars-block-mask), var(--overlay-scrollbars-inline-mask);
+  mask-repeat: no-repeat, no-repeat;
+  mask-size:
+    100% 100%,
+    100% 100%;
+  mask-composite: intersect;
+}
+
+.overlay-scrollbars-wrapper--show-top-hint
+  :deep([data-overlayscrollbars-viewport]) {
+  --overlay-scrollbars-fade-top-end: var(--overlay-scrollbars-block-fade-stop);
+}
+
+.overlay-scrollbars-wrapper--show-bottom-hint
+  :deep([data-overlayscrollbars-viewport]) {
+  --overlay-scrollbars-fade-bottom-start: calc(
+    100% - var(--overlay-scrollbars-block-fade-stop)
   );
 }
 
-.overlay-scrollbars-wrapper__hint--right {
-  right: 0;
-  background-image: linear-gradient(
-    to left,
-    var(--color-background),
-    transparent
+.overlay-scrollbars-wrapper--show-left-hint
+  :deep([data-overlayscrollbars-viewport]) {
+  --overlay-scrollbars-fade-left-end: var(
+    --overlay-scrollbars-inline-fade-stop
+  );
+}
+
+.overlay-scrollbars-wrapper--show-right-hint
+  :deep([data-overlayscrollbars-viewport]) {
+  --overlay-scrollbars-fade-right-start: calc(
+    100% - var(--overlay-scrollbars-inline-fade-stop)
   );
 }
 </style>

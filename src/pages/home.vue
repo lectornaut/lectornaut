@@ -536,7 +536,6 @@ const expandedCard = ref<number | null>(null)
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <Separator />
       <SidebarContent>
         <OverlayScrollbarsWrapper>
           <SidebarGroup class="group-data-[collapsible=icon]:hidden">
@@ -668,7 +667,6 @@ const expandedCard = ref<number | null>(null)
           </SidebarGroup>
         </OverlayScrollbarsWrapper>
       </SidebarContent>
-      <Separator />
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem v-for="item in navSecondary" :key="item.title">
@@ -701,7 +699,7 @@ const expandedCard = ref<number | null>(null)
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent class="grid w-full p-0">
-                  <div class="p-2">
+                  <div class="px-2 pt-2">
                     <Select v-model="range">
                       <SelectTrigger class="w-full">
                         <SelectValue :placeholder="t('common.select')" />
@@ -717,7 +715,6 @@ const expandedCard = ref<number | null>(null)
                       </SelectContent>
                     </Select>
                   </div>
-                  <Separator />
                   <RangeCalendar
                     v-model="range"
                     :max-value="today(getLocalTimeZone())"

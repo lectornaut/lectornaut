@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "clean": "rimraf lib src/shared",
     "copy:shared": "cpy \"../shared/**/*.ts\" src/shared",
@@ -32,14 +32,14 @@
     "handlebars": "^4.7.9",
     "mjml": "^4.18.0",
     "postmark": "^4.0.7",
-    "stripe": "^21.0.1",
+    "stripe": "^22.0.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/mjml": "^4.7.4",
     "cpy-cli": "^7.0.0",
     "firebase-functions-test": "^3.4.1",
-    "firebase-tools": "^15.12.0",
+    "firebase-tools": "^15.13.0",
     "rimraf": "^6.0.1",
     "typescript": "^6.0.2"
   }

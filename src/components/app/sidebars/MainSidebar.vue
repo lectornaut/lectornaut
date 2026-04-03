@@ -34,7 +34,6 @@ function closeSidebarOnMobile() {
         >
           <TeamSwitcher />
         </SidebarHeader>
-        <Separator />
         <SidebarContent @click.capture="closeSidebarOnMobile">
           <OverlayScrollbarsWrapper data-tauri-drag-region>
             <Navigation />
@@ -59,7 +58,6 @@ function closeSidebarOnMobile() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
-        <Separator />
         <SidebarFooter data-tauri-drag-region>
           <Agents />
           <Separator />
