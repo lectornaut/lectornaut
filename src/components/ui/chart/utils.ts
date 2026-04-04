@@ -1,9 +1,9 @@
 import { isClient } from "@vueuse/core"
+import { useId } from "reka-ui"
 import { h, render } from "vue"
 import type { ChartConfig } from "."
 
 // Simple cache using a Map to store serialized object keys
-const MAX_CACHE_SIZE = 500
 const cache = new Map<string, string>()
 
 // Convert object to a consistent string key
@@ -31,11 +31,8 @@ export function componentToString<P>(
   const id = useId()
 
   // https://unovis.dev/docs/auxiliary/Crosshair#component-props
-  const hasDataProp = (v: unknown): v is { data: unknown } =>
-    typeof v === "object" && v !== null && "data" in v
-
-  return (_data: unknown, x: number | Date) => {
-    const data = hasDataProp(_data) ? _data.data : _data
+  return (_data: Record<string, unknown>, x: number | Date) => {
+    const data = "data" in _data ? _data.data : _data
     const serializedKey = `${id}-${serializeKey(data as Record<string, unknown>)}`
     const cachedContent = cache.get(serializedKey)
     if (cachedContent) return cachedContent
@@ -43,10 +40,6 @@ export function componentToString<P>(
     const vnode = h<unknown>(component, { ...props, payload: data, config, x })
     const div = document.createElement("div")
     render(vnode, div)
-
-    if (cache.size >= MAX_CACHE_SIZE) {
-      cache.clear()
-    }
     cache.set(serializedKey, div.innerHTML)
     return div.innerHTML
   }

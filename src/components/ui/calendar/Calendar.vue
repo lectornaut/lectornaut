@@ -91,6 +91,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         </div>
         <NativeSelect
           class="relative h-8 pr-6 pl-2 text-xs text-transparent"
+          :model-value="date.month"
           @change="
             (e: Event) => {
               placeholder = placeholder.set({
@@ -122,6 +123,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         </div>
         <NativeSelect
           class="relative h-8 pr-6 pl-2 text-xs text-transparent"
+          :model-value="date.year"
           @change="
             (e: Event) => {
               placeholder = placeholder.set({

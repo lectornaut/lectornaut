@@ -6,17 +6,12 @@ const props = defineProps<SplitterPanelProps>()
 const emits = defineEmits<SplitterPanelEmits>()
 
 const forwarded = useForwardPropsEmits(props, emits)
-const splitterPanelRef = ref<InstanceType<typeof SplitterPanel>>()
-
-defineExpose({
-  splitterPanel: splitterPanelRef,
-})
-useForwardExpose()
+const { forwardRef } = useForwardExpose()
 </script>
 
 <template>
   <SplitterPanel
-    ref="splitterPanelRef"
+    :ref="forwardRef"
     v-slot="slotProps"
     data-slot="resizable-panel"
     v-bind="forwarded"

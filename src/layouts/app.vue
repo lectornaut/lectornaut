@@ -36,6 +36,7 @@ import { useLayoutStore } from "@/stores/layoutStore"
 import { listen } from "@tauri-apps/api/event"
 import { UseDraggable as Draggable } from "@vueuse/components"
 import { storeToRefs } from "pinia"
+import { SplitterPanel } from "reka-ui"
 
 const { currentTeam, isLoading } = useTeamActions()
 
@@ -96,21 +97,20 @@ watch(
   { immediate: true }
 )
 
-const leftPanel = ref<InstanceType<typeof ResizablePanel>>()
-const rightPanel = ref<InstanceType<typeof ResizablePanel>>()
-const topPanel = ref<InstanceType<typeof ResizablePanel>>()
-const bottomPanel = ref<InstanceType<typeof ResizablePanel>>()
+const leftPanel = ref<InstanceType<typeof SplitterPanel>>()
+const rightPanel = ref<InstanceType<typeof SplitterPanel>>()
+const topPanel = ref<InstanceType<typeof SplitterPanel>>()
+const bottomPanel = ref<InstanceType<typeof SplitterPanel>>()
 
 const syncPanelCollapsed = (
-  panel: InstanceType<typeof ResizablePanel> | undefined,
+  panel: InstanceType<typeof SplitterPanel> | undefined,
   collapsed: boolean
 ) => {
-  const splitterPanel = panel?.splitterPanel
-  if (!splitterPanel) return
-  if (collapsed && !splitterPanel.isCollapsed) {
-    splitterPanel.collapse()
-  } else if (!collapsed && splitterPanel.isCollapsed) {
-    splitterPanel.expand()
+  if (!panel) return
+  if (collapsed && !panel.isCollapsed) {
+    panel.collapse()
+  } else if (!collapsed && panel.isCollapsed) {
+    panel.expand()
   }
 }
 
@@ -141,50 +141,50 @@ watch([leftPanelCollapsed, rightPanelCollapsed, bottomPanelCollapsed], () => {
 })
 
 emitter.on("Sidebar.Left.Toggle", () => {
-  if (leftPanel.value?.splitterPanel?.isCollapsed) {
-    leftPanel.value?.splitterPanel?.expand()
+  if (leftPanel.value?.isCollapsed) {
+    leftPanel.value?.expand()
   } else {
-    leftPanel.value?.splitterPanel?.collapse()
+    leftPanel.value?.collapse()
   }
 })
 
 emitter.on("Sidebar.Left.Collapse", () => {
-  if (!leftPanel.value?.splitterPanel?.isCollapsed) {
-    leftPanel.value?.splitterPanel?.collapse()
+  if (!leftPanel.value?.isCollapsed) {
+    leftPanel.value?.collapse()
   }
 })
 
 emitter.on("Sidebar.Right.Toggle", () => {
-  if (rightPanel.value?.splitterPanel?.isCollapsed) {
-    rightPanel.value?.splitterPanel?.expand()
+  if (rightPanel.value?.isCollapsed) {
+    rightPanel.value?.expand()
   } else {
-    rightPanel.value?.splitterPanel?.collapse()
+    rightPanel.value?.collapse()
   }
 })
 
 emitter.on("Sidebar.Right.Collapse", () => {
-  if (!rightPanel.value?.splitterPanel?.isCollapsed) {
-    rightPanel.value?.splitterPanel?.collapse()
+  if (!rightPanel.value?.isCollapsed) {
+    rightPanel.value?.collapse()
   }
 })
 
 emitter.on("Sidebar.Left.Expand", () => {
-  if (leftPanel.value?.splitterPanel?.isCollapsed) {
-    leftPanel.value?.splitterPanel?.expand()
+  if (leftPanel.value?.isCollapsed) {
+    leftPanel.value?.expand()
   }
 })
 
 emitter.on("Sidebar.Right.Expand", () => {
-  if (rightPanel.value?.splitterPanel?.isCollapsed) {
-    rightPanel.value?.splitterPanel?.expand()
+  if (rightPanel.value?.isCollapsed) {
+    rightPanel.value?.expand()
   }
 })
 
 emitter.on("Panel.Bottom.Toggle", () => {
-  if (bottomPanel.value?.splitterPanel?.isCollapsed) {
-    bottomPanel.value?.splitterPanel?.expand()
+  if (bottomPanel.value?.isCollapsed) {
+    bottomPanel.value?.expand()
   } else {
-    bottomPanel.value?.splitterPanel?.collapse()
+    bottomPanel.value?.collapse()
   }
 })
 
@@ -289,7 +289,7 @@ const closeTab = (id: string) => {
                   :max-size="25"
                   :collapsed-size="0"
                   as-child
-                  :inert="leftPanel?.splitterPanel?.isCollapsed"
+                  :inert="leftPanel?.isCollapsed"
                   @collapse="leftPanelCollapsed = true"
                   @expand="leftPanelCollapsed = false"
                 >
@@ -303,7 +303,7 @@ const closeTab = (id: string) => {
                 </ResizablePanel>
               </ContextMenuTrigger>
               <ContextMenuContent align="start" side="bottom">
-                <ContextMenuItem @click="leftPanel?.splitterPanel?.collapse()">
+                <ContextMenuItem @click="leftPanel?.collapse()">
                   <IconX /> {{ t("tooltips.closePanel") }}
                 </ContextMenuItem>
               </ContextMenuContent>
@@ -315,12 +315,12 @@ const closeTab = (id: string) => {
                     class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
                       'data-resize-handle:after:bg-muted':
-                        !leftPanel?.splitterPanel?.isCollapsed,
+                        !leftPanel?.isCollapsed,
                     }"
                     @dblclick="
-                      leftPanel?.splitterPanel?.isCollapsed
-                        ? leftPanel?.splitterPanel?.expand()
-                        : leftPanel?.splitterPanel?.collapse()
+                      leftPanel?.isCollapsed
+                        ? leftPanel?.expand()
+                        : leftPanel?.collapse()
                     "
                   />
                 </TooltipTrigger>
@@ -367,7 +367,7 @@ const closeTab = (id: string) => {
                       :max-size="100"
                       :collapsed-size="0"
                       as-child
-                      :inert="topPanel?.splitterPanel?.isCollapsed"
+                      :inert="topPanel?.isCollapsed"
                     >
                       <div
                         class="bg-background/80 flex min-h-0 min-w-0 grow flex-col overflow-clip"
@@ -414,13 +414,12 @@ const closeTab = (id: string) => {
                         class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-10 h-0! w-auto! transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                         :class="{
                           'data-resize-handle:after:bg-muted':
-                            !bottomPanel?.splitterPanel?.isCollapsed &&
-                            !topPanel?.splitterPanel?.isCollapsed,
+                            !bottomPanel?.isCollapsed && !topPanel?.isCollapsed,
                         }"
                         @dblclick="
-                          bottomPanel?.splitterPanel?.isCollapsed
-                            ? bottomPanel?.splitterPanel?.expand()
-                            : bottomPanel?.splitterPanel?.collapse()
+                          bottomPanel?.isCollapsed
+                            ? bottomPanel?.expand()
+                            : bottomPanel?.collapse()
                         "
                       />
                     </TooltipTrigger>
@@ -466,7 +465,7 @@ const closeTab = (id: string) => {
                       :max-size="100"
                       :collapsed-size="0"
                       as-child
-                      :inert="bottomPanel?.splitterPanel?.isCollapsed"
+                      :inert="bottomPanel?.isCollapsed"
                       @collapse="bottomPanelCollapsed = true"
                       @expand="bottomPanelCollapsed = false"
                     >
@@ -559,23 +558,20 @@ const closeTab = (id: string) => {
                                           variant="secondary"
                                           size="icon-sm"
                                           @click="
-                                            topPanel?.splitterPanel?.isCollapsed
-                                              ? topPanel?.splitterPanel?.expand()
-                                              : topPanel?.splitterPanel?.collapse()
+                                            topPanel?.isCollapsed
+                                              ? topPanel?.expand()
+                                              : topPanel?.collapse()
                                           "
                                         >
                                           <IconMinimize
-                                            v-if="
-                                              topPanel?.splitterPanel
-                                                ?.isCollapsed
-                                            "
+                                            v-if="topPanel?.isCollapsed"
                                           />
                                           <IconMaximize v-else />
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         {{
-                                          topPanel?.splitterPanel?.isCollapsed
+                                          topPanel?.isCollapsed
                                             ? t("layouts.app.panel.minimize")
                                             : t("layouts.app.panel.maximize")
                                         }}
@@ -587,9 +583,7 @@ const closeTab = (id: string) => {
                                         <Button
                                           variant="secondary"
                                           size="icon-sm"
-                                          @click="
-                                            bottomPanel?.splitterPanel?.collapse()
-                                          "
+                                          @click="bottomPanel?.collapse()"
                                         >
                                           <IconX />
                                         </Button>
@@ -640,24 +634,20 @@ const closeTab = (id: string) => {
                   <ContextMenuContent align="start" side="bottom">
                     <ContextMenuItem
                       @click="
-                        topPanel?.splitterPanel?.isCollapsed
-                          ? topPanel?.splitterPanel?.expand()
-                          : topPanel?.splitterPanel?.collapse()
+                        topPanel?.isCollapsed
+                          ? topPanel?.expand()
+                          : topPanel?.collapse()
                       "
                     >
-                      <IconMinimize
-                        v-if="topPanel?.splitterPanel?.isCollapsed"
-                      />
+                      <IconMinimize v-if="topPanel?.isCollapsed" />
                       <IconMaximize v-else />
                       {{
-                        topPanel?.splitterPanel?.isCollapsed
+                        topPanel?.isCollapsed
                           ? t("layouts.app.panel.collapse")
                           : t("layouts.app.panel.expand")
                       }}
                     </ContextMenuItem>
-                    <ContextMenuItem
-                      @click="bottomPanel?.splitterPanel?.collapse()"
-                    >
+                    <ContextMenuItem @click="bottomPanel?.collapse()">
                       <IconX /> {{ t("layouts.app.panel.close") }}
                     </ContextMenuItem>
                   </ContextMenuContent>
@@ -671,12 +661,12 @@ const closeTab = (id: string) => {
                     class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
                       'data-resize-handle:after:bg-muted':
-                        !rightPanel?.splitterPanel?.isCollapsed,
+                        !rightPanel?.isCollapsed,
                     }"
                     @dblclick="
-                      rightPanel?.splitterPanel?.isCollapsed
-                        ? rightPanel?.splitterPanel?.expand()
-                        : rightPanel?.splitterPanel?.collapse()
+                      rightPanel?.isCollapsed
+                        ? rightPanel?.expand()
+                        : rightPanel?.collapse()
                     "
                   />
                 </TooltipTrigger>
@@ -717,7 +707,7 @@ const closeTab = (id: string) => {
                   :max-size="25"
                   :collapsed-size="0"
                   as-child
-                  :inert="rightPanel?.splitterPanel?.isCollapsed"
+                  :inert="rightPanel?.isCollapsed"
                   @collapse="rightPanelCollapsed = true"
                   @expand="rightPanelCollapsed = false"
                 >
@@ -731,7 +721,7 @@ const closeTab = (id: string) => {
                 </ResizablePanel>
               </ContextMenuTrigger>
               <ContextMenuContent align="start" side="bottom">
-                <ContextMenuItem @click="rightPanel?.splitterPanel?.collapse()">
+                <ContextMenuItem @click="rightPanel?.collapse()">
                   <IconX /> {{ t("layouts.app.panel.close") }}
                 </ContextMenuItem>
               </ContextMenuContent>
@@ -889,9 +879,9 @@ const closeTab = (id: string) => {
                         variant="ghost"
                         :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="
-                          bottomPanel?.splitterPanel?.isCollapsed
-                            ? bottomPanel?.splitterPanel?.expand()
-                            : bottomPanel?.splitterPanel?.collapse()
+                          bottomPanel?.isCollapsed
+                            ? bottomPanel?.expand()
+                            : bottomPanel?.collapse()
                         "
                       >
                         <IconTerminal />
@@ -902,7 +892,7 @@ const closeTab = (id: string) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
-                        bottomPanel?.splitterPanel?.isCollapsed
+                        bottomPanel?.isCollapsed
                           ? t("actions.expand")
                           : t("actions.collapse")
                       }}
@@ -952,9 +942,7 @@ const closeTab = (id: string) => {
                         :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="emitter.emit('Sidebar.Left.Toggle')"
                       >
-                        <IconPanelLeft
-                          v-if="leftPanel?.splitterPanel?.isCollapsed"
-                        />
+                        <IconPanelLeft v-if="leftPanel?.isCollapsed" />
                         <IconPanelLeftClose v-else />
                         <template v-if="footerIconDisplay === 'text'">
                           {{ t("layouts.app.statusBar.sidebar") }}
@@ -963,7 +951,7 @@ const closeTab = (id: string) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
-                        leftPanel?.splitterPanel?.isCollapsed
+                        leftPanel?.isCollapsed
                           ? t("actions.expand")
                           : t("actions.collapse")
                       }}
@@ -976,9 +964,7 @@ const closeTab = (id: string) => {
                         :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="emitter.emit('Panel.Bottom.Toggle')"
                       >
-                        <IconPanelBottom
-                          v-if="bottomPanel?.splitterPanel?.isCollapsed"
-                        />
+                        <IconPanelBottom v-if="bottomPanel?.isCollapsed" />
                         <IconPanelBottomClose v-else />
                         <template v-if="footerIconDisplay === 'text'">
                           {{ t("layouts.app.statusBar.panel") }}
@@ -987,7 +973,7 @@ const closeTab = (id: string) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
-                        bottomPanel?.splitterPanel?.isCollapsed
+                        bottomPanel?.isCollapsed
                           ? t("actions.expand")
                           : t("actions.collapse")
                       }}
@@ -1000,9 +986,7 @@ const closeTab = (id: string) => {
                         :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
                         @click="emitter.emit('Sidebar.Right.Toggle')"
                       >
-                        <IconPanelRight
-                          v-if="rightPanel?.splitterPanel?.isCollapsed"
-                        />
+                        <IconPanelRight v-if="rightPanel?.isCollapsed" />
                         <IconPanelRightClose v-else />
                         <template v-if="footerIconDisplay === 'text'">
                           {{ t("layouts.app.statusBar.sidebar") }}
@@ -1011,7 +995,7 @@ const closeTab = (id: string) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
-                        rightPanel?.splitterPanel?.isCollapsed
+                        rightPanel?.isCollapsed
                           ? t("actions.expand")
                           : t("actions.collapse")
                       }}
