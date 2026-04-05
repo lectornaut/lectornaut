@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { IconAiFill, IconChatFill } from "@/data/icons"
+import { IconMessageCircle, IconSparkles } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 
 definePage({
@@ -24,7 +24,7 @@ const { t } = useI18n()
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <IconChatFill />
+            <IconMessageCircle />
           </EmptyMedia>
           <EmptyTitle> {{ t("pages.start.console") }} </EmptyTitle>
           <EmptyDescription>
@@ -48,7 +48,7 @@ const { t } = useI18n()
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <IconAiFill />
+            <IconSparkles />
           </EmptyMedia>
           <EmptyTitle> {{ t("pages.start.getInstantAnswers") }} </EmptyTitle>
           <EmptyDescription>

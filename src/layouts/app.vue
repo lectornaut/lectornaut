@@ -11,7 +11,7 @@ import {
   IconArrowUp,
   IconGripHorizontal,
   IconHand,
-  IconLayerFill,
+  IconLayers,
   IconMaximize,
   IconMinimize,
   IconMinus,
@@ -271,11 +271,11 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div
             id="left-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-2xl border shadow empty:hidden"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-4xl border shadow empty:hidden"
           ></div>
           <ResizablePanelGroup
             :style="{ overflow: 'clip' }"
-            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-2xl border shadow"
+            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-4xl border shadow"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -379,7 +379,7 @@ const closeTab = (id: string) => {
                         </div>
                         <!-- Non-scrollable sub-header with backdrop blur -->
                         <div
-                          class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip rounded-b-lg border-x border-b p-2 shadow-xs backdrop-blur-lg"
+                          class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip rounded-b-4xl border-x border-b p-2 shadow-xs backdrop-blur-lg"
                         >
                           <SubNavigation />
                           <div
@@ -608,7 +608,7 @@ const closeTab = (id: string) => {
                               <Empty v-if="source.length === 0">
                                 <EmptyHeader>
                                   <EmptyMedia variant="icon">
-                                    <IconLayerFill />
+                                    <IconLayers />
                                   </EmptyMedia>
                                   <EmptyTitle>
                                     {{ t("layouts.app.empty.console.title") }}
@@ -856,7 +856,7 @@ const closeTab = (id: string) => {
           </Transition>
           <div
             id="right-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-2xl border-y border-l shadow"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-4xl border-y border-l shadow"
           ></div>
         </main>
       </div>

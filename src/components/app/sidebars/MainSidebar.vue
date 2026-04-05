@@ -26,7 +26,7 @@ function closeSidebarOnMobile() {
     <ContextMenuTrigger>
       <Sidebar
         collapsible="icon"
-        class="shadow-muted-foreground/5 inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-2xl border border-l-0 p-0 shadow"
+        class="shadow-muted-foreground/5 inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-3xl border border-l-0 p-0"
       >
         <SidebarHeader
           data-tauri-drag-region

@@ -49,32 +49,40 @@ emitter.on("Theme.Change", (newTheme) => {
 const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW()
 
 watch(offlineReady, (value) => {
-  if (value)
-    toast.info("Ready to work offline", {
-      action: {
-        label: "Okay",
-        onClick: () => {
-          offlineReady.value = false
-        },
-      },
-      onDismiss: () => {
+  if (!value) return
+  toast.success("Ready to work offline", {
+    id: "pwa-offline-ready",
+    description:
+      "The app is cached and will work without an internet connection.",
+    action: {
+      label: "Okay",
+      onClick: () => {
         offlineReady.value = false
       },
-    })
+    },
+    onDismiss: () => {
+      offlineReady.value = false
+    },
+    onAutoClose: () => {
+      offlineReady.value = false
+    },
+  })
 })
 
 watch(needRefresh, (value) => {
-  if (value)
-    toast.info("Update available", {
-      duration: Infinity,
-      action: {
-        label: "Update",
-        onClick: () => updateServiceWorker(),
-      },
-      onDismiss: () => {
-        needRefresh.value = false
-      },
-    })
+  if (!value) return
+  toast.info("New version available", {
+    id: "pwa-need-refresh",
+    duration: Infinity,
+    description: "Reload the app to apply the latest update.",
+    action: {
+      label: "Reload",
+      onClick: () => updateServiceWorker(),
+    },
+    onDismiss: () => {
+      needRefresh.value = false
+    },
+  })
 })
 
 const online = useOnline()

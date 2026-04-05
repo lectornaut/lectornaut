@@ -40,7 +40,7 @@ const agents = [
         </SidebarMenuItem>
       </SheetTrigger>
       <SheetContent
-        class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded border"
+        class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-3xl border"
         side="left"
         :class="{ 'mt-12': isTauri && !isFullscreen }"
       >
