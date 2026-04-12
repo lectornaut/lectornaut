@@ -1,24 +1,17 @@
-<template>
-  <div>
-    <canvas ref="canvasRef" :class="$props.class"></canvas>
-    <slot />
-  </div>
-</template>
-
-<script lang="ts" setup>
-import {
-  create,
-  type GlobalOptions as ConfettiGlobalOptions,
-  type CreateTypes as ConfettiInstance,
-  type Options as ConfettiOptions,
+<script setup lang="ts">
+import type {
+  GlobalOptions as ConfettiGlobalOptions,
+  CreateTypes as ConfettiInstance,
+  Options as ConfettiOptions,
 } from "canvas-confetti"
+import { create } from "canvas-confetti"
 import { onMounted, onUnmounted, provide, ref } from "vue"
 
-type Api = {
+interface Api {
   fire: (options?: ConfettiOptions) => void
 }
 
-type ConfettiProps = {
+interface ConfettiProps {
   options?: ConfettiOptions
   globalOptions?: ConfettiGlobalOptions
   manualstart?: boolean
@@ -65,3 +58,10 @@ defineExpose({
   fire,
 })
 </script>
+
+<template>
+  <div>
+    <canvas ref="canvasRef" :class="$props.class" />
+    <slot />
+  </div>
+</template>

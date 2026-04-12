@@ -6,8 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import type { DialogRootEmits, DialogRootProps } from "reka-ui"
 import { useForwardPropsEmits } from "reka-ui"
+import type { HTMLAttributes } from "vue"
 import Command from "./Command.vue"
 
 const props = withDefaults(
@@ -15,11 +17,14 @@ const props = withDefaults(
     DialogRootProps & {
       title?: string
       description?: string
+      class?: HTMLAttributes["class"]
+      showCloseButton?: boolean
     }
   >(),
   {
     title: "Command Palette",
     description: "Search for a command to run...",
+    showCloseButton: false,
   }
 )
 const emits = defineEmits<DialogRootEmits>()
@@ -29,7 +34,15 @@ const forwarded = useForwardPropsEmits(props, emits)
 
 <template>
   <Dialog v-slot="slotProps" v-bind="forwarded">
-    <DialogContent class="overflow-hidden p-0">
+    <DialogContent
+      :class="
+        cn(
+          'top-1/3 translate-y-0 overflow-hidden rounded-4xl! p-0',
+          props.class
+        )
+      "
+      :show-close-button="showCloseButton"
+    >
       <DialogHeader class="sr-only">
         <DialogTitle>{{ title }}</DialogTitle>
         <DialogDescription>{{ description }}</DialogDescription>

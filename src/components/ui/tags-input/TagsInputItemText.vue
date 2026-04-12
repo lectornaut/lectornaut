@@ -18,7 +18,5 @@ const forwardedProps = useForwardProps(delegatedProps)
   <TagsInputItemText
     v-bind="forwardedProps"
     :class="cn('rounded bg-transparent px-2 py-0.5 text-sm', props.class)"
-  >
-    <slot />
-  </TagsInputItemText>
+  />
 </template>

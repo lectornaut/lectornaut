@@ -72,6 +72,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
   >
     <!-- This is what handles the sidebar gap on desktop  -->
     <div
+      data-slot="sidebar-gap"
       :class="
         cn(
           'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear',
@@ -84,6 +85,8 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
       "
     />
     <div
+      data-slot="sidebar-container"
+      :data-side="side"
       :class="
         cn(
           'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
@@ -101,7 +104,8 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
     >
       <div
         data-sidebar="sidebar"
-        class="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-3xl group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
+        data-slot="sidebar-inner"
+        class="bg-sidebar group-data-[variant=floating]:ring-sidebar-border flex size-full flex-col group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1"
       >
         <slot />
       </div>

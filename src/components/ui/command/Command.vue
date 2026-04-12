@@ -87,7 +87,7 @@ provideCommandContext({
     v-bind="forwarded"
     :class="
       cn(
-        'bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-2xl',
+        'bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-4xl p-1',
         props.class
       )
     "

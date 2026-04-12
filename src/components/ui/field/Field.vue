@@ -4,10 +4,15 @@ import type { HTMLAttributes } from "vue"
 import type { FieldVariants } from "."
 import { fieldVariants } from "."
 
-const props = defineProps<{
-  class?: HTMLAttributes["class"]
-  orientation?: FieldVariants["orientation"]
-}>()
+const props = withDefaults(
+  defineProps<{
+    class?: HTMLAttributes["class"]
+    orientation?: FieldVariants["orientation"]
+  }>(),
+  {
+    orientation: "vertical",
+  }
+)
 </script>
 
 <template>

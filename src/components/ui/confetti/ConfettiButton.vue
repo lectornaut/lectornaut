@@ -1,15 +1,9 @@
-<template>
-  <button @click="handleClick">
-    <slot />
-  </button>
-</template>
-
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Options as ConfettiOptions } from "canvas-confetti"
 import confetti from "canvas-confetti"
 import { inject } from "vue"
 
-type ConfettiButtonProps = {
+interface ConfettiButtonProps {
   options?: ConfettiOptions & { canvas?: HTMLCanvasElement }
 }
 
@@ -38,3 +32,9 @@ function handleClick(event: MouseEvent) {
   }
 }
 </script>
+
+<template>
+  <button @click="handleClick">
+    <slot />
+  </button>
+</template>

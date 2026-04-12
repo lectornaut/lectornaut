@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<{
@@ -7,7 +8,11 @@ const props = defineProps<{
 </script>
 
 <template>
-  <nav aria-label="breadcrumb" data-slot="breadcrumb" :class="props.class">
+  <nav
+    aria-label="breadcrumb"
+    data-slot="breadcrumb"
+    :class="cn('', props.class)"
+  >
     <slot />
   </nav>
 </template>
