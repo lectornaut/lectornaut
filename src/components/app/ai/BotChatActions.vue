@@ -64,13 +64,13 @@ const controls = ref([
           <div
             v-for="control in controls"
             :key="control.id"
-            class="bg-muted/40 flex items-center justify-between gap-3 rounded-md border p-2"
+            class="bg-muted/40 flex items-center justify-between gap-3 border p-2"
           >
             <div class="min-w-0">
               <Label :for="control.id" class="text-sm">{{
                 control.label
               }}</Label>
-              <p class="text-muted-foreground text-xs">
+              <p>
                 {{ control.description }}
               </p>
             </div>

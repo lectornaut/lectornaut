@@ -9,10 +9,11 @@ import { initPwa } from "@/modules/pwa"
 import { router } from "@/modules/router"
 import { initTheme } from "@/modules/theme"
 import { initUpdater } from "@/modules/updater"
+import { setSchemaViolationSink } from "@/schemas"
 import "@/styles/index.css"
 import { initSync } from "@/utils/firebase/firebase-sync-engine"
 import "@geoql/v-maplibre/dist/v-maplibre.css"
-import { InferSeoMetaPlugin } from "@unhead/addons"
+import { InferSeoMetaPlugin } from "@unhead/bundler"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
 import "maplibre-gl/dist/maplibre-gl.css"
@@ -46,6 +47,26 @@ app.use(pinia)
 await router.isReady()
 
 app.mount("#app")
+
+// Route schema violations through the project logger + a dev-only toast.
+// In prod, reads degrade silently (caught by parseOrWarn's short-circuit);
+// writes throw SchemaValidationError which store write paths catch.
+setSchemaViolationSink((violation) => {
+  console.warn(
+    `[schema:${violation.context}]`,
+    violation.error.issues,
+    violation.raw
+  )
+  if (import.meta.env.DEV) {
+    void import("vue-sonner").then(({ toast }) =>
+      toast.error(`Schema violation: ${violation.context}`, {
+        description:
+          violation.error.issues[0]?.message ?? "See console for details",
+        duration: 8000,
+      })
+    )
+  }
+})
 
 if (isTauri.value) {
   const automaticUpdates = useStorage<boolean>("automaticUpdates", true)

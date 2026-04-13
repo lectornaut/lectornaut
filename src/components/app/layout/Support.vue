@@ -223,7 +223,7 @@ const startOnboarding = () => {
               {{ $t("components.support.help") }}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="right">
+          <DropdownMenuContent side="right">
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconMessageCircle />
@@ -276,7 +276,7 @@ const startOnboarding = () => {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuLabel class="text-muted-foreground text-xs">
+                    <DropdownMenuLabel>
                       Lectornaut v{{ version }}
                     </DropdownMenuLabel>
                   </DropdownMenuGroup>
@@ -284,7 +284,7 @@ const startOnboarding = () => {
               </DropdownMenuSub>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel class="text-muted-foreground text-xs">
+            <DropdownMenuLabel>
               {{ $t("components.support.whatsNew") }}
             </DropdownMenuLabel>
             <DropdownMenuGroup>
@@ -370,13 +370,15 @@ const startOnboarding = () => {
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem
-                      v-for="size in companySizes"
-                      :key="size.value"
-                      :value="size.value"
-                    >
-                      {{ size.label }}
-                    </SelectItem>
+                    <SelectGroup>
+                      <SelectItem
+                        v-for="size in companySizes"
+                        :key="size.value"
+                        :value="size.value"
+                      >
+                        {{ size.label }}
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -393,13 +395,15 @@ const startOnboarding = () => {
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem
-                      v-for="item in supportCategories"
-                      :key="item.value"
-                      :value="item.value"
-                    >
-                      {{ item.label }}
-                    </SelectItem>
+                    <SelectGroup>
+                      <SelectItem
+                        v-for="item in supportCategories"
+                        :key="item.value"
+                        :value="item.value"
+                      >
+                        {{ item.label }}
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>

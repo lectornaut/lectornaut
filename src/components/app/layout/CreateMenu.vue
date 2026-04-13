@@ -15,7 +15,7 @@ const { t } = useI18n()
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <div
-              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square items-center justify-center rounded-md"
+              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square items-center justify-center"
             >
               <IconPlus />
             </div>
@@ -25,8 +25,8 @@ const { t } = useI18n()
             </SidebarMenuBadge>
           </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-48" align="end" side="right">
-          <DropdownMenuLabel class="text-muted-foreground text-xs">
+        <DropdownMenuContent side="right">
+          <DropdownMenuLabel>
             {{ t("mainSidebar.createNew") }}
           </DropdownMenuLabel>
           <DropdownMenuItem

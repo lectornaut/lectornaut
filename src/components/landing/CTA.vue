@@ -23,31 +23,26 @@ hotkeys("enter", (event) => {
     class="before:from-background fixed inset-x-0 bottom-0 z-20 flex flex-col items-center justify-center gap-6 p-4 before:absolute before:inset-0 before:bg-linear-to-t before:backdrop-blur-lg before:[mask:linear-gradient(transparent,black_95%)]"
   >
     <div
-      class="bg-background/5 flex items-center gap-1.5 rounded-xl border p-1.5 shadow-xl backdrop-blur-lg"
+      class="bg-background/5 flex items-center gap-1.5 border p-1.5 shadow-xl backdrop-blur-lg"
     >
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
-            <Button
-              v-if="!isUserLoaded"
-              variant="ghost"
-              size="icon-sm"
-              disabled
-            >
+            <Button v-if="!isUserLoaded" variant="ghost" size="icon" disabled>
               <Spinner />
             </Button>
-            <Button v-else-if="user" as-child variant="outline" size="sm">
+            <Button v-else-if="user" as-child variant="outline">
               <RouterLink to="/start">
                 {{ t("landing.cta.enter") }}
               </RouterLink>
             </Button>
             <EnterTrigger v-else>
-              <Button variant="outline" size="sm">
+              <Button variant="outline">
                 {{ t("landing.cta.enter") }}
               </Button>
             </EnterTrigger>
           </TooltipTrigger>
-          <TooltipContent side="top">
+          <TooltipContent>
             Press <Kbd>↩</Kbd> to login or sign up
           </TooltipContent>
         </Tooltip>

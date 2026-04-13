@@ -128,7 +128,7 @@ const openShortcutsDemo = () => {
 
 <template>
   <div class="p-4">
-    <div class="mb-4 rounded-md border p-3">
+    <div class="mb-4 border p-3">
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium">Try all 3 demos to celebrate</p>
         <Badge variant="secondary">{{ completionCount }} / 3</Badge>
@@ -155,7 +155,7 @@ const openShortcutsDemo = () => {
             </KbdGroup>
             <Dialog v-model:open="commandDialogOpen">
               <DialogTrigger as-child>
-                <Button variant="outline" size="sm">
+                <Button variant="outline">
                   <IconSearch />
                   Try sample
                 </Button>
@@ -205,16 +205,14 @@ const openShortcutsDemo = () => {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
-                <Button variant="outline" size="sm">
+                <Button variant="outline">
                   <IconSwitchHorizontal />
                   {{ activeWorkspaceName }}
                   <IconChevronDown />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent class="w-44" align="end">
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  Sample workspaces
-                </DropdownMenuLabel>
+              <DropdownMenuContent class="w-44">
+                <DropdownMenuLabel> Sample workspaces </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     v-for="workspace in demoWorkspaces"
@@ -249,7 +247,7 @@ const openShortcutsDemo = () => {
             </KbdGroup>
             <Dialog v-model:open="shortcutsDialogOpen">
               <DialogTrigger as-child>
-                <Button variant="outline" size="sm" @click="openShortcutsDemo">
+                <Button variant="outline" @click="openShortcutsDemo">
                   <IconKeyboard />
                   Open sample
                 </Button>
@@ -262,18 +260,14 @@ const openShortcutsDemo = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-2">
-                  <div
-                    class="flex items-center justify-between rounded-md border p-2"
-                  >
+                  <div class="flex items-center justify-between border p-2">
                     <span class="text-sm">Commands</span>
                     <KbdGroup>
                       <Kbd>{{ platformSpecialKey }}</Kbd>
                       <Kbd>K</Kbd>
                     </KbdGroup>
                   </div>
-                  <div
-                    class="flex items-center justify-between rounded-md border p-2"
-                  >
+                  <div class="flex items-center justify-between border p-2">
                     <span class="text-sm">Workspace previous</span>
                     <KbdGroup>
                       <Kbd>{{ platformSpecialKey }}</Kbd>
@@ -281,9 +275,7 @@ const openShortcutsDemo = () => {
                       <Kbd>↑</Kbd>
                     </KbdGroup>
                   </div>
-                  <div
-                    class="flex items-center justify-between rounded-md border p-2"
-                  >
+                  <div class="flex items-center justify-between border p-2">
                     <span class="text-sm">Workspace next</span>
                     <KbdGroup>
                       <Kbd>{{ platformSpecialKey }}</Kbd>

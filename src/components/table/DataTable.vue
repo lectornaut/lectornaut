@@ -190,7 +190,7 @@ defineExpose({ table })
                   <template v-if="cell.getIsGrouped()">
                     <Button
                       variant="link"
-                      class="p-0! text-inherit"
+                      class="text-inherit"
                       @click="row.getToggleExpandedHandler()()"
                     >
                       <FlexRender
@@ -217,7 +217,7 @@ defineExpose({ table })
           </template>
           <template v-else>
             <TableRow>
-              <TableCell :colspan="props.columns.length" class="p-0">
+              <TableCell :colspan="props.columns.length">
                 <Empty v-if="!props.data || props.data.length === 0">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">

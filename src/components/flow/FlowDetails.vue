@@ -218,14 +218,12 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                 <div class="flex w-full flex-col gap-6">
                   <div class="flex grow flex-col items-center gap-1">
                     <span> {{ stat.usage }} {{ stat.unit }} </span>
-                    <span class="text-muted-foreground text-xs"> Used </span>
+                    <span> Used </span>
                   </div>
                   <Separator />
                   <div class="flex grow flex-col items-center gap-1">
                     <span> {{ stat.capacity }} {{ stat.unit }} </span>
-                    <span class="text-muted-foreground text-xs">
-                      Reserved
-                    </span>
+                    <span> Reserved </span>
                   </div>
                 </div>
               </CardFooter>
@@ -315,7 +313,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   <img
                     src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=3&w=1024&h=1024&q=80"
                     alt=""
-                    class="size-6 rounded"
+                    class="size-6"
                   />
                   <p class="font-medium">Aimee Douglas</p>
                 </div>
@@ -328,7 +326,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   <img
                     src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixqx=oilqXxSqey&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                     alt=""
-                    class="size-6 rounded"
+                    class="size-6"
                   />
                   <p class="font-medium">Andrea McMillan</p>
                 </div>

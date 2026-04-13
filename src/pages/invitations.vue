@@ -192,7 +192,7 @@ const formatInvitationTimestamp = (
   <div class="flex grow flex-col items-center">
     <PageHeader />
     <div class="grid w-full max-w-md gap-2 px-2">
-      <Label for="team-select" class="text-muted-foreground text-xs">
+      <Label for="team-select">
         {{ $t("pages.join.labels.findInvite") }}
       </Label>
       <Select id="team-select" v-model="selectedCode">
@@ -228,9 +228,11 @@ const formatInvitationTimestamp = (
                 </Tooltip>
               </TooltipProvider>
             </SelectGroup>
-            <SelectLabel v-else>
-              {{ $t("pages.join.empty.noPending") }}
-            </SelectLabel>
+            <SelectGroup v-else>
+              <SelectLabel>
+                {{ $t("pages.join.empty.noPending") }}
+              </SelectLabel>
+            </SelectGroup>
             <SelectSeparator />
             <SelectGroup v-if="declinedInvitations.length > 0">
               <SelectLabel>{{ $t("pages.join.labels.declined") }}</SelectLabel>
@@ -254,9 +256,11 @@ const formatInvitationTimestamp = (
                 </Tooltip>
               </TooltipProvider>
             </SelectGroup>
-            <SelectLabel v-else>
-              {{ $t("pages.join.empty.noDeclined") }}
-            </SelectLabel>
+            <SelectGroup v-else>
+              <SelectLabel>
+                {{ $t("pages.join.empty.noDeclined") }}
+              </SelectLabel>
+            </SelectGroup>
           </template>
         </SelectContent>
       </Select>
@@ -265,7 +269,7 @@ const formatInvitationTimestamp = (
       class="w-full max-w-md items-center justify-between p-2"
     >
       <div
-        class="bg-sidebar flex size-full flex-col items-center justify-between rounded-md p-2"
+        class="bg-sidebar flex size-full flex-col items-center justify-between p-2"
       >
         <div class="m-auto grid grow flex-col items-center justify-center">
           <Empty v-if="isLoading">
@@ -321,7 +325,7 @@ const formatInvitationTimestamp = (
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <span class="text-muted-foreground text-xs">
+              <span>
                 {{ invitation.inviterEmail }} sent this invitation on
                 {{ formatInvitationTimestamp(invitation.createdAt) }}
               </span>
@@ -349,7 +353,7 @@ const formatInvitationTimestamp = (
         </div>
         <div
           v-if="invitation"
-          class="bg-background flex w-full max-w-md flex-col items-center gap-2 rounded-md p-2"
+          class="bg-background flex w-full max-w-md flex-col items-center gap-2 p-2"
         >
           <div class="grid w-full gap-2">
             <template v-if="invitation.status === 'pending'">

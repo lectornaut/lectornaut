@@ -67,7 +67,6 @@ const handleClick = () => {
   <ContextMenu>
     <ContextMenuTrigger as-child>
       <Item
-        size="sm"
         class="group w-full gap-2 p-2"
         as-child
         @click.prevent.stop="handleClick"
@@ -77,7 +76,7 @@ const handleClick = () => {
             <Component :is="typeIcon" />
             <span
               v-if="notification.read === false"
-              class="bg-primary ring-accent absolute -top-1 -left-1 flex size-2.5 rounded ring-2"
+              class="bg-primary ring-accent size-2.5ring-2 absolute -top-1 -left-1 flex"
             ></span>
           </ItemMedia>
           <ItemContent class="gap-0.5 truncate">
@@ -96,7 +95,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="
                           notification.read
                             ? emit('mark-unread', notification.id)
@@ -119,7 +118,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="
                           emit('mark-inbox', notification.id)
                         "
@@ -137,7 +136,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="
                           emit('mark-saved', notification.id)
                         "
@@ -153,7 +152,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="emit('mark-done', notification.id)"
                       >
                         <IconCheck />
@@ -175,7 +174,7 @@ const handleClick = () => {
         </RouterLink>
       </Item>
     </ContextMenuTrigger>
-    <ContextMenuContent align="start" side="bottom">
+    <ContextMenuContent>
       <ContextMenuSub>
         <ContextMenuItem as-child>
           <ContextMenuSubTrigger>

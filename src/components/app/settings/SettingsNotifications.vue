@@ -46,23 +46,22 @@ const toBoolean = (value: unknown): boolean => value === true
               }}
             </FieldDescription>
           </FieldContent>
-          <ButtonGroup>
-            <ButtonGroup v-if="isUpdatingNotifications === 'communication'">
-              <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                <Spinner />
-              </InputGroupButton>
-            </ButtonGroup>
-            <ButtonGroup>
-              <Switch
-                id="communication-notifications"
-                :disabled="isUpdatingNotifications !== null"
-                :model-value="notificationSettings.categories.communication"
-                @update:model-value="
-                  updateNotificationCategory('communication', toBoolean($event))
-                "
-              />
-            </ButtonGroup>
-          </ButtonGroup>
+          <InputGroupButton
+            v-if="isUpdatingNotifications === 'communication'"
+            variant="ghost"
+            size="icon-xs"
+            disabled
+          >
+            <Spinner />
+          </InputGroupButton>
+          <Switch
+            id="communication-notifications"
+            :disabled="isUpdatingNotifications !== null"
+            :model-value="notificationSettings.categories.communication"
+            @update:model-value="
+              updateNotificationCategory('communication', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -73,23 +72,22 @@ const toBoolean = (value: unknown): boolean => value === true
               {{ t("settings.notifications.categories.marketing.description") }}
             </FieldDescription>
           </FieldContent>
-          <ButtonGroup>
-            <ButtonGroup v-if="isUpdatingNotifications === 'marketing'">
-              <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                <Spinner />
-              </InputGroupButton>
-            </ButtonGroup>
-            <ButtonGroup>
-              <Switch
-                id="marketing-notifications"
-                :disabled="isUpdatingNotifications !== null"
-                :model-value="notificationSettings.categories.marketing"
-                @update:model-value="
-                  updateNotificationCategory('marketing', toBoolean($event))
-                "
-              />
-            </ButtonGroup>
-          </ButtonGroup>
+          <InputGroupButton
+            v-if="isUpdatingNotifications === 'marketing'"
+            variant="ghost"
+            size="icon-xs"
+            disabled
+          >
+            <Spinner />
+          </InputGroupButton>
+          <Switch
+            id="marketing-notifications"
+            :disabled="isUpdatingNotifications !== null"
+            :model-value="notificationSettings.categories.marketing"
+            @update:model-value="
+              updateNotificationCategory('marketing', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -179,60 +177,50 @@ const toBoolean = (value: unknown): boolean => value === true
               {{ t("settings.notifications.channels.email.description") }}
             </FieldDescription>
           </FieldContent>
-          <ButtonGroup>
-            <ButtonGroup>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <InputGroupButton
-                      variant="ghost"
-                      size="icon-xs"
-                      :disabled="
-                        isUpdatingNotifications ||
-                        !notificationSettings.channels.email ||
-                        isSendingTestNotification !== null
-                      "
-                      :aria-label="
-                        t('settings.notifications.channels.test', {
-                          channel: t(
-                            'settings.notifications.channels.email.label'
-                          ),
-                        })
-                      "
-                      @click="sendTestNotification('email')"
-                    >
-                      <Spinner
-                        v-if="
-                          isSendingTestNotification === 'email' ||
-                          isUpdatingNotifications === 'email'
-                        "
-                      />
-                      <IconBellRing v-else />
-                    </InputGroupButton>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      t("settings.notifications.channels.test", {
-                        channel: t(
-                          "settings.notifications.channels.email.label"
-                        ),
-                      })
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </ButtonGroup>
-            <ButtonGroup>
-              <Switch
-                id="email-notifications"
-                :disabled="isUpdatingNotifications !== null"
-                :model-value="notificationSettings.channels.email"
-                @update:model-value="
-                  updateNotificationChannel('email', toBoolean($event))
-                "
-              />
-            </ButtonGroup>
-          </ButtonGroup>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <InputGroupButton
+                  variant="ghost"
+                  size="icon-xs"
+                  :disabled="
+                    isUpdatingNotifications ||
+                    !notificationSettings.channels.email ||
+                    isSendingTestNotification !== null
+                  "
+                  :aria-label="
+                    t('settings.notifications.channels.test', {
+                      channel: t('settings.notifications.channels.email.label'),
+                    })
+                  "
+                  @click="sendTestNotification('email')"
+                >
+                  <Spinner
+                    v-if="
+                      isSendingTestNotification === 'email' ||
+                      isUpdatingNotifications === 'email'
+                    "
+                  />
+                  <IconBellRing v-else />
+                </InputGroupButton>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{
+                  t("settings.notifications.channels.test", {
+                    channel: t("settings.notifications.channels.email.label"),
+                  })
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Switch
+            id="email-notifications"
+            :disabled="isUpdatingNotifications !== null"
+            :model-value="notificationSettings.channels.email"
+            @update:model-value="
+              updateNotificationChannel('email', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -243,60 +231,50 @@ const toBoolean = (value: unknown): boolean => value === true
               {{ t("settings.notifications.channels.inApp.description") }}
             </FieldDescription>
           </FieldContent>
-          <ButtonGroup>
-            <ButtonGroup>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <InputGroupButton
-                      variant="ghost"
-                      size="icon-xs"
-                      :disabled="
-                        isUpdatingNotifications ||
-                        !notificationSettings.channels.inApp ||
-                        isSendingTestNotification !== null
-                      "
-                      :aria-label="
-                        t('settings.notifications.channels.test', {
-                          channel: t(
-                            'settings.notifications.channels.inApp.label'
-                          ),
-                        })
-                      "
-                      @click="sendTestNotification('inApp')"
-                    >
-                      <Spinner
-                        v-if="
-                          isSendingTestNotification === 'inApp' ||
-                          isUpdatingNotifications === 'inApp'
-                        "
-                      />
-                      <IconBellRing v-else />
-                    </InputGroupButton>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      t("settings.notifications.channels.test", {
-                        channel: t(
-                          "settings.notifications.channels.inApp.label"
-                        ),
-                      })
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </ButtonGroup>
-            <ButtonGroup>
-              <Switch
-                id="inapp-notifications"
-                :disabled="isUpdatingNotifications !== null"
-                :model-value="notificationSettings.channels.inApp"
-                @update:model-value="
-                  updateNotificationChannel('inApp', toBoolean($event))
-                "
-              />
-            </ButtonGroup>
-          </ButtonGroup>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <InputGroupButton
+                  variant="ghost"
+                  size="icon-xs"
+                  :disabled="
+                    isUpdatingNotifications ||
+                    !notificationSettings.channels.inApp ||
+                    isSendingTestNotification !== null
+                  "
+                  :aria-label="
+                    t('settings.notifications.channels.test', {
+                      channel: t('settings.notifications.channels.inApp.label'),
+                    })
+                  "
+                  @click="sendTestNotification('inApp')"
+                >
+                  <Spinner
+                    v-if="
+                      isSendingTestNotification === 'inApp' ||
+                      isUpdatingNotifications === 'inApp'
+                    "
+                  />
+                  <IconBellRing v-else />
+                </InputGroupButton>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{
+                  t("settings.notifications.channels.test", {
+                    channel: t("settings.notifications.channels.inApp.label"),
+                  })
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Switch
+            id="inapp-notifications"
+            :disabled="isUpdatingNotifications !== null"
+            :model-value="notificationSettings.channels.inApp"
+            @update:model-value="
+              updateNotificationChannel('inApp', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -307,60 +285,52 @@ const toBoolean = (value: unknown): boolean => value === true
               {{ t("settings.notifications.channels.native.description") }}
             </FieldDescription>
           </FieldContent>
-          <ButtonGroup>
-            <ButtonGroup>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <InputGroupButton
-                      variant="ghost"
-                      size="icon-xs"
-                      :disabled="
-                        isUpdatingNotifications ||
-                        !notificationSettings.channels.native ||
-                        isSendingTestNotification !== null
-                      "
-                      :aria-label="
-                        t('settings.notifications.channels.test', {
-                          channel: t(
-                            'settings.notifications.channels.native.label'
-                          ),
-                        })
-                      "
-                      @click="sendTestNotification('native')"
-                    >
-                      <Spinner
-                        v-if="
-                          isSendingTestNotification === 'native' ||
-                          isUpdatingNotifications === 'native'
-                        "
-                      />
-                      <IconBellRing v-else />
-                    </InputGroupButton>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      t("settings.notifications.channels.test", {
-                        channel: t(
-                          "settings.notifications.channels.native.label"
-                        ),
-                      })
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </ButtonGroup>
-            <ButtonGroup>
-              <Switch
-                id="app-notifications"
-                :disabled="isUpdatingNotifications !== null"
-                :model-value="notificationSettings.channels.native"
-                @update:model-value="
-                  updateNotificationChannel('native', toBoolean($event))
-                "
-              />
-            </ButtonGroup>
-          </ButtonGroup>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <InputGroupButton
+                  variant="ghost"
+                  size="icon-xs"
+                  :disabled="
+                    isUpdatingNotifications ||
+                    !notificationSettings.channels.native ||
+                    isSendingTestNotification !== null
+                  "
+                  :aria-label="
+                    t('settings.notifications.channels.test', {
+                      channel: t(
+                        'settings.notifications.channels.native.label'
+                      ),
+                    })
+                  "
+                  @click="sendTestNotification('native')"
+                >
+                  <Spinner
+                    v-if="
+                      isSendingTestNotification === 'native' ||
+                      isUpdatingNotifications === 'native'
+                    "
+                  />
+                  <IconBellRing v-else />
+                </InputGroupButton>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{
+                  t("settings.notifications.channels.test", {
+                    channel: t("settings.notifications.channels.native.label"),
+                  })
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Switch
+            id="app-notifications"
+            :disabled="isUpdatingNotifications !== null"
+            :model-value="notificationSettings.channels.native"
+            @update:model-value="
+              updateNotificationChannel('native', toBoolean($event))
+            "
+          />
         </Field>
       </FieldSet>
     </FieldGroup>

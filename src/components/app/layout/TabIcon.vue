@@ -31,11 +31,11 @@ const indicatorToneClass = computed(
     <Component :is="resolvedIcon" />
     <span
       v-if="indicator"
-      class="bg-background ring-background absolute -top-2.5 -left-3 flex size-2 items-center justify-center rounded-full ring-2"
+      class="bg-background ring-background absolute -top-2.5 -left-3 flex size-2 items-center justify-center ring-2"
     >
       <span
         :class="[
-          'block size-1.5 rounded-full',
+          'block size-1.5',
           indicatorToneClass,
           {
             'animate-pulse': indicator.pulse,

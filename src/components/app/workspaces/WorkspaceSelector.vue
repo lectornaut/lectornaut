@@ -56,7 +56,7 @@ const deselectTeam = async () => {
       </EmptyDescription>
     </EmptyHeader>
     <EmptyContent
-      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-lg border p-2"
+      class="bg-background flex max-w-xs flex-col items-stretch gap-2 border p-2"
     >
       <div v-if="isLoading" class="flex justify-center p-4">
         <Spinner />
@@ -73,29 +73,31 @@ const deselectTeam = async () => {
           />
         </SelectTrigger>
         <SelectContent>
-          <SelectLabel v-if="computedWorkspaces.length === 0">
-            {{ t("components.workspaceSelector.noWorkspaces") }}
-          </SelectLabel>
-          <SelectItem
-            v-for="workspace in computedWorkspaces"
-            :key="workspace.value"
-            :value="workspace.value"
-          >
-            <div class="flex items-center gap-2">
-              <Avatar class="size-4">
-                <AvatarImage
-                  :src="workspace.original?.photoURL!"
-                  :alt="workspace.label"
-                  class="size-4"
-                  referrerpolicy="no-referrer"
-                />
-                <AvatarFallback class="size-4">
-                  {{ getInitials(workspace.label) }}
-                </AvatarFallback>
-              </Avatar>
-              {{ workspace.label }}
-            </div>
-          </SelectItem>
+          <SelectGroup>
+            <SelectLabel v-if="computedWorkspaces.length === 0">
+              {{ t("components.workspaceSelector.noWorkspaces") }}
+            </SelectLabel>
+            <SelectItem
+              v-for="workspace in computedWorkspaces"
+              :key="workspace.value"
+              :value="workspace.value"
+            >
+              <div class="flex items-center gap-2">
+                <Avatar class="size-4">
+                  <AvatarImage
+                    :src="workspace.original?.photoURL!"
+                    :alt="workspace.label"
+                    class="size-4"
+                    referrerpolicy="no-referrer"
+                  />
+                  <AvatarFallback class="size-4">
+                    {{ getInitials(workspace.label) }}
+                  </AvatarFallback>
+                </Avatar>
+                {{ workspace.label }}
+              </div>
+            </SelectItem>
+          </SelectGroup>
         </SelectContent>
       </Select>
       <TooltipProvider>
@@ -123,7 +125,7 @@ const deselectTeam = async () => {
         </Tooltip>
       </TooltipProvider>
     </EmptyContent>
-    <Button variant="outline" size="sm" @click="deselectTeam">
+    <Button variant="outline" @click="deselectTeam">
       <IconUsers />
       {{ t("components.workspaceSelector.changeTeam") }}
     </Button>

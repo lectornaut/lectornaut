@@ -7,7 +7,14 @@ import {
   IconPencil,
   IconX,
 } from "@/data/icons"
+import {
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  usernamesMatch,
+  validateUsername,
+} from "@/helpers/username"
 import { getInitials } from "@/helpers/utilities"
+import { firestore } from "@/modules/firebase"
 import { checkUsernameAvailability, claimUsername } from "@/queries/username"
 import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
 import { useAuthStore } from "@/stores/authStore"
@@ -15,30 +22,18 @@ import {
   deleteUserPhotoFile,
   getUserPhotoStorageRef,
 } from "@/utils/firebase/firebase-helpers"
-import {
-  USERNAME_MAX_LENGTH,
-  USERNAME_MIN_LENGTH,
-  usernamesMatch,
-  validateUsername,
-} from "@/utils/firebase/firebase-username"
 import { collection, doc } from "firebase/firestore"
 import { toast } from "vue-sonner"
-import {
-  useCurrentUser,
-  useDocument,
-  useFirestore,
-  useStorageFile,
-} from "vuefire"
+import { useCurrentUser, useDocument, useStorageFile } from "vuefire"
 
 const { t } = useI18n()
 
-const db = useFirestore()
 const user = useCurrentUser()
 const authStore = useAuthStore()
 
 const userDocRef = computed(() => {
   if (!user.value?.uid) return null
-  return doc(collection(db, "users"), user.value.uid)
+  return doc(collection(firestore, "users"), user.value.uid)
 })
 
 const { data: userData } = useDocument(userDocRef)
@@ -326,7 +321,7 @@ const handleRemoveProfilePicture = async () => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Avatar
-                    class="flex size-10 cursor-pointer items-center justify-center rounded-md"
+                    class="flex size-10 cursor-pointer items-center justify-center"
                     @click="triggerProfilePhotoUpload"
                   >
                     <template v-if="uploadError">
@@ -334,12 +329,11 @@ const handleRemoveProfilePicture = async () => {
                     </template>
                     <template v-else>
                       <AvatarImage
-                        class="rounded"
                         :src="displayPhotoURL || ''"
                         :alt="user?.displayName"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback class="rounded">
+                      <AvatarFallback>
                         {{ getInitials(user?.displayName || "") }}
                       </AvatarFallback>
                     </template>
@@ -358,8 +352,8 @@ const handleRemoveProfilePicture = async () => {
                   <Button
                     v-if="displayPhotoURL"
                     variant="secondary"
-                    class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0 ring-2 transition group-hover:opacity-100"
-                    size="icon-sm"
+                    class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                    size="icon"
                     @click.stop="handleRemoveProfilePicture"
                   >
                     <IconX />

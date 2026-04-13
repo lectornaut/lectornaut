@@ -1,14 +1,9 @@
-import type { Timestamp } from "firebase/firestore"
+import type { deviceTypeSchema, userSessionSchema } from "@/schemas/session"
+import type { z } from "zod"
 
-export type DeviceType = "desktop" | "mobile" | "tablet"
+/**
+ * Session type aliases — re-exported from `src/schemas/session.ts`.
+ */
 
-export interface IUserSession {
-  id: string
-  deviceName: string
-  browser: string
-  os: string
-  deviceType: DeviceType
-  ip: string
-  createdAt: Timestamp
-  lastActiveAt: Timestamp
-}
+export type DeviceType = z.infer<typeof deviceTypeSchema>
+export type IUserSession = z.infer<typeof userSessionSchema>

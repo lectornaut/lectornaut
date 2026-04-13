@@ -69,10 +69,7 @@ const selectedValue = computed(() => props.items[props.selectedIndex]?.id ?? "")
           >
             <div class="min-w-0">
               <div class="truncate text-sm">{{ item.title }}</div>
-              <div
-                v-if="item.description"
-                class="text-muted-foreground text-xs"
-              >
+              <div v-if="item.description">
                 {{ item.description }}
               </div>
             </div>

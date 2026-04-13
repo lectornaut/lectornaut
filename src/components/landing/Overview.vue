@@ -55,7 +55,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               privacy
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="px-3 py-2">
+            <HoverCardContent class="px-3 py-2">
               We don't sell your data. We don't show ads. We don't have
               investors. We are 100% bootstrapped.
             </HoverCardContent>
@@ -65,7 +65,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               longevity
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="px-3 py-2">
+            <HoverCardContent class="px-3 py-2">
               We've been around since 2017. We are a small team of passionate
               people. We are profitable. We are indie. We are here to stay.
             </HoverCardContent>
@@ -75,7 +75,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               beauty
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="px-3 py-2">
+            <HoverCardContent class="px-3 py-2">
               We care about design. We care about user experience. We care about
               you. We are not a faceless corporation. We are committed to your
               happiness.
@@ -94,7 +94,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               Mac
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="w-auto px-3 py-2">
+            <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconApple class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -111,7 +111,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               Windows
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="w-auto px-3 py-2">
+            <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconMicrosoftIcon class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -128,7 +128,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               Linux
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="w-auto px-3 py-2">
+            <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconFlathub class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -145,7 +145,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               iOS
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="w-auto px-3 py-2">
+            <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconAppleAppStore class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -162,7 +162,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               Android
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="w-auto px-3 py-2">
+            <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconGooglePlayIcon class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -179,7 +179,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               Web
             </HoverCardTrigger>
-            <HoverCardContent side="top" class="w-auto px-3 py-2">
+            <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconCircleSolid class="h-8 w-8" />
                 <div class="flex flex-col">
@@ -196,7 +196,7 @@ import {
             <HoverCardTrigger class="cursor-help underline">
               100K + users</HoverCardTrigger
             >
-            <HoverCardContent side="top" class="w-auto p-0">
+            <HoverCardContent class="w-auto">
               <WallOfLove />
             </HoverCardContent>
           </HoverCard>

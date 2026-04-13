@@ -63,7 +63,7 @@ const contextSources = [
           <div
             v-for="source in contextSources"
             :key="source.id"
-            class="bg-muted/40 flex items-center justify-between gap-2 rounded-md border p-2"
+            class="bg-muted/40 flex items-center justify-between gap-2 border p-2"
           >
             <div class="min-w-0">
               <p class="truncate text-sm font-medium">{{ source.name }}</p>

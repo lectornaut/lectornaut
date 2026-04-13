@@ -20,7 +20,7 @@ const { t } = useI18n()
       </EmptyDescription>
     </EmptyHeader>
     <EmptyContent
-      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-lg border p-2"
+      class="bg-background flex max-w-xs flex-col items-stretch gap-2 border p-2"
     >
       <Button as-child>
         <RouterLink to="/welcome?step=5">

@@ -12,7 +12,7 @@ const props = withDefaults(
     nameKey?: string
     labelKey?: string
     labelFormatter?: (d: number | Date) => string
-    payload?: Record<string, unknown>
+    payload?: Record<string, any>
     config?: ChartConfig
     class?: HTMLAttributes["class"]
     color?: string
@@ -33,8 +33,7 @@ const payload = computed(() => {
     .map(([key, value]) => {
       // const key = `${props.nameKey || item.name || item.dataKey || "value"}`
       const itemConfig = props.config[key]
-      const indicatorColor = (props.config[key]?.color ??
-        props.payload.fill) as string | undefined
+      const indicatorColor = props.config[key]?.color ?? props.payload.fill
 
       return { key, value, itemConfig, indicatorColor }
     })
@@ -59,7 +58,7 @@ const tooltipLabel = computed(() => {
   <div
     :class="
       cn(
-        'bg-popover text-popover-foreground ring-foreground/5 dark:ring-foreground/10 grid min-w-32 items-start gap-1.5 rounded-xl px-2.5 py-1.5 text-xs shadow-lg ring-1',
+        'border-border/50 bg-background grid min-w-32 items-start gap-1.5 rounded-none border px-2.5 py-1.5 text-xs shadow-xl',
         props.class
       )
     "

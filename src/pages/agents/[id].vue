@@ -69,7 +69,7 @@ const metadata = computed(() => [
         </SidebarHeader>
         <Separator />
         <SidebarHeader>
-          <TabsList class="w-full bg-transparent p-0">
+          <TabsList class="w-full bg-transparent">
             <TabsTrigger v-for="tab in metadata" :key="tab.id" :value="tab.id">
               <span class="flex items-center justify-center gap-2">
                 <span> {{ tab.name }} </span>

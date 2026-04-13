@@ -5,6 +5,8 @@ import {
   splitHotkeyBindings,
 } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
+import { parseSafe } from "@/schemas/_utils"
+import { shortcutOverridesSchema } from "@/schemas/settings"
 import hotkeys from "hotkeys-js"
 
 /** Track all currently registered hotkey strings for teardown */
@@ -12,12 +14,16 @@ const registeredBindings = new Set<string>()
 
 /**
  * Read shortcut overrides from localStorage (non-reactive, for use outside Vue).
- * Returns the override map or an empty object.
+ * Returns the override map or an empty object. Validates the cached entry
+ * via `parseSafe` so corrupt or tampered cache falls back to an empty map
+ * instead of poisoning the hotkey system with malformed bindings.
  */
 const readOverrides = (): Record<string, string> => {
   try {
     const raw = localStorage.getItem("shortcutOverrides")
-    return raw ? JSON.parse(raw) : {}
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    return parseSafe(shortcutOverridesSchema, parsed, "hotkeys.overrides") ?? {}
   } catch {
     return {}
   }

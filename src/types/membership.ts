@@ -1,58 +1,33 @@
-import type { ITeam, IUserProfile } from "@/types/domain"
-import { Timestamp } from "firebase/firestore"
+import type {
+  membershipDocDataSchema,
+  membershipRecordSchema,
+  membershipSchema,
+  membershipTeamSnapshotSchema,
+  membershipUserSnapshotSchema,
+} from "@/schemas/membership"
+import type { z } from "zod"
 
-// Re-export role primitives from the shared module so existing imports
-// like `import { IMembershipRole } from "@/types/membership"` keep working.
+/**
+ * Membership type aliases — re-exported `z.infer` types from
+ * `src/schemas/membership.ts`.
+ *
+ * Role primitives (`IMembershipRole`, `MEMBERSHIP_ROLES`, `isMembershipRole`)
+ * are re-exported from the shared permissions module so existing imports
+ * like `import { IMembershipRole } from "@/types/membership"` keep working.
+ */
+
 export {
   isMembershipRole,
   MEMBERSHIP_ROLES,
   type IMembershipRole,
 } from "@shared/permissions"
 
-import type { IMembershipRole } from "@shared/permissions"
-
-export interface IMembershipRecord {
-  readonly userId: string
-  readonly teamId: string
-  role: IMembershipRole
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
-
-export type IMembershipUserSnapshot = Pick<
-  IUserProfile,
-  | "uid"
-  | "email"
-  | "displayName"
-  | "photoURL"
-  | "username"
-  | "isPublic"
-  | "createdAt"
-  | "updatedAt"
+export type IMembershipRecord = z.infer<typeof membershipRecordSchema>
+export type IMembershipUserSnapshot = z.infer<
+  typeof membershipUserSnapshotSchema
 >
-
-export type IMembershipTeamSnapshot = Pick<
-  ITeam,
-  | "id"
-  | "name"
-  | "photoURL"
-  | "username"
-  | "isPublic"
-  | "createdAt"
-  | "updatedAt"
+export type IMembershipTeamSnapshot = z.infer<
+  typeof membershipTeamSnapshotSchema
 >
-
-export interface IMembership extends IMembershipRecord {
-  user: IMembershipUserSnapshot
-  team: IMembershipTeamSnapshot
-}
-
-export interface IMembershipDocData {
-  readonly userId: string
-  readonly teamId: string
-  role: IMembershipRole
-  user: Partial<IMembershipUserSnapshot>
-  team: Partial<IMembershipTeamSnapshot>
-  createdAt?: Timestamp
-  updatedAt?: Timestamp
-}
+export type IMembership = z.infer<typeof membershipSchema>
+export type IMembershipDocData = z.infer<typeof membershipDocDataSchema>

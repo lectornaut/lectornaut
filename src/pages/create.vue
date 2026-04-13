@@ -92,7 +92,7 @@ const generatePoem = async () => {
   </Teleport>
   <div class="flex grow gap-2 overflow-auto overscroll-none scroll-smooth p-2">
     <div
-      class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none scroll-smooth rounded-md border"
+      class="bg-card flex grow basis-2/5 flex-col overflow-auto overscroll-none scroll-smooth border"
     >
       <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">
@@ -101,7 +101,7 @@ const generatePoem = async () => {
               {{ t("pages.create.labels.avatar") }}
             </Label>
             <div class="flex items-center justify-center">
-              <Avatar class="size-16 rounded">
+              <Avatar class="size-16">
                 <AvatarImage
                   src="https://avatar.vercel.sh/agent.png"
                   alt="Agent"
@@ -217,7 +217,7 @@ const generatePoem = async () => {
       </OverlayScrollbarsWrapper>
     </div>
     <div
-      class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none scroll-smooth rounded-md border"
+      class="bg-card flex grow basis-3/5 flex-col overflow-auto overscroll-none scroll-smooth border"
     >
       <OverlayScrollbarsWrapper>
         <div class="grid grid-cols-1 gap-4 p-2">
@@ -233,7 +233,7 @@ const generatePoem = async () => {
                 : t("pages.create.compose")
             }}
           </Button>
-          <p class="rounded-md border p-2">
+          <p class="border p-2">
             <span v-if="isLoading" class="text-muted-foreground">
               {{ t("pages.create.generating") }}
             </span>

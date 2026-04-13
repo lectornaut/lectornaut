@@ -67,14 +67,6 @@ export function cloneState<T>(state: T): T {
   return structuredClone(deepToRaw(state))
 }
 
-/**
- * Shallow clone for arrays when deep cloning isn't needed
- * Much faster than cloneState for simple array operations
- */
-export function shallowCloneArray<T>(arr: T[]): T[] {
-  return [...arr]
-}
-
 // ============================================================================
 // Pending Set Management
 // ============================================================================
@@ -471,24 +463,11 @@ export function useCloudSyncQueueState(): CloudSyncQueueState {
 // ============================================================================
 
 /**
- * Result type for optimistic operations
- */
-export interface OptimisticResult<T> {
-  success: boolean
-  data?: T
-  error?: Error
-}
-
-/**
  * Options for optimistic operations
  */
 export interface OptimisticOptions {
-  /** Toast message on success */
-  successMessage?: string
-  /** Toast message on error */
-  errorMessage?: string
-  /** Whether to show toast notifications */
-  showToasts?: boolean
+  /** Telemetry source tag for the cloud sync queue and mutation receipt */
+  source?: string
   /** Maximum retry attempts (default: 0) */
   maxRetries?: number
   /** Base delay for exponential backoff in ms (default: 1000) */
@@ -562,14 +541,13 @@ export async function withOptimisticUpdate<T>(
   options: OptimisticOptions = {}
 ): Promise<T> {
   const {
+    source = "withOptimisticUpdate",
     maxRetries = 0,
     retryBaseDelay = 1000,
     trackSync = true,
     pendingReleaseDelayMs = DEFAULT_PENDING_RELEASE_DELAY_MS,
   } = options
-  const syncToken = trackSync
-    ? beginCloudSyncOperation({ id, source: "withOptimisticUpdate" })
-    : null
+  const syncToken = trackSync ? beginCloudSyncOperation({ id, source }) : null
   let syncError: unknown
   let receipt: OptimisticMutationReceipt | null = null
   const runFirestoreOperation = () =>
@@ -583,7 +561,7 @@ export async function withOptimisticUpdate<T>(
     // Apply optimistic update immediately (sync fast path)
     receipt = optimisticUpdater.applyLocal({
       id,
-      source: "withOptimisticUpdate",
+      source,
       pendingIds,
       applyLocal: applyOptimistic,
       rollback,
@@ -778,96 +756,6 @@ export function mergeOptimisticCollection<T extends { id: string }>(
     (item) => item.id,
     options
   )
-}
-
-/**
- * Type for array state operations
- */
-export interface ArrayStateHelpers<T extends { id: string }> {
-  /** Add an item optimistically */
-  addItem: (items: Ref<T[]>, item: T) => T[]
-  /** Remove an item optimistically, returns previous state */
-  removeItem: (items: Ref<T[]>, id: string) => T[]
-  /** Update an item optimistically, returns previous state */
-  updateItem: (items: Ref<T[]>, id: string, updates: Partial<T>) => T[]
-  /** Find an item by ID */
-  findItem: (items: Ref<T[]>, id: string) => T | undefined
-  /** Restore array to previous state */
-  restore: (items: Ref<T[]>, previousState: T[]) => void
-}
-
-/**
- * Creates helpers for managing array state with optimistic updates
- */
-export function createArrayHelpers<
-  T extends { id: string },
->(): ArrayStateHelpers<T> {
-  return {
-    addItem(items: Ref<T[]>, item: T): T[] {
-      const previousState = cloneState(items.value)
-      items.value = [...items.value, item]
-      return previousState
-    },
-
-    removeItem(items: Ref<T[]>, id: string): T[] {
-      const previousState = cloneState(items.value)
-      items.value = items.value.filter((item) => item.id !== id)
-      return previousState
-    },
-
-    updateItem(items: Ref<T[]>, id: string, updates: Partial<T>): T[] {
-      const previousState = cloneState(items.value)
-      items.value = items.value.map((item) =>
-        item.id === id ? { ...cloneState(item), ...updates } : item
-      )
-      return previousState
-    },
-
-    findItem(items: Ref<T[]>, id: string): T | undefined {
-      return items.value.find((item) => item.id === id)
-    },
-
-    restore(items: Ref<T[]>, previousState: T[]): void {
-      items.value = previousState
-    },
-  }
-}
-
-/**
- * Type for single object state operations
- */
-export interface ObjectStateHelpers<T> {
-  /** Update object optimistically, returns previous state */
-  updateObject: (obj: Ref<T | null>, updates: Partial<T>) => T | null
-  /** Set object optimistically, returns previous state */
-  setObject: (obj: Ref<T | null>, newValue: T | null) => T | null
-  /** Restore object to previous state */
-  restore: (obj: Ref<T | null>, previousState: T | null) => void
-}
-
-/**
- * Creates helpers for managing single object state with optimistic updates
- */
-export function createObjectHelpers<T>(): ObjectStateHelpers<T> {
-  return {
-    updateObject(obj: Ref<T | null>, updates: Partial<T>): T | null {
-      const previousState = cloneState(obj.value)
-      if (obj.value) {
-        obj.value = { ...cloneState(obj.value), ...updates }
-      }
-      return previousState
-    },
-
-    setObject(obj: Ref<T | null>, newValue: T | null): T | null {
-      const previousState = cloneState(obj.value)
-      obj.value = newValue ? cloneState(newValue) : null
-      return previousState
-    },
-
-    restore(obj: Ref<T | null>, previousState: T | null): void {
-      obj.value = previousState
-    },
-  }
 }
 
 /**

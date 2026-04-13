@@ -191,12 +191,7 @@ useInfiniteScroll(
                 <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
                 <span>{{ error }}</span>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                class="w-full"
-                @click="refreshLogs"
-              >
+              <Button variant="secondary" class="w-full" @click="refreshLogs">
                 Retry
               </Button>
             </div>
@@ -222,7 +217,7 @@ useInfiniteScroll(
                 >
                   <div class="relative flex flex-col items-center self-stretch">
                     <StepperIndicator as-child>
-                      <Button variant="outline" size="icon-sm">
+                      <Button variant="outline" size="icon">
                         <Component :is="getActionIcon(entry)" />
                       </Button>
                     </StepperIndicator>

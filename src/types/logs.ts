@@ -1,39 +1,20 @@
-import { Timestamp } from "firebase/firestore"
+import type {
+  logActorSchema,
+  logChangesSchema,
+  logContextSchema,
+  logEntrySchema,
+  logResourceSchema,
+  logResourceTypeSchema,
+} from "@/schemas/logs"
+import type { z } from "zod"
 
-export type LogResourceType = "team" | "workspace" | "content" | "membership"
+/**
+ * Audit log type aliases — re-exported from `src/schemas/logs.ts`.
+ */
 
-export interface ILogActor {
-  userId: string
-  email?: string | null
-  role?: string | null
-}
-
-export interface ILogResource {
-  type: LogResourceType
-  id: string
-  parentId?: string | null
-}
-
-export interface ILogContext {
-  ip?: string
-  userAgent?: string
-  authType?: "password" | "sso" | "api"
-}
-
-export interface ILogChanges {
-  before?: Record<string, unknown>
-  after?: Record<string, unknown>
-  fields?: string[]
-}
-
-export interface ILogEntry {
-  readonly id: string
-  timestamp: Timestamp
-  teamId: string
-  workspaceId?: string
-  actor: ILogActor
-  action: string
-  resource: ILogResource
-  context?: ILogContext
-  changes?: ILogChanges
-}
+export type LogResourceType = z.infer<typeof logResourceTypeSchema>
+export type ILogActor = z.infer<typeof logActorSchema>
+export type ILogResource = z.infer<typeof logResourceSchema>
+export type ILogContext = z.infer<typeof logContextSchema>
+export type ILogChanges = z.infer<typeof logChangesSchema>
+export type ILogEntry = z.infer<typeof logEntrySchema>

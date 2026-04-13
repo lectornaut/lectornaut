@@ -5,12 +5,7 @@ import { defaultMenu } from "@/helpers/defaults"
 
 <template>
   <ItemGroup class="grid grid-cols-1 gap-2 p-2 md:grid-cols-2">
-    <Item
-      v-for="(item, itemIdx) in defaultMenu"
-      :key="itemIdx"
-      size="sm"
-      variant="muted"
-    >
+    <Item v-for="(item, itemIdx) in defaultMenu" :key="itemIdx" variant="muted">
       <ItemMedia variant="icon" :class="[item.style.bg, item.style.text]">
         <Component :is="item.icon" />
       </ItemMedia>

@@ -17,13 +17,17 @@ import {
   IconTablet,
   IconX,
 } from "@/data/icons"
+import { verifyPhoneNumberWithRecaptcha } from "@/helpers/firebase-phone-verification"
 import { withToast } from "@/helpers/toast"
+import { USERNAME_MAX_LENGTH, usernamesMatch } from "@/helpers/username"
 import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
-import { auth } from "@/modules/firebase"
+import { auth, firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import { claimUsername, releaseUsername } from "@/queries/username"
 import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
+import { parseSafe } from "@/schemas/_utils"
+import { membershipSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IMembership } from "@/types/membership"
@@ -32,11 +36,6 @@ import {
   deleteUserPhotoFile,
   getUserPhotoStorageRef,
 } from "@/utils/firebase/firebase-helpers"
-import { verifyPhoneNumberWithRecaptcha } from "@/utils/firebase/firebase-phone-recaptcha"
-import {
-  USERNAME_MAX_LENGTH,
-  usernamesMatch,
-} from "@/utils/firebase/firebase-username"
 import { formatTimeAgoIntl } from "@vueuse/core"
 import {
   deleteUser,
@@ -57,22 +56,16 @@ import { collection, deleteDoc, doc, getDocs } from "firebase/firestore"
 import QRCode from "qrcode"
 import { REGEXP_ONLY_DIGITS } from "vue-input-otp"
 import { toast } from "vue-sonner"
-import {
-  useCurrentUser,
-  useDocument,
-  useFirestore,
-  useStorageFile,
-} from "vuefire"
+import { useCurrentUser, useDocument, useStorageFile } from "vuefire"
 
 const { t, locale } = useI18n()
 
-const db = useFirestore()
 const user = useCurrentUser()
 const authStore = useAuthStore()
 
 const userDocRef = computed(() => {
   if (!user.value?.uid) return null
-  return doc(collection(db, "users"), user.value.uid)
+  return doc(collection(firestore, "users"), user.value.uid)
 })
 
 const { data: userData } = useDocument(userDocRef)
@@ -396,9 +389,11 @@ const deleteAccount = async () => {
     const membershipsSnapshot = await getDocs(
       createUserMembershipsQuery(user.value!.uid)
     )
-    const membershipsToCheck = membershipsSnapshot.docs.map(
-      (d) => d.data() as IMembership
-    )
+    const membershipsToCheck = membershipsSnapshot.docs
+      .map((d) =>
+        parseSafe(membershipSchema, d.data(), `membership:${d.ref.path}`)
+      )
+      .filter((m): m is IMembership => m !== null)
     const errors: string[] = []
 
     // 1. Validate: Check for sole ownership or sole membership errors across all teams
@@ -921,7 +916,7 @@ const getDeviceIcon = (deviceType: string) => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <Avatar
-                      class="flex size-10 cursor-pointer items-center justify-center rounded-md"
+                      class="flex size-10 cursor-pointer items-center justify-center"
                       @click="triggerProfilePhotoUpload"
                     >
                       <template v-if="uploadError">
@@ -929,12 +924,11 @@ const getDeviceIcon = (deviceType: string) => {
                       </template>
                       <template v-else>
                         <AvatarImage
-                          class="rounded"
                           :src="displayPhotoURL || ''"
                           :alt="user?.displayName"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="rounded">
+                        <AvatarFallback>
                           {{ getInitials(user?.displayName!) }}
                         </AvatarFallback>
                       </template>
@@ -953,8 +947,8 @@ const getDeviceIcon = (deviceType: string) => {
                     <Button
                       v-if="displayPhotoURL"
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0 ring-2 transition group-hover:opacity-100"
-                      size="icon-sm"
+                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                      size="icon"
                       @click.stop="handleRemoveProfilePicture"
                     >
                       <IconX />
@@ -1265,16 +1259,15 @@ const getDeviceIcon = (deviceType: string) => {
             orientation="horizontal"
           >
             <FieldContent>
-              <Item size="sm" class="p-0">
+              <Item>
                 <ItemMedia class="group relative">
-                  <Avatar class="rounded">
+                  <Avatar>
                     <AvatarImage
-                      class="rounded"
                       :src="provider?.photoURL!"
                       :alt="provider?.displayName"
                       referrerpolicy="no-referrer"
                     />
-                    <AvatarFallback class="rounded">
+                    <AvatarFallback>
                       {{ getInitials(provider.displayName!) }}
                     </AvatarFallback>
                   </Avatar>
@@ -1283,8 +1276,8 @@ const getDeviceIcon = (deviceType: string) => {
                       <TooltipTrigger as-child>
                         <Button
                           variant="secondary"
-                          class="ring-background absolute -right-2 -bottom-2 size-4 rounded ring-2"
-                          size="icon-sm"
+                          class="ring-background absolute -right-2 -bottom-2 size-4 ring-2"
+                          size="icon"
                         >
                           <IconGoogleIcon
                             v-if="provider.providerId === 'google.com'"
@@ -1504,7 +1497,7 @@ const getDeviceIcon = (deviceType: string) => {
               >
                 <Spinner />
               </div>
-              <img v-else :src="totpQrDataUrl" alt="QR Code" class="rounded" />
+              <img v-else :src="totpQrDataUrl" alt="QR Code" />
               <p class="text-muted-foreground text-center text-sm">
                 {{ t("settings.account.mfa.scanQrDescription") }}
               </p>
@@ -1516,9 +1509,7 @@ const getDeviceIcon = (deviceType: string) => {
                 <p class="text-muted-foreground mb-1 text-xs">
                   {{ t("settings.account.mfa.manualEntry") }}
                 </p>
-                <code
-                  class="bg-muted rounded px-2 py-1 text-xs break-all select-all"
-                >
+                <code class="bg-mutedpx-2 py-1 text-xs break-all select-all">
                   {{ totpSecretKey }}
                 </code>
               </div>
@@ -1731,7 +1722,7 @@ const getDeviceIcon = (deviceType: string) => {
             orientation="horizontal"
           >
             <FieldContent>
-              <Item size="sm" class="p-0">
+              <Item>
                 <ItemMedia>
                   <Component :is="session.deviceIcon" />
                 </ItemMedia>
@@ -1878,7 +1869,7 @@ const getDeviceIcon = (deviceType: string) => {
     <!-- Footer with Save/Cancel -->
     <DialogFooter
       v-if="hasPendingChanges"
-      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
+      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 border p-2 backdrop-blur-lg"
     >
       <p class="text-muted-foreground mr-auto ml-2 text-xs">
         {{ t("settings.unsavedChanges") }}

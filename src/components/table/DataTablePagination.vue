@@ -41,14 +41,16 @@ defineProps<{
                   :placeholder="String(table.getState().pagination.pageSize)"
                 />
               </SelectTrigger>
-              <SelectContent side="top">
-                <SelectItem
-                  v-for="pageSize in [5, 10, 20, 30, 40, 50]"
-                  :key="pageSize"
-                  :value="pageSize"
-                >
-                  {{ pageSize }}
-                </SelectItem>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem
+                    v-for="pageSize in [5, 10, 20, 30, 40, 50]"
+                    :key="pageSize"
+                    :value="pageSize"
+                  >
+                    {{ pageSize }}
+                  </SelectItem>
+                </SelectGroup>
               </SelectContent>
             </TooltipTrigger>
             <TooltipContent>{{

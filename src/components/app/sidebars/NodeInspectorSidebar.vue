@@ -15,19 +15,19 @@ defineProps<{
       <TabsList class="bg-transparent p-2">
         <TabsTrigger
           value="details"
-          class="data-[state=active]:bg-muted rounded-xs p-2! text-xs leading-0 data-[state=active]:shadow-none"
+          class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none"
         >
           Details
         </TabsTrigger>
         <TabsTrigger
           value="attachments"
-          class="data-[state=active]:bg-muted rounded-xs p-2! text-xs leading-0 data-[state=active]:shadow-none"
+          class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none"
         >
           Attachments
         </TabsTrigger>
         <TabsTrigger
           value="activity"
-          class="data-[state=active]:bg-muted rounded-xs p-2! text-xs leading-0 data-[state=active]:shadow-none"
+          class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none"
         >
           Activity
         </TabsTrigger>
@@ -57,9 +57,7 @@ defineProps<{
           :document-id="node.id"
         />
         <div v-else class="p-4">
-          <div class="text-muted-foreground text-xs">
-            Select a file or folder to view activity history.
-          </div>
+          <div>Select a file or folder to view activity history.</div>
         </div>
       </TabsContent>
     </Tabs>

@@ -153,23 +153,22 @@ const restoreDefaultShortcut = () => {
               {{ t("settings.preferences.badgeCount.description") }}
             </FieldDescription>
           </FieldContent>
-          <ButtonGroup>
-            <ButtonGroup v-if="isUpdatingPreferences === 'badgeCount'">
-              <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                <Spinner />
-              </InputGroupButton>
-            </ButtonGroup>
-            <ButtonGroup>
-              <Switch
-                id="badge-count"
-                :disabled="isUpdatingPreferences !== null"
-                :model-value="badgeCount"
-                @update:model-value="
-                  updatePreference('badgeCount', toBoolean($event))
-                "
-              />
-            </ButtonGroup>
-          </ButtonGroup>
+          <InputGroupButton
+            v-if="isUpdatingPreferences === 'badgeCount'"
+            variant="ghost"
+            size="icon-xs"
+            disabled
+          >
+            <Spinner />
+          </InputGroupButton>
+          <Switch
+            id="badge-count"
+            :disabled="isUpdatingPreferences !== null"
+            :model-value="badgeCount"
+            @update:model-value="
+              updatePreference('badgeCount', toBoolean($event))
+            "
+          />
         </Field>
         <Field v-if="!isTauri" orientation="horizontal">
           <FieldContent>
@@ -207,28 +206,22 @@ const restoreDefaultShortcut = () => {
                 }}
               </FieldDescription>
             </FieldContent>
-            <ButtonGroup>
-              <ButtonGroup
-                v-if="isUpdatingPreferences === 'fileDropOverlayDragDrop'"
-              >
-                <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                  <Spinner />
-                </InputGroupButton>
-              </ButtonGroup>
-              <ButtonGroup>
-                <Switch
-                  id="file-drop-overlay-drag-drop"
-                  :disabled="isUpdatingPreferences !== null"
-                  :model-value="fileDropOverlayDragDrop"
-                  @update:model-value="
-                    updatePreference(
-                      'fileDropOverlayDragDrop',
-                      toBoolean($event)
-                    )
-                  "
-                />
-              </ButtonGroup>
-            </ButtonGroup>
+            <InputGroupButton
+              v-if="isUpdatingPreferences === 'fileDropOverlayDragDrop'"
+              variant="ghost"
+              size="icon-xs"
+              disabled
+            >
+              <Spinner />
+            </InputGroupButton>
+            <Switch
+              id="file-drop-overlay-drag-drop"
+              :disabled="isUpdatingPreferences !== null"
+              :model-value="fileDropOverlayDragDrop"
+              @update:model-value="
+                updatePreference('fileDropOverlayDragDrop', toBoolean($event))
+              "
+            />
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
@@ -241,28 +234,22 @@ const restoreDefaultShortcut = () => {
                 }}
               </FieldDescription>
             </FieldContent>
-            <ButtonGroup>
-              <ButtonGroup
-                v-if="isUpdatingPreferences === 'fileDropOverlayShortcut'"
-              >
-                <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                  <Spinner />
-                </InputGroupButton>
-              </ButtonGroup>
-              <ButtonGroup>
-                <Switch
-                  id="file-drop-overlay-shortcut"
-                  :disabled="isUpdatingPreferences !== null"
-                  :model-value="fileDropOverlayShortcut"
-                  @update:model-value="
-                    updatePreference(
-                      'fileDropOverlayShortcut',
-                      toBoolean($event)
-                    )
-                  "
-                />
-              </ButtonGroup>
-            </ButtonGroup>
+            <InputGroupButton
+              v-if="isUpdatingPreferences === 'fileDropOverlayShortcut'"
+              variant="ghost"
+              size="icon-xs"
+              disabled
+            >
+              <Spinner />
+            </InputGroupButton>
+            <Switch
+              id="file-drop-overlay-shortcut"
+              :disabled="isUpdatingPreferences !== null"
+              :model-value="fileDropOverlayShortcut"
+              @update:model-value="
+                updatePreference('fileDropOverlayShortcut', toBoolean($event))
+              "
+            />
           </Field>
           <Field v-if="fileDropOverlayShortcut" orientation="horizontal">
             <FieldContent>
@@ -293,7 +280,6 @@ const restoreDefaultShortcut = () => {
               </InputGroupAddon>
               <InputGroupInput
                 ref="recorderRef"
-                class="p-0!"
                 readonly
                 :disabled="isUpdatingPreferences !== null"
                 :placeholder="
@@ -417,7 +403,6 @@ const restoreDefaultShortcut = () => {
             </FieldContent>
             <Button
               v-if="lastCheckResult?.status === 'available'"
-              size="sm"
               @click="handleUpdateNow"
             >
               {{ t("settings.preferences.checkForUpdates.actionUpdate") }}
@@ -425,7 +410,6 @@ const restoreDefaultShortcut = () => {
             <Button
               v-else
               variant="secondary"
-              size="sm"
               :disabled="isCheckingForUpdates"
               @click="handleCheckForUpdates"
             >

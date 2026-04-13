@@ -1,24 +1,18 @@
-export type INotificationStatus = "inbox" | "saved" | "done"
+import type {
+  notificationSchema,
+  notificationStatusSchema,
+  notificationTypeSchema,
+} from "@/schemas/notifications"
+import type { z } from "zod"
 
-export type INotificationType =
-  | "user.welcome"
-  | "notification.test"
-  | "invitation.received"
-  | "invitation.declined"
-  | "member.joined"
-  | "member.removed"
+/**
+ * Notification entity type aliases — re-exported from
+ * `src/schemas/notifications.ts`.
+ *
+ * Important: `INotification.createdAt` is `Date`, NOT a Firestore `Timestamp`.
+ * This is a deliberate quirk — notifications are local ephemeral state.
+ */
 
-export interface INotification {
-  readonly id: string
-  type: INotificationType
-  title: string
-  description: string
-  url: string
-  status: INotificationStatus
-  read: boolean
-  createdAt: Date
-  source?: {
-    entityType: string
-    entityId: string
-  }
-}
+export type INotificationStatus = z.infer<typeof notificationStatusSchema>
+export type INotificationType = z.infer<typeof notificationTypeSchema>
+export type INotification = z.infer<typeof notificationSchema>

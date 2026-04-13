@@ -212,9 +212,9 @@ const route = useRoute()
                   v-for="(workflow, index) in agents"
                   :key="workflow.email"
                   :to="`${workflow.url}/${index}`"
-                  class="ring-offset-background focus-visible:ring-ring/50 rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  class="ring-offset-background focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 >
-                  <Card class="rounded-md shadow-none">
+                  <Card class="shadow-none">
                     <CardHeader>
                       <CardTitle class="flex w-full justify-between">
                         <span>{{ workflow.name }}</span>
@@ -258,10 +258,10 @@ const route = useRoute()
             {{ $t("pages.agents.title") }}
           </h1>
           {{ $t("pages.agents.description") }}
-          <Command class="bg-card rounded-md border">
+          <Command class="bg-card border">
             <CommandInput
               :placeholder="$t('pages.agents.searchPlaceholder')"
-              class="border-none p-0 focus:border-inherit focus:ring-0"
+              class="border-none focus:border-inherit focus:ring-0"
             />
             <CommandList>
               <CommandEmpty>{{ $t("pages.agents.empty") }}</CommandEmpty>
@@ -344,7 +344,6 @@ const route = useRoute()
                                 'var(--color-chart-4)',
                                 'var(--color-chart-5)',
                               ]"
-                              class="rounded"
                             />
                             Agent {{ index + 1 }}
                           </CardTitle>
@@ -378,7 +377,7 @@ const route = useRoute()
                           <CarouselContent>
                             <CarouselItem>
                               <div
-                                class="aspect-video rounded-lg bg-cover bg-center bg-no-repeat"
+                                class="aspect-video bg-cover bg-center bg-no-repeat"
                                 style="
                                   background-image: url(&quot;https://framerusercontent.com/images/FLr1IxUSg9tK6K5eLtfdnzUfkk.png&quot;);
                                 "
@@ -386,7 +385,7 @@ const route = useRoute()
                             </CarouselItem>
                             <CarouselItem>
                               <div
-                                class="aspect-video rounded-lg bg-cover bg-center bg-no-repeat"
+                                class="aspect-video bg-cover bg-center bg-no-repeat"
                                 style="
                                   background-image: url(&quot;https://framerusercontent.com/images/W6K9ukcWFSpamfFnCjmMmyYT4w.png&quot;);
                                 "
@@ -394,7 +393,7 @@ const route = useRoute()
                             </CarouselItem>
                             <CarouselItem>
                               <div
-                                class="aspect-video rounded-lg bg-cover bg-center bg-no-repeat"
+                                class="aspect-video bg-cover bg-center bg-no-repeat"
                                 style="
                                   background-image: url(&quot;https://framerusercontent.com/images/08IkYUqVYvZTgOrPDmYUofFh7LU.png&quot;);
                                 "
@@ -442,7 +441,6 @@ const route = useRoute()
                           'var(--color-chart-4)',
                           'var(--color-chart-5)',
                         ]"
-                        class="rounded"
                       />
                       Agent {{ index + 1 }}
                     </CardTitle>

@@ -46,7 +46,7 @@ const previousHistory = [
     <SidebarHeader>
       <div class="flex items-center justify-between gap-2">
         <span class="text-foreground ml-2 text-base font-medium">History</span>
-        <Button variant="ghost" size="icon-sm">
+        <Button variant="ghost" size="icon">
           <IconPlus />
           <span class="sr-only">New chat</span>
         </Button>

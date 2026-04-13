@@ -1,15 +1,24 @@
 import { generateId } from "@/helpers/utilities"
 import { auth, firestore } from "@/modules/firebase"
-import type {
-  SyncBaseVersion,
-  SyncMutationType,
-  SyncOperationStatus,
-} from "@/types/sync"
+import { lookupSchema } from "@/schemas/_registry"
+import { assertValid, validatePartialUpdate } from "@/schemas/_utils"
+import {
+  syncOutboxOperationSchema,
+  type SyncMutatePayload,
+  type SyncOutboxOperation,
+} from "@/schemas/sync"
+import type { SyncBaseVersion, SyncMutationType } from "@/types/sync"
 import {
   getFirestoreErrorMessage,
   isRetryableFirebaseError,
 } from "@/utils/firebase/firebase-errors"
-import { getBackoffDelay } from "@/utils/firebase/firebase-optimistic"
+import {
+  beginCloudSyncOperation,
+  endCloudSyncOperation,
+  getBackoffDelay,
+  optimisticUpdater,
+  type PendingCollection,
+} from "@/utils/firebase/firebase-optimistic"
 import { onIdTokenChanged } from "firebase/auth"
 import type { DocumentReference } from "firebase/firestore"
 import {
@@ -34,28 +43,14 @@ const OUTBOX_SETTLED_RETENTION_MS = 60 * 60 * 1000
 const OUTBOX_MAX_PENDING_PER_USER = 2_000
 const RETRY_BASE_DELAY_MS = 1_000
 const CANONICAL_WAIT_TIMEOUT_MS = 6_000
+const SYNC_BATCH_WINDOW_MS = 50
 
-export interface SyncMutatePayload {
-  source: string
-  targetPath: string
-  type: SyncMutationType
-  data?: Record<string, unknown>
-  merge?: boolean
-  baseVersion?: SyncBaseVersion | null
-}
-
-export interface SyncOutboxOperation extends SyncMutatePayload {
-  id: string
-  userId: string
-  clientId: string
-  status: SyncOperationStatus
-  attempts: number
-  createdAt: number
-  updatedAt: number
-  sentAt?: number
-  settledAt?: number
-  errorMessage?: string
-}
+/**
+ * Re-export so existing call sites that import these types from this file
+ * continue to work. The canonical definitions live alongside the runtime
+ * validation schema in `@/schemas/sync`.
+ */
+export type { SyncMutatePayload, SyncOutboxOperation }
 
 interface RemoteSyncOperationDocument {
   id: string
@@ -93,6 +88,7 @@ interface SyncMetricsState {
   pendingCount: ComputedRef<number>
   averageAckLatencyMs: ComputedRef<number>
   totalRetries: ComputedRef<number>
+  quarantineCount: ComputedRef<number>
 }
 
 export interface SyncAckEvent {
@@ -124,30 +120,11 @@ type CanonicalSubscriber = (event: SyncCanonicalEvent) => void
 
 const hasWindow = () => typeof window !== "undefined"
 
-const isSyncOutboxOperation = (
-  entry: unknown
-): entry is SyncOutboxOperation => {
-  if (!entry || typeof entry !== "object") return false
-  const value = entry as Record<string, unknown>
-  return (
-    typeof value.id === "string" &&
-    typeof value.userId === "string" &&
-    typeof value.clientId === "string" &&
-    typeof value.source === "string" &&
-    typeof value.targetPath === "string" &&
-    (value.type === "set" ||
-      value.type === "update" ||
-      value.type === "delete") &&
-    (value.status === "pending" ||
-      value.status === "sent" ||
-      value.status === "acked" ||
-      value.status === "rejected") &&
-    typeof value.attempts === "number" &&
-    typeof value.createdAt === "number" &&
-    typeof value.updatedAt === "number"
-  )
-}
-
+/**
+ * Parse the outbox from localStorage using the Zod schema. Replaces a
+ * hand-rolled type guard that checked ~10 fields individually. Corrupt
+ * entries are quarantined by the caller (`readOutbox`).
+ */
 const parseOutbox = (
   raw: string | null
 ): { valid: SyncOutboxOperation[]; invalid: unknown[] } => {
@@ -161,13 +138,14 @@ const parseOutbox = (
 
     const valid: SyncOutboxOperation[] = []
     const invalid: unknown[] = []
-    parsed.forEach((entry) => {
-      if (isSyncOutboxOperation(entry)) {
-        valid.push(entry)
+    for (const entry of parsed) {
+      const result = syncOutboxOperationSchema.safeParse(entry)
+      if (result.success) {
+        valid.push(result.data)
       } else {
         invalid.push(entry)
       }
-    })
+    }
 
     return { valid, invalid }
   } catch {
@@ -684,7 +662,7 @@ const getRetryIn = (operation: SyncOutboxOperation): number => {
   return Math.max(0, delay - elapsed)
 }
 
-const scheduleSync = (delay = 0) => {
+const scheduleSync = (delay = SYNC_BATCH_WINDOW_MS) => {
   if (!isRunning.value) return
   if (syncTimer) {
     clearTimeout(syncTimer)
@@ -1189,7 +1167,42 @@ export function stopSync(): void {
   }
 }
 
+/**
+ * Validate a mutation payload against the path's registered schema, if any.
+ *
+ * This is the single choke point for write-side validation — every mutation
+ * helper (`mutateSetDocument`, `mutateUpdateDocument`, `mutateDeleteDocument`,
+ * `mutateWithCoordinator`) funnels through `mutate()`, so adding validation
+ * here covers all of them with one change.
+ *
+ * Rules:
+ *   - `delete` operations have no data — skip validation entirely.
+ *   - `set` with `merge: false` expects a complete document — use
+ *     `assertValid` to enforce the write schema.
+ *   - `set` with `merge: true` and `update` are partial — use
+ *     `validatePartialUpdate` which iterates the patch's keys and validates
+ *     each field individually (allowing FieldValue sentinels and dotted
+ *     field paths to pass through).
+ *
+ * Paths without a registry entry pass through unvalidated. Throws
+ * `SchemaValidationError` on failure, which propagates to the caller — the
+ * sync engine never enqueues invalid data.
+ */
+const validateMutationPayload = (payload: SyncMutatePayload): void => {
+  if (payload.data === undefined) return
+  const schemas = lookupSchema(payload.targetPath)
+  if (!schemas) return
+
+  const ctx = `${payload.type}:${schemas.name}`
+  if (payload.type === "set" && !payload.merge) {
+    assertValid(schemas.write, payload.data, ctx)
+  } else {
+    validatePartialUpdate(schemas.write, payload.data, ctx)
+  }
+}
+
 export async function mutate(payload: SyncMutatePayload): Promise<void> {
+  validateMutationPayload(payload)
   const queued = enqueue(payload, { schedule: "microtask" })
   await queued.settled
 }
@@ -1229,6 +1242,14 @@ export function useSyncMetricsState(): SyncMetricsState {
     pendingCount,
     averageAckLatencyMs,
     totalRetries: computed(() => totalRetries.value),
+    quarantineCount: computed(() => {
+      try {
+        const raw = window.localStorage.getItem(OUTBOX_QUARANTINE_STORAGE_KEY)
+        return raw ? (JSON.parse(raw) as unknown[]).length : 0
+      } catch {
+        return 0
+      }
+    }),
   }
 }
 
@@ -1317,4 +1338,50 @@ export async function mutateDeleteDocument(
     type: "delete",
     baseVersion: options.baseVersion ?? null,
   })
+}
+
+/**
+ * Optimistic outbox mutation.
+ *
+ * Applies `applyLocal` immediately to Pinia state, enqueues `mutation` on the
+ * sync outbox, commits the receipt on ack or rolls back on failure. All writes
+ * that need offline durability, server ACKs, or queue metrics should go
+ * through here rather than calling `enqueue` + `optimisticUpdater` by hand.
+ */
+export interface MutateWithCoordinatorOptions {
+  id: string
+  pendingIds: PendingCollection
+  applyLocal: () => void
+  rollbackLocal: () => void
+  mutation: SyncMutatePayload
+  source?: string
+  pendingReleaseDelayMs?: number
+}
+
+export async function mutateWithCoordinator(
+  options: MutateWithCoordinatorOptions
+): Promise<void> {
+  const source = options.source ?? options.mutation.source
+  const receipt = optimisticUpdater.applyLocal({
+    id: options.id,
+    source,
+    pendingIds: options.pendingIds,
+    applyLocal: options.applyLocal,
+    rollback: options.rollbackLocal,
+    pendingReleaseDelayMs: options.pendingReleaseDelayMs,
+  })
+
+  const syncToken = beginCloudSyncOperation({ id: options.id, source })
+  let syncError: unknown
+
+  try {
+    await mutate(options.mutation)
+    optimisticUpdater.commit(receipt)
+  } catch (error) {
+    syncError = error
+    optimisticUpdater.rollback(receipt)
+    throw error
+  } finally {
+    endCloudSyncOperation(syncToken, syncError)
+  }
 }

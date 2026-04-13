@@ -20,7 +20,7 @@ const forwarded = useForwardProps(delegatedProps)
     v-bind="forwarded"
     :class="
       cn(
-        'no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none',
+        'no-scrollbar max-h-72 scroll-py-0 overflow-x-hidden overflow-y-auto outline-none',
         props.class
       )
     "

@@ -32,7 +32,7 @@ const task = computed(() => taskSchema.parse(props.row.original))
               <IconEllipsis />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent>
             <DropdownMenuItem>{{ t("actions.edit") }}</DropdownMenuItem>
             <DropdownMenuItem>{{ t("actions.duplicate") }}</DropdownMenuItem>
             <DropdownMenuItem>{{ t("labels.favorites") }}</DropdownMenuItem>

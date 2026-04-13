@@ -29,7 +29,7 @@ import {
   getMembershipPreferencesRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase/firebase-helpers"
-import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
+import { useLocalHydration } from "@/utils/firebase/firebase-hydration"
 import {
   addPending,
   cloneState,
@@ -38,7 +38,10 @@ import {
   removePending,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
+import {
+  mutateSetDocument,
+  mutateWithCoordinator,
+} from "@/utils/firebase/firebase-sync-engine"
 import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
@@ -128,6 +131,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       optimisticWorkspaces.value = value
     },
   })
+
+  // Hydrate from localStorage for instant cold-start rendering
+  useLocalHydration("workspaces", optimisticWorkspaces, () => workspaces.value)
 
   const workspaceById = computed(
     () =>

@@ -8,6 +8,8 @@ import {
   updateWorkspaceNodeContent,
 } from "@/composables/useFunctions"
 import { firestore } from "@/modules/firebase"
+import { parseSafe } from "@/schemas/_utils"
+import { workspaceNodeSchema } from "@/schemas/nodes"
 import {
   NODE_NAME_MAX_LENGTH,
   normalizeName,
@@ -15,11 +17,10 @@ import {
   type WorkspaceNode,
   type WorkspaceNodeScope,
 } from "@/types/nodes"
+import { getDocCached, getDocsCached } from "@/utils/firebase/firebase-cache"
 import {
   collection,
   doc,
-  getDoc,
-  getDocs,
   limit as limitQuery,
   onSnapshot,
   orderBy,
@@ -57,11 +58,26 @@ const getNodesCollection = (
   workspaceId: string
 ) => collection(firestore, "teams", teamId, "workspaces", workspaceId, scope)
 
-const toNode = (docSnap: QueryDocumentSnapshot<DocumentData>): WorkspaceNode =>
-  ({
-    id: docSnap.id,
-    ...(docSnap.data() as Omit<WorkspaceNode, "id">),
-  }) as WorkspaceNode
+/**
+ * Parse a Firestore snapshot into a `WorkspaceNode`. Returns `null` when
+ * validation fails — one corrupt row should never collapse the whole
+ * children listing. Callers filter nulls from the `.map()` result.
+ *
+ * Node queries are scope-parameterized (`code` vs `write` subcollection) so
+ * the path-registered converters in `firebase-helpers.ts` don't cover them;
+ * validation happens at the composable layer instead.
+ */
+const toNode = (
+  docSnap: QueryDocumentSnapshot<DocumentData>
+): WorkspaceNode | null =>
+  parseSafe(
+    workspaceNodeSchema,
+    { id: docSnap.id, ...docSnap.data() },
+    `node:${docSnap.ref.path}`
+  )
+
+const isNode = (node: WorkspaceNode | null): node is WorkspaceNode =>
+  node !== null
 
 const buildChildrenQuery = (
   scope: WorkspaceNodeScope,
@@ -110,14 +126,14 @@ export function useNodes() {
     options: ListChildrenOptions = {}
   ): Promise<ChildrenResult> => {
     const limit = options.limit ?? DEFAULT_CHILDREN_PAGE_SIZE
-    const snapshot = await getDocs(
+    const snapshot = await getDocsCached(
       buildChildrenQuery(scope, teamId, workspaceId, parentId, {
         ...options,
         limit,
       })
     )
 
-    const nodes = snapshot.docs.map(toNode)
+    const nodes = snapshot.docs.map(toNode).filter(isNode)
     const lastDoc = snapshot.docs.at(-1) ?? null
 
     return {
@@ -143,7 +159,7 @@ export function useNodes() {
         limit,
       }),
       (snapshot) => {
-        const nodes = snapshot.docs.map(toNode)
+        const nodes = snapshot.docs.map(toNode).filter(isNode)
         const lastDoc = snapshot.docs.at(-1) ?? null
 
         callback({
@@ -164,16 +180,17 @@ export function useNodes() {
     workspaceId: string,
     nodeId: string
   ): Promise<WorkspaceNode | null> => {
-    const nodeSnap = await getDoc(
+    const nodeSnap = await getDocCached(
       doc(getNodesCollection(scope, teamId, workspaceId), nodeId)
     )
 
     if (!nodeSnap.exists()) return null
 
-    return {
-      id: nodeSnap.id,
-      ...(nodeSnap.data() as Omit<WorkspaceNode, "id">),
-    } as WorkspaceNode
+    return parseSafe(
+      workspaceNodeSchema,
+      { id: nodeSnap.id, ...nodeSnap.data() },
+      `node:${nodeSnap.ref.path}`
+    )
   }
 
   const createNode = async (

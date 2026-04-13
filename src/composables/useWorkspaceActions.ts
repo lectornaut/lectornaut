@@ -28,15 +28,10 @@ export function useWorkspaceActions() {
     })
   )
 
-  const canCreateWorkspace = computed(() => canManageWorkspaces.value)
+  const canCreateWorkspace = canManageWorkspaces
   const getCannotCreateWorkspaceReason = computed(() =>
     !canManageWorkspaces.value
       ? "Only team owners and admins can create workspaces"
-      : null
-  )
-  const getCannotManageWorkspacesReason = computed(() =>
-    !canManageWorkspaces.value
-      ? "Only team owners and admins can manage workspaces"
       : null
   )
 
@@ -196,7 +191,6 @@ export function useWorkspaceActions() {
     loading,
 
     // Permission
-    canManageWorkspace: canManageWorkspaces,
     canCreateWorkspace,
     canUpdateWorkspace,
     canDeleteWorkspace,
@@ -205,7 +199,6 @@ export function useWorkspaceActions() {
     getCannotCreateWorkspaceReason,
     getCannotUpdateWorkspaceReason,
     getCannotDeleteWorkspaceReason,
-    getCannotManageWorkspacesReason,
 
     // Actions
     switchWorkspace,

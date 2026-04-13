@@ -249,7 +249,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
 <template>
   <Sheet v-model:open="openShortcuts">
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-3xl border"
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto! gap-0 overflow-clip border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader class="gap-4">
@@ -285,8 +285,6 @@ const isEditing = (shortcut: Shortcut): boolean =>
               <Item
                 v-for="(shortcut, shortcutIndex) in category.shortcuts"
                 :key="shortcutIndex"
-                size="sm"
-                class="p-0"
               >
                 <ItemContent>
                   <ItemDescription class="flex gap-1">
@@ -303,7 +301,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
                     </template>
                   </ItemDescription>
                 </ItemContent>
-                <ItemActions class="p-0.5">
+                <ItemActions>
                   <!-- Editable shortcut: inline InputGroup recorder -->
                   <template v-if="shortcut.hotkeys">
                     <InputGroup
@@ -326,7 +324,6 @@ const isEditing = (shortcut: Shortcut): boolean =>
                           (el) =>
                             setShortcutRecorderRef(getShortcutId(shortcut), el)
                         "
-                        class="p-0!"
                         readonly
                         :disabled="isShortcutsLoading"
                         :placeholder="
@@ -401,7 +398,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
                           </Kbd>
                         </KbdGroup>
                       </InputGroupAddon>
-                      <InputGroupInput readonly disabled class="p-0!" />
+                      <InputGroupInput readonly disabled />
                       <InputGroupAddon align="inline-end">
                         <Tooltip>
                           <TooltipTrigger as-child>

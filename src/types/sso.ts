@@ -1,52 +1,29 @@
-import type { Timestamp } from "firebase/firestore"
+import type {
+  loginMethodsSchema,
+  oidcConfigSchema,
+  samlConfigSchema,
+  ssoConfigSchema,
+  ssoProtocolSchema,
+  ssoResolveResultSchema,
+  teamSecurityConfigSchema,
+} from "@/schemas/sso"
+import type { z } from "zod"
 
-export type SsoProtocol = "saml" | "oidc"
+/**
+ * SSO / team security type aliases — re-exported from `src/schemas/sso.ts`.
+ *
+ * Default-value constants (`defaultLoginMethods`, `defaultSsoConfig`) stay
+ * here because they are runtime values consumed by the store and composable
+ * layers during initial setup.
+ */
 
-export interface ISamlConfig {
-  idpEntityId: string
-  ssoUrl: string
-  certificate: string
-}
-
-export interface IOidcConfig {
-  issuer: string
-  clientId: string
-}
-
-export interface ISsoConfig {
-  enabled: boolean
-  protocol: SsoProtocol
-  providerId: string
-  domains: string[]
-  enforced: boolean
-  autoProvision: boolean
-  defaultRole: "member" | "guest"
-  saml?: ISamlConfig
-  oidc?: IOidcConfig
-}
-
-export interface ILoginMethods {
-  emailPassword: boolean
-  magicLink: boolean
-  google: boolean
-  microsoft: boolean
-  apple: boolean
-  sso: boolean
-}
-
-export interface ITeamSecurityConfig {
-  loginMethods: ILoginMethods
-  approvedDomains: string[]
-  sso: ISsoConfig
-  configuredBy: string
-  updatedAt: Timestamp
-}
-
-export interface ISsoResolveResult {
-  sso: boolean
-  providerId?: string
-  enforced?: boolean
-}
+export type SsoProtocol = z.infer<typeof ssoProtocolSchema>
+export type ISamlConfig = z.infer<typeof samlConfigSchema>
+export type IOidcConfig = z.infer<typeof oidcConfigSchema>
+export type ISsoConfig = z.infer<typeof ssoConfigSchema>
+export type ILoginMethods = z.infer<typeof loginMethodsSchema>
+export type ITeamSecurityConfig = z.infer<typeof teamSecurityConfigSchema>
+export type ISsoResolveResult = z.infer<typeof ssoResolveResultSchema>
 
 export const defaultLoginMethods: ILoginMethods = {
   emailPassword: true,

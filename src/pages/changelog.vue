@@ -137,7 +137,7 @@ const entries: ChangelogEntry[] = [
             v-if="entry.image"
             :src="entry.image"
             :alt="`${entry.version} ${t('pages.changelog.versionVisual')}`"
-            class="mt-8 w-full rounded-lg object-cover"
+            class="mt-8 w-full object-cover"
           />
           <Button
             v-if="entry.button"

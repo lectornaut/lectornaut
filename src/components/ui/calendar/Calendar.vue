@@ -150,7 +150,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     data-slot="calendar"
     :class="
       cn(
-        'group/calendar bg-background p-3 [--cell-radius:var(--radius-4xl)] [--cell-size:--spacing(8)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent',
+        'group/calendar bg-background p-2 [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent',
         props.class
       )
     "

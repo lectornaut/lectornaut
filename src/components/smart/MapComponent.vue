@@ -17,7 +17,7 @@ const mapOptions = computed(() => ({
 </script>
 
 <template>
-  <div class="m-2 flex grow flex-col overflow-clip rounded border">
+  <div class="overflow-clipborder m-2 flex grow flex-col">
     <VMap :key="mapStyle" :options="mapOptions">
       <VControlNavigation position="bottom-right" />
     </VMap>

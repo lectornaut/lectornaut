@@ -28,6 +28,7 @@ import {
   getTeamRef,
   uploadTeamPhoto,
 } from "@/utils/firebase/firebase-helpers"
+import { useLocalHydration } from "@/utils/firebase/firebase-hydration"
 import {
   addPending,
   cloneState,
@@ -115,6 +116,13 @@ export const useTeamStore = defineStore("teams", () => {
       optimisticCurrentTeam.value = value
     },
   })
+
+  // Hydrate from localStorage for instant cold-start rendering
+  useLocalHydration(
+    "currentTeam",
+    optimisticCurrentTeam,
+    () => currentTeam.value
+  )
 
   const isLoading = computed(() => {
     // Still loading if auth/user profile is loading

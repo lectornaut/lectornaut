@@ -130,9 +130,7 @@ const teams = [
             </div>
           </CardContent>
           <CardFooter>
-            <Button size="sm">{{
-              t("components.flow.settings.general.save")
-            }}</Button>
+            <Button>{{ t("components.flow.settings.general.save") }}</Button>
           </CardFooter>
         </Card>
       </SidebarGroupContent>
@@ -185,7 +183,7 @@ const teams = [
                         class="ring-background ring-2"
                       >
                         <AvatarImage
-                          class="inline-block size-8 rounded"
+                          class="inline-block size-8"
                           :src="person?.avatar!"
                           :alt="person?.name"
                           referrerpolicy="no-referrer"
@@ -199,7 +197,7 @@ const teams = [
                       <p class="font-medium">
                         {{ team.name }}
                       </p>
-                      <p class="text-muted-foreground text-xs">
+                      <p>
                         {{ team.description }}
                       </p>
                     </div>
@@ -208,13 +206,15 @@ const teams = [
                     <SelectTrigger>
                       <SelectValue :placeholder="t('actions.select')" />
                     </SelectTrigger>
-                    <SelectContent align="end">
-                      <SelectItem value="edit">
-                        {{ t("actions.edit") }}
-                      </SelectItem>
-                      <SelectItem value="view">
-                        {{ t("actions.view") }}
-                      </SelectItem>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="edit">
+                          {{ t("actions.edit") }}
+                        </SelectItem>
+                        <SelectItem value="view">
+                          {{ t("actions.view") }}
+                        </SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -226,7 +226,7 @@ const teams = [
                   <div class="flex flex-col gap-2">
                     <Avatar>
                       <AvatarImage
-                        class="inline-block size-8 rounded"
+                        class="inline-block size-8"
                         :src="person?.avatar!"
                         :alt="person?.name"
                         referrerpolicy="no-referrer"
@@ -239,7 +239,7 @@ const teams = [
                       <p class="font-medium">
                         {{ person.name }}
                       </p>
-                      <p class="text-muted-foreground text-xs">
+                      <p>
                         {{ person.email }}
                       </p>
                     </div>
@@ -248,13 +248,15 @@ const teams = [
                     <SelectTrigger>
                       <SelectValue :placeholder="t('actions.select')" />
                     </SelectTrigger>
-                    <SelectContent align="end">
-                      <SelectItem value="edit">
-                        {{ t("actions.edit") }}
-                      </SelectItem>
-                      <SelectItem value="view">
-                        {{ t("actions.view") }}
-                      </SelectItem>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="edit">
+                          {{ t("actions.edit") }}
+                        </SelectItem>
+                        <SelectItem value="view">
+                          {{ t("actions.view") }}
+                        </SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -419,7 +421,7 @@ const teams = [
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button variant="destructive" size="sm" class="text-current">
+            <Button variant="destructive" class="text-current">
               {{ t("components.flow.settings.danger.delete") }}
             </Button>
           </CardFooter>

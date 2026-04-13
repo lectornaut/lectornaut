@@ -63,7 +63,7 @@ export const platform = computed(() => {
 // Global fullscreen state
 const isFullscreenState = shallowRef(false)
 let unlisten: UnlistenFn | undefined
-let listenerInitialized = false
+let initPromise: Promise<void> | null = null
 
 export const getCurrentTauriWindow = (): TauriWindow | null => {
   if (!isTauri.value) return null
@@ -75,26 +75,24 @@ export const getCurrentTauriWindow = (): TauriWindow | null => {
   }
 }
 
-const initFullscreenListener = async (): Promise<void> => {
-  // Only initialize once and only in Tauri environment
-  if (listenerInitialized || !isTauri.value) return
-  listenerInitialized = true
+const initFullscreenListener = (): void => {
+  if (initPromise || unlisten || !isTauri.value) return
 
-  try {
+  initPromise = (async () => {
     const win = getCurrentTauriWindow()
-    if (!win) {
-      listenerInitialized = false
-      return
-    }
+    if (!win) return
 
     isFullscreenState.value = await win.isFullscreen()
     unlisten = await win.onResized(async () => {
       isFullscreenState.value = await win.isFullscreen()
     })
-  } catch (e) {
-    console.error("Failed to setup fullscreen listener:", e)
-    listenerInitialized = false // Allow retry on error
-  }
+  })()
+    .catch((e) => {
+      console.error("Failed to setup fullscreen listener:", e)
+    })
+    .finally(() => {
+      initPromise = null
+    })
 }
 
 /**
@@ -163,6 +161,5 @@ export function cleanupPlatformListeners(): void {
   if (unlisten) {
     unlisten()
     unlisten = undefined
-    listenerInitialized = false
   }
 }

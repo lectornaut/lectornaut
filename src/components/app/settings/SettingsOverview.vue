@@ -3,11 +3,8 @@ import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
 import { IconAtSign, IconCheck, IconPencil, IconX } from "@/data/icons"
+import { USERNAME_MAX_LENGTH, usernamesMatch } from "@/helpers/username"
 import { getInitials } from "@/helpers/utilities"
-import {
-  USERNAME_MAX_LENGTH,
-  usernamesMatch,
-} from "@/utils/firebase/firebase-username"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
@@ -287,7 +284,7 @@ const discardChanges = () => {
                   <TooltipTrigger as-child>
                     <span class="inline-flex">
                       <Avatar
-                        class="flex size-10 items-center justify-center rounded-md"
+                        class="flex size-10 items-center justify-center"
                         :class="{
                           'cursor-pointer': canUpdateTeam,
                           'cursor-not-allowed opacity-60': !canUpdateTeam,
@@ -297,11 +294,10 @@ const discardChanges = () => {
                         <Spinner v-if="isTeamPhotoLoading" />
                         <template v-else>
                           <AvatarImage
-                            class="rounded"
                             :src="currentTeam?.photoURL || ''"
                             :alt="currentTeam?.name || 'Team'"
                           />
-                          <AvatarFallback class="rounded">
+                          <AvatarFallback>
                             {{
                               getInitials(
                                 localTeamName || currentTeam?.name || ""
@@ -326,8 +322,8 @@ const discardChanges = () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
-                      size="icon-sm"
+                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
+                      size="icon"
                       @click.stop="handleRemoveTeamPhoto"
                     >
                       <IconX />
@@ -476,51 +472,48 @@ const discardChanges = () => {
                 {{ t("settings.overview.publicTeam.description") }}
               </FieldDescription>
             </FieldContent>
-            <ButtonGroup>
-              <ButtonGroup v-if="isUpdatingOverview">
-                <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                  <Spinner />
-                </InputGroupButton>
-              </ButtonGroup>
-              <ButtonGroup>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <span class="inline-block">
-                        <Switch
-                          id="team-is-public"
-                          :model-value="isPublic"
-                          :disabled="
-                            !currentTeam ||
-                            !canUpdateTeam ||
-                            isUpdatingOverview ||
-                            (!isPublic && !hasValidUsername)
-                          "
-                          @update:model-value="toggleIsPublic"
-                        />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{
-                        !canUpdateTeam
-                          ? getCannotUpdateTeamReason
-                          : isPublic
-                            ? publicPath
-                              ? t("settings.overview.publicTeam.publicAt", {
-                                  path: publicPath,
-                                })
-                              : t("settings.overview.publicTeam.enabled")
-                            : !hasUsername
-                              ? t(
-                                  "settings.overview.publicTeam.requiresUsername"
-                                )
-                              : t("settings.overview.publicTeam.turnOnToEnable")
-                      }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ButtonGroup>
-            </ButtonGroup>
+            <InputGroupButton
+              v-if="isUpdatingOverview"
+              variant="ghost"
+              size="icon-xs"
+              disabled
+            >
+              <Spinner />
+            </InputGroupButton>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <span>
+                    <Switch
+                      id="team-is-public"
+                      :model-value="isPublic"
+                      :disabled="
+                        !currentTeam ||
+                        !canUpdateTeam ||
+                        isUpdatingOverview ||
+                        (!isPublic && !hasValidUsername)
+                      "
+                      @update:model-value="toggleIsPublic"
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{
+                    !canUpdateTeam
+                      ? getCannotUpdateTeamReason
+                      : isPublic
+                        ? publicPath
+                          ? t("settings.overview.publicTeam.publicAt", {
+                              path: publicPath,
+                            })
+                          : t("settings.overview.publicTeam.enabled")
+                        : !hasUsername
+                          ? t("settings.overview.publicTeam.requiresUsername")
+                          : t("settings.overview.publicTeam.turnOnToEnable")
+                  }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </Field>
         </FieldSet>
       </FieldGroup>
@@ -528,7 +521,7 @@ const discardChanges = () => {
 
     <DialogFooter
       v-if="hasPendingChanges"
-      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
+      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 border p-2 backdrop-blur-lg"
     >
       <p class="text-muted-foreground mr-auto ml-2 text-xs">Unsaved changes</p>
       <Button variant="secondary" :disabled="isSaving" @click="discardChanges">

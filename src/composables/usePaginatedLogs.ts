@@ -1,8 +1,11 @@
+import { parseSafe } from "@/schemas/_utils"
+import { logEntrySchema } from "@/schemas/logs"
 import type { ILogEntry } from "@/types/logs"
+import { getDocsCached } from "@/utils/firebase/firebase-cache"
 import {
-  getDocs,
   type Query,
   type QueryDocumentSnapshot,
+  type QuerySnapshot,
 } from "firebase/firestore"
 import { ref, watch, type WatchSource } from "vue"
 
@@ -40,14 +43,21 @@ export function usePaginatedLogs(options: UsePaginatedLogsOptions) {
     lastDoc.value = null
   }
 
-  const hydrateLogs = (snapshot: Awaited<ReturnType<typeof getDocs>>) =>
-    snapshot.docs.map((doc) => {
-      const data = doc.data() as ILogEntry
-      return {
-        ...data,
-        id: data.id ?? doc.id,
-      }
-    })
+  const hydrateLogs = (snapshot: QuerySnapshot): ILogEntry[] =>
+    snapshot.docs
+      .map((doc) => {
+        const raw = doc.data() as Record<string, unknown>
+        // Log queries are caller-constructed and don't flow through a
+        // ref-level Firestore converter, so validation happens here.
+        // Corrupt rows are dropped rather than throwing — one bad entry
+        // must never collapse the whole list.
+        return parseSafe(
+          logEntrySchema,
+          { ...raw, id: raw.id ?? doc.id },
+          `logs:${doc.ref.path}`
+        )
+      })
+      .filter((entry): entry is ILogEntry => entry !== null)
 
   const fetchLogs = async (reset = false) => {
     if (!options.canFetch()) {
@@ -82,7 +92,7 @@ export function usePaginatedLogs(options: UsePaginatedLogsOptions) {
         return
       }
 
-      const snapshot = await getDocs(q)
+      const snapshot = await getDocsCached(q)
       if (requestId !== latestRequestId) return
 
       const items = hydrateLogs(snapshot)

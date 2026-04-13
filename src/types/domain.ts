@@ -1,78 +1,43 @@
-import { Timestamp } from "firebase/firestore"
+import type {
+  billingIntervalSchema,
+  billingPlanKeySchema,
+  membershipPreferencesSchema,
+  teamBillingSchema,
+  teamSchema,
+  userPreferencesSchema,
+  userProfileSchema,
+  userSchema,
+  usernameClaimSchema,
+  workspaceSchema,
+} from "@/schemas/domain"
+import type { z } from "zod"
 
-export type BillingPlanKey =
-  | "personal"
-  | "professional"
-  | "business"
-  | "enterprise"
-export type BillingInterval = "month" | "year"
+/**
+ * Domain type aliases.
+ *
+ * These types used to be hand-written interfaces. They are now re-exported
+ * `z.infer` aliases from the single source of truth in `src/schemas/domain.ts`.
+ * Store and composable code that imports from `@/types/domain` keeps working
+ * with zero changes because the inferred shapes are structurally identical
+ * to the previous interfaces.
+ *
+ * One minor caveat: per-field `readonly` modifiers (e.g. `readonly id: string`
+ * on ITeam) are dropped by `z.infer`. This is a type-level loosening that
+ * matters only if code was relying on the compiler to block field mutation —
+ * which no call site in this codebase does.
+ */
 
-export interface ITeamBilling {
-  stripeCustomerId: string | null
-  stripeSubscriptionId: string | null
-  stripeScheduleId: string | null
-  planKey: BillingPlanKey | null
-  interval: BillingInterval | null
-  priceId: string | null
-  quantity: number | null
-  status: string | null
-  currentPeriodEnd: number | null
-  cancelAtPeriodEnd: boolean
-  lastInvoiceId: string | null
-  lastInvoiceStatus: string | null
-  lastStripeEventId: string | null
-  lastStripeEventCreated: number | null
-  isEntitled: boolean
-  updatedAt?: Timestamp
-}
+export type BillingPlanKey = z.infer<typeof billingPlanKeySchema>
+export type BillingInterval = z.infer<typeof billingIntervalSchema>
+export type ITeamBilling = z.infer<typeof teamBillingSchema>
 
-export interface ITeam {
-  readonly id: string
-  name: string
-  photoURL?: string | null
-  username?: string | null
-  isPublic?: boolean
-  billing?: Partial<ITeamBilling> | null
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
+export type ITeam = z.infer<typeof teamSchema>
+export type IWorkspace = z.infer<typeof workspaceSchema>
 
-export interface IWorkspace {
-  readonly id: string
-  readonly teamId: string
-  name: string
-  description?: string | null
-  photoURL?: string | null
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
+export type IUserProfile = z.infer<typeof userProfileSchema>
+export type IUser = z.infer<typeof userSchema>
 
-export interface IUserProfile {
-  readonly uid: string
-  email: string | null
-  displayName: string | null
-  photoURL: string | null
-  username: string | null
-  isPublic: boolean
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
+export type IUserPreferences = z.infer<typeof userPreferencesSchema>
+export type IMembershipPreferences = z.infer<typeof membershipPreferencesSchema>
 
-export type IUser = IUserProfile
-
-export interface IUserPreferences {
-  currentTeamId: string | null
-  onboarding: boolean
-  updatedAt?: Timestamp
-}
-
-export interface IMembershipPreferences {
-  currentWorkspaceId: string | null
-  updatedAt?: Timestamp
-}
-
-export interface IUsernameClaim {
-  entityType: "user" | "team"
-  entityId: string
-  createdAt?: Timestamp
-}
+export type IUsernameClaim = z.infer<typeof usernameClaimSchema>

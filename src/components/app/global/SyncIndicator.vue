@@ -54,7 +54,7 @@ const syncTooltip = computed(() => {
 <template>
   <Tooltip>
     <TooltipTrigger as-child>
-      <Button variant="ghost" :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'">
+      <Button variant="ghost" :size="iconDisplay === 'text' ? 'sm' : 'icon'">
         <IconCloudAlert
           v-if="syncState === 'offline' || syncState === 'error'"
           :class="{ 'text-destructive': syncState === 'error' }"

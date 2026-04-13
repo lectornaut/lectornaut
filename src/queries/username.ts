@@ -1,10 +1,10 @@
-import { auth, firestore } from "@/modules/firebase"
-import type { IUsernameClaim } from "@/types/domain"
 import {
   normalizeUsername,
   RESERVED_USERNAMES,
   validateUsername,
-} from "@/utils/firebase/firebase-username"
+} from "@/helpers/username"
+import { auth, firestore } from "@/modules/firebase"
+import type { IUsernameClaim } from "@/types/domain"
 import {
   collection,
   deleteDoc,

@@ -162,16 +162,12 @@ const formatCreatedAt = (
             <div v-if="isLoading" class="flex justify-center py-8">
               <Spinner />
             </div>
-            <div v-else class="overflow-clip rounded-md border">
+            <div v-else class="overflow-clip border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead class="w-1/4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        @click="toggleTeamSort('name')"
-                      >
+                      <Button variant="ghost" @click="toggleTeamSort('name')">
                         Name
                         <IconArrowUp
                           v-if="
@@ -192,7 +188,6 @@ const formatCreatedAt = (
                     <TableHead class="w-1/4">
                       <Button
                         variant="ghost"
-                        size="sm"
                         @click="toggleTeamSort('created')"
                       >
                         Created
@@ -220,13 +215,13 @@ const formatCreatedAt = (
                     :key="membership.teamId"
                   >
                     <TableCell>
-                      <Item size="sm" class="group w-full gap-2 p-0">
+                      <Item class="group w-full gap-2">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger as-child>
                                 <Avatar
-                                  class="flex items-center justify-center rounded-md"
+                                  class="flex items-center justify-center"
                                   :class="{
                                     'cursor-pointer': canEditTeam(membership),
                                     'cursor-not-allowed opacity-60':
@@ -245,11 +240,10 @@ const formatCreatedAt = (
                                   </template>
                                   <template v-else>
                                     <AvatarImage
-                                      class="rounded"
                                       :src="membership.team?.photoURL!"
                                       :alt="membership.team?.name"
                                     />
-                                    <AvatarFallback class="rounded">
+                                    <AvatarFallback>
                                       {{ getInitials(membership.team?.name) }}
                                     </AvatarFallback>
                                   </template>
@@ -271,8 +265,8 @@ const formatCreatedAt = (
                               <TooltipTrigger as-child>
                                 <Button
                                   variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
-                                  size="icon-sm"
+                                  class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
+                                  size="icon"
                                   :disabled="!canEditTeam(membership)"
                                   @click.stop="
                                     removeTeamPhoto(membership.teamId)
@@ -347,7 +341,7 @@ const formatCreatedAt = (
                                       <IconMoreHorizontal />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
+                                  <DropdownMenuContent>
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <div>

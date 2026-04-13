@@ -34,7 +34,7 @@ const messages = [
       <ContextMenu v-for="(message, index) in messages" :key="index">
         <ContextMenuTrigger>
           <div
-            class="flex items-end gap-2 p-4"
+            class="flex items-end gap-2 p-6"
             :class="{
               'flex-row-reverse': message.role === 'user',
             }"
@@ -53,10 +53,10 @@ const messages = [
             />
             <div
               :class="[
-                'flex w-max max-w-3/4 flex-col rounded-md px-3 py-2 text-sm',
+                'flex w-max max-w-3/4 flex-col px-3 py-2 text-sm',
                 message.role === 'user'
-                  ? 'bg-muted text-muted-foreground ml-auto rounded-br-xs'
-                  : 'bg-secondary text-secondary-foreground rounded-bl-xs',
+                  ? 'bg-muted text-muted-foreground ml-auto'
+                  : 'bg-secondary text-secondary-foreground',
               ]"
             >
               {{ message.content }}

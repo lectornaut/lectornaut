@@ -678,7 +678,7 @@ onUnmounted(() => {
                         </RouterLink>
                       </Button>
                     </ContextMenuTrigger>
-                    <ContextMenuContent class="w-56">
+                    <ContextMenuContent>
                       <ContextMenuGroup>
                         <ContextMenuItem @click="openNewTab">
                           <IconPlus />
@@ -750,7 +750,7 @@ onUnmounted(() => {
                 </HoverCardTrigger>
                 <HoverCardContent
                   :side-offset="12"
-                  class="flex w-60 flex-col gap-1.5 p-1.5"
+                  class="flex w-60 flex-col gap-2 p-2"
                 >
                   <div class="flex items-center gap-2">
                     <TooltipProvider>
@@ -782,7 +782,7 @@ onUnmounted(() => {
                       <Kbd>{{ index + 1 }}</Kbd>
                     </KbdGroup>
                   </div>
-                  <div class="bg-secondary aspect-video rounded border"></div>
+                  <div class="bg-secondary aspect-video border"></div>
                 </HoverCardContent>
               </HoverCard>
             </div>
@@ -814,7 +814,7 @@ onUnmounted(() => {
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
                   <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
-                  <DropdownMenuContent align="end" side="bottom">
+                  <DropdownMenuContent>
                     <DropdownMenuGroup>
                       <DropdownMenuItem @click="openNewTab">
                         <IconPlus />
@@ -895,11 +895,8 @@ onUnmounted(() => {
                             {{ t("tabs.activeTabs") }}
                           </DropdownMenuSubTrigger>
                         </DropdownMenuItem>
-                        <DropdownMenuSubContent class="w-56">
-                          <DropdownMenuLabel
-                            v-if="tabs.length === 0"
-                            class="text-muted-foreground text-xs"
-                          >
+                        <DropdownMenuSubContent>
+                          <DropdownMenuLabel v-if="tabs.length === 0">
                             {{ t("tabs.activeTabsEmpty") }}
                           </DropdownMenuLabel>
                           <DropdownMenuItem
@@ -938,11 +935,8 @@ onUnmounted(() => {
                             {{ t("tabs.recentClosedTabs") }}
                           </DropdownMenuSubTrigger>
                         </DropdownMenuItem>
-                        <DropdownMenuSubContent class="w-56">
-                          <DropdownMenuLabel
-                            v-if="recentlyClosed.length === 0"
-                            class="text-muted-foreground text-xs"
-                          >
+                        <DropdownMenuSubContent>
+                          <DropdownMenuLabel v-if="recentlyClosed.length === 0">
                             {{ t("tabs.recentlyClosedEmpty") }}
                           </DropdownMenuLabel>
                           <DropdownMenuItem
@@ -972,7 +966,7 @@ onUnmounted(() => {
         </div>
       </div>
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-56" align="start" side="bottom">
+    <ContextMenuContent>
       <ContextMenuGroup>
         <ContextMenuItem @click="openNewTab">
           <IconPlus />

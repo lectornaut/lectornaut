@@ -173,7 +173,7 @@ const authenticateApple = () =>
 
 <template>
   <!-- Step 1: Email Input -->
-  <div v-if="authStep === 'email'" class="gap-8">
+  <div v-if="authStep === 'email'" class="grid gap-2">
     <Tabs v-model="authMode" class="gap-8">
       <TabsContent value="sign-up" tabindex="-1">
         <h2
@@ -205,7 +205,7 @@ const authenticateApple = () =>
           </Button>
         </div>
       </TabsContent>
-      <div class="bg-background grid gap-4 rounded-2xl border p-2">
+      <div class="bg-background grid gap-4 border p-2">
         <!-- Email input -->
         <div class="grid gap-2">
           <InputGroup>
@@ -251,6 +251,7 @@ const authenticateApple = () =>
           <Button
             variant="secondary"
             class="relative justify-start"
+            size="lg"
             :disabled="authenticateGoogleInProgress"
             @click="authenticateGoogle"
           >
@@ -268,7 +269,7 @@ const authenticateApple = () =>
                     <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent side="top">
+                <TooltipContent>
                   {{ t("enter.magicLink.lastUsed") }}
                 </TooltipContent>
               </Tooltip>
@@ -277,6 +278,7 @@ const authenticateApple = () =>
           <Button
             variant="secondary"
             class="relative justify-start"
+            size="lg"
             :disabled="authenticateMicrosoftInProgress"
             @click="authenticateMicrosoft"
           >
@@ -298,7 +300,7 @@ const authenticateApple = () =>
                     <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent side="top">
+                <TooltipContent>
                   {{ t("enter.magicLink.lastUsed") }}
                 </TooltipContent>
               </Tooltip>
@@ -307,6 +309,7 @@ const authenticateApple = () =>
           <Button
             variant="secondary"
             class="relative justify-start"
+            size="lg"
             :disabled="authenticateAppleInProgress"
             @click="authenticateApple"
           >
@@ -328,7 +331,7 @@ const authenticateApple = () =>
                     <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent side="top">
+                <TooltipContent>
                   {{ t("enter.magicLink.lastUsed") }}
                 </TooltipContent>
               </Tooltip>
@@ -374,11 +377,11 @@ const authenticateApple = () =>
         {{ t("enter.signIn") }}
       </h2>
     </TabsContent>
-    <div class="bg-background grid gap-4 rounded-2xl border p-2">
+    <div class="bg-background grid gap-4 border p-2">
       <div class="flex flex-col gap-2">
         <!-- Email display with back button -->
         <div class="flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm" @click="goBackToEmail">
+          <Button variant="ghost" size="icon" @click="goBackToEmail">
             <IconArrowLeft />
           </Button>
           <span class="text-muted-foreground truncate text-sm">
@@ -405,7 +408,7 @@ const authenticateApple = () =>
                       <IconDisc /> {{ t("enter.magicLink.recent") }}
                     </Badge>
                   </TooltipTrigger>
-                  <TooltipContent side="top">
+                  <TooltipContent>
                     {{ t("enter.magicLink.lastUsed") }}
                   </TooltipContent>
                 </Tooltip>
@@ -574,7 +577,7 @@ const authenticateApple = () =>
                         <IconDisc /> {{ t("enter.magicLink.recent") }}
                       </Badge>
                     </TooltipTrigger>
-                    <TooltipContent side="top">
+                    <TooltipContent>
                       {{ t("enter.magicLink.lastUsed") }}
                     </TooltipContent>
                   </Tooltip>
@@ -602,7 +605,7 @@ const authenticateApple = () =>
                             <IconDisc /> {{ t("enter.magicLink.recent") }}
                           </Badge>
                         </TooltipTrigger>
-                        <TooltipContent side="top">
+                        <TooltipContent>
                           {{ t("enter.magicLink.lastUsed") }}
                         </TooltipContent>
                       </Tooltip>

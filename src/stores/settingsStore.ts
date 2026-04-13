@@ -20,6 +20,7 @@ import {
   defaultTheme,
 } from "@/helpers/defaults"
 import { getDefaultHotkeys } from "@/helpers/shortcuts"
+import { firestore } from "@/modules/firebase"
 import { rebindHotkeys } from "@/modules/hotkeys"
 import {
   areNotificationSettingsEqual,
@@ -51,7 +52,7 @@ import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
-import { useCurrentUser, useDocument, useFirestore } from "vuefire"
+import { useCurrentUser, useDocument } from "vuefire"
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
@@ -60,7 +61,6 @@ const toSettingsThemeDoc = (value: unknown): SettingsThemeDoc | null =>
   isRecord(value) ? (value as SettingsThemeDoc) : null
 
 export const useSettingsStore = defineStore("settings", () => {
-  const db = useFirestore()
   const user = useCurrentUser()
 
   const mode = useStorage<ThemeMode>("theme", defaultTheme)
@@ -95,7 +95,10 @@ export const useSettingsStore = defineStore("settings", () => {
   const themeDocRef = computed(() => {
     if (!user.value?.uid) return null
     return doc(
-      collection(doc(collection(db, "users"), user.value.uid), "settings"),
+      collection(
+        doc(collection(firestore, "users"), user.value.uid),
+        "settings"
+      ),
       "themes"
     )
   })
@@ -295,7 +298,7 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const notificationSettingsDocRef = computed(() => {
     if (!user.value?.uid) return null
-    return doc(db, "users", user.value.uid, "settings", "notifications")
+    return doc(firestore, "users", user.value.uid, "settings", "notifications")
   })
 
   const { data: notificationSettingsDoc, pending: notificationPending } =
@@ -500,7 +503,7 @@ export const useSettingsStore = defineStore("settings", () => {
   // Preferences: Run on startup & Menu bar
   const preferencesDocRef = computed(() => {
     if (!user.value?.uid) return null
-    return doc(db, "users", user.value.uid, "settings", "preferences")
+    return doc(firestore, "users", user.value.uid, "settings", "preferences")
   })
 
   const { data: preferencesDocData, pending: preferencesPending } =
@@ -770,7 +773,7 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const shortcutsDocRef = computed(() => {
     if (!user.value?.uid) return null
-    return doc(db, "users", user.value.uid, "settings", "shortcuts")
+    return doc(firestore, "users", user.value.uid, "settings", "shortcuts")
   })
 
   const { data: shortcutsDocData, pending: shortcutsPending } =

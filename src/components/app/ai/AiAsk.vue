@@ -31,7 +31,7 @@ const { t } = useI18n()
               id="tour-ai-assistant"
               variant="ghost"
               class="shadow-none"
-              :size="iconDisplay === 'text' ? 'sm' : 'icon-sm'"
+              :size="iconDisplay === 'text' ? 'sm' : 'icon'"
             >
               <IconAiFill />
               <template v-if="iconDisplay === 'text'">
@@ -55,7 +55,7 @@ const { t } = useI18n()
           <AiChatShell :placeholder="t('ai.placeholder')" />
         </Teleport>
         <SheetContent
-          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-3xl border"
+          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto! gap-0 overflow-clip border"
           :class="{ 'mt-12': isTauri && !isFullscreen }"
         >
           <SheetHeader>

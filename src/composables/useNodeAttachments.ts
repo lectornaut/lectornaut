@@ -3,25 +3,28 @@ import {
   deleteWorkspaceNodeAttachment as deleteWorkspaceNodeAttachmentCallable,
   updateWorkspaceNodeAttachment as updateWorkspaceNodeAttachmentCallable,
 } from "@/composables/useFunctions"
-import { generateId } from "@/helpers/utilities"
-import { resolveMimeTypeForUpload } from "@/modules/fileCapture"
-import { firestore } from "@/modules/firebase"
-import {
-  ATTACHMENT_NAME_MAX_LENGTH,
-  type WorkspaceNodeAttachment,
-  type WorkspaceNodeScope,
-} from "@/types/nodes"
-import {
-  deleteStorageFile,
-  getStorageFileRef,
-} from "@/utils/firebase/firebase-helpers"
 import {
   buildWorkspaceNodeAttachmentStoragePath,
   getWorkspaceNodeAttachmentsCollectionPath,
   NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
   normalizeAttachmentDisplayName,
   sanitizeAttachmentFileName,
-} from "@/utils/firebase/firebase-node-attachments"
+} from "@/helpers/node-attachments"
+import { generateId } from "@/helpers/utilities"
+import { resolveMimeTypeForUpload } from "@/modules/fileCapture"
+import { firestore } from "@/modules/firebase"
+import { parseSafe } from "@/schemas/_utils"
+import { workspaceNodeAttachmentSchema } from "@/schemas/nodes"
+import {
+  ATTACHMENT_NAME_MAX_LENGTH,
+  type WorkspaceNodeAttachment,
+  type WorkspaceNodeScope,
+} from "@/types/nodes"
+import { getDocCached } from "@/utils/firebase/firebase-cache"
+import {
+  deleteStorageFile,
+  getStorageFileRef,
+} from "@/utils/firebase/firebase-helpers"
 import {
   cloneState,
   createPendingSet,
@@ -31,7 +34,6 @@ import {
 import {
   collection,
   doc,
-  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -105,13 +107,27 @@ const getAttachmentDocRef = (
     attachmentId
   )
 
+/**
+ * Parse a Firestore snapshot into a `WorkspaceNodeAttachment`. Returns
+ * `null` when validation fails — one corrupt attachment should never
+ * collapse the whole attachment list. Callers filter nulls via `isAttachment`.
+ *
+ * Attachment paths are constructed dynamically via the collab helpers and
+ * don't flow through a `firebase-helpers.ts` ref getter, so no converter
+ * is attached at the ref level — validation happens here instead.
+ */
 const toAttachment = (
   docSnap: QueryDocumentSnapshot<DocumentData>
-): WorkspaceNodeAttachment =>
-  ({
-    id: docSnap.id,
-    ...(docSnap.data() as Omit<WorkspaceNodeAttachment, "id">),
-  }) as WorkspaceNodeAttachment
+): WorkspaceNodeAttachment | null =>
+  parseSafe(
+    workspaceNodeAttachmentSchema,
+    { id: docSnap.id, ...docSnap.data() },
+    `attachment:${docSnap.ref.path}`
+  )
+
+const isAttachment = (
+  attachment: WorkspaceNodeAttachment | null
+): attachment is WorkspaceNodeAttachment => attachment !== null
 
 const toTimestampMs = (
   value:
@@ -203,7 +219,7 @@ export const resolveWorkspaceNodeAttachmentCommitState = async (
   expectedStoragePath: string
 ): Promise<boolean | null> => {
   try {
-    const attachmentSnap = await getDoc(
+    const attachmentSnap = await getDocCached(
       getAttachmentDocRef(context, attachmentId)
     )
 
@@ -226,7 +242,7 @@ export const resolveWorkspaceNodeAttachmentDeletionState = async (
   attachmentId: string
 ): Promise<boolean | null> => {
   try {
-    const attachmentSnap = await getDoc(
+    const attachmentSnap = await getDocCached(
       getAttachmentDocRef(context, attachmentId)
     )
 
@@ -481,7 +497,9 @@ export function useNodeAttachmentsState(
           orderBy("updatedAt", "desc")
         ),
         (snapshot) => {
-          firestoreAttachments.value = snapshot.docs.map(toAttachment)
+          firestoreAttachments.value = snapshot.docs
+            .map(toAttachment)
+            .filter(isAttachment)
           error.value = null
           loading.value = false
         },

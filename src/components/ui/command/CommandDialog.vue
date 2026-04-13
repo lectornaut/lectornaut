@@ -37,7 +37,7 @@ const forwarded = useForwardPropsEmits(props, emits)
     <DialogContent
       :class="
         cn(
-          'top-1/3 translate-y-0 overflow-hidden rounded-4xl! p-0',
+          'top-1/3 translate-y-0 overflow-hidden rounded-none p-0',
           props.class
         )
       "

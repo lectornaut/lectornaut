@@ -1,59 +1,37 @@
-import { Timestamp } from "firebase/firestore"
+import type {
+  fileNodeSchema,
+  folderNodeSchema,
+  nodeBaseSchema,
+  nodeTypeSchema,
+  workspaceNodeAttachmentSchema,
+  workspaceNodeSchema,
+  workspaceNodeScopeSchema,
+} from "@/schemas/nodes"
+import type { z } from "zod"
+
+/**
+ * Workspace node type aliases — re-exported from `src/schemas/nodes.ts`.
+ *
+ * Constants and helper functions stay here because they are runtime values,
+ * not schema-derivable.
+ */
 
 export const ROOT_PARENT_ID = "root"
 export const NODE_NAME_MAX_LENGTH = 128
 export const ATTACHMENT_NAME_MAX_LENGTH = 255
 
-export type NodeType = "folder" | "file"
-export type WorkspaceNodeScope = "code" | "write"
+export type NodeType = z.infer<typeof nodeTypeSchema>
+export type WorkspaceNodeScope = z.infer<typeof workspaceNodeScopeSchema>
 
-export interface NodeBase {
-  readonly id: string
-  readonly workspaceId: string
-  type: NodeType
-  /** Folders first, then files */
-  typeOrder: number
-  name: string
-  nameLower: string
-  parentId: string
-  isArchived: boolean
-  archivedAt?: Timestamp
-  archivedBy?: string
-  createdAt: Timestamp
-  createdBy: string
-  updatedAt: Timestamp
-  updatedBy: string
-  sortKey?: string
-}
+export type NodeBase = z.infer<typeof nodeBaseSchema>
+export type FolderNode = z.infer<typeof folderNodeSchema>
+export type FileNode = z.infer<typeof fileNodeSchema>
+export type WorkspaceNode = z.infer<typeof workspaceNodeSchema>
+export type WorkspaceNodeAttachment = z.infer<
+  typeof workspaceNodeAttachmentSchema
+>
 
-export interface FolderNode extends NodeBase {
-  type: "folder"
-}
-
-export interface FileNode extends NodeBase {
-  type: "file"
-  content?: string
-  mimeType?: string
-  size?: number
-}
-
-export type WorkspaceNode = FolderNode | FileNode
-
-export interface WorkspaceNodeAttachment {
-  readonly id: string
-  readonly workspaceId: string
-  readonly nodeId: string
-  scope: WorkspaceNodeScope
-  displayName: string
-  originalName: string
-  storagePath: string
-  mimeType?: string | null
-  size?: number | null
-  createdAt: Timestamp
-  createdBy: string
-  updatedAt: Timestamp
-  updatedBy: string
-}
+// ─── Runtime helpers ─────────────────────────────────────────────────────────
 
 export function normalizeName(name: string): string {
   return name.trim().replace(/\s+/g, " ")

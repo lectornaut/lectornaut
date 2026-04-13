@@ -13,6 +13,12 @@ import {
   IconX,
 } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
+import {
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  usernamesMatch,
+  validateUsername,
+} from "@/helpers/username"
 import { getInitials } from "@/helpers/utilities"
 import { checkUsernameAvailability } from "@/queries/username"
 import {
@@ -28,12 +34,6 @@ import {
   type IMembershipRole,
 } from "@/types/membership"
 import { Capabilities, roleCan } from "@/types/permissions"
-import {
-  USERNAME_MAX_LENGTH,
-  USERNAME_MIN_LENGTH,
-  usernamesMatch,
-  validateUsername,
-} from "@/utils/firebase/firebase-username"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
@@ -781,18 +781,18 @@ const handleSubmit = async () => {
                       }"
                     >
                       <Avatar
-                        class="size-16 rounded"
+                        class="size-16"
                         :class="{
                           'cursor-pointer': canUpdateTeam || mode === 'create',
                         }"
                         @click="triggerTeamPhotoSelection"
                       >
                         <AvatarImage
-                          class="size-16 rounded"
+                          class="size-16"
                           :src="photoPreview!"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="size-16 rounded">
+                        <AvatarFallback class="size-16">
                           {{ getInitials(teamName) }}
                         </AvatarFallback>
                       </Avatar>
@@ -811,8 +811,8 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0 ring-2 transition group-hover:opacity-100"
-                      size="icon-sm"
+                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                      size="icon"
                       @click.stop="removePhoto"
                     >
                       <IconX />
@@ -824,7 +824,7 @@ const handleSubmit = async () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p class="text-muted-foreground text-xs">
+            <p>
               {{
                 photoPreview
                   ? t("components.teamDialog.labels.clickToChange")
@@ -954,38 +954,36 @@ const handleSubmit = async () => {
               }}
             </FieldDescription>
           </FieldContent>
-          <ButtonGroup>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <span class="inline-block">
-                    <Switch
-                      id="team-is-public"
-                      :model-value="teamIsPublic"
-                      :disabled="
-                        !hasValidTeamUsername ||
-                        (!canUpdateTeam && mode === 'edit')
-                      "
-                      @update:model-value="toggleTeamIsPublic"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{
-                    !canUpdateTeam && mode === "edit"
-                      ? t(getCannotUpdateTeamReason || "")
-                      : !hasTeamUsername
-                        ? t("components.teamDialog.tooltips.requiresHandle")
-                        : teamIsPublic
-                          ? t("components.teamDialog.tooltips.publicTeamUrl", {
-                              url: `/${teamUsername.trim()}`,
-                            })
-                          : t("components.teamDialog.tooltips.turnOnPublicTeam")
-                  }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </ButtonGroup>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <span>
+                  <Switch
+                    id="team-is-public"
+                    :model-value="teamIsPublic"
+                    :disabled="
+                      !hasValidTeamUsername ||
+                      (!canUpdateTeam && mode === 'edit')
+                    "
+                    @update:model-value="toggleTeamIsPublic"
+                  />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{
+                  !canUpdateTeam && mode === "edit"
+                    ? t(getCannotUpdateTeamReason || "")
+                    : !hasTeamUsername
+                      ? t("components.teamDialog.tooltips.requiresHandle")
+                      : teamIsPublic
+                        ? t("components.teamDialog.tooltips.publicTeamUrl", {
+                            url: `/${teamUsername.trim()}`,
+                          })
+                        : t("components.teamDialog.tooltips.turnOnPublicTeam")
+                }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Field>
 
         <!-- 1. MEMBERS SECTION (Active) -->
@@ -1014,18 +1012,20 @@ const handleSubmit = async () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="owner">{{
-                              t("components.teamDialog.roles.owner")
-                            }}</SelectItem>
-                            <SelectItem value="admin">{{
-                              t("components.teamDialog.roles.admin")
-                            }}</SelectItem>
-                            <SelectItem value="member">{{
-                              t("components.teamDialog.roles.member")
-                            }}</SelectItem>
-                            <SelectItem value="guest">{{
-                              t("components.teamDialog.roles.guest")
-                            }}</SelectItem>
+                            <SelectGroup>
+                              <SelectItem value="owner">{{
+                                t("components.teamDialog.roles.owner")
+                              }}</SelectItem>
+                              <SelectItem value="admin">{{
+                                t("components.teamDialog.roles.admin")
+                              }}</SelectItem>
+                              <SelectItem value="member">{{
+                                t("components.teamDialog.roles.member")
+                              }}</SelectItem>
+                              <SelectItem value="guest">{{
+                                t("components.teamDialog.roles.guest")
+                              }}</SelectItem>
+                            </SelectGroup>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1040,20 +1040,24 @@ const handleSubmit = async () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem
-                      value="owner"
-                      :disabled="!canManageOwnerRoles"
-                      >{{ t("components.teamDialog.roles.owner") }}</SelectItem
-                    >
-                    <SelectItem value="admin">{{
-                      t("components.teamDialog.roles.admin")
-                    }}</SelectItem>
-                    <SelectItem value="member">{{
-                      t("components.teamDialog.roles.member")
-                    }}</SelectItem>
-                    <SelectItem value="guest">{{
-                      t("components.teamDialog.roles.guest")
-                    }}</SelectItem>
+                    <SelectGroup>
+                      <SelectItem
+                        value="owner"
+                        :disabled="!canManageOwnerRoles"
+                        >{{
+                          t("components.teamDialog.roles.owner")
+                        }}</SelectItem
+                      >
+                      <SelectItem value="admin">{{
+                        t("components.teamDialog.roles.admin")
+                      }}</SelectItem>
+                      <SelectItem value="member">{{
+                        t("components.teamDialog.roles.member")
+                      }}</SelectItem>
+                      <SelectItem value="guest">{{
+                        t("components.teamDialog.roles.guest")
+                      }}</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </ButtonGroup>
@@ -1082,10 +1086,7 @@ const handleSubmit = async () => {
               </ButtonGroup>
             </ButtonGroup>
           </ButtonGroup>
-          <p
-            v-if="activeMembers.length === 0"
-            class="text-muted-foreground text-xs"
-          >
+          <p v-if="activeMembers.length === 0">
             {{ t("components.teamDialog.labels.noActiveMembers") }}
           </p>
         </Field>
@@ -1135,20 +1136,24 @@ const handleSubmit = async () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem
-                      value="owner"
-                      :disabled="!canManageOwnerRoles"
-                      >{{ t("components.teamDialog.roles.owner") }}</SelectItem
-                    >
-                    <SelectItem value="admin">{{
-                      t("components.teamDialog.roles.admin")
-                    }}</SelectItem>
-                    <SelectItem value="member">{{
-                      t("components.teamDialog.roles.member")
-                    }}</SelectItem>
-                    <SelectItem value="guest">{{
-                      t("components.teamDialog.roles.guest")
-                    }}</SelectItem>
+                    <SelectGroup>
+                      <SelectItem
+                        value="owner"
+                        :disabled="!canManageOwnerRoles"
+                        >{{
+                          t("components.teamDialog.roles.owner")
+                        }}</SelectItem
+                      >
+                      <SelectItem value="admin">{{
+                        t("components.teamDialog.roles.admin")
+                      }}</SelectItem>
+                      <SelectItem value="member">{{
+                        t("components.teamDialog.roles.member")
+                      }}</SelectItem>
+                      <SelectItem value="guest">{{
+                        t("components.teamDialog.roles.guest")
+                      }}</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </ButtonGroup>
@@ -1233,20 +1238,24 @@ const handleSubmit = async () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem
-                      value="owner"
-                      :disabled="!canManageOwnerRoles"
-                      >{{ t("components.teamDialog.roles.owner") }}</SelectItem
-                    >
-                    <SelectItem value="admin">{{
-                      t("components.teamDialog.roles.admin")
-                    }}</SelectItem>
-                    <SelectItem value="member">{{
-                      t("components.teamDialog.roles.member")
-                    }}</SelectItem>
-                    <SelectItem value="guest">{{
-                      t("components.teamDialog.roles.guest")
-                    }}</SelectItem>
+                    <SelectGroup>
+                      <SelectItem
+                        value="owner"
+                        :disabled="!canManageOwnerRoles"
+                        >{{
+                          t("components.teamDialog.roles.owner")
+                        }}</SelectItem
+                      >
+                      <SelectItem value="admin">{{
+                        t("components.teamDialog.roles.admin")
+                      }}</SelectItem>
+                      <SelectItem value="member">{{
+                        t("components.teamDialog.roles.member")
+                      }}</SelectItem>
+                      <SelectItem value="guest">{{
+                        t("components.teamDialog.roles.guest")
+                      }}</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </ButtonGroup>
@@ -1350,24 +1359,26 @@ const handleSubmit = async () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem
-                        value="owner"
-                        :disabled="
-                          !canManageOwnerRoles && invite.role !== 'owner'
-                        "
-                        >{{
-                          t("components.teamDialog.roles.owner")
-                        }}</SelectItem
-                      >
-                      <SelectItem value="admin">{{
-                        t("components.teamDialog.roles.admin")
-                      }}</SelectItem>
-                      <SelectItem value="member">{{
-                        t("components.teamDialog.roles.member")
-                      }}</SelectItem>
-                      <SelectItem value="guest">{{
-                        t("components.teamDialog.roles.guest")
-                      }}</SelectItem>
+                      <SelectGroup>
+                        <SelectItem
+                          value="owner"
+                          :disabled="
+                            !canManageOwnerRoles && invite.role !== 'owner'
+                          "
+                          >{{
+                            t("components.teamDialog.roles.owner")
+                          }}</SelectItem
+                        >
+                        <SelectItem value="admin">{{
+                          t("components.teamDialog.roles.admin")
+                        }}</SelectItem>
+                        <SelectItem value="member">{{
+                          t("components.teamDialog.roles.member")
+                        }}</SelectItem>
+                        <SelectItem value="guest">{{
+                          t("components.teamDialog.roles.guest")
+                        }}</SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </ButtonGroup>

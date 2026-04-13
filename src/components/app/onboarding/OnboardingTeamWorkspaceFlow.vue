@@ -121,7 +121,7 @@ const handleCreateWorkspace = async () => {
               <div
                 v-for="membership in memberships"
                 :key="membership.teamId"
-                class="flex items-center justify-between rounded-md border px-3 py-2"
+                class="flex items-center justify-between border px-3 py-2"
               >
                 <div class="min-w-0">
                   <p class="truncate text-sm font-medium">
@@ -155,7 +155,7 @@ const handleCreateWorkspace = async () => {
               </div>
               <div
                 v-if="memberships.length === 0"
-                class="text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-4 text-sm"
+                class="text-muted-foreground flex items-center gap-2 border px-3 py-4 text-sm"
               >
                 <IconUsers />
                 No teams yet. Create one to continue.
@@ -228,7 +228,7 @@ const handleCreateWorkspace = async () => {
               <div
                 v-for="workspace in workspaces"
                 :key="workspace.id"
-                class="flex items-center justify-between rounded-md border px-3 py-2"
+                class="flex items-center justify-between border px-3 py-2"
               >
                 <div class="min-w-0">
                   <p class="truncate text-sm font-medium">
@@ -257,7 +257,7 @@ const handleCreateWorkspace = async () => {
               </div>
               <div
                 v-if="workspaces.length === 0"
-                class="text-muted-foreground rounded-md border px-3 py-4 text-sm"
+                class="text-muted-foreground border px-3 py-4 text-sm"
               >
                 No workspaces yet. Create one in the current team.
               </div>

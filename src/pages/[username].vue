@@ -8,6 +8,7 @@ import {
 import { useTeamActions } from "@/composables/useTeamActions"
 import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
+import { firestore } from "@/modules/firebase"
 import {
   getTeamByUsername,
   getUserByUsername,
@@ -17,12 +18,7 @@ import {
 import type { DocumentData } from "firebase/firestore"
 import { doc } from "firebase/firestore"
 import { useRoute, useRouter } from "vue-router"
-import {
-  useCurrentUser,
-  useDocument,
-  useFirestore,
-  useIsCurrentUserLoaded,
-} from "vuefire"
+import { useCurrentUser, useDocument, useIsCurrentUserLoaded } from "vuefire"
 
 const route = useRoute()
 const router = useRouter()
@@ -30,9 +26,8 @@ const isAuthLoaded = useIsCurrentUserLoaded()
 const { t } = useI18n()
 
 const currentUser = useCurrentUser()
-const db = useFirestore()
 const currentUserRef = computed(() =>
-  currentUser.value ? doc(db, "users", currentUser.value.uid) : null
+  currentUser.value ? doc(firestore, "users", currentUser.value.uid) : null
 )
 const { data: currentUserData } = useDocument(currentUserRef)
 
@@ -327,14 +322,13 @@ useHead(() => ({
       <template v-else>
         <div class="flex flex-col items-center justify-center p-2">
           <div
-            class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-lg border shadow-xs"
+            class="bg-background flex aspect-video max-h-40 w-full flex-col border shadow-xs"
           >
             <div class="flex items-center justify-between p-2">
               <Logo class="size-8 shrink-0 p-2" />
               <Button
                 v-if="settingsRoute"
                 variant="outline"
-                size="sm"
                 @click="router.push(settingsRoute)"
               >
                 <IconSettings />
@@ -348,7 +342,7 @@ useHead(() => ({
             >
               <div v-if="error" class="flex flex-col items-center gap-2">
                 <p class="text-muted-foreground text-sm">{{ error }}</p>
-                <Button variant="outline" size="sm" @click="fetchPublicProfile">
+                <Button variant="outline" @click="fetchPublicProfile">
                   {{ t("pages.publicProfile.retry") }}
                 </Button>
               </div>
@@ -364,7 +358,7 @@ useHead(() => ({
                 </Badge>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-muted-foreground text-xs">
+                <span>
                   {{
                     profileStackMode === "members"
                       ? t("pages.teams.memberCount", {
@@ -384,34 +378,31 @@ useHead(() => ({
                           :key="avatar.id"
                         >
                           <TooltipTrigger as-child>
-                            <Avatar
-                              class="ring-background size-4 rounded ring-2"
-                            >
+                            <Avatar class="ring-background size-4 ring-2">
                               <AvatarImage
-                                class="rounded"
                                 :src="avatar.photoURL!"
                                 :alt="avatar.name || avatar.id"
                                 referrerpolicy="no-referrer"
                               />
-                              <AvatarFallback class="rounded">
+                              <AvatarFallback>
                                 {{ getInitials(avatar.name || avatar.id) }}
                               </AvatarFallback>
                             </Avatar>
                           </TooltipTrigger>
-                          <TooltipContent side="top">
+                          <TooltipContent>
                             {{ avatar.name || avatar.id }}
                           </TooltipContent>
                         </Tooltip>
                       </div>
                       <Tooltip v-if="hiddenHeaderAvatarCount > 0">
                         <TooltipTrigger as-child>
-                          <Avatar class="ring-background size-4 rounded ring-2">
-                            <AvatarFallback class="rounded text-[10px]">
+                          <Avatar class="ring-background size-4 ring-2">
+                            <AvatarFallback class="text-[10px]">
                               +{{ hiddenHeaderAvatarCount }}
                             </AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>
-                        <TooltipContent side="top" class="max-w-56 text-xs">
+                        <TooltipContent class="max-w-56 text-xs">
                           {{ hiddenHeaderAvatarNames.join(", ") }}
                         </TooltipContent>
                       </Tooltip>
@@ -421,25 +412,23 @@ useHead(() => ({
               </div>
             </div>
           </div>
-          <div
-            class="bg-background mx-auto -mt-10 rounded-lg border p-1.5 shadow-xs"
-          >
+          <div class="bg-background mx-auto -mt-10 border p-1.5 shadow-xs">
             <div v-if="user || team">
-              <Avatar class="size-20 rounded">
+              <Avatar class="size-20">
                 <AvatarImage
-                  class="size-20 rounded"
+                  class="size-20"
                   :src="(user?.photoURL || team?.photoURL) ?? ''"
                   :alt="user?.displayName || team?.name"
                   referrerpolicy="no-referrer"
                 />
-                <AvatarFallback class="size-20 rounded">
+                <AvatarFallback class="size-20">
                   {{ getInitials(user?.displayName || team?.name) }}
                 </AvatarFallback>
               </Avatar>
             </div>
             <div
               v-else
-              class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded"
+              class="bg-muted text-muted-foreground flex size-20 items-center justify-center"
             >
               <IconLock />
             </div>
@@ -466,9 +455,7 @@ useHead(() => ({
         </div>
 
         <div class="flex flex-col items-center justify-center p-2">
-          <div
-            class="bg-background flex w-full grow rounded-lg border p-4 shadow-xs"
-          >
+          <div class="bg-background flex w-full grow border p-4 shadow-xs">
             Content
           </div>
         </div>

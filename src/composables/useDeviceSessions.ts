@@ -30,7 +30,7 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore"
-import { useCollection, useCurrentUser, useFirestore } from "vuefire"
+import { useCollection, useCurrentUser } from "vuefire"
 
 const SESSION_ID_KEY = "lectornaut.session.id"
 const SESSION_REGISTERED_KEY = "lectornaut.session.registered"
@@ -538,7 +538,6 @@ export async function removeCurrentSession(uid: string) {
  * so this composable only handles the reactive session list and actions.
  */
 export function useDeviceSessions() {
-  const db = useFirestore()
   const user = useCurrentUser()
   const currentSessionId = getOrCreateSessionId()
 
@@ -546,7 +545,7 @@ export function useDeviceSessions() {
   const sessionsQueryRef = computed(() => {
     if (!user.value?.uid) return null
     return query(
-      collection(db, "users", user.value.uid, "sessions"),
+      collection(firestore, "users", user.value.uid, "sessions"),
       orderBy("lastActiveAt", "desc")
     )
   })

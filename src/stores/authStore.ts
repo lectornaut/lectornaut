@@ -10,6 +10,11 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
+import { SchemaValidationError } from "@/schemas/_utils"
+import {
+  userHydrationSchema,
+  userPreferencesHydrationSchema,
+} from "@/schemas/domain"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import type {
@@ -25,7 +30,10 @@ import {
   updateUserInMemberships,
   uploadUserPhoto,
 } from "@/utils/firebase/firebase-helpers"
-import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
+import {
+  clearHydrationCache,
+  useLocalHydration,
+} from "@/utils/firebase/firebase-hydration"
 import {
   cloneState,
   createPendingSet,
@@ -33,10 +41,12 @@ import {
 } from "@/utils/firebase/firebase-optimistic"
 import {
   buildUpdatedAtBaseVersion,
+  mutateSetDocument,
   mutateUpdateDocument,
+  mutateWithCoordinator,
 } from "@/utils/firebase/firebase-sync-engine"
 import type { User } from "firebase/auth"
-import { Timestamp, serverTimestamp, setDoc } from "firebase/firestore"
+import { Timestamp } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
 import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
@@ -159,6 +169,22 @@ export const useAuthStore = defineStore("auth", () => {
     },
   })
 
+  // Hydrate from localStorage for instant cold-start rendering. The hydration
+  // schemas validate the cached entry and rehydrate Timestamp fields (which
+  // JSON.stringify strips to plain { seconds, nanoseconds } objects).
+  useLocalHydration(
+    "userProfile",
+    optimisticUserProfile,
+    () => userProfile.value,
+    { schema: userHydrationSchema }
+  )
+  useLocalHydration(
+    "userPreferences",
+    optimisticUserPreferences,
+    () => userPreferences.value,
+    { schema: userPreferencesHydrationSchema }
+  )
+
   const currentWorkspaceId = computed(
     () => membershipPreferences.value?.currentWorkspaceId ?? null
   )
@@ -196,16 +222,30 @@ export const useAuthStore = defineStore("auth", () => {
             createdAt: now,
             updatedAt: now,
           }
-          const firestoreUser = {
-            ...optimisticUser,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          }
-          await setDoc(userRef, firestoreUser)
+          // Set optimistic state immediately (before async write)
           optimisticUserProfile.value = optimisticUser
+          // Route through sync engine so the write survives offline
+          await mutateSetDocument(
+            userRef,
+            optimisticUser as unknown as Record<string, unknown>,
+            { source: "auth.createUserProfile" }
+          )
         } catch (error) {
-          console.error("[authStore] Failed to create user profile:", error)
-          toast.error("Failed to create user profile. Please try again.")
+          if (error instanceof SchemaValidationError) {
+            // The sync engine's write validator blocked an invalid payload.
+            // This is a client-side programming error, not a server failure —
+            // log the exact zod issues so the root cause is visible in dev.
+            console.error(
+              "[authStore] createUserProfile blocked by schema validator:",
+              error.zodError.issues
+            )
+            toast.error(
+              "Unable to create your profile. Please refresh and try again."
+            )
+          } else {
+            console.error("[authStore] Failed to create user profile:", error)
+            toast.error("Failed to create user profile. Please try again.")
+          }
         }
       }
     },
@@ -264,6 +304,7 @@ export const useAuthStore = defineStore("auth", () => {
     optimisticUserProfile.value = null
     optimisticUserPreferences.value = null
     optimisticMembershipPreferences.value = null
+    clearHydrationCache()
   }
 
   watch(currentUser, (user) => {

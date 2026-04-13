@@ -10,6 +10,7 @@
 
 import { defaultMenu } from "@/helpers/defaults"
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
+import { firestore } from "@/modules/firebase"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import type {
@@ -32,7 +33,7 @@ import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { useCurrentUser, useDocument, useFirestore } from "vuefire"
+import { useCurrentUser, useDocument } from "vuefire"
 
 export type Tab = LayoutTab
 export type NavItem = (typeof defaultMenu)[number]
@@ -74,7 +75,6 @@ const normalizeTabs = (value: Tab[]): Tab[] => {
 const normalizeTabHistory = (value: Tab[]): Tab[] => value.map(normalizeTab)
 
 export const useLayoutStore = defineStore("layout", () => {
-  const db = useFirestore()
   const user = useCurrentUser()
   const teamStore = useTeamStore()
   const { currentTeam } = storeToRefs(teamStore)
@@ -178,7 +178,7 @@ export const useLayoutStore = defineStore("layout", () => {
           collection(
             doc(
               collection(
-                doc(collection(db, "teams"), currentTeam.value.id),
+                doc(collection(firestore, "teams"), currentTeam.value.id),
                 "memberships"
               ),
               user.value.uid
@@ -196,7 +196,7 @@ export const useLayoutStore = defineStore("layout", () => {
   const navigationDocRef = computed(() => {
     if (!user.value?.uid) return null
     return doc(
-      collection(doc(collection(db, "users"), user.value.uid), "layout"),
+      collection(doc(collection(firestore, "users"), user.value.uid), "layout"),
       "navigation"
     )
   })

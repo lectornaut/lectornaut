@@ -394,13 +394,8 @@ const handleSubscriptionAction = async (): Promise<void> => {
           </FieldContent>
         </Field>
         <template v-else>
-          <div class="rounded-lg border p-1">
-            <Item
-              v-if="hasCurrentPlan"
-              variant="outline"
-              size="sm"
-              class="bg-secondary"
-            >
+          <div class="border p-1">
+            <Item v-if="hasCurrentPlan" variant="outline" class="bg-secondary">
               <ItemMedia variant="icon">
                 <IconBadgeDollarSign />
               </ItemMedia>
@@ -429,7 +424,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
                 </Button>
               </ItemActions>
             </Item>
-            <Item v-else variant="outline" size="sm" class="bg-secondary">
+            <Item v-else variant="outline" class="bg-secondary">
               <ItemMedia variant="icon">
                 <IconBadgeDollarSign />
               </ItemMedia>

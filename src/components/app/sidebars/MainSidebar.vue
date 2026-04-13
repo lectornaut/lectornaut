@@ -26,7 +26,7 @@ function closeSidebarOnMobile() {
     <ContextMenuTrigger>
       <Sidebar
         collapsible="icon"
-        class="shadow-muted-foreground/5 inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip rounded-r-3xl border border-l-0 p-0"
+        class="shadow-muted-foreground/5 inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip border border-l-0"
       >
         <SidebarHeader
           data-tauri-drag-region
@@ -69,10 +69,8 @@ function closeSidebarOnMobile() {
         <SidebarRail />
       </Sidebar>
     </ContextMenuTrigger>
-    <ContextMenuContent align="start" side="bottom">
-      <ContextMenuLabel class="text-muted-foreground text-xs">
-        Appearance
-      </ContextMenuLabel>
+    <ContextMenuContent>
+      <ContextMenuLabel> Appearance </ContextMenuLabel>
       <ContextMenuRadioGroup v-model="iconDisplay">
         <ContextMenuRadioItem value="icon"> Icons only </ContextMenuRadioItem>
         <ContextMenuRadioItem value="text">

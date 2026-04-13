@@ -148,15 +148,17 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                 :placeholder="t('settings.preferences.theme.placeholder')"
               />
             </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem
-                v-for="mode in themes"
-                :key="mode.id"
-                :value="mode.id"
-              >
-                <Component :is="mode.icon" />
-                {{ mode.name }}
-              </SelectItem>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="mode in themes"
+                  :key="mode.id"
+                  :value="mode.id"
+                >
+                  <Component :is="mode.icon" />
+                  {{ mode.name }}
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </Field>
@@ -175,7 +177,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               id="custom-base-color"
               v-model="selectedCustomBaseColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2.75 shadow-xs"
+              class="bg-background appearance-noneborder aspect-square size-9 cursor-pointer p-2.75 shadow-xs"
             />
             <Select id="base" v-model="selectedBase">
               <SelectTrigger>
@@ -183,7 +185,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   :placeholder="t('settings.preferences.base.placeholder')"
                 />
               </SelectTrigger>
-              <SelectContent align="end">
+              <SelectContent>
                 <SelectGroup>
                   <SelectItem
                     v-for="color in baseOptions"
@@ -191,7 +193,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :value="color.id"
                   >
                     <span
-                      class="size-3 rounded-xs"
+                      class="size-3"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getBaseOptionStyle(color.id)"
                     />
@@ -209,7 +211,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :disabled="color.id === 'accent' && isAccentBaseSelected"
                   >
                     <span
-                      class="size-3 rounded-xs"
+                      class="size-3"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getBaseOptionStyle(color.id)"
                     />
@@ -235,7 +237,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               id="custom-accent-color"
               v-model="selectedCustomAccentColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2.75 shadow-xs"
+              class="bg-background appearance-noneborder aspect-square size-9 cursor-pointer p-2.75 shadow-xs"
             />
             <Select id="accent" v-model="selectedAccent">
               <SelectTrigger>
@@ -243,7 +245,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   :placeholder="t('settings.preferences.accent.placeholder')"
                 />
               </SelectTrigger>
-              <SelectContent align="end">
+              <SelectContent>
                 <SelectGroup v-if="groupedAccentOptions.length > 0">
                   <SelectItem
                     v-for="color in groupedAccentOptions"
@@ -252,7 +254,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :disabled="color.id === 'base' && isBaseAccentSelected"
                   >
                     <span
-                      class="size-3 rounded-xs"
+                      class="size-3"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getAccentOptionStyle(color.id)"
                     />
@@ -271,7 +273,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :value="color.id"
                   >
                     <span
-                      class="size-3 rounded-xs"
+                      class="size-3"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getAccentOptionStyle(color.id)"
                     />
@@ -297,15 +299,17 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                 :placeholder="t('settings.preferences.language.placeholder')"
               />
             </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem
-                v-for="language in languages"
-                :key="language.id"
-                :value="language.id"
-              >
-                <Component :is="language.icon" />
-                {{ language.name }}
-              </SelectItem>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="language in languages"
+                  :key="language.id"
+                  :value="language.id"
+                >
+                  <Component :is="language.icon" />
+                  {{ language.name }}
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </Field>
@@ -324,17 +328,19 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                 :placeholder="t('settings.preferences.font.placeholder')"
               />
             </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem
-                v-for="family in fonts"
-                :key="family.id"
-                :value="family.id"
-              >
-                <Component :is="family.icon" />
-                <span :class="family.style">
-                  {{ family.name }}
-                </span>
-              </SelectItem>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="family in fonts"
+                  :key="family.id"
+                  :value="family.id"
+                >
+                  <Component :is="family.icon" />
+                  <span :class="family.style">
+                    {{ family.name }}
+                  </span>
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </Field>
@@ -347,23 +353,25 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               {{ t("settings.preferences.text.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="text-size" v-model="selectedSize" class="w-40">
+          <Select id="text-size" v-model="selectedSize">
             <SelectTrigger>
               <SelectValue
                 :placeholder="t('settings.preferences.text.placeholder')"
               />
             </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem
-                v-for="scale in sizes"
-                :key="scale.id"
-                :value="scale.id"
-              >
-                <Component :is="scale.icon" />
-                <span :class="scale.style">
-                  {{ scale.name }}
-                </span>
-              </SelectItem>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="scale in sizes"
+                  :key="scale.id"
+                  :value="scale.id"
+                >
+                  <Component :is="scale.icon" />
+                  <span :class="scale.style">
+                    {{ scale.name }}
+                  </span>
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </Field>

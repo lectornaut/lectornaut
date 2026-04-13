@@ -172,20 +172,22 @@ const clearFilter = () => {
         </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="grid w-full p-0" align="start" side="bottom">
+    <PopoverContent class="grid w-full">
       <div class="p-2">
         <Select v-model="range">
           <SelectTrigger class="w-full">
             <SelectValue placeholder="Select range" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem
-              v-for="preset in presets"
-              :key="preset.id"
-              :value="preset.value"
-            >
-              {{ preset.label }}
-            </SelectItem>
+            <SelectGroup>
+              <SelectItem
+                v-for="preset in presets"
+                :key="preset.id"
+                :value="preset.value"
+              >
+                {{ preset.label }}
+              </SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>
@@ -198,9 +200,7 @@ const clearFilter = () => {
       />
       <Separator />
       <div class="grid p-2">
-        <Button variant="ghost" size="sm" @click="clearFilter">
-          Clear filters
-        </Button>
+        <Button variant="ghost" @click="clearFilter"> Clear filters </Button>
       </div>
     </PopoverContent>
   </Popover>

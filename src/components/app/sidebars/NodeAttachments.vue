@@ -27,6 +27,11 @@ import {
   IconUpload,
   IconX,
 } from "@/data/icons"
+import {
+  formatAttachmentSize,
+  normalizeAttachmentDisplayName,
+  sanitizeAttachmentFileName,
+} from "@/helpers/node-attachments"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { generateId } from "@/helpers/utilities"
 import { useAuthStore } from "@/stores/authStore"
@@ -39,11 +44,6 @@ import {
 } from "@/types/nodes"
 import { can, Capabilities } from "@/types/permissions"
 import { getStorageFileRef } from "@/utils/firebase/firebase-helpers"
-import {
-  formatAttachmentSize,
-  normalizeAttachmentDisplayName,
-  sanitizeAttachmentFileName,
-} from "@/utils/firebase/firebase-node-attachments"
 import { invoke } from "@tauri-apps/api/core"
 import { save } from "@tauri-apps/plugin-dialog"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
@@ -529,7 +529,7 @@ watch(selectedCreateFiles, async (files) => {
               <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
                   <p class="text-sm font-medium">Attachments</p>
-                  <p class="text-muted-foreground text-xs">
+                  <p>
                     {{ attachments.length }}
                     {{
                       attachments.length === 1 ? "attachment" : "attachments"
@@ -538,7 +538,6 @@ watch(selectedCreateFiles, async (files) => {
                 </div>
 
                 <Button
-                  size="sm"
                   :disabled="isReadOnly"
                   class="shrink-0"
                   @click="triggerFilePicker"
@@ -548,21 +547,17 @@ watch(selectedCreateFiles, async (files) => {
                 </Button>
               </div>
 
-              <div v-if="readOnlyMessage" class="text-muted-foreground text-xs">
+              <div v-if="readOnlyMessage">
                 {{ readOnlyMessage }}
               </div>
 
-              <div
-                v-if="uploadStates.length"
-                class="space-y-2 rounded-lg border p-2"
-              >
+              <div v-if="uploadStates.length" class="space-y-2 border p-2">
                 <div class="flex items-center justify-between gap-2">
                   <p class="text-xs font-medium">Uploads</p>
                   <Button
                     v-if="!uploadInProgress"
                     type="button"
                     variant="ghost"
-                    size="sm"
                     @click="uploadStates = []"
                   >
                     Clear
@@ -572,7 +567,7 @@ watch(selectedCreateFiles, async (files) => {
                 <div
                   v-for="item in uploadStates"
                   :key="item.id"
-                  class="flex items-start gap-2 rounded-md border p-2"
+                  class="flex items-start gap-2 border p-2"
                 >
                   <Spinner
                     v-if="item.status === 'uploading'"
@@ -585,7 +580,7 @@ watch(selectedCreateFiles, async (files) => {
 
                   <div class="min-w-0 grow">
                     <p class="truncate text-xs font-medium">{{ item.name }}</p>
-                    <p class="text-muted-foreground text-xs">
+                    <p>
                       {{
                         item.status === "uploading"
                           ? "Uploading..."
@@ -598,7 +593,7 @@ watch(selectedCreateFiles, async (files) => {
                     v-if="item.status === 'error'"
                     type="button"
                     variant="ghost"
-                    size="icon-sm"
+                    size="icon"
                     @click="dismissUploadState(item.id)"
                   >
                     <IconX />
@@ -614,7 +609,7 @@ watch(selectedCreateFiles, async (files) => {
                 Loading attachments...
               </div>
 
-              <div v-else-if="error" class="space-y-2 rounded-lg border p-3">
+              <div v-else-if="error" class="space-y-2 border p-3">
                 <div class="text-destructive flex items-start gap-2 text-xs">
                   <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
                   <span>{{ error }}</span>
@@ -622,7 +617,6 @@ watch(selectedCreateFiles, async (files) => {
 
                 <Button
                   type="button"
-                  size="sm"
                   variant="secondary"
                   class="w-full"
                   @click="refreshAttachments"
@@ -634,7 +628,7 @@ watch(selectedCreateFiles, async (files) => {
 
               <div
                 v-else-if="attachments.length === 0"
-                class="text-muted-foreground rounded-lg border border-dashed p-4 text-xs"
+                class="text-muted-foreground border border-dashed p-4 text-xs"
               >
                 {{
                   isReadOnly
@@ -647,11 +641,11 @@ watch(selectedCreateFiles, async (files) => {
                 <article
                   v-for="attachment in attachments"
                   :key="attachment.id"
-                  class="rounded-lg border p-3"
+                  class="border p-3"
                 >
                   <div class="flex items-start gap-3">
                     <div
-                      class="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md border"
+                      class="bg-muted flex size-9 shrink-0 items-center justify-center border"
                     >
                       <Component
                         :is="resolveAttachmentIcon(attachment)"
@@ -674,7 +668,7 @@ watch(selectedCreateFiles, async (files) => {
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon-sm"
+                            size="icon"
                             :disabled="
                               downloadingIds.includes(attachment.id) ||
                               isAttachmentPending(attachment.id) ||
@@ -691,7 +685,7 @@ watch(selectedCreateFiles, async (files) => {
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon-sm"
+                            size="icon"
                             :disabled="
                               isReadOnly || isAttachmentPending(attachment.id)
                             "
@@ -703,7 +697,7 @@ watch(selectedCreateFiles, async (files) => {
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon-sm"
+                            size="icon"
                             :disabled="
                               isReadOnly ||
                               deletingId === attachment.id ||
@@ -786,13 +780,13 @@ watch(selectedCreateFiles, async (files) => {
             :id="`attachment-replace-${replacementInputKey}`"
             :key="replacementInputKey"
             type="file"
-            class="file:text-foreground border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium"
+            class="file:text-foreground border-input h-9 w-full min-w-0 border bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium"
             @change="handleReplacementSelected"
           />
 
           <div
             v-if="replacementFile"
-            class="flex items-center justify-between gap-2 rounded-md border p-2 text-xs"
+            class="flex items-center justify-between gap-2 border p-2 text-xs"
           >
             <div class="min-w-0">
               <p class="truncate font-medium">{{ replacementFile.name }}</p>
@@ -801,12 +795,7 @@ watch(selectedCreateFiles, async (files) => {
               </p>
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              @click="clearReplacementFile"
-            >
+            <Button type="button" variant="ghost" @click="clearReplacementFile">
               Clear
             </Button>
           </div>

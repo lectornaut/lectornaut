@@ -28,7 +28,7 @@ const { t } = useI18n()
   >
     <div class="mx-auto flex w-full max-w-6xl items-center justify-center">
       <div
-        class="bg-background/25 grid w-full grid-cols-3 gap-2 rounded-b-lg p-2 backdrop-blur-lg"
+        class="bg-background/25 grid w-full grid-cols-3 gap-2 p-2 backdrop-blur-lg"
       >
         <div class="flex grow items-center justify-start gap-2">
           <ContextMenu>
@@ -73,13 +73,13 @@ const { t } = useI18n()
                     >
                       <Button
                         variant="ghost"
-                        class="h-full items-start gap-0 p-0!"
+                        class="h-full items-start gap-0"
                         :class="item.style.grid"
                         as-child
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start rounded-t p-4"
+                            class="flex size-full items-start justify-start p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -87,15 +87,13 @@ const { t } = useI18n()
                               :class="item.style.text"
                             />
                           </div>
-                          <div
-                            class="bg-accent/50 flex w-full flex-col rounded-b p-4"
-                          >
+                          <div class="bg-accent/50 flex w-full flex-col p-4">
                             <span>
                               {{
                                 t("landing.menu.items." + item.id + ".title")
                               }}
                             </span>
-                            <span class="text-muted-foreground text-xs">
+                            <span>
                               {{
                                 t(
                                   "landing.menu.items." +
@@ -135,13 +133,13 @@ const { t } = useI18n()
                         >
                           <Button
                             variant="ghost"
-                            class="h-full items-start gap-0 p-0!"
+                            class="h-full items-start gap-0"
                             :class="item.style.grid"
                             as-child
                           >
                             <RouterLink :to="item.url">
                               <div
-                                class="flex size-full items-start justify-start rounded-t p-4"
+                                class="flex size-full items-start justify-start p-4"
                                 :class="item.style.bg"
                               >
                                 <Component
@@ -150,12 +148,12 @@ const { t } = useI18n()
                                 />
                               </div>
                               <div
-                                class="bg-accent/50 flex w-full flex-col rounded-b p-4"
+                                class="bg-accent/50 flex w-full flex-col p-4"
                               >
                                 <span>
                                   {{ item.title }}
                                 </span>
-                                <span class="text-muted-foreground text-xs">
+                                <span>
                                   {{ item.description }}
                                 </span>
                               </div>
@@ -180,13 +178,13 @@ const { t } = useI18n()
                     >
                       <Button
                         variant="ghost"
-                        class="h-full items-start gap-0 p-0!"
+                        class="h-full items-start gap-0"
                         :class="item.style.grid"
                         as-child
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start rounded-t p-4"
+                            class="flex size-full items-start justify-start p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -194,13 +192,11 @@ const { t } = useI18n()
                               :class="item.style.text"
                             />
                           </div>
-                          <div
-                            class="bg-accent/50 flex w-full flex-col rounded-b p-4"
-                          >
+                          <div class="bg-accent/50 flex w-full flex-col p-4">
                             <span>
                               {{ item.title }}
                             </span>
-                            <span class="text-muted-foreground text-xs">
+                            <span>
                               {{ item.description }}
                             </span>
                           </div>
@@ -223,13 +219,13 @@ const { t } = useI18n()
                     >
                       <Button
                         variant="ghost"
-                        class="h-full items-start gap-0 p-0!"
+                        class="h-full items-start gap-0"
                         :class="item.style.grid"
                         as-child
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start rounded-t p-4"
+                            class="flex size-full items-start justify-start p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -237,13 +233,11 @@ const { t } = useI18n()
                               :class="item.style.text"
                             />
                           </div>
-                          <div
-                            class="bg-accent/50 flex w-full flex-col rounded-b p-4"
-                          >
+                          <div class="bg-accent/50 flex w-full flex-col p-4">
                             <span>
                               {{ item.title }}
                             </span>
-                            <span class="text-muted-foreground text-xs">
+                            <span>
                               {{ item.description }}
                             </span>
                           </div>
@@ -304,7 +298,7 @@ const { t } = useI18n()
                     </TooltipContent>
                   </SheetTrigger>
                   <SheetContent
-                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto gap-0 overflow-clip rounded-3xl border"
+                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto! gap-0 overflow-clip border"
                     :class="{ 'mt-12': isTauri && !isFullscreen }"
                   >
                     <SheetHeader>
@@ -334,7 +328,7 @@ const { t } = useI18n()
                                   <RouterLink :to="item.url">
                                     <ItemMedia>
                                       <div
-                                        class="flex size-10 shrink-0 items-center justify-center rounded"
+                                        class="flex size-10 shrink-0 items-center justify-center"
                                         :class="item.style.bg"
                                       >
                                         <Component
@@ -400,7 +394,7 @@ const { t } = useI18n()
                                     <RouterLink :to="item.url">
                                       <ItemMedia>
                                         <div
-                                          class="flex size-10 shrink-0 items-center justify-center rounded"
+                                          class="flex size-10 shrink-0 items-center justify-center"
                                           :class="item.style.bg"
                                         >
                                           <Component
@@ -440,7 +434,7 @@ const { t } = useI18n()
                                   <RouterLink :to="item.url">
                                     <ItemMedia>
                                       <div
-                                        class="flex size-10 shrink-0 items-center justify-center rounded"
+                                        class="flex size-10 shrink-0 items-center justify-center"
                                         :class="item.style.bg"
                                       >
                                         <Component
@@ -479,7 +473,7 @@ const { t } = useI18n()
                                   <RouterLink :to="item.url">
                                     <ItemMedia>
                                       <div
-                                        class="flex size-10 shrink-0 items-center justify-center rounded"
+                                        class="flex size-10 shrink-0 items-center justify-center"
                                         :class="item.style.bg"
                                       >
                                         <Component

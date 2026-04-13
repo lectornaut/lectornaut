@@ -1,18 +1,18 @@
 import { setBadgeCount } from "@/composables/usePlatform"
 import { withToast } from "@/helpers/toast"
-import { firestore as db, functions } from "@/modules/firebase"
+import { firestore, functions } from "@/modules/firebase"
 import { useSettingsStore } from "@/stores/settingsStore"
 import {
   type INotification,
   type INotificationStatus,
 } from "@/types/notification"
-import { mutateWithCoordinator } from "@/utils/firebase/firebase-mutation-coordinator"
 import {
   cloneState,
   createPendingSet,
   mergeOptimisticCollection,
   withOptimisticBatchUpdate,
 } from "@/utils/firebase/firebase-optimistic"
+import { mutateWithCoordinator } from "@/utils/firebase/firebase-sync-engine"
 import {
   collection,
   doc,
@@ -23,7 +23,7 @@ import {
   Timestamp,
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
-import { computed, onUnmounted, ref, shallowRef, watch, watchEffect } from "vue"
+import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
 import { useCurrentUser } from "vuefire"
 
 const sortNotifications = (notifications: INotification[]) =>
@@ -139,7 +139,7 @@ export function useNotifications() {
       mutation: {
         source: "notifications.update",
         targetPath: doc(
-          db,
+          firestore,
           `users/${user.value.uid}/notifications`,
           notificationId
         ).path,
@@ -364,7 +364,7 @@ export function useNotifications() {
 
     isLoading.value = true
     const q = query(
-      collection(db, `users/${user.value.uid}/notifications`),
+      collection(firestore, `users/${user.value.uid}/notifications`),
       orderBy("createdAt", "desc"),
       limit(limitCount.value)
     )
@@ -402,9 +402,11 @@ export function useNotifications() {
 
   const settingsStore = useSettingsStore()
 
-  watchEffect(() => {
-    void setBadgeCount(settingsStore.badgeCount ? inboxUnreadCount.value : null)
-  })
+  watch(
+    [() => settingsStore.badgeCount, inboxUnreadCount],
+    ([showBadge, count]) => void setBadgeCount(showBadge ? count : null),
+    { immediate: true }
+  )
 
   const loadMore = () => {
     limitCount.value += 20

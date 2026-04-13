@@ -24,7 +24,7 @@ const columns = computed(() =>
         Sort
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end">
+    <DropdownMenuContent>
       <DropdownMenuLabel>Sort by</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>

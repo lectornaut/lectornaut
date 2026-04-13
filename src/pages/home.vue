@@ -568,7 +568,7 @@ const expandedCard = ref<number | null>(null)
                       <span class="sr-only">{{ t("actions.more") }}</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="right">
+                  <DropdownMenuContent side="right">
                     <DropdownMenuItem>
                       <IconStarOff class="text-muted-foreground" />
                       <span>{{
@@ -692,26 +692,28 @@ const expandedCard = ref<number | null>(null)
                 <PopoverTrigger as-child>
                   <Button
                     variant="ghost"
-                    size="icon-sm"
+                    size="icon"
                     class="data-[state=open]:bg-accent"
                   >
                     <IconCalendar />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent class="grid w-full p-0">
+                <PopoverContent class="grid w-full">
                   <div class="px-2 pt-2">
                     <Select v-model="range">
                       <SelectTrigger class="w-full">
                         <SelectValue :placeholder="t('common.select')" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem
-                          v-for="preset in presets"
-                          :key="preset.id"
-                          :value="preset.value"
-                        >
-                          {{ preset.label }}
-                        </SelectItem>
+                        <SelectGroup>
+                          <SelectItem
+                            v-for="preset in presets"
+                            :key="preset.id"
+                            :value="preset.value"
+                          >
+                            {{ preset.label }}
+                          </SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
@@ -745,18 +747,18 @@ const expandedCard = ref<number | null>(null)
             </Tooltip>
           </TooltipProvider>
         </Popover>
-        <TabsList class="flex h-full min-w-0 items-stretch gap-1 p-0.5">
-          <TabsTrigger value="overview" class="size-full py-0.5">
+        <TabsList>
+          <TabsTrigger value="overview">
             {{ t("pages.home.tabs.overview") }}
           </TabsTrigger>
-          <TabsTrigger value="usage" class="size-full py-0.5">
+          <TabsTrigger value="usage">
             {{ t("pages.home.tabs.usage") }}
           </TabsTrigger>
         </TabsList>
       </div>
     </Teleport>
     <TabsContent value="overview" class="@container">
-      <div class="grid gap-8 p-2">
+      <div class="grid gap-8 p-6">
         <div
           v-for="group in dashboardData"
           :key="group.title"
@@ -768,16 +770,16 @@ const expandedCard = ref<number | null>(null)
             >
               {{ group.title }}
             </h2>
-            <p class="text-muted-foreground text-xs">{{ group.description }}</p>
+            <p >{{ group.description }}</p>
           </div> -->
           <div
-            class="bg-secondary grid grid-cols-1 gap-2 rounded p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
+            class="bg-secondary grid grid-cols-1 gap-2 p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
           >
             <Card
               v-for="card in group.cards"
               :key="card.id"
               :class="[
-                'col-span-1 rounded shadow-none',
+                'col-span-1 shadow-none',
                 {
                   '@xl:col-span-2 @6xl:col-span-2': expandedCard === card.id,
                 },
@@ -793,7 +795,7 @@ const expandedCard = ref<number | null>(null)
                         <TooltipTrigger as-child>
                           <Button
                             variant="outline"
-                            size="icon-sm"
+                            size="icon"
                             @click="
                               expandedCard =
                                 expandedCard === card.id ? null : card.id
@@ -822,7 +824,7 @@ const expandedCard = ref<number | null>(null)
                             <DropdownMenuTrigger as-child>
                               <Button
                                 variant="outline"
-                                size="icon-sm"
+                                size="icon"
                                 class="data-[state=open]:bg-accent"
                               >
                                 <IconMoreHorizontal />
@@ -833,7 +835,7 @@ const expandedCard = ref<number | null>(null)
                             t("actions.moreOptions")
                           }}</TooltipContent>
 
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent>
                             <DropdownMenuItem>
                               <IconStar />
                               <span>{{

@@ -71,7 +71,7 @@ const works: Artwork[] = [
     <div class="flex h-max flex-col gap-4 p-4">
       <div v-for="artwork in works" :key="artwork.id">
         <figure class="shrink-0">
-          <div class="overflow-auto overscroll-none scroll-smooth rounded-md">
+          <div class="overflow-auto overscroll-none scroll-smooth">
             <img
               :src="artwork.art"
               :alt="`${t('components.landing.wallOfLove.photoBy')} ${artwork.artist}`"

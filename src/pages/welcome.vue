@@ -280,17 +280,13 @@ const handleFinalStepAction = async () => {
                           <span
                             class="relative flex size-4 items-center justify-center"
                           >
-                            <span
-                              class="bg-primary/25 absolute size-4 rounded"
-                            />
-                            <span
-                              class="bg-primary relative block size-2 rounded"
-                            />
+                            <span class="bg-primary/25 absolute size-4" />
+                            <span class="bg-primary relative block size-2" />
                           </span>
                         </template>
                         <template v-else>
                           <span
-                            class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2 rounded"
+                            class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2"
                           />
                         </template>
                       </StepperIndicator>
@@ -318,9 +314,7 @@ const handleFinalStepAction = async () => {
         </SidebarContent>
       </Sidebar>
       <Separator orientation="vertical" />
-      <SidebarInset
-        class="bg-background flex min-h-0 min-w-0 grow rounded-none"
-      >
+      <SidebarInset class="bg-background flex min-h-0 min-w-0 grow">
         <div class="border-b p-5">
           <h2 class="text-xl font-semibold">
             {{ activeStep?.title || t("pages.welcome.content.allSet") }}
@@ -374,24 +368,18 @@ const handleFinalStepAction = async () => {
           <div class="flex items-center justify-between gap-2">
             <Button
               variant="outline"
-              size="sm"
               :disabled="currentStep === 1"
               @click="handlePreviousStep"
             >
               <IconChevronLeft />
               Back
             </Button>
-            <Button
-              v-if="currentStep < totalSteps"
-              size="sm"
-              @click="handleNextStep"
-            >
+            <Button v-if="currentStep < totalSteps" @click="handleNextStep">
               Next
               <IconChevronRight />
             </Button>
             <Button
               v-else
-              size="sm"
               :disabled="finalStepActionDisabled"
               @click="handleFinalStepAction"
             >

@@ -134,16 +134,12 @@ const formatCreatedAt = (
             <div v-if="isLoading" class="flex justify-center py-8">
               <Spinner />
             </div>
-            <div v-else class="overflow-clip rounded-md border">
+            <div v-else class="overflow-clip border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead class="w-1/4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        @click="toggleMemberSort('name')"
-                      >
+                      <Button variant="ghost" @click="toggleMemberSort('name')">
                         Name
                         <IconArrowUp
                           v-if="
@@ -164,7 +160,6 @@ const formatCreatedAt = (
                     <TableHead class="w-1/4">
                       <Button
                         variant="ghost"
-                        size="sm"
                         @click="toggleMemberSort('joined')"
                       >
                         Joined
@@ -192,16 +187,15 @@ const formatCreatedAt = (
                     :key="member.userId"
                   >
                     <TableCell>
-                      <Item size="sm" class="group w-full gap-2 p-0">
+                      <Item class="group w-full gap-2">
                         <ItemMedia>
-                          <Avatar class="rounded">
+                          <Avatar>
                             <AvatarImage
-                              class="rounded"
                               :src="member.user?.photoURL!"
                               :alt="member.user?.displayName"
                               referrerpolicy="no-referrer"
                             />
-                            <AvatarFallback class="rounded">
+                            <AvatarFallback>
                               {{ getInitials(member.user?.displayName!) }}
                             </AvatarFallback>
                           </Avatar>
@@ -226,10 +220,14 @@ const formatCreatedAt = (
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="owner">Owner</SelectItem>
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                  <SelectItem value="member">Member</SelectItem>
-                                  <SelectItem value="guest">Guest</SelectItem>
+                                  <SelectGroup>
+                                    <SelectItem value="owner">Owner</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="member"
+                                      >Member</SelectItem
+                                    >
+                                    <SelectItem value="guest">Guest</SelectItem>
+                                  </SelectGroup>
                                 </SelectContent>
                               </Select>
                             </span>
@@ -255,10 +253,12 @@ const formatCreatedAt = (
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="owner">Owner</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="guest">Guest</SelectItem>
+                          <SelectGroup>
+                            <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="member">Member</SelectItem>
+                            <SelectItem value="guest">Guest</SelectItem>
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -307,7 +307,7 @@ const formatCreatedAt = (
                                     <IconMoreHorizontal v-else />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent>
                                   <AlertDialog>
                                     <AlertDialogTrigger as-child>
                                       <DropdownMenuItem @select.prevent>

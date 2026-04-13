@@ -36,7 +36,7 @@ watch(isMobile, (val) => {
           >
             <Logo class="size-8 shrink-0 p-2" />
             <SidebarTrigger v-if="isMobile" class="size-8" />
-            <Separator orientation="vertical" class="max-h-4 min-h-4" />
+            <Separator orientation="vertical" class="my-2" />
             <Notifications :icon-display="headerIconDisplay" />
           </div>
           <div
@@ -55,8 +55,8 @@ watch(isMobile, (val) => {
         </div>
       </header>
     </ContextMenuTrigger>
-    <ContextMenuContent align="start" side="bottom">
-      <ContextMenuLabel class="text-muted-foreground text-xs">
+    <ContextMenuContent>
+      <ContextMenuLabel>
         {{ t("titlebar.appearance") }}
       </ContextMenuLabel>
       <ContextMenuRadioGroup v-model="headerIconDisplay">

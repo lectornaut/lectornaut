@@ -1,3 +1,23 @@
+import type {
+  notificationCategorySettingsSchema,
+  notificationChannelSettingsSchema,
+  notificationFrequencySchema,
+  userNotificationSettingsSchema,
+} from "@/schemas/notifications"
+import type { z } from "zod"
+
+/**
+ * User notification settings — re-exported `z.infer` types from
+ * `src/schemas/notifications.ts`, plus the runtime constants and
+ * normalization helpers that depend on the type values.
+ *
+ * The helpers (`normalizeNotificationSettings`, `cloneNotificationSettings`,
+ * `areNotificationSettingsEqual`) stay here because they are used by stores
+ * and composables to hydrate/validate settings before they reach the Zod
+ * layer. Over time some of these could be simplified by leaning on
+ * `parseSafe(userNotificationSettingsSchema, …)` instead.
+ */
+
 export const NOTIFICATION_FREQUENCIES = [
   "immediate",
   "daily",
@@ -5,25 +25,19 @@ export const NOTIFICATION_FREQUENCIES = [
   "none",
 ] as const
 
-export type NotificationFrequency = (typeof NOTIFICATION_FREQUENCIES)[number]
+export type NotificationFrequency = z.infer<typeof notificationFrequencySchema>
 
-export interface NotificationCategorySettings {
-  communication: boolean
-  marketing: boolean
-  security: boolean
-}
+export type NotificationCategorySettings = z.infer<
+  typeof notificationCategorySettingsSchema
+>
 
-export interface NotificationChannelSettings {
-  email: boolean
-  inApp: boolean
-  native: boolean
-}
+export type NotificationChannelSettings = z.infer<
+  typeof notificationChannelSettingsSchema
+>
 
-export interface UserNotificationSettings {
-  categories: NotificationCategorySettings
-  frequency: NotificationFrequency
-  channels: NotificationChannelSettings
-}
+export type UserNotificationSettings = z.infer<
+  typeof userNotificationSettingsSchema
+>
 
 export const DEFAULT_NOTIFICATION_SETTINGS: UserNotificationSettings = {
   categories: {

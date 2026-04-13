@@ -44,7 +44,7 @@ const handleSwitchTeam = async (teamId: AcceptableValue) => {
       </EmptyDescription>
     </EmptyHeader>
     <EmptyContent
-      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-lg border p-2"
+      class="bg-background flex max-w-xs flex-col items-stretch gap-2 border p-2"
     >
       <div v-if="isLoading" class="flex justify-center p-4">
         <Spinner />
@@ -60,29 +60,31 @@ const handleSwitchTeam = async (teamId: AcceptableValue) => {
           />
         </SelectTrigger>
         <SelectContent>
-          <SelectLabel v-if="computedTeams.length === 0">
-            {{ t("components.teamSelector.noTeams") }}
-          </SelectLabel>
-          <SelectItem
-            v-for="team in computedTeams"
-            :key="team.value"
-            :value="team.value"
-          >
-            <div class="flex items-center gap-2">
-              <Avatar class="size-4">
-                <AvatarImage
-                  :src="team.original?.photoURL!"
-                  :alt="team.label"
-                  class="size-4"
-                  referrerpolicy="no-referrer"
-                />
-                <AvatarFallback class="size-4">
-                  {{ getInitials(team.label) }}
-                </AvatarFallback>
-              </Avatar>
-              {{ team.label }}
-            </div>
-          </SelectItem>
+          <SelectGroup>
+            <SelectLabel v-if="computedTeams.length === 0">
+              {{ t("components.teamSelector.noTeams") }}
+            </SelectLabel>
+            <SelectItem
+              v-for="team in computedTeams"
+              :key="team.value"
+              :value="team.value"
+            >
+              <div class="flex items-center gap-2">
+                <Avatar class="size-4">
+                  <AvatarImage
+                    :src="team.original?.photoURL!"
+                    :alt="team.label"
+                    class="size-4"
+                    referrerpolicy="no-referrer"
+                  />
+                  <AvatarFallback class="size-4">
+                    {{ getInitials(team.label) }}
+                  </AvatarFallback>
+                </Avatar>
+                {{ team.label }}
+              </div>
+            </SelectItem>
+          </SelectGroup>
         </SelectContent>
       </Select>
       <TooltipProvider>
@@ -106,11 +108,7 @@ const handleSwitchTeam = async (teamId: AcceptableValue) => {
         </Tooltip>
       </TooltipProvider>
     </EmptyContent>
-    <Button
-      variant="outline"
-      size="sm"
-      @click="emitter.emit('Dialog.Exit.Open')"
-    >
+    <Button variant="outline" @click="emitter.emit('Dialog.Exit.Open')">
       <IconLogOut />
       {{ t("components.teamSelector.logout") }}
     </Button>

@@ -17,7 +17,7 @@ const currentUser = useCurrentUser()
       :class="{ 'pl-20': isTauri && !isFullscreen }"
     >
       <Logo class="size-8 shrink-0 p-2" />
-      <Button variant="ghost" size="icon-sm" as-child>
+      <Button variant="ghost" size="icon" as-child>
         <RouterLink to="/start">
           <IconArrowLeft />
         </RouterLink>
@@ -29,33 +29,32 @@ const currentUser = useCurrentUser()
     >
       <DropdownMenu v-if="currentUser">
         <DropdownMenuTrigger as-child>
-          <Button variant="ghost" size="sm">
-            <Avatar class="size-4 rounded">
+          <Button variant="ghost">
+            <Avatar class="size-4">
               <AvatarImage
-                class="size-4 rounded"
+                class="size-4"
                 :src="currentUser.photoURL || ''"
                 :alt="currentUser.displayName || ''"
                 referrerpolicy="no-referrer"
               />
-              <AvatarFallback class="size-4 rounded">
+              <AvatarFallback class="size-4">
                 {{ getInitials(currentUser.displayName || "") }}
               </AvatarFallback>
             </Avatar>
             {{ currentUser.displayName }}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-48" align="end">
+        <DropdownMenuContent>
           <DropdownMenuLabel>
-            <Item size="sm" class="group w-full gap-2 rounded p-0">
+            <Item class="group w-full gap-2">
               <ItemMedia>
-                <Avatar class="rounded">
+                <Avatar>
                   <AvatarImage
-                    class="rounded"
                     :src="currentUser.photoURL || ''"
                     :alt="currentUser.displayName || ''"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback class="rounded">
+                  <AvatarFallback>
                     {{ getInitials(currentUser.displayName || "") }}
                   </AvatarFallback>
                 </Avatar>

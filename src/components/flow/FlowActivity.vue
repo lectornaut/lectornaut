@@ -249,7 +249,7 @@ const formatDate = (
                   }}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent class="grid w-full p-0">
+              <PopoverContent class="grid w-full">
                 <div class="p-2">
                   <Select v-model="range">
                     <SelectTrigger class="w-full">
@@ -258,13 +258,15 @@ const formatDate = (
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem
-                        v-for="preset in presets"
-                        :key="preset.id"
-                        :value="preset.value"
-                      >
-                        {{ preset.label }}
-                      </SelectItem>
+                      <SelectGroup>
+                        <SelectItem
+                          v-for="preset in presets"
+                          :key="preset.id"
+                          :value="preset.value"
+                        >
+                          {{ preset.label }}
+                        </SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -291,7 +293,7 @@ const formatDate = (
                       <span
                         :class="[
                           event.iconColor,
-                          'ring-background bg-background flex size-4 items-center justify-center rounded ring-6',
+                          'ring-background bg-background justify-centerring-6 flex size-4 items-center',
                         ]"
                       >
                         <Component :is="event.icon" />
@@ -330,11 +332,7 @@ const formatDate = (
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button
-                  variant="destructive"
-                  class="w-full text-current"
-                  size="sm"
-                >
+                <Button variant="destructive" class="w-full text-current">
                   {{ t("components.flow.activity.upgrade") }}
                 </Button>
               </CardContent>

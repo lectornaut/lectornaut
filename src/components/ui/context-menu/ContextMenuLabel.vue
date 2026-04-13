@@ -18,10 +18,7 @@ const delegatedProps = reactiveOmit(props, "class")
     :data-inset="inset ? '' : undefined"
     v-bind="delegatedProps"
     :class="
-      cn(
-        'text-muted-foreground px-3 py-2.5 text-xs data-inset:pl-9.5',
-        props.class
-      )
+      cn('text-muted-foreground px-2 py-2 text-xs data-inset:pl-7', props.class)
     "
   >
     <slot />

@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { IconKeyRound, IconSmartphone } from "@/data/icons"
+import { verifyPhoneNumberWithRecaptcha } from "@/helpers/firebase-phone-verification"
 import { finishAuthentication } from "@/modules/auth"
 import { auth } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import { getAuthErrorMessage } from "@/utils/firebase/firebase-errors"
-import { verifyPhoneNumberWithRecaptcha } from "@/utils/firebase/firebase-phone-recaptcha"
 import {
   PhoneAuthProvider,
   PhoneMultiFactorGenerator,
@@ -230,9 +230,7 @@ onUnmounted(() => {
           <IconSmartphone v-else />
           <span class="flex flex-col items-start">
             <span>{{ hint.displayName || getHintLabel(hint) }}</span>
-            <span class="text-muted-foreground text-xs">{{
-              getHintLabel(hint)
-            }}</span>
+            <span>{{ getHintLabel(hint) }}</span>
           </span>
         </Button>
       </div>

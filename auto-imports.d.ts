@@ -240,9 +240,9 @@ declare global {
   const useScroll: typeof import('@vueuse/core').useScroll
   const useScrollLock: typeof import('@vueuse/core').useScrollLock
   const useSeoMeta: typeof import('@unhead/vue').useSeoMeta
-  const useServerHead: typeof import('@unhead/vue').useServerHead
-  const useServerHeadSafe: typeof import('@unhead/vue').useServerHeadSafe
-  const useServerSeoMeta: typeof import('@unhead/vue').useServerSeoMeta
+  const useServerHead: typeof import("@unhead/vue").useServerHead
+  const useServerHeadSafe: typeof import("@unhead/vue").useServerHeadSafe
+  const useServerSeoMeta: typeof import("@unhead/vue").useServerSeoMeta
   const useSessionStorage: typeof import('@vueuse/core').useSessionStorage
   const useShare: typeof import('@vueuse/core').useShare
   const useSlots: typeof import('vue').useSlots
@@ -551,9 +551,6 @@ declare module 'vue' {
     readonly useScroll: UnwrapRef<typeof import('@vueuse/core')['useScroll']>
     readonly useScrollLock: UnwrapRef<typeof import('@vueuse/core')['useScrollLock']>
     readonly useSeoMeta: UnwrapRef<typeof import('@unhead/vue')['useSeoMeta']>
-    readonly useServerHead: UnwrapRef<typeof import('@unhead/vue')['useServerHead']>
-    readonly useServerHeadSafe: UnwrapRef<typeof import('@unhead/vue')['useServerHeadSafe']>
-    readonly useServerSeoMeta: UnwrapRef<typeof import('@unhead/vue')['useServerSeoMeta']>
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>

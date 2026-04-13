@@ -124,13 +124,11 @@ onBeforeUnmount(() => {
             </AvatarFallback>
           </Avatar>
         </TooltipTrigger>
-        <TooltipContent side="top">
+        <TooltipContent>
           {{ participant.name }}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-    <span v-if="overflowCount > 0" class="text-muted-foreground text-xs">
-      +{{ overflowCount }}
-    </span>
+    <span v-if="overflowCount > 0"> +{{ overflowCount }} </span>
   </div>
 </template>

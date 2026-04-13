@@ -21,7 +21,7 @@ import { store } from "@/modules/theme"
         <TooltipContent>
           {{ $t("components.colorMode.tooltip") }}
         </TooltipContent>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent>
           <DropdownMenuRadioGroup v-model="store">
             <DropdownMenuRadioItem
               v-for="mode in themes"

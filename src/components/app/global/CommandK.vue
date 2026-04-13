@@ -21,13 +21,13 @@ const filteredShortcuts = computed(() =>
 
 <template>
   <Dialog v-model:open="openCommand">
-    <DialogContent class="bg-secondary p-1.5">
+    <DialogContent class="bg-secondary p-1.25">
       <Command highlight-on-hover class="border">
         <CommandInput
           :placeholder="t('components.global.commandK.placeholder')"
-          class="border-none p-0 focus:border-inherit focus:ring-0"
+          class="border-none bg-transparent focus:border-inherit focus:ring-0"
         />
-        <CommandList class="group min-h-80">
+        <CommandList class="group min-h-80 w-full">
           <CommandEmpty class="text-muted-foreground">
             {{ t("components.global.commandK.noResults") }}
           </CommandEmpty>

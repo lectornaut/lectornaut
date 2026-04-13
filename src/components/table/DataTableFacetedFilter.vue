@@ -49,11 +49,11 @@ const selectedValues = computed(
         </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="p-0" align="start" side="bottom">
+    <PopoverContent>
       <Command>
         <CommandInput
           :placeholder="title"
-          class="border-none p-0 focus:border-inherit focus:ring-0"
+          class="border-none focus:border-inherit focus:ring-0"
         />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>

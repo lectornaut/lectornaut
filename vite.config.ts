@@ -1,7 +1,7 @@
 import VueI18nPlugin from "@intlify/unplugin-vue-i18n/vite"
 import tailwindcss from "@tailwindcss/vite"
-import UnheadVite from "@unhead/addons/vite"
 import { unheadVueComposablesImports } from "@unhead/vue"
+import { Unhead } from "@unhead/vue/vite"
 import Vue from "@vitejs/plugin-vue"
 import MotionResolver from "motion-v/resolver"
 import { readFileSync } from "node:fs"
@@ -241,7 +241,7 @@ export default defineConfig({
         "./src/locales/**"
       ),
     }),
-    UnheadVite(),
+    Unhead(),
     Sitemap(),
     checker({
       typescript: true,

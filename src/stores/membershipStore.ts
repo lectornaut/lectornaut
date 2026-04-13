@@ -18,6 +18,8 @@ import {
   sendInvitation as sendInvitationFn,
 } from "@/composables/useFunctions"
 import { defaultTeamRole } from "@/helpers/defaults"
+import { parseSafe } from "@/schemas/_utils"
+import { membershipSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
 import type { ITeam } from "@/types/domain"
 import {
@@ -26,11 +28,13 @@ import {
   type IMembershipRole,
 } from "@/types/membership"
 import { can, Capabilities, hasExactRole } from "@/types/permissions"
+import { getDocsCached } from "@/utils/firebase/firebase-cache"
 import {
   getAllMembershipsGroup,
   getMembershipRef,
   getTeamMembershipsCollection,
 } from "@/utils/firebase/firebase-helpers"
+import { useLocalHydration } from "@/utils/firebase/firebase-hydration"
 import {
   addPending,
   cloneState,
@@ -43,7 +47,6 @@ import {
 import {
   getCountFromServer,
   getDoc,
-  getDocs,
   query,
   Timestamp,
   where,
@@ -93,29 +96,9 @@ export const useMembershipStore = defineStore("memberships", () => {
     () => _vuefireMemberships.data.value ?? []
   )
 
-  // Query for team members - null when no team selected
-
-  const teamMembersQueryRef = computed(() => {
-    const teamId = currentTeamId.value
-    if (!teamId) return null
-
-    // Guard: Ensure user is a member of the team before trying to list its members.
-    // This prevents the "Missing or insufficient permissions" error.
-    // Note: memberships.value comes from the user's own membership list (collectionGroup), which is safe.
-    const isMember = memberships.value.some((m) => m.teamId === teamId)
-    if (!isMember) return null
-
-    return getTeamMembershipsCollection(teamId)
-  })
-
-  // VueFire reactive collection binding for team members
-  const _vuefireTeamMembers = useCollection<IMembership>(teamMembersQueryRef)
-  const firestoreTeamMembers: ComputedRef<IMembership[]> = computed(
-    () => _vuefireTeamMembers.data.value ?? []
-  )
-
   // ============================================================================
-  // State (for optimistic updates)
+  // State (for optimistic updates) — declared early so teamMembersQueryRef
+  // guard can check membership without a forward reference to the merged computed.
   // ============================================================================
 
   /** Local memberships that can be optimistically updated */
@@ -126,6 +109,34 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   // Pending operation tracking
   const pendingMembershipIds = shallowRef(createPendingSet())
+
+  // Hydrate from localStorage for instant cold-start rendering.
+  // Must happen before teamMembersQueryRef so the guard has cached membership data.
+  useLocalHydration("memberships", optimisticMemberships)
+
+  // Query for team members - null when no team selected
+
+  const teamMembersQueryRef = computed(() => {
+    const teamId = currentTeamId.value
+    if (!teamId) return null
+
+    // Guard: Ensure user is a member of the team before trying to list its members.
+    // This prevents the "Missing or insufficient permissions" error.
+    // Uses firestoreMemberships (not merged `memberships` computed) to avoid forward reference
+    // during cold-start hydration when currentTeamId may already be set from localStorage cache.
+    const isMember =
+      firestoreMemberships.value.some((m) => m.teamId === teamId) ||
+      optimisticMemberships.value.some((m) => m.teamId === teamId)
+    if (!isMember) return null
+
+    return getTeamMembershipsCollection(teamId)
+  })
+
+  // VueFire reactive collection binding for team members
+  const _vuefireTeamMembers = useCollection<IMembership>(teamMembersQueryRef)
+  const firestoreTeamMembers: ComputedRef<IMembership[]> = computed(
+    () => _vuefireTeamMembers.data.value ?? []
+  )
 
   // ============================================================================
   // Computed - Merged State
@@ -250,7 +261,15 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     const membershipSnap = await getDoc(getMembershipRef(teamId, userId))
     if (!membershipSnap.exists()) return null
-    return membershipSnap.data() as IMembership
+    // Snapshot is already validated against membershipDocDataSchema by the
+    // converter on getMembershipRef; re-parse against the stricter
+    // membershipSchema to confirm denormalized user/team snapshots are
+    // fully populated before returning to the caller.
+    return parseSafe(
+      membershipSchema,
+      membershipSnap.data(),
+      `membership:${membershipSnap.ref.path}`
+    )
   }
 
   /**
@@ -270,7 +289,14 @@ export const useMembershipStore = defineStore("memberships", () => {
     )
     return snapshots
       .filter((snapshot) => snapshot.exists())
-      .map((snapshot) => snapshot.data() as IMembership)
+      .map((snapshot) =>
+        parseSafe(
+          membershipSchema,
+          snapshot.data(),
+          `membership:${snapshot.ref.path}`
+        )
+      )
+      .filter((m): m is IMembership => m !== null)
   }
 
   // ============================================================================
@@ -289,6 +315,11 @@ export const useMembershipStore = defineStore("memberships", () => {
   const fetchSingleTeamMemberCount = async (
     teamId: string
   ): Promise<number> => {
+    // If this is the current team and members are loaded, use local count
+    if (currentTeamId.value === teamId && !_vuefireTeamMembers.pending.value) {
+      return Math.max(teamMembers.value.length, 1)
+    }
+
     const membersCollection = getTeamMembershipsCollection(teamId)
 
     try {
@@ -300,7 +331,7 @@ export const useMembershipStore = defineStore("memberships", () => {
       }
 
       try {
-        const membersSnapshot = await getDocs(membersCollection)
+        const membersSnapshot = await getDocsCached(membersCollection)
         return Math.max(membersSnapshot.size, 1)
       } catch (fallbackError) {
         if (isPermissionDeniedError(fallbackError)) {
@@ -793,10 +824,14 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
 
     try {
-      const membersSnapshot = await getDocs(
+      const membersSnapshot = await getDocsCached(
         getTeamMembershipsCollection(teamId)
       )
-      return membersSnapshot.docs.map((doc) => doc.data() as IMembership)
+      return membersSnapshot.docs
+        .map((doc) =>
+          parseSafe(membershipSchema, doc.data(), `membership:${doc.ref.path}`)
+        )
+        .filter((m): m is IMembership => m !== null)
     } catch (error) {
       console.error(
         `[membershipStore] Failed to fetch members for team ${teamId}:`,
@@ -816,8 +851,12 @@ export const useMembershipStore = defineStore("memberships", () => {
         getAllMembershipsGroup(),
         where("userId", "==", currentUser.value.uid)
       )
-      const snapshot = await getDocs(q)
-      return snapshot.docs.map((doc) => doc.data() as IMembership)
+      const snapshot = await getDocsCached(q)
+      return snapshot.docs
+        .map((doc) =>
+          parseSafe(membershipSchema, doc.data(), `membership:${doc.ref.path}`)
+        )
+        .filter((m): m is IMembership => m !== null)
     } catch (error) {
       console.error(
         "[membershipStore] Failed to fetch user memberships:",

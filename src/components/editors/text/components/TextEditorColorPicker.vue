@@ -18,7 +18,7 @@ withDefaults(
   {
     activeColor: null,
     title: "Color",
-    swatchClass: "size-4 rounded border",
+    swatchClass: "size-4 border",
     disabled: false,
   }
 )
@@ -34,21 +34,21 @@ const emit = defineEmits<{
     <PopoverTrigger as-child>
       <Button
         variant="outline"
-        size="icon-sm"
+        size="icon"
         :disabled="disabled"
         class="data-[state=open]:bg-accent"
       >
         <slot name="trigger" />
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="w-52 p-2" align="start">
+    <PopoverContent class="w-52 p-2">
       <div class="mb-2 text-xs font-medium">{{ title }}</div>
       <div class="grid grid-cols-5 gap-1">
         <Button
           v-for="color in colors"
           :key="color.id"
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           :title="color.name"
           class="relative"
           @click="emit('select', color.value)"
@@ -59,12 +59,12 @@ const emit = defineEmits<{
           />
           <span
             v-if="activeColor === color.value"
-            class="bg-background/85 absolute inset-0 flex items-center justify-center rounded-sm"
+            class="bg-background/85 absolute inset-0 flex items-center justify-center"
           >
             <IconCheck class="size-3" />
           </span>
         </Button>
-        <Button variant="ghost" size="icon-sm" @click="emit('clear')">
+        <Button variant="ghost" size="icon" @click="emit('clear')">
           <IconX />
         </Button>
       </div>

@@ -89,7 +89,7 @@ useInfiniteScroll(
       <Button
         id="tour-tasks-notifications"
         variant="ghost"
-        :size="iconDisplay === 'text' || unreadCount > 0 ? 'sm' : 'icon-sm'"
+        :size="iconDisplay === 'text' || unreadCount > 0 ? 'default' : 'icon'"
       >
         <IconBell />
         <Badge
@@ -102,15 +102,11 @@ useInfiniteScroll(
         <template v-if="iconDisplay === 'text'"> Notifications </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent side="bottom" class="mx-2 w-auto p-2">
+    <PopoverContent class="mx-2 w-auto p-2">
       <Tabs v-model="activeTab" default-value="inbox">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              @click="isDocked = !isDocked"
-            >
+            <Button variant="ghost" size="icon" @click="isDocked = !isDocked">
               <IconPin v-if="!isDocked" />
               <IconPinOff v-else />
             </Button>
@@ -154,7 +150,7 @@ useInfiniteScroll(
         </div>
         <OverlayScrollbarsWrapper
           ref="scrollableContainer"
-          class="bg-sidebar aspect-square w-md rounded-md"
+          class="bg-sidebar aspect-square w-md"
         >
           <Empty
             v-if="filteredNotifications.length === 0 && !isLoading"
@@ -197,11 +193,11 @@ useInfiniteScroll(
             <ButtonGroup>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                  <Button variant="secondary" size="icon-sm">
+                  <Button variant="secondary" size="icon">
                     <IconMoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top" class="w-40">
+                <DropdownMenuContent>
                   <DropdownMenuSub>
                     <DropdownMenuItem as-child>
                       <DropdownMenuSubTrigger>
@@ -254,7 +250,6 @@ useInfiniteScroll(
           <div>
             <Button
               variant="secondary"
-              size="sm"
               :disabled="
                 (activeTab === 'inbox' && inboxUnreadCount === 0) ||
                 (activeTab === 'saved' && savedUnreadCount === 0) ||

@@ -32,6 +32,9 @@ import {
   updateInvitationRole as updateInvitationRoleFn,
 } from "@/composables/useFunctions"
 import { firestore, functions } from "@/modules/firebase"
+import { parseSafe } from "@/schemas/_utils"
+import { invitationSchema } from "@/schemas/invitation"
+import { membershipSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import {
@@ -221,7 +224,14 @@ export const useInvitationStore = defineStore("invitations", () => {
       getMembershipRef(teamId, currentUser.value.uid)
     )
     if (!membershipSnap.exists()) return null
-    return membershipSnap.data() as IMembership
+    // Stricter re-parse: the ref's converter validates against
+    // membershipDocDataSchema (which allows partial snapshots), but the
+    // caller wants a fully-resolved IMembership.
+    return parseSafe(
+      membershipSchema,
+      membershipSnap.data(),
+      `membership:${membershipSnap.ref.path}`
+    )
   }
 
   const assertTeamCapability = (
@@ -464,7 +474,13 @@ export const useInvitationStore = defineStore("invitations", () => {
     const docSnap = snapshot.docs[0]
     if (!docSnap) return null
 
-    return { id: docSnap.id, ...docSnap.data() } as IInvitation
+    // The `invitations` collection is queried with a raw `collection()` ref,
+    // so no converter is attached at the ref level — validate here instead.
+    return parseSafe(
+      invitationSchema,
+      { id: docSnap.id, ...docSnap.data() },
+      `invitation:${docSnap.ref.path}`
+    )
   }
 
   /**

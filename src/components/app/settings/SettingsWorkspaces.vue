@@ -154,14 +154,13 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
             <div v-if="isLoading" class="flex justify-center py-8">
               <Spinner />
             </div>
-            <div v-else class="overflow-clip rounded-md border">
+            <div v-else class="overflow-clip border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead class="w-1/4">
                       <Button
                         variant="ghost"
-                        size="sm"
                         @click="toggleWorkspaceSort('name')"
                       >
                         Name
@@ -184,7 +183,6 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                     <TableHead class="w-1/4">
                       <Button
                         variant="ghost"
-                        size="sm"
                         @click="toggleWorkspaceSort('created')"
                       >
                         Created
@@ -212,13 +210,13 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                     :key="workspace.id"
                   >
                     <TableCell>
-                      <Item size="sm" class="group w-full gap-2 p-0">
+                      <Item class="group w-full gap-2">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger as-child>
                                 <Avatar
-                                  class="flex items-center justify-center rounded-md"
+                                  class="flex items-center justify-center"
                                   :class="{
                                     'cursor-pointer': canUpdateWorkspace,
                                     'cursor-not-allowed opacity-60':
@@ -237,11 +235,10 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                   </template>
                                   <template v-else>
                                     <AvatarImage
-                                      class="rounded"
                                       :src="workspace.photoURL!"
                                       :alt="workspace.name"
                                     />
-                                    <AvatarFallback class="rounded">
+                                    <AvatarFallback>
                                       {{ getInitials(workspace.name) }}
                                     </AvatarFallback>
                                   </template>
@@ -263,8 +260,8 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                               <TooltipTrigger as-child>
                                 <Button
                                   variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
-                                  size="icon-sm"
+                                  class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
+                                  size="icon"
                                   :disabled="!canUpdateWorkspace"
                                   @click.stop="
                                     removeWorkspacePhoto(workspace.id)
@@ -331,7 +328,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                       <IconMoreHorizontal />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
+                                  <DropdownMenuContent>
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <div>

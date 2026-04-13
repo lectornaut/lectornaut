@@ -1,16 +1,12 @@
 import { firestore } from "@/modules/firebase"
+import { getDocCached } from "@/utils/firebase/firebase-cache"
 import {
   FirestoreErrorCodes,
   hasFirebaseErrorCode,
 } from "@/utils/firebase/firebase-errors"
+import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { useEventListener } from "@vueuse/core"
-import {
-  doc,
-  getDoc,
-  serverTimestamp,
-  setDoc,
-  type Timestamp,
-} from "firebase/firestore"
+import { doc, Timestamp } from "firebase/firestore"
 import {
   fromBase64 as base64ToBytes,
   toBase64 as bytesToBase64,
@@ -37,7 +33,7 @@ export async function loadSnapshot(
   let snapshot
 
   try {
-    snapshot = await getDoc(snapshotRef)
+    snapshot = await getDocCached(snapshotRef)
   } catch (error) {
     // Older rulesets deny reads for missing snapshot docs. Treat that as a miss
     // so collaboration can still initialize while rules are being rolled out.
@@ -78,17 +74,17 @@ export async function saveSnapshot(
 
   const ydocBase64 = bytesToBase64(stateUpdate)
 
-  await setDoc(
+  await mutateSetDocument(
     doc(firestore, "snapshots", contentId),
     {
       contentId,
       teamId,
       workspaceId,
-      updatedAt: serverTimestamp(),
+      updatedAt: Timestamp.now(),
       updatedBy: userId,
       ydocBase64,
     },
-    { merge: true }
+    { source: "collab.saveSnapshot", merge: true }
   )
 }
 

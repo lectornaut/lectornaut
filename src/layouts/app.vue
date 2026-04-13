@@ -271,11 +271,11 @@ const closeTab = (id: string) => {
           <MainSidebar />
           <div
             id="left-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-4xl border shadow empty:hidden"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip border shadow empty:hidden"
           ></div>
           <ResizablePanelGroup
             :style="{ overflow: 'clip' }"
-            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-4xl border shadow"
+            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 border shadow"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -302,7 +302,7 @@ const closeTab = (id: string) => {
                   </div>
                 </ResizablePanel>
               </ContextMenuTrigger>
-              <ContextMenuContent align="start" side="bottom">
+              <ContextMenuContent>
                 <ContextMenuItem @click="leftPanel?.collapse()">
                   <IconX /> {{ t("tooltips.closePanel") }}
                 </ContextMenuItem>
@@ -326,7 +326,7 @@ const closeTab = (id: string) => {
                 </TooltipTrigger>
                 <TooltipContent side="right" class="p-1!">
                   <div class="flex flex-col gap-1">
-                    <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <div class="bg-accent/5 flex flex-col gap-2 p-2">
                       <span class="flex items-center gap-2">
                         <IconHand /> {{ t("tooltips.dragToResize") }}
                       </span>
@@ -335,7 +335,7 @@ const closeTab = (id: string) => {
                         {{ t("tooltips.doubleClickToggle") }}
                       </span>
                     </div>
-                    <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <div class="bg-accent/5 flex flex-col gap-2 p-2">
                       <span class="flex items-center gap-2">
                         <IconArrowRight /> {{ t("tooltips.rightArrowExpand") }}
                       </span>
@@ -379,7 +379,7 @@ const closeTab = (id: string) => {
                         </div>
                         <!-- Non-scrollable sub-header with backdrop blur -->
                         <div
-                          class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip rounded-b-4xl border-x border-b p-2 shadow-xs backdrop-blur-lg"
+                          class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip border-x border-b p-2 shadow-xs backdrop-blur-lg"
                         >
                           <SubNavigation />
                           <div
@@ -394,7 +394,7 @@ const closeTab = (id: string) => {
                       </div>
                     </ResizablePanel>
                   </ContextMenuTrigger>
-                  <ContextMenuContent align="start" side="bottom">
+                  <ContextMenuContent>
                     <ContextMenuItem @click="router.go(0)">
                       <IconRefreshCcw /> {{ t("actions.refresh") }}
                     </ContextMenuItem>
@@ -423,11 +423,9 @@ const closeTab = (id: string) => {
                         "
                       />
                     </TooltipTrigger>
-                    <TooltipContent side="top" class="p-1!">
+                    <TooltipContent class="p-1!">
                       <div class="flex flex-col gap-1">
-                        <div
-                          class="bg-accent/5 flex flex-col gap-2 rounded p-2"
-                        >
+                        <div class="bg-accent/5 flex flex-col gap-2 p-2">
                           <span class="flex items-center gap-2">
                             <IconHand /> {{ t("tooltips.dragToResize") }}
                           </span>
@@ -436,9 +434,7 @@ const closeTab = (id: string) => {
                             {{ t("tooltips.doubleClickToggle") }}
                           </span>
                         </div>
-                        <div
-                          class="bg-accent/5 flex flex-col gap-2 rounded p-2"
-                        >
+                        <div class="bg-accent/5 flex flex-col gap-2 p-2">
                           <span class="flex items-center gap-2">
                             <IconArrowUp /> {{ t("tooltips.upArrowExpand") }}
                           </span>
@@ -484,7 +480,7 @@ const closeTab = (id: string) => {
                               >
                                 <TabsList
                                   v-if="source.length > 0"
-                                  class="flex h-full min-w-0 items-stretch gap-2 bg-transparent p-0"
+                                  class="flex h-full min-w-0 items-stretch gap-2 bg-transparent"
                                 >
                                   <TabsTrigger
                                     v-for="tab in source"
@@ -534,7 +530,7 @@ const closeTab = (id: string) => {
                                       <TooltipTrigger as-child>
                                         <Button
                                           variant="ghost"
-                                          size="icon-sm"
+                                          size="icon"
                                           @click="newTab()"
                                         >
                                           <IconPlus />
@@ -556,7 +552,7 @@ const closeTab = (id: string) => {
                                       <TooltipTrigger as-child>
                                         <Button
                                           variant="secondary"
-                                          size="icon-sm"
+                                          size="icon"
                                           @click="
                                             topPanel?.isCollapsed
                                               ? topPanel?.expand()
@@ -582,7 +578,7 @@ const closeTab = (id: string) => {
                                       <TooltipTrigger as-child>
                                         <Button
                                           variant="secondary"
-                                          size="icon-sm"
+                                          size="icon"
                                           @click="bottomPanel?.collapse()"
                                         >
                                           <IconX />
@@ -631,7 +627,7 @@ const closeTab = (id: string) => {
                       </Tabs>
                     </ResizablePanel>
                   </ContextMenuTrigger>
-                  <ContextMenuContent align="start" side="bottom">
+                  <ContextMenuContent>
                     <ContextMenuItem
                       @click="
                         topPanel?.isCollapsed
@@ -672,7 +668,7 @@ const closeTab = (id: string) => {
                 </TooltipTrigger>
                 <TooltipContent side="left" class="p-1!">
                   <div class="flex flex-col gap-1">
-                    <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <div class="bg-accent/5 flex flex-col gap-2 p-2">
                       <span class="flex items-center gap-2">
                         <IconHand /> {{ t("tooltips.dragToResize") }}
                       </span>
@@ -681,7 +677,7 @@ const closeTab = (id: string) => {
                         {{ t("tooltips.doubleClickToToggle") }}
                       </span>
                     </div>
-                    <div class="bg-accent/5 flex flex-col gap-2 rounded p-2">
+                    <div class="bg-accent/5 flex flex-col gap-2 p-2">
                       <span class="flex items-center gap-2">
                         <IconArrowLeft /> {{ t("tooltips.leftArrowExpand") }}
                       </span>
@@ -720,7 +716,7 @@ const closeTab = (id: string) => {
                   </div>
                 </ResizablePanel>
               </ContextMenuTrigger>
-              <ContextMenuContent align="start" side="bottom">
+              <ContextMenuContent>
                 <ContextMenuItem @click="rightPanel?.collapse()">
                   <IconX /> {{ t("layouts.app.panel.close") }}
                 </ContextMenuItem>
@@ -764,7 +760,7 @@ const closeTab = (id: string) => {
                             height: `${observedSize.height}px`,
                           }
                     "
-                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded border will-change-transform"
+                    class="bg-secondary overflow-clipborder pointer-events-auto absolute flex min-w-64 flex-col will-change-transform"
                     :class="
                       isPoppedOutMinimized
                         ? 'border-foreground shadow-md ring-1'
@@ -825,17 +821,17 @@ const closeTab = (id: string) => {
                     </div>
                     <div
                       v-if="!isPoppedOutMinimized"
-                      class="bg-background mx-2 mb-2 grow rounded border p-2"
+                      class="bg-background growborder mx-2 mb-2 p-2"
                     >
                       <div
-                        class="size-full rounded bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
+                        class="size-fullbg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
                       >
                         Sample Content
                       </div>
                     </div>
                   </Draggable>
                 </ContextMenuTrigger>
-                <ContextMenuContent align="start" side="bottom">
+                <ContextMenuContent>
                   <ContextMenuItem
                     @click="isPoppedOutMinimized = !isPoppedOutMinimized"
                   >
@@ -856,7 +852,7 @@ const closeTab = (id: string) => {
           </Transition>
           <div
             id="right-dock"
-            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-l-4xl border-y border-l shadow"
+            class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip border-y border-l shadow"
           ></div>
         </main>
       </div>
@@ -877,7 +873,7 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon'"
                         @click="
                           bottomPanel?.isCollapsed
                             ? bottomPanel?.expand()
@@ -913,7 +909,7 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon'"
                         @click="isPoppedOut = !isPoppedOut"
                       >
                         <IconPictureInPicture2 v-if="!isPoppedOut" />
@@ -939,7 +935,7 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon'"
                         @click="emitter.emit('Sidebar.Left.Toggle')"
                       >
                         <IconPanelLeft v-if="leftPanel?.isCollapsed" />
@@ -961,7 +957,7 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon'"
                         @click="emitter.emit('Panel.Bottom.Toggle')"
                       >
                         <IconPanelBottom v-if="bottomPanel?.isCollapsed" />
@@ -983,7 +979,7 @@ const closeTab = (id: string) => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="ghost"
-                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon-sm'"
+                        :size="footerIconDisplay === 'text' ? 'sm' : 'icon'"
                         @click="emitter.emit('Sidebar.Right.Toggle')"
                       >
                         <IconPanelRight v-if="rightPanel?.isCollapsed" />
@@ -1006,8 +1002,8 @@ const closeTab = (id: string) => {
             </div>
           </footer>
         </ContextMenuTrigger>
-        <ContextMenuContent align="start" side="bottom">
-          <ContextMenuLabel class="text-muted-foreground text-xs">
+        <ContextMenuContent>
+          <ContextMenuLabel>
             {{ t("layouts.app.statusBar.appearance") }}
           </ContextMenuLabel>
           <ContextMenuRadioGroup v-model="footerIconDisplay">

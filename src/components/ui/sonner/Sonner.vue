@@ -32,7 +32,7 @@ const restProps = computed(() => {
     }"
     :toast-options="{
       classes: {
-        toast: 'rounded-2xl',
+        toast: 'rounded-none',
       },
     }"
     v-bind="restProps"

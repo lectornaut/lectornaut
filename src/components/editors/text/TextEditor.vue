@@ -971,7 +971,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
-            <Button variant="outline" size="icon-sm">
+            <Button variant="outline" size="icon">
               <IconInfo />
             </Button>
           </TooltipTrigger>
@@ -998,7 +998,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           @click="scrollToTableOfContentsItem(item)"
         >
           <span
-            class="bg-sidebar-primary h-1 rounded opacity-25 group-hover:opacity-75"
+            class="bg-sidebar-primary h-1opacity-25 group-hover:opacity-75"
             :style="{ width: getTableOfContentsItemIndent(item.level) }"
           >
           </span>
@@ -1021,16 +1021,16 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     }"
   >
     <div
-      class="bg-background/50 flex items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xl backdrop-blur-lg"
+      class="bg-background/50 flex items-center gap-1 overflow-x-auto border p-1 shadow-xl backdrop-blur-lg"
     >
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button variant="outline" size="sm" class="h-8 px-2.5 text-xs">
+          <Button variant="outline" class="h-8 px-2.5 text-xs">
             {{ currentBlockLabel }}
             <IconChevronDown class="size-3" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent>
           <DropdownMenuItem
             @click="editor?.chain().focus().setParagraph().run()"
           >
@@ -1074,7 +1074,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('bold')"
         @click="editor?.chain().focus().toggleBold().run()"
       >
@@ -1082,7 +1081,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </Toggle>
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('italic')"
         @click="editor?.chain().focus().toggleItalic().run()"
       >
@@ -1090,7 +1088,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </Toggle>
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('underline')"
         @click="editor?.chain().focus().toggleUnderline().run()"
       >
@@ -1098,7 +1095,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </Toggle>
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('strike')"
         @click="editor?.chain().focus().toggleStrike().run()"
       >
@@ -1106,7 +1102,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </Toggle>
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('code')"
         @click="editor?.chain().focus().toggleCode().run()"
       >
@@ -1117,7 +1112,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('bulletList')"
         @click="editor?.chain().focus().toggleBulletList().run()"
       >
@@ -1125,7 +1119,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </Toggle>
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('orderedList')"
         @click="editor?.chain().focus().toggleOrderedList().run()"
       >
@@ -1133,7 +1126,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </Toggle>
       <Toggle
         variant="outline"
-        size="sm"
         :pressed="editor?.isActive('taskList')"
         @click="editor?.chain().focus().toggleTaskList().run()"
       >
@@ -1172,13 +1164,13 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         </template>
       </TextEditorColorPicker>
 
-      <Button variant="outline" size="icon-sm" @click="openLinkDialog">
+      <Button variant="outline" size="icon" @click="openLinkDialog">
         <IconLink />
       </Button>
       <Button
         v-if="editor?.isActive('link')"
         variant="outline"
-        size="icon-sm"
+        size="icon"
         @click="
           editor?.chain().focus().extendMarkRange('link').unsetLink().run()
         "
@@ -1186,7 +1178,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         <IconUnlink />
       </Button>
 
-      <Button variant="outline" size="icon-sm" @click="openImageDialog">
+      <Button variant="outline" size="icon" @click="openImageDialog">
         <IconImage />
       </Button>
 
@@ -1195,11 +1187,11 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         @update:open="!$event && clearTablePickerSelection()"
       >
         <PopoverTrigger as-child>
-          <Button variant="outline" size="icon-sm">
+          <Button variant="outline" size="icon">
             <IconTable />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" class="w-auto p-2">
+        <PopoverContent class="w-auto p-2">
           <div class="text-muted-foreground mb-2 text-xs font-medium">
             {{ tablePickerLabel }}
           </div>
@@ -1212,7 +1204,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
                 v-for="col in TABLE_PICKER_COLS"
                 :key="`${row}-${col}`"
                 type="button"
-                class="size-4 rounded-[2px] border transition-colors"
+                class="size-4 border transition-colors"
                 :class="
                   col <= tablePickerSelection.cols &&
                   row <= tablePickerSelection.rows
@@ -1230,11 +1222,11 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
       <DropdownMenu v-if="editor?.isActive('table')">
         <DropdownMenuTrigger as-child>
-          <Button variant="outline" size="icon-sm">
+          <Button variant="outline" size="icon">
             <IconTable />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent>
           <DropdownMenuLabel class="text-xs">Table</DropdownMenuLabel>
           <DropdownMenuItem
             @click="editor?.chain().focus().addRowBefore().run()"
@@ -1282,41 +1274,31 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             <SelectValue placeholder="Language" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="auto">Auto</SelectItem>
-            <SelectItem
-              v-for="language in CODE_BLOCK_LANGUAGES"
-              :key="language"
-              :value="language"
-            >
-              {{ language }}
-            </SelectItem>
+            <SelectGroup>
+              <SelectItem value="auto">Auto</SelectItem>
+              <SelectItem
+                v-for="language in CODE_BLOCK_LANGUAGES"
+                :key="language"
+                :value="language"
+              >
+                {{ language }}
+              </SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>
 
       <div
         v-if="editor?.isActive('image')"
-        class="border-border/70 bg-muted/30 flex items-center gap-1 rounded-md border px-1 py-0.5"
+        class="border-border/70 bg-muted/30 flex items-center gap-1 border px-1 py-0.5"
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="applyImageAttrs({ align: 'left' })"
-        >
+        <Button variant="ghost" @click="applyImageAttrs({ align: 'left' })">
           Left
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="applyImageAttrs({ align: 'center' })"
-        >
+        <Button variant="ghost" @click="applyImageAttrs({ align: 'center' })">
           Center
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="applyImageAttrs({ align: 'right' })"
-        >
+        <Button variant="ghost" @click="applyImageAttrs({ align: 'right' })">
           Right
         </Button>
         <Select
@@ -1327,9 +1309,11 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             <SelectValue placeholder="Width" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="50%">50%</SelectItem>
-            <SelectItem value="75%">75%</SelectItem>
-            <SelectItem value="100%">100%</SelectItem>
+            <SelectGroup>
+              <SelectItem value="50%">50%</SelectItem>
+              <SelectItem value="75%">75%</SelectItem>
+              <SelectItem value="100%">100%</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>
@@ -1338,7 +1322,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
       <Button
         variant="outline"
-        size="icon-sm"
+        size="icon"
         :disabled="!editor?.can().undo()"
         @click="editor?.chain().focus().undo().run()"
       >
@@ -1346,7 +1330,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </Button>
       <Button
         variant="outline"
-        size="icon-sm"
+        size="icon"
         :disabled="!editor?.can().redo()"
         @click="editor?.chain().focus().redo().run()"
       >
@@ -1362,7 +1346,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   >
     <Button
       variant="outline"
-      size="icon-sm"
+      size="icon"
       class="mr-2 size-6"
       @click.stop="selectNodeFromDragHandle"
     >

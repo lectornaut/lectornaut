@@ -14,7 +14,7 @@ const { t } = useI18n()
           {{ t("components.landing.qrCode.scan") }}
         </span>
         <div
-          class="bg-background/50 group hover:bg-background/75 cursor-pointer rounded-lg border backdrop-blur-lg transition hover:scale-110"
+          class="bg-background/50 group hover:bg-background/75 cursor-pointer border backdrop-blur-lg transition hover:scale-110"
         >
           <img
             :src="`/assets/images/qr-code-${state}.svg`"

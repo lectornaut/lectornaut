@@ -48,7 +48,7 @@ function onPageSizeChange(val: unknown) {
         {{ $t("components.dataTable.view") }}
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end">
+    <DropdownMenuContent>
       <DropdownMenuLabel>
         {{ $t("components.dataTable.options") }}
       </DropdownMenuLabel>

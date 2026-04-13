@@ -71,10 +71,7 @@ const { onDragStart } = useDragAndDrop()
                           />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
-                      <CollapsibleContent
-                        class="rounded-md p-2"
-                        :class="[list.bg]"
-                      >
+                      <CollapsibleContent class="p-2" :class="[list.bg]">
                         <SidebarMenu>
                           <SidebarMenuItem
                             v-for="node in list.nodes"
@@ -82,7 +79,7 @@ const { onDragStart } = useDragAndDrop()
                           >
                             <SidebarMenuButton
                               :draggable="true"
-                              class="rounded-md border border-dashed p-2"
+                              class="border border-dashed p-2"
                               :class="[list.bg, list.color, list.border]"
                               @dragstart="onDragStart($event, node.id)"
                             >

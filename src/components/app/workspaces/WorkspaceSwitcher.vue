@@ -48,7 +48,6 @@ onUnmounted(() => {
               <DropdownMenuTrigger as-child>
                 <Button
                   variant="ghost"
-                  size="sm"
                   class="data-[state=open]:bg-accent"
                   :disabled="!currentTeam"
                 >
@@ -76,7 +75,7 @@ onUnmounted(() => {
             <TooltipContent>
               {{ t("components.workspaceSwitcher.tooltip") }}
             </TooltipContent>
-            <DropdownMenuContent class="w-48">
+            <DropdownMenuContent align="center">
               <DropdownMenuGroup
                 v-if="isLoading"
                 class="flex justify-center py-2"
@@ -84,12 +83,8 @@ onUnmounted(() => {
                 <Spinner />
               </DropdownMenuGroup>
               <DropdownMenuGroup v-else>
-                <DropdownMenuLabel class="text-muted-foreground text-xs">
-                  {{
-                    workspaces.length === 0
-                      ? t("components.workspaceSwitcher.noOtherWorkspaces")
-                      : t("components.workspaceSwitcher.myWorkspaces")
-                  }}
+                <DropdownMenuLabel v-if="workspaces.length === 0">
+                  {{ t("components.workspaceSwitcher.noOtherWorkspaces") }}
                 </DropdownMenuLabel>
                 <DropdownMenuItem
                   v-for="workspace in workspaces"
@@ -146,7 +141,7 @@ onUnmounted(() => {
         </Tooltip>
       </TooltipProvider>
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-48">
+    <ContextMenuContent>
       <ContextMenuGroup>
         <ContextMenuItem
           @click="emitter.emit('Dialog.Settings.Open', 'workspaces')"

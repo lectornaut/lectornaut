@@ -58,8 +58,8 @@ useSortable(el, activeNavItems, {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="right">
-            <DropdownMenuLabel class="text-muted-foreground text-xs">
+          <DropdownMenuContent side="right">
+            <DropdownMenuLabel>
               {{ t("navigation.show") }}
             </DropdownMenuLabel>
             <DropdownMenuCheckboxItem

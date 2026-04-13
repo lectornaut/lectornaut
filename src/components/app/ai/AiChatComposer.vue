@@ -20,7 +20,7 @@ const inputPlaceholder = computed(
 </script>
 
 <template>
-  <InputGroup class="bg-background">
+  <InputGroup>
     <InputGroupTextarea v-model="userInput" :placeholder="inputPlaceholder" />
     <InputGroupAddon align="block-end">
       <InputGroupButton variant="outline" size="icon-xs">
@@ -32,10 +32,12 @@ const inputPlaceholder = computed(
             <SelectValue :placeholder="t('ai.mode')" />
           </SelectTrigger>
         </InputGroupButton>
-        <SelectContent side="top" align="start">
-          <SelectItem value="auto">{{ t("ai.auto") }}</SelectItem>
-          <SelectItem value="agent">{{ t("ai.agent") }}</SelectItem>
-          <SelectItem value="manual">{{ t("ai.manual") }}</SelectItem>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="auto">{{ t("ai.auto") }}</SelectItem>
+            <SelectItem value="agent">{{ t("ai.agent") }}</SelectItem>
+            <SelectItem value="manual">{{ t("ai.manual") }}</SelectItem>
+          </SelectGroup>
         </SelectContent>
       </Select>
       <InputGroupText class="ml-auto text-xs">

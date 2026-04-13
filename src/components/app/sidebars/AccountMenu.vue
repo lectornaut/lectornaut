@@ -24,16 +24,15 @@ const { t } = useI18n()
               <SidebarMenuButton
                 :tooltip="t('accountMenu.account')"
                 size="lg"
-                class="data-[state=open]:bg-accent rounded"
+                class="data-[state=open]:bg-accent"
               >
-                <Avatar class="rounded">
+                <Avatar>
                   <AvatarImage
-                    class="rounded"
                     :src="user?.photoURL!"
                     :alt="user?.displayName"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback class="rounded">
+                  <AvatarFallback>
                     {{ getInitials(user?.displayName!) }}
                   </AvatarFallback>
                 </Avatar>
@@ -52,18 +51,17 @@ const { t } = useI18n()
                 </SidebarMenuBadge>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent class="w-48" align="end" side="right">
+            <DropdownMenuContent side="right">
               <DropdownMenuLabel>
-                <Item size="sm" class="group w-full gap-2 rounded p-0">
+                <Item size="xs" class="group w-full gap-2">
                   <ItemMedia>
-                    <Avatar class="rounded">
+                    <Avatar>
                       <AvatarImage
-                        class="rounded"
                         :src="user?.photoURL!"
                         :alt="user?.displayName"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback class="rounded">
+                      <AvatarFallback>
                         {{ getInitials(user?.displayName!) }}
                       </AvatarFallback>
                     </Avatar>
@@ -110,7 +108,7 @@ const { t } = useI18n()
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-48" align="end" side="right">
+        <ContextMenuContent side="right">
           <ContextMenuGroup>
             <ContextMenuItem as-child>
               <RouterLink to="/profile">

@@ -1,3 +1,4 @@
+import { createActionRunner } from "@/composables/useActionRunner"
 import {
   configureSso,
   deleteSso,
@@ -7,24 +8,28 @@ import {
   type ConfigureSsoRequest,
   type TestSsoConnectionRequest,
 } from "@/composables/useFunctions"
+import { useLoadingState } from "@/composables/useLoadingState"
 import { firestore } from "@/modules/firebase"
 import type { ITeamSecurityConfig } from "@/types/sso"
 import { defaultLoginMethods, defaultSsoConfig } from "@/types/sso"
 import { doc } from "firebase/firestore"
 import type { Ref } from "vue"
-import { toast } from "vue-sonner"
 import { useDocument } from "vuefire"
+
+type SsoOperation =
+  | "save"
+  | "delete"
+  | "test"
+  | "loginMethods"
+  | "approvedDomains"
 
 /**
  * Composable for managing team SSO configuration in admin settings.
  * Provides reactive Firestore binding and Cloud Function wrappers.
  */
 export function useSsoConfig(teamId: Ref<string | null>) {
-  const saving = ref(false)
-  const deleting = ref(false)
-  const testing = ref(false)
-  const savingLoginMethods = ref(false)
-  const savingApprovedDomains = ref(false)
+  const loading = useLoadingState<SsoOperation>()
+  const actions = createActionRunner(loading.withLoading)
 
   // Reactive Firestore binding to security config
   const securityDocRef = computed(() => {
@@ -32,7 +37,7 @@ export function useSsoConfig(teamId: Ref<string | null>) {
     return doc(firestore, `teams/${teamId.value}/settings/security`)
   })
 
-  const { data: securityConfig, pending: loading } =
+  const { data: securityConfig, pending: loadingConfig } =
     useDocument<ITeamSecurityConfig>(securityDocRef)
 
   // Computed helpers
@@ -52,72 +57,56 @@ export function useSsoConfig(teamId: Ref<string | null>) {
     () => securityConfig.value?.approvedDomains ?? []
   )
 
-  // Save SSO configuration
-  const saveSsoConfig = async (config: Omit<ConfigureSsoRequest, "teamId">) => {
-    if (!teamId.value) return
-    saving.value = true
-
-    try {
-      const { data } = await configureSso({
-        teamId: teamId.value,
-        ...config,
-      })
-      toast.success("SSO configuration saved")
-      return data
-    } catch (error) {
-      console.error("[useSsoConfig] save error:", error)
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to save SSO configuration"
-      toast.error(message)
-    } finally {
-      saving.value = false
-    }
+  const requireTeamId = (): string => {
+    if (!teamId.value) throw new Error("No team selected")
+    return teamId.value
   }
+
+  // Save SSO configuration
+  const saveSsoConfig = async (config: Omit<ConfigureSsoRequest, "teamId">) =>
+    actions.run(
+      "save",
+      async () => {
+        const id = requireTeamId()
+        const { data } = await configureSso({ teamId: id, ...config })
+        return data
+      },
+      {
+        success: "SSO configuration saved",
+        error: "Failed to save SSO configuration",
+      }
+    )
 
   // Delete SSO configuration
-  const deleteSsoConfig = async () => {
-    if (!teamId.value) return
-    deleting.value = true
-
-    try {
-      await deleteSso({ teamId: teamId.value })
-      toast.success("SSO configuration removed")
-    } catch (error) {
-      console.error("[useSsoConfig] delete error:", error)
-      toast.error("Failed to remove SSO configuration")
-    } finally {
-      deleting.value = false
-    }
-  }
+  const deleteSsoConfig = async () =>
+    actions.run(
+      "delete",
+      async () => {
+        const id = requireTeamId()
+        await deleteSso({ teamId: id })
+      },
+      {
+        success: "SSO configuration removed",
+        error: "Failed to remove SSO configuration",
+      }
+    )
 
   // Test SSO connection
   const testConnection = async (
     config: Omit<TestSsoConnectionRequest, "teamId">
-  ) => {
-    if (!teamId.value) return { valid: false, error: "No team selected" }
-    testing.value = true
-
-    try {
-      const { data } = await testSsoConnection({
-        teamId: teamId.value,
-        ...config,
-      })
-      if (data.valid) {
-        toast.success("SSO connection is valid")
-      } else {
-        toast.error(data.error ?? "SSO connection test failed")
+  ) =>
+    actions.run(
+      "test",
+      async () => {
+        const id = requireTeamId()
+        const { data } = await testSsoConnection({ teamId: id, ...config })
+        return data
+      },
+      {
+        success: "SSO connection is valid",
+        error: "Failed to test SSO connection",
       }
-      return data
-    } catch (error) {
-      console.error("[useSsoConfig] test error:", error)
-      toast.error("Failed to test SSO connection")
-      return { valid: false, error: "Test request failed" }
-    } finally {
-      testing.value = false
-    }
-  }
+    )
 
   // Save login methods
   const saveLoginMethods = async (methods: {
@@ -127,42 +116,44 @@ export function useSsoConfig(teamId: Ref<string | null>) {
     microsoft: boolean
     apple: boolean
     sso: boolean
-  }) => {
-    if (!teamId.value) return
-    savingLoginMethods.value = true
-
-    try {
-      await updateTeamLoginMethods({
-        teamId: teamId.value,
-        loginMethods: methods,
-      })
-      toast.success("Authentication methods updated")
-    } catch (error) {
-      console.error("[useSsoConfig] saveLoginMethods error:", error)
-      toast.error("Failed to update authentication methods")
-    } finally {
-      savingLoginMethods.value = false
-    }
-  }
+  }) =>
+    actions.run(
+      "loginMethods",
+      async () => {
+        const id = requireTeamId()
+        await updateTeamLoginMethods({ teamId: id, loginMethods: methods })
+      },
+      {
+        success: "Authentication methods updated",
+        error: "Failed to update authentication methods",
+      }
+    )
 
   // Save approved domains
-  const saveApprovedDomains = async (domains: string[]) => {
-    if (!teamId.value) return
-    savingApprovedDomains.value = true
+  const saveApprovedDomains = async (domains: string[]) =>
+    actions.run(
+      "approvedDomains",
+      async () => {
+        const id = requireTeamId()
+        await updateTeamApprovedDomains({
+          teamId: id,
+          approvedDomains: domains,
+        })
+      },
+      {
+        success: "Approved domains updated",
+        error: "Failed to update approved domains",
+      }
+    )
 
-    try {
-      await updateTeamApprovedDomains({
-        teamId: teamId.value,
-        approvedDomains: domains,
-      })
-      toast.success("Approved domains updated")
-    } catch (error) {
-      console.error("[useSsoConfig] saveApprovedDomains error:", error)
-      toast.error("Failed to update approved domains")
-    } finally {
-      savingApprovedDomains.value = false
-    }
-  }
+  // Backward-compatible loading refs
+  const saving = computed(() => loading.isLoading("save"))
+  const deleting = computed(() => loading.isLoading("delete"))
+  const testing = computed(() => loading.isLoading("test"))
+  const savingLoginMethods = computed(() => loading.isLoading("loginMethods"))
+  const savingApprovedDomains = computed(() =>
+    loading.isLoading("approvedDomains")
+  )
 
   return {
     // State
@@ -171,7 +162,7 @@ export function useSsoConfig(teamId: Ref<string | null>) {
     approvedDomains,
     ssoConfig,
     hasSso,
-    loading,
+    loading: loadingConfig,
     saving: readonly(saving),
     deleting: readonly(deleting),
     testing: readonly(testing),

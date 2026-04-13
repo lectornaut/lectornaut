@@ -60,7 +60,6 @@ const actionItems: ActionItem[] = [
           v-for="item in actionItems"
           :key="item.event"
           variant="muted"
-          size="sm"
           class="hover:bg-secondary cursor-pointer"
           @click="emitter.emit(item.event)"
         >

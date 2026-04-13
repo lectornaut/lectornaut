@@ -413,7 +413,7 @@ onBeforeUnmount(() => {
       </SidebarGroupLabel>
       <CollapsibleContent>
         <SidebarGroupContent
-          class="rounded-md transition-colors"
+          class="transition-colors"
           :class="{
             'bg-sidebar-accent/50 ring-sidebar-ring ring-2': isRootDragOver,
           }"
@@ -452,7 +452,6 @@ onBeforeUnmount(() => {
           <div v-if="rootPagination.hasMore" class="p-2">
             <Button
               variant="ghost"
-              size="sm"
               class="w-full justify-start"
               :disabled="rootPagination.loadingMore"
               @click="loadMoreRoot"

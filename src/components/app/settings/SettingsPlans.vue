@@ -348,9 +348,9 @@ const getButtonLabel = (planId: BillingPlanKey) => {
             </FieldContent>
             <div
               v-if="!hasActiveSubscription && !selectedPlanId"
-              class="rounded-lg border p-1"
+              class="border p-1"
             >
-              <Item variant="outline" size="sm" class="bg-secondary">
+              <Item variant="outline" class="bg-secondary">
                 <ItemMedia variant="icon">
                   <IconBadgeDollarSign />
                 </ItemMedia>
@@ -420,7 +420,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
             <Collapsible>
               <div class="grid gap-3">
                 <CollapsibleTrigger as-child>
-                  <div class="group bg-secondary relative rounded py-4">
+                  <div class="group bg-secondary relativepy-4">
                     <Badge
                       variant="secondary"
                       class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -432,8 +432,8 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                     </Badge>
                   </div>
                 </CollapsibleTrigger>
-                <CollapsibleContent class="rounded-lg border p-1.5">
-                  <div class="overflow-clip rounded border">
+                <CollapsibleContent class="border p-1.5">
+                  <div class="overflow-clipborder">
                     <Table class="bg-secondary overflow-clip">
                       <TableHeader class="bg-secondary">
                         <TableRow class="hover:bg-transparent">
@@ -447,7 +447,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                             :key="plan.id"
                             class="w-1/5 p-2"
                             :class="{
-                              'bg-background after:border-primary relative z-10 rounded-t-lg after:absolute after:inset-0 after:z-10 after:rounded-t-lg after:border-x after:border-t':
+                              'bg-background after:border-primary relative z-10 after:absolute after:inset-0 after:z-10 after:border-x after:border-t':
                                 selectedPlanId === plan.id,
                             }"
                           >
@@ -455,7 +455,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                               {{ t(plan.titleKey) }}
                             </span>
                             <br />
-                            <span class="text-muted-foreground text-xs">
+                            <span>
                               {{
                                 getPlanPricePerMonthLabel(
                                   plan.id,
@@ -531,10 +531,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                                       : 'monthly')
                                 "
                               />
-                              <Label
-                                for="annual-mode-table"
-                                class="text-muted-foreground text-xs"
-                              >
+                              <Label for="annual-mode-table">
                                 Annual billing
                               </Label>
                             </div>
@@ -543,12 +540,11 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                             v-for="plan in settingsPlans"
                             :key="plan.id"
                             :class="{
-                              'bg-background after:border-primary relative z-10 rounded-b-lg p-2 after:absolute after:inset-0 after:z-10 after:rounded-b-lg after:border-x after:border-b':
+                              'bg-background after:border-primary after: relative z-10 p-2 after:absolute after:inset-0 after:z-10 after:border-x after:border-b':
                                 selectedPlanId === plan.id,
                             }"
                           >
                             <Button
-                              size="sm"
                               class="w-full shadow-none"
                               :variant="getButtonVariant(plan.id)"
                               :disabled="
@@ -612,7 +608,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
 
     <DialogFooter
       v-if="canManageBilling && hasPendingChanges"
-      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-md border p-2 backdrop-blur-lg"
+      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 border p-2 backdrop-blur-lg"
     >
       <p class="text-muted-foreground mr-auto ml-2 text-xs">
         {{ t("settings.unsavedChanges") }}

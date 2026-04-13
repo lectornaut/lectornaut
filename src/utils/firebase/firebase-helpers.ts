@@ -3,9 +3,24 @@
  *
  * Centralized utilities for Firestore operations used across all stores.
  * Provides consistent patterns for refs, batch processing, and common operations.
+ *
+ * As of PR 4, all single-doc ref getters and their corresponding collection
+ * getters are wired through Zod converters. Every snapshot read via VueFire
+ * flows through `parseOrWarn(schema, data, …)` automatically — store and
+ * composable code needs no changes because the returned `DocumentReference<T>`
+ * generic is identical to the previous hand-cast version.
  */
 
 import { firestore, storage } from "@/modules/firebase"
+import { zodConverter } from "@/schemas/_utils"
+import {
+  membershipPreferencesSchema,
+  teamSchema,
+  userPreferencesSchema,
+  userSchema,
+  workspaceSchema,
+} from "@/schemas/domain"
+import { membershipDocDataSchema } from "@/schemas/membership"
 import type {
   IMembershipPreferences,
   ITeam,
@@ -24,7 +39,6 @@ import {
   where,
   writeBatch,
   type DocumentData,
-  type DocumentReference,
   type Query,
   type QueryDocumentSnapshot,
 } from "firebase/firestore"
@@ -44,47 +58,59 @@ import {
 export const BATCH_SIZE = 450
 
 // ============================================================================
-// Document References - Cached getters for common collections
+// Zod Converters
+//
+// Each converter is created once at module load and reused by every ref
+// getter and collection getter for its entity. Reads flow through
+// `parseOrWarn` inside the converter's `fromFirestore`; writes are a
+// pass-through because the sync engine validates via its path registry.
 // ============================================================================
 
-/** Get a reference to a user document */
-export const getUserRef = (userId: string): DocumentReference<IUser> =>
-  doc(firestore, "users", userId) as DocumentReference<IUser>
+const userConverter = zodConverter<IUser>(userSchema, "user")
+const userPreferencesConverter = zodConverter<IUserPreferences>(
+  userPreferencesSchema,
+  "userPreferences"
+)
+const teamConverter = zodConverter<ITeam>(teamSchema, "team")
+const workspaceConverter = zodConverter<IWorkspace>(
+  workspaceSchema,
+  "workspace"
+)
+const membershipConverter = zodConverter<IMembershipDocData>(
+  membershipDocDataSchema,
+  "membership"
+)
+const membershipPreferencesConverter = zodConverter<IMembershipPreferences>(
+  membershipPreferencesSchema,
+  "membershipPreferences"
+)
+
+// ============================================================================
+// Document References - Converter-wired getters for common collections
+// ============================================================================
+
+/** Get a reference to a user document (validated on read). */
+export const getUserRef = (userId: string) =>
+  doc(firestore, "users", userId).withConverter(userConverter)
 
 /** Get a reference to a user's preferences document. */
-export const getUserPreferencesRef = (
-  userId: string
-): DocumentReference<IUserPreferences> =>
-  doc(
-    firestore,
-    "users",
-    userId,
-    "settings",
-    "preferences"
-  ) as DocumentReference<IUserPreferences>
+export const getUserPreferencesRef = (userId: string) =>
+  doc(firestore, "users", userId, "settings", "preferences").withConverter(
+    userPreferencesConverter
+  )
 
-/** Get a reference to a team document */
-export const getTeamRef = (teamId: string): DocumentReference<ITeam> =>
-  doc(firestore, "teams", teamId) as DocumentReference<ITeam>
+/** Get a reference to a team document. */
+export const getTeamRef = (teamId: string) =>
+  doc(firestore, "teams", teamId).withConverter(teamConverter)
 
-/** Get a reference to a membership document */
-export const getMembershipRef = (
-  teamId: string,
-  userId: string
-): DocumentReference<IMembershipDocData> =>
-  doc(
-    firestore,
-    "teams",
-    teamId,
-    "memberships",
-    userId
-  ) as DocumentReference<IMembershipDocData>
+/** Get a reference to a membership document. */
+export const getMembershipRef = (teamId: string, userId: string) =>
+  doc(firestore, "teams", teamId, "memberships", userId).withConverter(
+    membershipConverter
+  )
 
 /** Get a reference to the membership-scoped preferences document. */
-export const getMembershipPreferencesRef = (
-  teamId: string,
-  userId: string
-): DocumentReference<IMembershipPreferences> =>
+export const getMembershipPreferencesRef = (teamId: string, userId: string) =>
   doc(
     firestore,
     "teams",
@@ -93,45 +119,54 @@ export const getMembershipPreferencesRef = (
     userId,
     "settings",
     "preferences"
-  ) as DocumentReference<IMembershipPreferences>
+  ).withConverter(membershipPreferencesConverter)
 
-/** Get a reference to a workspace document */
-export const getWorkspaceRef = (
-  teamId: string,
-  workspaceId: string
-): DocumentReference<IWorkspace> =>
-  doc(
-    firestore,
-    "teams",
-    teamId,
-    "workspaces",
-    workspaceId
-  ) as DocumentReference<IWorkspace>
+/** Get a reference to a workspace document. */
+export const getWorkspaceRef = (teamId: string, workspaceId: string) =>
+  doc(firestore, "teams", teamId, "workspaces", workspaceId).withConverter(
+    workspaceConverter
+  )
 
 // ============================================================================
 // Collection References
 // ============================================================================
 
-/** Get the users collection reference */
-export const getUsersCollection = () => collection(firestore, "users")
+/** Get the users collection reference (validated on read). */
+export const getUsersCollection = () =>
+  collection(firestore, "users").withConverter(userConverter)
 
-/** Get the teams collection reference */
-export const getTeamsCollection = () => collection(firestore, "teams")
+/** Get the teams collection reference (validated on read). */
+export const getTeamsCollection = () =>
+  collection(firestore, "teams").withConverter(teamConverter)
 
-/** Get the todos collection reference */
+/**
+ * Get the todos collection reference.
+ *
+ * Unconverted: no domain schema exists for todos (the demo `taskSchema` in
+ * `src/data/schema.ts` is unrelated UI fixture data). This export has no
+ * call sites and is a candidate for removal in a later cleanup.
+ */
 export const getTodosCollection = () => collection(firestore, "todos")
 
-/** Get memberships subcollection for a team */
+/** Get memberships subcollection for a team (validated on read). */
 export const getTeamMembershipsCollection = (teamId: string) =>
-  collection(firestore, "teams", teamId, "memberships")
+  collection(firestore, "teams", teamId, "memberships").withConverter(
+    membershipConverter
+  )
 
-/** Get all memberships across all teams (collection group) */
+/**
+ * Get all memberships across all teams as a collection group
+ * (validated on read). Used for cross-team queries like "all memberships
+ * for this user".
+ */
 export const getAllMembershipsGroup = () =>
-  collectionGroup(firestore, "memberships")
+  collectionGroup(firestore, "memberships").withConverter(membershipConverter)
 
-/** Get workspaces subcollection for a team */
+/** Get workspaces subcollection for a team (validated on read). */
 export const getTeamWorkspacesCollection = (teamId: string) =>
-  collection(firestore, "teams", teamId, "workspaces")
+  collection(firestore, "teams", teamId, "workspaces").withConverter(
+    workspaceConverter
+  )
 
 // ============================================================================
 // Batch Processing

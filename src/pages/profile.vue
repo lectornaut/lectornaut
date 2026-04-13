@@ -8,9 +8,10 @@ import {
   IconUsers,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
+import { firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import { doc } from "firebase/firestore"
-import { useCurrentUser, useDocument, useFirestore } from "vuefire"
+import { useCurrentUser, useDocument } from "vuefire"
 
 definePage({
   meta: {
@@ -28,9 +29,8 @@ useHead({
 const { t } = useI18n()
 
 const user = useCurrentUser()
-const db = useFirestore()
 const userDocRef = computed(() =>
-  user.value ? doc(db, "users", user.value.uid) : null
+  user.value ? doc(firestore, "users", user.value.uid) : null
 )
 const { data: userData } = useDocument(userDocRef)
 const isPublic = computed(() => userData.value?.isPublic ?? false)
@@ -46,17 +46,17 @@ const {
 <template>
   <div class="flex flex-col items-center justify-center p-2">
     <div
-      class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+      class="aspect-video max-h-40 w-full border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
     ></div>
-    <div class="bg-background mx-auto -mt-10 rounded border p-1">
-      <Avatar class="size-20 rounded">
+    <div class="bg-background -mt-10border mx-auto p-1">
+      <Avatar class="size-20">
         <AvatarImage
-          class="size-20 rounded"
+          class="size-20"
           :src="user?.photoURL!"
           :alt="user?.displayName"
           referrerpolicy="no-referrer"
         />
-        <AvatarFallback class="size-20 rounded">
+        <AvatarFallback class="size-20">
           {{ getInitials(user?.displayName!) }}
         </AvatarFallback>
       </Avatar>
@@ -112,14 +112,13 @@ const {
       <Item v-for="membership in memberships" :key="membership.teamId" as-child>
         <RouterLink :to="`/teams/${membership.teamId}`">
           <ItemMedia>
-            <Avatar class="rounded">
+            <Avatar>
               <AvatarImage
-                class="rounded"
                 :src="membership.team.photoURL!"
                 :alt="membership.team.name"
                 referrerpolicy="no-referrer"
               />
-              <AvatarFallback class="rounded">
+              <AvatarFallback>
                 {{ getInitials(membership.team.name) }}
               </AvatarFallback>
             </Avatar>

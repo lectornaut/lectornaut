@@ -183,7 +183,7 @@ const handleSubmit = async () => {
                       }"
                     >
                       <Avatar
-                        class="size-16 rounded"
+                        class="size-16"
                         :class="{
                           'cursor-pointer':
                             (canCreateWorkspace && mode === 'create') ||
@@ -192,11 +192,11 @@ const handleSubmit = async () => {
                         @click="triggerWorkspacePhotoSelection"
                       >
                         <AvatarImage
-                          class="size-16 rounded"
+                          class="size-16"
                           :src="photoPreview!"
                           referrerpolicy="no-referrer"
                         />
-                        <AvatarFallback class="size-16 rounded">
+                        <AvatarFallback class="size-16">
                           {{ getInitials(workspaceName) }}
                         </AvatarFallback>
                       </Avatar>
@@ -228,8 +228,8 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 rounded opacity-0 ring-2 transition group-hover:opacity-100"
-                      size="icon-sm"
+                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                      size="icon"
                       @click.stop="removePhoto"
                     >
                       <IconX />
@@ -239,7 +239,7 @@ const handleSubmit = async () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p class="text-muted-foreground text-xs">
+            <p>
               {{ photoPreview ? "Click to change" : "Click to upload" }}
             </p>
           </div>

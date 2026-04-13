@@ -27,11 +27,11 @@ const accordionItems = computed(() => [
     <Drawer>
       <DrawerTrigger as-child>
         <TooltipTrigger as-child>
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon">
             <IconCircleHelp />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="top">
+        <TooltipContent>
           {{ t("landing.faq.tooltip") }}
         </TooltipContent>
       </DrawerTrigger>

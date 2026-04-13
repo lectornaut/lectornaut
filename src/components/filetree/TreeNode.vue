@@ -273,7 +273,7 @@ const showEmptyState = computed(
                 <IconMoreHorizontal />
               </SidebarMenuAction>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent>
               <template v-if="!node.isArchived">
                 <DropdownMenuItem @click="emit('create-folder', node)">
                   <IconFolderPlus />
@@ -333,17 +333,10 @@ const showEmptyState = computed(
               @select="emit('select', $event)"
             />
             <SidebarMenuItem v-if="showEmptyState">
-              <SidebarMenuButton
-                size="sm"
-                disabled
-                class="text-muted-foreground text-xs"
-              >
-                Empty
-              </SidebarMenuButton>
+              <SidebarMenuButton disabled> Empty </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem v-if="pagination.hasMore">
               <SidebarMenuButton
-                size="sm"
                 class="justify-start text-xs"
                 :disabled="pagination.loadingMore"
                 @click="loadMore"
@@ -382,7 +375,7 @@ const showEmptyState = computed(
               <IconMoreHorizontal />
             </SidebarMenuAction>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent>
             <DropdownMenuItem
               :disabled="node.isArchived"
               @click="emit('rename', node)"

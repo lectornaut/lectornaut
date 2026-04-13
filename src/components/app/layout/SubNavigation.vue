@@ -58,7 +58,7 @@ const displayBreadcrumbs = computed(() => {
           <BreadcrumbItem>
             <BreadcrumbPage as-child>
               <BreadcrumbLink as-child>
-                <Button variant="outline" size="icon-sm" as-child>
+                <Button variant="outline" size="icon" as-child>
                   <RouterLink to="/start">
                     <IconHome />
                   </RouterLink>
@@ -87,7 +87,7 @@ const displayBreadcrumbs = computed(() => {
         </BreadcrumbList>
       </Breadcrumb>
     </ContextMenuTrigger>
-    <ContextMenuContent align="start" side="bottom">
+    <ContextMenuContent>
       <ContextMenuItem @click="router.go(0)">
         <IconRefreshCcw /> Refresh
       </ContextMenuItem>

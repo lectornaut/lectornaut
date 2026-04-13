@@ -1,9 +1,9 @@
-import { checkUsernameAvailability } from "@/queries/username"
 import {
   USERNAME_MIN_LENGTH,
   usernamesMatch,
   validateUsername,
-} from "@/utils/firebase/firebase-username"
+} from "@/helpers/username"
+import { checkUsernameAvailability } from "@/queries/username"
 
 type UsernameCheckState =
   | "empty"
@@ -124,16 +124,17 @@ export const useUsernameAvailability = (
     }
   }
 
-  const debouncedEvaluate = useDebounceFn((rawUsername: string) => {
-    void evaluate(rawUsername)
-  }, options.debounceMs ?? 500)
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+  const debouncedEvaluate = (rawUsername: string) => {
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      void evaluate(rawUsername)
+    }, options.debounceMs ?? 500)
+  }
 
   const cancelDebouncedEvaluate = () => {
-    ;(
-      debouncedEvaluate as typeof debouncedEvaluate & {
-        cancel?: () => void
-      }
-    ).cancel?.()
+    clearTimeout(debounceTimer)
   }
 
   const handleInput = (rawUsername: string) => {

@@ -7,7 +7,7 @@ import { state } from "@/modules/theme"
     <img
       :src="`/assets/images/hero-image-${state}.png`"
       alt="Hero Image"
-      class="h-auto w-full rounded-lg border shadow-lg"
+      class="h-auto w-full border shadow-lg"
     />
   </div>
 </template>

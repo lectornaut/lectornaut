@@ -148,7 +148,7 @@ const getTotalPriceLabel = (
           </FieldContent>
           <FieldDescription
             v-if="hasActivePlan"
-            class="text-muted-foreground rounded-md border px-3 py-2 text-sm"
+            class="text-muted-foreground border px-3 py-2 text-sm"
           >
             {{
               t("pages.welcome.plans.activeSummary", {
@@ -168,7 +168,7 @@ const getTotalPriceLabel = (
           </FieldDescription>
           <FieldDescription
             v-else-if="!canManageBilling"
-            class="text-muted-foreground rounded-md border px-3 py-2 text-sm"
+            class="text-muted-foreground border px-3 py-2 text-sm"
           >
             {{ t("pages.welcome.plans.noPermission") }}
           </FieldDescription>
@@ -199,7 +199,7 @@ const getTotalPriceLabel = (
               v-for="plan in planOptions"
               :key="plan.id"
               orientation="horizontal"
-              class="items-start gap-3 rounded-md border px-3 py-2"
+              class="items-start gap-3 border px-3 py-2"
             >
               <RadioGroupItem
                 :id="`onboarding-plan-${plan.id}`"
@@ -258,7 +258,7 @@ const getTotalPriceLabel = (
           >
             <Field
               orientation="horizontal"
-              class="items-start gap-3 rounded-md border px-3 py-2"
+              class="items-start gap-3 border px-3 py-2"
             >
               <RadioGroupItem
                 id="onboarding-plan-interval-month"
@@ -275,7 +275,7 @@ const getTotalPriceLabel = (
             </Field>
             <Field
               orientation="horizontal"
-              class="items-start gap-3 rounded-md border px-3 py-2"
+              class="items-start gap-3 border px-3 py-2"
             >
               <RadioGroupItem id="onboarding-plan-interval-year" value="year" />
               <FieldContent class="gap-0.5">

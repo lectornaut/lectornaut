@@ -1,8 +1,7 @@
+import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import { usePaginatedLogs } from "@/composables/usePaginatedLogs"
 import { firestore } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
-import { useMembershipStore } from "@/stores/membershipStore"
-import { can, Capabilities } from "@/types/permissions"
 import {
   collection,
   limit,
@@ -14,33 +13,12 @@ import {
   type QueryDocumentSnapshot,
 } from "firebase/firestore"
 import { storeToRefs } from "pinia"
-import { computed } from "vue"
 
 const PAGE_SIZE = 50
 
 export function useAuditLogs() {
-  const authStore = useAuthStore()
-  const membershipStore = useMembershipStore()
-  const { currentTeamId, currentUser } = storeToRefs(authStore)
-  const { memberships } = storeToRefs(membershipStore)
-
-  const currentRole = computed(() => {
-    if (!currentTeamId.value || !currentUser.value) return null
-    return (
-      memberships.value.find(
-        (m) =>
-          m.teamId === currentTeamId.value &&
-          m.userId === currentUser.value?.uid
-      )?.role ?? null
-    )
-  })
-
-  const canViewLogs = computed(() =>
-    can(currentUser.value, Capabilities.READ_AUDIT_LOGS, {
-      scope: "team",
-      teamRole: currentRole.value,
-    })
-  )
+  const { currentTeamId } = storeToRefs(useAuthStore())
+  const { canViewLogs } = useCurrentTeamRole(currentTeamId)
 
   const buildQuery = (cursor?: QueryDocumentSnapshot | null): Query | null => {
     if (!currentTeamId.value) return null

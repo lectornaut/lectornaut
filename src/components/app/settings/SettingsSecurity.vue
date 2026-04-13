@@ -313,7 +313,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                 <TagsInputInput
                   placeholder="acme.com"
                   type="url"
-                  class="border-none p-0 focus:border-inherit focus:ring-0"
+                  class="border-none focus:border-inherit focus:ring-0"
                 />
                 <TooltipProvider>
                   <Tooltip>
@@ -355,25 +355,23 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   Traditional email and password sign-in.
                 </FieldDescription>
               </FieldContent>
-              <ButtonGroup>
-                <ButtonGroup v-if="updatingMethod === 'emailPassword'">
-                  <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                    <Spinner />
-                  </InputGroupButton>
-                </ButtonGroup>
-                <ButtonGroup>
-                  <Switch
-                    :model-value="loginMethods.emailPassword"
-                    :disabled="
-                      isLastNonSsoMethod('emailPassword') ||
-                      updatingMethod !== null
-                    "
-                    @update:model-value="
-                      updateMethod('emailPassword', toBoolean($event))
-                    "
-                  />
-                </ButtonGroup>
-              </ButtonGroup>
+              <InputGroupButton
+                v-if="updatingMethod === 'emailPassword'"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+              >
+                <Spinner />
+              </InputGroupButton>
+              <Switch
+                :model-value="loginMethods.emailPassword"
+                :disabled="
+                  isLastNonSsoMethod('emailPassword') || updatingMethod !== null
+                "
+                @update:model-value="
+                  updateMethod('emailPassword', toBoolean($event))
+                "
+              />
             </Field>
 
             <Field orientation="horizontal">
@@ -383,24 +381,23 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   Passwordless sign-in via email link.
                 </FieldDescription>
               </FieldContent>
-              <ButtonGroup>
-                <ButtonGroup v-if="updatingMethod === 'magicLink'">
-                  <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                    <Spinner />
-                  </InputGroupButton>
-                </ButtonGroup>
-                <ButtonGroup>
-                  <Switch
-                    :model-value="loginMethods.magicLink"
-                    :disabled="
-                      isLastNonSsoMethod('magicLink') || updatingMethod !== null
-                    "
-                    @update:model-value="
-                      updateMethod('magicLink', toBoolean($event))
-                    "
-                  />
-                </ButtonGroup>
-              </ButtonGroup>
+              <InputGroupButton
+                v-if="updatingMethod === 'magicLink'"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+              >
+                <Spinner />
+              </InputGroupButton>
+              <Switch
+                :model-value="loginMethods.magicLink"
+                :disabled="
+                  isLastNonSsoMethod('magicLink') || updatingMethod !== null
+                "
+                @update:model-value="
+                  updateMethod('magicLink', toBoolean($event))
+                "
+              />
             </Field>
 
             <Field orientation="horizontal">
@@ -410,24 +407,21 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   Sign in with Google account.
                 </FieldDescription>
               </FieldContent>
-              <ButtonGroup>
-                <ButtonGroup v-if="updatingMethod === 'google'">
-                  <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                    <Spinner />
-                  </InputGroupButton>
-                </ButtonGroup>
-                <ButtonGroup>
-                  <Switch
-                    :model-value="loginMethods.google"
-                    :disabled="
-                      isLastNonSsoMethod('google') || updatingMethod !== null
-                    "
-                    @update:model-value="
-                      updateMethod('google', toBoolean($event))
-                    "
-                  />
-                </ButtonGroup>
-              </ButtonGroup>
+              <InputGroupButton
+                v-if="updatingMethod === 'google'"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+              >
+                <Spinner />
+              </InputGroupButton>
+              <Switch
+                :model-value="loginMethods.google"
+                :disabled="
+                  isLastNonSsoMethod('google') || updatingMethod !== null
+                "
+                @update:model-value="updateMethod('google', toBoolean($event))"
+              />
             </Field>
 
             <Field orientation="horizontal">
@@ -437,24 +431,23 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   Sign in with Microsoft account.
                 </FieldDescription>
               </FieldContent>
-              <ButtonGroup>
-                <ButtonGroup v-if="updatingMethod === 'microsoft'">
-                  <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                    <Spinner />
-                  </InputGroupButton>
-                </ButtonGroup>
-                <ButtonGroup>
-                  <Switch
-                    :model-value="loginMethods.microsoft"
-                    :disabled="
-                      isLastNonSsoMethod('microsoft') || updatingMethod !== null
-                    "
-                    @update:model-value="
-                      updateMethod('microsoft', toBoolean($event))
-                    "
-                  />
-                </ButtonGroup>
-              </ButtonGroup>
+              <InputGroupButton
+                v-if="updatingMethod === 'microsoft'"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+              >
+                <Spinner />
+              </InputGroupButton>
+              <Switch
+                :model-value="loginMethods.microsoft"
+                :disabled="
+                  isLastNonSsoMethod('microsoft') || updatingMethod !== null
+                "
+                @update:model-value="
+                  updateMethod('microsoft', toBoolean($event))
+                "
+              />
             </Field>
 
             <Field orientation="horizontal">
@@ -464,24 +457,21 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   Sign in with Apple account.
                 </FieldDescription>
               </FieldContent>
-              <ButtonGroup>
-                <ButtonGroup v-if="updatingMethod === 'apple'">
-                  <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                    <Spinner />
-                  </InputGroupButton>
-                </ButtonGroup>
-                <ButtonGroup>
-                  <Switch
-                    :model-value="loginMethods.apple"
-                    :disabled="
-                      isLastNonSsoMethod('apple') || updatingMethod !== null
-                    "
-                    @update:model-value="
-                      updateMethod('apple', toBoolean($event))
-                    "
-                  />
-                </ButtonGroup>
-              </ButtonGroup>
+              <InputGroupButton
+                v-if="updatingMethod === 'apple'"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+              >
+                <Spinner />
+              </InputGroupButton>
+              <Switch
+                :model-value="loginMethods.apple"
+                :disabled="
+                  isLastNonSsoMethod('apple') || updatingMethod !== null
+                "
+                @update:model-value="updateMethod('apple', toBoolean($event))"
+              />
             </Field>
 
             <Field orientation="horizontal">
@@ -491,42 +481,34 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   Enable Single Sign-On with SAML or OIDC identity providers.
                 </FieldDescription>
               </FieldContent>
-              <ButtonGroup>
-                <ButtonGroup>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <InputGroupButton
-                          variant="ghost"
-                          size="icon-xs"
-                          :disabled="
-                            !loginMethods.sso || updatingMethod !== null
-                          "
-                          @click="ssoConfigDialogOpen = true"
-                        >
-                          <Spinner
-                            v-if="
-                              updatingMethod === 'sso' ||
-                              saving ||
-                              testing ||
-                              deleting
-                            "
-                          />
-                          <IconSettings v-else />
-                        </InputGroupButton>
-                      </TooltipTrigger>
-                      <TooltipContent>Configure SSO</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </ButtonGroup>
-                <ButtonGroup>
-                  <Switch
-                    :model-value="loginMethods.sso"
-                    :disabled="updatingMethod !== null"
-                    @update:model-value="updateMethod('sso', toBoolean($event))"
-                  />
-                </ButtonGroup>
-              </ButtonGroup>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <InputGroupButton
+                      variant="ghost"
+                      size="icon-xs"
+                      :disabled="!loginMethods.sso || updatingMethod !== null"
+                      @click="ssoConfigDialogOpen = true"
+                    >
+                      <Spinner
+                        v-if="
+                          updatingMethod === 'sso' ||
+                          saving ||
+                          testing ||
+                          deleting
+                        "
+                      />
+                      <IconSettings v-else />
+                    </InputGroupButton>
+                  </TooltipTrigger>
+                  <TooltipContent>Configure SSO</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Switch
+                :model-value="loginMethods.sso"
+                :disabled="updatingMethod !== null"
+                @update:model-value="updateMethod('sso', toBoolean($event))"
+              />
             </Field>
 
             <Alert
@@ -600,7 +582,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         <TagsInputInput
                           placeholder="acme.com"
                           type="url"
-                          class="border-none p-0 focus:border-inherit focus:ring-0"
+                          class="border-none focus:border-inherit focus:ring-0"
                         />
                         <TooltipProvider>
                           <Tooltip>
@@ -652,8 +634,10 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="guest">Guest</SelectItem>
+                          <SelectGroup>
+                            <SelectItem value="member">Member</SelectItem>
+                            <SelectItem value="guest">Guest</SelectItem>
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                     </Field>
@@ -695,9 +679,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent align="end">
-                          <SelectItem value="saml">SAML</SelectItem>
-                          <SelectItem value="oidc">OIDC</SelectItem>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="saml">SAML</SelectItem>
+                            <SelectItem value="oidc">OIDC</SelectItem>
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                     </Field>
