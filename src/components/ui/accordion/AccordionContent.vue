@@ -16,12 +16,12 @@ const delegatedProps = reactiveOmit(props, "class")
   <AccordionContent
     data-slot="accordion-content"
     v-bind="delegatedProps"
-    class="data-open:animate-accordion-down data-closed:animate-accordion-up overflow-hidden text-xs"
+    class="data-open:animate-accordion-down data-closed:animate-accordion-up overflow-hidden text-sm"
   >
     <div
       :class="
         cn(
-          '[&_a]:hover:text-foreground h-(--reka-accordion-content-height) pt-0 pb-2.5 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4',
+          '[&_a]:hover:text-foreground h-(--reka-accordion-content-height) pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4',
           props.class
         )
       "

@@ -12,7 +12,7 @@ const props = withDefaults(
     nameKey?: string
     labelKey?: string
     labelFormatter?: (d: number | Date) => string
-    payload?: Record<string, any>
+    payload?: Record<string, string | number>
     config?: ChartConfig
     class?: HTMLAttributes["class"]
     color?: string
@@ -58,7 +58,7 @@ const tooltipLabel = computed(() => {
   <div
     :class="
       cn(
-        'border-border/50 bg-background grid min-w-32 items-start gap-1.5 rounded-none border px-2.5 py-1.5 text-xs shadow-xl',
+        'border-border/50 bg-background grid min-w-32 items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl',
         props.class
       )
     "

@@ -1107,8 +1107,8 @@ const isFullscreen = useIsFullscreen()
                 {{ t("components.fileDropOverlay.buttons.save") }}
               </Button>
               <SheetContent
-                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto! gap-0 overflow-clip border"
-                :class="{ 'mt-12': isTauri && !isFullscreen }"
+                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
+                :class="{ 'mt-13': isTauri && !isFullscreen }"
               >
                 <SheetHeader>
                   <SheetTitle>

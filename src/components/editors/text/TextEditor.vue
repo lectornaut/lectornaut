@@ -1070,7 +1070,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Separator orientation="vertical" class="mx-0.5 h-6" />
+      <Separator orientation="vertical" />
 
       <Toggle
         variant="outline"
@@ -1108,7 +1108,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         <IconBraces />
       </Toggle>
 
-      <Separator orientation="vertical" class="mx-0.5 h-6" />
+      <Separator orientation="vertical" />
 
       <Toggle
         variant="outline"
@@ -1132,7 +1132,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         <IconListChecks />
       </Toggle>
 
-      <Separator orientation="vertical" class="mx-0.5 h-6" />
+      <Separator orientation="vertical" />
 
       <TextEditorColorPicker
         :colors="TEXT_COLORS"
@@ -1318,7 +1318,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         </Select>
       </div>
 
-      <Separator orientation="vertical" class="mx-0.5 h-6" />
+      <Separator orientation="vertical" />
 
       <Button
         variant="outline"

@@ -24,6 +24,7 @@ export interface NavigationUiState {
   headerIconDisplay: IconDisplay
   footerIconDisplay: IconDisplay
   sidebarOpen: boolean
+  sidebarPinned: boolean
   leftPanelCollapsed: boolean
   rightPanelCollapsed: boolean
   bottomPanelCollapsed: boolean

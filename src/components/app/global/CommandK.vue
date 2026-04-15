@@ -21,7 +21,7 @@ const filteredShortcuts = computed(() =>
 
 <template>
   <Dialog v-model:open="openCommand">
-    <DialogContent class="bg-secondary p-1.25">
+    <DialogContent class="bg-secondary p-1.75">
       <Command highlight-on-hover class="border">
         <CommandInput
           :placeholder="t('components.global.commandK.placeholder')"

@@ -152,7 +152,7 @@ const currentPlanLabel = computed(() => {
                 <IconChevronsUpDown />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right">
+            <DropdownMenuContent>
               <DropdownMenuLabel>
                 <Item size="xs" class="group w-full gap-2">
                   <ItemMedia>

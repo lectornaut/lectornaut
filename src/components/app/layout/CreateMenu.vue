@@ -25,7 +25,7 @@ const { t } = useI18n()
             </SidebarMenuBadge>
           </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="right">
+        <DropdownMenuContent>
           <DropdownMenuLabel>
             {{ t("mainSidebar.createNew") }}
           </DropdownMenuLabel>

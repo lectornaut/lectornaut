@@ -40,9 +40,9 @@ const agents = [
         </SidebarMenuItem>
       </SheetTrigger>
       <SheetContent
-        class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+var(--spacing)*2)] h-auto! gap-0 overflow-clip border"
+        class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
         side="left"
-        :class="{ 'mt-12': isTauri && !isFullscreen }"
+        :class="{ 'mt-13': isTauri && !isFullscreen }"
       >
         <SheetHeader>
           <SheetTitle>{{ agent.name }}</SheetTitle>

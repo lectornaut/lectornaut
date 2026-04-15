@@ -14,7 +14,7 @@ const props = defineProps<{
     :data-content="!!$slots.default"
     :class="
       cn(
-        'relative -my-2 h-5 text-xs group-data-[variant=outline]/field-group:-mb-2',
+        'relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2',
         props.class
       )
     "

@@ -9,7 +9,7 @@ const { t } = useI18n()
 const { isMobile } = useSidebar()
 const isFullscreen = useIsFullscreen()
 const layoutStore = useLayoutStore()
-const { headerIconDisplay } = storeToRefs(layoutStore)
+const { headerIconDisplay, sidebarPinned } = storeToRefs(layoutStore)
 
 watch(isMobile, (val) => {
   if (val) {
@@ -35,7 +35,7 @@ watch(isMobile, (val) => {
             :class="{ 'pl-20': isTauri && !isFullscreen }"
           >
             <Logo class="size-8 shrink-0 p-2" />
-            <SidebarTrigger v-if="isMobile" class="size-8" />
+            <SidebarTrigger v-if="isMobile || !sidebarPinned" class="size-9" />
             <Separator orientation="vertical" class="my-2" />
             <Notifications :icon-display="headerIconDisplay" />
           </div>

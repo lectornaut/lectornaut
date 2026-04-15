@@ -32,7 +32,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     "
   >
     <template v-if="props.withHandle">
-      <div class="bg-border z-10 flex h-6 w-1 shrink-0 rounded-none">
+      <div class="bg-border z-10 flex h-6 w-1 shrink-0 rounded-lg">
         <slot />
       </div>
     </template>

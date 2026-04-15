@@ -223,7 +223,7 @@ const startOnboarding = () => {
               {{ $t("components.support.help") }}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="right">
+          <DropdownMenuContent>
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconMessageCircle />

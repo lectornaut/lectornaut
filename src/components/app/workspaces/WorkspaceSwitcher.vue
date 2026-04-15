@@ -75,7 +75,7 @@ onUnmounted(() => {
             <TooltipContent>
               {{ t("components.workspaceSwitcher.tooltip") }}
             </TooltipContent>
-            <DropdownMenuContent align="center">
+            <DropdownMenuContent>
               <DropdownMenuGroup
                 v-if="isLoading"
                 class="flex justify-center py-2"

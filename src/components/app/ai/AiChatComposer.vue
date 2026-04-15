@@ -43,7 +43,7 @@ const inputPlaceholder = computed(
       <InputGroupText class="ml-auto text-xs">
         {{ usageLabel }}
       </InputGroupText>
-      <Separator orientation="vertical" />
+      <Separator orientation="vertical" class="my-2" />
       <InputGroupButton
         variant="default"
         size="icon-xs"

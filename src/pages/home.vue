@@ -568,7 +568,7 @@ const expandedCard = ref<number | null>(null)
                       <span class="sr-only">{{ t("actions.more") }}</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="right">
+                  <DropdownMenuContent>
                     <DropdownMenuItem>
                       <IconStarOff class="text-muted-foreground" />
                       <span>{{

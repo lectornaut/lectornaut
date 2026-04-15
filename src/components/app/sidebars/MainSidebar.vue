@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconChevronRight, IconGift } from "@/data/icons"
+import { IconChevronRight, IconGift, IconPin } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
+import { useLayoutStore } from "@/stores/layoutStore"
 import { storeToRefs } from "pinia"
 
 const { open, setOpen, isMobile, setOpenMobile } = useSidebar()
 const authStore = useAuthStore()
+const layoutStore = useLayoutStore()
 const { onboarding } = storeToRefs(authStore)
+const { sidebarPinned } = storeToRefs(layoutStore)
 
 const iconDisplay = computed({
   get: () => (open.value ? "text" : "icon"),
@@ -25,12 +28,13 @@ function closeSidebarOnMobile() {
   <ContextMenu>
     <ContextMenuTrigger>
       <Sidebar
-        collapsible="icon"
-        class="shadow-muted-foreground/5 inset-y-12 h-[calc(100vh-var(--spacing-12)-var(--spacing-12))] overflow-clip border border-l-0"
+        :collapsible="sidebarPinned ? 'icon' : 'offcanvas'"
+        :variant="sidebarPinned ? 'floating' : 'inset'"
+        class="shadow-muted-foreground/5 inset-y-13 h-[calc(100vh-var(--spacing-13)-var(--spacing-13))] p-0 **:data-[slot='sidebar-inner']:rounded-l-none"
       >
         <SidebarHeader
           data-tauri-drag-region
-          :class="{ 'mt-12': isTauri && isMobile && !isFullscreen }"
+          :class="{ 'mt-13': isTauri && isMobile && !isFullscreen }"
         >
           <TeamSwitcher />
         </SidebarHeader>
@@ -66,7 +70,7 @@ function closeSidebarOnMobile() {
           <CreateMenu />
           <AccountMenu />
         </SidebarFooter>
-        <SidebarRail />
+        <!-- <SidebarRail /> -->
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent>
@@ -77,6 +81,11 @@ function closeSidebarOnMobile() {
           Icons and text
         </ContextMenuRadioItem>
       </ContextMenuRadioGroup>
+      <ContextMenuSeparator />
+      <ContextMenuCheckboxItem v-model="sidebarPinned">
+        <IconPin />
+        Pin sidebar
+      </ContextMenuCheckboxItem>
     </ContextMenuContent>
   </ContextMenu>
 </template>

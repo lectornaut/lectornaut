@@ -27,9 +27,9 @@ const { filterState } = useCommand()
 </script>
 
 <template>
-  <div data-slot="command-input-wrapper" class="border-b pb-0">
+  <div data-slot="command-input-wrapper" class="p-1 pb-0">
     <InputGroup
-      class="bg-input/30 border-input/30 h-8 border-none shadow-none! *:data-[slot=input-group-addon]:pl-2!"
+      class="bg-input/30 border-input/30 h-8! rounded-lg! shadow-none! *:data-[slot=input-group-addon]:pl-2!"
     >
       <ListboxFilter
         v-bind="{ ...forwardedProps, ...$attrs }"
@@ -38,7 +38,7 @@ const { filterState } = useCommand()
         auto-focus
         :class="
           cn(
-            'w-full text-xs outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
+            'w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
             props.class
           )
         "

@@ -411,7 +411,7 @@ const closeTab = (id: string) => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <ResizableHandle
-                        class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-10 h-0! w-auto! transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+                        class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-10 h-0! w-full! transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                         :class="{
                           'data-resize-handle:after:bg-muted':
                             !bottomPanel?.isCollapsed && !topPanel?.isCollapsed,
