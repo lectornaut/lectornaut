@@ -3,6 +3,8 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+#[cfg(target_os = "macos")]
+use tauri::menu::{AboutMetadata, Submenu};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use window_vibrancy::*;
 
@@ -42,10 +44,107 @@ fn create_tray_menu<R: tauri::Runtime>(
     }
 }
 
+/// Build the macOS application menu bar.
+///
+/// This replaces Tauri's default menu (see [`tauri::menu::Menu::default`]).
+/// The only meaningful difference is that the Quit item is a plain
+/// `MenuItem` bound to `CmdOrCtrl+Q` instead of `PredefinedMenuItem::quit`.
+///
+/// Why: `PredefinedMenuItem::quit` on macOS is wired to
+/// `NSApplication::terminate:`, which sends `windowShouldClose:` to every
+/// window. tao's window delegate always returns `NO` from that selector
+/// (`tao::platform_impl::macos::window_delegate::window_should_close`) and
+/// just emits `WindowEvent::CloseRequested`. Because our main window's
+/// `CloseRequested` handler hides the window to the tray, Cmd+Q ends up
+/// hiding the window and AppKit then cancels the termination — the app
+/// never quits. By giving Cmd+Q its own custom `MenuItem`, the keypress
+/// becomes a regular `MenuEvent` with id `"quit"` that our existing tray
+/// `on_menu_event` handler already routes to `app.exit(0)`. That call goes
+/// through `Message::RequestExit` → `RunEvent::ExitRequested` →
+/// `control_flow = Exit` and exits the event loop without ever touching
+/// `windowShouldClose:`.
+#[cfg(target_os = "macos")]
+fn create_app_menu<R: tauri::Runtime>(
+    handle: &tauri::AppHandle<R>,
+) -> tauri::Result<Menu<R>> {
+    let pkg_info = handle.package_info();
+    let config = handle.config();
+    let about_metadata = AboutMetadata {
+        name: Some(pkg_info.name.clone()),
+        version: Some(pkg_info.version.to_string()),
+        copyright: config.bundle.copyright.clone(),
+        authors: config.bundle.publisher.clone().map(|p| vec![p]),
+        ..Default::default()
+    };
+
+    let quit_item = MenuItem::with_id(
+        handle,
+        "quit",
+        format!("Quit {}", pkg_info.name),
+        true,
+        Some("CmdOrCtrl+Q"),
+    )?;
+
+    let app_submenu = Submenu::with_items(
+        handle,
+        pkg_info.name.clone(),
+        true,
+        &[
+            &PredefinedMenuItem::about(handle, None, Some(about_metadata))?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::services(handle, None)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::hide(handle, None)?,
+            &PredefinedMenuItem::hide_others(handle, None)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &quit_item,
+        ],
+    )?;
+
+    let edit_submenu = Submenu::with_items(
+        handle,
+        "Edit",
+        true,
+        &[
+            &PredefinedMenuItem::undo(handle, None)?,
+            &PredefinedMenuItem::redo(handle, None)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::cut(handle, None)?,
+            &PredefinedMenuItem::copy(handle, None)?,
+            &PredefinedMenuItem::paste(handle, None)?,
+            &PredefinedMenuItem::select_all(handle, None)?,
+        ],
+    )?;
+
+    let view_submenu = Submenu::with_items(
+        handle,
+        "View",
+        true,
+        &[&PredefinedMenuItem::fullscreen(handle, None)?],
+    )?;
+
+    let window_submenu = Submenu::with_items(
+        handle,
+        "Window",
+        true,
+        &[
+            &PredefinedMenuItem::minimize(handle, None)?,
+            &PredefinedMenuItem::maximize(handle, None)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::close_window(handle, None)?,
+        ],
+    )?;
+
+    Menu::with_items(
+        handle,
+        &[&app_submenu, &edit_submenu, &view_submenu, &window_submenu],
+    )
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let ctx = tauri::generate_context!();
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_process::init())
@@ -167,8 +266,8 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| match event {
-            tauri::WindowEvent::CloseRequested { api, .. } => {
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == file_capture::FILE_CAPTURE_WINDOW_LABEL {
                     api.prevent_close();
                     let _ = file_capture::dismiss_file_capture_window(window.app_handle().clone());
@@ -178,6 +277,8 @@ pub fn run() {
                 if window.label() != "main" {
                     return;
                 }
+
+                // Hide the main window to the tray instead of closing it.
                 api.prevent_close();
                 window.hide().unwrap();
                 if let Some(tray) = window.app_handle().tray_by_id("main") {
@@ -185,8 +286,14 @@ pub fn run() {
                         create_tray_menu(window.app_handle(), true).map(|m| tray.set_menu(Some(m)));
                 }
             }
-            _ => {}
-        })
+        });
+
+    // Custom macOS application menu so Cmd+Q routes through a regular menu
+    // event instead of `NSApplication::terminate:`.
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(create_app_menu);
+
+    builder
         .build(ctx)
         .expect("error while building tauri application")
         .run(|_app_handle, _event| {

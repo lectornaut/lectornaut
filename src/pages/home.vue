@@ -773,7 +773,7 @@ const expandedCard = ref<number | null>(null)
             <p >{{ group.description }}</p>
           </div> -->
           <div
-            class="bg-secondary grid grid-cols-1 gap-2 p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
+            class="bg-secondary grid grid-cols-1 gap-2 rounded-xl p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
           >
             <Card
               v-for="card in group.cards"

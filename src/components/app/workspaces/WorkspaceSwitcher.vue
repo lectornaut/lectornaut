@@ -39,18 +39,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ContextMenu>
-    <ContextMenuTrigger id="tour-workspace-switcher">
-      <TooltipProvider>
-        <Tooltip>
+  <SidebarMenu>
+    <SidebarMenuItem id="tour-workspace-switcher">
+      <ContextMenu>
+        <ContextMenuTrigger>
           <DropdownMenu v-model:open="isWorkspaceSwitcherOpen">
-            <TooltipTrigger as-child>
-              <DropdownMenuTrigger as-child>
-                <Button
-                  variant="ghost"
-                  class="data-[state=open]:bg-accent"
-                  :disabled="!currentTeam"
-                >
+            <DropdownMenuTrigger as-child>
+              <SidebarMenuButton
+                class="data-[state=open]:bg-accent"
+                :tooltip="t('components.workspaceSwitcher.tooltip')"
+                :disabled="!currentTeam"
+              >
+                <div class="flex grow items-center gap-2">
                   <template v-if="currentWorkspace">
                     <Avatar class="size-4">
                       <AvatarImage
@@ -68,13 +68,10 @@ onUnmounted(() => {
                   <template v-else>
                     {{ t("components.workspaceSwitcher.selectWorkspace") }}
                   </template>
-                  <IconChevronDown />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              {{ t("components.workspaceSwitcher.tooltip") }}
-            </TooltipContent>
+                </div>
+                <IconChevronDown />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuGroup
                 v-if="isLoading"
@@ -138,19 +135,19 @@ onUnmounted(() => {
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-        </Tooltip>
-      </TooltipProvider>
-    </ContextMenuTrigger>
-    <ContextMenuContent>
-      <ContextMenuGroup>
-        <ContextMenuItem
-          @click="emitter.emit('Dialog.Settings.Open', 'workspaces')"
-        >
-          <IconBlocks />
-          {{ t("components.workspaceSwitcher.menu.settings") }}
-        </ContextMenuItem>
-      </ContextMenuGroup>
-    </ContextMenuContent>
-  </ContextMenu>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuGroup>
+            <ContextMenuItem
+              @click="emitter.emit('Dialog.Settings.Open', 'workspaces')"
+            >
+              <IconBlocks />
+              {{ t("components.workspaceSwitcher.menu.settings") }}
+            </ContextMenuItem>
+          </ContextMenuGroup>
+        </ContextMenuContent>
+      </ContextMenu>
+    </SidebarMenuItem>
+  </SidebarMenu>
   <WorkspaceDialog v-model:open="isCreatingWorkspaceDialogOpen" mode="create" />
 </template>

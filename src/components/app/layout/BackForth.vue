@@ -16,7 +16,6 @@ const { t } = useI18n()
         </TooltipTrigger>
         <TooltipContent> {{ t("tabs.goBack") }} </TooltipContent>
       </Tooltip>
-      <ButtonGroupSeparator />
       <Tooltip>
         <TooltipTrigger as-child>
           <Button variant="secondary" size="icon" @click="router.go(1)">

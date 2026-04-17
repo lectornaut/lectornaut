@@ -4,10 +4,6 @@ import { IconAiFill, IconPin, IconPinOff } from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 
-defineProps<{
-  iconDisplay?: "icon" | "text"
-}>()
-
 const isFullscreen = useIsFullscreen()
 
 const isDocked = ref(false)
@@ -31,12 +27,9 @@ const { t } = useI18n()
               id="tour-ai-assistant"
               variant="ghost"
               class="shadow-none"
-              :size="iconDisplay === 'text' ? 'sm' : 'icon'"
+              size="icon"
             >
               <IconAiFill />
-              <template v-if="iconDisplay === 'text'">
-                {{ t("pages.start.askAi") }}
-              </template>
             </Button>
           </TooltipTrigger>
           <TooltipContent class="flex items-center gap-2 px-2">
@@ -55,7 +48,7 @@ const { t } = useI18n()
           <AiChatShell :placeholder="t('ai.placeholder')" />
         </Teleport>
         <SheetContent
-          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
+          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
           :class="{ 'mt-13': isTauri && !isFullscreen }"
         >
           <SheetHeader>

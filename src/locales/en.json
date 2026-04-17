@@ -729,11 +729,6 @@
     "reopenLast": "Reopen last tab",
     "options": "Tab options"
   },
-  "titlebar": {
-    "appearance": "Appearance",
-    "iconsOnly": "Icons only",
-    "iconsAndText": "Icons and text"
-  },
   "landing": {
     "cta": {
       "enter": "Enter",
@@ -2216,6 +2211,10 @@
         "sidebar": "Sidebar",
         "sync": "Sync",
         "panel": "Panel",
+        "panels": "Panels",
+        "leftPanel": "Left panel",
+        "bottomPanel": "Bottom panel",
+        "rightPanel": "Right panel",
         "dock": "Dock",
         "popOut": "Pop out",
         "appearance": "Appearance",

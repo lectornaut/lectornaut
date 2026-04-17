@@ -1026,7 +1026,7 @@ const isFullscreen = useIsFullscreen()
     >
       <div
         data-tauri-drag-region
-        :class="{ 'pl-20': isTauri && !isFullscreen }"
+        :class="{ 'pl-22': isTauri && !isFullscreen }"
         class="flex items-start justify-between gap-2"
       >
         <TooltipProvider>
@@ -1107,7 +1107,7 @@ const isFullscreen = useIsFullscreen()
                 {{ t("components.fileDropOverlay.buttons.save") }}
               </Button>
               <SheetContent
-                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
+                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
                 :class="{ 'mt-13': isTauri && !isFullscreen }"
               >
                 <SheetHeader>

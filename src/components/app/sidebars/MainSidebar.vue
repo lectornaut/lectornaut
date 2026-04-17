@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconChevronRight, IconGift, IconPin } from "@/data/icons"
+import { IconChevronRight, IconGift } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { storeToRefs } from "pinia"
@@ -30,13 +30,20 @@ function closeSidebarOnMobile() {
       <Sidebar
         :collapsible="sidebarPinned ? 'icon' : 'offcanvas'"
         :variant="sidebarPinned ? 'floating' : 'inset'"
-        class="shadow-muted-foreground/5 inset-y-13 h-[calc(100vh-var(--spacing-13)-var(--spacing-13))] p-0 **:data-[slot='sidebar-inner']:rounded-l-none"
+        class="shadow-muted-foreground/5 p-0 **:data-[slot='sidebar-inner']:rounded-none"
       >
         <SidebarHeader
           data-tauri-drag-region
           :class="{ 'mt-13': isTauri && isMobile && !isFullscreen }"
         >
+          <div class="ml-auto flex gap-2">
+            <!-- <Logo class="size-8 shrink-0 p-2" /> -->
+            <SyncIndicator />
+            <CommandKTrigger />
+            <Notifications />
+          </div>
           <TeamSwitcher />
+          <WorkspaceSwitcher />
         </SidebarHeader>
         <SidebarContent @click.capture="closeSidebarOnMobile">
           <OverlayScrollbarsWrapper data-tauri-drag-region>
@@ -70,7 +77,7 @@ function closeSidebarOnMobile() {
           <CreateMenu />
           <AccountMenu />
         </SidebarFooter>
-        <!-- <SidebarRail /> -->
+        <SidebarRail />
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent>
@@ -83,7 +90,6 @@ function closeSidebarOnMobile() {
       </ContextMenuRadioGroup>
       <ContextMenuSeparator />
       <ContextMenuCheckboxItem v-model="sidebarPinned">
-        <IconPin />
         Pin sidebar
       </ContextMenuCheckboxItem>
     </ContextMenuContent>

@@ -22,10 +22,6 @@ type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
   getScrollElement: () => HTMLElement | undefined
 }>
 
-defineProps<{
-  iconDisplay?: "icon" | "text"
-}>()
-
 const {
   notifications,
   isLoading,
@@ -89,7 +85,7 @@ useInfiniteScroll(
       <Button
         id="tour-tasks-notifications"
         variant="ghost"
-        :size="iconDisplay === 'text' || unreadCount > 0 ? 'default' : 'icon'"
+        :size="unreadCount > 0 ? 'default' : 'icon'"
       >
         <IconBell />
         <Badge
@@ -99,7 +95,6 @@ useInfiniteScroll(
         >
           {{ unreadCount }}
         </Badge>
-        <template v-if="iconDisplay === 'text'"> Notifications </template>
       </Button>
     </PopoverTrigger>
     <PopoverContent class="mx-2 w-auto p-2">

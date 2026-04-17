@@ -71,9 +71,9 @@ const currentPlanLabel = computed(() => {
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton
-                :tooltip="t('components.teamSwitcher.switchTeam')"
-                size="lg"
                 class="data-[state=open]:bg-accent"
+                size="lg"
+                :tooltip="t('components.teamSwitcher.switchTeam')"
               >
                 <Avatar>
                   <AvatarImage

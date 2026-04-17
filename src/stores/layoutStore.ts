@@ -14,7 +14,6 @@ import { firestore } from "@/modules/firebase"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import type {
-  IconDisplay,
   LayoutNavigationDoc,
   LayoutTab,
   LayoutTabIndicator,
@@ -40,9 +39,6 @@ export type NavItem = (typeof defaultMenu)[number]
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
-
-const isIconDisplay = (value: unknown): value is IconDisplay =>
-  value === "icon" || value === "text"
 
 const toLayoutTabsDoc = (value: unknown): LayoutTabsDoc | null =>
   isRecord(value) ? (value as LayoutTabsDoc) : null
@@ -85,14 +81,6 @@ export const useLayoutStore = defineStore("layout", () => {
   // State
   // ============================================================================
 
-  const headerIconDisplay = useStorage<IconDisplay>(
-    "layout.header.iconDisplay",
-    "icon"
-  )
-  const footerIconDisplay = useStorage<IconDisplay>(
-    "layout.footer.iconDisplay",
-    "icon"
-  )
   const sidebarOpen = useStorage<boolean>("layout.sidebar.open", true)
   const sidebarPinned = useStorage<boolean>("layout.sidebar.pinned", true)
   const leftPanelCollapsed = useStorage<boolean>(
@@ -140,8 +128,6 @@ export const useLayoutStore = defineStore("layout", () => {
   const hasAnyTabPending = computed(() => pendingTabIds.value.size > 0)
 
   const getNavigationUiState = (): NavigationUiState => ({
-    headerIconDisplay: headerIconDisplay.value,
-    footerIconDisplay: footerIconDisplay.value,
     sidebarOpen: sidebarOpen.value,
     sidebarPinned: sidebarPinned.value,
     leftPanelCollapsed: leftPanelCollapsed.value,
@@ -150,10 +136,6 @@ export const useLayoutStore = defineStore("layout", () => {
   })
 
   const isNavigationUiSnapshotInSync = (ui: Partial<NavigationUiState>) =>
-    isIconDisplay(ui.headerIconDisplay) &&
-    ui.headerIconDisplay === headerIconDisplay.value &&
-    isIconDisplay(ui.footerIconDisplay) &&
-    ui.footerIconDisplay === footerIconDisplay.value &&
     typeof ui.sidebarOpen === "boolean" &&
     ui.sidebarOpen === sidebarOpen.value &&
     typeof ui.sidebarPinned === "boolean" &&
@@ -269,8 +251,6 @@ export const useLayoutStore = defineStore("layout", () => {
   // Mark UI prefs as dirty immediately when changed locally.
   watch(
     [
-      headerIconDisplay,
-      footerIconDisplay,
       sidebarOpen,
       sidebarPinned,
       leftPanelCollapsed,
@@ -304,18 +284,6 @@ export const useLayoutStore = defineStore("layout", () => {
       if (ui && !pendingNavigationUi.value && !navigationUiDirty.value) {
         isApplyingNavigationUiSnapshot.value = true
         try {
-          if (
-            isIconDisplay(ui.headerIconDisplay) &&
-            ui.headerIconDisplay !== headerIconDisplay.value
-          ) {
-            headerIconDisplay.value = ui.headerIconDisplay
-          }
-          if (
-            isIconDisplay(ui.footerIconDisplay) &&
-            ui.footerIconDisplay !== footerIconDisplay.value
-          ) {
-            footerIconDisplay.value = ui.footerIconDisplay
-          }
           if (
             typeof ui.sidebarOpen === "boolean" &&
             ui.sidebarOpen !== sidebarOpen.value
@@ -556,8 +524,6 @@ export const useLayoutStore = defineStore("layout", () => {
   // Persist UI Layout State (debounced)
   watchDebounced(
     [
-      headerIconDisplay,
-      footerIconDisplay,
       sidebarOpen,
       sidebarPinned,
       leftPanelCollapsed,
@@ -1105,8 +1071,6 @@ export const useLayoutStore = defineStore("layout", () => {
     recentlyClosed,
     tabIndicators,
     activeNavItems,
-    headerIconDisplay,
-    footerIconDisplay,
     sidebarOpen,
     sidebarPinned,
     leftPanelCollapsed,

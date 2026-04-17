@@ -3,10 +3,6 @@ import { IconSearch } from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 
-defineProps<{
-  iconDisplay?: "icon" | "text"
-}>()
-
 const { t } = useI18n()
 
 const openCommandDialog = () => {
@@ -21,13 +17,10 @@ const openCommandDialog = () => {
         <Button
           id="tour-search-bar"
           variant="ghost"
-          :size="iconDisplay === 'text' ? 'sm' : 'icon'"
+          size="icon"
           @click="openCommandDialog"
         >
           <IconSearch />
-          <template v-if="iconDisplay === 'text'">
-            {{ t("components.global.shortcuts.search") }}
-          </template>
         </Button>
       </TooltipTrigger>
       <TooltipContent class="flex items-center gap-2 pr-2">

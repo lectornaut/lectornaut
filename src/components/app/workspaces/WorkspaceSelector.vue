@@ -56,7 +56,7 @@ const deselectTeam = async () => {
       </EmptyDescription>
     </EmptyHeader>
     <EmptyContent
-      class="bg-background flex max-w-xs flex-col items-stretch gap-2 border p-2"
+      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-xl border p-2"
     >
       <div v-if="isLoading" class="flex justify-center p-4">
         <Spinner />

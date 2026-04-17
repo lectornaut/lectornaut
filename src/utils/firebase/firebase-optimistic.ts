@@ -220,7 +220,16 @@ const removePendingForHandle = (
   counts.set(id, currentCount - 1)
 }
 
-const DEFAULT_PENDING_RELEASE_DELAY_MS = 900
+/**
+ * Brief hold applied after a mutation's server ack before we clear the
+ * pending-id entry. Absorbs the ~1-frame gap between the Firestore ack and
+ * the live onSnapshot tick so the UI doesn't flicker between optimistic and
+ * server state. 900ms was the prior default; aggressive testing showed most
+ * snapshot lag resolves in <100ms when the sync engine's canonical wait is
+ * non-blocking, so 120ms is a comfortable safety margin without feeling
+ * sluggish.
+ */
+const DEFAULT_PENDING_RELEASE_DELAY_MS = 120
 
 export function applyLocalMutation(
   options: ApplyLocalMutationOptions
@@ -476,7 +485,7 @@ export interface OptimisticOptions {
   trackSync?: boolean
   /**
    * Keep pending IDs alive briefly after mutation success to absorb Firestore
-   * snapshot lag and prevent UI flicker (default: 900ms).
+   * snapshot lag and prevent UI flicker (default: 120ms).
    */
   pendingReleaseDelayMs?: number
 }

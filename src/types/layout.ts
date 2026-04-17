@@ -1,4 +1,3 @@
-export type IconDisplay = "icon" | "text"
 export type TabIndicatorTone =
   | "neutral"
   | "info"
@@ -21,8 +20,6 @@ export interface LayoutTabIndicator {
 }
 
 export interface NavigationUiState {
-  headerIconDisplay: IconDisplay
-  footerIconDisplay: IconDisplay
   sidebarOpen: boolean
   sidebarPinned: boolean
   leftPanelCollapsed: boolean

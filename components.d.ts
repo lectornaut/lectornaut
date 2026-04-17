@@ -272,6 +272,7 @@ declare module 'vue' {
     OverlayScrollbarsWrapper: typeof import('./src/components/smart/OverlayScrollbarsWrapper.vue')['default']
     Overview: typeof import('./src/components/landing/Overview.vue')['default']
     PageHeader: typeof import('./src/components/layout/PageHeader.vue')['default']
+    PanelsControl: typeof import('./src/components/app/layout/PanelsControl.vue')['default']
     Popover: typeof import('./src/components/ui/popover/Popover.vue')['default']
     PopoverAnchor: typeof import('./src/components/ui/popover/PopoverAnchor.vue')['default']
     PopoverContent: typeof import('./src/components/ui/popover/PopoverContent.vue')['default']

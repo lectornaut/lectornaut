@@ -4,11 +4,37 @@ import type { Ref, WatchSource } from "vue"
 import type { ZodType } from "zod"
 
 const CACHE_PREFIX = "lectornaut.cache."
+/**
+ * Default debounce for localStorage persist writes. 1000ms caused stale reads
+ * on rapid team switches followed by tab refresh. 250ms keeps writes cheap
+ * while ensuring the cache reflects recent state even if the tab is closed
+ * mid-session. A `pagehide` flush handles the last-pending write regardless.
+ */
+const DEFAULT_PERSIST_DEBOUNCE_MS = 250
+let unloadListenersAttached = false
+const pendingFlushCallbacks = new Set<() => void>()
+
+const ensureUnloadListener = () => {
+  if (unloadListenersAttached) return
+  if (typeof window === "undefined") return
+  unloadListenersAttached = true
+  const flushAll = () => {
+    pendingFlushCallbacks.forEach((flush) => {
+      try {
+        flush()
+      } catch {
+        /* ignore */
+      }
+    })
+  }
+  window.addEventListener("pagehide", flushAll)
+  window.addEventListener("beforeunload", flushAll)
+}
 
 interface UseLocalHydrationOptions<T> {
   /** Guard function; only hydrate if returns true (default: target is null). */
   shouldHydrate?: () => boolean
-  /** Debounce for persist writes (default 1000ms). */
+  /** Debounce for persist writes (default 250ms). */
   debounce?: number
   /**
    * Optional Zod schema that validates the cached entry on hydrate. Corrupt
@@ -45,7 +71,7 @@ export function useLocalHydration<T>(
   const storageKey = CACHE_PREFIX + key
   const {
     shouldHydrate = () => !target.value,
-    debounce = 1000,
+    debounce = DEFAULT_PERSIST_DEBOUNCE_MS,
     schema,
     context,
   } = options
@@ -83,6 +109,22 @@ export function useLocalHydration<T>(
   // Persist: watch source (or target ref) and write back on changes (debounced).
   // When source is the target ref itself, there's no forward-reference risk.
   const watchSource = source ?? target
+
+  // Track the latest observed value (undebounced) so the unload flush always
+  // writes the most recent state, even if the debounced callback has not
+  // fired yet. The debounced watcher drives the common-case write.
+  let latestValue: T | null | undefined
+  let latestIsDirty = false
+
+  watch(
+    watchSource,
+    (value) => {
+      latestValue = value
+      latestIsDirty = true
+    },
+    { deep: true, immediate: false }
+  )
+
   watchDebounced(
     watchSource,
     (value) => {
@@ -92,12 +134,32 @@ export function useLocalHydration<T>(
         } else {
           localStorage.removeItem(storageKey)
         }
+        latestIsDirty = false
       } catch {
         // localStorage full or unavailable — ignore
       }
     },
     { debounce, deep: true }
   )
+
+  const flushToStorage = () => {
+    if (!latestIsDirty) return
+    latestIsDirty = false
+    try {
+      if (latestValue != null) {
+        localStorage.setItem(storageKey, JSON.stringify(latestValue))
+      } else {
+        localStorage.removeItem(storageKey)
+      }
+    } catch {
+      // localStorage full or unavailable — ignore
+    }
+  }
+
+  // Register an unload flush so the last-pending write lands even if the
+  // user closes or navigates the tab before the debounce fires.
+  pendingFlushCallbacks.add(flushToStorage)
+  ensureUnloadListener()
 }
 
 /**

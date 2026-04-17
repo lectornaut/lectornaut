@@ -42,8 +42,17 @@ const CLIENT_ID_STORAGE_KEY = "lectornaut.sync.client.v1"
 const OUTBOX_SETTLED_RETENTION_MS = 60 * 60 * 1000
 const OUTBOX_MAX_PENDING_PER_USER = 2_000
 const RETRY_BASE_DELAY_MS = 1_000
-const CANONICAL_WAIT_TIMEOUT_MS = 6_000
-const SYNC_BATCH_WINDOW_MS = 50
+// Canonical wait kept as a safety net for stragglers — but never blocks the
+// caller promise. See `settleAckAfterCanonical` for the non-blocking semantics.
+const CANONICAL_WAIT_TIMEOUT_MS = 1_500
+// Coalescing window — kept tight so the first operation fires without lag.
+// Subsequent operations enqueued inside the window still coalesce via
+// `tryCoalesceOperation` (path-indexed, O(1)).
+const SYNC_BATCH_WINDOW_MS = 25
+// Debounce window for localStorage writes. Batching N updates into one JSON
+// serialize + write avoids hammering the main thread during bursts of
+// optimistic updates.
+const OUTBOX_PERSIST_DEBOUNCE_MS = 16
 
 /**
  * Re-export so existing call sites that import these types from this file
@@ -191,9 +200,41 @@ const readOutbox = (): SyncOutboxOperation[] => {
   return valid.sort(byCreatedOrder)
 }
 
+let pendingPersistTimer: ReturnType<typeof setTimeout> | null = null
+let pendingPersistSnapshot: SyncOutboxOperation[] | null = null
+
+const flushOutboxPersist = () => {
+  if (pendingPersistTimer) {
+    clearTimeout(pendingPersistTimer)
+    pendingPersistTimer = null
+  }
+  const snapshot = pendingPersistSnapshot
+  if (!snapshot || !hasWindow()) {
+    pendingPersistSnapshot = null
+    return
+  }
+  pendingPersistSnapshot = null
+  try {
+    window.localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(snapshot))
+  } catch (error) {
+    console.warn("[syncEngine] Failed to persist outbox", error)
+  }
+}
+
+/**
+ * Debounced localStorage write. Bursts of optimistic updates (e.g. rapid
+ * keypresses, batch operations) all share a single serialize + write pass.
+ * A `beforeunload`/`pagehide` listener ensures the last write is flushed
+ * synchronously even if the user navigates away mid-batch.
+ */
 const persistOutbox = (operations: SyncOutboxOperation[]) => {
   if (!hasWindow()) return
-  window.localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(operations))
+  pendingPersistSnapshot = operations
+  if (pendingPersistTimer) return
+  pendingPersistTimer = setTimeout(
+    flushOutboxPersist,
+    OUTBOX_PERSIST_DEBOUNCE_MS
+  )
 }
 
 const createId = () => generateId()
@@ -496,6 +537,7 @@ const updateOutbox = (
   const next = updater(outbox.value)
   if (next === outbox.value) return
   outbox.value = next
+  pathIndexDirty = true
   persistOutbox(next)
 }
 
@@ -534,40 +576,68 @@ const canCoalesceOperation = (
   return true
 }
 
+/**
+ * Index of pending operations by `userId:targetPath` → operation id.
+ * Lets `tryCoalesceOperation` locate a coalescing candidate in O(1) instead
+ * of scanning the whole outbox. Rebuilt lazily from the outbox and kept in
+ * sync via `updateOutbox`.
+ */
+const pendingPathIndex = new Map<string, string>()
+let pathIndexDirty = true
+
+const pathIndexKey = (userId: string, targetPath: string) =>
+  `${userId}\u0001${targetPath}`
+
+const rebuildPathIndex = () => {
+  pendingPathIndex.clear()
+  for (const op of outbox.value) {
+    if (op.status !== "pending" || op.attempts > 0) continue
+    pendingPathIndex.set(pathIndexKey(op.userId, op.targetPath), op.id)
+  }
+  pathIndexDirty = false
+}
+
+const ensurePathIndex = () => {
+  if (pathIndexDirty) rebuildPathIndex()
+}
+
 const tryCoalesceOperation = (
   incoming: SyncOutboxOperation
 ): { operationId: string; coalesced: boolean } | null => {
+  // Coalescing applies only to `set`/`update` (not `delete`); bail early so
+  // we don't pay the index lookup for deletes.
+  if (incoming.type === "delete") return null
+
+  ensurePathIndex()
+  const candidateId = pendingPathIndex.get(
+    pathIndexKey(incoming.userId, incoming.targetPath)
+  )
+  if (!candidateId) return null
+
   let result: { operationId: string; coalesced: boolean } | null = null
   let changed = false
 
   updateOutbox((operations) => {
+    const index = operations.findIndex((op) => op.id === candidateId)
+    if (index === -1) return operations
+
+    const existing = operations[index]
+    if (!existing || !canCoalesceOperation(existing, incoming))
+      return operations
+
     const next = [...operations]
-
-    for (let index = next.length - 1; index >= 0; index--) {
-      const existing = next[index]
-      if (!existing || !canCoalesceOperation(existing, incoming)) continue
-
-      const mergedData = {
-        ...(existing.data ?? {}),
-        ...(incoming.data ?? {}),
-      }
-
-      next[index] = {
-        ...existing,
-        data: mergedData,
-        source: incoming.source,
-        updatedAt: incoming.updatedAt,
-      }
-      changed = true
-
-      result = { operationId: existing.id, coalesced: true }
-      break
+    next[index] = {
+      ...existing,
+      data: { ...(existing.data ?? {}), ...(incoming.data ?? {}) },
+      source: incoming.source,
+      updatedAt: incoming.updatedAt,
     }
-
-    return changed ? next : operations
+    changed = true
+    result = { operationId: existing.id, coalesced: true }
+    return next
   })
 
-  return result
+  return changed ? result : null
 }
 
 const upsertOperation = (
@@ -707,6 +777,17 @@ const toRemoteDocument = (
   }
 }
 
+/**
+ * On ack, we settle waiters IMMEDIATELY — the server has confirmed the write,
+ * so the caller's promise is done. The canonical onSnapshot wait runs in the
+ * background purely for telemetry (canonical subscribers) and never blocks
+ * the mutate() promise.
+ *
+ * Previous behavior waited up to 6s for the local cache to reflect the server
+ * state before resolving — this compounded with the release-pending delay to
+ * make UI feedback feel sluggish. Now `mutate()` returns as soon as the
+ * server acks, and the optimistic-update layer handles UI consistency.
+ */
 const settleAckAfterCanonical = (
   operationId: string,
   eventBase: {
@@ -716,31 +797,32 @@ const settleAckAfterCanonical = (
   },
   outboxOperation?: SyncOutboxOperation
 ) => {
-  const finalize = () => {
+  settleWaiters(operationId)
+
+  const fireCanonical = (origin: "local") => {
     notifyCanonicalSubscribers({
       userId: eventBase.userId,
       targetPath: eventBase.targetPath,
-      origin: "local",
+      origin,
       operationId,
       at: Date.now(),
     })
-    settleWaiters(operationId)
   }
 
   if (!outboxOperation) {
-    finalize()
+    fireCanonical("local")
     return
   }
 
+  // Background canonical confirmation — fire the subscriber event once the
+  // local cache reflects the server state. Errors are non-fatal; the event
+  // still fires on timeout so any downstream listeners are not starved.
   void waitForCanonicalDocumentState(outboxOperation)
     .catch((error) => {
-      console.warn(
-        "[syncEngine] Canonical wait failed; proceeding with waiter settlement:",
-        error
-      )
+      console.warn("[syncEngine] Canonical wait failed (non-blocking):", error)
     })
     .finally(() => {
-      finalize()
+      fireCanonical("local")
     })
 }
 
@@ -1001,6 +1083,7 @@ const ensureAuthListener = () => {
 }
 
 let onlineCleanup: (() => void) | null = null
+let unloadCleanup: (() => void) | null = null
 
 const ensureOnlineListeners = () => {
   if (!hasWindow()) return
@@ -1027,6 +1110,27 @@ const ensureOnlineListeners = () => {
   }
 }
 
+/**
+ * Flush any debounced outbox write before the page unloads so we don't lose
+ * pending operations. `pagehide` covers bfcache, mobile Safari, and normal
+ * navigation; `beforeunload` catches desktop refresh.
+ */
+const ensureUnloadFlush = () => {
+  if (!hasWindow() || unloadCleanup) return
+
+  const flush = () => {
+    flushOutboxPersist()
+  }
+
+  window.addEventListener("pagehide", flush)
+  window.addEventListener("beforeunload", flush)
+
+  unloadCleanup = () => {
+    window.removeEventListener("pagehide", flush)
+    window.removeEventListener("beforeunload", flush)
+  }
+}
+
 let initialized = false
 
 const ensureInitialized = () => {
@@ -1034,6 +1138,7 @@ const ensureInitialized = () => {
   initialized = true
   ensureAuthListener()
   ensureOnlineListeners()
+  ensureUnloadFlush()
   pruneSettledOperations()
 }
 
@@ -1165,6 +1270,9 @@ export function stopSync(): void {
   if (activeUserId.value) {
     rejectWaitersForUser(activeUserId.value, "Sync stopped")
   }
+  // Persist any debounced outbox writes immediately so subsequent inits
+  // read a consistent snapshot.
+  flushOutboxPersist()
 }
 
 /**
