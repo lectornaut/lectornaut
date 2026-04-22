@@ -9,7 +9,7 @@ const { t } = useI18n()
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger as-child>
-        <Button variant="ghost" size="icon-xs" @click="router.go(-1)">
+        <Button variant="ghost" size="icon" @click="router.go(-1)">
           <IconArrowLeft />
         </Button>
       </TooltipTrigger>
@@ -17,7 +17,7 @@ const { t } = useI18n()
     </Tooltip>
     <Tooltip>
       <TooltipTrigger as-child>
-        <Button variant="ghost" size="icon-xs" @click="router.go(1)">
+        <Button variant="ghost" size="icon" @click="router.go(1)">
           <IconArrowRight />
         </Button>
       </TooltipTrigger>

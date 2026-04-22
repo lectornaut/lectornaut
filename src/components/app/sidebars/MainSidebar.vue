@@ -23,25 +23,23 @@ function closeSidebarOnMobile() {
       <Sidebar
         collapsible="offcanvas"
         variant="inset"
-        class="shadow-muted-foreground/5 relative w-full"
+        class="shadow-muted-foreground/5 relative w-full p-0"
       >
-        <SidebarHeader
+        <div
           data-tauri-drag-region
-          :class="{ 'mt-13': isTauri && isMobile && !isFullscreen }"
+          class="flex items-center justify-between gap-2 p-2"
+          :class="[{ 'pl-22': isTauri && !isFullscreen }]"
         >
-          <div
-            class="flex items-center justify-between gap-2"
-            :class="{ 'pl-20': isTauri && !isFullscreen }"
-          >
-            <div class="flex gap-2">
-              <SyncIndicator />
-              <Notifications />
-              <CommandKTrigger />
-            </div>
-            <div class="flex gap-2">
-              <BackForth />
-            </div>
+          <div class="flex items-center gap-2">
+            <SyncIndicator />
+            <Notifications />
+            <CommandKTrigger />
           </div>
+          <div class="flex items-center gap-2">
+            <BackForth />
+          </div>
+        </div>
+        <SidebarHeader data-tauri-drag-region>
           <TeamSwitcher />
           <WorkspaceSwitcher />
         </SidebarHeader>
@@ -77,11 +75,12 @@ function closeSidebarOnMobile() {
           <CreateMenu />
           <AccountMenu />
         </SidebarFooter>
-        <SidebarRail />
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent class="w-46">
-      <ContextMenuItem @click="setOpen(false)">
+      <ContextMenuItem
+        @click="isMobile ? setOpenMobile(false) : setOpen(false)"
+      >
         <IconX /> {{ t("layouts.app.sidebar.close") }}
       </ContextMenuItem>
     </ContextMenuContent>

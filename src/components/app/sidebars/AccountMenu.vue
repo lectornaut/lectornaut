@@ -51,7 +51,7 @@ const { t } = useI18n()
                 </SidebarMenuBadge>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent class="w-46">
+            <DropdownMenuContent>
               <DropdownMenuLabel>
                 <Item size="xs" class="group w-full gap-2">
                   <ItemMedia>

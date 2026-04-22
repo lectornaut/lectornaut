@@ -572,7 +572,7 @@ onUnmounted(() => {
           data-tauri-drag-region
           class="flex min-w-0 items-center gap-2 p-2 transition-all"
           :class="{
-            'pl-22': !open && isTauri && !isFullscreen,
+            'pl-22': (!open || isMobile) && isTauri && !isFullscreen,
           }"
         >
           <SidebarTrigger v-if="!open || isMobile" class="size-9" />

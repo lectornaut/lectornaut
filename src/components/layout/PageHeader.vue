@@ -14,7 +14,7 @@ const currentUser = useCurrentUser()
     <div
       data-tauri-drag-region
       class="flex items-center justify-start gap-2 transition-all"
-      :class="{ 'pl-20': isTauri && !isFullscreen }"
+      :class="{ 'pl-22': isTauri && !isFullscreen }"
     >
       <Logo class="size-8 shrink-0 p-2" />
       <Button variant="ghost" size="icon" as-child>

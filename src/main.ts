@@ -13,7 +13,6 @@ import { setSchemaViolationSink } from "@/schemas"
 import "@/styles/index.css"
 import { initSync } from "@/utils/firebase/firebase-sync-engine"
 import "@geoql/v-maplibre/dist/v-maplibre.css"
-import { InferSeoMetaPlugin } from "@unhead/bundler"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
 import "maplibre-gl/dist/maplibre-gl.css"
@@ -28,9 +27,7 @@ import "~console/theme-detect"
 
 OverlayScrollbars.plugin(ClickScrollPlugin)
 
-const head = createHead({
-  plugins: [InferSeoMetaPlugin()],
-})
+const head = createHead()
 const pinia = createPinia()
 const app = createApp(App)
 

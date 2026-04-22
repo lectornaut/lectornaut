@@ -85,7 +85,7 @@ useInfiniteScroll(
       <Button
         id="tour-tasks-notifications"
         variant="ghost"
-        :size="unreadCount > 0 ? 'default' : 'icon-xs'"
+        :size="unreadCount > 0 ? 'default' : 'icon'"
       >
         <IconBell />
         <Badge
