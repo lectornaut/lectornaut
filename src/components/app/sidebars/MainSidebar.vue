@@ -1,21 +1,14 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconChevronRight, IconGift } from "@/data/icons"
+import { IconChevronRight, IconGift, IconX } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
-import { useLayoutStore } from "@/stores/layoutStore"
 import { storeToRefs } from "pinia"
 
-const { open, setOpen, isMobile, setOpenMobile } = useSidebar()
+const { t } = useI18n()
+const { setOpen, isMobile, setOpenMobile } = useSidebar()
 const authStore = useAuthStore()
-const layoutStore = useLayoutStore()
 const { onboarding } = storeToRefs(authStore)
-const { sidebarPinned } = storeToRefs(layoutStore)
-
-const iconDisplay = computed({
-  get: () => (open.value ? "text" : "icon"),
-  set: (val) => setOpen(val === "text"),
-})
 
 const isFullscreen = useIsFullscreen()
 
@@ -28,19 +21,26 @@ function closeSidebarOnMobile() {
   <ContextMenu>
     <ContextMenuTrigger>
       <Sidebar
-        :collapsible="sidebarPinned ? 'icon' : 'offcanvas'"
-        :variant="sidebarPinned ? 'floating' : 'inset'"
-        class="shadow-muted-foreground/5 p-0 **:data-[slot='sidebar-inner']:rounded-none"
+        collapsible="offcanvas"
+        variant="inset"
+        class="shadow-muted-foreground/5 relative w-full"
       >
         <SidebarHeader
           data-tauri-drag-region
           :class="{ 'mt-13': isTauri && isMobile && !isFullscreen }"
         >
-          <div class="ml-auto flex gap-2">
-            <!-- <Logo class="size-8 shrink-0 p-2" /> -->
-            <SyncIndicator />
-            <CommandKTrigger />
-            <Notifications />
+          <div
+            class="flex items-center justify-between gap-2"
+            :class="{ 'pl-20': isTauri && !isFullscreen }"
+          >
+            <div class="flex gap-2">
+              <SyncIndicator />
+              <Notifications />
+              <CommandKTrigger />
+            </div>
+            <div class="flex gap-2">
+              <BackForth />
+            </div>
           </div>
           <TeamSwitcher />
           <WorkspaceSwitcher />
@@ -80,18 +80,10 @@ function closeSidebarOnMobile() {
         <SidebarRail />
       </Sidebar>
     </ContextMenuTrigger>
-    <ContextMenuContent>
-      <ContextMenuLabel> Appearance </ContextMenuLabel>
-      <ContextMenuRadioGroup v-model="iconDisplay">
-        <ContextMenuRadioItem value="icon"> Icons only </ContextMenuRadioItem>
-        <ContextMenuRadioItem value="text">
-          Icons and text
-        </ContextMenuRadioItem>
-      </ContextMenuRadioGroup>
-      <ContextMenuSeparator />
-      <ContextMenuCheckboxItem v-model="sidebarPinned">
-        Pin sidebar
-      </ContextMenuCheckboxItem>
+    <ContextMenuContent class="w-46">
+      <ContextMenuItem @click="setOpen(false)">
+        <IconX /> {{ t("layouts.app.sidebar.close") }}
+      </ContextMenuItem>
     </ContextMenuContent>
   </ContextMenu>
 </template>

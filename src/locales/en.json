@@ -723,10 +723,10 @@
     "activeTabs": "Active tabs",
     "activeTabsEmpty": "No active tabs",
     "closeAllTabs": "Close all tabs",
-    "recentClosedTabs": "Recently closed tabs",
+    "recentClosedTabs": "Recently closed",
     "recentlyClosedEmpty": "No recently closed tabs",
     "clearRecent": "Clear recent tabs",
-    "reopenLast": "Reopen last tab",
+    "reopenLast": "Reopen last",
     "options": "Tab options"
   },
   "landing": {

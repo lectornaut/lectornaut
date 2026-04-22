@@ -87,7 +87,7 @@ const displayBreadcrumbs = computed(() => {
         </BreadcrumbList>
       </Breadcrumb>
     </ContextMenuTrigger>
-    <ContextMenuContent>
+    <ContextMenuContent class="w-46">
       <ContextMenuItem @click="router.go(0)">
         <IconRefreshCcw /> Refresh
       </ContextMenuItem>

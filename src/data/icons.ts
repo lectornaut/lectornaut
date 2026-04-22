@@ -63,6 +63,7 @@ import IconLucideCheckSquare2 from "~icons/lucide/check-square-2"
 import IconLucideChevronDown from "~icons/lucide/chevron-down"
 import IconLucideChevronLeft from "~icons/lucide/chevron-left"
 import IconLucideChevronRight from "~icons/lucide/chevron-right"
+import IconLucideChevronUp from "~icons/lucide/chevron-up"
 import IconLucideChevronsDownUp from "~icons/lucide/chevrons-down-up"
 import IconLucideChevronsLeftRightEllipsis from "~icons/lucide/chevrons-left-right-ellipsis"
 import IconLucideChevronsUpDown from "~icons/lucide/chevrons-up-down"
@@ -352,6 +353,7 @@ export {
   IconLucideChevronsDownUp as IconChevronsDownUp,
   IconLucideChevronsLeftRightEllipsis as IconChevronsLeftRightEllipsis,
   IconLucideChevronsUpDown as IconChevronsUpDown,
+  IconLucideChevronUp as IconChevronUp,
   IconLucideCircle as IconCircle,
   IconLucideCircleAlert as IconCircleAlert,
   IconLucideCircleCheck as IconCircleCheck,

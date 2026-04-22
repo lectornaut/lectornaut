@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconChevronDown, IconPlus } from "@/data/icons"
+import { IconChevronUp, IconPlus } from "@/data/icons"
 import { defaultCreateMenu } from "@/helpers/defaults"
 
 const { t } = useI18n()
@@ -21,11 +21,11 @@ const { t } = useI18n()
             </div>
             {{ t("mainSidebar.createNew") }}
             <SidebarMenuBadge>
-              <IconChevronDown />
+              <IconChevronUp />
             </SidebarMenuBadge>
           </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
+        <DropdownMenuContent class="w-46">
           <DropdownMenuLabel>
             {{ t("mainSidebar.createNew") }}
           </DropdownMenuLabel>

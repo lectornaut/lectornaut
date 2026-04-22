@@ -40,7 +40,7 @@ const { t } = useI18n()
                 </RouterLink>
               </Button>
             </ContextMenuTrigger>
-            <ContextMenuContent>
+            <ContextMenuContent class="w-46">
               <ContextMenuItem>
                 <IconAiFill />
                 {{ t("landing.header.copyIcon") }}

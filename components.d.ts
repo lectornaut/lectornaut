@@ -36,6 +36,7 @@ declare module 'vue' {
     AlertDialogTitle: typeof import('./src/components/ui/alert-dialog/AlertDialogTitle.vue')['default']
     AlertDialogTrigger: typeof import('./src/components/ui/alert-dialog/AlertDialogTrigger.vue')['default']
     AlertTitle: typeof import('./src/components/ui/alert/AlertTitle.vue')['default']
+    AppLayoutSkeleton: typeof import('./src/components/app/layout/AppLayoutSkeleton.vue')['default']
     AspectRatio: typeof import('./src/components/ui/aspect-ratio/AspectRatio.vue')['default']
     Avatar: typeof import('./src/components/ui/avatar/Avatar.vue')['default']
     AvatarBadge: typeof import('./src/components/ui/avatar/AvatarBadge.vue')['default']

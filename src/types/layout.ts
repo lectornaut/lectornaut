@@ -21,7 +21,6 @@ export interface LayoutTabIndicator {
 
 export interface NavigationUiState {
   sidebarOpen: boolean
-  sidebarPinned: boolean
   leftPanelCollapsed: boolean
   rightPanelCollapsed: boolean
   bottomPanelCollapsed: boolean

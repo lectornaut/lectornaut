@@ -211,7 +211,7 @@ const openShortcutsDemo = () => {
                   <IconChevronDown />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent class="w-46">
                 <DropdownMenuLabel> Sample workspaces </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem

@@ -51,7 +51,7 @@ const { t } = useI18n()
                 </SidebarMenuBadge>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent class="w-46">
               <DropdownMenuLabel>
                 <Item size="xs" class="group w-full gap-2">
                   <ItemMedia>
@@ -108,7 +108,7 @@ const { t } = useI18n()
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent>
+        <ContextMenuContent class="w-46">
           <ContextMenuGroup>
             <ContextMenuItem as-child>
               <RouterLink to="/profile">

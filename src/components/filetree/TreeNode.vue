@@ -273,7 +273,7 @@ const showEmptyState = computed(
                 <IconMoreHorizontal />
               </SidebarMenuAction>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent class="w-46">
               <template v-if="!node.isArchived">
                 <DropdownMenuItem @click="emit('create-folder', node)">
                   <IconFolderPlus />
@@ -375,7 +375,7 @@ const showEmptyState = computed(
               <IconMoreHorizontal />
             </SidebarMenuAction>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
+          <DropdownMenuContent class="w-46">
             <DropdownMenuItem
               :disabled="node.isArchived"
               @click="emit('rename', node)"

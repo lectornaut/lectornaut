@@ -174,7 +174,7 @@ const handleClick = () => {
         </RouterLink>
       </Item>
     </ContextMenuTrigger>
-    <ContextMenuContent>
+    <ContextMenuContent class="w-46">
       <ContextMenuSub>
         <ContextMenuItem as-child>
           <ContextMenuSubTrigger>
@@ -182,7 +182,7 @@ const handleClick = () => {
             {{ $t("components.notificationItem.contextMenu.moveTo") }}
           </ContextMenuSubTrigger>
         </ContextMenuItem>
-        <ContextMenuSubContent>
+        <ContextMenuSubContent class="w-46">
           <ContextMenuItem @click="emit('mark-inbox', notification.id)">
             <IconInbox />
             {{ $t("components.notificationItem.contextMenu.inbox") }}
@@ -204,7 +204,7 @@ const handleClick = () => {
             {{ $t("components.notificationItem.contextMenu.markAs") }}
           </ContextMenuSubTrigger>
         </ContextMenuItem>
-        <ContextMenuSubContent>
+        <ContextMenuSubContent class="w-46">
           <ContextMenuItem @click="emit('mark-read', notification.id)">
             <IconEye />
             {{ $t("components.notificationItem.contextMenu.read") }}

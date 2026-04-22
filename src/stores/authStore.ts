@@ -12,6 +12,7 @@
 
 import { SchemaValidationError } from "@/schemas/_utils"
 import {
+  membershipPreferencesHydrationSchema,
   userHydrationSchema,
   userPreferencesHydrationSchema,
 } from "@/schemas/domain"
@@ -155,6 +156,9 @@ export const useAuthStore = defineStore("auth", () => {
   const firestoreMembershipPreferences: ComputedRef<
     IMembershipPreferences | null | undefined
   > = computed(() => _vuefireMembershipPreferencesDoc.data.value)
+  const isMembershipPreferencesLoading: ComputedRef<boolean> = computed(
+    () => _vuefireMembershipPreferencesDoc.pending.value
+  )
 
   const membershipPreferences = computed({
     get: () => {
@@ -183,6 +187,16 @@ export const useAuthStore = defineStore("auth", () => {
     optimisticUserPreferences,
     () => userPreferences.value,
     { schema: userPreferencesHydrationSchema }
+  )
+  // Hydrate membership preferences (contains currentWorkspaceId) so cold-start
+  // doesn't briefly render WorkspaceSelector while the Firestore doc resolves.
+  // Since currentTeamId is also hydrated above, the cached prefs correspond to
+  // the same team on initial render.
+  useLocalHydration(
+    "membershipPreferences",
+    optimisticMembershipPreferences,
+    () => membershipPreferences.value,
+    { schema: membershipPreferencesHydrationSchema }
   )
 
   const currentWorkspaceId = computed(
@@ -292,13 +306,14 @@ export const useAuthStore = defineStore("auth", () => {
     { immediate: true }
   )
 
-  watch(
-    currentTeamId,
-    () => {
-      optimisticMembershipPreferences.value = defaultMembershipPreferences()
-    },
-    { immediate: true }
-  )
+  // Only reset membership preferences on an actual team switch — not on the
+  // initial render. `immediate: true` would clobber values hydrated from
+  // localStorage, reintroducing the WorkspaceSelector flicker this fixes.
+  watch(currentTeamId, (newId, oldId) => {
+    if (oldId === undefined) return
+    if (newId === oldId) return
+    optimisticMembershipPreferences.value = defaultMembershipPreferences()
+  })
 
   function cleanup() {
     optimisticUserProfile.value = null
@@ -515,6 +530,7 @@ export const useAuthStore = defineStore("auth", () => {
     isUserPending,
     hasAnyPendingOperation,
     isAuthenticated,
+    isMembershipPreferencesLoading,
     currentTeamId,
     currentWorkspaceId,
 

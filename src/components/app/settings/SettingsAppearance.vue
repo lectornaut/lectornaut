@@ -193,7 +193,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :value="color.id"
                   >
                     <span
-                      class="size-3"
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getBaseOptionStyle(color.id)"
                     />
@@ -211,7 +211,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :disabled="color.id === 'accent' && isAccentBaseSelected"
                   >
                     <span
-                      class="size-3"
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getBaseOptionStyle(color.id)"
                     />
@@ -254,7 +254,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :disabled="color.id === 'base' && isBaseAccentSelected"
                   >
                     <span
-                      class="size-3"
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getAccentOptionStyle(color.id)"
                     />
@@ -273,7 +273,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                     :value="color.id"
                   >
                     <span
-                      class="size-3"
+                      class="size-3 rounded-xs"
                       :class="getOptionClass(color.id, color.style)"
                       :style="getAccentOptionStyle(color.id)"
                     />

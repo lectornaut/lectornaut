@@ -82,7 +82,6 @@ export const useLayoutStore = defineStore("layout", () => {
   // ============================================================================
 
   const sidebarOpen = useStorage<boolean>("layout.sidebar.open", true)
-  const sidebarPinned = useStorage<boolean>("layout.sidebar.pinned", true)
   const leftPanelCollapsed = useStorage<boolean>(
     "layout.panel.left.collapsed",
     false
@@ -129,7 +128,6 @@ export const useLayoutStore = defineStore("layout", () => {
 
   const getNavigationUiState = (): NavigationUiState => ({
     sidebarOpen: sidebarOpen.value,
-    sidebarPinned: sidebarPinned.value,
     leftPanelCollapsed: leftPanelCollapsed.value,
     rightPanelCollapsed: rightPanelCollapsed.value,
     bottomPanelCollapsed: bottomPanelCollapsed.value,
@@ -138,8 +136,6 @@ export const useLayoutStore = defineStore("layout", () => {
   const isNavigationUiSnapshotInSync = (ui: Partial<NavigationUiState>) =>
     typeof ui.sidebarOpen === "boolean" &&
     ui.sidebarOpen === sidebarOpen.value &&
-    typeof ui.sidebarPinned === "boolean" &&
-    ui.sidebarPinned === sidebarPinned.value &&
     typeof ui.leftPanelCollapsed === "boolean" &&
     ui.leftPanelCollapsed === leftPanelCollapsed.value &&
     typeof ui.rightPanelCollapsed === "boolean" &&
@@ -252,7 +248,6 @@ export const useLayoutStore = defineStore("layout", () => {
   watch(
     [
       sidebarOpen,
-      sidebarPinned,
       leftPanelCollapsed,
       rightPanelCollapsed,
       bottomPanelCollapsed,
@@ -289,12 +284,6 @@ export const useLayoutStore = defineStore("layout", () => {
             ui.sidebarOpen !== sidebarOpen.value
           ) {
             sidebarOpen.value = ui.sidebarOpen
-          }
-          if (
-            typeof ui.sidebarPinned === "boolean" &&
-            ui.sidebarPinned !== sidebarPinned.value
-          ) {
-            sidebarPinned.value = ui.sidebarPinned
           }
           if (
             typeof ui.leftPanelCollapsed === "boolean" &&
@@ -525,7 +514,6 @@ export const useLayoutStore = defineStore("layout", () => {
   watchDebounced(
     [
       sidebarOpen,
-      sidebarPinned,
       leftPanelCollapsed,
       rightPanelCollapsed,
       bottomPanelCollapsed,
@@ -1072,7 +1060,6 @@ export const useLayoutStore = defineStore("layout", () => {
     tabIndicators,
     activeNavItems,
     sidebarOpen,
-    sidebarPinned,
     leftPanelCollapsed,
     rightPanelCollapsed,
     bottomPanelCollapsed,

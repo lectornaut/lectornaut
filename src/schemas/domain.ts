@@ -178,3 +178,8 @@ export const userHydrationSchema = userProfileSchema.extend({
 export const userPreferencesHydrationSchema = userPreferencesSchema.extend({
   updatedAt: timestampHydratedSchema.optional(),
 })
+
+export const membershipPreferencesHydrationSchema =
+  membershipPreferencesSchema.extend({
+    updatedAt: timestampHydratedSchema.optional(),
+  })

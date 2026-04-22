@@ -1026,7 +1026,7 @@ const isFullscreen = useIsFullscreen()
     >
       <div
         data-tauri-drag-region
-        :class="{ 'pl-22': isTauri && !isFullscreen }"
+        :class="{ 'pl-20': isTauri && !isFullscreen }"
         class="flex items-start justify-between gap-2"
       >
         <TooltipProvider>
@@ -1422,7 +1422,7 @@ const isFullscreen = useIsFullscreen()
                 <TooltipContent>
                   {{ t("components.fileDropOverlay.tooltips.more") }}
                 </TooltipContent>
-                <DropdownMenuContent>
+                <DropdownMenuContent class="w-46">
                   <DropdownMenuItem
                     :disabled="!hasQueuedFiles || isMoving"
                     @click="clearQueuedFiles()"

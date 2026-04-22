@@ -58,7 +58,7 @@ useSortable(el, activeNavItems, {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
+          <DropdownMenuContent class="w-46">
             <DropdownMenuLabel>
               {{ t("navigation.show") }}
             </DropdownMenuLabel>

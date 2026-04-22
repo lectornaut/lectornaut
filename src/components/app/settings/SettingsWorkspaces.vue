@@ -328,7 +328,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                       <IconMoreHorizontal />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
+                                  <DropdownMenuContent class="w-46">
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <div>

@@ -44,7 +44,6 @@ const {
   activeTabId,
   activeTab,
   recentlyClosed,
-  sidebarPinned,
   leftPanelCollapsed,
   rightPanelCollapsed,
   bottomPanelCollapsed,
@@ -571,16 +570,13 @@ onUnmounted(() => {
       >
         <div
           data-tauri-drag-region
-          class="flex min-w-0 items-stretch gap-2 p-2 transition-all"
+          class="flex min-w-0 items-center gap-2 p-2 transition-all"
           :class="{
-            'pl-22': !open && isTauri && !isFullscreen && !sidebarPinned,
+            'pl-22': !open && isTauri && !isFullscreen,
           }"
         >
-          <SidebarTrigger
-            v-if="(!open || isMobile) && !sidebarPinned"
-            class="size-9"
-          />
-          <BackForth />
+          <SidebarTrigger v-if="!open || isMobile" class="size-9" />
+          <BackForth v-if="!open || isMobile" />
           <nav
             ref="el"
             class="relative flex min-w-0 items-stretch justify-start gap-2"
@@ -710,7 +706,7 @@ onUnmounted(() => {
                           </RouterLink>
                         </Button>
                       </ContextMenuTrigger>
-                      <ContextMenuContent>
+                      <ContextMenuContent class="w-46">
                         <ContextMenuGroup>
                           <ContextMenuItem @click="openNewTab">
                             <IconPlus />
@@ -849,7 +845,7 @@ onUnmounted(() => {
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
-                    <DropdownMenuContent>
+                    <DropdownMenuContent class="w-46" align="end">
                       <DropdownMenuGroup>
                         <DropdownMenuItem @click="openNewTab">
                           <IconPlus />
@@ -932,7 +928,7 @@ onUnmounted(() => {
                               {{ t("tabs.activeTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
-                          <DropdownMenuSubContent>
+                          <DropdownMenuSubContent class="w-46">
                             <DropdownMenuLabel v-if="tabs.length === 0">
                               {{ t("tabs.activeTabsEmpty") }}
                             </DropdownMenuLabel>
@@ -972,7 +968,7 @@ onUnmounted(() => {
                               {{ t("tabs.recentClosedTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
-                          <DropdownMenuSubContent>
+                          <DropdownMenuSubContent class="w-46">
                             <DropdownMenuLabel
                               v-if="recentlyClosed.length === 0"
                             >
@@ -1044,7 +1040,7 @@ onUnmounted(() => {
         </div>
       </div>
     </ContextMenuTrigger>
-    <ContextMenuContent>
+    <ContextMenuContent class="w-46">
       <ContextMenuGroup>
         <ContextMenuItem @click="openNewTab">
           <IconPlus />

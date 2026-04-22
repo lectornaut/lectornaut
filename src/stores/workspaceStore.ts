@@ -50,8 +50,13 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
 
-  const { currentUser, pendingUserIds, currentTeamId, currentWorkspaceId } =
-    storeToRefs(authStore)
+  const {
+    currentUser,
+    pendingUserIds,
+    currentTeamId,
+    currentWorkspaceId,
+    isMembershipPreferencesLoading,
+  } = storeToRefs(authStore)
   const {
     canManageWorkspaces,
     memberships,
@@ -150,7 +155,29 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const isLoading = computed(() => {
     // If no team selected, not loading
     if (!currentTeamId.value) return false
-    return isFirestoreLoading.value && optimisticWorkspaces.value.length === 0
+    // Workspaces list is still fetching and we have no cache to fall back on
+    if (isFirestoreLoading.value && optimisticWorkspaces.value.length === 0) {
+      return true
+    }
+    // Membership preferences (contains currentWorkspaceId) is still fetching
+    // and we don't have hydrated prefs — without this gate, the UI would
+    // briefly render WorkspaceSelector while the doc subscription resolves.
+    if (isMembershipPreferencesLoading.value && !currentWorkspaceId.value) {
+      return true
+    }
+    return false
+  })
+
+  /**
+   * True once we know whether the user has a workspace selected for the
+   * current team. Distinguishes "user hasn't picked one yet" (show selector)
+   * from "we don't know yet" (show spinner/skeleton).
+   */
+  const isWorkspaceSelectionResolved = computed(() => {
+    if (!currentTeamId.value) return true
+    // Either hydration/cache gave us the selection, or Firestore has resolved.
+    if (currentWorkspaceId.value) return true
+    return !isMembershipPreferencesLoading.value
   })
 
   const isWorkspacePending = computed(
@@ -547,6 +574,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     workspaces,
     currentWorkspace,
     isLoading,
+    isWorkspaceSelectionResolved,
 
     // Pending state
     pendingWorkspaceIds,

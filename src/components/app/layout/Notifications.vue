@@ -85,7 +85,7 @@ useInfiniteScroll(
       <Button
         id="tour-tasks-notifications"
         variant="ghost"
-        :size="unreadCount > 0 ? 'default' : 'icon'"
+        :size="unreadCount > 0 ? 'default' : 'icon-xs'"
       >
         <IconBell />
         <Badge
@@ -192,7 +192,7 @@ useInfiniteScroll(
                     <IconMoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent class="w-46">
                   <DropdownMenuSub>
                     <DropdownMenuItem as-child>
                       <DropdownMenuSubTrigger>
@@ -200,7 +200,7 @@ useInfiniteScroll(
                         Move all to
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
-                    <DropdownMenuSubContent>
+                    <DropdownMenuSubContent class="w-46">
                       <DropdownMenuItem @click="markAllInbox(activeTab)">
                         <IconInbox />
                         Inbox
@@ -222,7 +222,7 @@ useInfiniteScroll(
                         Mark all as
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
-                    <DropdownMenuSubContent>
+                    <DropdownMenuSubContent class="w-46">
                       <DropdownMenuItem @click="markAllRead(activeTab)">
                         <IconEye />
                         Read

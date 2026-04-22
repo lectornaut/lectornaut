@@ -24,7 +24,7 @@ const columns = computed(() =>
         Groups
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent>
+    <DropdownMenuContent class="w-46">
       <DropdownMenuLabel>Group by</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
