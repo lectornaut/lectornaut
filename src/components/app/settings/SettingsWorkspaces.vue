@@ -210,7 +210,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                     :key="workspace.id"
                   >
                     <TableCell>
-                      <Item class="group w-full gap-2">
+                      <Item class="group" size="xs">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>

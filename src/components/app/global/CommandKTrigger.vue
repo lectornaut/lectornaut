@@ -17,7 +17,7 @@ const openCommandDialog = () => {
         <Button
           id="tour-search-bar"
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           @click="openCommandDialog"
         >
           <IconSearch />

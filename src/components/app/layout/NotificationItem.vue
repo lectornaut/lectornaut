@@ -66,11 +66,7 @@ const handleClick = () => {
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <Item
-        class="group w-full gap-2 p-2"
-        as-child
-        @click.prevent.stop="handleClick"
-      >
+      <Item class="group" size="xs" as-child @click.prevent.stop="handleClick">
         <RouterLink :to="notification.url">
           <ItemMedia variant="icon" class="text-muted-foreground relative">
             <Component :is="typeIcon" />
@@ -83,7 +79,7 @@ const handleClick = () => {
             <ItemTitle class="line-clamp-1 truncate">
               {{ notification.title }}
             </ItemTitle>
-            <ItemDescription class="line-clamp-1 truncate text-xs">
+            <ItemDescription class="truncate text-xs">
               {{ notification.description }}
             </ItemDescription>
           </ItemContent>

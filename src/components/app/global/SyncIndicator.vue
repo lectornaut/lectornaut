@@ -5,12 +5,29 @@ import { useSyncEngineState } from "@/utils/firebase/firebase-sync-engine"
 
 const { t } = useI18n()
 const isOnline = useOnline()
-const { activeCount, hasError, isSyncing, lastErrorMessage } =
-  useCloudSyncQueueState()
+const {
+  activeCount,
+  hasError,
+  isSyncing,
+  lastErrorAt,
+  lastErrorMessage,
+  lastSuccessAt,
+} = useCloudSyncQueueState()
 const { pendingCount } = useSyncEngineState()
 
 const syncCount = computed(() =>
   Math.max(activeCount.value, pendingCount.value)
+)
+
+const lastSuccessTimeAgo = useTimeAgo(() => lastSuccessAt.value ?? Date.now())
+const lastSuccessDate = useDateFormat(
+  () => lastSuccessAt.value ?? Date.now(),
+  "MMM D, YYYY · h:mm A"
+)
+const lastErrorTimeAgo = useTimeAgo(() => lastErrorAt.value ?? Date.now())
+const lastErrorDate = useDateFormat(
+  () => lastErrorAt.value ?? Date.now(),
+  "MMM D, YYYY · h:mm A"
 )
 
 const syncState = computed(() => {
@@ -20,7 +37,7 @@ const syncState = computed(() => {
   return "synced"
 })
 
-const syncTooltip = computed(() => {
+const syncLabel = computed(() => {
   if (syncState.value === "offline") {
     return t("layouts.app.status.offline")
   }
@@ -33,25 +50,168 @@ const syncTooltip = computed(() => {
   }
 
   if (syncState.value === "error") {
-    return lastErrorMessage.value || "Cloud sync failed"
+    return lastErrorMessage.value || t("layouts.app.status.failed")
   }
 
   return t("layouts.app.status.synced")
 })
+
+const syncIcon = computed(() => {
+  if (syncState.value === "offline" || syncState.value === "error") {
+    return IconCloudAlert
+  }
+
+  if (syncState.value === "syncing") return IconCloudSync
+
+  return IconCloudCheck
+})
+
+const syncIconClass = computed(() => {
+  if (syncState.value === "error") return "text-destructive"
+  if (syncState.value === "offline") return "text-muted-foreground"
+  if (syncState.value === "synced") return "text-emerald-600"
+  return "text-muted-foreground"
+})
+
+const syncBadgeClass = computed(() => {
+  if (syncState.value === "error") return "bg-destructive/10 text-destructive"
+  if (syncState.value === "offline") return "bg-muted text-muted-foreground"
+  if (syncState.value === "synced") return "bg-emerald-500/10 text-emerald-600"
+  return "bg-secondary text-secondary-foreground"
+})
+
+const syncTitle = computed(() => {
+  if (syncState.value === "offline") {
+    return t("layouts.app.status.hovercard.offlineTitle")
+  }
+
+  if (syncState.value === "syncing") {
+    return t("layouts.app.status.hovercard.syncingTitle")
+  }
+
+  if (syncState.value === "error") {
+    return t("layouts.app.status.hovercard.errorTitle")
+  }
+
+  return t("layouts.app.status.hovercard.syncedTitle")
+})
+
+const syncDescription = computed(() => {
+  if (syncState.value === "offline") {
+    return t("layouts.app.status.hovercard.offlineDescription")
+  }
+
+  if (syncState.value === "syncing") {
+    return t("layouts.app.status.hovercard.syncingDescription")
+  }
+
+  if (syncState.value === "error") {
+    return t("layouts.app.status.hovercard.errorDescription")
+  }
+
+  return t("layouts.app.status.hovercard.syncedDescription")
+})
+
+const errorMessage = computed(
+  () => lastErrorMessage.value || t("layouts.app.status.failed")
+)
 </script>
 
 <template>
-  <Tooltip>
-    <TooltipTrigger as-child>
-      <Button variant="ghost" size="icon">
-        <IconCloudAlert
-          v-if="syncState === 'offline' || syncState === 'error'"
-          :class="{ 'text-destructive': syncState === 'error' }"
-        />
-        <IconCloudSync v-else-if="syncState === 'syncing'" />
-        <IconCloudCheck v-else />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{{ syncTooltip }}</TooltipContent>
-  </Tooltip>
+  <TooltipProvider>
+    <HoverCard :open-delay="150" :close-delay="0">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <HoverCardTrigger as-child>
+            <Component :is="syncIcon" :class="syncIconClass" />
+          </HoverCardTrigger>
+          <HoverCardContent
+            side="bottom"
+            :side-offset="12"
+            class="flex w-60 flex-col gap-2 p-2"
+          >
+            <Item size="sm" class="p-0">
+              <ItemMedia
+                variant="icon"
+                class="size-8 rounded-full"
+                :class="syncBadgeClass"
+              >
+                <Component :is="syncIcon" class="size-4" />
+              </ItemMedia>
+              <ItemContent class="gap-0.5 truncate">
+                <ItemTitle class="truncate">{{ syncTitle }}</ItemTitle>
+                <ItemDescription class="truncate text-xs">
+                  {{ syncDescription }}
+                </ItemDescription>
+              </ItemContent>
+            </Item>
+
+            <div
+              v-if="
+                syncCount > 0 ||
+                lastSuccessAt ||
+                (syncState === 'error' && lastErrorAt)
+              "
+              class="space-y-2"
+            >
+              <div
+                v-if="syncCount > 0"
+                class="flex items-center justify-between gap-3 text-xs"
+              >
+                <span class="text-muted-foreground">{{
+                  t("layouts.app.status.hovercard.pendingChanges")
+                }}</span>
+                <span class="font-medium tabular-nums">{{ syncCount }}</span>
+              </div>
+
+              <div
+                v-if="lastSuccessAt"
+                class="flex items-center justify-between gap-3 text-xs"
+              >
+                <span class="text-muted-foreground">{{
+                  t("layouts.app.status.hovercard.lastSynced")
+                }}</span>
+                <time
+                  :title="lastSuccessDate"
+                  :datetime="new Date(lastSuccessAt).toISOString()"
+                >
+                  {{ lastSuccessTimeAgo }}
+                </time>
+              </div>
+
+              <div
+                v-if="syncState === 'error' && lastErrorAt"
+                class="flex items-center justify-between gap-3 text-xs"
+              >
+                <span class="text-muted-foreground">{{
+                  t("layouts.app.status.hovercard.lastError")
+                }}</span>
+                <time
+                  :title="lastErrorDate"
+                  :datetime="new Date(lastErrorAt).toISOString()"
+                >
+                  {{ lastErrorTimeAgo }}
+                </time>
+              </div>
+            </div>
+
+            <div
+              v-if="syncState === 'error'"
+              class="bg-muted/60 rounded-md border px-2.5 py-2"
+            >
+              <p class="text-xs font-medium">
+                {{ t("layouts.app.status.hovercard.errorDetails") }}
+              </p>
+              <p
+                class="text-muted-foreground mt-1 line-clamp-3 text-xs leading-relaxed"
+              >
+                {{ errorMessage }}
+              </p>
+            </div>
+          </HoverCardContent>
+        </TooltipTrigger>
+        <TooltipContent>{{ syncLabel }}</TooltipContent>
+      </Tooltip>
+    </HoverCard>
+  </TooltipProvider>
 </template>

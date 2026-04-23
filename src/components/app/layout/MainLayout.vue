@@ -237,7 +237,7 @@ const closeTab = (id: string) => {
       <Tooltip>
         <TooltipTrigger as-child>
           <ResizableHandle
-            class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-30 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+            class="data-[resize-handle-state=drag]:after:bg-muted data-[resize-handle-state=hover]:after:bg-muted data-[resize-handle-state=hover]:bg-muted data-[resize-handle-state=drag]:bg-muted focus-visible:after:bg-muted! z-30 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
             :class="{
               'data-resize-handle:after:bg-muted': !sidebarPanel?.isCollapsed,
             }"
@@ -326,7 +326,7 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+                    class="data-[resize-handle-state=drag]:after:bg-muted data-[resize-handle-state=hover]:after:bg-muted data-[resize-handle-state=hover]:bg-muted data-[resize-handle-state=drag]:bg-muted focus-visible:after:bg-muted! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
                       'data-resize-handle:after:bg-muted':
                         !leftPanel?.isCollapsed,
@@ -423,7 +423,7 @@ const closeTab = (id: string) => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <ResizableHandle
-                        class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-10 h-0! w-full! transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+                        class="data-[resize-handle-state=drag]:after:bg-muted data-[resize-handle-state=hover]:after:bg-muted data-[resize-handle-state=hover]:bg-muted data-[resize-handle-state=drag]:bg-muted focus-visible:after:bg-muted! z-10 h-0! w-full! transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 after:top-1/2! after:bottom-auto! after:left-0! after:w-full! after:translate-x-0! after:-translate-y-1/2! focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:h-px! data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                         :class="{
                           'data-resize-handle:after:bg-muted':
                             !bottomPanel?.isCollapsed && !topPanel?.isCollapsed,
@@ -493,13 +493,13 @@ const closeTab = (id: string) => {
                               >
                                 <TabsList
                                   v-if="source.length > 0"
-                                  class="flex h-full min-w-0 items-stretch gap-2 bg-transparent"
+                                  class="flex h-8! min-w-0 items-stretch gap-2 bg-transparent p-0"
                                 >
                                   <TabsTrigger
                                     v-for="tab in source"
                                     :key="tab.id"
                                     :value="tab.id"
-                                    class="hover:bg-secondary/50 data-[state=inactive]:text-secondary-foreground/50 data-[state=inactive]:bg-secondary/50 group size-full w-60 max-w-60 min-w-0 gap-2 border-0 px-3 pr-1.5!"
+                                    class="hover:bg-secondary/50 data-[state=inactive]:text-secondary-foreground/50 data-[state=inactive]:bg-secondary/50 group size-full w-60 max-w-60 min-w-0 border-0 pr-1!"
                                     :class="{
                                       'min-w-40 transition-all':
                                         tab.id === activeTab,
@@ -543,7 +543,7 @@ const closeTab = (id: string) => {
                                       <TooltipTrigger as-child>
                                         <Button
                                           variant="ghost"
-                                          size="icon"
+                                          size="icon-sm"
                                           @click="newTab()"
                                         >
                                           <IconPlus />
@@ -565,7 +565,7 @@ const closeTab = (id: string) => {
                                       <TooltipTrigger as-child>
                                         <Button
                                           variant="secondary"
-                                          size="icon"
+                                          size="icon-sm"
                                           @click="
                                             topPanel?.isCollapsed
                                               ? topPanel?.expand()
@@ -591,7 +591,7 @@ const closeTab = (id: string) => {
                                       <TooltipTrigger as-child>
                                         <Button
                                           variant="secondary"
-                                          size="icon"
+                                          size="icon-sm"
                                           @click="bottomPanel?.collapse()"
                                         >
                                           <IconX />
@@ -667,7 +667,7 @@ const closeTab = (id: string) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <ResizableHandle
-                    class="data-[resize-handle-state=drag]:after:bg-muted-foreground data-[resize-handle-state=hover]:after:bg-muted-foreground data-[resize-handle-state=hover]:bg-muted-foreground data-[resize-handle-state=drag]:bg-muted-foreground focus-visible:after:bg-muted-foreground! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
+                    class="data-[resize-handle-state=drag]:after:bg-muted data-[resize-handle-state=hover]:after:bg-muted data-[resize-handle-state=hover]:bg-muted data-[resize-handle-state=drag]:bg-muted focus-visible:after:bg-muted! z-20 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
                     :class="{
                       'data-resize-handle:after:bg-muted':
                         !rightPanel?.isCollapsed,
@@ -687,7 +687,7 @@ const closeTab = (id: string) => {
                       </span>
                       <span class="flex items-center gap-2">
                         <IconPointerClick />
-                        {{ t("tooltips.doubleClickToToggle") }}
+                        {{ t("tooltips.doubleClickToggle") }}
                       </span>
                     </div>
                     <div class="bg-accent/5 flex flex-col gap-2 p-2">

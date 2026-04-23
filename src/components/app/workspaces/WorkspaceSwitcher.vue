@@ -69,6 +69,7 @@ onUnmounted(() => {
                     {{ t("components.workspaceSwitcher.selectWorkspace") }}
                   </template>
                 </div>
+                <SyncIndicator />
                 <IconChevronDown />
               </SidebarMenuButton>
             </DropdownMenuTrigger>

@@ -1107,8 +1107,8 @@ const isFullscreen = useIsFullscreen()
                 {{ t("components.fileDropOverlay.buttons.save") }}
               </Button>
               <SheetContent
-                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
-                :class="{ 'mt-13': isTauri && !isFullscreen }"
+                class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
+                :class="{ 'mt-12': isTauri && !isFullscreen }"
               >
                 <SheetHeader>
                   <SheetTitle>
@@ -1245,7 +1245,7 @@ const isFullscreen = useIsFullscreen()
               <ItemTitle class="truncate">
                 {{ file.name }}
               </ItemTitle>
-              <ItemDescription class="line-clamp-1 truncate text-xs">
+              <ItemDescription class="truncate text-xs">
                 {{ file.description }}
               </ItemDescription>
             </ItemContent>
@@ -1332,7 +1332,7 @@ const isFullscreen = useIsFullscreen()
               <ItemTitle class="truncate">
                 {{ file.name }}
               </ItemTitle>
-              <ItemDescription class="line-clamp-1 truncate text-xs">
+              <ItemDescription class="truncate text-xs">
                 {{ file.description }}
               </ItemDescription>
             </ItemContent>

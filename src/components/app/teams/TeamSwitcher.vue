@@ -75,7 +75,7 @@ const currentPlanLabel = computed(() => {
                 size="lg"
                 :tooltip="t('components.teamSwitcher.switchTeam')"
               >
-                <Avatar>
+                <!-- <Avatar>
                   <AvatarImage
                     :src="currentTeam?.photoURL!"
                     :alt="currentTeam?.name"
@@ -84,7 +84,7 @@ const currentPlanLabel = computed(() => {
                   <AvatarFallback>
                     {{ getInitials(currentTeam?.name!) }}
                   </AvatarFallback>
-                </Avatar>
+                </Avatar> -->
                 <div class="flex grow flex-col">
                   <span
                     class="truncate text-base leading-tight font-semibold tracking-tight"
@@ -154,7 +154,7 @@ const currentPlanLabel = computed(() => {
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuLabel>
-                <Item size="xs" class="group w-full gap-2">
+                <Item class="group" size="xs">
                   <ItemMedia>
                     <Avatar>
                       <AvatarImage
@@ -228,7 +228,7 @@ const currentPlanLabel = computed(() => {
                         :key="team.value"
                         @click="switchTeam(team.value)"
                       >
-                        <Item size="xs" class="group w-full gap-2">
+                        <Item class="group" size="xs">
                           <ItemMedia>
                             <Avatar>
                               <AvatarImage

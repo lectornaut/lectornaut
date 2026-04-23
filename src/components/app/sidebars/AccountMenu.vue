@@ -53,7 +53,7 @@ const { t } = useI18n()
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuLabel>
-                <Item size="xs" class="group w-full gap-2">
+                <Item class="group" size="xs">
                   <ItemMedia>
                     <Avatar>
                       <AvatarImage

@@ -215,7 +215,7 @@ const formatCreatedAt = (
                     :key="membership.teamId"
                   >
                     <TableCell>
-                      <Item class="group w-full gap-2">
+                      <Item class="group" size="xs">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>

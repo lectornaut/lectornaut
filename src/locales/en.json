@@ -117,7 +117,6 @@
     "closeSidebar": "Close sidebar",
     "collapsePanel": "Collapse panel",
     "doubleClickToggle": "Double click to toggle",
-    "doubleClickToToggle": "Double click to toggle",
     "dragToResize": "Drag to resize",
     "expandPanel": "Expand panel",
     "expandSidebar": "Expand sidebar",
@@ -2174,8 +2173,23 @@
       },
       "status": {
         "offline": "You are offline",
+        "failed": "Cloud sync failed",
         "syncing": "Syncing...",
-        "synced": "Synced to cloud"
+        "synced": "Synced to cloud",
+        "hovercard": {
+          "offlineTitle": "Cloud sync is paused",
+          "offlineDescription": "Changes on this device will stay local until you're back online.",
+          "syncingTitle": "Syncing changes",
+          "syncingDescription": "Recent changes are still being uploaded to the cloud.",
+          "syncedTitle": "Cloud sync is up to date",
+          "syncedDescription": "Recent changes have been synced to the cloud.",
+          "errorTitle": "Cloud sync needs attention",
+          "errorDescription": "Some changes could not be synced to the cloud.",
+          "pendingChanges": "Pending changes",
+          "lastSynced": "Last synced",
+          "lastError": "Last error",
+          "errorDetails": "Error details"
+        }
       },
       "popout": {
         "title": "Popout",

@@ -46,7 +46,7 @@ const currentUser = useCurrentUser()
         </DropdownMenuTrigger>
         <DropdownMenuContent class="w-46">
           <DropdownMenuLabel>
-            <Item class="group w-full gap-2">
+            <Item class="group" size="xs">
               <ItemMedia>
                 <Avatar>
                   <AvatarImage

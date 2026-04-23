@@ -187,7 +187,7 @@ const formatCreatedAt = (
                     :key="member.userId"
                   >
                     <TableCell>
-                      <Item class="group w-full gap-2">
+                      <Item class="group" size="xs">
                         <ItemMedia>
                           <Avatar>
                             <AvatarImage

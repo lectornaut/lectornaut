@@ -27,7 +27,9 @@ emitter.on("Dialog.Exit.Open", () => {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
+        <AlertDialogCancel variant="ghost">
+          {{ t("actions.cancel") }}
+        </AlertDialogCancel>
         <AlertDialogAction @click="handleLogout()">
           {{ t("pages.exit.dialog.logout") }}
         </AlertDialogAction>

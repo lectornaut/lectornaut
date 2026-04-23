@@ -7,21 +7,23 @@ const { t } = useI18n()
 
 <template>
   <TooltipProvider>
-    <Tooltip>
-      <TooltipTrigger as-child>
-        <Button variant="ghost" size="icon" @click="router.go(-1)">
-          <IconArrowLeft />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent> {{ t("tabs.goBack") }} </TooltipContent>
-    </Tooltip>
-    <Tooltip>
-      <TooltipTrigger as-child>
-        <Button variant="ghost" size="icon" @click="router.go(1)">
-          <IconArrowRight />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent> {{ t("tabs.goForward") }} </TooltipContent>
-    </Tooltip>
+    <ButtonGroup>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button variant="secondary" size="icon-sm" @click="router.go(-1)">
+            <IconArrowLeft />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent> {{ t("tabs.goBack") }} </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button variant="secondary" size="icon-sm" @click="router.go(1)">
+            <IconArrowRight />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent> {{ t("tabs.goForward") }} </TooltipContent>
+      </Tooltip>
+    </ButtonGroup>
   </TooltipProvider>
 </template>

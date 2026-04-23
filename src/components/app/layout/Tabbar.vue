@@ -575,19 +575,20 @@ onUnmounted(() => {
             'pl-22': (!open || isMobile) && isTauri && !isFullscreen,
           }"
         >
-          <SidebarTrigger v-if="!open || isMobile" class="size-9" />
+          <SidebarTrigger v-if="!open || isMobile" />
           <BackForth v-if="!open || isMobile" />
           <nav
             ref="el"
             class="relative flex min-w-0 items-stretch justify-start gap-2"
           >
             <template v-if="pending">
-              <Skeleton v-for="n in 3" :key="n" class="bg-accent h-9 w-60" />
+              <Skeleton v-for="n in 3" :key="n" class="bg-accent h-8 w-60" />
             </template>
             <template v-else-if="tabs.length === 0">
               <Button
                 variant="outline"
                 class="w-60 min-w-0 shrink-0 justify-start border-dashed shadow-none"
+                size="sm"
                 @click="openNewTab"
               >
                 <IconPlus />
@@ -604,7 +605,7 @@ onUnmounted(() => {
                   renamingTabId === tab.id
                     ? 'w-60 shrink'
                     : isPinnedTab(tab)
-                      ? 'w-9 shrink-0'
+                      ? 'w-8 shrink-0'
                       : 'w-60 shrink',
                   {
                     'min-w-40 transition-all':
@@ -652,10 +653,9 @@ onUnmounted(() => {
                             tab.id === activeTabId
                               ? 'text-foreground shadow-none'
                               : 'text-secondary-foreground/50 bg-secondary/50',
-                            isPinnedTab(tab)
-                              ? 'justify-center px-0!'
-                              : 'pr-1.5! pl-2.75!',
+                            isPinnedTab(tab) ? 'justify-center px-0!' : 'pr-1!',
                           ]"
+                          size="sm"
                           as-child
                         >
                           <RouterLink
@@ -825,7 +825,7 @@ onUnmounted(() => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon" @click="openNewTab">
+                  <Button variant="ghost" size="icon-sm" @click="openNewTab">
                     <IconPlus />
                   </Button>
                 </TooltipTrigger>
@@ -833,13 +833,12 @@ onUnmounted(() => {
               </Tooltip>
             </TooltipProvider>
             <div class="flex items-stretch justify-center gap-2">
-              <AiAsk />
               <TooltipProvider>
                 <Tooltip>
                   <DropdownMenu>
                     <TooltipTrigger as-child>
                       <DropdownMenuTrigger as-child>
-                        <Button variant="secondary" size="icon">
+                        <Button variant="ghost" size="icon-sm">
                           <IconChevronDown />
                         </Button>
                       </DropdownMenuTrigger>
@@ -1035,6 +1034,7 @@ onUnmounted(() => {
                   </DropdownMenu>
                 </Tooltip>
               </TooltipProvider>
+              <AiAsk />
             </div>
           </div>
         </div>

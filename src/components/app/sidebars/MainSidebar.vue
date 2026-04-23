@@ -27,11 +27,11 @@ function closeSidebarOnMobile() {
       >
         <div
           data-tauri-drag-region
-          class="flex items-center justify-between gap-2 p-2"
+          class="flex items-center justify-between gap-2 px-2 pt-2"
           :class="[{ 'pl-22': isTauri && !isFullscreen }]"
         >
+          <!-- <Separator class="absolute -translate-x-full bg-red-400" /> -->
           <div class="flex items-center gap-2">
-            <SyncIndicator />
             <Notifications />
             <CommandKTrigger />
           </div>
