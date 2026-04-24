@@ -572,7 +572,7 @@ const randomIndex = () => {
         <template v-for="(item, index) in navItems" :key="index">
           <CarouselItem
             :class="[
-              'gap-2px-3 flex shrink-0 basis-auto items-center justify-center transition-all',
+              'gap-2px-3 flex shrink-0 basis-auto items-center justify-center',
               `border-${item.color}-500/5`,
               selectedIndex === index ? item.style.active : item.style.inactive,
             ]"

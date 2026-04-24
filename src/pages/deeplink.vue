@@ -19,7 +19,7 @@ onMounted(() => {
 
 <template>
   <OverlayScrollbarsWrapper class="bg-background">
-    <div data-tauri-drag-region class="grid size-full grow place-items-center">
+    <div class="grid size-full grow place-items-center">
       <Empty v-if="redirected">
         <EmptyHeader>
           <EmptyMedia variant="icon">

@@ -183,3 +183,10 @@ export const membershipPreferencesHydrationSchema =
   membershipPreferencesSchema.extend({
     updatedAt: timestampHydratedSchema.optional(),
   })
+
+export const workspaceHydrationSchema = workspaceSchema.extend({
+  createdAt: timestampHydratedSchema,
+  updatedAt: timestampHydratedSchema,
+})
+
+export const workspacesHydrationSchema = z.array(workspaceHydrationSchema)

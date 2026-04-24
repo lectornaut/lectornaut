@@ -69,7 +69,7 @@ onMounted(async () => {
 
 <template>
   <OverlayScrollbarsWrapper class="bg-background">
-    <div data-tauri-drag-region class="grid size-full grow place-items-center">
+    <div class="grid size-full grow place-items-center">
       <div
         class="mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-8 p-4"
       >

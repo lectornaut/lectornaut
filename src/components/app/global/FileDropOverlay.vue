@@ -1021,7 +1021,6 @@ const isFullscreen = useIsFullscreen()
   >
     <div
       v-if="shouldRender"
-      data-tauri-drag-region
       class="bg-background/50 fixed inset-0 isolate z-50 flex flex-col gap-2 p-2 backdrop-blur-lg"
     >
       <div
@@ -1407,7 +1406,7 @@ const isFullscreen = useIsFullscreen()
         </EmptyHeader>
         <EmptyContent class="w-full max-w-none items-stretch"> </EmptyContent>
       </Empty>
-      <div data-tauri-drag-region class="flex justify-between">
+      <div class="flex justify-between">
         <ButtonGroup>
           <TooltipProvider>
             <Tooltip>

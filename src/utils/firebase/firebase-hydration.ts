@@ -32,7 +32,7 @@ const ensureUnloadListener = () => {
 }
 
 interface UseLocalHydrationOptions<T> {
-  /** Guard function; only hydrate if returns true (default: target is null). */
+  /** Guard function; only hydrate if returns true (default: target is empty). */
   shouldHydrate?: () => boolean
   /** Debounce for persist writes (default 250ms). */
   debounce?: number
@@ -49,6 +49,67 @@ interface UseLocalHydrationOptions<T> {
   schema?: ZodType<T>
   /** Override the default violation context (`hydration:<key>`). */
   context?: string
+}
+
+interface HydrationCacheOptions<T> {
+  schema?: ZodType<T>
+  context?: string
+}
+
+const getStorageKey = (key: string) => CACHE_PREFIX + key
+
+const shouldHydrateValue = (value: unknown): boolean => {
+  if (value == null) return true
+  if (Array.isArray(value)) return value.length === 0
+  if (typeof value === "object") return Object.keys(value).length === 0
+  return false
+}
+
+export function readHydrationCache<T>(
+  key: string,
+  options: HydrationCacheOptions<T> = {}
+): T | null {
+  if (typeof window === "undefined") return null
+
+  const storageKey = getStorageKey(key)
+  const { schema, context } = options
+
+  try {
+    const cached = localStorage.getItem(storageKey)
+    if (!cached) return null
+
+    const parsed = JSON.parse(cached) as unknown
+    if (!schema) {
+      return parsed as T
+    }
+
+    const validated = parseSafe(schema, parsed, context ?? `hydration:${key}`)
+    if (validated !== null) {
+      return validated
+    }
+
+    localStorage.removeItem(storageKey)
+    return null
+  } catch {
+    localStorage.removeItem(storageKey)
+    return null
+  }
+}
+
+export function writeHydrationCache<T>(key: string, value: T | null): void {
+  if (typeof window === "undefined") return
+
+  const storageKey = getStorageKey(key)
+
+  try {
+    if (value != null) {
+      localStorage.setItem(storageKey, JSON.stringify(value))
+    } else {
+      localStorage.removeItem(storageKey)
+    }
+  } catch {
+    // localStorage full or unavailable — ignore
+  }
 }
 
 /**
@@ -68,9 +129,8 @@ export function useLocalHydration<T>(
   source?: WatchSource<T | null>,
   options: UseLocalHydrationOptions<T> = {}
 ): void {
-  const storageKey = CACHE_PREFIX + key
   const {
-    shouldHydrate = () => !target.value,
+    shouldHydrate = () => shouldHydrateValue(target.value),
     debounce = DEFAULT_PERSIST_DEBOUNCE_MS,
     schema,
     context,
@@ -78,31 +138,9 @@ export function useLocalHydration<T>(
 
   // Hydrate: read from localStorage synchronously on setup
   if (shouldHydrate()) {
-    try {
-      const cached = localStorage.getItem(storageKey)
-      if (cached) {
-        const parsed = JSON.parse(cached) as unknown
-        if (schema) {
-          const validated = parseSafe(
-            schema,
-            parsed,
-            context ?? `hydration:${key}`
-          )
-          if (validated !== null) {
-            target.value = validated
-          } else {
-            // Validation failed — discard the corrupt/stale cache so the next
-            // write starts fresh. The violation has already been logged via
-            // the sink by parseSafe.
-            localStorage.removeItem(storageKey)
-          }
-        } else {
-          target.value = parsed as T
-        }
-      }
-    } catch {
-      // Corrupted cache — ignore silently and clear so a future write overwrites
-      localStorage.removeItem(storageKey)
+    const hydrated = readHydrationCache<T>(key, { schema, context })
+    if (hydrated !== null) {
+      target.value = hydrated
     }
   }
 
@@ -128,16 +166,8 @@ export function useLocalHydration<T>(
   watchDebounced(
     watchSource,
     (value) => {
-      try {
-        if (value != null) {
-          localStorage.setItem(storageKey, JSON.stringify(value))
-        } else {
-          localStorage.removeItem(storageKey)
-        }
-        latestIsDirty = false
-      } catch {
-        // localStorage full or unavailable — ignore
-      }
+      writeHydrationCache(key, value)
+      latestIsDirty = false
     },
     { debounce, deep: true }
   )
@@ -145,15 +175,7 @@ export function useLocalHydration<T>(
   const flushToStorage = () => {
     if (!latestIsDirty) return
     latestIsDirty = false
-    try {
-      if (latestValue != null) {
-        localStorage.setItem(storageKey, JSON.stringify(latestValue))
-      } else {
-        localStorage.removeItem(storageKey)
-      }
-    } catch {
-      // localStorage full or unavailable — ignore
-    }
+    writeHydrationCache(key, latestValue ?? null)
   }
 
   // Register an unload flush so the last-pending write lands even if the
@@ -166,6 +188,8 @@ export function useLocalHydration<T>(
  * Clear all hydration cache entries (e.g., on logout).
  */
 export function clearHydrationCache(): void {
+  if (typeof window === "undefined") return
+
   const keysToRemove: string[] = []
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)

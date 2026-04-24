@@ -23,7 +23,7 @@ function closeSidebarOnMobile() {
       <Sidebar
         collapsible="offcanvas"
         variant="inset"
-        class="shadow-muted-foreground/5 relative w-full p-0"
+        class="shadow-muted-foreground/5 relative w-full p-0 transition-none!"
       >
         <div
           data-tauri-drag-region
@@ -31,20 +31,20 @@ function closeSidebarOnMobile() {
           :class="[{ 'pl-22': isTauri && !isFullscreen }]"
         >
           <!-- <Separator class="absolute -translate-x-full bg-red-400" /> -->
-          <div class="flex items-center gap-2">
+          <div data-tauri-drag-region class="flex items-center gap-2">
             <Notifications />
             <CommandKTrigger />
           </div>
-          <div class="flex items-center gap-2">
+          <div data-tauri-drag-region class="flex items-center gap-2">
             <BackForth />
           </div>
         </div>
-        <SidebarHeader data-tauri-drag-region>
+        <SidebarHeader>
           <TeamSwitcher />
           <WorkspaceSwitcher />
         </SidebarHeader>
         <SidebarContent @click.capture="closeSidebarOnMobile">
-          <OverlayScrollbarsWrapper data-tauri-drag-region>
+          <OverlayScrollbarsWrapper>
             <Navigation />
           </OverlayScrollbarsWrapper>
         </SidebarContent>
@@ -67,7 +67,7 @@ function closeSidebarOnMobile() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
-        <SidebarFooter data-tauri-drag-region>
+        <SidebarFooter>
           <Agents />
           <Separator />
           <Support />

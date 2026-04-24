@@ -10,7 +10,11 @@ import {
   IconCopy,
   IconGalleryHorizontalEnd,
   IconHistory,
+  IconPanelBottom,
+  IconPanelLeft,
+  IconPanelRight,
   IconPenLine,
+  IconPictureInPicture2,
   IconPin,
   IconPinOff,
   IconPlus,
@@ -570,7 +574,7 @@ onUnmounted(() => {
       >
         <div
           data-tauri-drag-region
-          class="flex min-w-0 items-center gap-2 p-2 transition-all"
+          class="flex min-w-0 items-center gap-2 px-2 pt-2"
           :class="{
             'pl-22': (!open || isMobile) && isTauri && !isFullscreen,
           }"
@@ -579,6 +583,7 @@ onUnmounted(() => {
           <BackForth v-if="!open || isMobile" />
           <nav
             ref="el"
+            data-tauri-drag-region
             class="relative flex min-w-0 items-stretch justify-start gap-2"
           >
             <template v-if="pending">
@@ -608,8 +613,7 @@ onUnmounted(() => {
                       ? 'w-8 shrink-0'
                       : 'w-60 shrink',
                   {
-                    'min-w-40 transition-all':
-                      !isPinnedTab(tab) && tab.id === activeTabId,
+                    'min-w-40': !isPinnedTab(tab) && tab.id === activeTabId,
                   },
                 ]"
               >
@@ -832,7 +836,10 @@ onUnmounted(() => {
                 <TooltipContent> {{ t("tabs.newTab") }} </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <div class="flex items-stretch justify-center gap-2">
+            <div
+              data-tauri-drag-region
+              class="flex items-stretch justify-center gap-2"
+            >
               <TooltipProvider>
                 <Tooltip>
                   <DropdownMenu>
@@ -999,6 +1006,7 @@ onUnmounted(() => {
                           @update:model-value="isPoppedOut = !isPoppedOut"
                           @select.prevent
                         >
+                          <IconPictureInPicture2 />
                           {{ t("layouts.app.statusBar.popOut") }}
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuSeparator />
@@ -1009,16 +1017,8 @@ onUnmounted(() => {
                           "
                           @select.prevent
                         >
+                          <IconPanelLeft />
                           {{ t("layouts.app.statusBar.leftPanel") }}
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          :model-value="!bottomPanelCollapsed"
-                          @update:model-value="
-                            emitter.emit('Panel.Bottom.Toggle')
-                          "
-                          @select.prevent
-                        >
-                          {{ t("layouts.app.statusBar.bottomPanel") }}
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           :model-value="!rightPanelCollapsed"
@@ -1027,7 +1027,18 @@ onUnmounted(() => {
                           "
                           @select.prevent
                         >
+                          <IconPanelRight />
                           {{ t("layouts.app.statusBar.rightPanel") }}
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          :model-value="!bottomPanelCollapsed"
+                          @update:model-value="
+                            emitter.emit('Panel.Bottom.Toggle')
+                          "
+                          @select.prevent
+                        >
+                          <IconPanelBottom />
+                          {{ t("layouts.app.statusBar.bottomPanel") }}
                         </DropdownMenuCheckboxItem>
                       </DropdownMenuGroup>
                     </DropdownMenuContent>

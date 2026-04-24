@@ -14,12 +14,8 @@ export function useWorkspaceActions() {
   const workspaceStore = useWorkspaceStore()
   const membershipStore = useMembershipStore()
 
-  const {
-    workspaces,
-    currentWorkspace,
-    isLoading,
-    isWorkspaceSelectionResolved,
-  } = storeToRefs(workspaceStore)
+  const { workspaces, currentWorkspace, isLoading, isBootstrapping } =
+    storeToRefs(workspaceStore)
   const { isOwner, currentUserRole } = storeToRefs(membershipStore)
   const { currentUser } = storeToRefs(useAuthStore()) // We need user for can()
   const loading = useLoadingState<string>()
@@ -188,7 +184,7 @@ export function useWorkspaceActions() {
     currentWorkspace,
     workspaces,
     isLoading,
-    isWorkspaceSelectionResolved,
+    isBootstrapping,
     isOwner,
     canManageWorkspaces,
 

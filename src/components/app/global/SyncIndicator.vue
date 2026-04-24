@@ -125,12 +125,8 @@ const errorMessage = computed(
           <HoverCardTrigger as-child>
             <Component :is="syncIcon" :class="syncIconClass" />
           </HoverCardTrigger>
-          <HoverCardContent
-            side="bottom"
-            :side-offset="12"
-            class="flex w-60 flex-col gap-2 p-2"
-          >
-            <Item size="sm" class="p-0">
+          <HoverCardContent side="bottom" class="flex w-60 flex-col gap-2 p-2">
+            <Item class="group" size="xs">
               <ItemMedia
                 variant="icon"
                 class="size-8 rounded-full"
@@ -152,11 +148,11 @@ const errorMessage = computed(
                 lastSuccessAt ||
                 (syncState === 'error' && lastErrorAt)
               "
-              class="space-y-2"
+              class="bg-muted space-y-2 rounded-md p-2"
             >
               <div
                 v-if="syncCount > 0"
-                class="flex items-center justify-between gap-3 text-xs"
+                class="flex items-center justify-between gap-2 text-xs"
               >
                 <span class="text-muted-foreground">{{
                   t("layouts.app.status.hovercard.pendingChanges")
@@ -166,7 +162,7 @@ const errorMessage = computed(
 
               <div
                 v-if="lastSuccessAt"
-                class="flex items-center justify-between gap-3 text-xs"
+                class="flex items-center justify-between gap-2 text-xs"
               >
                 <span class="text-muted-foreground">{{
                   t("layouts.app.status.hovercard.lastSynced")
@@ -181,7 +177,7 @@ const errorMessage = computed(
 
               <div
                 v-if="syncState === 'error' && lastErrorAt"
-                class="flex items-center justify-between gap-3 text-xs"
+                class="flex items-center justify-between gap-2 text-xs"
               >
                 <span class="text-muted-foreground">{{
                   t("layouts.app.status.hovercard.lastError")
@@ -195,10 +191,7 @@ const errorMessage = computed(
               </div>
             </div>
 
-            <div
-              v-if="syncState === 'error'"
-              class="bg-muted/60 rounded-md border px-2.5 py-2"
-            >
+            <div v-if="syncState === 'error'" class="bg-muted rounded-md p-2">
               <p class="text-xs font-medium">
                 {{ t("layouts.app.status.hovercard.errorDetails") }}
               </p>

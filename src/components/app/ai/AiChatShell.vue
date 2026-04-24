@@ -10,8 +10,12 @@ defineProps<{
 <template>
   <OverlayScrollbarsWrapper>
     <AiChat />
-    <div class="bg-secondary mx-3 mb-3 rounded-xl p-2">
-      <Badge variant="secondary" size="icon-xs" class="text-muted-foreground">
+    <div class="bg-secondary mx-3 mb-3 rounded">
+      <Badge
+        variant="secondary"
+        size="icon-xs"
+        class="text-muted-foreground m-1"
+      >
         <IconAiFill />
       </Badge>
       <AiChatComposer :placeholder="placeholder" :usage-label="usageLabel" />

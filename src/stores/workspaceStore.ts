@@ -20,6 +20,7 @@ import {
   deleteWorkspace as deleteWorkspaceFn,
   updateWorkspace as updateWorkspaceFn,
 } from "@/composables/useFunctions"
+import { workspacesHydrationSchema } from "@/schemas/domain"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IWorkspace } from "@/types/domain"
@@ -29,7 +30,10 @@ import {
   getMembershipPreferencesRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase/firebase-helpers"
-import { useLocalHydration } from "@/utils/firebase/firebase-hydration"
+import {
+  readHydrationCache,
+  writeHydrationCache,
+} from "@/utils/firebase/firebase-hydration"
 import {
   addPending,
   cloneState,
@@ -46,6 +50,8 @@ import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCollection } from "vuefire"
 
+const getWorkspacesCacheKey = (teamId: string) => `workspaces:${teamId}`
+
 export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
@@ -55,7 +61,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     pendingUserIds,
     currentTeamId,
     currentWorkspaceId,
-    isMembershipPreferencesLoading,
+    hasResolvedCurrentWorkspaceSelection,
   } = storeToRefs(authStore)
   const {
     canManageWorkspaces,
@@ -120,6 +126,29 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     )
   }
 
+  const hydrateWorkspacesForTeam = (teamId: string | null) => {
+    if (!teamId) {
+      optimisticWorkspaces.value = []
+      return
+    }
+
+    const cacheKey = getWorkspacesCacheKey(teamId)
+    const cached = readHydrationCache<IWorkspace[]>(cacheKey, {
+      schema: workspacesHydrationSchema,
+      context: `hydration:${cacheKey}`,
+    })
+
+    optimisticWorkspaces.value = cached ? [...cached] : []
+  }
+
+  const persistWorkspacesForTeam = (
+    teamId: string | null,
+    workspaceList: IWorkspace[]
+  ) => {
+    if (!teamId) return
+    writeHydrationCache(getWorkspacesCacheKey(teamId), workspaceList)
+  }
+
   // ============================================================================
   // Computed - Merged State
   // ============================================================================
@@ -137,9 +166,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     },
   })
 
-  // Hydrate from localStorage for instant cold-start rendering
-  useLocalHydration("workspaces", optimisticWorkspaces, () => workspaces.value)
-
   const workspaceById = computed(
     () =>
       new Map(workspaces.value.map((workspace) => [workspace.id, workspace]))
@@ -152,32 +178,35 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     return workspaceById.value.get(workspaceId) ?? null
   })
 
-  const isLoading = computed(() => {
-    // If no team selected, not loading
-    if (!currentTeamId.value) return false
-    // Workspaces list is still fetching and we have no cache to fall back on
-    if (isFirestoreLoading.value && optimisticWorkspaces.value.length === 0) {
-      return true
-    }
-    // Membership preferences (contains currentWorkspaceId) is still fetching
-    // and we don't have hydrated prefs — without this gate, the UI would
-    // briefly render WorkspaceSelector while the doc subscription resolves.
-    if (isMembershipPreferencesLoading.value && !currentWorkspaceId.value) {
-      return true
-    }
-    return false
+  const hasResolvedWorkspaceList = computed(() => {
+    if (!currentTeamId.value) return true
+    if (optimisticWorkspaces.value.length > 0) return true
+    if (isMembershipLoading.value) return false
+    if (!workspacesQueryRef.value) return true
+    return !isFirestoreLoading.value
   })
 
-  /**
-   * True once we know whether the user has a workspace selected for the
-   * current team. Distinguishes "user hasn't picked one yet" (show selector)
-   * from "we don't know yet" (show spinner/skeleton).
-   */
-  const isWorkspaceSelectionResolved = computed(() => {
-    if (!currentTeamId.value) return true
-    // Either hydration/cache gave us the selection, or Firestore has resolved.
-    if (currentWorkspaceId.value) return true
-    return !isMembershipPreferencesLoading.value
+  const isLoading = computed(() => {
+    if (!currentTeamId.value) return false
+    if (optimisticWorkspaces.value.length > 0) return false
+    if (isMembershipLoading.value) return true
+    if (!workspacesQueryRef.value) return false
+    return isFirestoreLoading.value
+  })
+
+  // App-shell bootstrap is narrower than list loading: only block while we
+  // still don't know the current team's workspace selection or can't map the
+  // selected workspace ID to a workspace yet.
+  const isBootstrapping = computed(() => {
+    if (!currentTeamId.value) return false
+    if (currentWorkspaceId.value) {
+      return !currentWorkspace.value && !hasResolvedWorkspaceList.value
+    }
+
+    return (
+      !hasResolvedCurrentWorkspaceSelection.value &&
+      !hasResolvedWorkspaceList.value
+    )
   })
 
   const isWorkspacePending = computed(
@@ -194,11 +223,35 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
   // Sync optimistic workspaces with Firestore data when not pending
   watch(
-    firestoreWorkspaces,
-    (data) => {
-      if (data && pendingWorkspaceIds.value.size === 0) {
-        optimisticWorkspaces.value = [...data]
-      }
+    currentTeamId,
+    (teamId, previousTeamId) => {
+      if (teamId === previousTeamId && previousTeamId !== undefined) return
+      hydrateWorkspacesForTeam(teamId)
+    },
+    { immediate: true }
+  )
+
+  // Sync optimistic state from Firestore only once VueFire has actually
+  // fetched for the current team. Guarding on `workspacesQueryRef` and
+  // `isFirestoreLoading` prevents the immediate fire from clobbering the
+  // hydrated cache with VueFire's initial empty-array default — which
+  // previously persisted `[]` to localStorage and left the app shell
+  // stuck on the bootstrap spinner when memberships were still loading.
+  watch(
+    [
+      currentTeamId,
+      firestoreWorkspaces,
+      isFirestoreLoading,
+      workspacesQueryRef,
+    ],
+    ([teamId, data, loading, queryRef]) => {
+      if (!teamId || loading || !queryRef) return
+      if (pendingWorkspaceIds.value.size > 0) return
+      if (data.some((workspace) => workspace.teamId !== teamId)) return
+
+      const nextWorkspaces = [...(data ?? [])]
+      optimisticWorkspaces.value = nextWorkspaces
+      persistWorkspacesForTeam(teamId, nextWorkspaces)
     },
     { immediate: true }
   )
@@ -211,6 +264,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       isLoading,
       currentTeamId,
       isMembershipLoading,
+      isFirestoreLoading,
     ],
     async ([
       workspaceId,
@@ -218,9 +272,22 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       loading,
       teamId,
       membershipLoading,
+      firestoreLoading,
     ]) => {
-      // If we are loading, or no workspace ID selected, ignore
-      if (!workspaceId || loading || !teamId || membershipLoading) {
+      // If we are loading, or no workspace ID selected, ignore.
+      // `firestoreLoading` is checked separately from `loading` because the
+      // latter shortcuts to false whenever `optimisticWorkspaces` has any
+      // items (including cache-hydrated entries). Without this guard, a
+      // cold start with a cached selection would fire before the workspaces
+      // query resolved, see an empty merged list (the merge drops non-pending
+      // optimistic entries), and wipe the user's selection.
+      if (
+        !workspaceId ||
+        loading ||
+        !teamId ||
+        membershipLoading ||
+        firestoreLoading
+      ) {
         return
       }
 
@@ -231,10 +298,15 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // Check if the current workspace exists in the list
       const exists = workspaceList.some((w) => w.id === workspaceId)
 
-      // If it doesn't exist and we don't have a pending operation for it
+      // Skip while ANY workspace mutation is still pending. During creation,
+      // currentWorkspaceId flips from tempId to the server-issued id before
+      // Firestore emits the new workspace — guarding on the id alone misses
+      // that window and the cleanup here would wipe the freshly-saved
+      // selection. The 120ms `pendingReleaseDelayMs` in optimistic commits
+      // gives snapshot listeners time to catch up.
       if (
         !exists &&
-        !pendingWorkspaceIds.value.has(workspaceId) &&
+        pendingWorkspaceIds.value.size === 0 &&
         !isPersistingWorkspaceSelection.value
       ) {
         console.warn(
@@ -263,9 +335,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   function cleanup() {
     optimisticWorkspaces.value = []
   }
-
-  // Watch for team change to cleanup
-  watch(currentTeamId, cleanup)
 
   // ============================================================================
   // Actions
@@ -574,7 +643,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     workspaces,
     currentWorkspace,
     isLoading,
-    isWorkspaceSelectionResolved,
+    isBootstrapping,
 
     // Pending state
     pendingWorkspaceIds,

@@ -826,6 +826,7 @@ const sessionRows = computed(() =>
 
     return {
       ...session,
+      id: session.id,
       deviceIcon: getDeviceIcon(session.deviceType),
       isCurrent,
       lastActiveLabel: lastActiveAt

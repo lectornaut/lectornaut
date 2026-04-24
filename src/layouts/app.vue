@@ -10,11 +10,8 @@ import { storeToRefs } from "pinia"
 
 const { currentTeam, isLoading: isTeamLoading } = useTeamActions()
 
-const {
-  currentWorkspace,
-  isLoading: isWorkspaceLoading,
-  isWorkspaceSelectionResolved,
-} = useWorkspaceActions()
+const { currentWorkspace, isBootstrapping: isWorkspaceBootstrapping } =
+  useWorkspaceActions()
 const layoutStore = useLayoutStore()
 const { sidebarOpen } = storeToRefs(layoutStore)
 
@@ -78,11 +75,9 @@ onMounted(async () => {
 <template>
   <SidebarProvider v-model:open="sidebarOpen">
     <div class="flex size-full min-h-0 min-w-0 grow flex-col overflow-clip">
-      <div data-tauri-drag-region class="flex min-h-0 min-w-0 grow">
+      <div class="flex min-h-0 min-w-0 grow">
         <Spinner
-          v-if="
-            isTeamLoading || isWorkspaceLoading || !isWorkspaceSelectionResolved
-          "
+          v-if="isTeamLoading || isWorkspaceBootstrapping"
           class="m-auto"
         />
         <TeamSelector v-else-if="!currentTeam" />

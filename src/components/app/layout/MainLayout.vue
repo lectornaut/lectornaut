@@ -281,7 +281,7 @@ const closeTab = (id: string) => {
       <div class="flex min-h-0 min-w-0 grow flex-col">
         <Tabbar />
         <div
-          class="flex min-h-0 min-w-0 grow gap-2 self-stretch overscroll-none scroll-smooth px-2 pb-2"
+          class="flex min-h-0 min-w-0 grow gap-2 self-stretch overscroll-none scroll-smooth p-2"
         >
           <div
             id="left-dock"
@@ -501,8 +501,7 @@ const closeTab = (id: string) => {
                                     :value="tab.id"
                                     class="hover:bg-secondary/50 data-[state=inactive]:text-secondary-foreground/50 data-[state=inactive]:bg-secondary/50 group size-full w-60 max-w-60 min-w-0 border-0 pr-1!"
                                     :class="{
-                                      'min-w-40 transition-all':
-                                        tab.id === activeTab,
+                                      'min-w-40': tab.id === activeTab,
                                       'bg-secondary! shadow-none!':
                                         tab.id === activeTab,
                                     }"

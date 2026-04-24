@@ -33,7 +33,9 @@ import {
 } from "@/utils/firebase/firebase-helpers"
 import {
   clearHydrationCache,
+  readHydrationCache,
   useLocalHydration,
+  writeHydrationCache,
 } from "@/utils/firebase/firebase-hydration"
 import {
   cloneState,
@@ -60,6 +62,9 @@ const defaultUserPreferences = (): IUserPreferences => ({
 const defaultMembershipPreferences = (): IMembershipPreferences => ({
   currentWorkspaceId: null,
 })
+
+const getMembershipPreferencesCacheKey = (teamId: string) =>
+  `membershipPreferences:${teamId}`
 
 export const useAuthStore = defineStore("auth", () => {
   const currentUser = useCurrentUser() as Ref<User | null>
@@ -94,6 +99,7 @@ export const useAuthStore = defineStore("auth", () => {
   const optimisticMembershipPreferences = ref<IMembershipPreferences | null>(
     null
   )
+  const resolvedMembershipPreferencesTeamId = ref<string | null>(null)
 
   const pendingUserIds = shallowRef(createPendingSet())
 
@@ -173,6 +179,39 @@ export const useAuthStore = defineStore("auth", () => {
     },
   })
 
+  const hydrateMembershipPreferencesForTeam = (teamId: string | null) => {
+    if (!teamId) {
+      optimisticMembershipPreferences.value = null
+      resolvedMembershipPreferencesTeamId.value = null
+      return
+    }
+
+    // Membership preferences are team-scoped; hydrate the active team's
+    // cached selection synchronously so team switches do not flash the app
+    // shell spinner while VueFire rebinds the new document.
+    const cacheKey = getMembershipPreferencesCacheKey(teamId)
+    const cached = readHydrationCache<IMembershipPreferences>(cacheKey, {
+      schema: membershipPreferencesHydrationSchema,
+      context: `hydration:${cacheKey}`,
+    })
+
+    optimisticMembershipPreferences.value =
+      cached ?? defaultMembershipPreferences()
+    resolvedMembershipPreferencesTeamId.value = cached ? teamId : null
+  }
+
+  const persistMembershipPreferencesForTeam = (
+    teamId: string | null,
+    value: IMembershipPreferences | null
+  ) => {
+    if (!teamId) return
+
+    writeHydrationCache(
+      getMembershipPreferencesCacheKey(teamId),
+      value ?? defaultMembershipPreferences()
+    )
+  }
+
   // Hydrate from localStorage for instant cold-start rendering. The hydration
   // schemas validate the cached entry and rehydrate Timestamp fields (which
   // JSON.stringify strips to plain { seconds, nanoseconds } objects).
@@ -188,21 +227,16 @@ export const useAuthStore = defineStore("auth", () => {
     () => userPreferences.value,
     { schema: userPreferencesHydrationSchema }
   )
-  // Hydrate membership preferences (contains currentWorkspaceId) so cold-start
-  // doesn't briefly render WorkspaceSelector while the Firestore doc resolves.
-  // Since currentTeamId is also hydrated above, the cached prefs correspond to
-  // the same team on initial render.
-  useLocalHydration(
-    "membershipPreferences",
-    optimisticMembershipPreferences,
-    () => membershipPreferences.value,
-    { schema: membershipPreferencesHydrationSchema }
-  )
 
   const currentWorkspaceId = computed(
     () => membershipPreferences.value?.currentWorkspaceId ?? null
   )
   const onboarding = computed(() => userPreferences.value?.onboarding ?? false)
+  const hasResolvedCurrentWorkspaceSelection = computed(() => {
+    const teamId = currentTeamId.value
+    if (!teamId) return true
+    return resolvedMembershipPreferencesTeamId.value === teamId
+  })
 
   const isLoading = computed(
     () =>
@@ -295,30 +329,38 @@ export const useAuthStore = defineStore("auth", () => {
   )
 
   watch(
-    firestoreMembershipPreferences,
-    (preferences) => {
-      if (!currentUser.value) {
+    [
+      currentTeamId,
+      firestoreMembershipPreferences,
+      isMembershipPreferencesLoading,
+    ],
+    ([teamId, preferences, loading]) => {
+      if (!currentUser.value || !teamId || loading) {
         return
       }
-      optimisticMembershipPreferences.value =
-        preferences ?? defaultMembershipPreferences()
+
+      const nextPreferences = preferences ?? defaultMembershipPreferences()
+      optimisticMembershipPreferences.value = nextPreferences
+      resolvedMembershipPreferencesTeamId.value = teamId
+      persistMembershipPreferencesForTeam(teamId, nextPreferences)
     },
     { immediate: true }
   )
 
-  // Only reset membership preferences on an actual team switch — not on the
-  // initial render. `immediate: true` would clobber values hydrated from
-  // localStorage, reintroducing the WorkspaceSelector flicker this fixes.
-  watch(currentTeamId, (newId, oldId) => {
-    if (oldId === undefined) return
-    if (newId === oldId) return
-    optimisticMembershipPreferences.value = defaultMembershipPreferences()
-  })
+  watch(
+    currentTeamId,
+    (teamId, previousTeamId) => {
+      if (teamId === previousTeamId && previousTeamId !== undefined) return
+      hydrateMembershipPreferencesForTeam(teamId)
+    },
+    { immediate: true }
+  )
 
   function cleanup() {
     optimisticUserProfile.value = null
     optimisticUserPreferences.value = null
     optimisticMembershipPreferences.value = null
+    resolvedMembershipPreferencesTeamId.value = null
     clearHydrationCache()
   }
 
@@ -347,7 +389,7 @@ export const useAuthStore = defineStore("auth", () => {
       ...(userPreferences.value ?? defaultUserPreferences()),
       currentTeamId: teamId,
     }
-    optimisticMembershipPreferences.value = defaultMembershipPreferences()
+    hydrateMembershipPreferencesForTeam(teamId)
   }
 
   async function setCurrentTeamId(teamId: string | null): Promise<void> {
@@ -394,6 +436,11 @@ export const useAuthStore = defineStore("auth", () => {
       ...(membershipPreferences.value ?? defaultMembershipPreferences()),
       currentWorkspaceId: workspaceId,
     }
+    resolvedMembershipPreferencesTeamId.value = currentTeamId.value
+    persistMembershipPreferencesForTeam(
+      currentTeamId.value,
+      optimisticMembershipPreferences.value
+    )
   }
 
   async function updateUserProfile(
@@ -531,6 +578,7 @@ export const useAuthStore = defineStore("auth", () => {
     hasAnyPendingOperation,
     isAuthenticated,
     isMembershipPreferencesLoading,
+    hasResolvedCurrentWorkspaceSelection,
     currentTeamId,
     currentWorkspaceId,
 

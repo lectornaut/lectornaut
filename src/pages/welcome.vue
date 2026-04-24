@@ -248,7 +248,7 @@ const handleFinalStepAction = async () => {
       :default-open="true"
     >
       <Sidebar collapsible="none">
-        <SidebarContent data-tauri-drag-region>
+        <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel>
               Step {{ Math.min(currentStep, totalSteps) }} of {{ totalSteps }}

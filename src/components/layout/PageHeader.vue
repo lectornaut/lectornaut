@@ -10,26 +10,22 @@ const currentUser = useCurrentUser()
 </script>
 
 <template>
-  <div data-tauri-drag-region class="grid grid-cols-2 gap-2 self-stretch p-2">
-    <div
-      data-tauri-drag-region
-      class="flex items-center justify-start gap-2 transition-all"
-      :class="{ 'pl-22': isTauri && !isFullscreen }"
-    >
-      <Logo class="size-8 shrink-0 p-2" />
-      <Button variant="ghost" size="icon" as-child>
+  <div
+    data-tauri-drag-region
+    class="grid grid-cols-2 gap-2 self-stretch p-2"
+    :class="{ 'pl-22': isTauri && !isFullscreen }"
+  >
+    <div data-tauri-drag-region class="flex items-center justify-start gap-2">
+      <Button variant="ghost" size="icon-sm" as-child>
         <RouterLink to="/start">
           <IconArrowLeft />
         </RouterLink>
       </Button>
     </div>
-    <div
-      data-tauri-drag-region
-      class="flex items-center justify-end transition-all"
-    >
+    <div data-tauri-drag-region class="flex items-center justify-end">
       <DropdownMenu v-if="currentUser">
         <DropdownMenuTrigger as-child>
-          <Button variant="ghost">
+          <Button variant="ghost" size="sm">
             <Avatar class="size-4">
               <AvatarImage
                 class="size-4"

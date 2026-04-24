@@ -18,7 +18,6 @@ const props = withDefaults(
     showInlineHints: false,
   }
 )
-const attrs = useAttrs()
 
 const overlayScrollbars =
   useTemplateRef<OverlayScrollbarsComponentRef>("overlayScrollbars")
@@ -155,7 +154,6 @@ defineExpose({
       v-if="!props.targetSelector"
       ref="overlayScrollbars"
       class="overlay-scrollbars-wrapper__viewport size-full min-h-0 min-w-0 grow overflow-auto"
-      :data-tauri-drag-region="attrs['data-tauri-drag-region']"
       defer
       :options="osOptions"
       @os-initialized="handleInitialized"

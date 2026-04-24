@@ -13,7 +13,7 @@ const agents = [
 </script>
 
 <template>
-  <SidebarMenu id="tour-team-members" data-tauri-drag-region>
+  <SidebarMenu id="tour-team-members">
     <SidebarMenuItem>
       <SidebarMenuButton tooltip="New Agent">
         <IconCirclePlus />
