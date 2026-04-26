@@ -34,6 +34,7 @@
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
+    scrollbar-color: var(--color-muted) transparent;
     text-box: trim-both cap alphabetic;
     font-variation-settings: "GRAD" var(--grade-axis);
 

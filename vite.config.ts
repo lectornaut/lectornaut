@@ -16,7 +16,7 @@ import TurboConsole from "unplugin-turbo-console/vite"
 import Components from "unplugin-vue-components/vite"
 import { VueRouterAutoImports } from "unplugin-vue-router"
 import VueRouter from "unplugin-vue-router/vite"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
 import checker from "vite-plugin-checker"
 import { ViteImageOptimizer } from "vite-plugin-image-optimizer"
 import { VitePWA } from "vite-plugin-pwa"
@@ -29,6 +29,39 @@ const file = fileURLToPath(new URL("package.json", import.meta.url))
 const json = readFileSync(file, "utf8")
 const pkg = JSON.parse(json)
 
+// @geoql/v-maplibre lazy-loads these optional peer deps via dynamic import()
+// wrapped in try/catch. We don't use the COG/geotiff/raster/lidar features, so
+// instead of installing the (heavy) packages we resolve them to a stub that
+// throws — letting v-maplibre's catch block disable the feature gracefully.
+const optionalGeoDeps = [
+  "@developmentseed/deck.gl-geotiff",
+  "@developmentseed/deck.gl-raster",
+  "@developmentseed/geotiff",
+  "@geoql/maplibre-gl-starfield",
+  "maplibre-gl-lidar",
+  "maplibre-gl-wind",
+]
+
+const stubMessage = (name: string) =>
+  `[v-maplibre] Optional peer "${name}" is not installed; this feature is disabled.`
+
+const stubOptionalGeoDeps = (): Plugin => {
+  const STUB = "\0v-maplibre-optional-stub:"
+  return {
+    name: "v-maplibre-stub-optional-deps",
+    enforce: "pre",
+    resolveId(id) {
+      if (optionalGeoDeps.includes(id)) return STUB + id
+    },
+    load(id) {
+      if (id.startsWith(STUB)) {
+        const name = id.slice(STUB.length)
+        return `throw new Error(${JSON.stringify(stubMessage(name))})`
+      }
+    },
+  }
+}
+
 // https://vitejs.dev/config/
 /**
  * Vite Configuration
@@ -40,8 +73,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ["workbox-window"],
+    rolldownOptions: {
+      plugins: [stubOptionalGeoDeps()],
+    },
   },
   plugins: [
+    stubOptionalGeoDeps(),
     generateThemesCssPlugin({
       outFile: "./styles/theme.css",
     }),

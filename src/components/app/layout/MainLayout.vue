@@ -774,7 +774,7 @@ const closeTab = (id: string) => {
                             height: `${observedSize.height}px`,
                           }
                     "
-                    class="bg-secondary overflow-clipborder pointer-events-auto absolute flex min-w-64 flex-col will-change-transform"
+                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-clip border will-change-transform"
                     :class="
                       isPoppedOutMinimized
                         ? 'border-foreground shadow-md ring-1'
