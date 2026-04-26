@@ -200,7 +200,17 @@ export function zodConverter<T extends DocumentData>(
     },
     fromFirestore(snap: QueryDocumentSnapshot, options?: SnapshotOptions): T {
       const data = coerceNumericTimestamps(snap.data(options))
-      return parseOrWarn(schema, data, `${context}:${snap.ref.path}`)
+      // Inject `snap.id` into the parsed data. The doc's path-derived id
+      // is canonical; storing it in the body is denormalization. This
+      // makes schemas with `id: z.string()` parse cleanly even when the
+      // body was written without explicit `id` (legacy docs, or docs
+      // written by code that didn't denormalize). Spread before `id` so
+      // an explicit body value is overridden by the canonical one.
+      return parseOrWarn(
+        schema,
+        { ...data, id: snap.id },
+        `${context}:${snap.ref.path}`
+      )
     },
   }
 }

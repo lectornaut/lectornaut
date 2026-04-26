@@ -1,8 +1,10 @@
 <script lang="ts" setup>
+import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconAiFill, IconPin, IconPinOff } from "@/data/icons"
+import { IconAiFill, IconHistory, IconPin, IconPinOff } from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
+import { useRouter } from "vue-router"
 
 const isFullscreen = useIsFullscreen()
 
@@ -15,6 +17,26 @@ emitter.on("Dialog.AiAsk.Toggle", () => {
 })
 
 const { t } = useI18n()
+
+// AiAsk has its own independent chat context — separate from `bot.vue`'s
+// page-level one. Each opening starts a fresh session: a quick "ask" is a
+// throwaway conversation, not a continuation of whatever happened last.
+// Sessions still persist server-side under teams/{teamId}/workspaces/
+// {workspaceId}/botSessions and remain accessible from the bot page's
+// history sidebar — the reset only affects what AiAsk's UI shows.
+const aiAskBotChat = useBotChat()
+provide(BotChatContextKey, aiAskBotChat)
+
+watch(openAiAsk, (isOpen) => {
+  if (isOpen) aiAskBotChat.startNewSession()
+})
+
+const router = useRouter()
+
+const openHistory = () => {
+  openAiAsk.value = false
+  void router.push("/bot")
+}
 </script>
 
 <template>
@@ -48,11 +70,21 @@ const { t } = useI18n()
           <AiChatShell :placeholder="t('ai.placeholder')" />
         </Teleport>
         <SheetContent
-          class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
+          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
           :class="{ 'mt-12': isTauri && !isFullscreen }"
         >
           <SheetHeader>
-            <SheetTitle> {{ t("pages.start.askAi") }} </SheetTitle>
+            <div class="flex items-center justify-between gap-2">
+              <SheetTitle>{{ t("pages.start.askAi") }}</SheetTitle>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="mr-9"
+                @click="openHistory"
+              >
+                <IconHistory />
+              </Button>
+            </div>
           </SheetHeader>
           <AiChatShell :placeholder="t('ai.placeholder')" />
         </SheetContent>

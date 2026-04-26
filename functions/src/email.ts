@@ -71,7 +71,9 @@ export async function sendEmailInternal(data: EmailData) {
       htmlBody = await render(template, templateData)
     } catch (error) {
       logger.error(`Error rendering email template ${template}`, error)
-      throw new Error(`Error rendering email template: ${error}`)
+      throw new Error(`Error rendering email template: ${error}`, {
+        cause: error,
+      })
     }
   }
 
@@ -93,7 +95,7 @@ export async function sendEmailInternal(data: EmailData) {
   } catch (error) {
     logger.error("Error sending email", error)
     const detail = error instanceof Error ? error.message : String(error)
-    throw new Error(`Error sending email: ${detail}`)
+    throw new Error(`Error sending email: ${detail}`, { cause: error })
   }
 }
 

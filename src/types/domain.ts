@@ -1,6 +1,8 @@
 import type {
   billingIntervalSchema,
   billingPlanKeySchema,
+  botSessionSchema,
+  botSessionVisibilitySchema,
   membershipPreferencesSchema,
   teamBillingSchema,
   teamSchema,
@@ -41,3 +43,6 @@ export type IUserPreferences = z.infer<typeof userPreferencesSchema>
 export type IMembershipPreferences = z.infer<typeof membershipPreferencesSchema>
 
 export type IUsernameClaim = z.infer<typeof usernameClaimSchema>
+
+export type IBotSession = z.infer<typeof botSessionSchema>
+export type IBotSessionVisibility = z.infer<typeof botSessionVisibilitySchema>

@@ -190,3 +190,42 @@ export const workspaceHydrationSchema = workspaceSchema.extend({
 })
 
 export const workspacesHydrationSchema = z.array(workspaceHydrationSchema)
+
+// ─── Bot Session ─────────────────────────────────────────────────────────────
+
+/**
+ * Bot chat session visibility:
+ *   - private: only the owner can read/write (default).
+ *   - shared:  any team member can read; only owner + team admins can write.
+ *   - public:  anyone with the URL can read (deferred — schema-only for now).
+ */
+export const botSessionVisibilitySchema = z.enum([
+  "private",
+  "shared",
+  "public",
+])
+
+/**
+ * Bot chat session metadata. The full Genkit `SessionData` blob lives in
+ * `data` and is round-tripped opaquely by the server-side `SessionStore`.
+ * The other fields are derived on each save so the history sidebar can
+ * render without parsing the blob client-side.
+ *
+ * Sessions written before the visibility field existed have no value on
+ * disk — the schema's `.default("private")` keeps them owner-only at the
+ * type layer without a data migration.
+ */
+export const botSessionSchema = z.object({
+  id: z.string(),
+  teamId: z.string(),
+  workspaceId: z.string(),
+  ownerUid: z.string(),
+  title: z.string().optional(),
+  preview: z.string().optional(),
+  messageCount: z.number().optional(),
+  visibility: botSessionVisibilitySchema.default("private"),
+  createdAt: timestampSchema.optional(),
+  updatedAt: timestampSchema.optional(),
+  /** Set when archived; null/undefined when active. */
+  archivedAt: timestampSchema.nullable().optional(),
+})

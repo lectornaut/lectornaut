@@ -1,6 +1,7 @@
 export * from "./appCheck.js"
 export * from "./audit.js"
 export * from "./billing.js"
+export * from "./bot.js"
 export * from "./callables.js"
 export * from "./collab.js"
 export * from "./email.js"

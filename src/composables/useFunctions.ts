@@ -9,6 +9,7 @@ import { functions } from "@/modules/firebase"
 import type {
   BillingInterval,
   BillingPlanKey,
+  IBotSessionVisibility,
   ITeamBilling,
 } from "@/types/domain"
 import type { IMembershipRole } from "@/types/membership"
@@ -454,6 +455,88 @@ export interface GetPublicTeamMembersResponse {
 }
 
 // =============================================================================
+// Bot Chat Request/Response Types
+// =============================================================================
+
+export interface SendBotMessageRequest {
+  teamId: string
+  workspaceId: string
+  /** Pass null/undefined to start a new session; the response carries the new id. */
+  sessionId?: string | null
+  message: string
+}
+
+export interface SendBotMessageResponse {
+  sessionId: string
+  reply: string
+}
+
+export type BotChatRole = "user" | "agent"
+
+export interface BotChatHistoryMessage {
+  role: BotChatRole
+  content: string
+}
+
+export interface LoadBotSessionRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+}
+
+export interface LoadBotSessionResponse {
+  sessionId: string
+  messages: BotChatHistoryMessage[]
+}
+
+export interface UpdateBotSessionVisibilityRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  visibility: IBotSessionVisibility
+}
+
+export interface UpdateBotSessionVisibilityResponse {
+  sessionId: string
+  visibility: IBotSessionVisibility
+}
+
+export interface RenameBotSessionRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  title: string
+}
+
+export interface RenameBotSessionResponse {
+  sessionId: string
+  title: string
+}
+
+export interface ArchiveBotSessionRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  archived: boolean
+}
+
+export interface ArchiveBotSessionResponse {
+  sessionId: string
+  archived: boolean
+}
+
+export interface DeleteBotSessionRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+}
+
+export interface DeleteBotSessionResponse {
+  sessionId: string
+  deleted: true
+}
+
+// =============================================================================
 // Typed Function Callers
 // =============================================================================
 
@@ -871,6 +954,64 @@ export const revokeSession = createTypedCallable<
 >("revokeSession")
 
 // =============================================================================
+// Bot Chat Functions
+// =============================================================================
+
+/**
+ * Send a message to the workspace-scoped Genkit chat session.
+ * Creates a new session if `sessionId` is null/omitted; resumes otherwise.
+ * Session history is persisted under
+ * `teams/{teamId}/workspaces/{workspaceId}/botSessions/{sessionId}`.
+ */
+export const sendBotMessage = createTypedCallable<
+  SendBotMessageRequest,
+  SendBotMessageResponse
+>("sendBotMessage")
+
+/**
+ * Load an existing bot chat session's main-thread messages so the client
+ * can re-render the prior conversation when the user picks a session
+ * from the history sidebar.
+ */
+export const loadBotSession = createTypedCallable<
+  LoadBotSessionRequest,
+  LoadBotSessionResponse
+>("loadBotSession")
+
+/**
+ * Change a bot chat session's visibility (private ↔ shared). Only the
+ * session owner or a team admin may invoke; the server enforces this.
+ * The "public" visibility is reserved for a future iteration and will
+ * be rejected by the server.
+ */
+export const updateBotSessionVisibility = createTypedCallable<
+  UpdateBotSessionVisibilityRequest,
+  UpdateBotSessionVisibilityResponse
+>("updateBotSessionVisibility")
+
+/** Rename a bot chat session. Owner or team admin only. */
+export const renameBotSession = createTypedCallable<
+  RenameBotSessionRequest,
+  RenameBotSessionResponse
+>("renameBotSession")
+
+/**
+ * Archive or unarchive a bot chat session. Archived sessions are hidden
+ * from the main history list but remain accessible from the "Archived"
+ * section. Owner or team admin only.
+ */
+export const archiveBotSession = createTypedCallable<
+  ArchiveBotSessionRequest,
+  ArchiveBotSessionResponse
+>("archiveBotSession")
+
+/** Delete a bot chat session permanently. Owner or team admin only. */
+export const deleteBotSession = createTypedCallable<
+  DeleteBotSessionRequest,
+  DeleteBotSessionResponse
+>("deleteBotSession")
+
+// =============================================================================
 // Composable Hook
 // =============================================================================
 
@@ -965,5 +1106,13 @@ export function useFunctions() {
     registerSessionCallable,
     revokeAllSessions,
     revokeSession,
+
+    // Bot chat operations
+    sendBotMessage,
+    loadBotSession,
+    updateBotSessionVisibility,
+    renameBotSession,
+    archiveBotSession,
+    deleteBotSession,
   }
 }

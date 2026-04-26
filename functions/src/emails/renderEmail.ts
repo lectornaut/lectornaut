@@ -36,8 +36,10 @@ function getTemplateContent(templateName: string): string {
 
   try {
     templateContent = fs.readFileSync(templatePath, "utf8")
-  } catch (_error) {
-    throw new Error(`Email template not found: ${templateName}`)
+  } catch (error) {
+    throw new Error(`Email template not found: ${templateName}`, {
+      cause: error,
+    })
   }
 
   templateContentCache.set(templateName, templateContent)

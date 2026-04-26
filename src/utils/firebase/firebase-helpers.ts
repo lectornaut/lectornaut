@@ -14,6 +14,7 @@
 import { firestore, storage } from "@/modules/firebase"
 import { zodConverter } from "@/schemas/_utils"
 import {
+  botSessionSchema,
   membershipPreferencesSchema,
   teamSchema,
   userPreferencesSchema,
@@ -22,6 +23,7 @@ import {
 } from "@/schemas/domain"
 import { membershipDocDataSchema } from "@/schemas/membership"
 import type {
+  IBotSession,
   IMembershipPreferences,
   ITeam,
   IUser,
@@ -34,6 +36,7 @@ import {
   collectionGroup,
   doc,
   getDocs,
+  orderBy,
   query,
   serverTimestamp,
   where,
@@ -83,6 +86,10 @@ const membershipConverter = zodConverter<IMembershipDocData>(
 const membershipPreferencesConverter = zodConverter<IMembershipPreferences>(
   membershipPreferencesSchema,
   "membershipPreferences"
+)
+const botSessionConverter = zodConverter<IBotSession>(
+  botSessionSchema,
+  "botSession"
 )
 
 // ============================================================================
@@ -414,4 +421,50 @@ export function createTeamMembershipsQuery(teamId: string) {
  */
 export function createTeamWorkspacesQuery(teamId: string) {
   return getTeamWorkspacesCollection(teamId)
+}
+
+/** Get bot sessions subcollection for a workspace (validated on read). */
+export const getBotSessionsCollection = (teamId: string, workspaceId: string) =>
+  collection(
+    firestore,
+    "teams",
+    teamId,
+    "workspaces",
+    workspaceId,
+    "botSessions"
+  ).withConverter(botSessionConverter)
+
+/**
+ * Create a query for the signed-in user's bot sessions in a workspace,
+ * sorted by most-recently updated. Returns the user's own sessions
+ * regardless of visibility (private + shared + public).
+ */
+export function createBotSessionsQuery(
+  teamId: string,
+  workspaceId: string,
+  ownerUid: string
+) {
+  return query(
+    getBotSessionsCollection(teamId, workspaceId),
+    where("ownerUid", "==", ownerUid),
+    orderBy("updatedAt", "desc")
+  )
+}
+
+/**
+ * Create a query for bot sessions in a workspace that have been shared
+ * by other team members. The caller filters out their own sessions
+ * client-side because Firestore can't OR across `ownerUid != x` and
+ * `visibility == 'shared'` in the same query — the visibility filter is
+ * the rule-friendly part, ownership is intersected in the consumer.
+ */
+export function createSharedBotSessionsQuery(
+  teamId: string,
+  workspaceId: string
+) {
+  return query(
+    getBotSessionsCollection(teamId, workspaceId),
+    where("visibility", "==", "shared"),
+    orderBy("updatedAt", "desc")
+  )
 }

@@ -1,5 +1,7 @@
 <script lang="ts" setup>
+import { BotChatContextKey } from "@/composables/useBotChat"
 import { IconArrowUp, IconPlus } from "@/data/icons"
+import { inject } from "vue"
 
 const props = withDefaults(
   defineProps<{
@@ -14,14 +16,51 @@ const props = withDefaults(
 const { t } = useI18n()
 const userInput = ref("")
 
-const inputPlaceholder = computed(
-  () => props.placeholder ?? t("ai.placeholder")
+const botChat = inject(BotChatContextKey)
+const isSending = computed(() => botChat?.isSending.value ?? false)
+const canSend = computed(() => botChat?.canSend.value ?? false)
+const canEditActive = computed(() => botChat?.canEditActive.value ?? true)
+const isActiveArchived = computed(
+  () => botChat?.isActiveArchived.value ?? false
 )
+const isReadOnly = computed(
+  () => !!botChat?.sessionId.value && !canEditActive.value
+)
+
+const inputPlaceholder = computed(() => {
+  if (isActiveArchived.value)
+    return "This chat is archived. Restore it to continue."
+  if (isReadOnly.value) return "This chat is read-only"
+  return props.placeholder ?? t("ai.placeholder")
+})
+
+const isDisabled = computed(
+  () => userInput.value.trim().length === 0 || !canSend.value
+)
+
+const handleSend = async () => {
+  if (isDisabled.value || !botChat) return
+  const text = userInput.value
+  userInput.value = ""
+  await botChat.sendMessage(text)
+}
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    event.preventDefault()
+    handleSend()
+  }
+}
 </script>
 
 <template>
   <InputGroup>
-    <InputGroupTextarea v-model="userInput" :placeholder="inputPlaceholder" />
+    <InputGroupTextarea
+      v-model="userInput"
+      :placeholder="inputPlaceholder"
+      :disabled="isSending || isReadOnly"
+      @keydown="handleKeydown"
+    />
     <InputGroupAddon align="block-end">
       <InputGroupButton variant="outline" size="icon-xs">
         <IconPlus />
@@ -47,7 +86,8 @@ const inputPlaceholder = computed(
       <InputGroupButton
         variant="default"
         size="icon-xs"
-        :disabled="userInput.trim().length === 0"
+        :disabled="isDisabled"
+        @click="handleSend"
       >
         <IconArrowUp />
         <span class="sr-only">{{ t("actions.send") }}</span>

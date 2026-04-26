@@ -329,6 +329,24 @@ service cloud.firestore {
             allow write: if false;
           }
         }
+
+        // Bot chat sessions have three visibility modes:
+        //   - private (default): owner-only read.
+        //   - shared:  any team member can read; only owner + admins write.
+        //   - public:  reserved for future — rule path not yet implemented.
+        // Writes always happen via Cloud Functions (sendBotMessage,
+        // updateBotSessionVisibility). Sessions written before the
+        // visibility field existed have no value, which evaluates as
+        // owner-only here (the shared predicate requires the explicit
+        // string match).
+        match /botSessions/{sessionId} {
+          allow read: if isTeamMember(teamId)
+            && (
+              resource.data.ownerUid == request.auth.uid
+              || resource.data.visibility == "shared"
+            );
+          allow write: if false;
+        }
       }
     }
 

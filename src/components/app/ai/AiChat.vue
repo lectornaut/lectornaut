@@ -1,36 +1,30 @@
 <script lang="ts" setup>
-import { IconCopy, IconPenLine, IconReply, IconTrash } from "@/data/icons"
+import { BotChatContextKey } from "@/composables/useBotChat"
+import {
+  IconAiFill,
+  IconCopy,
+  IconPenLine,
+  IconReply,
+  IconTrash,
+} from "@/data/icons"
 import Avatar from "vue-boring-avatars"
+import { inject } from "vue"
 
-const messages = [
-  { role: "agent", content: "Hi, how can I help you today?" },
-  { role: "user", content: "Hey, I'm having trouble with my account." },
-  { role: "agent", content: "What seems to be the problem?" },
-  { role: "user", content: "I can't log in." },
-  { role: "agent", content: "Let me check that for you." },
-  { role: "user", content: "Thanks!" },
-  { role: "agent", content: "You're welcome! Is there anything else?" },
-  { role: "user", content: "Actually, I have another question." },
-  { role: "agent", content: "Sure, what's your question?" },
-  { role: "user", content: "Can you help me with my billing?" },
-  { role: "agent", content: "Of course! What do you need help with?" },
-  { role: "user", content: "I need to update my payment method." },
-  { role: "agent", content: "No problem, I can assist you with that." },
-  { role: "user", content: "Great, thank you!" },
-  {
-    role: "agent",
-    content: "You're welcome! Let me know if you need anything else.",
-  },
-  { role: "user", content: "I will, thanks!" },
-  { role: "agent", content: "Have a great day!" },
-  { role: "user", content: "You too!" },
-  { role: "agent", content: "Goodbye!" },
-]
+const botChat = inject(BotChatContextKey)
+const messages = computed(() => botChat?.messages.value ?? [])
+const isSending = computed(() => botChat?.isSending.value ?? false)
 </script>
 
 <template>
   <OverlayScrollbarsWrapper>
-    <div class="grid grid-cols-1">
+    <div
+      v-if="messages.length === 0 && !isSending"
+      class="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-8 text-center text-sm"
+    >
+      <IconAiFill class="size-8 opacity-60" />
+      <p>Ask anything to get started.</p>
+    </div>
+    <div v-else class="grid grid-cols-1">
       <ContextMenu v-for="(message, index) in messages" :key="index">
         <ContextMenuTrigger>
           <div
@@ -53,7 +47,7 @@ const messages = [
             />
             <div
               :class="[
-                'flex w-max max-w-3/4 flex-col px-3 py-2 text-sm',
+                'flex w-max max-w-3/4 flex-col px-3 py-2 text-sm whitespace-pre-wrap',
                 message.role === 'user'
                   ? 'bg-muted text-muted-foreground ml-auto'
                   : 'bg-secondary text-secondary-foreground',
@@ -87,6 +81,15 @@ const messages = [
           </ContextMenuGroup>
         </ContextMenuContent>
       </ContextMenu>
+      <div
+        v-if="isSending"
+        class="text-muted-foreground flex items-center gap-2 px-6 pb-4 text-xs"
+      >
+        <span
+          class="bg-muted-foreground inline-block size-1.5 animate-pulse rounded-full"
+        />
+        <span>Thinking...</span>
+      </div>
     </div>
   </OverlayScrollbarsWrapper>
 </template>

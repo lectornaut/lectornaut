@@ -4,6 +4,9 @@ export const ATTACHMENT_NAME_MAX_LENGTH = 255
 export const NODE_ATTACHMENTS_STORAGE_ROOT = "attachments"
 
 const INVALID_STORAGE_FILENAME_CHARS = /[\\/:*?"<>|]+/g
+// Stripping control characters from filenames is the explicit intent
+// here — they're a security risk in storage paths.
+// eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]+/g
 
 export interface WorkspaceNodeAttachmentPathParams {
