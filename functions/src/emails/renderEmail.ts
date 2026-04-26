@@ -69,14 +69,17 @@ export function preloadEmailTemplates(): void {
 
 /**
  * Renders an MJML email template with the provided data.
+ *
+ * MJML v5+ exposes `mjml2html` as async, so this function awaits it.
+ *
  * @param templateName The name of the template file (without extension)
  * @param data The data to inject into the template
  * @returns The rendered HTML string
  */
-export const renderEmail = (
+export const renderEmail = async (
   templateName: string,
   data: Record<string, unknown>
-): string => {
+): Promise<string> => {
   const compiledMjmlTemplate = getCompiledMjmlTemplate(templateName)
 
   // Add global variables
@@ -89,7 +92,7 @@ export const renderEmail = (
   // We use Handlebars to replace {{variables}} inside the MJML structure
   const mjmlContent = compiledMjmlTemplate(templateData)
 
-  const { html, errors } = mjml2html(mjmlContent, {
+  const { html, errors } = await mjml2html(mjmlContent, {
     filePath: templatesDir,
   })
 
