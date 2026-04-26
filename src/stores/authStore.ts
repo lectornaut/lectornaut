@@ -272,10 +272,18 @@ export const useAuthStore = defineStore("auth", () => {
           }
           // Set optimistic state immediately (before async write)
           optimisticUserProfile.value = optimisticUser
+          // The server stamps `createdAt`/`updatedAt` itself
+          // (functions/src/sync.ts withServerManagedFields) and the write
+          // validator rejects them in the client payload.
+          const {
+            createdAt: _c,
+            updatedAt: _u,
+            ...serverPayload
+          } = optimisticUser
           // Route through sync engine so the write survives offline
           await mutateSetDocument(
             userRef,
-            optimisticUser as unknown as Record<string, unknown>,
+            serverPayload as unknown as Record<string, unknown>,
             { source: "auth.createUserProfile" }
           )
         } catch (error) {

@@ -60,15 +60,31 @@ async function sendInvitationNotification(
   invitationId: string
 ) {
   const email = invitation.email
-  if (!email) return
+  logger.info(`[INV] sendInvitationNotification entry`, { invitationId, email })
+  if (!email) {
+    logger.warn(`[INV] No email on invitation`, { invitationId })
+    return
+  }
 
   // Check if the user is already registered
   let userId: string | undefined
   try {
     const userRecord = await auth.getUserByEmail(email)
     userId = userRecord.uid
-  } catch (_error) {
-    logger.info(`Invited email ${email} is not a registered user yet.`)
+    logger.info(`[INV] Recipient is a registered user`, {
+      invitationId,
+      email,
+      userId,
+    })
+  } catch (error) {
+    logger.info(`[INV] Recipient is NOT a registered user`, {
+      invitationId,
+      email,
+      reason:
+        error instanceof Error && "code" in error
+          ? (error as { code: string }).code
+          : String(error),
+    })
   }
 
   const role = normalizeMembershipRole(invitation.role)
@@ -99,7 +115,12 @@ async function sendInvitationNotification(
   if (userId) {
     // User exists - send via unified notification service
     const roleLabel = MembershipRoleLabels[role]
-    await sendNotification({
+    logger.info(`[INV] Routing through sendNotification (registered user)`, {
+      invitationId,
+      userId,
+      email,
+    })
+    const result = await sendNotification({
       userId,
       userEmail: email,
       type: "invitation.received",
@@ -115,8 +136,20 @@ async function sendInvitationNotification(
         templateData,
       },
     })
+    logger.info(`[INV] sendNotification result`, {
+      invitationId,
+      userId,
+      result,
+    })
   } else {
     // User doesn't exist - send email only
+    logger.info(
+      `[INV] Routing through direct sendEmailInternal (unregistered)`,
+      {
+        invitationId,
+        email,
+      }
+    )
     try {
       await sendEmailInternal({
         email,
@@ -126,6 +159,10 @@ async function sendInvitationNotification(
           ...templateData,
           ctaUrl: `https://lectornaut.com/invitations?code=${invitation.code}`,
         },
+      })
+      logger.info(`[INV] Direct sendEmailInternal succeeded`, {
+        invitationId,
+        email,
       })
     } catch (error) {
       logger.error(`Failed to send invitation email to ${email}`, error)

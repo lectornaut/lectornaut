@@ -35,11 +35,12 @@ import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
 import {
   createBotSessionsQuery,
   createSharedBotSessionsQuery,
+  getBotSessionRef,
 } from "@/utils/firebase/firebase-helpers"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch, type InjectionKey, type Ref } from "vue"
 import { toast } from "vue-sonner"
-import { useCollection } from "vuefire"
+import { useCollection, useDocument } from "vuefire"
 
 export type BotChatRole = "user" | "agent"
 
@@ -145,6 +146,52 @@ export function useBotChat(): BotChatContext {
     () =>
       _vuefireMySessions.pending.value || _vuefireSharedSessions.pending.value
   )
+
+  // ── Real-time subscription to the active session ──────────────────────────
+  //
+  // Binds to the active session doc so every save (from this user OR another
+  // owner/admin in a shared chat) flows back into the local message list as
+  // a Firestore snapshot. The denormalized `messages` field on the doc is
+  // the canonical wire format — clients don't unpack the SessionData blob.
+
+  const activeSessionDocRef = computed(() => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const id = sessionId.value
+    if (!teamId || !workspaceId || !id) return null
+    return getBotSessionRef(teamId, workspaceId, id)
+  })
+
+  const _vuefireActiveSessionDoc = useDocument<IBotSession>(
+    activeSessionDocRef,
+    { reset: true }
+  )
+
+  // Sync server-driven messages into local state. Skip during in-flight
+  // sends so the user's optimistic message stays visible until the
+  // response lands; once `isSending` flips back to false, re-sync the
+  // latest doc state in case the snapshot fired during the gated window.
+  watch(
+    () => _vuefireActiveSessionDoc.data.value?.messages,
+    (serverMessages) => {
+      if (!serverMessages) return
+      if (isSending.value) return
+      messages.value = serverMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }))
+    }
+  )
+
+  watch(isSending, (sending) => {
+    if (sending) return
+    const serverMessages = _vuefireActiveSessionDoc.data.value?.messages
+    if (!serverMessages) return
+    messages.value = serverMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }))
+  })
 
   // ── Active session derivations ─────────────────────────────────────────────
 

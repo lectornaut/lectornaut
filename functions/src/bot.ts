@@ -156,6 +156,11 @@ class FirestoreBotSessionStore implements SessionStore {
       teamId: this.teamId,
       workspaceId: this.workspaceId,
       ownerUid: this.ownerUid,
+      // Denormalized flat messages for real-time client subscriptions.
+      // Clients shouldn't need to parse the opaque SessionData blob; this
+      // field is the canonical "what does the conversation look like
+      // right now" for every snapshot listener.
+      messages,
       preview: derivePreview(messages),
       messageCount: messages.length,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),

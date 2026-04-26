@@ -326,6 +326,10 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
           photoURL: auth.token.picture ?? null,
         }
 
+    const userPreferencesRef = getUserPreferencesRef(uid)
+    const userPreferencesSnap = await transaction.get(userPreferencesRef)
+    const currentTeamId = readSelectedTeamId(userPreferencesSnap) ?? null
+
     transaction.set(membershipRef, {
       userId: uid,
       teamId: invitation.teamId,
@@ -337,10 +341,6 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
     })
 
     transaction.delete(invRef)
-
-    const userPreferencesRef = getUserPreferencesRef(uid)
-    const userPreferencesSnap = await transaction.get(userPreferencesRef)
-    const currentTeamId = readSelectedTeamId(userPreferencesSnap) ?? null
 
     if (!currentTeamId) {
       transaction.set(

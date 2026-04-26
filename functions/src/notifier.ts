@@ -200,6 +200,14 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
 
   const settings = await getUserNotificationSettings(userId)
 
+  logger.info(`[NOTIF] Settings for user`, {
+    userId,
+    type,
+    settings,
+    channelConfig,
+    isSecurityNotification,
+  })
+
   if (!isSecurityNotification && !settings.categories[channelConfig.category]) {
     logger.info(
       `Notification category ${channelConfig.category} disabled for user ${userId}`
@@ -228,6 +236,15 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
     (isSecurityNotification || settings.channels.native) &&
     immediateExternalDelivery
 
+  logger.info(`[NOTIF] Routing decisions`, {
+    userId,
+    type,
+    shouldSendInApp,
+    shouldSendEmail,
+    shouldSendNative,
+    immediateExternalDelivery,
+  })
+
   if (shouldSendInApp) {
     result.inApp = await createInAppNotification(userId, {
       type: payload.type,
@@ -239,11 +256,28 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
   }
 
   if (shouldSendEmail && userEmail) {
+    logger.info(`[NOTIF] Calling sendEmailNotification`, {
+      userId,
+      type,
+      userEmail,
+    })
     result.email = await sendEmailNotification(userEmail, payload)
+    logger.info(`[NOTIF] sendEmailNotification returned`, {
+      userId,
+      type,
+      ok: result.email,
+    })
   } else if (shouldSendEmail && !userEmail) {
     logger.warn(
       `Email channel configured for ${type} but no email provided for user ${userId}`
     )
+  } else {
+    logger.info(`[NOTIF] Email send skipped`, {
+      userId,
+      type,
+      shouldSendEmail,
+      hasEmail: !!userEmail,
+    })
   }
 
   // Native desktop notifications are delivered client-side.

@@ -206,6 +206,20 @@ export const botSessionVisibilitySchema = z.enum([
 ])
 
 /**
+ * Flat client-facing role for messages stored on the session doc.
+ * Different from Genkit's internal MessageData (which uses "model" not
+ * "agent" and supports multipart content): we denormalize a simple
+ * `{role, content}` array on save so the client can render directly
+ * from the snapshot without parsing the SessionData blob.
+ */
+export const botChatRoleSchema = z.enum(["user", "agent"])
+
+export const botSessionMessageSchema = z.object({
+  role: botChatRoleSchema,
+  content: z.string(),
+})
+
+/**
  * Bot chat session metadata. The full Genkit `SessionData` blob lives in
  * `data` and is round-tripped opaquely by the server-side `SessionStore`.
  * The other fields are derived on each save so the history sidebar can
@@ -223,6 +237,13 @@ export const botSessionSchema = z.object({
   title: z.string().optional(),
   preview: z.string().optional(),
   messageCount: z.number().optional(),
+  /**
+   * Denormalized flat list of user/agent messages. Populated on every
+   * SessionStore.save so clients can subscribe to the doc and render
+   * the conversation in real-time without unpacking the SessionData
+   * blob. Empty array is valid (a session with no messages yet).
+   */
+  messages: z.array(botSessionMessageSchema).optional(),
   visibility: botSessionVisibilitySchema.default("private"),
   createdAt: timestampSchema.optional(),
   updatedAt: timestampSchema.optional(),

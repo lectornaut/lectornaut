@@ -434,6 +434,22 @@ export const getBotSessionsCollection = (teamId: string, workspaceId: string) =>
     "botSessions"
   ).withConverter(botSessionConverter)
 
+/** Get a single bot session document reference (validated on read). */
+export const getBotSessionRef = (
+  teamId: string,
+  workspaceId: string,
+  sessionId: string
+) =>
+  doc(
+    firestore,
+    "teams",
+    teamId,
+    "workspaces",
+    workspaceId,
+    "botSessions",
+    sessionId
+  ).withConverter(botSessionConverter)
+
 /**
  * Create a query for the signed-in user's bot sessions in a workspace,
  * sorted by most-recently updated. Returns the user's own sessions

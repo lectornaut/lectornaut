@@ -84,12 +84,18 @@ export async function sendEmailInternal(data: EmailData) {
   const client = getPostmarkClient()
 
   try {
-    await client.sendEmail({
+    const response = await client.sendEmail({
       From: EMAIL_FROM,
       To: email,
       Subject: subject,
       HtmlBody: htmlBody,
       MessageStream: "outbound",
+    })
+    logger.info(`[EMAIL] Postmark send accepted`, {
+      to: email,
+      subject,
+      messageID: response?.MessageID,
+      submittedAt: response?.SubmittedAt,
     })
     return { success: true }
   } catch (error) {
