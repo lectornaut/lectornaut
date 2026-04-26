@@ -1,20 +1,8 @@
-import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
-import { googleAI } from "@genkit-ai/google-genai"
 import { onCallGenkit } from "firebase-functions/https"
-import { genkit, z } from "genkit"
+import { z } from "genkit/beta"
+import { ai } from "./genkitClient.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { geminiApiKey } from "./secrets.js"
-
-enableFirebaseTelemetry()
-
-/**
- * Genkit Initialization
- * Sets up Google AI model (Gemini) for server-side generation
- */
-const ai = genkit({
-  plugins: [googleAI()],
-  model: googleAI.model("gemini-3-flash-preview"),
-})
 
 const generatePoemStreamingFlow = ai.defineFlow(
   {

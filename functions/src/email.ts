@@ -12,7 +12,7 @@ import { EmailData } from "./types.js"
  */
 let _postmarkClient: ServerClient | null = null
 let _renderEmail:
-  | ((templateName: string, data: Record<string, unknown>) => string)
+  | ((templateName: string, data: Record<string, unknown>) => Promise<string>)
   | null = null
 let _renderEmailLoader: Promise<void> | null = null
 
@@ -68,7 +68,7 @@ export async function sendEmailInternal(data: EmailData) {
       await ensureEmailRendererLoaded()
       // Local binding for type narrowing — ensureEmailRendererLoaded guarantees non-null
       const render = _renderEmail!
-      htmlBody = render(template, templateData)
+      htmlBody = await render(template, templateData)
     } catch (error) {
       logger.error(`Error rendering email template ${template}`, error)
       throw new Error(`Error rendering email template: ${error}`)
