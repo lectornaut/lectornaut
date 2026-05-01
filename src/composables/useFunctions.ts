@@ -14,7 +14,11 @@ import type {
 } from "@/types/domain"
 import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
-import { httpsCallable, type HttpsCallableResult } from "firebase/functions"
+import {
+  httpsCallable,
+  type HttpsCallable,
+  type HttpsCallableResult,
+} from "firebase/functions"
 
 export type { BillingInterval, BillingPlanKey } from "@/types/domain"
 
@@ -478,6 +482,16 @@ export interface BotChatHistoryMessage {
   content: string
 }
 
+/**
+ * One streamed update from `sendBotMessage`. The first chunk emitted by
+ * the server carries `sessionId` (so the URL can update before the reply
+ * finishes); subsequent chunks carry `chunk` text deltas.
+ */
+export interface SendBotMessageStreamChunk {
+  sessionId?: string
+  chunk?: string
+}
+
 export interface LoadBotSessionRequest {
   teamId: string
   workspaceId: string
@@ -549,6 +563,18 @@ function createTypedCallable<TRequest, TResponse>(
 ): FunctionCaller<TRequest, TResponse> {
   const callable = httpsCallable<TRequest, TResponse>(functions, name)
   return (data: TRequest) => callable(data)
+}
+
+/**
+ * Variant of {@link createTypedCallable} that exposes the underlying
+ * `HttpsCallable` so callers can use both unary (`callable(data)`) and
+ * streaming (`callable.stream(data)`) invocations against the same
+ * endpoint. Used for `onCallGenkit` flows that emit chunks.
+ */
+function createTypedStreamingCallable<TRequest, TResponse, TStream>(
+  name: string
+): HttpsCallable<TRequest, TResponse, TStream> {
+  return httpsCallable<TRequest, TResponse, TStream>(functions, name)
 }
 
 // =============================================================================
@@ -962,10 +988,16 @@ export const revokeSession = createTypedCallable<
  * Creates a new session if `sessionId` is null/omitted; resumes otherwise.
  * Session history is persisted under
  * `teams/{teamId}/workspaces/{workspaceId}/botSessions/{sessionId}`.
+ *
+ * This callable is backed by an `onCallGenkit` flow, so it supports
+ * streaming via `sendBotMessage.stream(...)` — each emitted chunk is a
+ * raw text delta. The unary form (`sendBotMessage(...)`) still works and
+ * resolves to the final aggregated reply.
  */
-export const sendBotMessage = createTypedCallable<
+export const sendBotMessage = createTypedStreamingCallable<
   SendBotMessageRequest,
-  SendBotMessageResponse
+  SendBotMessageResponse,
+  SendBotMessageStreamChunk
 >("sendBotMessage")
 
 /**

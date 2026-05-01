@@ -47,6 +47,7 @@ import {
 import {
   getCountFromServer,
   getDoc,
+  getDocsFromCache,
   query,
   Timestamp,
   where,
@@ -305,10 +306,35 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** Cache of member counts for each team */
   const teamMemberCounts = ref<Record<string, number>>({})
+  const TEAM_MEMBER_COUNT_REFRESH_DELAY_MS = 300
+  const TEAM_MEMBER_COUNT_BATCH_SIZE = 4
   let latestMemberCountRequestId = 0
+  let teamMemberCountRefreshTimer: ReturnType<typeof setTimeout> | null = null
+
+  const getMembershipTeamIds = () =>
+    [
+      ...new Set(memberships.value.map((membership) => membership.teamId)),
+    ].sort()
+
+  const syncCurrentTeamMemberCount = () => {
+    const teamId = currentTeamId.value
+    if (!teamId || _vuefireTeamMembers.pending.value) return
+
+    const nextCount = Math.max(teamMembers.value.length, 1)
+    if (teamMemberCounts.value[teamId] === nextCount) return
+
+    teamMemberCounts.value = {
+      ...teamMemberCounts.value,
+      [teamId]: nextCount,
+    }
+  }
 
   /** Get member count for a specific team */
   const getTeamMemberCount = (teamId: string): number => {
+    if (currentTeamId.value === teamId && !_vuefireTeamMembers.pending.value) {
+      return Math.max(teamMembers.value.length, 1)
+    }
+
     return teamMemberCounts.value[teamId] ?? 1
   }
 
@@ -321,6 +347,13 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
 
     const membersCollection = getTeamMembershipsCollection(teamId)
+
+    try {
+      const cachedMembersSnapshot = await getDocsFromCache(membersCollection)
+      return Math.max(cachedMembersSnapshot.size, 1)
+    } catch {
+      // Cache miss - fall through to server-backed counting below.
+    }
 
     try {
       const countSnapshot = await getCountFromServer(membersCollection)
@@ -344,11 +377,11 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   /** Fetch member counts for all teams the user is a member of */
-  async function fetchTeamMemberCounts() {
+  async function fetchTeamMemberCounts(teamIds = getMembershipTeamIds()) {
     const requestId = ++latestMemberCountRequestId
-    const teamIds = [...new Set(memberships.value.map((m) => m.teamId))].sort()
+    const uniqueTeamIds = [...new Set(teamIds)].sort()
 
-    if (teamIds.length === 0) {
+    if (uniqueTeamIds.length === 0) {
       if (requestId === latestMemberCountRequestId) {
         teamMemberCounts.value = {}
       }
@@ -356,33 +389,47 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
 
     const counts: Record<string, number> = {}
-    teamIds.forEach((teamId) => {
-      counts[teamId] = 1
+    uniqueTeamIds.forEach((teamId) => {
+      counts[teamId] = teamMemberCounts.value[teamId] ?? 1
     })
 
     // We cannot use collectionGroup("memberships").where("teamId", "in", ...)
     // here because security rules only allow reads on membership docs owned by
-    // the signed-in user in collectionGroup queries. Count each team directly.
-    await Promise.all(
-      teamIds.map(async (teamId) => {
-        try {
-          counts[teamId] = await fetchSingleTeamMemberCount(teamId)
-        } catch (error) {
-          if (isPermissionDeniedError(error)) {
+    // the signed-in user in collectionGroup queries. Count each team directly,
+    // but in small batches so startup doesn't fan out a request storm.
+    for (
+      let index = 0;
+      index < uniqueTeamIds.length;
+      index += TEAM_MEMBER_COUNT_BATCH_SIZE
+    ) {
+      const batch = uniqueTeamIds.slice(
+        index,
+        index + TEAM_MEMBER_COUNT_BATCH_SIZE
+      )
+
+      await Promise.all(
+        batch.map(async (teamId) => {
+          try {
+            counts[teamId] = await fetchSingleTeamMemberCount(teamId)
+          } catch (error) {
+            if (isPermissionDeniedError(error)) {
+              counts[teamId] = 1
+              return
+            }
+
+            console.error(
+              `[membershipStore] Failed to fetch member count for team ${teamId}:`,
+              error
+            )
             counts[teamId] = 1
-            return
           }
+        })
+      )
 
-          console.error(
-            `[membershipStore] Failed to fetch member count for team ${teamId}:`,
-            error
-          )
-          counts[teamId] = 1
-        }
-      })
-    )
+      if (requestId !== latestMemberCountRequestId) return
+    }
 
-    teamIds.forEach((teamId) => {
+    uniqueTeamIds.forEach((teamId) => {
       if ((counts[teamId] ?? 0) <= 0) {
         counts[teamId] = 1
       }
@@ -392,11 +439,43 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamMemberCounts.value = counts
   }
 
+  const scheduleTeamMemberCountsRefresh = () => {
+    const teamIds = getMembershipTeamIds()
+
+    if (teamMemberCountRefreshTimer) {
+      clearTimeout(teamMemberCountRefreshTimer)
+      teamMemberCountRefreshTimer = null
+    }
+
+    if (teamIds.length === 0) {
+      latestMemberCountRequestId += 1
+      teamMemberCounts.value = {}
+      return
+    }
+
+    teamMemberCountRefreshTimer = setTimeout(() => {
+      teamMemberCountRefreshTimer = null
+      void fetchTeamMemberCounts(teamIds)
+    }, TEAM_MEMBER_COUNT_REFRESH_DELAY_MS)
+  }
+
   // Fetch member counts when memberships change
   watch(
     () => [...new Set(memberships.value.map((m) => m.teamId))].sort().join(","),
     () => {
-      void fetchTeamMemberCounts()
+      scheduleTeamMemberCountsRefresh()
+    },
+    { immediate: true }
+  )
+
+  watch(
+    [
+      currentTeamId,
+      firestoreTeamMembers,
+      () => _vuefireTeamMembers.pending.value,
+    ],
+    () => {
+      syncCurrentTeamMemberCount()
     },
     { immediate: true }
   )
@@ -405,24 +484,41 @@ export const useMembershipStore = defineStore("memberships", () => {
   // Sync Optimistic State with Firestore
   // ============================================================================
 
-  // Sync optimistic memberships with Firestore data when not pending
+  // Sync optimistic memberships with Firestore data only once VueFire has
+  // actually fetched. Guarding on `membershipsQueryRef` and `pending`
+  // prevents the immediate fire from clobbering the hydrated cache with
+  // VueFire's initial empty-array default — which would otherwise stall
+  // the cold-start waterfall by hiding cached membership data, blocking
+  // `teamDocRef`, `workspacesQueryRef`, and `teamMembersQueryRef` (all
+  // gated on `memberships.some(...)`) until the firestore round-trip
+  // completes.
   watch(
-    firestoreMemberships,
-    (data) => {
-      if (data && pendingMembershipIds.value.size === 0) {
-        optimisticMemberships.value = [...data]
-      }
+    [
+      firestoreMemberships,
+      membershipsQueryRef,
+      () => _vuefireMemberships.pending.value,
+    ],
+    ([data, queryRef, pending]) => {
+      if (!queryRef || pending) return
+      if (pendingMembershipIds.value.size > 0) return
+      optimisticMemberships.value = [...data]
     },
     { immediate: true }
   )
 
-  // Sync optimistic team members with Firestore data when not pending
+  // Sync optimistic team members with Firestore data only once VueFire has
+  // actually fetched. Same hydration-clobber concern as the memberships
+  // watch above.
   watch(
-    firestoreTeamMembers,
-    (data) => {
-      if (data && pendingMembershipIds.value.size === 0) {
-        optimisticTeamMembers.value = [...data]
-      }
+    [
+      firestoreTeamMembers,
+      teamMembersQueryRef,
+      () => _vuefireTeamMembers.pending.value,
+    ],
+    ([data, queryRef, pending]) => {
+      if (!queryRef || pending) return
+      if (pendingMembershipIds.value.size > 0) return
+      optimisticTeamMembers.value = [...data]
     },
     { immediate: true }
   )
@@ -433,6 +529,10 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   function cleanup() {
     latestMemberCountRequestId += 1
+    if (teamMemberCountRefreshTimer) {
+      clearTimeout(teamMemberCountRefreshTimer)
+      teamMemberCountRefreshTimer = null
+    }
     teamMemberCounts.value = {}
     optimisticMemberships.value = []
     optimisticTeamMembers.value = []

@@ -573,7 +573,7 @@ onUnmounted(() => {
         class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top relative z-40"
       >
         <div
-          data-tauri-drag-region
+          data-tauri-drag-region="deep"
           class="flex min-w-0 items-center gap-2 px-2 pt-2"
           :class="{
             'pl-22': (!open || isMobile) && isTauri && !isFullscreen,
@@ -583,7 +583,6 @@ onUnmounted(() => {
           <BackForth v-if="!open || isMobile" />
           <nav
             ref="el"
-            data-tauri-drag-region
             class="relative flex min-w-0 items-stretch justify-start gap-2"
           >
             <template v-if="pending">
@@ -822,10 +821,7 @@ onUnmounted(() => {
               </div>
             </template>
           </nav>
-          <div
-            data-tauri-drag-region
-            class="flex shrink-0 grow items-stretch justify-between gap-2"
-          >
+          <div class="flex shrink-0 grow items-stretch justify-between gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
@@ -836,10 +832,7 @@ onUnmounted(() => {
                 <TooltipContent> {{ t("tabs.newTab") }} </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <div
-              data-tauri-drag-region
-              class="flex items-stretch justify-center gap-2"
-            >
+            <div class="flex items-stretch justify-center gap-2">
               <TooltipProvider>
                 <Tooltip>
                   <DropdownMenu>

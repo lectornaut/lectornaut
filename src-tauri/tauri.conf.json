@@ -27,7 +27,8 @@
         "trafficLightPosition": {
           "x": 16,
           "y": 25
-        }
+        },
+        "generalAutofillEnabled": false
       }
     ],
     "security": {

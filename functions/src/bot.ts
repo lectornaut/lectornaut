@@ -15,19 +15,35 @@
  *   - shared:  any team member can read; only owner + team admins write.
  *   - public:  reserved for future — read path not implemented.
  *
+ * Auth layering:
+ *   - App Check + signed-in + email_verified are enforced at the callable
+ *     boundary (via `enforceAppCheck` + `authPolicy` for `sendBotMessage`,
+ *     and `requireVerifiedAuth` for the CRUD callables).
+ *   - Membership / role / visibility / archived checks live inside the
+ *     handlers, since they require Firestore reads.
+ *
  * The `SessionStore.save()` deliberately does NOT touch `visibility` —
  * Genkit calls save on every chat turn, and we don't want a turn write
  * to race with the user's visibility toggle. Visibility is owned by the
  * `updateBotSessionVisibility` callable.
  */
 
-import { HttpsError, onCall } from "firebase-functions/v2/https"
-import type { SessionData, SessionStore } from "genkit/beta"
+import { onCallGenkit } from "firebase-functions/https"
+import {
+  HttpsError,
+  onCall,
+  type CallableRequest,
+} from "firebase-functions/v2/https"
+import { z, type SessionData, type SessionStore } from "genkit/beta"
 import { admin, db } from "./firebase.js"
 import { ai } from "./genkitClient.js"
-import { CALLABLE_OPTS } from "./runtimeConfig.js"
+import { CALLABLE_OPTS, GENKIT_OPTS } from "./runtimeConfig.js"
 import { geminiApiKey } from "./secrets.js"
 import type { IMembershipRole } from "./types.js"
+
+// `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
+// it from `CallableRequest["auth"]` to avoid reaching into internal paths.
+type AuthData = NonNullable<CallableRequest["auth"]>
 
 type SessionVisibility = "private" | "shared" | "public"
 const ADMIN_ROLES: ReadonlyArray<IMembershipRole> = ["owner", "admin"]
@@ -183,27 +199,31 @@ const SYSTEM_PROMPT =
   "You are a helpful assistant for the user's team workspace. " +
   "Answer concisely and stay focused on the user's question."
 
-interface SendBotMessageRequest {
-  teamId: string
-  workspaceId: string
-  sessionId?: string | null
-  message: string
-}
+// ===========================================================================
+// Auth helpers
+// ===========================================================================
 
-interface SendBotMessageResponse {
-  sessionId: string
-  reply: string
-}
-
-interface LoadBotSessionRequest {
-  teamId: string
-  workspaceId: string
-  sessionId: string
-}
-
-interface LoadBotSessionResponse {
-  sessionId: string
-  messages: ChatMessage[]
+/**
+ * Require the caller to be signed in with a verified email and return the
+ * narrowed auth. Used by every non-Genkit callable in this file (the
+ * Genkit-wrapped flow enforces `email_verified` via `authPolicy`, so it
+ * doesn't need this helper).
+ *
+ * Returning the auth (instead of using an `asserts` helper) avoids
+ * TypeScript's flaky narrowing of property accesses like `request.auth.uid`
+ * across the call boundary.
+ */
+function requireVerifiedAuth(auth: AuthData | undefined): AuthData {
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "Sign-in required.")
+  }
+  if (auth.token?.email_verified !== true) {
+    throw new HttpsError(
+      "permission-denied",
+      "Verify your email address to continue."
+    )
+  }
+  return auth
 }
 
 /**
@@ -259,37 +279,65 @@ async function readSessionDoc(
   }
 }
 
-export const sendBotMessage = onCall<SendBotMessageRequest>(
+// ===========================================================================
+// sendBotMessage — Genkit flow with streaming, exposed via onCallGenkit.
+// ===========================================================================
+
+const SendBotMessageInput = z.object({
+  teamId: z.string().min(1),
+  workspaceId: z.string().min(1),
+  /** Pass null/undefined to start a new session; the response carries the new id. */
+  sessionId: z.string().nullable().optional(),
+  message: z.string().min(1),
+})
+
+const SendBotMessageOutput = z.object({
+  sessionId: z.string(),
+  reply: z.string(),
+})
+
+/**
+ * Streaming chunks carry one of two payloads:
+ *   - `{ sessionId }` — emitted once, as the first chunk, so the client can
+ *     pin the URL to a linkable `/bot/:id` before the reply has finished.
+ *     For brand-new sessions this lets the user navigate or refresh
+ *     mid-stream without losing access to the just-created chat.
+ *   - `{ chunk }`     — a raw text delta from the model.
+ * Both fields are optional so the schema is permissive in either direction.
+ * The final aggregated reply still lands on the unary response.
+ */
+const SendBotMessageStream = z.object({
+  sessionId: z.string().optional(),
+  chunk: z.string().optional(),
+})
+
+const sendBotMessageFlow = ai.defineFlow(
   {
-    ...CALLABLE_OPTS,
-    secrets: [geminiApiKey],
-    enforceAppCheck: true,
+    name: "sendBotMessage",
+    inputSchema: SendBotMessageInput,
+    outputSchema: SendBotMessageOutput,
+    streamSchema: SendBotMessageStream,
   },
-  async (request): Promise<SendBotMessageResponse> => {
-    if (!request.auth) {
+  async (input, { sendChunk, context }) => {
+    const auth = context?.auth as AuthData | undefined
+    if (!auth?.uid) {
+      // Defense in depth — `authPolicy` should have already rejected this.
       throw new HttpsError("unauthenticated", "Sign-in required.")
     }
 
-    const { teamId, workspaceId, sessionId, message } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof message !== "string" || !message.trim()) {
-      throw new HttpsError("invalid-argument", "message is required.")
+    const message = input.message.trim()
+    if (!message) {
+      throw new HttpsError("invalid-argument", "message cannot be empty.")
     }
 
-    const role = await getMembershipRole(teamId, request.auth.uid)
+    const { teamId, workspaceId, sessionId } = input
+    const role = await getMembershipRole(teamId, auth.uid)
 
-    // For existing sessions, enforce edit permission server-side. The
-    // owner always has edit; for shared sessions, team admins also have
-    // edit. Archived sessions reject sends regardless of role —
-    // archiving is a soft "read-only" flag the user (or an admin) sets.
-    // New sessions (no sessionId yet) default to private and the caller
-    // is the owner-to-be.
+    // For existing sessions, enforce edit permission. The owner always has
+    // edit; for shared sessions, team admins also have edit. Archived
+    // sessions reject sends regardless of role — archiving is a soft
+    // "read-only" flag the user (or an admin) sets. New sessions (no
+    // sessionId yet) default to private and the caller is the owner-to-be.
     if (sessionId) {
       const existing = await readSessionDoc(teamId, workspaceId, sessionId)
       if (!existing) {
@@ -301,7 +349,7 @@ export const sendBotMessage = onCall<SendBotMessageRequest>(
           "This chat is archived. Restore it before sending new messages."
         )
       }
-      const isOwner = existing.ownerUid === request.auth.uid
+      const isOwner = existing.ownerUid === auth.uid
       const canEdit =
         isOwner || (existing.visibility === "shared" && isAdminRole(role))
       if (!canEdit) {
@@ -312,11 +360,7 @@ export const sendBotMessage = onCall<SendBotMessageRequest>(
       }
     }
 
-    const store = new FirestoreBotSessionStore(
-      teamId,
-      workspaceId,
-      request.auth.uid
-    )
+    const store = new FirestoreBotSessionStore(teamId, workspaceId, auth.uid)
 
     const session = sessionId
       ? await ai.loadSession(sessionId, { store })
@@ -326,14 +370,51 @@ export const sendBotMessage = onCall<SendBotMessageRequest>(
       ? session.chat()
       : session.chat({ system: SYSTEM_PROMPT })
 
-    const { text } = await chat.send(message)
+    // Emit the session id before we touch the model. For brand-new sessions
+    // this lets the client update the URL immediately; for resumed sessions
+    // it's a redundant confirmation but harmless.
+    sendChunk({ sessionId: session.id })
+
+    const { stream, response } = chat.sendStream(message)
+    for await (const chunk of stream) {
+      const text = chunk.text
+      if (text) sendChunk({ chunk: text })
+    }
+
+    const final = await response
 
     return {
       sessionId: session.id,
-      reply: text,
+      reply: final.text,
     }
   }
 )
+
+export const sendBotMessage = onCallGenkit(
+  {
+    ...GENKIT_OPTS,
+    secrets: [geminiApiKey],
+    authPolicy: (auth) => !!auth?.token?.email_verified,
+    enforceAppCheck: true,
+  },
+  sendBotMessageFlow
+)
+
+// ===========================================================================
+// Read & metadata callables (loadBotSession, visibility, rename, archive,
+// delete) — plain `onCall`, gated by `requireVerifiedAuth` + role checks.
+// ===========================================================================
+
+interface LoadBotSessionRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+}
+
+interface LoadBotSessionResponse {
+  sessionId: string
+  messages: ChatMessage[]
+}
 
 /**
  * Resume an existing session: fetches the persisted `SessionData` blob and
@@ -347,9 +428,7 @@ export const loadBotSession = onCall<LoadBotSessionRequest>(
     enforceAppCheck: true,
   },
   async (request): Promise<LoadBotSessionResponse> => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign-in required.")
-    }
+    const auth = requireVerifiedAuth(request.auth)
 
     const { teamId, workspaceId, sessionId } = request.data ?? {}
 
@@ -363,14 +442,14 @@ export const loadBotSession = onCall<LoadBotSessionRequest>(
       throw new HttpsError("invalid-argument", "sessionId is required.")
     }
 
-    await getMembershipRole(teamId, request.auth.uid)
+    await getMembershipRole(teamId, auth.uid)
 
     const existing = await readSessionDoc(teamId, workspaceId, sessionId)
     if (!existing) {
       throw new HttpsError("not-found", "Session not found.")
     }
 
-    const isOwner = existing.ownerUid === request.auth.uid
+    const isOwner = existing.ownerUid === auth.uid
     const isShared = existing.visibility === "shared"
     if (!isOwner && !isShared) {
       throw new HttpsError(
@@ -408,9 +487,7 @@ export const updateBotSessionVisibility =
       enforceAppCheck: true,
     },
     async (request): Promise<UpdateBotSessionVisibilityResponse> => {
-      if (!request.auth) {
-        throw new HttpsError("unauthenticated", "Sign-in required.")
-      }
+      const auth = requireVerifiedAuth(request.auth)
 
       const { teamId, workspaceId, sessionId, visibility } = request.data ?? {}
 
@@ -430,13 +507,13 @@ export const updateBotSessionVisibility =
         )
       }
 
-      const role = await getMembershipRole(teamId, request.auth.uid)
+      const role = await getMembershipRole(teamId, auth.uid)
       const existing = await readSessionDoc(teamId, workspaceId, sessionId)
       if (!existing) {
         throw new HttpsError("not-found", "Session not found.")
       }
 
-      const isOwner = existing.ownerUid === request.auth.uid
+      const isOwner = existing.ownerUid === auth.uid
       const canChange = isOwner || isAdminRole(role)
       if (!canChange) {
         throw new HttpsError(
@@ -505,9 +582,7 @@ interface RenameBotSessionResponse {
 export const renameBotSession = onCall<RenameBotSessionRequest>(
   { ...CALLABLE_OPTS, enforceAppCheck: true },
   async (request): Promise<RenameBotSessionResponse> => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign-in required.")
-    }
+    const auth = requireVerifiedAuth(request.auth)
     const { teamId, workspaceId, sessionId, title } = request.data ?? {}
 
     if (typeof teamId !== "string" || !teamId) {
@@ -524,7 +599,7 @@ export const renameBotSession = onCall<RenameBotSessionRequest>(
     }
     const trimmed = title.trim().slice(0, TITLE_LIMIT)
 
-    await assertCanMutate(teamId, workspaceId, sessionId, request.auth.uid)
+    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
 
     await db
       .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
@@ -551,9 +626,7 @@ interface ArchiveBotSessionResponse {
 export const archiveBotSession = onCall<ArchiveBotSessionRequest>(
   { ...CALLABLE_OPTS, enforceAppCheck: true },
   async (request): Promise<ArchiveBotSessionResponse> => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign-in required.")
-    }
+    const auth = requireVerifiedAuth(request.auth)
     const { teamId, workspaceId, sessionId, archived } = request.data ?? {}
 
     if (typeof teamId !== "string" || !teamId) {
@@ -569,7 +642,7 @@ export const archiveBotSession = onCall<ArchiveBotSessionRequest>(
       throw new HttpsError("invalid-argument", "archived must be a boolean.")
     }
 
-    await assertCanMutate(teamId, workspaceId, sessionId, request.auth.uid)
+    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
 
     await db
       .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
@@ -596,9 +669,7 @@ interface DeleteBotSessionResponse {
 export const deleteBotSession = onCall<DeleteBotSessionRequest>(
   { ...CALLABLE_OPTS, enforceAppCheck: true },
   async (request): Promise<DeleteBotSessionResponse> => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign-in required.")
-    }
+    const auth = requireVerifiedAuth(request.auth)
     const { teamId, workspaceId, sessionId } = request.data ?? {}
 
     if (typeof teamId !== "string" || !teamId) {
@@ -611,7 +682,7 @@ export const deleteBotSession = onCall<DeleteBotSessionRequest>(
       throw new HttpsError("invalid-argument", "sessionId is required.")
     }
 
-    await assertCanMutate(teamId, workspaceId, sessionId, request.auth.uid)
+    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
 
     // Single document; no subcollections to traverse.
     await db

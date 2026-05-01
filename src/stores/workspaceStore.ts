@@ -69,6 +69,14 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     isLoading: isMembershipLoading,
   } = storeToRefs(membershipStore)
 
+  const hasCurrentTeamMembership = computed(() => {
+    const teamId = currentTeamId.value
+    return (
+      !!teamId &&
+      memberships.value.some((membership) => membership.teamId === teamId)
+    )
+  })
+
   // ============================================================================
   // VueFire Reactive Bindings
   // ============================================================================
@@ -79,10 +87,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     if (!teamId) return null
 
     // Guard: Ensure user is a member of the team before trying to list its workspaces.
-    const isMember = membershipStore.memberships.some(
-      (m) => m.teamId === teamId
-    )
-    if (!isMember) return null
+    if (!hasCurrentTeamMembership.value) return null
 
     return createTeamWorkspacesQuery(teamId)
   })
@@ -181,17 +186,15 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const hasResolvedWorkspaceList = computed(() => {
     if (!currentTeamId.value) return true
     if (optimisticWorkspaces.value.length > 0) return true
-    if (isMembershipLoading.value) return false
-    if (!workspacesQueryRef.value) return true
-    return !isFirestoreLoading.value
+    if (workspacesQueryRef.value) return !isFirestoreLoading.value
+    return !isMembershipLoading.value || hasCurrentTeamMembership.value
   })
 
   const isLoading = computed(() => {
     if (!currentTeamId.value) return false
     if (optimisticWorkspaces.value.length > 0) return false
-    if (isMembershipLoading.value) return true
-    if (!workspacesQueryRef.value) return false
-    return isFirestoreLoading.value
+    if (workspacesQueryRef.value) return isFirestoreLoading.value
+    return isMembershipLoading.value && !hasCurrentTeamMembership.value
   })
 
   // App-shell bootstrap is narrower than list loading: only block while we
@@ -285,7 +288,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         !workspaceId ||
         loading ||
         !teamId ||
-        membershipLoading ||
+        (membershipLoading && !hasCurrentTeamMembership.value) ||
         firestoreLoading
       ) {
         return

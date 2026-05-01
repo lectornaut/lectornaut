@@ -99,6 +99,19 @@ export function useBotChat(): BotChatContext {
   const isUpdatingVisibility = ref(false)
   const isMutatingSession = ref(false)
 
+  // Cancellation handle for the in-flight `sendBotMessage.stream(...)`.
+  // Aborted whenever the user switches to a different session, starts a
+  // new chat, or the composable's scope is disposed (page unmount). This
+  // prevents zombie streams from billing tokens after the user has moved
+  // on, and keeps the local message list in sync with what's visible.
+  let inflightController: AbortController | null = null
+  const abortInflightSend = () => {
+    if (inflightController) {
+      inflightController.abort()
+      inflightController = null
+    }
+  }
+
   const isArchived = (s: IBotSession) => !!s.archivedAt
 
   // ── Sessions list: own + shared-by-others ──────────────────────────────────
@@ -167,10 +180,16 @@ export function useBotChat(): BotChatContext {
     { reset: true }
   )
 
-  // Sync server-driven messages into local state. Skip during in-flight
-  // sends so the user's optimistic message stays visible until the
-  // response lands; once `isSending` flips back to false, re-sync the
-  // latest doc state in case the snapshot fired during the gated window.
+  // Sync server-driven messages into local state. Skipped during in-flight
+  // sends so the optimistic / streaming agent message stays visible until
+  // the response lands. Genkit's `SessionStore.save` runs once at the end
+  // of each chat turn, so a fresh snapshot will fire shortly after
+  // `isSending` flips back to false and reconcile naturally.
+  //
+  // We deliberately don't re-read the snapshot when `isSending` flips
+  // false — that introduced a race where the locally-built streaming
+  // text could be overwritten with a stale pre-write snapshot before the
+  // post-write snapshot arrived.
   watch(
     () => _vuefireActiveSessionDoc.data.value?.messages,
     (serverMessages) => {
@@ -183,16 +202,6 @@ export function useBotChat(): BotChatContext {
     }
   )
 
-  watch(isSending, (sending) => {
-    if (sending) return
-    const serverMessages = _vuefireActiveSessionDoc.data.value?.messages
-    if (!serverMessages) return
-    messages.value = serverMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }))
-  })
-
   // ── Active session derivations ─────────────────────────────────────────────
 
   const activeSession = computed<IBotSession | null>(() => {
@@ -203,6 +212,25 @@ export function useBotChat(): BotChatContext {
       _vuefireSharedSessions.data.value?.find((s) => s.id === id) ??
       null
     )
+  })
+
+  // Reactive access loss: when `activeSession` flips from a real value
+  // back to null while `sessionId` is still set, the user has lost
+  // their handle on the chat — either an owner just tightened a shared
+  // chat to private (it disappears from `sharedSessions`) or another
+  // admin deleted it (it disappears from both lists). The
+  // `sharedSessions` query (`where("visibility", "==", "shared")`)
+  // updates in real time via Firestore, so this fires the moment the
+  // owner's write commits — no doc-subscription error path needed.
+  //
+  // Owners stay put: the session never leaves `mySessions` (which
+  // filters by `ownerUid`, not visibility), so their `activeSession`
+  // never goes null on a visibility flip. Initial loads (`null → session`)
+  // don't match the `prev && !next` gate either.
+  watch(activeSession, (next, prev) => {
+    if (sessionId.value && prev && !next) {
+      startNewSession()
+    }
   })
 
   const activeVisibility = computed<IBotSessionVisibility>(
@@ -250,9 +278,15 @@ export function useBotChat(): BotChatContext {
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const startNewSession = () => {
+    abortInflightSend()
     sessionId.value = null
     messages.value = []
   }
+
+  // Page unmount / composable teardown — kill any active stream so we
+  // stop incurring model tokens for a chat the user has navigated away
+  // from. Called automatically when the consuming component is unmounted.
+  onScopeDispose(abortInflightSend)
 
   // Genkit session IDs are scoped server-side to (teamId, workspaceId).
   // Switching either invalidates the local session — start fresh.
@@ -271,28 +305,67 @@ export function useBotChat(): BotChatContext {
       return
     }
     if (isSending.value) return
-    if (!canEditActive.value) {
-      toast.error("This chat is read-only.")
-      return
-    }
+    // Silent guard — the composer is `:disabled` for non-editors, so
+    // reaching this branch means a programmatic call slipped through.
+    // No toast: a user who legitimately shouldn't be sending shouldn't
+    // see a "this is read-only" error narrated at them.
+    if (!canEditActive.value) return
 
     messages.value.push({ role: "user", content: trimmed })
+    // Empty agent placeholder; chunks mutate `.content` in place as they
+    // stream in, so the bubble grows without the array shape changing.
+    const agentIndex = messages.value.length
+    messages.value.push({ role: "agent", content: "" })
     isSending.value = true
 
+    const controller = new AbortController()
+    inflightController = controller
+
     try {
-      const { data } = await sendBotMessage({
-        teamId,
-        workspaceId,
-        sessionId: sessionId.value,
-        message: trimmed,
-      })
-      sessionId.value = data.sessionId
-      messages.value.push({ role: "agent", content: data.reply })
+      const result = await sendBotMessage.stream(
+        {
+          teamId,
+          workspaceId,
+          sessionId: sessionId.value,
+          message: trimmed,
+        },
+        { signal: controller.signal }
+      )
+
+      for await (const chunk of result.stream) {
+        if (chunk.sessionId && chunk.sessionId !== sessionId.value) {
+          // Server's first chunk pins the session id — flip the URL early
+          // so the chat is linkable before the reply finishes streaming.
+          sessionId.value = chunk.sessionId
+        }
+        if (chunk.chunk) {
+          const agent = messages.value[agentIndex]
+          if (agent?.role === "agent") agent.content += chunk.chunk
+        }
+      }
+
+      const final = await result.data
+      sessionId.value = final.sessionId
+      // Server's final reply is canonical; reconcile in case the stream
+      // missed any chunk (a partial network blip during iteration).
+      const agent = messages.value[agentIndex]
+      if (agent?.role === "agent") agent.content = final.reply
     } catch (error) {
-      console.error("[useBotChat] sendBotMessage failed:", error)
-      toast.error("Failed to send message. Please try again.")
-      messages.value.pop()
+      // A user-driven cancel (session switch / unmount) lands here as an
+      // AbortError — silent rollback, no toast.
+      const isAbort = controller.signal.aborted
+      if (!isAbort) {
+        console.error("[useBotChat] sendBotMessage failed:", error)
+        toast.error("Failed to send message. Please try again.")
+      }
+      // Roll back the agent placeholder + the user message we optimistically
+      // pushed. Using splice (not two pops) so we only mutate the slice we
+      // own, even if a snapshot reconciliation snuck a write in between.
+      messages.value.splice(agentIndex - 1, 2)
     } finally {
+      // Only clear the controller if it's still ours — a later send may
+      // have already swapped a new one in (e.g., abort + immediate retry).
+      if (inflightController === controller) inflightController = null
       isSending.value = false
     }
   }
@@ -308,6 +381,10 @@ export function useBotChat(): BotChatContext {
       return
     }
     if (isLoadingSession.value) return
+
+    // Switching to a different session — kill any in-flight stream from
+    // the previous one so its chunks don't bleed into this load.
+    abortInflightSend()
 
     isLoadingSession.value = true
     try {
@@ -415,10 +492,12 @@ export function useBotChat(): BotChatContext {
       toast.info("Public chats are coming soon.")
       return
     }
-    if (!canChangeVisibilityActive.value) {
-      toast.error("Only the owner or a team admin can change visibility.")
-      return
-    }
+    // Silent guard — the radio is `:disabled` and `onVisibilityChange`
+    // also early-returns for non-admins, so reaching this branch means
+    // a programmatic call slipped through. No toast: members shouldn't
+    // see permission errors narrated at them for actions the UI was
+    // supposed to prevent.
+    if (!canChangeVisibilityActive.value) return
     if (isUpdatingVisibility.value) return
 
     isUpdatingVisibility.value = true
@@ -431,6 +510,9 @@ export function useBotChat(): BotChatContext {
       })
       // The Firestore snapshot listener will reflect the change reactively
       // through `mySessions` / `sharedSessions` — no local mutation needed.
+      // Owners stay on their chat; non-owners who lose read access are
+      // handled by the active-doc watcher below (it sees `data.value`
+      // flip non-null → null when security rules revoke their read).
     } catch (error) {
       console.error("[useBotChat] updateBotSessionVisibility failed:", error)
       toast.error("Failed to update chat visibility.")

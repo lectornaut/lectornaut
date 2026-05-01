@@ -19,6 +19,14 @@ const props = withDefaults(
   }
 )
 
+// Emitted once OverlayScrollbars finishes its deferred init and the real
+// scroll viewport is in the DOM. Consumers (e.g. auto-scrolling chats)
+// use this to wire `useScroll` against the actual scrolling element
+// instead of polling `getScrollElement()`.
+const emit = defineEmits<{
+  scrollReady: [scrollEl: HTMLElement]
+}>()
+
 const overlayScrollbars =
   useTemplateRef<OverlayScrollbarsComponentRef>("overlayScrollbars")
 const overlayContent = useTemplateRef<HTMLElement>("overlayContent")
@@ -104,6 +112,7 @@ const updateScrollHints = useThrottleFn(
 )
 
 const handleInitialized = (instance: OverlayScrollbars) => {
+  emit("scrollReady", instance.elements().scrollOffsetElement)
   nextTick(() => updateScrollHints(instance))
 }
 

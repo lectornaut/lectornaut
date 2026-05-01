@@ -26,6 +26,7 @@ const canChangeVisibility = computed(
   () => botChat?.canChangeVisibilityActive.value ?? false
 )
 const canManage = computed(() => botChat?.canManageActive.value ?? false)
+const isActiveOwner = computed(() => botChat?.isActiveOwner.value ?? false)
 const isUpdatingVisibility = computed(
   () => botChat?.isUpdatingVisibility.value ?? false
 )
@@ -41,11 +42,16 @@ interface VisibilityOption {
   disabled?: boolean
 }
 
-const visibilityOptions: VisibilityOption[] = [
+// Private's description is contextual: a team admin tightening someone
+// else's chat to private is *losing* their own access (not gaining
+// exclusive access), so phrase it from the actor's perspective.
+const visibilityOptions = computed<VisibilityOption[]>(() => [
   {
     value: "private",
     label: "Private",
-    description: "Only you can see this chat.",
+    description: isActiveOwner.value
+      ? "Only you can see this chat."
+      : "Only the owner can see this chat.",
     icon: IconLock,
   },
   {
@@ -62,13 +68,18 @@ const visibilityOptions: VisibilityOption[] = [
     icon: IconGlobe,
     disabled: true,
   },
-]
+])
 
 const confirmShareOpen = ref(false)
 const pendingVisibility = ref<IBotSessionVisibility | null>(null)
 
 const onVisibilityChange = (value: string) => {
   if (!sessionId.value) return
+  // Proactive gate: members shouldn't reach `setActiveVisibility` at all.
+  // The radio is also `:disabled` for them, but if the underlying control
+  // ever emits an update event programmatically, this stops the call
+  // before the composable would have to error out with a toast.
+  if (!canChangeVisibility.value) return
   const target = value as IBotSessionVisibility
   if (target === activeVisibility.value) return
   if (target === "public") {
@@ -212,7 +223,6 @@ const submitDelete = async () => {
               v-for="opt in visibilityOptions"
               :key="opt.value"
               orientation="horizontal"
-              class="bg-muted/40 hover:bg-muted/70 items-start gap-3 border p-2"
               :class="{
                 'opacity-60': opt.disabled,
               }"

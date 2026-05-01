@@ -54,7 +54,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 </script>
 
 <template>
-  <InputGroup>
+  <InputGroup class="bg-secondary">
     <InputGroupTextarea
       v-model="userInput"
       :placeholder="inputPlaceholder"

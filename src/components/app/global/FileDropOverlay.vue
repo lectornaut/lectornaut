@@ -1024,7 +1024,7 @@ const isFullscreen = useIsFullscreen()
       class="bg-background/50 fixed inset-0 isolate z-50 flex flex-col gap-2 p-2 backdrop-blur-lg"
     >
       <div
-        data-tauri-drag-region
+        data-tauri-drag-region="deep"
         :class="{ 'pl-22': isTauri && !isFullscreen }"
         class="flex items-start justify-between gap-2"
       >

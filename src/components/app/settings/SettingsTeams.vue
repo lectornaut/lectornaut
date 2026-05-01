@@ -162,7 +162,7 @@ const formatCreatedAt = (
             <div v-if="isLoading" class="flex justify-center py-8">
               <Spinner />
             </div>
-            <div v-else class="overflow-clip border">
+            <div v-else class="overflow-clip rounded-xl border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -215,7 +215,7 @@ const formatCreatedAt = (
                     :key="membership.teamId"
                   >
                     <TableCell>
-                      <Item class="group" size="xs">
+                      <Item class="group p-0" size="xs">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>

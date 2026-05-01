@@ -7,6 +7,8 @@ import type { ThemeMode } from "@/types/settings"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
 
+const { t } = useI18n()
+
 const currentWindowLabel = shallowRef<string | null>(null)
 const isFileCaptureWindow = computed(
   () => currentWindowLabel.value === FILE_CAPTURE_WINDOW_LABEL
@@ -50,12 +52,11 @@ const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW()
 
 watch(offlineReady, (value) => {
   if (!value) return
-  toast.success("Ready to work offline", {
+  toast.success(t("components.globalActions.toasts.offlineReady.title"), {
     id: "pwa-offline-ready",
-    description:
-      "The app is cached and will work without an internet connection.",
+    description: t("components.globalActions.toasts.offlineReady.description"),
     action: {
-      label: "Okay",
+      label: t("components.globalActions.toasts.offlineReady.action"),
       onClick: () => {
         offlineReady.value = false
       },
@@ -71,12 +72,12 @@ watch(offlineReady, (value) => {
 
 watch(needRefresh, (value) => {
   if (!value) return
-  toast.info("New version available", {
+  toast.info(t("components.globalActions.toasts.needRefresh.title"), {
     id: "pwa-need-refresh",
     duration: Infinity,
-    description: "Reload the app to apply the latest update.",
+    description: t("components.globalActions.toasts.needRefresh.description"),
     action: {
-      label: "Reload",
+      label: t("components.globalActions.toasts.needRefresh.action"),
       onClick: () => updateServiceWorker(),
     },
     onDismiss: () => {
@@ -88,8 +89,8 @@ watch(needRefresh, (value) => {
 const online = useOnline()
 
 watch(online, (value) => {
-  if (value) toast.success("You are online")
-  else toast.error("You are offline")
+  if (value) toast.success(t("components.globalActions.toasts.online"))
+  else toast.error(t("components.globalActions.toasts.offline"))
 })
 
 onMounted(() => {

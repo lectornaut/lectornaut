@@ -193,6 +193,10 @@
     }
   },
   "common": {
+    "more": "More",
+    "fontLarger": "Larger",
+    "fontSmaller": "Smaller",
+    "fontReset": "Reset",
     "cancel": "Cancel",
     "delete": "Delete",
     "save": "Save",
@@ -1584,6 +1588,22 @@
     "colorMode": {
       "tooltip": "Change theme"
     },
+    "globalActions": {
+      "toasts": {
+        "offlineReady": {
+          "title": "Ready to work offline",
+          "description": "The app is cached and will work without an internet connection.",
+          "action": "Okay"
+        },
+        "needRefresh": {
+          "title": "New version available",
+          "description": "Reload the app to apply the latest update.",
+          "action": "Reload"
+        },
+        "online": "You are online",
+        "offline": "You are offline"
+      }
+    },
     "fileDropOverlay": {
       "empty": {
         "title": "Add files",
@@ -2247,5 +2267,18 @@
     "not_found_title": "Desktop app not found",
     "not_found_description": "Get the Lectornaut desktop app for the best experience.",
     "download": "Get desktop app"
+  },
+  "updater": {
+    "preparing": "Preparing update...",
+    "downloading": "Downloading update...",
+    "downloadingProgress": "Downloading update... {percent}%",
+    "startedDownloading": "Started downloading {bytes} bytes",
+    "downloadProgress": "{downloaded} MB / {total} MB",
+    "downloaded": "Update downloaded",
+    "restartToApply": "Restart to apply changes",
+    "restart": "Restart",
+    "versionAvailable": "v{version} is available",
+    "newVersionAvailable": "A new version is available.",
+    "update": "Update"
   }
 }

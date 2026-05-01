@@ -256,10 +256,7 @@ const onArchiveToggle = (session: IBotSession) => {
                         Archive
                       </ContextMenuItem>
                       <ContextMenuSeparator />
-                      <ContextMenuItem
-                        class="text-destructive"
-                        @click="openDelete(item)"
-                      >
+                      <ContextMenuItem @click="openDelete(item)">
                         <IconTrash2 />
                         Delete
                       </ContextMenuItem>
@@ -288,10 +285,7 @@ const onArchiveToggle = (session: IBotSession) => {
                         Archive
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        class="text-destructive"
-                        @click="openDelete(item)"
-                      >
+                      <DropdownMenuItem @click="openDelete(item)">
                         <IconTrash2 />
                         Delete
                       </DropdownMenuItem>
@@ -403,10 +397,7 @@ const onArchiveToggle = (session: IBotSession) => {
                         Rename
                       </ContextMenuItem>
                       <ContextMenuSeparator />
-                      <ContextMenuItem
-                        class="text-destructive"
-                        @click="openDelete(item)"
-                      >
+                      <ContextMenuItem @click="openDelete(item)">
                         <IconTrash2 />
                         Delete
                       </ContextMenuItem>
@@ -435,10 +426,7 @@ const onArchiveToggle = (session: IBotSession) => {
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        class="text-destructive"
-                        @click="openDelete(item)"
-                      >
+                      <DropdownMenuItem @click="openDelete(item)">
                         <IconTrash2 />
                         Delete
                       </DropdownMenuItem>

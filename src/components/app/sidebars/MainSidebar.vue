@@ -26,16 +26,16 @@ function closeSidebarOnMobile() {
         class="shadow-muted-foreground/5 relative w-full p-0 transition-none!"
       >
         <div
-          data-tauri-drag-region
+          data-tauri-drag-region="deep"
           class="flex items-center justify-between gap-2 px-2 pt-2"
           :class="[{ 'pl-22': isTauri && !isFullscreen }]"
         >
           <!-- <Separator class="absolute -translate-x-full bg-red-400" /> -->
-          <div data-tauri-drag-region class="flex items-center gap-2">
+          <div class="flex items-center gap-2">
             <Notifications />
             <CommandKTrigger />
           </div>
-          <div data-tauri-drag-region class="flex items-center gap-2">
+          <div class="flex items-center gap-2">
             <BackForth />
           </div>
         </div>

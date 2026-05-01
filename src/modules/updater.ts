@@ -1,6 +1,9 @@
+import { i18n } from "@/modules/i18n"
 import { relaunch } from "@tauri-apps/plugin-process"
 import { check, type Update } from "@tauri-apps/plugin-updater"
 import { toast } from "vue-sonner"
+
+const t = i18n.global.t
 
 export type UpdateCheckResult = {
   status: "up-to-date" | "available"
@@ -20,33 +23,38 @@ export const downloadAndInstallUpdate = async (update: Update) => {
   let downloaded = 0
   let contentLength = 0
 
-  const toastId = toast.loading("Preparing update...")
+  const toastId = toast.loading(t("updater.preparing"))
 
   await update.downloadAndInstall((event) => {
     switch (event.event) {
       case "Started":
         contentLength = event.data.contentLength ?? 0
-        toast.loading("Downloading update...", {
+        toast.loading(t("updater.downloading"), {
           id: toastId,
-          description: `Started downloading ${contentLength} bytes`,
+          description: t("updater.startedDownloading", {
+            bytes: contentLength,
+          }),
         })
         break
       case "Progress":
         downloaded += event.data.chunkLength
         if (contentLength > 0) {
           const percent = Math.round((downloaded / contentLength) * 100)
-          toast.loading(`Downloading update... ${percent}%`, {
+          toast.loading(t("updater.downloadingProgress", { percent }), {
             id: toastId,
-            description: `${(downloaded / 1024 / 1024).toFixed(2)} MB / ${(contentLength / 1024 / 1024).toFixed(2)} MB`,
+            description: t("updater.downloadProgress", {
+              downloaded: (downloaded / 1024 / 1024).toFixed(2),
+              total: (contentLength / 1024 / 1024).toFixed(2),
+            }),
           })
         }
         break
       case "Finished":
-        toast.success("Update downloaded", {
+        toast.success(t("updater.downloaded"), {
           id: toastId,
-          description: "Restart to apply changes",
+          description: t("updater.restartToApply"),
           action: {
-            label: "Restart",
+            label: t("updater.restart"),
             onClick: async () => {
               await relaunch()
             },
@@ -98,10 +106,10 @@ export const initUpdater = async () => {
     const result = await checkForUpdates()
 
     if (result.status === "available" && result.update) {
-      toast.info(`v${result.version} is available`, {
-        description: "A new version is available.",
+      toast.info(t("updater.versionAvailable", { version: result.version }), {
+        description: t("updater.newVersionAvailable"),
         action: {
-          label: "Update",
+          label: t("updater.update"),
           onClick: async () => {
             await downloadAndInstallUpdate(result.update!)
           },
