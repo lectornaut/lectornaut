@@ -1008,7 +1008,7 @@ const handleSubmit = async () => {
                     <TooltipTrigger as-child>
                       <div>
                         <Select v-model="member.role" disabled>
-                          <SelectTrigger class="w-32">
+                          <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1036,7 +1036,7 @@ const handleSubmit = async () => {
                   </Tooltip>
                 </TooltipProvider>
                 <Select v-else v-model="member.role">
-                  <SelectTrigger class="w-32">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1132,7 +1132,7 @@ const handleSubmit = async () => {
                   v-model="inviteRole"
                   :disabled="!canInviteMembers && mode !== 'create'"
                 >
-                  <SelectTrigger class="w-32">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1234,7 +1234,7 @@ const handleSubmit = async () => {
             <ButtonGroup>
               <ButtonGroup>
                 <Select v-model="member.role">
-                  <SelectTrigger class="w-32">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1355,7 +1355,7 @@ const handleSubmit = async () => {
                       (val) => handleInvitationRoleChange(invite.id!, val)
                     "
                   >
-                    <SelectTrigger class="w-32">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

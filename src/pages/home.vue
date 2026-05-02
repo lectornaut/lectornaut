@@ -692,7 +692,7 @@ const expandedCard = ref<number | null>(null)
                 <PopoverTrigger as-child>
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="icon-sm"
                     class="data-[state=open]:bg-accent"
                   >
                     <IconCalendar />
@@ -795,7 +795,7 @@ const expandedCard = ref<number | null>(null)
                         <TooltipTrigger as-child>
                           <Button
                             variant="outline"
-                            size="icon"
+                            size="icon-sm"
                             @click="
                               expandedCard =
                                 expandedCard === card.id ? null : card.id
@@ -824,7 +824,7 @@ const expandedCard = ref<number | null>(null)
                             <DropdownMenuTrigger as-child>
                               <Button
                                 variant="outline"
-                                size="icon"
+                                size="icon-sm"
                                 class="data-[state=open]:bg-accent"
                               >
                                 <IconMoreHorizontal />

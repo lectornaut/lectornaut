@@ -390,15 +390,7 @@ const closeTab = (id: string) => {
                         class="bg-background/80 flex min-h-0 min-w-0 grow flex-col overflow-clip"
                       >
                         <!-- Non-scrollable sub-header with backdrop blur -->
-                        <div
-                          class="bg-sidebar/95 shadow-muted-foreground/5 mx-2 flex items-center justify-between overflow-clip rounded-b-xl border-x border-b p-2 shadow-xs backdrop-blur-lg"
-                        >
-                          <SubNavigation />
-                          <div
-                            id="cta-dock"
-                            class="flex shrink-0 items-center justify-end gap-2"
-                          ></div>
-                        </div>
+                        <SubNavigation />
                         <!-- Scrollable content area -->
                         <OverlayScrollbarsWrapper>
                           <RouterView />

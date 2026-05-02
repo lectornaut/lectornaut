@@ -2,6 +2,7 @@
 import TabIcon from "@/components/app/layout/TabIcon.vue"
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { useShortcutKeys } from "@/composables/useShortcutKeys"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   IconCheck,
@@ -54,6 +55,17 @@ const {
   isLoading: pending,
   isHydrated,
 } = storeToRefs(layoutStore)
+
+const leftPanelKeys = useShortcutKeys("Sidebar.Left.Toggle")
+const rightPanelKeys = useShortcutKeys("Sidebar.Right.Toggle")
+const bottomPanelKeys = useShortcutKeys("Panel.Bottom.Toggle")
+const newTabKeys = useShortcutKeys("Tabs.Add")
+const closeTabKeys = useShortcutKeys("Tabs.Close")
+const closeAllTabsKeys = useShortcutKeys("Tabs.Close.All")
+const closeOtherTabsKeys = useShortcutKeys("Tabs.Close.Others")
+const duplicateTabKeys = useShortcutKeys("Tabs.Duplicate")
+const renameTabKeys = useShortcutKeys("Tabs.Rename")
+const reopenLastTabKeys = useShortcutKeys("Tabs.ReopenLast")
 
 const isPoppedOut = useLocalStorage("popout-state", false)
 
@@ -714,7 +726,9 @@ onUnmounted(() => {
                           <ContextMenuItem @click="openNewTab">
                             <IconPlus />
                             {{ t("tabs.newTab") }}
-                            <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+                            <ContextMenuShortcut v-if="newTabKeys?.length">
+                              {{ newTabKeys.join("") }}
+                            </ContextMenuShortcut>
                           </ContextMenuItem>
                         </ContextMenuGroup>
                         <ContextMenuSeparator />
@@ -725,7 +739,9 @@ onUnmounted(() => {
                           >
                             <IconX />
                             {{ t("common.close") }}
-                            <ContextMenuShortcut>⌘W</ContextMenuShortcut>
+                            <ContextMenuShortcut v-if="closeTabKeys?.length">
+                              {{ closeTabKeys.join("") }}
+                            </ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem
                             :disabled="!hasClosableTabs"
@@ -733,7 +749,11 @@ onUnmounted(() => {
                           >
                             <IconCircleX />
                             {{ t("tabs.closeAll") }}
-                            <ContextMenuShortcut>⌘⌥W</ContextMenuShortcut>
+                            <ContextMenuShortcut
+                              v-if="closeAllTabsKeys?.length"
+                            >
+                              {{ closeAllTabsKeys.join("") }}
+                            </ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem
                             :disabled="!hasClosableOtherTabs(tab.id)"
@@ -741,7 +761,11 @@ onUnmounted(() => {
                           >
                             <IconSquareX />
                             {{ t("tabs.closeOthers") }}
-                            <ContextMenuShortcut>⌘⇧W</ContextMenuShortcut>
+                            <ContextMenuShortcut
+                              v-if="closeOtherTabsKeys?.length"
+                            >
+                              {{ closeOtherTabsKeys.join("") }}
+                            </ContextMenuShortcut>
                           </ContextMenuItem>
                         </ContextMenuGroup>
                         <ContextMenuSeparator />
@@ -767,7 +791,9 @@ onUnmounted(() => {
                           >
                             <IconSquarePen />
                             {{ t("tabs.rename") }}
-                            <ContextMenuShortcut>F2</ContextMenuShortcut>
+                            <ContextMenuShortcut v-if="renameTabKeys?.length">
+                              {{ renameTabKeys.join("") }}
+                            </ContextMenuShortcut>
                           </ContextMenuItem>
                           <ContextMenuItem
                             :disabled="isDefaultRoute(tab)"
@@ -775,7 +801,11 @@ onUnmounted(() => {
                           >
                             <IconCopy />
                             {{ t("tabs.duplicate") }}
-                            <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+                            <ContextMenuShortcut
+                              v-if="duplicateTabKeys?.length"
+                            >
+                              {{ duplicateTabKeys.join("") }}
+                            </ContextMenuShortcut>
                           </ContextMenuItem>
                         </ContextMenuGroup>
                       </ContextMenuContent>
@@ -849,7 +879,9 @@ onUnmounted(() => {
                         <DropdownMenuItem @click="openNewTab">
                           <IconPlus />
                           {{ t("tabs.newTab") }}
-                          <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+                          <DropdownMenuShortcut v-if="newTabKeys?.length">
+                            {{ newTabKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
@@ -860,7 +892,9 @@ onUnmounted(() => {
                         >
                           <IconX />
                           {{ t("common.close") }}
-                          <DropdownMenuShortcut>⌘W</DropdownMenuShortcut>
+                          <DropdownMenuShortcut v-if="closeTabKeys?.length">
+                            {{ closeTabKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           :disabled="!hasClosableTabs"
@@ -868,7 +902,9 @@ onUnmounted(() => {
                         >
                           <IconCircleX />
                           {{ t("tabs.closeAll") }}
-                          <DropdownMenuShortcut>⌘⌥W</DropdownMenuShortcut>
+                          <DropdownMenuShortcut v-if="closeAllTabsKeys?.length">
+                            {{ closeAllTabsKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           :disabled="
@@ -880,7 +916,11 @@ onUnmounted(() => {
                         >
                           <IconSquareX />
                           {{ t("tabs.closeOthers") }}
-                          <DropdownMenuShortcut>⌘⇧W</DropdownMenuShortcut>
+                          <DropdownMenuShortcut
+                            v-if="closeOtherTabsKeys?.length"
+                          >
+                            {{ closeOtherTabsKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
@@ -907,7 +947,9 @@ onUnmounted(() => {
                         >
                           <IconSquarePen />
                           {{ t("tabs.rename") }}
-                          <DropdownMenuShortcut>F2</DropdownMenuShortcut>
+                          <DropdownMenuShortcut v-if="renameTabKeys?.length">
+                            {{ renameTabKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           :disabled="!canRenameActiveTab"
@@ -915,7 +957,9 @@ onUnmounted(() => {
                         >
                           <IconCopy />
                           {{ t("tabs.duplicate") }}
-                          <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+                          <DropdownMenuShortcut v-if="duplicateTabKeys?.length">
+                            {{ duplicateTabKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
@@ -1012,6 +1056,9 @@ onUnmounted(() => {
                         >
                           <IconPanelLeft />
                           {{ t("layouts.app.statusBar.leftPanel") }}
+                          <DropdownMenuShortcut v-if="leftPanelKeys?.length">
+                            {{ leftPanelKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           :model-value="!rightPanelCollapsed"
@@ -1022,6 +1069,9 @@ onUnmounted(() => {
                         >
                           <IconPanelRight />
                           {{ t("layouts.app.statusBar.rightPanel") }}
+                          <DropdownMenuShortcut v-if="rightPanelKeys?.length">
+                            {{ rightPanelKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           :model-value="!bottomPanelCollapsed"
@@ -1032,6 +1082,9 @@ onUnmounted(() => {
                         >
                           <IconPanelBottom />
                           {{ t("layouts.app.statusBar.bottomPanel") }}
+                          <DropdownMenuShortcut v-if="bottomPanelKeys?.length">
+                            {{ bottomPanelKeys.join("") }}
+                          </DropdownMenuShortcut>
                         </DropdownMenuCheckboxItem>
                       </DropdownMenuGroup>
                     </DropdownMenuContent>
@@ -1049,7 +1102,9 @@ onUnmounted(() => {
         <ContextMenuItem @click="openNewTab">
           <IconPlus />
           {{ t("tabs.newTab") }}
-          <ContextMenuShortcut>⌘T</ContextMenuShortcut>
+          <ContextMenuShortcut v-if="newTabKeys?.length">
+            {{ newTabKeys.join("") }}
+          </ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuGroup>
       <ContextMenuSeparator />
@@ -1060,7 +1115,9 @@ onUnmounted(() => {
         >
           <IconHistory />
           {{ t("tabs.reopenLast") }}
-          <ContextMenuShortcut>⌘⇧T</ContextMenuShortcut>
+          <ContextMenuShortcut v-if="reopenLastTabKeys?.length">
+            {{ reopenLastTabKeys.join("") }}
+          </ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuGroup>
     </ContextMenuContent>

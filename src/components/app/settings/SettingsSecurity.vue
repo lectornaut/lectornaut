@@ -630,7 +630,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         </FieldDescription>
                       </FieldContent>
                       <Select v-model="ssoDefaultRole">
-                        <SelectTrigger class="w-32">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

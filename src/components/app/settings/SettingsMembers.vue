@@ -216,7 +216,7 @@ const formatCreatedAt = (
                           <TooltipTrigger as-child>
                             <span class="inline-block">
                               <Select :model-value="member.role" disabled>
-                                <SelectTrigger class="w-32">
+                                <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -249,7 +249,7 @@ const formatCreatedAt = (
                             )
                         "
                       >
-                        <SelectTrigger class="w-32">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

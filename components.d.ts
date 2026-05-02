@@ -377,6 +377,7 @@ declare module 'vue' {
     StepperTitle: typeof import('./src/components/ui/stepper/StepperTitle.vue')['default']
     StepperTrigger: typeof import('./src/components/ui/stepper/StepperTrigger.vue')['default']
     SubNavigation: typeof import('./src/components/app/layout/SubNavigation.vue')['default']
+    SubNavigationSidebarToggle: typeof import('./src/components/app/layout/SubNavigationSidebarToggle.vue')['default']
     Support: typeof import('./src/components/app/layout/Support.vue')['default']
     Switch: typeof import('./src/components/ui/switch/Switch.vue')['default']
     SyncIndicator: typeof import('./src/components/app/global/SyncIndicator.vue')['default']

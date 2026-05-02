@@ -1583,6 +1583,11 @@
         "refresh": "Refresh",
         "goBack": "Go back",
         "goForward": "Go forward"
+      },
+      "tooltips": {
+        "home": "Home",
+        "toggleLeftSidebar": "Toggle left sidebar",
+        "toggleRightSidebar": "Toggle right sidebar"
       }
     },
     "colorMode": {

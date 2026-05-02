@@ -83,7 +83,7 @@ export function useCollabPage(
   const teamId = computed(() => currentWorkspace.value?.teamId ?? null)
   const workspaceId = computed(() => currentWorkspace.value?.id ?? null)
   const routeNodeId = computed(() => {
-    const raw = route.params.nodeId
+    const raw = (route.params as { nodeId?: string }).nodeId
     return typeof raw === "string" && raw.length ? raw : null
   })
   const selectedNodeId = computed(() => {

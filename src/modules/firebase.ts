@@ -1,6 +1,11 @@
 import { getAnalytics } from "firebase/analytics"
 import { initializeApp } from "firebase/app"
-import { browserLocalPersistence, getAuth, setPersistence } from "firebase/auth"
+import {
+  browserLocalPersistence,
+  getAuth,
+  onAuthStateChanged,
+  setPersistence,
+} from "firebase/auth"
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -78,5 +83,16 @@ export const auth = getAuth(firebaseApp)
 export const functions = getFunctions(firebaseApp)
 export const storage = getStorage(firebaseApp)
 
-// Explicitly use LocalStorage so we can capture the session blob synchronously.
-setPersistence(auth, browserLocalPersistence)
+// Resolves once persistence has been applied AND Firebase has emitted its
+// first auth state event. Awaiting this in `main.ts` before mounting prevents
+// router guards from racing with session restoration (would otherwise redirect
+// authenticated users to /enter on cold start / full reload).
+export const authReady = setPersistence(auth, browserLocalPersistence).then(
+  () =>
+    new Promise<void>((resolve) => {
+      const unsub = onAuthStateChanged(auth, () => {
+        unsub()
+        resolve()
+      })
+    })
+)

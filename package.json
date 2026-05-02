@@ -40,12 +40,6 @@
     "@codemirror/search": "^6.7.0",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.41.1",
-    "@deck.gl/aggregation-layers": "^9.3.2",
-    "@deck.gl/core": "^9.3.2",
-    "@deck.gl/geo-layers": "^9.3.2",
-    "@deck.gl/layers": "^9.3.2",
-    "@deck.gl/mapbox": "^9.3.2",
-    "@deck.gl/mesh-layers": "^9.3.2",
     "@fontsource-variable/eb-garamond": "^5.2.7",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/geist-mono": "^5.2.7",
@@ -55,7 +49,6 @@
     "@tailwindcss/vite": "^4.2.4",
     "@tanstack/vue-table": "^8.21.3",
     "@tauri-apps/api": "^2.11.0",
-    "@tauri-apps/cli": "^2.11.0",
     "@tauri-apps/plugin-autostart": "~2.5.1",
     "@tauri-apps/plugin-deep-link": "^2.4.9",
     "@tauri-apps/plugin-dialog": "~2.7.1",
@@ -68,7 +61,6 @@
     "@tauri-apps/plugin-process": "~2.3.1",
     "@tauri-apps/plugin-shell": "~2.3.5",
     "@tauri-apps/plugin-updater": "~2.10.1",
-    "@terrastruct/d2": "^0.1.33",
     "@tiptap/core": "^3.22.5",
     "@tiptap/extension-blockquote": "^3.22.5",
     "@tiptap/extension-bold": "^3.22.5",
@@ -110,8 +102,6 @@
     "@tiptap/starter-kit": "^3.22.5",
     "@tiptap/suggestion": "^3.22.5",
     "@tiptap/vue-3": "^3.22.5",
-    "@types/qrcode": "^1.5.6",
-    "@typescript-eslint/parser": "^8.59.1",
     "@unhead/vue": "3.1.0",
     "@unovis/ts": "1.6.5",
     "@unovis/vue": "1.6.5",
@@ -140,7 +130,6 @@
     "lucide-vue-next": "^1.0.0",
     "maplibre-gl": "^5.24.0",
     "markstream-vue": "0.0.14-beta.2",
-    "mermaid": "^11.14.0",
     "mime": "^4.1.0",
     "mitt": "^3.0.1",
     "motion-v": "2.2.1",
@@ -150,12 +139,8 @@
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",
     "reka-ui": "2.9.6",
-    "shadcn-vue": "^2.6.2",
     "sortablejs": "^1.15.7",
-    "stream-markdown": "^0.0.15",
-    "stream-monaco": "^0.0.40",
     "tailwind-merge": "^3.5.0",
-    "tw-animate-css": "^1.4.0",
     "uuid": "^14.0.0",
     "vaul-vue": "^0.4.1",
     "vee-validate": "^4.15.1",
@@ -181,10 +166,13 @@
     "@intlify/unplugin-vue-i18n": "^11.1.2",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.19",
+    "@tauri-apps/cli": "^2.11.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^25.6.0",
     "@types/nprogress": "^0.2.3",
+    "@types/qrcode": "^1.5.6",
     "@types/sortablejs": "^1.15.9",
+    "@typescript-eslint/parser": "^8.59.1",
     "@vite-pwa/assets-generator": "^1.0.2",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/tsconfig": "^0.9.1",
@@ -200,6 +188,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "sass-embedded": "^1.99.0",
+    "shadcn-vue": "^2.6.2",
     "sharp": "^0.34.5",
     "stylelint": "^17.9.1",
     "stylelint-config-standard-scss": "^17.0.0",
@@ -213,7 +202,6 @@
     "unplugin-icons": "^23.0.1",
     "unplugin-turbo-console": "2.3.1",
     "unplugin-vue-components": "^32.0.0",
-    "unplugin-vue-router": "^0.19.2",
     "vite": "^8.0.10",
     "vite-plugin-checker": "^0.13.0",
     "vite-plugin-image-optimizer": "^2.0.3",
@@ -228,9 +216,10 @@
   "engines": {
     "node": "22"
   },
-  "pnpm": {
-    "overrides": {
-      "sharp": "^0.34.5"
-    }
+  "overrides": {
+    "vite-plugin-pwa": {
+      "vite": "$vite"
+    },
+    "sharp": "^0.34.5"
   }
 }

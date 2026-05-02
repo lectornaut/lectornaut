@@ -25,7 +25,7 @@ const route = useRoute()
 const router = useRouter()
 
 const routeSessionId = computed(() => {
-  const id = route.params.id
+  const id = (route.params as { id?: string }).id
   return typeof id === "string" && id ? id : null
 })
 

@@ -2,7 +2,7 @@ import App from "@/App.vue"
 import { isTauri } from "@/composables/usePlatform"
 import { createAppCheckModule } from "@/modules/appCheck"
 import { initDeepLink } from "@/modules/deepLink"
-import { firebaseApp } from "@/modules/firebase"
+import { authReady, firebaseApp } from "@/modules/firebase"
 import { initHotkeys } from "@/modules/hotkeys"
 import { i18n, initLanguage } from "@/modules/i18n"
 import { initPwa } from "@/modules/pwa"
@@ -41,6 +41,9 @@ app.use(MotionPlugin)
 app.use(i18n)
 app.use(pinia)
 
+// Order matters: authReady must resolve before router.isReady() so the
+// initial navigation guard sees a settled `auth.currentUser`.
+await authReady
 await router.isReady()
 
 app.mount("#app")

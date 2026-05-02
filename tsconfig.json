@@ -5,6 +5,7 @@
     "allowSyntheticDefaultImports": true,
     "noImplicitOverride": true,
     "outDir": "dist",
+    "rootDir": ".",
     "sourceMap": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "strict": true,
@@ -23,7 +24,6 @@
       "vite-plugin-pwa/vue",
       "unplugin-fonts/client",
       "unplugin-icons/types/vue",
-      "unplugin-vue-router/client",
       "vite-plugin-pwa/pwa-assets",
       "unplugin-turbo-console/client",
       "vite-plugin-vue-layouts/client",
@@ -33,6 +33,12 @@
       "@/*": ["./src/*"],
       "@shared/*": ["./shared/*"]
     }
+  },
+  "vueCompilerOptions": {
+    "plugins": [
+      "vue-router/volar/sfc-typed-router",
+      "vue-router/volar/sfc-route-blocks"
+    ]
   },
   "include": [
     "./src/**/*.ts",
