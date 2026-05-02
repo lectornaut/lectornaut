@@ -85,13 +85,13 @@ useInfiniteScroll(
       <Button
         id="tour-tasks-notifications"
         variant="ghost"
-        :size="unreadCount > 0 ? 'default' : 'icon-sm'"
+        :size="unreadCount > 0 ? 'sm' : 'icon-sm'"
       >
         <IconBell />
         <Badge
           v-if="unreadCount > 0"
           variant="secondary"
-          class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square px-1"
+          class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square h-4 px-1"
         >
           {{ unreadCount }}
         </Badge>

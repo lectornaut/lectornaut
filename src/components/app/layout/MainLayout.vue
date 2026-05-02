@@ -774,11 +774,11 @@ const closeTab = (id: string) => {
                             height: `${observedSize.height}px`,
                           }
                     "
-                    class="bg-secondary pointer-events-auto absolute flex min-w-64 flex-col overflow-clip border will-change-transform"
+                    class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-xl border will-change-transform"
                     :class="
                       isPoppedOutMinimized
-                        ? 'border-foreground shadow-md ring-1'
-                        : 'min-h-64 resize shadow'
+                        ? 'border-foreground shadow ring-1'
+                        : 'min-h-64 resize shadow-lg'
                     "
                   >
                     <div
@@ -793,7 +793,8 @@ const closeTab = (id: string) => {
                         <IconGripHorizontal />
                         {{ t("layouts.app.popout.title") }}
                       </span>
-                      <ButtonGroup>
+                      <span class="flex items-center gap-2">
+                        <!-- <ButtonGroup> -->
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger as-child>
@@ -831,7 +832,8 @@ const closeTab = (id: string) => {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      </ButtonGroup>
+                        <!-- </ButtonGroup> -->
+                      </span>
                     </div>
                     <div
                       v-if="!isPoppedOutMinimized"

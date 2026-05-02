@@ -32,7 +32,7 @@
     "more": "More",
     "moreOptions": "More options",
     "new": "New",
-    "openInNewTab": "Open in New tab",
+    "openInNewTab": "Open in new tab",
     "pin": "Pin",
     "popOut": "Pop out",
     "refresh": "Refresh",
@@ -40,7 +40,7 @@
     "rename": "Rename",
     "reset": "Reset",
     "save": "Save",
-    "saveChanges": "Save Changes",
+    "saveChanges": "Save changes",
     "search": "Search",
     "select": "Select",
     "send": "Send",
@@ -120,25 +120,25 @@
     "dragToResize": "Drag to resize",
     "expandPanel": "Expand panel",
     "expandSidebar": "Expand sidebar",
-    "leftArrowCollapse": "Left arrow to collapse",
-    "leftArrowExpand": "Left arrow to expand",
+    "leftArrowCollapse": "← Collapse",
+    "leftArrowExpand": "← Expand",
     "maximizePanel": "Maximize panel",
     "minimizePanel": "Minimize panel",
     "minimizeSidebar": "Minimize sidebar",
     "newTab": "New tab",
     "newTerminal": "New Terminal",
-    "rightArrowCollapse": "Right arrow to collapse",
-    "rightArrowExpand": "Right arrow to expand",
+    "rightArrowCollapse": "→ Collapse",
+    "rightArrowExpand": "→ Expand",
     "shiftLargeSteps": "Shift for large steps",
-    "upArrowExpand": "Up arrow to expand",
-    "downArrowCollapse": "Down arrow to collapse"
+    "upArrowExpand": "↑ Expand",
+    "downArrowCollapse": "↓ Collapse"
   },
   "empty": {
     "noResults": "No matches found.",
-    "noActiveSessions": "No terminal sessions yet. Open a new terminal to get started.",
+    "noActiveSessions": "No active sessions",
     "noData": "No data",
-    "noFilteredData": "No matches for the current filters.",
-    "resetFilters": "Reset filters to see all results."
+    "noFilteredData": "No matches",
+    "resetFilters": "Reset filters"
   },
   "enter": {
     "title": "Enter",
@@ -150,9 +150,9 @@
     "continue": "Continue",
     "orContinueWith": "Or continue with",
     "magicLink": {
-      "send": "Email me a sign-in link",
+      "send": "Send sign-in link",
       "title": "Send sign-in link",
-      "description": "Enter your email address and we'll send you a sign-in link.",
+      "description": "We'll email you a sign-in link.",
       "recent": "Recent",
       "lastUsed": "Last used sign-in method",
       "tooltip": "Send a sign-in link"
@@ -160,7 +160,7 @@
     "forgotPassword": {
       "send": "Send reset link",
       "title": "Forgot password",
-      "description": "Enter your email address and we'll send you a password reset link.",
+      "description": "We'll email you a password reset link.",
       "tooltip": "Reset password"
     },
     "placeholders": {
@@ -175,8 +175,8 @@
       "hidePassword": "Hide password"
     },
     "tooltips": {
-      "notifications": "We'll use this email for account updates and sign-in links",
-      "strongPassword": "Use a strong password to protect your account"
+      "notifications": "Used for account updates and sign-in",
+      "strongPassword": "Use a strong password"
     },
     "uhoh": "Something went wrong",
     "cancel": "Cancel",
@@ -184,9 +184,9 @@
     "microsoft": "Microsoft",
     "apple": "Apple",
     "removeAccount": "Remove account",
-    "useAccount": "Use this account",
-    "showAllAuthOptions": "Show all sign-in options",
-    "showAllAccounts": "Show all accounts",
+    "useAccount": "Use account",
+    "showAllAuthOptions": "All sign-in options",
+    "showAllAccounts": "All accounts",
     "footer": {
       "terms": "Terms",
       "privacy": "Privacy"
@@ -242,67 +242,67 @@
       "plans": "Plans"
     },
     "descriptions": {
-      "preferences": "Change language, theme, font, and display preferences.",
-      "account": "Update your profile, sign-in methods, and account details.",
-      "notifications": "Choose which updates you receive and how often.",
-      "appearance": "Adjust the app's theme, colors, and typography.",
-      "security": "Domain allowlist, password, and multi-factor authentication settings.",
-      "agents": "Review the agents available in this workspace.",
-      "members": "Review members, roles, and access.",
-      "overview": "Review team details, visibility, and access.",
-      "teams": "Create teams, update team details, and manage visibility.",
-      "workspaces": "Create workspaces and switch where you work.",
+      "preferences": "Language, theme, font, and display.",
+      "account": "Profile, sign-in, and account details.",
+      "notifications": "Choose what to receive and how often.",
+      "appearance": "Theme, colors, and typography.",
+      "security": "Password, MFA, and domain controls.",
+      "agents": "Agents available in this workspace.",
+      "members": "Members, roles, and access.",
+      "overview": "Team details, visibility, and access.",
+      "teams": "Create and manage teams.",
+      "workspaces": "Create and switch workspaces.",
       "invite": "Invite people to this team.",
-      "runs": "Review run history and current status.",
-      "knowledge": "Add and organize knowledge for this workspace.",
-      "integrations": "Connect tools and services to this workspace.",
-      "logs": "Review activity and system history.",
-      "general": "Review organization-wide settings and defaults.",
-      "billing": "Review plans, invoices, payment details, and billing status.",
-      "plans": "Compare plans and update this team's subscription."
+      "runs": "Run history and current status.",
+      "knowledge": "Add and organize workspace knowledge.",
+      "integrations": "Connect tools and services.",
+      "logs": "Activity and system history.",
+      "general": "Organization-wide settings and defaults.",
+      "billing": "Plans, invoices, and billing status.",
+      "plans": "Compare plans and update subscription."
     },
     "account": {
       "profile": {
         "label": "Profile",
-        "description": "Manage your name and profile picture."
+        "description": "Manage name and profile picture."
       },
       "publicIdentity": {
         "label": "Public identity",
-        "description": "Control your username and public profile visibility."
+        "description": "Control username and public visibility."
       },
       "signIn": {
         "label": "Sign-in",
-        "description": "Manage your email address and password."
+        "description": "Manage email and password."
       },
       "profilePicture": {
         "label": "Profile picture",
-        "description": "Upload or remove the photo shown on your profile.",
-        "upload": "Upload profile picture",
-        "remove": "Remove profile picture",
+        "description": "Upload or remove your profile photo.",
+        "upload": "Upload",
+        "remove": "Remove",
         "updated": "Profile photo updated",
         "updatedDesc": "Your profile photo was updated.",
-        "uploading": "Uploading profile picture",
+        "uploading": "Uploading...",
         "uploadingDesc": "Uploading your profile photo.",
         "failed": "Couldn't update profile photo",
         "failedUpload": "Couldn't upload profile photo"
       },
       "preferredName": {
         "label": "Preferred name",
-        "description": "Choose the name shown throughout the app.",
+        "description": "Name shown throughout the app.",
         "inputLabel": "Name",
         "placeholder": "Name",
         "editPrompt": "This name appears throughout the app"
       },
       "publicProfile": {
         "label": "Public profile",
-        "description": "Let people view your profile when they have the link.",
-        "requiresUsername": "Add a username before turning on your public profile",
-        "turnOnToEnable": "Turn this on to make your profile public",
-        "availableAt": "Your public profile is available at {url}"
+        "description": "Let people view your profile via link.",
+        "requiresUsername": "Add a username to enable",
+        "turnOnToEnable": "Turn on to make profile public",
+        "availableAt": "Available at {url}"
       },
       "username": {
         "label": "Username",
-        "description": "Choose the unique handle used for your public profile.",
+        "description": "Your unique public handle.",
         "placeholder": "username",
         "available": "Available",
         "checkPrompt": "Choose a unique username",
@@ -312,25 +312,25 @@
         "label": "Email",
         "verified": "Verified",
         "verifiedDesc": "We've verified your email address.",
-        "verify": "Send verification email",
+        "verify": "Verify email",
         "change": "Change email",
         "changeTitle": "Change email address",
-        "changeDesc": "Enter the email address you want to use for sign-in and notifications.",
+        "changeDesc": "Enter the email used for sign-in and notifications.",
         "newLabel": "New email address",
         "newPlaceholder": "New email address",
-        "sendVerification": "Send verification email",
+        "sendVerification": "Send link",
         "sent": "Verification email sent",
         "sentDesc": "Check your inbox to verify this email address.",
         "failed": "Couldn't send verification email"
       },
       "password": {
         "label": "Password",
-        "description": "Set the password used for email sign-in.",
+        "description": "Password for email sign-in.",
         "change": "Change password",
         "set": "Create password",
         "changeTitle": "Change password",
         "setTitle": "Create password",
-        "changeDesc": "Enter a new password for this account.",
+        "changeDesc": "Enter a new password.",
         "newLabel": "New password",
         "newPlaceholder": "New password",
         "updated": "Password updated",
@@ -339,9 +339,9 @@
       },
       "identityProviders": {
         "label": "Identity providers",
-        "description": "Review the sign-in methods connected to this account.",
-        "connect": "Connect a new account",
-        "noAccounts": "No sign-in methods connected.",
+        "description": "Sign-in methods connected to this account.",
+        "connect": "Connect",
+        "noAccounts": "No sign-in methods",
         "unlinked": "Provider unlinked",
         "unlinkedDesc": "This sign-in method was removed.",
         "failed": "Couldn't unlink sign-in method",
@@ -350,8 +350,8 @@
       },
       "devices": {
         "label": "Devices",
-        "description": "Manage your active sessions across devices.",
-        "logoutAllDescription": "Revoke active sessions on all your devices, other than this one.",
+        "description": "Manage active sessions across devices.",
+        "logoutAllDescription": "Revoke active sessions on other devices.",
         "logoutAllButton": "Revoke all",
         "logoutDevice": "Revoke",
         "thisDevice": "Current session",
@@ -361,9 +361,9 @@
         "originalSignIn": "Signed in {date}",
         "noSessions": "No active sessions found.",
         "logoutAllConfirmTitle": "Revoke all devices?",
-        "logoutAllConfirmDescription": "This will end all sessions except your current one. You'll need to log in again on those devices.",
+        "logoutAllConfirmDescription": "Ends all sessions except this one. You'll need to log in again elsewhere.",
         "logoutDeviceConfirmTitle": "Revoke this device?",
-        "logoutDeviceConfirmDescription": "This will end the session on {device}.",
+        "logoutDeviceConfirmDescription": "Ends the session on {device}.",
         "loggedOutAll": "Revoked all devices",
         "loggedOutAllDesc": "Revoked {count} device(s).",
         "loggedOutDevice": "Device revoked",
@@ -371,7 +371,7 @@
         "failedLogoutAll": "Couldn't revoke all devices",
         "failedLogoutDevice": "Couldn't revoke device",
         "revokedTitle": "Session ended",
-        "revokedDescription": "Your session was ended from another device. Please log in again to continue.",
+        "revokedDescription": "Session ended from another device. Log in to continue.",
         "revokedAction": "Log in again"
       },
       "mfa": {
@@ -380,15 +380,15 @@
         "authenticatorApp": "Authenticator app",
         "phone": "Phone",
         "addAuthenticator": "Authenticator app",
-        "addAuthenticatorDescription": "Use an authenticator app to generate verification codes.",
+        "addAuthenticatorDescription": "Generate codes from an authenticator app.",
         "addPhone": "Phone number",
-        "addPhoneDescription": "Receive verification codes via SMS.",
+        "addPhoneDescription": "Receive codes via SMS.",
         "totpDialogTitle": "Set up authenticator app",
-        "totpDialogDescription": "Scan the QR code with your authenticator app, then enter the verification code.",
-        "scanQrDescription": "Scan this QR code with Google Authenticator, Authy, or any TOTP-compatible app.",
+        "totpDialogDescription": "Scan the QR code, then enter the verification code.",
+        "scanQrDescription": "Scan with any TOTP-compatible authenticator app.",
         "manualEntry": "Can't scan? Enter this key manually:",
         "smsDialogTitle": "Set up phone verification",
-        "smsDialogDescription": "Add a phone number to receive verification codes via SMS.",
+        "smsDialogDescription": "Add a phone number to receive SMS codes.",
         "phonePlaceholder": "+1 234 567 8900",
         "codePlaceholder": "000000",
         "displayNamePlaceholder": "Display name",
@@ -399,28 +399,28 @@
         "enterTotpCode": "Enter the 6-digit code from your authenticator app.",
         "enterSmsCode": "Enter the 6-digit code sent to {phone}.",
         "removeConfirmTitle": "Remove factor?",
-        "removeConfirmDescription": "Are you sure you want to remove {name}? You will no longer be able to use it for two-factor authentication.",
+        "removeConfirmDescription": "Remove {name}? You won't be able to use it for two-factor sign-in.",
         "totpEnrolled": "Authenticator app added",
         "smsEnrolled": "Phone number added",
         "factorRemoved": "{name} removed",
         "failedTotpEnroll": "Failed to add authenticator app",
         "failedSmsEnroll": "Failed to add phone number",
         "failedSmsSend": "Failed to send verification code",
-        "invalidPhoneNumber": "Enter a phone number starting with + and country code (e.g. +1234567890)",
+        "invalidPhoneNumber": "Use international format (e.g. +1234567890)",
         "failedUnenroll": "Failed to remove factor",
         "mfaDialogTitle": "Multi-factor authentication required",
-        "mfaDialogDescription": "Enter your verification code to continue signing in.",
+        "mfaDialogDescription": "Enter your verification code to continue.",
         "chooseMethod": "Choose a verification method",
-        "enrollFirst": "Add an authenticator app or phone number to enable MFA.",
+        "enrollFirst": "Add an authenticator or phone to enable MFA.",
         "disable": "Disable MFA",
         "disabled": "Multi-factor authentication disabled",
         "failedDisable": "Failed to disable MFA",
         "disableConfirmTitle": "Disable multi-factor authentication?",
-        "disableConfirmDescription": "This will remove all enrolled factors. You will no longer need a second step to sign in."
+        "disableConfirmDescription": "This removes all factors. You won't need a second step to sign in."
       },
       "deleteAccount": {
         "label": "Delete account",
-        "description": "Permanently delete this account and its data.",
+        "description": "Delete this account and its data.",
         "title": "Delete account",
         "confirm": "Delete this account permanently?",
         "deleted": "Account deleted",
@@ -475,7 +475,7 @@
       },
       "runOnStartup": {
         "label": "Run on startup",
-        "description": "Automatically start app when you log in to your computer."
+        "description": "Start app when you log in."
       },
       "menuBar": {
         "label": "Menu bar",
@@ -483,11 +483,11 @@
       },
       "badgeCount": {
         "label": "Badge count",
-        "description": "Show unread inbox notification count on the app icon."
+        "description": "Show unread count on the app icon."
       },
       "openInDesktopApp": {
         "label": "Open in desktop app",
-        "description": "Automatically open links in the Lectornaut desktop app when available."
+        "description": "Open links in the desktop app when available."
       },
       "automaticUpdates": {
         "label": "Automatic updates",
@@ -508,11 +508,11 @@
       },
       "fileDropOverlayDragDrop": {
         "label": "Global drag and drop",
-        "description": "Show the file drop overlay window when dragging files anywhere on the desktop."
+        "description": "Show the file drop overlay when dragging files."
       },
       "fileDropOverlayShortcut": {
         "label": "Keyboard shortcut",
-        "description": "Enable a global keyboard shortcut to open the file drop overlay window."
+        "description": "Use a shortcut to open the file drop overlay."
       },
       "fileDropOverlayShortcutKeys": {
         "label": "Shortcut keys",
@@ -560,7 +560,7 @@
         },
         "native": {
           "label": "App notifications",
-          "description": "Receive native desktop notifications. Only available in the desktop app."
+          "description": "Native notifications (desktop app only)."
         },
         "test": "Send test {channel}"
       }
@@ -570,7 +570,7 @@
         "label": "Current plan",
         "description": "Review this team's plan and billing status.",
         "noPlanDescription": "This team doesn't have an active plan yet.",
-        "button": "View billing details",
+        "button": "View details",
         "subscribeButton": "Choose plan"
       },
       "seatCount": "{count} seat | {count} seats",
@@ -578,12 +578,12 @@
       "paymentMethod": {
         "label": "Payment method",
         "description": "Update the payment method used for billing.",
-        "button": "Update payment method"
+        "button": "Update"
       },
       "billingAddress": {
         "label": "Billing address",
         "description": "Update the address shown on invoices.",
-        "button": "Update billing address"
+        "button": "Update"
       },
       "billingHistory": {
         "label": "Billing history",
@@ -598,7 +598,7 @@
       },
       "cancelSubscription": {
         "label": "Cancel subscription",
-        "description": "Cancel this subscription at the end of the current billing period."
+        "description": "Cancel at the end of the billing period."
       },
       "noPermission": "Billing access required"
     },
@@ -616,11 +616,11 @@
         },
         "business": {
           "title": "Business",
-          "description": "For growing teams that need shared workflows and more control."
+          "description": "For teams that need shared workflows and control."
         },
         "enterprise": {
           "title": "Enterprise",
-          "description": "For organizations that need custom terms and advanced controls."
+          "description": "Custom terms and advanced controls."
         }
       },
       "subscriptionTerm": {
@@ -649,39 +649,39 @@
     "overview": {
       "teamProfile": {
         "label": "Team profile",
-        "description": "Manage your team's photo and display name."
+        "description": "Manage team photo and name."
       },
       "teamPhoto": {
         "label": "Team photo",
-        "description": "Upload a photo to represent your team.",
-        "upload": "Upload team photo",
+        "description": "Upload a photo for your team.",
+        "upload": "Upload",
         "uploading": "Uploading...",
-        "remove": "Remove team photo"
+        "remove": "Remove"
       },
       "teamName": {
         "label": "Team name",
-        "description": "Update the display name of your team.",
+        "description": "Update your team's display name.",
         "placeholder": "Team name",
         "editPrompt": "Edit team name"
       },
       "publicIdentity": {
         "label": "Public identity",
-        "description": "Control your team's username and public visibility."
+        "description": "Control team handle and public visibility."
       },
       "username": {
         "label": "Username",
-        "description": "Set a public handle for your team.",
+        "description": "Public handle for your team.",
         "checkingAvailability": "Checking availability",
         "available": "Username is available",
         "usernameHint": "Use lowercase letters, numbers, and hyphens"
       },
       "publicTeam": {
         "label": "Public team",
-        "description": "Allow anyone with the link to view this team.",
+        "description": "Let anyone with the link view this team.",
         "publicAt": "Public at /{path}",
         "enabled": "Public team is enabled",
-        "requiresUsername": "Set a username to enable public access",
-        "turnOnToEnable": "Turn on to make this team public"
+        "requiresUsername": "Set a username to enable",
+        "turnOnToEnable": "Turn on to make team public"
       }
     },
     "teams": {
@@ -764,7 +764,7 @@
       "openApp": "Open app",
       "getStarted": "Get started",
       "menu": "Menu",
-      "menuDescription": "Access all the features and settings of Lectornaut."
+      "menuDescription": "All Lectornaut features and settings."
     },
     "hero": {
       "line1": "Learn",
@@ -927,8 +927,8 @@
     "start": {
       "console": "Console",
       "getInstantAnswers": "AI assistant",
-      "consoleDescription": "Open a terminal to run commands and view output.",
-      "getInstantAnswersDescription": "Ask questions, search, and chat without leaving your workspace.",
+      "consoleDescription": "Run commands and view output.",
+      "getInstantAnswersDescription": "Ask, search, and chat in your workspace.",
       "askAi": "Ask AI"
     },
     "create": {
@@ -978,7 +978,7 @@
     },
     "changelog": {
       "title": "Changelog",
-      "subtitle": "Stay up to date with the latest changes and improvements to our platform.",
+      "subtitle": "The latest changes and improvements.",
       "versionVisual": "visual",
       "readMore": "Learn more"
     },
@@ -1011,11 +1011,11 @@
       "new": "New",
       "filter": "Filter",
       "search": "Search",
-      "searchPlaceholder": "Search agents, functionalities, or categories...",
+      "searchPlaceholder": "Search agents...",
       "featured": "Featured",
       "empty": "No results found.",
       "title": "Agent Network",
-      "description": "Discover and deploy AI agents that automate your workflows, enhance productivity, and transform your business operations.",
+      "description": "Discover and deploy AI agents that automate workflows.",
       "trending": "Trending Agents",
       "categories": {
         "featured": "Featured",
@@ -1039,16 +1039,16 @@
       },
       "sections": {
         "featured": "Featured",
-        "featuredDescription": "Explore our featured agents designed to boost your productivity.",
+        "featuredDescription": "Featured agents to boost productivity.",
         "trending": "Trending",
-        "trendingDescription": "Discover the most popular agents used by our community.",
+        "trendingDescription": "The most popular agents in the community.",
         "byAgentNetwork": "By Agent Network",
-        "byAgentNetworkDescription": "Agents created by the Agent Network team."
+        "byAgentNetworkDescription": "Agents created by Agent Network."
       },
       "buttons": {
         "new": "New",
         "recruit": "Recruit",
-        "addToTeam": "Add to Team"
+        "addToTeam": "Add to team"
       },
       "badges": {
         "runs": "RUNS",
@@ -1057,7 +1057,7 @@
     },
     "pricing": {
       "title": "Pricing",
-      "subtitle": "Choose the plan that fits your needs. All plans come with a 14-day personal trial. Cancel anytime.",
+      "subtitle": "Choose a plan. 14-day trial. Cancel anytime.",
       "feature": "Feature",
       "billing": {
         "monthly": "Monthly",
@@ -1207,10 +1207,10 @@
         "tableOfContents": "Table of Contents"
       },
       "dropdown": {
-        "addToFavorites": "Add to Favorites",
-        "removeFromFavorites": "Remove from Favorites",
-        "copyLink": "Copy Link",
-        "openInNewTab": "Open in New tab",
+        "addToFavorites": "Favorite",
+        "removeFromFavorites": "Unfavorite",
+        "copyLink": "Copy link",
+        "openInNewTab": "Open in new tab",
         "delete": "Delete"
       },
       "tabs": {
@@ -1280,42 +1280,42 @@
       "steps": {
         "account": {
           "title": "Account details",
-          "description": "Add your photo, name, username, and profile visibility."
+          "description": "Photo, name, username, and visibility."
         },
         "appearance": {
           "title": "Appearance",
-          "description": "Choose a theme, accent color, font, and language."
+          "description": "Theme, accent, font, and language."
         },
         "teamWorkspace": {
           "title": "Team and workspace",
-          "description": "Create a team, create a workspace, and pick where to start."
+          "description": "Create a team and workspace to start in."
         },
         "app": {
           "title": "App",
-          "description": "Try search, workspace switching, and keyboard shortcuts."
+          "description": "Search, switching, and shortcuts."
         },
         "plans": {
           "title": "Plans",
-          "description": "Choose a plan and billing interval for your team."
+          "description": "Choose a plan and billing interval."
         }
       },
       "content": {
         "accountDetails": "Account Details",
-        "accountDescription": "Set up your profile before you start working.",
+        "accountDescription": "Set up your profile to get started.",
         "preferences": "Appearance",
-        "preferencesDescription": "Adjust how the app looks and which language it uses.",
+        "preferencesDescription": "Adjust app look and language.",
         "paymentMethod": "Team and workspace",
-        "paymentDescription": "Create the team and workspace you want to start in.",
+        "paymentDescription": "Create a team and workspace to start in.",
         "confirmation": "Plans",
         "confirmationDescription": "Choose a plan to finish setup.",
         "plans": "Choose a plan",
-        "plansDescription": "Select a plan and billing interval for this team.",
+        "plansDescription": "Select a plan and billing interval.",
         "allSet": "All Set!",
-        "allSetDescription": "You're ready to start working in the app."
+        "allSetDescription": "You're ready to start."
       },
       "actions": {
         "continue": "Continue",
-        "continueToCheckout": "Continue to checkout"
+        "continueToCheckout": "Checkout"
       },
       "plans": {
         "noActivePlan": "No active plan",
@@ -1328,20 +1328,20 @@
         "pricingSummary": "{monthly}/mo • {annual}/yr",
         "pricingSummaryPerSeat": "{monthly}/mo per seat • {annual}/yr per seat",
         "pricingSummaryTotal": "{monthly}/mo total • {annual}/yr total for {seats}",
-        "monthlyDescription": "Pay month to month and change plans anytime.",
-        "annualDescription": "Pay yearly with one renewal each year.",
-        "activeSummary": "Current team plan: {plan} ({interval}) • Status: {status}",
-        "activeReadOnly": "This team already has an active plan, so these options are read-only.",
-        "noPermission": "You need billing access in this team to choose a plan."
+        "monthlyDescription": "Pay monthly. Change plans anytime.",
+        "annualDescription": "Pay yearly with one renewal.",
+        "activeSummary": "Current plan: {plan} ({interval}) • {status}",
+        "activeReadOnly": "Plan is active. Options are read-only.",
+        "noPermission": "Billing access is required to choose a plan."
       }
     },
     "exit": {
       "logout": "Log out",
       "dialog": {
-        "title": "Are you sure you want to logout?",
-        "description": "You will be redirected to the login page.",
+        "title": "Log out?",
+        "description": "You'll be redirected to the login page.",
         "cancel": "Cancel",
-        "logout": "Logout"
+        "logout": "Log out"
       }
     },
     "test": {
@@ -1384,12 +1384,12 @@
     "join": {
       "title": "Join a team",
       "labels": {
-        "findInvite": "Choose an invitation to review",
+        "findInvite": "Choose an invitation",
         "pending": "Pending",
         "declined": "Declined",
         "joinTeam": "Join {teamName}",
-        "invitedAs": "{inviterName} invited you to join as a {role}",
-        "sentOn": "Sent by {inviterEmail} on {date}",
+        "invitedAs": "{inviterName} invited you as {role}",
+        "sentOn": "From {inviterEmail} on {date}",
         "hasDeclined": "You declined this invitation",
         "invitedBy": "invited by"
       },
@@ -1411,9 +1411,9 @@
         "error": "Couldn't load invitation"
       },
       "errors": {
-        "invalidLink": "This invitation link is invalid.",
-        "notFoundOrExpired": "This invitation was not found or has expired.",
-        "emailMismatch": "This invitation was sent to a different email. You're signed in as {email}.",
+        "invalidLink": "Invalid invitation link.",
+        "notFoundOrExpired": "Invitation not found or expired.",
+        "emailMismatch": "Invitation was sent to a different email. You're signed in as {email}.",
         "loadFailed": "Couldn't load this invitation.",
         "onlyPending": "Only pending invitations can be accepted.",
         "joinFailed": "Couldn't join team",
@@ -1472,7 +1472,7 @@
       "title": "Teams",
       "description": "Select a team to continue",
       "placeholder": "Select team",
-      "noTeams": "No teams available",
+      "noTeams": "No teams",
       "createTeam": "Create team",
       "logout": "Log out"
     },
@@ -1515,9 +1515,9 @@
         "resendInvitation": "Resend invitation",
         "declined": "Declined",
         "pending": "Pending",
-        "requiresHandle": "Add a team handle before turning on the public profile",
-        "turnOnPublicTeam": "Turn this on to make the team profile public",
-        "publicTeamUrl": "Public team profile: {url}"
+        "requiresHandle": "Add a handle to enable",
+        "turnOnPublicTeam": "Turn on to make team public",
+        "publicTeamUrl": "Public at {url}"
       },
       "labels": {
         "clickToChange": "Click to change",
@@ -1560,7 +1560,7 @@
         "usernameTaken": "This handle is already taken",
         "invalidUsername": "Please enter a valid handle",
         "ownerRoleRequiresOwner": "Only team owners can manage owner roles",
-        "publicTeamRequiresUsername": "Add a valid team handle before turning on the public profile",
+        "publicTeamRequiresUsername": "Add a valid handle to enable public profile",
         "failedToCreate": "Couldn't create team",
         "failedToUpdate": "Couldn't update team",
         "failedToInvite": "Couldn't send invitations"
@@ -1592,12 +1592,12 @@
       "toasts": {
         "offlineReady": {
           "title": "Ready to work offline",
-          "description": "The app is cached and will work without an internet connection.",
+          "description": "Cached and ready without internet.",
           "action": "Okay"
         },
         "needRefresh": {
           "title": "New version available",
-          "description": "Reload the app to apply the latest update.",
+          "description": "Reload to apply the update.",
           "action": "Reload"
         },
         "online": "You are online",
@@ -1607,7 +1607,7 @@
     "fileDropOverlay": {
       "empty": {
         "title": "Add files",
-        "description": "Drop files here, click to browse, or use Upload to add them to the list."
+        "description": "Drop files or click to browse."
       },
       "buttons": {
         "save": "Save",
@@ -1634,22 +1634,22 @@
       },
       "saveSheet": {
         "title": "Save files",
-        "description": "Choose a destination node to attach these files.",
+        "description": "Choose a destination for these files.",
         "tabs": {
           "code": "Code",
           "write": "Write"
         },
         "configure": "Move",
         "moving": "Moving...",
-        "noTeam": "Select a team to choose a destination node.",
-        "noWorkspace": "Open a workspace to choose a destination node.",
-        "readOnly": "You can browse nodes, but only members, admins, and owners can move attachments.",
-        "noSelection": "Select a node to attach these files.",
-        "selectedTarget": "Selected node: {path}",
-        "archivedTarget": "Archived nodes are read-only. Select another node to continue.",
+        "noTeam": "Select a team first.",
+        "noWorkspace": "Open a workspace first.",
+        "readOnly": "Only members, admins, and owners can move attachments.",
+        "noSelection": "Select a destination.",
+        "selectedTarget": "Destination: {path}",
+        "archivedTarget": "Archived nodes are read-only.",
         "folderNotSupported": "{name} is a folder. Only files can be attached.",
-        "unavailableFile": "{name} is no longer available. Remove it and try again.",
-        "desktopOnly": "{name} can only be attached from the desktop app.",
+        "unavailableFile": "{name} is no longer available.",
+        "desktopOnly": "{name} can only be attached from desktop.",
         "moveFailed": "Couldn't move files",
         "success": {
           "single": "Attachment added",
@@ -1680,16 +1680,16 @@
       },
       "buttons": {
         "newTask": "New task",
-        "markAllDone": "Mark all as done",
-        "markAllSaved": "Mark all as saved"
+        "markAllDone": "Mark all done",
+        "markAllSaved": "Mark all saved"
       }
     },
     "notificationItem": {
       "tooltips": {
-        "markUnread": "Mark as unread",
-        "moveToInbox": "Move to Inbox",
+        "markUnread": "Mark unread",
+        "moveToInbox": "Move to inbox",
         "save": "Save",
-        "markDone": "Mark as done"
+        "markDone": "Mark done"
       },
       "contextMenu": {
         "moveTo": "Move to",
@@ -1721,7 +1721,7 @@
       },
       "sheet": {
         "title": "AI assistant",
-        "description": "Ask questions, search, and chat without leaving your workspace."
+        "description": "Ask, search, and chat in your workspace."
       },
       "placeholders": {
         "input": "Ask, search, or chat..."
@@ -1835,7 +1835,7 @@
         "endDate": "End date",
         "limitReached": "Limit reached",
         "upgrade": "Upgrade",
-        "upgradeDesc": "Get unlimited access to your activity timeline by upgrading to the Pro plan.",
+        "upgradeDesc": "Upgrade to Pro for unlimited activity timeline.",
         "presets": {
           "today": "Today",
           "last7days": "Last 7 days",
@@ -1889,23 +1889,23 @@
           "description": "Configure the notifications of the project.",
           "taskUpdates": {
             "label": "Task updates",
-            "desc": "When an automation completes, fails, or encounters an error."
+            "desc": "Automation completes, fails, or errors."
           },
           "workflow": {
             "label": "Workflow execution",
-            "desc": "Start, pause, or completion of multi-step agent workflow."
+            "desc": "Start, pause, or completion of workflows."
           },
           "agent": {
             "label": "Agent Insights",
-            "desc": "AI-generated suggestions, optimizations, or reports."
+            "desc": "AI suggestions, optimizations, or reports."
           },
           "collaboration": {
             "label": "Collaboration Alerts",
-            "desc": "When a team member assigns a task, comments, or makes updates."
+            "desc": "Assignments, comments, or task updates."
           },
           "security": {
             "label": "Security & Compliance",
-            "desc": "Unauthorized access attempts, unusual activity, or system failures."
+            "desc": "Access attempts, unusual activity, or failures."
           }
         },
         "danger": {
@@ -1936,7 +1936,7 @@
       "whatsNew": "What's new",
       "fullChangelog": "Full changelog",
       "contactSalesTitle": "Contact sales",
-      "contactSalesDesc": "Fill out the form below to contact our sales team. We will get back to you as soon as possible.",
+      "contactSalesDesc": "Tell us how to help. We'll get back to you soon.",
       "firstName": "First name",
       "lastName": "Last name",
       "workEmail": "Work email",
@@ -1972,31 +1972,31 @@
         "steps": {
           "welcome": {
             "title": "Welcome to Lectornaut",
-            "description": "Take a quick tour of the core workspace controls."
+            "description": "A quick tour of the workspace."
           },
           "tasksNotifications": {
             "title": "Tasks and notifications",
-            "description": "Review tasks and recent notifications in one place."
+            "description": "Tasks and notifications in one place."
           },
           "workspaceSwitcher": {
             "title": "Switch workspaces",
-            "description": "Switch between workspaces when you work across multiple contexts."
+            "description": "Switch when you work across contexts."
           },
           "searchBar": {
             "title": "Search and commands",
-            "description": "Search, jump, and run commands from one place."
+            "description": "Search, jump, and run commands."
           },
           "aiAssistant": {
             "title": "AI Assistant",
-            "description": "Open the assistant to ask questions, search, or chat."
+            "description": "Ask, search, or chat with the assistant."
           },
           "teamSwitcher": {
             "title": "Select your team",
-            "description": "Switch teams and review the current team context."
+            "description": "Switch teams and review current team."
           },
           "primaryNavigation": {
             "title": "Primary navigation",
-            "description": "Move between the main sections of the app."
+            "description": "Move between main app sections."
           },
           "teamMembers": {
             "title": "Team members",
@@ -2004,15 +2004,15 @@
           },
           "helpSupport": {
             "title": "Help and support",
-            "description": "Open docs, shortcuts, and support resources."
+            "description": "Docs, shortcuts, and support."
           },
           "accountMenu": {
             "title": "Account menu",
-            "description": "Open account settings, billing, and sign-out controls."
+            "description": "Account, billing, and sign-out."
           },
           "happyCoding": {
             "title": "All set",
-            "description": "You're set. Start exploring the workspace."
+            "description": "Start exploring the workspace."
           }
         }
       }
@@ -2037,10 +2037,10 @@
       "takePhoto": "Take photo",
       "imageUrl": "Image URL",
       "productLink": "Product Link",
-      "supportedFormats": "JPEG, PNG, GIF, WEBP, AVIF supported. Max 5MB.",
-      "supportedPlatforms": "Amazon, Shopify, Etsy, eBay, Rakuten, Walmart supported.",
+      "supportedFormats": "JPEG, PNG, GIF, WEBP, AVIF • Max 5MB.",
+      "supportedPlatforms": "Amazon, Shopify, Etsy, eBay, Rakuten, Walmart.",
       "errors": {
-        "cameraAccess": "Allow access to the camera in your browser settings."
+        "cameraAccess": "Allow camera access in browser settings."
       }
     },
     "landing": {
@@ -2120,10 +2120,10 @@
       "title": "Workspaces",
       "description": "Select a workspace to continue",
       "placeholder": "Select workspace",
-      "noWorkspaces": "No workspaces available",
+      "noWorkspaces": "No workspaces",
       "createWorkspace": "Create workspace",
       "changeTeam": "Change team",
-      "selectTeamToCreate": "Select a team to create a workspace"
+      "selectTeamToCreate": "Select a team first"
     },
     "workspaceSwitcher": {
       "noOtherWorkspaces": "No workspaces yet",
@@ -2164,12 +2164,12 @@
         "closeSidebar": "Close sidebar",
         "dragToResize": "Drag to resize",
         "doubleClickToggle": "Double click to toggle",
-        "rightArrowExpand": "Right arrow to expand",
-        "leftArrowCollapse": "Left arrow to collapse",
-        "leftArrowExpand": "Left arrow to expand",
-        "rightArrowCollapse": "Right arrow to collapse",
-        "upArrowExpand": "Up arrow to expand",
-        "downArrowCollapse": "Down arrow to collapse",
+        "rightArrowExpand": "→ Expand",
+        "leftArrowCollapse": "← Collapse",
+        "leftArrowExpand": "← Expand",
+        "rightArrowCollapse": "→ Collapse",
+        "upArrowExpand": "↑ Expand",
+        "downArrowCollapse": "↓ Collapse",
         "shiftLargeSteps": "Shift for large steps",
         "newTab": "New tab",
         "minimizePanel": "Minimize panel",
@@ -2181,7 +2181,7 @@
       },
       "emptyState": {
         "console": "Console",
-        "noActiveSessions": "No terminal sessions yet. Open a new terminal to get started."
+        "noActiveSessions": "No active sessions"
       },
       "buttons": {
         "newTerminal": "New Terminal",
@@ -2198,13 +2198,13 @@
         "synced": "Synced to cloud",
         "hovercard": {
           "offlineTitle": "Cloud sync is paused",
-          "offlineDescription": "Changes on this device will stay local until you're back online.",
+          "offlineDescription": "Changes stay local until you're back online.",
           "syncingTitle": "Syncing changes",
-          "syncingDescription": "Recent changes are still being uploaded to the cloud.",
+          "syncingDescription": "Uploading recent changes to the cloud.",
           "syncedTitle": "Cloud sync is up to date",
-          "syncedDescription": "Recent changes have been synced to the cloud.",
+          "syncedDescription": "Recent changes are synced.",
           "errorTitle": "Cloud sync needs attention",
-          "errorDescription": "Some changes could not be synced to the cloud.",
+          "errorDescription": "Some changes couldn't be synced.",
           "pendingChanges": "Pending changes",
           "lastSynced": "Last synced",
           "lastError": "Last error",
@@ -2236,7 +2236,7 @@
       "empty": {
         "console": {
           "title": "Console",
-          "description": "No terminal sessions yet. Open a new terminal to get started.",
+          "description": "No active sessions. Open a new terminal to start.",
           "action": "New Terminal"
         }
       },
@@ -2265,7 +2265,7 @@
     "description": "Open in the desktop app for the best experience.",
     "open": "Open",
     "not_found_title": "Desktop app not found",
-    "not_found_description": "Get the Lectornaut desktop app for the best experience.",
+    "not_found_description": "Get the desktop app for the best experience.",
     "download": "Get desktop app"
   },
   "updater": {

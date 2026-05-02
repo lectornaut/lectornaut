@@ -59,7 +59,7 @@ const displayBreadcrumbs = computed(() => {
             <BreadcrumbPage as-child>
               <BreadcrumbLink as-child>
                 <Button variant="outline" size="icon" as-child>
-                  <RouterLink to="/start">
+                  <RouterLink to="/new">
                     <IconHome />
                   </RouterLink>
                 </Button>
