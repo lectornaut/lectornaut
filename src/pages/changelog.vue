@@ -1,5 +1,8 @@
 <script lang="ts" setup>
-import { IconArrowUpRight } from "@/data/icons"
+import { changelog } from "@/data/changelog"
+import MarkdownRender from "markstream-vue"
+import "markstream-vue/index.css"
+
 definePage({
   meta: {
     layout: "landing",
@@ -11,83 +14,7 @@ useHead({
 })
 
 const { t } = useI18n()
-
-type ChangelogEntry = {
-  version: string
-  date: string
-  title: string
-  description: string
-  items?: string[]
-  image?: string
-  button?: {
-    url: string
-    text: string
-  }
-}
-
-const entries: ChangelogEntry[] = [
-  {
-    version: "Version 1.3.0",
-    date: "15 November 2024",
-    title: "Enhanced Analytics Dashboard",
-    description:
-      "We've completely redesigned our analytics dashboard to provide deeper insights and improved visualizations of your data.",
-    items: [
-      "Interactive data visualizations with real-time updates",
-      "Customizable dashboard widgets",
-      "Export analytics in multiple formats (CSV, PDF, Excel)",
-      "New reporting templates for common use cases",
-      "Improved data filtering and segmentation options",
-    ],
-    image:
-      "https://deifkwefumgah.cloudfront.net/shadcnblocks/block/placeholder-aspect-video-1.svg",
-    button: {
-      url: "https://shadcnblocks.com",
-      text: "Learn more",
-    },
-  },
-  {
-    version: "Version 1.2.5",
-    date: "7 October 2024",
-    title: "Mobile App Launch",
-    description:
-      "We're excited to announce the launch of our mobile application, available now on iOS and Android platforms.",
-    items: [
-      "Native mobile experience for on-the-go productivity",
-      "Offline mode support for working without internet connection",
-      "In-app notifications for important updates",
-      "Biometric authentication for enhanced security",
-    ],
-  },
-  {
-    version: "Version 1.2.1",
-    date: "23 September 2024",
-    title: "New features and improvements",
-    description:
-      "Here are the latest updates and improvements to our platform. We are always working to improve our platform and your experience.",
-    items: [
-      "Added new feature to export data",
-      "Improved performance and speed",
-      "Fixed minor bugs and issues",
-      "Added new feature to import data",
-    ],
-    image:
-      "https://deifkwefumgah.cloudfront.net/shadcnblocks/block/placeholder-aspect-video-1.svg",
-  },
-  {
-    version: "Version 1.0.0",
-    date: "31 August 2024",
-    title: "First version of our platform",
-    description:
-      "Introducing a new platform to help you manage your projects and tasks. We are excited to launch our platform and help you get started. We are always working to improve our platform and your experience.",
-    image:
-      "https://deifkwefumgah.cloudfront.net/shadcnblocks/block/placeholder-aspect-video-1.svg",
-    button: {
-      url: "https://shadcnblocks.com",
-      text: "Learn more",
-    },
-  },
-]
+const isDark = usePreferredDark()
 </script>
 
 <template>
@@ -100,16 +27,16 @@ const entries: ChangelogEntry[] = [
         {{ t("pages.changelog.subtitle") }}
       </p>
     </div>
-    <div v-for="(entry, index) in entries" :key="index" class="px-8 py-4">
+    <div v-for="entry in changelog" :key="entry.id" class="px-8 py-4">
       <div class="relative flex flex-col gap-4 md:flex-row">
         <div
           class="top-32 flex h-min w-64 shrink-0 items-center gap-4 md:sticky"
         >
           <Badge variant="secondary" class="text-xs">
-            {{ entry.version }}
+            {{ entry.id }}
           </Badge>
           <span class="text-muted-foreground text-xs font-medium">
-            {{ entry.date }}
+            {{ useDateFormat(entry.date, "D MMMM YYYY") }}
           </span>
         </div>
         <div class="flex flex-col">
@@ -118,39 +45,48 @@ const entries: ChangelogEntry[] = [
           >
             {{ entry.title }}
           </h2>
-          <p class="text-muted-foreground text-sm md:text-base">
-            {{ entry.description }}
-          </p>
-          <ul
-            v-if="entry.items && entry.items.length > 0"
-            class="text-muted-foreground mt-4 ml-4 space-y-1.5 text-sm md:text-base"
+          <div
+            class="changelog-markdown text-muted-foreground text-sm md:text-base"
           >
-            <li
-              v-for="(item, itemIndex) in entry.items"
-              :key="itemIndex"
-              class="list-disc"
-            >
-              {{ item }}
-            </li>
-          </ul>
-          <img
-            v-if="entry.image"
-            :src="entry.image"
-            :alt="`${entry.version} ${t('pages.changelog.versionVisual')}`"
-            class="mt-8 w-full object-cover"
-          />
-          <Button
-            v-if="entry.button"
-            variant="link"
-            class="mt-4 self-end"
-            as-child
-          >
-            <a :href="entry.button.url" target="_blank">
-              {{ t("pages.changelog.readMore") }} <IconArrowUpRight />
-            </a>
-          </Button>
+            <MarkdownRender
+              custom-id="changelog"
+              :is-dark="isDark"
+              :code-block-props="{
+                theme: { light: 'vitesse-light', dark: 'vitesse-dark' },
+              }"
+              :content="entry.content"
+            />
+          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* markstream-vue's `.markstream-vue` wrapper redefines every `--ms-*`
+   typography variable on itself, shadowing anything we set on a parent.
+   Push our overrides onto that wrapper directly via `:deep()` so they
+   actually win the cascade — and keep them in `em` units so the
+   container's `text-sm md:text-base` stays the source of truth. */
+.changelog-markdown :deep(.markstream-vue) {
+  --ms-text-body: 1em;
+  --ms-leading-body: 1.6;
+  --ms-flow-paragraph-y: 1rem;
+  --ms-text-h3: 1.1em;
+  --ms-text-h4: 1em;
+  --ms-flow-heading-3-mt: 1.5rem;
+  --ms-flow-heading-3-mb: 0.5rem;
+  --ms-flow-heading-4-mt: 1rem;
+  --ms-flow-heading-4-mb: 0.25rem;
+}
+
+/* Strip leading/trailing margins so the first heading and last paragraph
+   don't blow past the entry's own padding. */
+.changelog-markdown :deep(.markstream-vue *:first-child) {
+  margin-top: 0;
+}
+.changelog-markdown :deep(.markstream-vue *:last-child) {
+  margin-bottom: 0;
+}
+</style>

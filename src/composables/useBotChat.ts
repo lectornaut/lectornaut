@@ -45,9 +45,23 @@ import { useCollection, useDocument } from "vuefire"
 export type BotChatRole = "user" | "agent"
 
 export interface BotChatMessage {
+  // Stable client-side id for `v-for :key` and parse-tree memoization in
+  // the chat view. Not persisted — every snapshot reconcile mints fresh
+  // ids, which is fine because the array is rebuilt wholesale at that
+  // point and the WeakMap parse cache resets along with it.
+  id: string
   role: BotChatRole
   content: string
 }
+
+const createMessage = (m: {
+  role: BotChatRole
+  content: string
+}): BotChatMessage => ({
+  id: crypto.randomUUID(),
+  role: m.role,
+  content: m.content,
+})
 
 export interface BotChatContext {
   messages: Ref<BotChatMessage[]>
@@ -195,10 +209,7 @@ export function useBotChat(): BotChatContext {
     (serverMessages) => {
       if (!serverMessages) return
       if (isSending.value) return
-      messages.value = serverMessages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }))
+      messages.value = serverMessages.map(createMessage)
     }
   )
 
@@ -311,11 +322,15 @@ export function useBotChat(): BotChatContext {
     // see a "this is read-only" error narrated at them.
     if (!canEditActive.value) return
 
-    messages.value.push({ role: "user", content: trimmed })
+    messages.value.push(createMessage({ role: "user", content: trimmed }))
     // Empty agent placeholder; chunks mutate `.content` in place as they
     // stream in, so the bubble grows without the array shape changing.
+    // Object identity is also load-bearing: the renderer's parse cache
+    // keys on the message object, so chunks must mutate this same
+    // instance (not replace it) to keep the streaming-tail re-parse path
+    // exclusive.
     const agentIndex = messages.value.length
-    messages.value.push({ role: "agent", content: "" })
+    messages.value.push(createMessage({ role: "agent", content: "" }))
     isSending.value = true
 
     const controller = new AbortController()
@@ -394,10 +409,7 @@ export function useBotChat(): BotChatContext {
         sessionId: id,
       })
       sessionId.value = data.sessionId
-      messages.value = data.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }))
+      messages.value = data.messages.map(createMessage)
     } catch (error) {
       console.error("[useBotChat] loadBotSession failed:", error)
       toast.error("Failed to open chat. Please try again.")

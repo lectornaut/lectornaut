@@ -1,5 +1,8 @@
 <script lang="ts" setup>
-import { BotChatContextKey } from "@/composables/useBotChat"
+import {
+  BotChatContextKey,
+  type BotChatMessage,
+} from "@/composables/useBotChat"
 import MarkdownRender, {
   getMarkdown,
   parseMarkdownToStructure,
@@ -46,6 +49,20 @@ const md = getMarkdown("chat-message")
 // committing half-open code fences/links while chunks are still arriving.
 // Every other bubble is finalised, so its tree is stable and the renderer
 // can skip re-diffing on subsequent chunks.
+//
+// Memoize finalized parses by message identity. Without this, every
+// streaming chunk re-runs `parseMarkdownToStructure` for every message
+// in the array — O(history) work per token. The streaming tail is the
+// one exception: its `.content` mutates while its identity stays
+// constant (the empty placeholder pushed in `useBotChat` is the same
+// object that grows), so the tail must always re-parse and never get
+// cached. `WeakMap` is right here — finalized messages get evicted
+// automatically when the array is replaced (session switch / Firestore
+// reconcile), no manual eviction needed.
+const parseCache = new WeakMap<
+  BotChatMessage,
+  ReturnType<typeof parseMarkdownToStructure>
+>()
 const renderedMessages = computed(() =>
   displayMessages.value.map((message, index) => {
     const isStreamingTail =
@@ -53,11 +70,19 @@ const renderedMessages = computed(() =>
       index === displayMessages.value.length - 1 &&
       message.role === "agent"
     const final = !isStreamingTail
-    return {
-      message,
-      nodes: parseMarkdownToStructure(message.content, md, { final }),
-      final,
+    let nodes: ReturnType<typeof parseMarkdownToStructure>
+    if (isStreamingTail) {
+      nodes = parseMarkdownToStructure(message.content, md, { final: false })
+    } else {
+      const cached = parseCache.get(message)
+      if (cached) {
+        nodes = cached
+      } else {
+        nodes = parseMarkdownToStructure(message.content, md, { final: true })
+        parseCache.set(message, nodes)
+      }
     }
+    return { message, nodes, final }
   })
 )
 
@@ -140,7 +165,7 @@ useResizeObserver(contentEl, () => {
     <div v-else ref="contentEl" class="mt-auto grid grid-cols-1">
       <ContextMenu
         v-for="({ message, nodes, final }, index) in renderedMessages"
-        :key="index"
+        :key="message.id"
       >
         <ContextMenuTrigger>
           <div
@@ -170,7 +195,7 @@ useResizeObserver(contentEl, () => {
               ]"
             >
               <MarkdownRender
-                :custom-id="`chat-${index}`"
+                custom-id="chat"
                 :is-dark="isDark"
                 :code-block-props="{
                   theme: { light: 'vitesse-light', dark: 'vitesse-dark' },

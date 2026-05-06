@@ -3,8 +3,11 @@ import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { changelog } from "@/data/changelog"
 import { IconArrowUpRight, IconBookOpen, IconMessageCircle } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
+import MarkdownRender from "markstream-vue"
+import "markstream-vue/index.css"
 
 const isFullscreen = useIsFullscreen()
+const isDark = usePreferredDark()
 
 const openChangelog = ref(false)
 
@@ -45,11 +48,16 @@ emitter.on("Dialog.Changelog.Open", (id) => {
                 </span>
               </AccordionTrigger>
               <AccordionContent>
-                <ul
-                  class="marker:text-muted-foreground text-secondary-foreground list-inside list-disc"
-                >
-                  <li v-for="item in log.content" :key="item">{{ item }}</li>
-                </ul>
+                <div class="changelog-sheet-markdown text-secondary-foreground">
+                  <MarkdownRender
+                    custom-id="changelog-sheet"
+                    :is-dark="isDark"
+                    :code-block-props="{
+                      theme: { light: 'vitesse-light', dark: 'vitesse-dark' },
+                    }"
+                    :content="log.content"
+                  />
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -69,3 +77,27 @@ emitter.on("Dialog.Changelog.Open", (id) => {
     </SheetContent>
   </Sheet>
 </template>
+
+<style scoped>
+/* Compact typography for the side-sheet surface — the accordion item is
+   tight, so headings/lists need to stay close to the body text. Same
+   `:deep()` strategy as the main changelog page (the `.markstream-vue`
+   wrapper redefines `--ms-*` on itself). */
+.changelog-sheet-markdown :deep(.markstream-vue) {
+  --ms-text-body: 0.875em;
+  --ms-leading-body: 1.5;
+  --ms-flow-paragraph-y: 0.5rem;
+  --ms-text-h3: 0.95em;
+  --ms-text-h4: 0.875em;
+  --ms-flow-heading-3-mt: 0.75rem;
+  --ms-flow-heading-3-mb: 0.25rem;
+  --ms-flow-heading-4-mt: 0.5rem;
+  --ms-flow-heading-4-mb: 0.25rem;
+}
+.changelog-sheet-markdown :deep(.markstream-vue *:first-child) {
+  margin-top: 0;
+}
+.changelog-sheet-markdown :deep(.markstream-vue *:last-child) {
+  margin-bottom: 0;
+}
+</style>
