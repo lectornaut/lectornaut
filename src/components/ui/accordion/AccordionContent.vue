@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { cn } from "@/lib/utils"
-import { reactiveOmit } from "@vueuse/core"
 import type { AccordionContentProps } from "reka-ui"
-import { AccordionContent } from "reka-ui"
 import type { HTMLAttributes } from "vue"
+import { reactiveOmit } from "@vueuse/core"
+import { AccordionContent } from "reka-ui"
+import { cn } from "@/lib/utils"
 
 const props = defineProps<
   AccordionContentProps & { class?: HTMLAttributes["class"] }
@@ -21,7 +21,7 @@ const delegatedProps = reactiveOmit(props, "class")
     <div
       :class="
         cn(
-          '[&_a]:hover:text-foreground h-(--reka-accordion-content-height) pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4',
+          '[&_a]:hover:text-foreground pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4',
           props.class
         )
       "

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import type { HTMLAttributes } from "vue"
 
-import { cn } from "@/lib/utils"
 import { ChevronRightIcon } from "lucide-vue-next"
+import { cn } from "@/lib/utils"
 
 const props = defineProps<{
   class?: HTMLAttributes["class"]

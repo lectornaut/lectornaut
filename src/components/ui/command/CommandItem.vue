@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { ListboxItemEmits, ListboxItemProps } from "reka-ui"
 
-import { cn } from "@/lib/utils"
+import type { HTMLAttributes } from "vue"
 import { reactiveOmit, useCurrentElement } from "@vueuse/core"
 import { CheckIcon } from "lucide-vue-next"
 import { ListboxItem, useForwardPropsEmits, useId } from "reka-ui"
-import type { HTMLAttributes } from "vue"
 import { computed, onMounted, onUnmounted, ref } from "vue"
+import { cn } from "@/lib/utils"
 import { useCommand, useCommandGroup } from "."
 
 const props = defineProps<

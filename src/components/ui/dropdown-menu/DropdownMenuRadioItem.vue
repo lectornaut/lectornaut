@@ -4,7 +4,7 @@ import type {
   DropdownMenuRadioItemProps,
 } from "reka-ui"
 
-import { cn } from "@/lib/utils"
+import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { CheckIcon } from "lucide-vue-next"
 import {
@@ -12,7 +12,7 @@ import {
   DropdownMenuRadioItem,
   useForwardPropsEmits,
 } from "reka-ui"
-import type { HTMLAttributes } from "vue"
+import { cn } from "@/lib/utils"
 
 const props = defineProps<
   DropdownMenuRadioItemProps & { class?: HTMLAttributes["class"] }

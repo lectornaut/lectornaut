@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { XIcon } from "lucide-vue-next"
 import {
@@ -11,7 +10,8 @@ import {
   DialogPortal,
   useForwardPropsEmits,
 } from "reka-ui"
-import type { HTMLAttributes } from "vue"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import DialogOverlay from "./DialogOverlay.vue"
 
 defineOptions({

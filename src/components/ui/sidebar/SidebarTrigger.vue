@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import { PanelLeftIcon } from "lucide-vue-next"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { useSidebar } from "./utils"
 
 const props = defineProps<{

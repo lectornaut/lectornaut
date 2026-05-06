@@ -48,7 +48,9 @@ const execute = (term: XTerminal, command = "") => {
     case "js":
       return new Promise((res, rej) => {
         try {
-          const output = eval(args.join(" "))
+          // Indirect eval: runs in global scope, lets the bundler minify the
+          // surrounding scope, and prevents leaking setup-locals to the CLI.
+          const output = (0, eval)(args.join(" "))
           res(output)
         } catch (err) {
           rej(err)

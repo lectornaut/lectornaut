@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { cn } from "@/lib/utils"
-import { reactiveOmit } from "@vueuse/core"
 import type { AvatarFallbackProps } from "reka-ui"
-import { AvatarFallback } from "reka-ui"
 import type { HTMLAttributes } from "vue"
+import { reactiveOmit } from "@vueuse/core"
+import { AvatarFallback } from "reka-ui"
+import { cn } from "@/lib/utils"
 
 const props = defineProps<
   AvatarFallbackProps & { class?: HTMLAttributes["class"] }

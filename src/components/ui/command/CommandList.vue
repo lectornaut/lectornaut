@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { cn } from "@/lib/utils"
-import { reactiveOmit } from "@vueuse/core"
 import type { ListboxContentProps } from "reka-ui"
-import { ListboxContent, useForwardProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
+import { reactiveOmit } from "@vueuse/core"
+import { ListboxContent, useForwardProps } from "reka-ui"
+import { cn } from "@/lib/utils"
 
 const props = defineProps<
   ListboxContentProps & { class?: HTMLAttributes["class"] }

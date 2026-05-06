@@ -2,9 +2,9 @@
 import type { WithClassAsProps } from "./interface"
 
 import type { ButtonVariants } from "@/components/ui/button"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import { ChevronLeftIcon } from "lucide-vue-next"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { useCarousel } from "./useCarousel"
 
 const props = withDefaults(

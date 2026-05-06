@@ -36,6 +36,7 @@ import IconLucideArrowRightToLine from "~icons/lucide/arrow-right-to-line"
 import IconLucideArrowUp from "~icons/lucide/arrow-up"
 import IconLucideArrowUpDown from "~icons/lucide/arrow-up-down"
 import IconLucideArrowUpRight from "~icons/lucide/arrow-up-right"
+import IconLucideArrowUpToLine from "~icons/lucide/arrow-up-to-line"
 import IconLucideAsterisk from "~icons/lucide/asterisk"
 import IconLucideAtSign from "~icons/lucide/at-sign"
 import IconLucideBadgeCheck from "~icons/lucide/badge-check"
@@ -320,6 +321,7 @@ export {
   IconLucideArrowUp as IconArrowUp,
   IconLucideArrowUpDown as IconArrowUpDown,
   IconLucideArrowUpRight as IconArrowUpRight,
+  IconLucideArrowUpToLine as IconArrowUpToLine,
   IconLucideAsterisk as IconAsterisk,
   IconLucideAtSign as IconAtSign,
   IconLucideBadgeCheck as IconBadgeCheck,

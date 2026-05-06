@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import type { RangeCalendarNextProps } from "reka-ui"
 
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { ChevronRightIcon } from "lucide-vue-next"
 import { RangeCalendarNext, useForwardProps } from "reka-ui"
-import type { HTMLAttributes } from "vue"
+import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
 
 const props = defineProps<
   RangeCalendarNextProps & { class?: HTMLAttributes["class"] }

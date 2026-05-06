@@ -1,16 +1,16 @@
 <script lang="ts" setup>
-import { cn } from "@/lib/utils"
-import { reactiveOmit } from "@vueuse/core"
 import type { RangeCalendarHeadingProps } from "reka-ui"
-import { RangeCalendarHeading, useForwardProps } from "reka-ui"
 import type { HTMLAttributes, VNode } from "vue"
+import { reactiveOmit } from "@vueuse/core"
+import { RangeCalendarHeading, useForwardProps } from "reka-ui"
+import { cn } from "@/lib/utils"
 
 const props = defineProps<
   RangeCalendarHeadingProps & { class?: HTMLAttributes["class"] }
 >()
 
 defineSlots<{
-  default: (props: { headingValue: string }) => VNode | VNode[]
+  default: (props: { headingValue: string }) => VNode[]
 }>()
 
 const delegatedProps = reactiveOmit(props, "class")
