@@ -3,6 +3,26 @@ import { type WorkspaceNodeScope } from "@/types/nodes"
 export const NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 export const NODE_ATTACHMENTS_STORAGE_ROOT = "attachments"
 
+// Mirrors storage.rules `isBlockedAttachmentType()`. Keep in sync.
+const BLOCKED_ATTACHMENT_MIME_PATTERNS: readonly RegExp[] = [
+  /^text\/html$/i,
+  /^application\/xhtml.*/i,
+  /^image\/svg.*/i,
+  /^application\/x-shockwave-flash$/i,
+  /^text\/javascript$/i,
+  /^application\/javascript$/i,
+]
+
+export const isBlockedAttachmentMimeType = (
+  mimeType: string | null | undefined
+): boolean => {
+  if (!mimeType) return false
+  const normalized = mimeType.trim().toLowerCase()
+  return BLOCKED_ATTACHMENT_MIME_PATTERNS.some((pattern) =>
+    pattern.test(normalized)
+  )
+}
+
 const INVALID_STORAGE_FILENAME_CHARS = /[\\/:*?"<>|]+/g
 
 const isControlChar = (code: number) => code <= 0x1f || code === 0x7f

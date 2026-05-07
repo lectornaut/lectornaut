@@ -6,6 +6,7 @@ import {
 import {
   buildWorkspaceNodeAttachmentStoragePath,
   getWorkspaceNodeAttachmentsCollectionPath,
+  isBlockedAttachmentMimeType,
   NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
   normalizeAttachmentDisplayName,
   sanitizeAttachmentFileName,
@@ -194,6 +195,11 @@ export const uploadNodeAttachmentBlob = async (
     fileName: file.name,
     mimeType: file.type,
   })
+  if (isBlockedAttachmentMimeType(contentType)) {
+    throw new Error(
+      `${file.name} can't be uploaded. SVG, HTML, and other executable file types are blocked for security.`
+    )
+  }
   const version = generateId()
   const storagePath = buildWorkspaceNodeAttachmentStoragePath({
     teamId: context.teamId,

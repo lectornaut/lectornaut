@@ -215,7 +215,7 @@
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
   --font-sans: "Geist Variable", "sans-serif";
-  --font-serif: "EB Garamond Variable", "serif";
+  --font-serif: "Playfair Display Variable", "serif";
   --font-mono: "Geist Mono Variable", "monospace";
   --font-display: "Playfair Display Variable", "serif";
   --font-flex: var(--flex);

@@ -262,7 +262,6 @@ export default defineConfig({
       fontsource: {
         families: [
           "Geist Variable",
-          "EB Garamond Variable",
           "Geist Mono Variable",
           "Playfair Display Variable",
         ],

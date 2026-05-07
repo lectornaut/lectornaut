@@ -1021,7 +1021,7 @@ const isFullscreen = useIsFullscreen()
   >
     <div
       v-if="shouldRender"
-      class="bg-background/50 fixed inset-0 isolate z-50 flex flex-col gap-2 p-2 backdrop-blur-lg"
+      class="bg-background fixed inset-0 isolate z-50 flex flex-col gap-2 p-2"
     >
       <div
         data-tauri-drag-region="deep"
@@ -1031,6 +1031,7 @@ const isFullscreen = useIsFullscreen()
         <TooltipProvider>
           <ToggleGroup
             type="single"
+            class="overflow-clip rounded-md"
             :model-value="fileListLayout"
             @update:model-value="updateFileListLayout"
           >
@@ -1038,9 +1039,10 @@ const isFullscreen = useIsFullscreen()
               <TooltipTrigger as-child>
                 <ToggleGroupItem
                   value="list"
+                  size="sm"
                   variant="outline"
                   :class="[
-                    'aspect-square',
+                    'aspect-square rounded-l-md!',
                     fileListLayout === 'list'
                       ? 'bg-background text-foreground hover:bg-background'
                       : 'bg-secondary',
@@ -1057,9 +1059,10 @@ const isFullscreen = useIsFullscreen()
               <TooltipTrigger as-child>
                 <ToggleGroupItem
                   value="grid"
+                  size="sm"
                   variant="outline"
                   :class="[
-                    'aspect-square',
+                    'aspect-square rounded-r-md!',
                     fileListLayout === 'grid'
                       ? 'bg-background text-foreground hover:bg-background'
                       : 'bg-secondary',
@@ -1081,7 +1084,7 @@ const isFullscreen = useIsFullscreen()
                 <TooltipTrigger as-child>
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="icon-sm"
                     :disabled="isMoving"
                     @click="selectFiles()"
                   >
@@ -1101,6 +1104,7 @@ const isFullscreen = useIsFullscreen()
             >
               <Button
                 :disabled="!hasQueuedFiles || isMoving"
+                size="sm"
                 @click="openSaveSheet"
               >
                 {{ t("components.fileDropOverlay.buttons.save") }}
@@ -1212,10 +1216,7 @@ const isFullscreen = useIsFullscreen()
           </ButtonGroup>
         </ButtonGroup>
       </div>
-      <OverlayScrollbarsWrapper
-        v-if="hasQueuedFiles"
-        class="bg-background @container grow"
-      >
+      <OverlayScrollbarsWrapper v-if="hasQueuedFiles" class="@container grow">
         <ItemGroup v-if="!isGridLayout" class="gap-2 p-2">
           <Item
             v-for="file in droppedFileItems"
@@ -1255,7 +1256,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon"
+                        size="icon-sm"
                         :disabled="
                           file.source === 'tauri' ? !isTauri : !file.openTarget
                         "
@@ -1272,7 +1273,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon"
+                        size="icon-sm"
                         :disabled="!isTauri || file.source !== 'tauri'"
                         @click="revealFile(file)"
                       >
@@ -1285,7 +1286,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon"
+                        size="icon-sm"
                         :disabled="isMoving"
                         @click="removeQueuedFile(file.id)"
                       >
@@ -1342,7 +1343,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon"
+                        size="icon-sm"
                         :disabled="
                           file.source === 'tauri' ? !isTauri : !file.openTarget
                         "
@@ -1359,7 +1360,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon"
+                        size="icon-sm"
                         @click="revealFile(file)"
                       >
                         <IconSquareArrowOutUpRight />
@@ -1371,7 +1372,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon"
+                        size="icon-sm"
                         :disabled="isMoving"
                         @click="removeQueuedFile(file.id)"
                       >
@@ -1413,7 +1414,7 @@ const isFullscreen = useIsFullscreen()
               <DropdownMenu>
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger as-child>
-                    <Button variant="secondary" size="icon">
+                    <Button variant="secondary" size="icon-sm">
                       <IconMoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1435,7 +1436,7 @@ const isFullscreen = useIsFullscreen()
             <ButtonGroupSeparator />
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="secondary" size="icon">
+                <Button variant="secondary" size="icon-sm">
                   <IconSettings />
                 </Button>
               </TooltipTrigger>

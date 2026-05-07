@@ -46,7 +46,7 @@
   }
 
   :root[data-font="serif"] {
-    --flex: "EB Garamond Variable", "serif";
+    --flex: "Playfair Display Variable", "serif";
   }
 
   :root[data-font="mono"] {
