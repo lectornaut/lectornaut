@@ -34,20 +34,28 @@ export async function getDocCached<T>(
 /**
  * Cache-first collection/query read.
  *
- * Mirrors `getDocCached`: if the cache answers the query (populated OR
- * definitively empty), we return that snapshot directly. A cache miss
- * (throws) falls through to the network. Callers needing fresh results
- * should use `getDocs` directly.
+ * Tries the local IndexedDB cache first. If the cache has matching docs we
+ * trust that result and skip the network — collections kept warm by an
+ * `onSnapshot` listener consistently hit this path.
  *
- * Note: `cached.empty` alone is ambiguous — it could mean the cache knows
- * the query is empty, OR the cache simply has no entries for this query
- * shape. Firestore's `getDocsFromCache` distinguishes by throwing on the
- * latter, so we rely on the throw boundary rather than the `empty` flag.
+ * Unlike `getDocFromCache`, `getDocsFromCache` does NOT throw when no
+ * documents have been synced for the query — it simply resolves to an
+ * empty snapshot, indistinguishable from a "truly empty" answer. So an
+ * empty cached result is never authoritative on its own, and we fall
+ * through to `getDocs` for the network's verdict. Same fallthrough on a
+ * cache exception (e.g. persistence disabled).
+ *
+ * Net effect: this saves a round-trip only when the answer is non-empty
+ * AND already local; otherwise it degrades to a plain `getDocs`. Callers
+ * that always want freshness should use `getDocs` directly to skip the
+ * cache probe entirely.
  */
 export async function getDocsCached<T>(q: Query<T>): Promise<QuerySnapshot<T>> {
   try {
-    return await getDocsFromCache(q)
+    const cached = await getDocsFromCache(q)
+    if (!cached.empty) return cached
   } catch {
-    return await getDocs(q)
+    // Cache miss or persistence error — fall through to the network.
   }
+  return await getDocs(q)
 }

@@ -1,13 +1,21 @@
 <script lang="ts" setup>
-import { BotChatContextKey } from "@/composables/useBotChat"
+import {
+  BotChatContextKey,
+  BOT_CHAT_MODE_OPTIONS,
+  type BotChatMode,
+} from "@/composables/useBotChat"
 import {
   IconArchive,
+  IconBolt,
+  IconBot,
   IconGlobe,
   IconLock,
+  IconMessageCircle,
   IconPencil,
   IconRotateCcw,
   IconTrash2,
   IconUsers,
+  IconWrench,
 } from "@/data/icons"
 import type { IBotSessionVisibility } from "@/types/domain"
 import { computed, inject, nextTick, ref, type Component } from "vue"
@@ -31,6 +39,36 @@ const isUpdatingVisibility = computed(
   () => botChat?.isUpdatingVisibility.value ?? false
 )
 const isMutating = computed(() => botChat?.isMutatingSession.value ?? false)
+
+// ── Mode (action context) ────────────────────────────────────────────────────
+//
+// The composer's dropdown is the primary control for switching modes;
+// this side-panel radio group is the "what does each mode do?" explainer
+// plus a secondary control for users who already have the panel open.
+// Both bind to the same `botChat.mode` ref, so they stay in sync.
+
+const modeOptions = BOT_CHAT_MODE_OPTIONS
+const activeMode = computed<BotChatMode>(() => botChat?.mode.value ?? "auto")
+const activeModeOption = computed(
+  () => botChat?.activeModeOption.value ?? modeOptions[0]
+)
+const toolsAreEnabled = computed(() => activeModeOption.value.toolsEnabled)
+
+// Per-mode icon. Lives here (not on the option object in the composable)
+// because the composable is plain TypeScript and component imports
+// shouldn't leak into it.
+const modeIcons: Record<BotChatMode, Component> = {
+  auto: IconBolt,
+  agent: IconBot,
+  manual: IconMessageCircle,
+}
+
+const onModeChange = (value: unknown) => {
+  if (!botChat) return
+  if (typeof value !== "string") return
+  if (!modeOptions.some((o) => o.value === value)) return
+  botChat.mode.value = value as BotChatMode
+}
 
 // ── Visibility (radio group) ────────────────────────────────────────────────
 
@@ -141,6 +179,52 @@ const onArchiveToggle = () => {
   void botChat?.archiveSession(id, !isActiveArchived.value)
 }
 
+// ── Available tools ──────────────────────────────────────────────────────────
+//
+// Mirror of the server-side tool catalog declared in
+// `functions/src/bot.ts` (`BOT_TOOLS`). Kept as a static mirror because
+// the catalog is small and changes rarely; if it grows or becomes
+// team-scoped, promote to a `listBotTools` callable so the two stay in
+// lock-step automatically.
+
+interface AvailableTool {
+  name: string
+  description: string
+  example: string
+}
+
+interface AvailableInterrupt {
+  name: string
+  description: string
+  example: string
+}
+
+const availableTools: AvailableTool[] = [
+  {
+    name: "getWeather",
+    description: "Look up current weather for a location.",
+    example: "What's the weather in Tokyo?",
+  },
+  {
+    name: "rollDice",
+    description: "Roll a six-sided die.",
+    example: "Roll a die for me.",
+  },
+]
+
+// Interrupt tools pause the chat and surface a form. Listed separately
+// from action tools because they're available in *every* mode (including
+// `manual`) — a clarifying question has no side effects.
+const availableInterrupts: AvailableInterrupt[] = [
+  {
+    name: "askQuestion",
+    description:
+      "Pauses the chat and asks you a multiple-choice question. Pick a " +
+      "choice (or type your own when allowed) to continue.",
+    example: "Help me plan a backyard BBQ.",
+  },
+]
+
 // ── Delete ───────────────────────────────────────────────────────────────────
 
 const deleteDialogOpen = ref(false)
@@ -161,6 +245,120 @@ const submitDelete = async () => {
 <template>
   <SidebarContent>
     <OverlayScrollbarsWrapper>
+      <SidebarGroup>
+        <SidebarGroupLabel class="flex items-center gap-2">
+          <Component :is="modeIcons[activeMode]" />
+          Mode
+        </SidebarGroupLabel>
+        <SidebarGroupContent class="space-y-2 p-2">
+          <p class="text-muted-foreground text-xs">
+            Mode steers how the assistant approaches each turn — what tools it
+            can reach, how proactive it is, and how it phrases replies.
+          </p>
+          <RadioGroup
+            :model-value="activeMode"
+            @update:model-value="(v) => onModeChange(v)"
+          >
+            <Field
+              v-for="opt in modeOptions"
+              :key="opt.value"
+              orientation="horizontal"
+            >
+              <RadioGroupItem
+                :id="`bot-mode-${opt.value}`"
+                :value="opt.value"
+                class="mt-0.5"
+              />
+              <FieldContent>
+                <FieldLabel
+                  :for="`bot-mode-${opt.value}`"
+                  class="flex items-center gap-2 text-sm"
+                >
+                  <Component :is="modeIcons[opt.value]" class="size-4" />
+                  {{ opt.label }}
+                </FieldLabel>
+                <p class="text-muted-foreground text-xs">
+                  {{ opt.longDescription }}
+                </p>
+              </FieldContent>
+            </Field>
+          </RadioGroup>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel class="flex items-center gap-2">
+          <IconWrench />
+          Available tools
+        </SidebarGroupLabel>
+        <SidebarGroupContent class="space-y-2 p-2">
+          <p v-if="toolsAreEnabled" class="text-muted-foreground text-xs">
+            The assistant can call these on its own when relevant. Try one of
+            the example prompts below.
+          </p>
+          <p v-else class="text-muted-foreground text-xs">
+            Tools are disabled in
+            <strong>{{ activeModeOption.label }}</strong> mode. Switch to
+            <strong>Auto</strong> or <strong>Agent</strong> to re-enable them.
+          </p>
+          <ul class="space-y-2">
+            <li
+              v-for="tool in availableTools"
+              :key="tool.name"
+              class="border-border/60 bg-background/40 rounded-md border p-2 transition-opacity"
+              :class="{ 'opacity-50': !toolsAreEnabled }"
+            >
+              <div class="flex items-center gap-2">
+                <IconWrench class="text-muted-foreground size-3.5" />
+                <code class="text-foreground text-xs font-medium">{{
+                  tool.name
+                }}</code>
+              </div>
+              <p class="text-muted-foreground mt-1 text-xs">
+                {{ tool.description }}
+              </p>
+              <p class="text-muted-foreground/80 mt-1 text-[11px] italic">
+                e.g. “{{ tool.example }}”
+              </p>
+            </li>
+          </ul>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel class="flex items-center gap-2">
+          <IconMessageCircle />
+          Human-in-the-Loop
+        </SidebarGroupLabel>
+        <SidebarGroupContent class="space-y-2 p-2">
+          <p class="text-muted-foreground text-xs">
+            The assistant can pause and ask you a clarifying question instead of
+            guessing. These interrupts are available in every mode — including
+            <strong>Manual</strong>.
+          </p>
+          <ul class="space-y-2">
+            <li
+              v-for="interrupt in availableInterrupts"
+              :key="interrupt.name"
+              class="border-border/60 bg-background/40 rounded-md border p-2"
+            >
+              <div class="flex items-center gap-2">
+                <IconMessageCircle class="text-muted-foreground size-3.5" />
+                <code class="text-foreground text-xs font-medium">{{
+                  interrupt.name
+                }}</code>
+              </div>
+              <p class="text-muted-foreground mt-1 text-xs">
+                {{ interrupt.description }}
+              </p>
+              <p class="text-muted-foreground/80 mt-1 text-[11px] italic">
+                e.g. “{{ interrupt.example }}”
+              </p>
+            </li>
+          </ul>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
       <SidebarGroup>
         <SidebarGroupLabel>Manage chat</SidebarGroupLabel>
         <SidebarGroupContent class="grid gap-2 p-2">
@@ -183,7 +381,7 @@ const submitDelete = async () => {
               :disabled="!canManage || isMutating"
               @click="onArchiveToggle"
             >
-              <component :is="isActiveArchived ? IconRotateCcw : IconArchive" />
+              <Component :is="isActiveArchived ? IconRotateCcw : IconArchive" />
               {{ isActiveArchived ? "Restore from archive" : "Archive" }}
             </Button>
             <Button
@@ -238,7 +436,7 @@ const submitDelete = async () => {
                   :for="`bot-visibility-${opt.value}`"
                   class="flex items-center gap-2 text-sm"
                 >
-                  <component :is="opt.icon" class="size-4" />
+                  <Component :is="opt.icon" class="size-4" />
                   {{ opt.label }}
                 </FieldLabel>
                 <p class="text-muted-foreground text-xs">

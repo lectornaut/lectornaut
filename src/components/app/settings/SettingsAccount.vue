@@ -1313,12 +1313,23 @@ const getDeviceIcon = (deviceType: string) => {
               <span> {{ t("common.remove") }} </span>
             </Button>
           </Field>
-          <div
-            v-if="linkedProviders.length === 0"
-            class="text-muted-foreground"
-          >
-            {{ t("settings.account.identityProviders.noAccounts") }}
-          </div>
+          <Field v-if="linkedProviders.length === 0" orientation="horizontal">
+            <FieldContent>
+              <Empty class="border border-dashed">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconKeyRound />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {{ t("settings.account.identityProviders.noAccounts") }}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {{ t("settings.account.identityProviders.description") }}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </FieldContent>
+          </Field>
         </FieldSet>
         <FieldSeparator />
         <!-- Multi-Factor Authentication -->
@@ -1798,19 +1809,32 @@ const getDeviceIcon = (deviceType: string) => {
               </AlertDialog>
             </div>
           </Field>
-          <div
-            v-if="sessionsPending"
-            class="text-muted-foreground flex items-center gap-2"
-          >
-            <Spinner />
-            {{ t("common.loading") }}
-          </div>
-          <div
-            v-else-if="sessionRows.length === 0"
-            class="text-muted-foreground"
-          >
-            {{ t("settings.account.devices.noSessions") }}
-          </div>
+          <Field v-if="sessionsPending" orientation="horizontal">
+            <FieldContent>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Spinner />
+                  </EmptyMedia>
+                  <EmptyTitle>{{ t("common.loading") }}</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            </FieldContent>
+          </Field>
+          <Field v-else-if="sessionRows.length === 0" orientation="horizontal">
+            <FieldContent>
+              <Empty class="border border-dashed">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconMonitor />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {{ t("settings.account.devices.noSessions") }}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            </FieldContent>
+          </Field>
         </FieldSet>
         <FieldSeparator />
         <FieldSet>

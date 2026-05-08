@@ -523,16 +523,18 @@ const discardChanges = () => {
       v-if="hasPendingChanges"
       class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 border p-2 backdrop-blur-lg"
     >
-      <p class="text-muted-foreground mr-auto ml-2 text-xs">Unsaved changes</p>
+      <p class="text-muted-foreground mr-auto ml-2 text-xs">
+        {{ t("settings.unsavedChanges") }}
+      </p>
       <Button variant="secondary" :disabled="isSaving" @click="discardChanges">
-        Discard
+        {{ t("common.discard") }}
       </Button>
       <Button
         :disabled="!canSave || isSaving || isUpdatingOverview"
         @click="saveChanges"
       >
         <Spinner v-if="isSaving || isUpdatingOverview" />
-        Save
+        {{ t("common.save") }}
       </Button>
     </DialogFooter>
   </div>

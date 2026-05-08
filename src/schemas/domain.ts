@@ -214,9 +214,50 @@ export const botSessionVisibilitySchema = z.enum([
  */
 export const botChatRoleSchema = z.enum(["user", "agent"])
 
+/**
+ * Tool invocation captured on an agent message. `input` is the JSON the
+ * model passed to the tool; `output` is what the tool returned. `output`
+ * may be `undefined` while a call is still pending (only happens during
+ * streaming — persisted messages always have it set). `ref` correlates
+ * the request half with the response half across Genkit's internal
+ * model→tool→model round-trip.
+ */
+export const botToolCallSchema = z.object({
+  ref: z.string().optional(),
+  name: z.string(),
+  input: z.unknown().optional(),
+  output: z.unknown().optional(),
+  /**
+   * When true, this tool call paused the chat for human input
+   * (Genkit's `defineInterrupt` primitive). The UI renders an
+   * interactive form instead of a "Running…" spinner. Cleared once
+   * `output` is set, since the interrupt has been resolved by then.
+   */
+  isInterrupt: z.boolean().optional(),
+})
+
+/**
+ * One slice of an agent message. Genkit messages are multipart (text +
+ * tool requests/responses interleaved), and we mirror that on the wire
+ * so the chat UI can render tool calls as cards inline with text. User
+ * messages are always a single text segment.
+ */
+export const botMessageSegmentSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("text"), text: z.string() }),
+  z.object({ kind: z.literal("tool"), tool: botToolCallSchema }),
+])
+
 export const botSessionMessageSchema = z.object({
   role: botChatRoleSchema,
+  /** Concatenated text — used for sidebar previews and as a fallback. */
   content: z.string(),
+  /**
+   * Structured parts. Present on agent messages that include tool calls,
+   * absent for plain text-only messages (and all legacy messages saved
+   * before this field existed). When absent, the renderer falls back to
+   * a single `content` text bubble.
+   */
+  segments: z.array(botMessageSegmentSchema).optional(),
 })
 
 /**
@@ -229,6 +270,66 @@ export const botSessionMessageSchema = z.object({
  * disk — the schema's `.default("private")` keeps them owner-only at the
  * type layer without a data migration.
  */
+// ─── Workspace agent (bot) config ────────────────────────────────────────────
+
+/**
+ * Models the bot can be pinned to. Mirrors the server-side allowlist in
+ * `functions/src/bot.ts` (`BOT_AGENT_MODELS`) — keep the two in sync. The
+ * UI catalog of label/description per model lives in `helpers/defaults.ts`.
+ */
+export const botAgentModelSchema = z.enum([
+  "gemini-3-flash-preview",
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+])
+
+/**
+ * Per-tool feature flags. Disabled tools are simply not registered with
+ * the chat — the model never sees them in its tool catalog.
+ */
+export const botAgentToolTogglesSchema = z.object({
+  getWeather: z.boolean(),
+  rollDice: z.boolean(),
+  /**
+   * Interrupt tool. When false, the bot can't pause to ask the user a
+   * clarifying question — useful for non-interactive workflows.
+   */
+  askQuestion: z.boolean(),
+})
+
+/**
+ * The bot's chat-mode options. Mirrors `BOT_CHAT_MODES` on the server
+ * and `BotChatMode` on the client; duplicated here so the agent config
+ * type carries it cleanly without a circular import.
+ */
+export const botAgentDefaultModeSchema = z.enum(["auto", "agent", "manual"])
+
+/**
+ * Effective workspace agent config — every field is required because
+ * the server fills missing fields with defaults before returning. The
+ * UI form binds against this shape.
+ */
+export const botAgentConfigSchema = z.object({
+  model: botAgentModelSchema,
+  temperature: z.number().min(0).max(2),
+  topP: z.number().min(0).max(1),
+  topK: z.number().int().min(1).max(100),
+  maxOutputTokens: z.number().int().min(256).max(65536),
+  defaultMode: botAgentDefaultModeSchema,
+  systemPromptBase: z.string().max(4000),
+  promptSuffixes: z.object({
+    auto: z.string().max(2000),
+    agent: z.string().max(2000),
+    manual: z.string().max(2000),
+  }),
+  tools: botAgentToolTogglesSchema,
+  titleMaxLength: z.number().int().min(20).max(200),
+  previewMaxLength: z.number().int().min(50).max(500),
+})
+
 export const botSessionSchema = z.object({
   id: z.string(),
   teamId: z.string(),

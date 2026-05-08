@@ -15,6 +15,7 @@ export const logResourceTypeSchema = z.enum([
   "workspace",
   "content",
   "membership",
+  "security",
 ])
 
 export const logActorSchema = z.object({

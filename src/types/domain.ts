@@ -1,10 +1,16 @@
 import type {
   billingIntervalSchema,
   billingPlanKeySchema,
+  botAgentConfigSchema,
+  botAgentDefaultModeSchema,
+  botAgentModelSchema,
+  botAgentToolTogglesSchema,
   botChatRoleSchema,
+  botMessageSegmentSchema,
   botSessionMessageSchema,
   botSessionSchema,
   botSessionVisibilitySchema,
+  botToolCallSchema,
   membershipPreferencesSchema,
   teamBillingSchema,
   teamSchema,
@@ -50,3 +56,10 @@ export type IBotSession = z.infer<typeof botSessionSchema>
 export type IBotSessionVisibility = z.infer<typeof botSessionVisibilitySchema>
 export type IBotChatRole = z.infer<typeof botChatRoleSchema>
 export type IBotSessionMessage = z.infer<typeof botSessionMessageSchema>
+export type IBotMessageSegment = z.infer<typeof botMessageSegmentSchema>
+export type IBotToolCall = z.infer<typeof botToolCallSchema>
+
+export type IBotAgentModel = z.infer<typeof botAgentModelSchema>
+export type IBotAgentDefaultMode = z.infer<typeof botAgentDefaultModeSchema>
+export type IBotAgentToolToggles = z.infer<typeof botAgentToolTogglesSchema>
+export type IBotAgentConfig = z.infer<typeof botAgentConfigSchema>

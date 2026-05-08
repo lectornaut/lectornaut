@@ -6,9 +6,9 @@
  * Cloud Functions, and the Genkit `ai` instance has circular references
  * inside its registry that overflow the loader's stack walker.
  *
- * Cloud Function endpoints that use Genkit live in `genkit.ts` (the
- * `generatePoem` flow) and `bot.ts` (chat callables); they import `ai`
- * from this module.
+ * Cloud Function endpoints that use Genkit live in `bot.ts` (chat,
+ * tool-calling, action context, and Human-in-the-Loop callables);
+ * they import `ai` from this module.
  */
 
 import { enableFirebaseTelemetry } from "@genkit-ai/firebase"

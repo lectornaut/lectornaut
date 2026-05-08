@@ -1,7 +1,11 @@
 <script lang="ts" setup>
-import { BotChatContextKey } from "@/composables/useBotChat"
+import {
+  BotChatContextKey,
+  BOT_CHAT_MODE_OPTIONS,
+  type BotChatMode,
+} from "@/composables/useBotChat"
 import { IconArrowUp, IconPlus } from "@/data/icons"
-import { inject } from "vue"
+import { computed, inject } from "vue"
 
 const props = withDefaults(
   defineProps<{
@@ -26,6 +30,28 @@ const isActiveArchived = computed(
 const isReadOnly = computed(
   () => !!botChat?.sessionId.value && !canEditActive.value
 )
+
+// Mode selector — the dropdown in the composer toolbar. We bind to
+// `botChat.mode` directly so the side panel and composer stay in sync,
+// and so the next `sendMessage` automatically picks up the new mode.
+// Options live in `useBotChat` so labels and descriptions are shared
+// with the side-panel explainer (single source of truth).
+const modeOptions = BOT_CHAT_MODE_OPTIONS
+const mode = computed<BotChatMode>(() => botChat?.mode.value ?? "auto")
+const onModeChange = (next: unknown) => {
+  if (!botChat) return
+  if (typeof next !== "string") return
+  if (!modeOptions.some((o) => o.value === next)) return
+  botChat.mode.value = next as BotChatMode
+}
+
+const modeLabel = (value: BotChatMode): string => {
+  // Map mode → i18n key. Keeping this explicit (rather than `t(\`ai.${value}\`)`)
+  // so the i18n-extractor toolchain can statically discover the keys.
+  if (value === "auto") return t("ai.auto")
+  if (value === "agent") return t("ai.agent")
+  return t("ai.manual")
+}
 
 const inputPlaceholder = computed(() => {
   if (isActiveArchived.value)
@@ -65,7 +91,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       <InputGroupButton variant="outline" size="icon-xs">
         <IconPlus />
       </InputGroupButton>
-      <Select>
+      <Select :model-value="mode" @update:model-value="onModeChange">
         <InputGroupButton variant="ghost" as-child>
           <SelectTrigger>
             <SelectValue :placeholder="t('ai.mode')" />
@@ -73,9 +99,20 @@ const handleKeydown = (event: KeyboardEvent) => {
         </InputGroupButton>
         <SelectContent>
           <SelectGroup>
-            <SelectItem value="auto">{{ t("ai.auto") }}</SelectItem>
-            <SelectItem value="agent">{{ t("ai.agent") }}</SelectItem>
-            <SelectItem value="manual">{{ t("ai.manual") }}</SelectItem>
+            <SelectItem
+              v-for="option in modeOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              <div class="flex flex-col gap-0.5">
+                <span class="text-sm font-medium">
+                  {{ modeLabel(option.value) }}
+                </span>
+                <span class="text-muted-foreground text-xs">
+                  {{ option.shortDescription }}
+                </span>
+              </div>
+            </SelectItem>
           </SelectGroup>
         </SelectContent>
       </Select>

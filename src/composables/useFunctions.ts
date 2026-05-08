@@ -9,11 +9,13 @@ import { functions } from "@/modules/firebase"
 import type {
   BillingInterval,
   BillingPlanKey,
+  IBotAgentConfig,
   IBotSessionVisibility,
   ITeamBilling,
 } from "@/types/domain"
 import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
+import type { INotificationStatus } from "@/types/notification"
 import {
   httpsCallable,
   type HttpsCallable,
@@ -425,6 +427,33 @@ export interface SendTestNotificationResponse {
 }
 
 // =============================================================================
+// Notification Mutation Request/Response Types
+// =============================================================================
+
+/**
+ * Shared shape for the `markAllNotifications*` and `deleteAllNotifications`
+ * batch callables. Omitting `status` operates over the whole inbox+saved+done
+ * set; passing one narrows to that bucket. The server caps batch size to
+ * `COST_BUDGET.QUERY_MAX_LIMIT`, so `count` may be lower than what the
+ * client sees if the user has more notifications than the cap.
+ */
+export interface BatchNotificationRequest {
+  status?: INotificationStatus
+}
+
+export interface BatchNotificationResponse {
+  count: number
+}
+
+export interface DeleteNotificationRequest {
+  notificationId: string
+}
+
+export interface DeleteNotificationResponse {
+  success: boolean
+}
+
+// =============================================================================
 // Public Profile Functions
 // =============================================================================
 
@@ -462,12 +491,26 @@ export interface GetPublicTeamMembersResponse {
 // Bot Chat Request/Response Types
 // =============================================================================
 
+/**
+ * Action-context mode for a chat turn. Mirrors the server enum; the
+ * authoritative list lives in `functions/src/bot.ts` (`BOT_CHAT_MODES`).
+ *   - `auto`   — balanced default; tools enabled; concise replies
+ *   - `agent`  — proactive; tools encouraged; thorough chain-of-thought
+ *   - `manual` — read-only conversation; tools stripped server-side
+ */
+export type BotChatMode = "auto" | "agent" | "manual"
+
 export interface SendBotMessageRequest {
   teamId: string
   workspaceId: string
   /** Pass null/undefined to start a new session; the response carries the new id. */
   sessionId?: string | null
   message: string
+  /**
+   * Per-turn capability mode. Optional — server defaults to `auto` when
+   * omitted, so older clients that predate the mode selector still work.
+   */
+  mode?: BotChatMode
 }
 
 export interface SendBotMessageResponse {
@@ -477,19 +520,90 @@ export interface SendBotMessageResponse {
 
 export type BotChatRole = "user" | "agent"
 
+/**
+ * One slice of an agent message. Either a text run or a tool invocation.
+ * Tool segments capture the model's reasoning loop so the UI can render
+ * each call as a distinct card alongside surrounding text.
+ */
+export type BotChatHistorySegment =
+  | { kind: "text"; text: string }
+  | {
+      kind: "tool"
+      tool: {
+        ref?: string
+        name: string
+        input?: unknown
+        output?: unknown
+        /**
+         * When true, this tool call paused the chat for a Human-in-the-
+         * Loop response. The renderer draws an interactive form; the
+         * flag is dropped once `output` is set.
+         */
+        isInterrupt?: boolean
+      }
+    }
+
 export interface BotChatHistoryMessage {
   role: BotChatRole
   content: string
+  /** Present on agent messages with tool calls; absent for plain text. */
+  segments?: BotChatHistorySegment[]
 }
 
 /**
- * One streamed update from `sendBotMessage`. The first chunk emitted by
- * the server carries `sessionId` (so the URL can update before the reply
- * finishes); subsequent chunks carry `chunk` text deltas.
+ * One streamed update from `sendBotMessage`. Any combination of fields
+ * may be present; the client routes by which ones are set:
+ *   - `sessionId` — pinned once on the very first chunk
+ *   - `chunk`     — a text delta from the model
+ *   - `toolCall`  — model invoked a tool (input is finalised; output
+ *                   arrives later as a matching `toolResult` keyed by
+ *                   `ref`)
+ *   - `toolResult` — tool returned `output`; client flips the matching
+ *                   tool card from "running" to "done"
  */
 export interface SendBotMessageStreamChunk {
   sessionId?: string
   chunk?: string
+  toolCall?: {
+    ref?: string
+    name: string
+    input?: unknown
+    /**
+     * When true, this tool call is a paused Human-in-the-Loop interrupt.
+     * The chat is suspended server-side; the client must call
+     * `respondToBotInterrupt` with the user's answer to resume it.
+     */
+    isInterrupt?: boolean
+  }
+  toolResult?: {
+    ref?: string
+    name: string
+    output?: unknown
+  }
+}
+
+/**
+ * Resume a chat that was paused by an interrupt-tool call. Carries the
+ * user's answer (matching the interrupt's `outputSchema`) plus the
+ * (sessionId, ref, name) tuple identifying which interrupt is being
+ * answered. Streams chunks back using the same `SendBotMessageStreamChunk`
+ * protocol as `sendBotMessage`, so the client can route them through the
+ * same pipeline.
+ */
+export interface RespondToBotInterruptRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  ref?: string
+  name: string
+  /** Must conform to the interrupt tool's outputSchema. */
+  response: unknown
+  mode?: BotChatMode
+}
+
+export interface RespondToBotInterruptResponse {
+  sessionId: string
+  reply: string
 }
 
 export interface LoadBotSessionRequest {
@@ -548,6 +662,48 @@ export interface DeleteBotSessionRequest {
 export interface DeleteBotSessionResponse {
   sessionId: string
   deleted: true
+}
+
+// =============================================================================
+// Team Agent Config Request/Response Types
+// =============================================================================
+
+export interface GetTeamAgentConfigRequest {
+  teamId: string
+}
+
+export interface GetTeamAgentConfigResponse {
+  config: IBotAgentConfig
+  /** True when the team has an explicit overrides doc. */
+  hasOverrides: boolean
+}
+
+/**
+ * Partial update — only sent fields are written. Anything omitted falls
+ * through to the previously-saved value (or to the server default if the
+ * doc doesn't have it yet).
+ */
+export type UpdateTeamAgentConfigPatch = Partial<{
+  model: IBotAgentConfig["model"]
+  temperature: number
+  topP: number
+  topK: number
+  maxOutputTokens: number
+  defaultMode: IBotAgentConfig["defaultMode"]
+  systemPromptBase: string
+  promptSuffixes: Partial<IBotAgentConfig["promptSuffixes"]>
+  tools: Partial<IBotAgentConfig["tools"]>
+  titleMaxLength: number
+  previewMaxLength: number
+}>
+
+export interface UpdateTeamAgentConfigRequest {
+  teamId: string
+  updates: UpdateTeamAgentConfigPatch
+}
+
+export interface UpdateTeamAgentConfigResponse {
+  config: IBotAgentConfig
 }
 
 // =============================================================================
@@ -793,6 +949,45 @@ export const sendTestNotification = createTypedCallable<
   SendTestNotificationResponse
 >("sendTestNotification")
 
+// =============================================================================
+// Notification Mutation Functions
+// =============================================================================
+
+export const markAllNotificationsRead = createTypedCallable<
+  BatchNotificationRequest,
+  BatchNotificationResponse
+>("markAllNotificationsRead")
+
+export const markAllNotificationsUnread = createTypedCallable<
+  BatchNotificationRequest,
+  BatchNotificationResponse
+>("markAllNotificationsUnread")
+
+export const markAllNotificationsDone = createTypedCallable<
+  BatchNotificationRequest,
+  BatchNotificationResponse
+>("markAllNotificationsDone")
+
+export const markAllNotificationsInbox = createTypedCallable<
+  BatchNotificationRequest,
+  BatchNotificationResponse
+>("markAllNotificationsInbox")
+
+export const markAllNotificationsSaved = createTypedCallable<
+  BatchNotificationRequest,
+  BatchNotificationResponse
+>("markAllNotificationsSaved")
+
+export const deleteAllNotifications = createTypedCallable<
+  BatchNotificationRequest,
+  BatchNotificationResponse
+>("deleteAllNotifications")
+
+export const deleteNotification = createTypedCallable<
+  DeleteNotificationRequest,
+  DeleteNotificationResponse
+>("deleteNotification")
+
 export const getPublicTeamMembers = createTypedCallable<
   GetPublicTeamMembersRequest,
   GetPublicTeamMembersResponse
@@ -1001,6 +1196,18 @@ export const sendBotMessage = createTypedStreamingCallable<
 >("sendBotMessage")
 
 /**
+ * Resume a chat that was paused by an `askQuestion` interrupt with the
+ * user's answer. Streams the model's continuation using the same chunk
+ * shape as `sendBotMessage` — the client can pipe both into the same
+ * stream-handling code path.
+ */
+export const respondToBotInterrupt = createTypedStreamingCallable<
+  RespondToBotInterruptRequest,
+  RespondToBotInterruptResponse,
+  SendBotMessageStreamChunk
+>("respondToBotInterrupt")
+
+/**
  * Load an existing bot chat session's main-thread messages so the client
  * can re-render the prior conversation when the user picks a session
  * from the history sidebar.
@@ -1042,6 +1249,30 @@ export const deleteBotSession = createTypedCallable<
   DeleteBotSessionRequest,
   DeleteBotSessionResponse
 >("deleteBotSession")
+
+// =============================================================================
+// Team Agent Config Functions
+// =============================================================================
+
+/**
+ * Read the team's agent config. Open to any team member; the response
+ * always carries a fully-populated config (defaults are filled in
+ * server-side for any unset field).
+ */
+export const getTeamAgentConfig = createTypedCallable<
+  GetTeamAgentConfigRequest,
+  GetTeamAgentConfigResponse
+>("getTeamAgentConfig")
+
+/**
+ * Update the team's agent config. Owner / admin only — non-admins
+ * receive `permission-denied`. Returns the merged effective config so
+ * the client can swap its local copy wholesale.
+ */
+export const updateTeamAgentConfig = createTypedCallable<
+  UpdateTeamAgentConfigRequest,
+  UpdateTeamAgentConfigResponse
+>("updateTeamAgentConfig")
 
 // =============================================================================
 // Composable Hook
@@ -1121,6 +1352,13 @@ export function useFunctions() {
 
     // Notification operations
     sendTestNotification,
+    markAllNotificationsRead,
+    markAllNotificationsUnread,
+    markAllNotificationsDone,
+    markAllNotificationsInbox,
+    markAllNotificationsSaved,
+    deleteAllNotifications,
+    deleteNotification,
 
     // Public profile operations
     getPublicTeamMembers,
@@ -1146,5 +1384,9 @@ export function useFunctions() {
     renameBotSession,
     archiveBotSession,
     deleteBotSession,
+
+    // Team agent config operations
+    getTeamAgentConfig,
+    updateTeamAgentConfig,
   }
 }

@@ -33,6 +33,9 @@ const isActiveArchived = computed(
   () => botChat?.isActiveArchived.value ?? false
 )
 const localMessageCount = computed(() => botChat?.messages.value.length ?? 0)
+const activeModeLabel = computed(
+  () => botChat?.activeModeOption.value.label ?? "Auto"
+)
 
 const tsToDate = (value: unknown): Date | null => {
   if (!value) return null
@@ -182,9 +185,10 @@ const detailRows = computed<DetailRow[]>(() => {
 
             <div class="flex flex-wrap items-center gap-2">
               <Badge variant="outline" class="gap-1">
-                <component :is="visibilityIcon(activeVisibility)" />
+                <Component :is="visibilityIcon(activeVisibility)" />
                 {{ visibilityLabel(activeVisibility) }}
               </Badge>
+              <Badge variant="outline"> {{ activeModeLabel }} mode </Badge>
               <Badge v-if="isActiveOwner" variant="secondary">Owner</Badge>
               <Badge v-else variant="secondary">Read-only</Badge>
               <Badge v-if="isActiveArchived" variant="outline" class="gap-1">
@@ -229,7 +233,7 @@ const detailRows = computed<DetailRow[]>(() => {
                 class="flex items-start justify-between gap-2"
               >
                 <dt class="text-muted-foreground flex items-center gap-2">
-                  <component :is="row.icon" />
+                  <Component :is="row.icon" />
                   {{ row.label }}
                 </dt>
                 <dd class="text-right text-sm font-medium">{{ row.value }}</dd>

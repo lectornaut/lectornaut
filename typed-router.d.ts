@@ -94,13 +94,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/create': RouteRecordInfo<
-      '/create',
-      '/create',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/deeplink': RouteRecordInfo<
       '/deeplink',
       '/deeplink',
@@ -308,12 +301,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/code.vue': {
       routes:
         | '/code'
-      views:
-        | never
-    }
-    'src/pages/create.vue': {
-      routes:
-        | '/create'
       views:
         | never
     }

@@ -1,8 +1,8 @@
 import { parseSafe } from "@/schemas/_utils"
 import { logEntrySchema } from "@/schemas/logs"
 import type { ILogEntry } from "@/types/logs"
-import { getDocsCached } from "@/utils/firebase/firebase-cache"
 import {
+  getDocs,
   type Query,
   type QueryDocumentSnapshot,
   type QuerySnapshot,
@@ -92,7 +92,7 @@ export function usePaginatedLogs(options: UsePaginatedLogsOptions) {
         return
       }
 
-      const snapshot = await getDocsCached(q)
+      const snapshot = await getDocs(q)
       if (requestId !== latestRequestId) return
 
       const items = hydrateLogs(snapshot)

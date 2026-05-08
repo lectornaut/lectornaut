@@ -1,6 +1,15 @@
+import {
+  deleteAllNotifications as deleteAllNotificationsFn,
+  deleteNotification as deleteNotificationFn,
+  markAllNotificationsDone,
+  markAllNotificationsInbox,
+  markAllNotificationsRead,
+  markAllNotificationsSaved,
+  markAllNotificationsUnread,
+} from "@/composables/useFunctions"
 import { setBadgeCount } from "@/composables/usePlatform"
 import { withToast } from "@/helpers/toast"
-import { firestore, functions } from "@/modules/firebase"
+import { firestore } from "@/modules/firebase"
 import { useSettingsStore } from "@/stores/settingsStore"
 import {
   type INotification,
@@ -22,7 +31,6 @@ import {
   query,
   Timestamp,
 } from "firebase/firestore"
-import { httpsCallable } from "firebase/functions"
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
 import { useCurrentUser } from "vuefire"
 
@@ -150,7 +158,8 @@ export function useNotifications() {
   }
 
   const performBatchAction = async (
-    actionName: string,
+    callable: typeof markAllNotificationsRead,
+    source: string,
     status: INotificationStatus | undefined,
     transform: (items: INotification[]) => INotification[]
   ) => {
@@ -172,11 +181,10 @@ export function useNotifications() {
         optimisticNotifications.value = previousOptimistic
       },
       async () => {
-        const fn = httpsCallable(functions, actionName)
-        await fn({ status })
+        await callable({ status })
       },
       {
-        source: `notifications.batch.${actionName}`,
+        source: `notifications.batch.${source}`,
       }
     )
   }
@@ -249,7 +257,8 @@ export function useNotifications() {
   }
 
   const performBatchActionWithToast = async (
-    actionName: string,
+    callable: typeof markAllNotificationsRead,
+    source: string,
     status: INotificationStatus | undefined,
     transform: (items: INotification[]) => INotification[],
     options: {
@@ -262,7 +271,7 @@ export function useNotifications() {
     const snapshots = getNotificationSnapshots(status)
 
     return runNotificationActionWithToast(
-      () => performBatchAction(actionName, status, transform),
+      () => performBatchAction(callable, source, status, transform),
       {
         success: options.success,
         error: options.error,
@@ -302,8 +311,7 @@ export function useNotifications() {
         firestoreNotifications.value = previousFirestore
       },
       async () => {
-        const fn = httpsCallable(functions, "deleteNotification")
-        await fn({ notificationId })
+        await deleteNotificationFn({ notificationId })
       },
       {
         source: "notifications.delete",
@@ -342,8 +350,7 @@ export function useNotifications() {
         firestoreNotifications.value = previousFirestore
       },
       async () => {
-        const fn = httpsCallable(functions, "deleteAllNotifications")
-        await fn({ status })
+        await deleteAllNotificationsFn({ status })
       },
       {
         source: "notifications.batch.deleteAllNotifications",
@@ -464,6 +471,7 @@ export function useNotifications() {
 
   const markAllRead = (status?: INotificationStatus) =>
     performBatchActionWithToast(
+      markAllNotificationsRead,
       "markAllNotificationsRead",
       status,
       (items) =>
@@ -480,6 +488,7 @@ export function useNotifications() {
 
   const markAllUnread = (status?: INotificationStatus) =>
     performBatchActionWithToast(
+      markAllNotificationsUnread,
       "markAllNotificationsUnread",
       status,
       (items) =>
@@ -496,6 +505,7 @@ export function useNotifications() {
 
   const markAllDone = (status?: INotificationStatus) =>
     performBatchActionWithToast(
+      markAllNotificationsDone,
       "markAllNotificationsDone",
       status,
       (items) =>
@@ -512,6 +522,7 @@ export function useNotifications() {
 
   const markAllSaved = (status?: INotificationStatus) =>
     performBatchActionWithToast(
+      markAllNotificationsSaved,
       "markAllNotificationsSaved",
       status,
       (items) =>
@@ -528,6 +539,7 @@ export function useNotifications() {
 
   const markAllInbox = (status?: INotificationStatus) =>
     performBatchActionWithToast(
+      markAllNotificationsInbox,
       "markAllNotificationsInbox",
       status,
       (items) =>

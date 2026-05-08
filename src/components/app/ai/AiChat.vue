@@ -2,6 +2,7 @@
 import {
   BotChatContextKey,
   type BotChatMessage,
+  type BotChatSegment,
 } from "@/composables/useBotChat"
 import MarkdownRender, {
   getMarkdown,
@@ -27,13 +28,16 @@ const isSending = computed(() => botChat?.isSending.value ?? false)
 const sessionId = computed(() => botChat?.sessionId.value ?? null)
 
 // While streaming, `useBotChat` pushes an empty agent placeholder before
-// chunks arrive and mutates its `.content` in place. Hide that empty
-// bubble until at least one chunk lands, and use the same condition to
-// drive the "Thinking…" indicator (it disappears the moment text starts
-// flowing into the bubble).
+// chunks arrive and mutates its `.content` / `.segments` in place. Hide
+// that empty bubble until at least one chunk lands (text OR tool call),
+// and use the same condition to drive the "Thinking…" indicator (it
+// disappears the moment text or a tool segment shows up).
 const tailIsEmptyAgent = computed(() => {
   const last = messages.value[messages.value.length - 1]
-  return last?.role === "agent" && last.content.length === 0
+  if (last?.role !== "agent") return false
+  if (last.content.length > 0) return false
+  if ((last.segments?.length ?? 0) > 0) return false
+  return true
 })
 const displayMessages = computed(() =>
   tailIsEmptyAgent.value ? messages.value.slice(0, -1) : messages.value
@@ -44,45 +48,137 @@ const showThinking = computed(() => isSending.value && tailIsEmptyAgent.value)
 // memoizes by id, so this is a cheap lookup, not a fresh parser each call.
 const md = getMarkdown("chat-message")
 
-// Parse each bubble into a markstream node tree. Only the actively
-// streaming agent tail gets `final: false` — that keeps the parser from
-// committing half-open code fences/links while chunks are still arriving.
-// Every other bubble is finalised, so its tree is stable and the renderer
-// can skip re-diffing on subsequent chunks.
+// Parse each bubble into a list of "blocks" — text blocks become
+// markstream node trees, tool blocks become tool-call cards. Two
+// rendering paths converge here:
 //
-// Memoize finalized parses by message identity. Without this, every
-// streaming chunk re-runs `parseMarkdownToStructure` for every message
-// in the array — O(history) work per token. The streaming tail is the
-// one exception: its `.content` mutates while its identity stays
-// constant (the empty placeholder pushed in `useBotChat` is the same
-// object that grows), so the tail must always re-parse and never get
-// cached. `WeakMap` is right here — finalized messages get evicted
-// automatically when the array is replaced (session switch / Firestore
-// reconcile), no manual eviction needed.
-const parseCache = new WeakMap<
+//   • Agent message WITH segments → walk segments in order, each text
+//     segment becomes one parsed-markdown block, each tool segment
+//     becomes one tool-card block. Order matters: the model may emit
+//     prose, then call a tool, then continue prose — and the UI must
+//     reflect that flow.
+//
+//   • Agent message WITHOUT segments (legacy text-only chats and user
+//     messages) → single markdown block parsed from `message.content`.
+//
+// Streaming-tail markdown gets `final: false` (parser tolerates
+// half-open code fences / links). All other markdown is finalised so
+// the renderer can skip re-diffing on subsequent chunks.
+//
+// Memoize finalised parses by (message, segment-text) pair. Without a
+// cache, every streaming chunk re-runs `parseMarkdownToStructure` for
+// every text block in every message — O(history × segments) per token.
+// The streaming tail is the one exception: its content mutates in place
+// while the message identity stays constant, so the tail must always
+// re-parse. `WeakMap` keyed on the message object lets finalized parses
+// drop automatically when the messages array is replaced (session
+// switch / Firestore reconcile), no manual eviction needed.
+type ParsedNodes = ReturnType<typeof parseMarkdownToStructure>
+
+interface TextBlock {
+  kind: "text"
+  id: string
+  nodes: ParsedNodes
+  final: boolean
+}
+interface ToolBlock {
+  kind: "tool"
+  id: string
+  segment: Extract<BotChatSegment, { kind: "tool" }>
+}
+type RenderedBlock = TextBlock | ToolBlock
+
+// Per-message map: text-segment-content → parsed nodes. Keying on the
+// segment's text string means once a text segment finalises (no longer
+// the streaming tail), its parse is reused on every subsequent render.
+// We rebuild the inner map for each message but the outer WeakMap
+// survives across renders, so finalised parses persist.
+const parseCacheByMessage = new WeakMap<
   BotChatMessage,
-  ReturnType<typeof parseMarkdownToStructure>
+  Map<string, ParsedNodes>
 >()
+
+const getCachedParse = (
+  message: BotChatMessage,
+  text: string,
+  isStreamingTail: boolean
+): ParsedNodes => {
+  if (isStreamingTail) {
+    // Streaming tail: never cache (text mutates per chunk), use partial
+    // parse mode so the parser tolerates unclosed fences/links/etc.
+    return parseMarkdownToStructure(text, md, { final: false })
+  }
+  let inner = parseCacheByMessage.get(message)
+  if (!inner) {
+    inner = new Map()
+    parseCacheByMessage.set(message, inner)
+  }
+  let nodes = inner.get(text)
+  if (!nodes) {
+    nodes = parseMarkdownToStructure(text, md, { final: true })
+    inner.set(text, nodes)
+  }
+  return nodes
+}
+
 const renderedMessages = computed(() =>
-  displayMessages.value.map((message, index) => {
-    const isStreamingTail =
-      isSending.value &&
-      index === displayMessages.value.length - 1 &&
-      message.role === "agent"
-    const final = !isStreamingTail
-    let nodes: ReturnType<typeof parseMarkdownToStructure>
-    if (isStreamingTail) {
-      nodes = parseMarkdownToStructure(message.content, md, { final: false })
-    } else {
-      const cached = parseCache.get(message)
-      if (cached) {
-        nodes = cached
-      } else {
-        nodes = parseMarkdownToStructure(message.content, md, { final: true })
-        parseCache.set(message, nodes)
+  displayMessages.value.map((message, messageIndex) => {
+    const isLastMessage = messageIndex === displayMessages.value.length - 1
+    const blocks: RenderedBlock[] = []
+
+    if (
+      message.role === "agent" &&
+      message.segments &&
+      message.segments.length > 0
+    ) {
+      // Identify which (if any) text segment is the active streaming
+      // tail. Only the very last text segment of the very last message
+      // can be streaming — and only while `isSending` is true.
+      let lastTextIndex = -1
+      for (let i = message.segments.length - 1; i >= 0; i--) {
+        if (message.segments[i].kind === "text") {
+          lastTextIndex = i
+          break
+        }
       }
+      message.segments.forEach((segment, segIndex) => {
+        if (segment.kind === "text") {
+          const isStreamingTail =
+            isSending.value && isLastMessage && segIndex === lastTextIndex
+          blocks.push({
+            kind: "text",
+            id: `${message.id}-text-${segIndex}`,
+            nodes: getCachedParse(message, segment.text, isStreamingTail),
+            final: !isStreamingTail,
+          })
+        } else {
+          // Tool segment — `tool.ref` (when present) is the most stable
+          // key; falls back to index. Either way, mutation of `output`
+          // happens in place on the same segment object, so Vue's
+          // child-component instance stays put across the running→done
+          // transition.
+          blocks.push({
+            kind: "tool",
+            id: `${message.id}-tool-${segment.tool.ref ?? segIndex}`,
+            segment,
+          })
+        }
+      })
+    } else {
+      // No segments — single markdown block over `content`. Covers user
+      // messages (always) and agent messages from before tool support
+      // existed (legacy data and pure text turns).
+      const isStreamingTail =
+        isSending.value && isLastMessage && message.role === "agent"
+      blocks.push({
+        kind: "text",
+        id: `${message.id}-content`,
+        nodes: getCachedParse(message, message.content, isStreamingTail),
+        final: !isStreamingTail,
+      })
     }
-    return { message, nodes, final }
+
+    return { message, blocks }
   })
 )
 
@@ -164,7 +260,7 @@ useResizeObserver(contentEl, () => {
     </div>
     <div v-else ref="contentEl" class="mt-auto grid grid-cols-1">
       <ContextMenu
-        v-for="({ message, nodes, final }, index) in renderedMessages"
+        v-for="({ message, blocks }, index) in renderedMessages"
         :key="message.id"
       >
         <ContextMenuTrigger>
@@ -194,15 +290,23 @@ useResizeObserver(contentEl, () => {
                   : 'bg-secondary text-secondary-foreground mr-auto rounded-lg rounded-bl-xs',
               ]"
             >
-              <MarkdownRender
-                custom-id="chat"
-                :is-dark="isDark"
-                :code-block-props="{
-                  theme: { light: 'vitesse-light', dark: 'vitesse-dark' },
-                }"
-                :nodes="nodes"
-                :final="final"
-              />
+              <template v-for="block in blocks" :key="block.id">
+                <MarkdownRender
+                  v-if="block.kind === 'text'"
+                  custom-id="chat"
+                  :is-dark="isDark"
+                  :code-block-props="{
+                    theme: { light: 'vitesse-light', dark: 'vitesse-dark' },
+                  }"
+                  :nodes="block.nodes"
+                  :final="block.final"
+                />
+                <BotChatToolCall
+                  v-else
+                  :tool="block.segment.tool"
+                  :message-id="message.id"
+                />
+              </template>
             </div>
           </div>
         </ContextMenuTrigger>

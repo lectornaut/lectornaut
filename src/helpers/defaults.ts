@@ -30,7 +30,6 @@ import {
   IconScroll,
   IconSettings,
   IconShieldCheck,
-  IconSparkle,
   IconSun,
   IconSunMoon,
   IconUSA,
@@ -38,7 +37,11 @@ import {
   IconUserRound,
   IconUsersRound,
 } from "@/data/icons"
-import type { BillingPlanKey } from "@/types/domain"
+import type {
+  BillingPlanKey,
+  IBotAgentConfig,
+  IBotAgentModel,
+} from "@/types/domain"
 
 export const languages = [
   {
@@ -163,6 +166,134 @@ export const sizes = [
 export type SizeId = (typeof sizes)[number]["id"]
 
 export const defaultSize: SizeId = "base"
+
+// ────────────────────────────────────────────────────────────────────────────
+// Bot agent (workspace AI client) — model catalog + per-workspace defaults.
+// ────────────────────────────────────────────────────────────────────────────
+//
+// `botModels` is the UI catalog: each entry powers one row in the model
+// dropdown. The wire-name `id` MUST match the server-side allowlist in
+// `functions/src/bot.ts` (`BOT_AGENT_MODELS`) — keep both in sync, or the
+// update callable will reject the chosen model with `invalid-argument`.
+//
+// `defaultBotAgentConfig` mirrors the server's `DEFAULT_BOT_AGENT_CONFIG`.
+// We duplicate it on the client so the form has something to render before
+// the first callable response lands and so the "Reset to defaults" button
+// has a target shape.
+
+export const botModels = [
+  {
+    id: "gemini-3-flash-preview",
+    name: "Gemini 3 Flash (Preview)",
+    description: "Latest preview — fast, capable, multimodal.",
+    badge: "Preview",
+  },
+  {
+    id: "gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    description: "Most capable — best for complex reasoning.",
+    badge: "Pro",
+  },
+  {
+    id: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    description: "Balanced speed and quality.",
+    badge: null,
+  },
+  {
+    id: "gemini-2.5-flash-lite",
+    name: "Gemini 2.5 Flash Lite",
+    description: "Lightweight — cheapest 2.5-class option.",
+    badge: null,
+  },
+  {
+    id: "gemini-2.0-flash",
+    name: "Gemini 2.0 Flash",
+    description: "Stable, mature workhorse.",
+    badge: null,
+  },
+  {
+    id: "gemini-2.0-flash-lite",
+    name: "Gemini 2.0 Flash Lite",
+    description: "Lowest cost — best for simple queries.",
+    badge: null,
+  },
+] as const satisfies readonly {
+  id: IBotAgentModel
+  name: string
+  description: string
+  badge: string | null
+}[]
+
+export const botChatModes = [
+  {
+    id: "auto",
+    name: "Auto",
+    description: "Balanced default — tools used when they directly help.",
+  },
+  {
+    id: "agent",
+    name: "Agent",
+    description: "Proactive — eager tool use, longer narrated replies.",
+  },
+  {
+    id: "manual",
+    name: "Manual",
+    description: "Read-only — explanation and suggestion only, no actions.",
+  },
+] as const
+
+export const defaultBotAgentConfig: IBotAgentConfig = {
+  model: "gemini-3-flash-preview",
+  temperature: 0.7,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 2048,
+  defaultMode: "auto",
+  systemPromptBase:
+    "You are a helpful assistant for the user's team workspace.",
+  promptSuffixes: {
+    auto:
+      "Default mode: answer concisely. Call a tool when it directly " +
+      "advances the user's request, otherwise just reply with text. If " +
+      "the request is ambiguous, prefer asking the user a clarifying " +
+      "question via `askQuestion` over guessing.",
+    agent:
+      "Agent mode: be proactive. Prefer calling tools to gather concrete " +
+      "data over guessing, and chain multiple tool calls when a question " +
+      "needs them. Briefly narrate what you're doing and why. When you " +
+      "need a decision from the user before continuing, ask via " +
+      "`askQuestion` — don't pick on their behalf.",
+    manual:
+      "Manual mode: action tools are disabled. You are a read-only " +
+      "conversational partner — explain, suggest, and discuss, but never " +
+      "claim to take actions on the user's behalf. You may still ask " +
+      "clarifying questions via `askQuestion` when it would help the " +
+      "discussion.",
+  },
+  tools: {
+    getWeather: true,
+    rollDice: true,
+    askQuestion: true,
+  },
+  titleMaxLength: 80,
+  previewMaxLength: 200,
+}
+
+/**
+ * Bound metadata for the slider/number fields. Mirrors
+ * `BOT_AGENT_BOUNDS` server-side; if you tighten one, tighten the other.
+ */
+export const botAgentBounds = {
+  temperature: { min: 0, max: 2, step: 0.05 },
+  topP: { min: 0, max: 1, step: 0.01 },
+  topK: { min: 1, max: 100, step: 1 },
+  maxOutputTokens: { min: 256, max: 65536, step: 256 },
+  systemPromptBase: { max: 4000 },
+  promptSuffix: { max: 2000 },
+  titleMaxLength: { min: 20, max: 200, step: 1 },
+  previewMaxLength: { min: 50, max: 500, step: 1 },
+} as const
 
 export const defaultMenu = [
   {
@@ -305,20 +436,6 @@ export const defaultMenu = [
       grid: "",
     },
     shortcut: "⌘P",
-  },
-  {
-    title: "Create",
-    action: "Start something new",
-    description: "Create new resources for your workspace.",
-    url: "/create",
-    id: "create",
-    icon: IconSparkle,
-    style: {
-      text: "text-purple-700/90 dark:text-purple-300/90",
-      bg: "bg-purple-50 dark:bg-purple-950/40",
-      grid: "",
-    },
-    shortcut: "⌘N",
   },
 ] as const
 

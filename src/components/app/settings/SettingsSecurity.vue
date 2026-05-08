@@ -254,27 +254,34 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 <template>
   <div class="flex grow flex-col justify-between">
     <div class="p-6">
-      <!-- Enterprise plan gate -->
-      <Empty v-if="!isEnterprise">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <IconShieldCheck />
-          </EmptyMedia>
-          <EmptyTitle>Enterprise Security</EmptyTitle>
-          <EmptyDescription>
-            SSO and advanced login method controls are available on the
-            Enterprise plan. Upgrade to configure SAML, OIDC, and per-team
-            authentication policies.
-          </EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button variant="outline" @click="emit('navigate', 'plans')">
-            View Plans
-          </Button>
-        </EmptyContent>
-      </Empty>
+      <FieldGroup v-if="!isEnterprise">
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <Empty class="border border-dashed">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconShieldCheck />
+                  </EmptyMedia>
+                  <EmptyTitle>Enterprise Security</EmptyTitle>
+                  <EmptyDescription>
+                    SSO and advanced login method controls are available on the
+                    Enterprise plan. Upgrade to configure SAML, OIDC, and
+                    per-team authentication policies.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button variant="outline" @click="emit('navigate', 'plans')">
+                    View Plans
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            </FieldContent>
+          </Field>
+        </FieldSet>
+      </FieldGroup>
       <template v-else>
-        <div v-if="loading" class="flex justify-center py-12">
+        <div v-if="loading" class="flex justify-center py-8">
           <Spinner />
         </div>
         <FieldGroup v-else>

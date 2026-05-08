@@ -225,7 +225,7 @@ const onArchiveToggle = (session: IBotSession) => {
                             <span class="truncate text-sm">
                               {{ item.title || "New chat" }}
                             </span>
-                            <component
+                            <Component
                               :is="visibilityIcon(item.visibility)"
                               v-if="item.visibility !== 'private'"
                               class="text-muted-foreground size-3 shrink-0"

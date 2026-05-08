@@ -247,7 +247,7 @@
       "notifications": "Choose what to receive and how often.",
       "appearance": "Theme, colors, and typography.",
       "security": "Password, MFA, and domain controls.",
-      "agents": "Agents available in this workspace.",
+      "agents": "Tune the team AI assistant's model, prompt, and tools.",
       "members": "Members, roles, and access.",
       "overview": "Team details, visibility, and access.",
       "teams": "Create and manage teams.",
@@ -646,6 +646,91 @@
         "description": "Adjust theme, colors, fonts, and display preferences."
       }
     },
+    "agents": {
+      "permissionRequired": "Only team owners and admins can change agent settings.",
+      "saveSuccess": "Agent settings saved.",
+      "saveError": "Failed to save agent settings.",
+      "loadError": "Couldn't load agent settings.",
+      "saving": "Saving...",
+      "saveAll": "Save changes",
+      "discard": "Discard",
+      "resetDefaults": "Reset to defaults",
+      "resetDefaultsDescription": "Restore all agent settings to their default values.",
+      "unsavedChanges": "You have unsaved changes.",
+      "model": {
+        "label": "Model",
+        "description": "Pick which large language model powers chats for this team.",
+        "placeholder": "Select a model"
+      },
+      "generation": {
+        "label": "Generation parameters",
+        "description": "Tune randomness, sampling, and reply length."
+      },
+      "temperature": {
+        "label": "Temperature",
+        "description": "Higher values produce more varied output (0 = deterministic, 2 = wild)."
+      },
+      "topP": {
+        "label": "Top-P",
+        "description": "Nucleus sampling cutoff. 1.0 disables this constraint."
+      },
+      "topK": {
+        "label": "Top-K",
+        "description": "Limits the model to its top-K most likely tokens."
+      },
+      "maxOutputTokens": {
+        "label": "Max output tokens",
+        "description": "Hard cap on the model's reply length."
+      },
+      "defaultMode": {
+        "label": "Default mode",
+        "description": "Pre-selected mode for new chats. Users can still override per-turn."
+      },
+      "systemPrompt": {
+        "label": "System prompt",
+        "description": "Team-level instructions sent at the start of every chat."
+      },
+      "systemPromptBase": {
+        "label": "Base prompt",
+        "description": "Always sent. Use to set tone, persona, or shared context.",
+        "placeholder": "You are a helpful assistant for this team."
+      },
+      "promptSuffixes": {
+        "label": "Mode-specific suffixes",
+        "description": "Appended after the base prompt depending on the active chat mode.",
+        "auto": "Auto suffix",
+        "agent": "Agent suffix",
+        "manual": "Manual suffix"
+      },
+      "tools": {
+        "label": "Tools",
+        "description": "Disable any tool to remove it from the model's catalog.",
+        "getWeather": {
+          "label": "Weather",
+          "description": "Demo tool that returns fake weather data for a location."
+        },
+        "rollDice": {
+          "label": "Roll dice",
+          "description": "Demo tool that rolls a six-sided die."
+        },
+        "askQuestion": {
+          "label": "Ask user (clarify)",
+          "description": "Lets the bot pause and ask a clarifying question with choices."
+        }
+      },
+      "limits": {
+        "label": "Display limits",
+        "description": "Truncation lengths for sidebar previews and chat titles."
+      },
+      "titleMaxLength": {
+        "label": "Title max length",
+        "description": "Characters allowed in the auto-generated chat title."
+      },
+      "previewMaxLength": {
+        "label": "Preview max length",
+        "description": "Characters shown in the sidebar preview."
+      }
+    },
     "overview": {
       "teamProfile": {
         "label": "Team profile",
@@ -930,48 +1015,6 @@
       "consoleDescription": "Run commands and view output.",
       "getInstantAnswersDescription": "Ask, search, and chat in your workspace.",
       "askAi": "Ask AI"
-    },
-    "create": {
-      "avatarFallback": "AG",
-      "description": "Description",
-      "prompt": "Prompt",
-      "temperature": "Temperature",
-      "maxLength": "Maximum Length",
-      "topP": "Top P",
-      "composing": "Composing...",
-      "compose": "Compose",
-      "generating": "Generating poem...",
-      "poemPlaceholder": "Your poem will appear here.",
-      "labels": {
-        "avatar": "Avatar",
-        "name": "Name",
-        "description": "Description",
-        "prompt": "Prompt",
-        "model": "Model",
-        "temperature": "Temperature",
-        "maxLength": "Maximum Length",
-        "topP": "Top P"
-      },
-      "placeholders": {
-        "name": "Enter a name",
-        "description": "Enter a description",
-        "prompt": "Enter a prompt",
-        "model": "Select a model",
-        "subject": "Subject"
-      },
-      "status": {
-        "composing": "Composing...",
-        "generating": "Generating poem..."
-      },
-      "buttons": {
-        "compose": "Compose"
-      },
-      "poem": {
-        "placeholder": "Your poem will appear here."
-      },
-      "alts": {
-        "agent": "Agent"
-      }
     },
     "runs": {
       "files": "Files"
