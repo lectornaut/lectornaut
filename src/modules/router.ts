@@ -40,11 +40,14 @@ if (import.meta.hot) {
 // already settled `auth.currentUser`. Async guards here would re-introduce
 // per-navigation races on HMR-triggered re-navigation.
 router.beforeEach((to, from) => {
-  if (to.name === "/" && isTauri.value) {
-    return { path: "/enter" }
-  }
-
   const user = auth.currentUser
+
+  // Tauri has no marketing landing — always route the root somewhere useful.
+  // Skip the /enter hop when already authenticated; otherwise App.vue would
+  // immediately redirect /enter → /start anyway.
+  if (to.name === "/" && isTauri.value) {
+    return { path: user ? "/start" : "/enter" }
+  }
 
   if (to.meta.requiresUser && !user) {
     return {

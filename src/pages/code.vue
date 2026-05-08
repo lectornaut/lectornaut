@@ -2,14 +2,19 @@
 import { useCodeMirrorCollab } from "@/composables/useCodeMirrorCollab"
 import { useCollabPage } from "@/composables/useCollabPage"
 import { IconFileText } from "@/data/icons"
+import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
 import type { Extension } from "@codemirror/state"
 
 definePage({
+  // Single component handles `/code` (no file) and `/code/:nodeId` (open file).
+  // The optional `:nodeId?` segment makes both addresses match here.
+  path: "/code/:nodeId?",
   meta: {
     requiresUser: true,
     layout: "app",
     sidebar: "Code",
-    breadcrumb: "Code",
+    breadcrumb: (route: { params?: { nodeId?: unknown } }) =>
+      useNodeBreadcrumb("Code", "code")(route),
   },
 })
 

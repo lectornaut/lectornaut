@@ -5,7 +5,7 @@ import { emitter } from "@/modules/mitt"
 definePage({
   meta: {
     requiresUser: true,
-    layout: "empty",
+    layout: false,
   },
 })
 

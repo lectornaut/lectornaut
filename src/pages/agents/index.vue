@@ -15,15 +15,11 @@ import {
 } from "@/data/icons"
 import Avatar from "vue-boring-avatars"
 
-definePage({
-  meta: {
-    requiresUser: true,
-    layout: false,
-    sidebar: "Agents",
-    breadcrumb: "Agents",
-  },
-})
-
+// Meta (`requiresUser`, `layout: "app"`, `sidebar`, `breadcrumb`) is inherited
+// from the parent route via vue-router's meta merging. Adding `layout: "app"`
+// here would double-wrap, since the plugin wraps top-level AND any child with
+// `meta.layout`. See sibling `[id].vue` which intentionally overrides to
+// `layout: "agents"` (flow-editor chrome inside the app shell).
 useHead({
   title: "Agents",
 })

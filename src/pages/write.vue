@@ -1,13 +1,18 @@
 <script lang="ts" setup>
 import { useCollabPage } from "@/composables/useCollabPage"
 import { IconFileText } from "@/data/icons"
+import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
 
 definePage({
+  // Single component handles `/write` (no file) and `/write/:nodeId` (open file).
+  // The optional `:nodeId?` segment makes both addresses match here.
+  path: "/write/:nodeId?",
   meta: {
     requiresUser: true,
     layout: "app",
     sidebar: "Write",
-    breadcrumb: "Write",
+    breadcrumb: (route: { params?: { nodeId?: unknown } }) =>
+      useNodeBreadcrumb("Write", "write")(route),
   },
 })
 

@@ -2,12 +2,6 @@
 import { IconArrowLeft, IconCircleAlert, IconShieldCheck } from "@/data/icons"
 import { handleSsoRedirectResult, signInWithSsoRedirect } from "@/modules/auth"
 
-definePage({
-  meta: {
-    requiresGuest: true,
-  },
-})
-
 useHead({
   title: "SSO Sign In",
 })

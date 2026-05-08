@@ -2,9 +2,10 @@
 import { IconCheck, IconCopy } from "@/data/icons"
 
 definePage({
+  // Overrides parent's `layout: "app"` to swap in the flow-editor chrome.
+  // `requiresUser` is inherited from the parent.
   meta: {
     layout: "agents",
-    requiresUser: true,
     sidebar: "Agent",
     breadcrumb: (route: { params: { id: string } }) =>
       `Agent ${route?.params.id}`,

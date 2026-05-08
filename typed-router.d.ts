@@ -89,16 +89,9 @@ declare module 'vue-router/auto-routes' {
     >,
     '/code': RouteRecordInfo<
       '/code',
-      '/code',
+      '/code/:nodeId?',
       Record<never, never>,
       Record<never, never>,
-      | '/code/[nodeId]'
-    >,
-    '/code/[nodeId]': RouteRecordInfo<
-      '/code/[nodeId]',
-      '/code/:nodeId',
-      { nodeId: ParamValue<true> },
-      { nodeId: ParamValue<false> },
       | never
     >,
     '/create': RouteRecordInfo<
@@ -120,7 +113,15 @@ declare module 'vue-router/auto-routes' {
       '/enter',
       Record<never, never>,
       Record<never, never>,
+      | '/enter/'
       | '/enter/sso'
+    >,
+    '/enter/': RouteRecordInfo<
+      '/enter/',
+      '/enter',
+      Record<never, never>,
+      Record<never, never>,
+      | never
     >,
     '/enter/sso': RouteRecordInfo<
       '/enter/sso',
@@ -236,16 +237,9 @@ declare module 'vue-router/auto-routes' {
     >,
     '/write': RouteRecordInfo<
       '/write',
-      '/write',
+      '/write/:nodeId?',
       Record<never, never>,
       Record<never, never>,
-      | '/write/[nodeId]'
-    >,
-    '/write/[nodeId]': RouteRecordInfo<
-      '/write/[nodeId]',
-      '/write/:nodeId',
-      { nodeId: ParamValue<true> },
-      { nodeId: ParamValue<false> },
       | never
     >,
   }
@@ -314,13 +308,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/code.vue': {
       routes:
         | '/code'
-        | '/code/[nodeId]'
-      views:
-        | 'default'
-    }
-    'src/pages/code/[nodeId].vue': {
-      routes:
-        | '/code/[nodeId]'
       views:
         | never
     }
@@ -339,9 +326,16 @@ declare module 'vue-router/auto-routes' {
     'src/pages/enter.vue': {
       routes:
         | '/enter'
+        | '/enter/'
         | '/enter/sso'
       views:
         | 'default'
+    }
+    'src/pages/enter/index.vue': {
+      routes:
+        | '/enter/'
+      views:
+        | never
     }
     'src/pages/enter/sso.vue': {
       routes:
@@ -442,13 +436,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/write.vue': {
       routes:
         | '/write'
-        | '/write/[nodeId]'
-      views:
-        | 'default'
-    }
-    'src/pages/write/[nodeId].vue': {
-      routes:
-        | '/write/[nodeId]'
       views:
         | never
     }

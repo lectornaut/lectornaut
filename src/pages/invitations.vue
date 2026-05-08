@@ -10,7 +10,7 @@ import { toast } from "vue-sonner"
 definePage({
   meta: {
     requiresUser: true,
-    layout: "empty",
+    layout: false,
   },
 })
 

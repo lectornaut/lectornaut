@@ -1,6 +1,13 @@
 <script lang="ts" setup>
 import { IconCheckCircle } from "@/data/icons"
 
+definePage({
+  // Transient redirect page — no chrome.
+  meta: {
+    layout: false,
+  },
+})
+
 const redirected = ref(false)
 
 onMounted(() => {

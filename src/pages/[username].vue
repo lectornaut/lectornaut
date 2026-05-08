@@ -20,6 +20,13 @@ import { doc } from "firebase/firestore"
 import { useRoute, useRouter } from "vue-router"
 import { useCurrentUser, useDocument, useIsCurrentUserLoaded } from "vuefire"
 
+definePage({
+  // Public profile renders its own PageHeader, so no surrounding layout.
+  meta: {
+    layout: false,
+  },
+})
+
 const route = useRoute()
 const router = useRouter()
 const isAuthLoaded = useIsCurrentUserLoaded()

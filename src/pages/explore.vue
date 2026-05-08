@@ -2,6 +2,7 @@
 definePage({
   meta: {
     requiresUser: true,
+    layout: "app",
     sidebar: "Explore",
     breadcrumb: "Explore",
   },
