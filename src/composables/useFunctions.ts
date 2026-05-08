@@ -707,6 +707,46 @@ export interface UpdateTeamAgentConfigResponse {
 }
 
 // =============================================================================
+// User Profile Request/Response Types
+// =============================================================================
+
+export interface ClaimUsernameRequest {
+  username: string
+}
+
+export interface ClaimUsernameResponse {
+  username: string
+}
+
+export interface ReleaseUsernameRequest {
+  username: string
+}
+
+export interface ReleaseUsernameResponse {
+  released: boolean
+}
+
+export interface UpdateUserProfileVisibilityRequest {
+  isPublic: boolean
+}
+
+export interface UpdateUserProfileVisibilityResponse {
+  isPublic: boolean
+}
+
+export type SyncCurrentUserAccountProfileRequest = Record<string, never>
+
+export interface SyncCurrentUserAccountProfileResponse {
+  synced: boolean
+}
+
+export type DeleteCurrentUserAccountDataRequest = Record<string, never>
+
+export interface DeleteCurrentUserAccountDataResponse {
+  deleted: boolean
+}
+
+// =============================================================================
 // Typed Function Callers
 // =============================================================================
 
@@ -997,6 +1037,35 @@ export const getPublicTeamsForUser = createTypedCallable<
   GetPublicTeamsForUserRequest,
   GetPublicTeamsForUserResponse
 >("getPublicTeamsForUser")
+
+// =============================================================================
+// User Profile Functions
+// =============================================================================
+
+export const claimUsername = createTypedCallable<
+  ClaimUsernameRequest,
+  ClaimUsernameResponse
+>("claimUsername")
+
+export const releaseUsername = createTypedCallable<
+  ReleaseUsernameRequest,
+  ReleaseUsernameResponse
+>("releaseUsername")
+
+export const updateUserProfileVisibility = createTypedCallable<
+  UpdateUserProfileVisibilityRequest,
+  UpdateUserProfileVisibilityResponse
+>("updateUserProfileVisibility")
+
+export const syncCurrentUserAccountProfileCallable = createTypedCallable<
+  SyncCurrentUserAccountProfileRequest,
+  SyncCurrentUserAccountProfileResponse
+>("syncCurrentUserAccountProfile")
+
+export const deleteCurrentUserAccountData = createTypedCallable<
+  DeleteCurrentUserAccountDataRequest,
+  DeleteCurrentUserAccountDataResponse
+>("deleteCurrentUserAccountData")
 
 // =============================================================================
 // SSO Types
@@ -1363,6 +1432,11 @@ export function useFunctions() {
     // Public profile operations
     getPublicTeamMembers,
     getPublicTeamsForUser,
+    claimUsername,
+    releaseUsername,
+    updateUserProfileVisibility,
+    syncCurrentUserAccountProfileCallable,
+    deleteCurrentUserAccountData,
 
     // SSO operations
     configureSso,

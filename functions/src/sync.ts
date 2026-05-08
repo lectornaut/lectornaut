@@ -17,6 +17,7 @@ const NOTIFICATION_STATUSES = new Set<NotificationStatus>([
   "saved",
   "done",
 ])
+const MAX_SNAPSHOT_BASE64_LENGTH = 1_000_000
 
 interface SyncOperation {
   id: string
@@ -200,14 +201,7 @@ const validateUserProfilePayload = (
   const payload = operation.data ?? {}
   assertAllowedKeys(
     payload,
-    new Set([
-      "uid",
-      "email",
-      "displayName",
-      "photoURL",
-      "username",
-      "isPublic",
-    ]),
+    new Set(["uid", "email", "displayName", "photoURL"]),
     "User profile updates contain blocked fields"
   )
 
@@ -222,12 +216,6 @@ const validateUserProfilePayload = (
   }
   if ("photoURL" in payload) {
     assertNullableString(payload.photoURL, "users.photoURL")
-  }
-  if ("username" in payload) {
-    assertNullableString(payload.username, "users.username")
-  }
-  if ("isPublic" in payload) {
-    assertBoolean(payload.isPublic, "users.isPublic")
   }
 }
 
@@ -439,6 +427,53 @@ const validateMembershipSettingsMutation = async (
   return true
 }
 
+const validateSnapshotMutation = async (
+  transaction: admin.firestore.Transaction,
+  path: string[],
+  operation: SyncOperation,
+  userId: string
+) => {
+  if (path.length !== 2 || path[0] !== "snapshots") return false
+
+  if (operation.type === "delete") {
+    reject("permission-denied", "Snapshots cannot be deleted via sync")
+  }
+
+  const payload = operation.data ?? {}
+  assertAllowedKeys(
+    payload,
+    new Set([
+      "contentId",
+      "teamId",
+      "workspaceId",
+      "updatedAt",
+      "updatedBy",
+      "ydocBase64",
+    ]),
+    "Snapshot updates contain blocked fields"
+  )
+
+  const contentId = assertString(payload.contentId, "snapshots.contentId")
+  if (contentId !== path[1]) {
+    reject("permission-denied", "Snapshot contentId does not match target path")
+  }
+
+  const teamId = assertString(payload.teamId, "snapshots.teamId")
+  assertString(payload.workspaceId, "snapshots.workspaceId")
+
+  if (payload.updatedBy !== userId) {
+    reject("permission-denied", "Snapshot updatedBy must match current user")
+  }
+
+  const ydocBase64 = assertString(payload.ydocBase64, "snapshots.ydocBase64")
+  if (ydocBase64.length > MAX_SNAPSHOT_BASE64_LENGTH) {
+    reject("invalid-argument", "Snapshot payload is too large")
+  }
+
+  await ensureTeamMembership(transaction, teamId, userId)
+  return true
+}
+
 const validateBaseVersion = (
   targetSnap: FirebaseFirestore.DocumentSnapshot,
   baseVersion: SyncBaseVersion | null
@@ -501,6 +536,14 @@ const validateOperationAccess = async (
     )
   if (handledMembershipSettingsMutation) return
 
+  const handledSnapshotMutation = await validateSnapshotMutation(
+    transaction,
+    path,
+    operation,
+    userId
+  )
+  if (handledSnapshotMutation) return
+
   reject("permission-denied", "Unsupported sync mutation target")
 }
 
@@ -528,6 +571,9 @@ const isMembershipPreferencesPathForUser = (
   path[4] === "settings" &&
   path[5] === "preferences"
 
+const isSnapshotPath = (path: string[]): boolean =>
+  path.length === 2 && path[0] === "snapshots"
+
 const withServerManagedFields = (
   payload: Record<string, unknown>,
   targetSnap: FirebaseFirestore.DocumentSnapshot,
@@ -537,7 +583,8 @@ const withServerManagedFields = (
   const shouldStampUpdatedAt =
     isUserRootPathForUser(path, userId) ||
     isUserPreferencesPathForUser(path, userId) ||
-    isMembershipPreferencesPathForUser(path, userId)
+    isMembershipPreferencesPathForUser(path, userId) ||
+    isSnapshotPath(path)
 
   if (!shouldStampUpdatedAt) {
     return payload
@@ -554,6 +601,12 @@ const withServerManagedFields = (
     !("createdAt" in nextPayload)
   ) {
     nextPayload.createdAt = admin.firestore.FieldValue.serverTimestamp()
+    nextPayload.username = null
+    nextPayload.isPublic = false
+  }
+
+  if (isSnapshotPath(path)) {
+    nextPayload.updatedBy = userId
   }
 
   return nextPayload

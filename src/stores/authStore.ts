@@ -10,7 +10,7 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
-import { SchemaValidationError } from "@/schemas/_utils"
+import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
 import {
   membershipPreferencesHydrationSchema,
   userHydrationSchema,
@@ -28,7 +28,6 @@ import {
   getMembershipPreferencesRef,
   getUserPreferencesRef,
   getUserRef,
-  updateUserInMemberships,
   uploadUserPhoto,
 } from "@/utils/firebase/firebase-helpers"
 import {
@@ -44,7 +43,6 @@ import {
 } from "@/utils/firebase/firebase-optimistic"
 import {
   buildUpdatedAtBaseVersion,
-  mutateSetDocument,
   mutateUpdateDocument,
   mutateWithCoordinator,
 } from "@/utils/firebase/firebase-sync-engine"
@@ -258,7 +256,6 @@ export const useAuthStore = defineStore("auth", () => {
 
       if (!profile) {
         try {
-          const userRef = getUserRef(user.uid)
           const now = Timestamp.now()
           const optimisticUser: IUser = {
             uid: user.uid,
@@ -272,36 +269,10 @@ export const useAuthStore = defineStore("auth", () => {
           }
           // Set optimistic state immediately (before async write)
           optimisticUserProfile.value = optimisticUser
-          // The server stamps `createdAt`/`updatedAt` itself
-          // (functions/src/sync.ts withServerManagedFields) and the write
-          // validator rejects them in the client payload.
-          const {
-            createdAt: _c,
-            updatedAt: _u,
-            ...serverPayload
-          } = optimisticUser
-          // Route through sync engine so the write survives offline
-          await mutateSetDocument(
-            userRef,
-            serverPayload as unknown as Record<string, unknown>,
-            { source: "auth.createUserProfile" }
-          )
+          await syncCurrentUserAccountProfile()
         } catch (error) {
-          if (error instanceof SchemaValidationError) {
-            // The sync engine's write validator blocked an invalid payload.
-            // This is a client-side programming error, not a server failure —
-            // log the exact zod issues so the root cause is visible in dev.
-            console.error(
-              "[authStore] createUserProfile blocked by schema validator:",
-              error.zodError.issues
-            )
-            toast.error(
-              "Unable to create your profile. Please refresh and try again."
-            )
-          } else {
-            console.error("[authStore] Failed to create user profile:", error)
-            toast.error("Failed to create user profile. Please try again.")
-          }
+          console.error("[authStore] Failed to create user profile:", error)
+          toast.error("Failed to create user profile. Please try again.")
         }
       }
     },
@@ -510,14 +481,6 @@ export const useAuthStore = defineStore("auth", () => {
               ),
             })
           )
-        }
-
-        const membershipUpdates = {
-          ...userUpdates,
-          ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
-        }
-        if (Object.keys(membershipUpdates).length > 0) {
-          promises.push(updateUserInMemberships(userId, membershipUpdates))
         }
 
         await Promise.all(promises)

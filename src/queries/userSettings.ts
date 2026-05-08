@@ -1,11 +1,10 @@
 import {
-  getUserPreferencesRef,
-  getUserRef,
-} from "@/utils/firebase/firebase-helpers"
-import {
-  mutateSetDocument,
-  mutateUpdateDocument,
-} from "@/utils/firebase/firebase-sync-engine"
+  deleteCurrentUserAccountData as deleteCurrentUserAccountDataCallable,
+  syncCurrentUserAccountProfileCallable,
+  updateUserProfileVisibility,
+} from "@/composables/useFunctions"
+import { getUserPreferencesRef } from "@/utils/firebase/firebase-helpers"
+import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { useCurrentUser } from "vuefire"
 
 const getAuthenticatedUser = () => {
@@ -18,37 +17,20 @@ const getAuthenticatedUser = () => {
 }
 
 export const syncCurrentUserAccountProfile = async (): Promise<void> => {
-  const user = getAuthenticatedUser()
-
-  await mutateSetDocument(
-    getUserRef(user.uid),
-    {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-    },
-    {
-      source: "user.profile.syncAuthMetadata",
-      merge: true,
-    }
-  )
+  getAuthenticatedUser()
+  await syncCurrentUserAccountProfileCallable({})
 }
 
 export const updateCurrentUserProfileVisibility = async (
   isPublic: boolean
 ): Promise<void> => {
-  const user = getAuthenticatedUser()
+  getAuthenticatedUser()
+  await updateUserProfileVisibility({ isPublic })
+}
 
-  await mutateUpdateDocument(
-    getUserRef(user.uid),
-    {
-      isPublic,
-    },
-    {
-      source: "user.profile.visibility",
-    }
-  )
+export const deleteCurrentUserAccountData = async (): Promise<void> => {
+  getAuthenticatedUser()
+  await deleteCurrentUserAccountDataCallable({})
 }
 
 export const setCurrentUserOnboardingState = async (

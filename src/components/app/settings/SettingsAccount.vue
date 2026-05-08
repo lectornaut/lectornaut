@@ -24,8 +24,11 @@ import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { auth, firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
-import { claimUsername, releaseUsername } from "@/queries/username"
-import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
+import { claimUsername } from "@/queries/username"
+import {
+  deleteCurrentUserAccountData,
+  updateCurrentUserProfileVisibility,
+} from "@/queries/userSettings"
 import { parseSafe } from "@/schemas/_utils"
 import { membershipSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
@@ -52,7 +55,7 @@ import {
   type TotpSecret,
   type UserInfo,
 } from "firebase/auth"
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore"
+import { collection, doc, getDocs } from "firebase/firestore"
 import QRCode from "qrcode"
 import { REGEXP_ONLY_DIGITS } from "vue-input-otp"
 import { toast } from "vue-sonner"
@@ -431,20 +434,13 @@ const deleteAccount = async () => {
       await membershipStore.removeMember(membership.teamId, user.value!.uid)
     }
 
-    // 3. Release username
-    if (userData.value?.username) {
-      await releaseUsername(userData.value.username)
-    }
+    // 3. Cleanup Firestore account profile and username claim
+    await deleteCurrentUserAccountData()
 
     // 4. Cleanup Storage (Profile Photos)
     await Promise.allSettled([deleteUserPhotoFile(user.value!.uid)])
 
-    // 5. Cleanup Firestore User Document
-    if (userDocRef.value) {
-      await deleteDoc(userDocRef.value)
-    }
-
-    // 6. Delete User Account
+    // 5. Delete User Account
     await deleteUser(user.value!)
     toast.success("Account deleted", {
       description: "Your account has been successfully deleted.",

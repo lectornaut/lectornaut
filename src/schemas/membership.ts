@@ -58,8 +58,8 @@ export const membershipSchema = membershipRecordSchema.extend({
 
 /**
  * The as-stored shape in Firestore, where snapshot fields may be partial
- * during asynchronous propagation (e.g., if a user field is being updated
- * across all memberships via `updateUserInMemberships`).
+ * during asynchronous propagation (e.g., while server triggers refresh
+ * denormalized user/team snapshots).
  */
 export const membershipDocDataSchema = z.object({
   userId: z.string(),

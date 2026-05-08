@@ -9,11 +9,9 @@ import {
   defaultTheme,
 } from "@/helpers/defaults"
 import { firestore } from "@/modules/firebase"
+import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
 import { DEFAULT_NOTIFICATION_SETTINGS } from "@/types/notifications"
-import {
-  getUserPreferencesRef,
-  getUserRef,
-} from "@/utils/firebase/firebase-helpers"
+import { getUserPreferencesRef } from "@/utils/firebase/firebase-helpers"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { doc } from "firebase/firestore"
 import { useCurrentUser } from "vuefire"
@@ -23,7 +21,6 @@ export const setDefaultUserData = async (): Promise<void> => {
   const uid = user.value?.uid
   if (!uid) return
 
-  const userDocRef = getUserRef(uid)
   const userPreferencesDocRef = getUserPreferencesRef(uid)
   const notificationSettingsDocRef = doc(
     firestore,
@@ -35,18 +32,7 @@ export const setDefaultUserData = async (): Promise<void> => {
   const themesDocRef = doc(firestore, "users", uid, "settings", "themes")
 
   await Promise.all([
-    mutateSetDocument(
-      userDocRef,
-      {
-        uid,
-        email: user.value?.email,
-        displayName: user.value?.displayName,
-        photoURL: user.value?.photoURL,
-        username: null,
-        isPublic: false,
-      },
-      { source: "user.setDefaultUserData", merge: true }
-    ),
+    syncCurrentUserAccountProfile(),
     mutateSetDocument(
       userPreferencesDocRef,
       {

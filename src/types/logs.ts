@@ -1,4 +1,5 @@
 import type {
+  logActionSchema,
   logActorSchema,
   logChangesSchema,
   logContextSchema,
@@ -13,6 +14,7 @@ import type { z } from "zod"
  */
 
 export type LogResourceType = z.infer<typeof logResourceTypeSchema>
+export type LogAction = z.infer<typeof logActionSchema>
 export type ILogActor = z.infer<typeof logActorSchema>
 export type ILogResource = z.infer<typeof logResourceSchema>
 export type ILogContext = z.infer<typeof logContextSchema>

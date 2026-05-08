@@ -1,20 +1,21 @@
 import {
+  claimUsername as claimUsernameCallable,
+  releaseUsername as releaseUsernameCallable,
+} from "@/composables/useFunctions"
+import {
   normalizeUsername,
   RESERVED_USERNAMES,
   validateUsername,
 } from "@/helpers/username"
-import { auth, firestore } from "@/modules/firebase"
+import { firestore } from "@/modules/firebase"
 import type { IUsernameClaim } from "@/types/domain"
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
   limit,
   query,
-  runTransaction,
-  serverTimestamp,
   where,
 } from "firebase/firestore"
 
@@ -133,75 +134,12 @@ export const checkUsernameAvailability = async (
  * @returns Promise<void>
  */
 export const claimUsername = async (username: string): Promise<void> => {
-  const user = auth.currentUser
-  if (!user) throw new Error("User not authenticated")
-
-  // Validate and normalize the username
   const validation = validateUsername(username)
   if (!validation.valid || !validation.normalized) {
     throw new Error(validation.error || "Invalid username")
   }
 
-  const normalized = validation.normalized
-
-  // Check reserved usernames
-  if (RESERVED_USERNAMES.has(normalized)) {
-    throw new Error("This username is reserved")
-  }
-
-  await runTransaction(firestore, async (transaction) => {
-    const userDocRef = doc(firestore, "users", user.uid)
-    const usernameDocRef = doc(firestore, "usernames", normalized)
-
-    const userDoc = await transaction.get(userDocRef)
-    const usernameDoc = await transaction.get(usernameDocRef)
-
-    if (usernameDoc.exists()) {
-      const ownerId = resolveUserClaimId(usernameDoc.data() as UsernameDocData)
-      if (ownerId !== user.uid) {
-        throw new Error("Username already taken")
-      }
-    }
-
-    const oldUsername = userDoc.exists() ? userDoc.data()?.username : null
-    const oldNormalized = oldUsername ? normalizeUsername(oldUsername) : null
-
-    // 1. Create entry in usernames collection
-    transaction.set(usernameDocRef, {
-      entityType: "user",
-      entityId: user.uid,
-      createdAt: serverTimestamp(),
-    })
-
-    // 2. Update user document, creating a full account-profile document if needed.
-    if (userDoc.exists()) {
-      transaction.set(
-        userDocRef,
-        {
-          username: normalized,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-    } else {
-      transaction.set(userDocRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        username: normalized,
-        isPublic: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
-    }
-
-    // 3. If user had an old username, delete it
-    if (oldNormalized && oldNormalized !== normalized) {
-      const oldUsernameDocRef = doc(firestore, "usernames", oldNormalized)
-      transaction.delete(oldUsernameDocRef)
-    }
-  })
+  await claimUsernameCallable({ username: validation.normalized })
 }
 
 export type UserFetchResult =
@@ -396,20 +334,8 @@ export const getTeamByUsername = async (
  * @returns Promise<void>
  */
 export const releaseUsername = async (username: string): Promise<void> => {
-  const user = auth.currentUser
-  if (!user) throw new Error("User not authenticated")
-
   const normalized = normalizeUsername(username)
   if (!normalized) return
 
-  const usernameDocRef = doc(firestore, "usernames", normalized)
-  const usernameDoc = await getDoc(usernameDocRef)
-
-  // Only delete if it belongs to the requesting user
-  if (
-    usernameDoc.exists() &&
-    resolveUserClaimId(usernameDoc.data() as UsernameDocData) === user.uid
-  ) {
-    await deleteDoc(usernameDocRef)
-  }
+  await releaseUsernameCallable({ username: normalized })
 }

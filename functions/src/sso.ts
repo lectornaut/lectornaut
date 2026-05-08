@@ -4,15 +4,11 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { logEvent } from "./audit.js"
 import { admin, auth, db } from "./firebase.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
-import {
-  Actor,
-  Capabilities,
-  type IMembershipRole,
-  type LogEventParams,
-} from "./types.js"
+import { Actor, Capabilities, type IMembershipRole } from "./types.js"
 
 // ============================================================================
 // Helpers
@@ -69,21 +65,6 @@ function buildContext(request: CallableRequest) {
   if (ip) context.ip = ip
   if (userAgent) context.userAgent = userAgent
   return Object.keys(context).length > 0 ? context : undefined
-}
-
-async function logEvent(params: LogEventParams) {
-  const logRef = db.collection("logs").doc()
-  const entry = {
-    id: logRef.id,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    teamId: params.teamId,
-    actor: params.actor,
-    action: params.action,
-    resource: params.resource,
-    ...(params.context && { context: params.context }),
-    ...(params.changes && { changes: params.changes }),
-  }
-  await logRef.set(entry)
 }
 
 async function requireTeamAdmin(

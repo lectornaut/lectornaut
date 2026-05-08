@@ -35,15 +35,9 @@ import {
   collection,
   collectionGroup,
   doc,
-  getDocs,
   orderBy,
   query,
-  serverTimestamp,
   where,
-  writeBatch,
-  type DocumentData,
-  type Query,
-  type QueryDocumentSnapshot,
 } from "firebase/firestore"
 import {
   deleteObject,
@@ -52,13 +46,6 @@ import {
   uploadBytes,
   type StorageReference,
 } from "firebase/storage"
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-/** Maximum documents per batch write (Firestore limit is 500, we use 450 for safety) */
-export const BATCH_SIZE = 450
 
 // ============================================================================
 // Zod Converters
@@ -174,135 +161,6 @@ export const getTeamWorkspacesCollection = (teamId: string) =>
   collection(firestore, "teams", teamId, "workspaces").withConverter(
     workspaceConverter
   )
-
-// ============================================================================
-// Batch Processing
-// ============================================================================
-
-type BatchProcessor<T> = (item: T, batch: ReturnType<typeof writeBatch>) => void
-
-/**
- * Process items in batches to stay within Firestore limits
- * Commits each batch before starting the next
- *
- * @param items - Array of items to process
- * @param processFn - Function to apply to each item with the batch
- */
-export async function processInBatches<T>(
-  items: T[],
-  processFn: BatchProcessor<T>
-): Promise<void> {
-  const batches: Promise<void>[] = []
-
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const chunk = items.slice(i, i + BATCH_SIZE)
-    const batch = writeBatch(firestore)
-    chunk.forEach((item) => processFn(item, batch))
-    batches.push(batch.commit())
-  }
-
-  // Run batches in parallel for better performance
-  await Promise.all(batches)
-}
-
-/**
- * Execute a query and process results in batches
- * Useful for bulk updates/deletes
- *
- * @param queryRef - The Firestore query to execute
- * @param processFn - Function to apply to each document with the batch
- */
-export async function queryAndProcessInBatches(
-  queryRef: Query,
-  processFn: BatchProcessor<QueryDocumentSnapshot>
-): Promise<number> {
-  const snapshot = await getDocs(queryRef)
-  if (snapshot.empty) return 0
-
-  await processInBatches(snapshot.docs, processFn)
-  return snapshot.size
-}
-
-// ============================================================================
-// Membership Update Helpers
-// ============================================================================
-
-type MembershipUpdateFn = (
-  membershipData: IMembershipDocData
-) => Partial<IMembershipDocData>
-
-/**
- * Update all memberships matching a query with a transformation function
- * Automatically adds updatedAt timestamp
- *
- * @param queryRef - Query for memberships to update
- * @param updateFn - Transform function that receives current data and returns updates
- */
-export async function updateMemberships(
-  queryRef: Query,
-  updateFn: MembershipUpdateFn
-): Promise<number> {
-  return queryAndProcessInBatches(queryRef, (docSnap, batch) => {
-    const membershipData = docSnap.data() as IMembershipDocData
-    batch.update(docSnap.ref, {
-      ...updateFn(membershipData),
-      updatedAt: serverTimestamp(),
-    })
-  })
-}
-
-/**
- * Update user data in all their memberships
- */
-export async function updateUserInMemberships(
-  userId: string,
-  userUpdates: Partial<DocumentData>
-): Promise<number> {
-  const membershipsQuery = query(
-    getAllMembershipsGroup(),
-    where("userId", "==", userId)
-  )
-
-  return updateMemberships(membershipsQuery, (membershipData) => {
-    const existingUser = membershipData.user ?? {}
-    return {
-      user: {
-        ...existingUser,
-        ...userUpdates,
-      },
-    }
-  })
-}
-
-/**
- * Update team data in all memberships for that team
- */
-export async function updateTeamInAllMemberships(
-  teamId: string,
-  teamUpdates: Partial<DocumentData>
-): Promise<number> {
-  const membershipsQuery = query(
-    getAllMembershipsGroup(),
-    where("teamId", "==", teamId)
-  )
-
-  return updateMemberships(membershipsQuery, (membershipData) => {
-    const existingTeam = membershipData.team ?? {}
-    const updatedTeam: Partial<ITeam> = {
-      ...existingTeam,
-      ...teamUpdates,
-    }
-    // Remove undefined values using type-safe key access
-    for (const key of Object.keys(updatedTeam) as Array<
-      keyof typeof updatedTeam
-    >) {
-      if (updatedTeam[key] === undefined) {
-        delete updatedTeam[key]
-      }
-    }
-    return { team: updatedTeam }
-  })
-}
 
 // ============================================================================
 // Storage Helpers
