@@ -4,8 +4,9 @@ import {
   BOT_CHAT_MODE_OPTIONS,
   type BotChatMode,
 } from "@/composables/useBotChat"
-import { IconArrowUp, IconPlus } from "@/data/icons"
-import { computed, inject } from "vue"
+import { BOT_TOOL_CATALOG, type BotToolDescriptor } from "@/data/botTools"
+import { IconAiFill, IconArrowUp, IconPlus } from "@/data/icons"
+import { computed, inject, nextTick } from "vue"
 
 const props = withDefaults(
   defineProps<{
@@ -19,6 +20,7 @@ const props = withDefaults(
 
 const { t } = useI18n()
 const userInput = ref("")
+const textareaRef = ref<{ $el?: HTMLTextAreaElement } | null>(null)
 
 const botChat = inject(BotChatContextKey)
 const isSending = computed(() => botChat?.isSending.value ?? false)
@@ -77,58 +79,125 @@ const handleKeydown = (event: KeyboardEvent) => {
     handleSend()
   }
 }
+
+// ── Tool picker ──────────────────────────────────────────────────────────────
+//
+// Click the AI badge on top of the composer to expand a list of tools the
+// bot can call. Picking one inserts that tool's example prompt into the
+// textarea at the current caret (or appends to the end if the textarea
+// hasn't been focused). The picker auto-collapses after a pick. Tool
+// dispatch on the model side is driven by natural-language intent, not by
+// any sigil syntax — that's why we insert a full sentence, not "/cmd".
+
+const toolsOpen = ref(false)
+
+const insertToolPrompt = (tool: BotToolDescriptor) => {
+  const el = textareaRef.value?.$el
+  if (el) {
+    const start = el.selectionStart ?? userInput.value.length
+    const end = el.selectionEnd ?? userInput.value.length
+    const before = userInput.value.slice(0, start)
+    const after = userInput.value.slice(end)
+    userInput.value = `${before}${tool.example}${after}`
+    const caret = before.length + tool.example.length
+    nextTick(() => {
+      el.focus()
+      el.setSelectionRange(caret, caret)
+    })
+  } else {
+    userInput.value = `${userInput.value}${tool.example}`
+  }
+  toolsOpen.value = false
+}
 </script>
 
 <template>
-  <InputGroup class="bg-secondary">
-    <InputGroupTextarea
-      v-model="userInput"
-      :placeholder="inputPlaceholder"
-      :disabled="isSending || isReadOnly"
-      @keydown="handleKeydown"
-    />
-    <InputGroupAddon align="block-end">
-      <InputGroupButton variant="outline" size="icon-xs">
-        <IconPlus />
-      </InputGroupButton>
-      <Select :model-value="mode" @update:model-value="onModeChange">
-        <InputGroupButton variant="ghost" as-child>
-          <SelectTrigger>
-            <SelectValue :placeholder="t('ai.mode')" />
-          </SelectTrigger>
+  <Collapsible v-model:open="toolsOpen" class="bg-secondary mx-2 mb-2 rounded">
+    <TooltipProvider>
+      <Tooltip>
+        <CollapsibleTrigger as-child>
+          <TooltipTrigger as-child>
+            <Badge variant="ghost" class="m-1">
+              <IconAiFill />
+            </Badge>
+          </TooltipTrigger>
+        </CollapsibleTrigger>
+        <TooltipContent>
+          {{ toolsOpen ? "Hide tools" : "Show tools" }}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+    <CollapsibleContent>
+      <ItemGroup class="p-1">
+        <Item
+          v-for="tool in BOT_TOOL_CATALOG"
+          :key="tool.name"
+          size="xs"
+          class="hover:bg-muted"
+          :disabled="isReadOnly"
+          @click="insertToolPrompt(tool)"
+        >
+          <ItemMedia variant="icon">
+            <Component :is="tool.icon" />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{{ tool.label }}</ItemTitle>
+            <ItemDescription>{{ tool.description }}</ItemDescription>
+          </ItemContent>
+        </Item>
+      </ItemGroup>
+    </CollapsibleContent>
+    <InputGroup class="bg-background">
+      <InputGroupTextarea
+        ref="textareaRef"
+        v-model="userInput"
+        :placeholder="inputPlaceholder"
+        :disabled="isSending || isReadOnly"
+        @keydown="handleKeydown"
+      />
+      <InputGroupAddon align="block-end">
+        <InputGroupButton variant="outline" size="icon-xs">
+          <IconPlus />
         </InputGroupButton>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem
-              v-for="option in modeOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              <div class="flex flex-col gap-0.5">
-                <span class="text-sm font-medium">
-                  {{ modeLabel(option.value) }}
-                </span>
-                <span class="text-muted-foreground text-xs">
-                  {{ option.shortDescription }}
-                </span>
-              </div>
-            </SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      <InputGroupText class="ml-auto text-xs">
-        {{ usageLabel }}
-      </InputGroupText>
-      <Separator orientation="vertical" class="my-2" />
-      <InputGroupButton
-        variant="default"
-        size="icon-xs"
-        :disabled="isDisabled"
-        @click="handleSend"
-      >
-        <IconArrowUp />
-        <span class="sr-only">{{ t("actions.send") }}</span>
-      </InputGroupButton>
-    </InputGroupAddon>
-  </InputGroup>
+        <Select :model-value="mode" @update:model-value="onModeChange">
+          <InputGroupButton variant="ghost" as-child>
+            <SelectTrigger>
+              <SelectValue :placeholder="t('ai.mode')" />
+            </SelectTrigger>
+          </InputGroupButton>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem
+                v-for="option in modeOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-sm font-medium">
+                    {{ modeLabel(option.value) }}
+                  </span>
+                  <span class="text-muted-foreground text-xs">
+                    {{ option.shortDescription }}
+                  </span>
+                </div>
+              </SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <InputGroupText class="ml-auto text-xs">
+          {{ usageLabel }}
+        </InputGroupText>
+        <Separator orientation="vertical" class="my-2" />
+        <InputGroupButton
+          variant="default"
+          size="icon-xs"
+          :disabled="isDisabled"
+          @click="handleSend"
+        >
+          <IconArrowUp />
+          <span class="sr-only">{{ t("actions.send") }}</span>
+        </InputGroupButton>
+      </InputGroupAddon>
+    </InputGroup>
+  </Collapsible>
 </template>

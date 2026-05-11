@@ -318,7 +318,6 @@ declare module 'vue' {
     SessionRevokedDialog: typeof import('./src/components/app/global/SessionRevokedDialog.vue')['default']
     Settings: typeof import('./src/components/app/global/Settings.vue')['default']
     SettingsAccount: typeof import('./src/components/app/settings/SettingsAccount.vue')['default']
-    SettingsAgent: typeof import('./src/components/app/settings/SettingsAgent.vue')['default']
     SettingsAgents: typeof import('./src/components/app/settings/SettingsAgents.vue')['default']
     SettingsAppearance: typeof import('./src/components/app/settings/SettingsAppearance.vue')['default']
     SettingsBilling: typeof import('./src/components/app/settings/SettingsBilling.vue')['default']

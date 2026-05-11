@@ -40,28 +40,26 @@ const toggle = () => {
 </script>
 
 <template>
-  <TooltipProvider>
-    <Tooltip>
-      <TooltipTrigger as-child>
-        <Button variant="outline" size="icon" @click="toggle">
-          <slot>
-            <template v-if="side === 'left'">
-              <IconPanelLeft v-if="isCollapsed" />
-              <IconPanelLeftClose v-else />
-            </template>
-            <template v-else>
-              <IconPanelRight v-if="isCollapsed" />
-              <IconPanelRightClose v-else />
-            </template>
-          </slot>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent class="flex items-center gap-2 pr-2">
-        <slot name="tooltip">{{ tooltipLabel }}</slot>
-        <KbdGroup v-if="shortcutKeys?.length">
-          <Kbd v-for="key in shortcutKeys" :key="key">{{ key }}</Kbd>
-        </KbdGroup>
-      </TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger as-child>
+      <Button variant="outline" size="icon" @click="toggle">
+        <slot>
+          <template v-if="side === 'left'">
+            <IconPanelLeft v-if="isCollapsed" />
+            <IconPanelLeftClose v-else />
+          </template>
+          <template v-else>
+            <IconPanelRight v-if="isCollapsed" />
+            <IconPanelRightClose v-else />
+          </template>
+        </slot>
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent class="flex items-center gap-2 pr-2">
+      <slot name="tooltip">{{ tooltipLabel }}</slot>
+      <KbdGroup v-if="shortcutKeys?.length">
+        <Kbd v-for="key in shortcutKeys" :key="key">{{ key }}</Kbd>
+      </KbdGroup>
+    </TooltipContent>
+  </Tooltip>
 </template>

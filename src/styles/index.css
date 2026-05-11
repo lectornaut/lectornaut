@@ -31,10 +31,6 @@
   body {
     --grade-axis: 0;
 
-    scroll-behavior: smooth;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-muted) transparent;
     text-box: trim-both cap alphabetic;
     font-variation-settings: "GRAD" var(--grade-axis);
 
@@ -51,6 +47,10 @@
     @apply overflow-auto;
     @apply overscroll-none;
     @apply scroll-smooth;
+    @apply scrollbar-gutter-stable;
+    @apply scrollbar-thin;
+    @apply scrollbar-thumb-muted;
+    @apply scrollbar-track-transparent;
     @apply accent-current;
     @apply antialiased;
   }
@@ -276,15 +276,15 @@
 
   .no-scrollbar::-webkit-scrollbar,
   [no-scrollbar]::-webkit-scrollbar {
-    display: none;
-    appearance: none;
+    @apply hidden;
+    @apply appearance-none;
   }
 
   .no-scrollbar,
   [no-scrollbar] {
     -ms-overflow-style: none;
-    scrollbar-width: none;
 
+    @apply scrollbar-none;
     @apply overflow-auto;
     @apply overscroll-none;
     @apply scroll-smooth;

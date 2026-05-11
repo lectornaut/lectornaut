@@ -84,6 +84,7 @@ import IconLucideCircleX from "~icons/lucide/circle-x"
 import IconLucideClock from "~icons/lucide/clock"
 import IconLucideCloudAlert from "~icons/lucide/cloud-alert"
 import IconLucideCloudCheck from "~icons/lucide/cloud-check"
+import IconLucideCloudRain from "~icons/lucide/cloud-rain"
 import IconLucideCloudSync from "~icons/lucide/cloud-sync"
 import IconLucideCode from "~icons/lucide/code"
 import IconLucideColumns from "~icons/lucide/columns"
@@ -95,6 +96,7 @@ import IconLucideContrast from "~icons/lucide/contrast"
 import IconLucideCopy from "~icons/lucide/copy"
 import IconLucideCreditCard from "~icons/lucide/credit-card"
 import IconLucideDatabase from "~icons/lucide/database"
+import IconLucideDices from "~icons/lucide/dices"
 import IconLucideDisc from "~icons/lucide/disc"
 import IconLucideDownload from "~icons/lucide/download"
 import IconLucideEllipsis from "~icons/lucide/ellipsis"
@@ -376,6 +378,7 @@ export {
   IconLucideClock as IconClock,
   IconLucideCloudAlert as IconCloudAlert,
   IconLucideCloudCheck as IconCloudCheck,
+  IconLucideCloudRain as IconCloudRain,
   IconLucideCloudSync as IconCloudSync,
   IconLucideCode as IconCode,
   IconLucideColumns as IconColumns,
@@ -387,6 +390,7 @@ export {
   IconLucideCopy as IconCopy,
   IconLucideCreditCard as IconCreditCard,
   IconLucideDatabase as IconDatabase,
+  IconLucideDices as IconDices,
   IconLucideDisc as IconDisc,
   IconMdiDotsCircle as IconDotsCircle,
   IconLucideDownload as IconDownload,

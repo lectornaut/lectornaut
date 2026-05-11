@@ -29,9 +29,7 @@ const sessionId = computed(() => botChat?.sessionId.value ?? null)
 
 // While streaming, `useBotChat` pushes an empty agent placeholder before
 // chunks arrive and mutates its `.content` / `.segments` in place. Hide
-// that empty bubble until at least one chunk lands (text OR tool call),
-// and use the same condition to drive the "Thinking…" indicator (it
-// disappears the moment text or a tool segment shows up).
+// that empty bubble until at least one chunk lands (text OR tool call).
 const tailIsEmptyAgent = computed(() => {
   const last = messages.value[messages.value.length - 1]
   if (last?.role !== "agent") return false
@@ -42,7 +40,35 @@ const tailIsEmptyAgent = computed(() => {
 const displayMessages = computed(() =>
   tailIsEmptyAgent.value ? messages.value.slice(0, -1) : messages.value
 )
-const showThinking = computed(() => isSending.value && tailIsEmptyAgent.value)
+// Drive the "Thinking…" indicator off a *broader* condition than the
+// empty-placeholder check above. There are two distinct gaps where the
+// agent is generating but has no in-flight output to render:
+//
+//   • Initial turn — empty placeholder pushed by `sendMessage`, no
+//     chunks yet (covered by `tailIsEmptyAgent`).
+//   • Resumed turn — `respondToInterrupt` (and any post-tool-result gap
+//     before the next text chunk) keeps streaming into the *same* agent
+//     message that already has visible segments. The bubble isn't
+//     empty, but the tail is a *completed* tool (output filled, not
+//     paused for input), so nothing is moving on screen until the model
+//     emits its next text/tool.
+//
+// The indicator hides as soon as the tail flips "active": a streaming
+// text segment (chunks mutating it in place) or a still-running tool
+// (output undefined — its card already shows a running spinner, no
+// need to double up).
+const tailAwaitingNewChunk = computed(() => {
+  const last = messages.value[messages.value.length - 1]
+  if (last?.role !== "agent") return false
+  const segments = last.segments
+  if (!segments || segments.length === 0) return last.content.length === 0
+  const tail = segments[segments.length - 1]
+  if (tail.kind !== "tool") return false
+  return tail.tool.output !== undefined && !tail.tool.isInterrupt
+})
+const showThinking = computed(
+  () => isSending.value && tailAwaitingNewChunk.value
+)
 
 // Shared markdown-it instance for every bubble in this view. `getMarkdown`
 // memoizes by id, so this is a cheap lookup, not a fresh parser each call.
@@ -258,19 +284,15 @@ useResizeObserver(contentEl, () => {
       <IconAiFill class="size-8 opacity-60" />
       <p>Ask anything to get started.</p>
     </div>
-    <div v-else ref="contentEl" class="mt-auto grid grid-cols-1">
+    <div v-else ref="contentEl" class="mt-auto grid grid-cols-1 gap-2">
       <ContextMenu
         v-for="({ message, blocks }, index) in renderedMessages"
         :key="message.id"
       >
         <ContextMenuTrigger>
-          <div
-            class="flex items-end gap-2 p-6"
-            :class="{
-              'flex-row-reverse': message.role === 'user',
-            }"
-          >
+          <div class="flex items-end gap-2 p-2">
             <Avatar
+              v-if="message.role === 'user'"
               variant="beam"
               :name="`Agent ${index + 1}`"
               :colors="[
@@ -280,14 +302,18 @@ useResizeObserver(contentEl, () => {
                 'var(--color-chart-4)',
                 'var(--color-chart-5)',
               ]"
-              class="sticky bottom-0 size-8 border-4 border-transparent"
+              class="sticky bottom-0 size-5"
             />
             <div
               :class="[
-                'markdown-bubble flex w-max max-w-3/4 flex-col px-3 py-2 text-sm whitespace-pre-wrap',
-                message.role === 'user'
-                  ? 'bg-muted text-muted-foreground ml-auto rounded-lg rounded-br-xs'
-                  : 'bg-secondary text-secondary-foreground mr-auto rounded-lg rounded-bl-xs',
+                'markdown-bubble flex w-max flex-col px-2 py-1 text-sm whitespace-pre-wrap',
+                {
+                  'bg-secondary text-secondary-foreground rounded-lg rounded-bl-xs':
+                    message.role === 'user',
+                },
+                {
+                  'rounded-lg': message.role === 'agent',
+                },
               ]"
             >
               <template v-for="block in blocks" :key="block.id">
@@ -351,40 +377,149 @@ useResizeObserver(contentEl, () => {
 /* markstream-vue injects a `.markstream-vue` wrapper that re-defines every
    `--ms-*` typography variable on itself, shadowing anything we set on the
    bubble parent. We push our overrides onto that wrapper directly via
-   `:deep()` so they actually win the cascade — and we keep them in `em`
-   units so the bubble's `text-sm` stays the source of truth for sizing. */
+   `:deep()` so they actually win the cascade — and we keep everything in
+   `em` units so the bubble's `text-sm` stays the source of truth for
+   sizing (the rhythm scales if the bubble's font-size ever changes). */
 .markdown-bubble :deep(.markstream-vue) {
+  /* ── Animations ───────────────────────────────────────────────────
+     Disable every transition/animation in the markstream subtree.
+     During streaming the per-token fade-in (`.text-node-stream-delta`,
+     `.inline-code-stream-delta` — each ~0.28s) fires on every chunk,
+     queuing dozens of concurrent compositor animations and burning
+     ~5ms/token in style work for a fade most users never notice.
+     The two `--*-fade-duration` vars are *not* set by the library's
+     defaults (they fall through to a `.28s` literal in `var()`
+     fallbacks), so we must zero them explicitly alongside the
+     `--ms-duration-*` set. */
+  --ms-duration-fast: 0s;
+  --ms-duration-standard: 0s;
+  --ms-duration-emphasis: 0s;
+  --ms-duration-overlay: 0s;
+  --ms-duration-stream: 0s;
+  --ms-duration-slow: 0s;
+  --stream-update-fade-duration: 0s;
+  --fade-duration: 0s;
+
+  /* ── Body ─────────────────────────────────────────────────────────
+     1.65 leading hits the chat sweet spot — looser than 1.5 (which
+     feels cramped at small sizes) but tighter than the library's 1.75
+     default (which wastes vertical space inside a bubble). */
   --ms-text-body: 1em;
-  --ms-leading-body: 1.5;
-  --ms-flow-paragraph-y: 1rem;
-  --ms-text-h1: 1.5rem;
-  --ms-text-h2: 1.3rem;
-  --ms-text-h3: 1.15rem;
-  --ms-text-h4: 1em;
+  --ms-leading-body: 1.65;
+  --ms-flow-paragraph-y: 0.85em;
+
+  /* ── Headings ─────────────────────────────────────────────────────
+     Stronger size *and* weight contrast between levels so a quick scan
+     reveals structure. h4–h6 stay at body size but lean on weight to
+     avoid headings smaller than the prose under them. */
+  --ms-text-h1: 1.5em;
+  --ms-text-h2: 1.3em;
+  --ms-text-h3: 1.15em;
+  --ms-text-h4: 1.05em;
   --ms-text-h5: 1em;
   --ms-text-h6: 1em;
-  --ms-flow-heading-1-mt: 0.5rem;
-  --ms-flow-heading-1-mb: 0.25rem;
-  --ms-flow-heading-2-mt: 0.5rem;
-  --ms-flow-heading-2-mb: 0.25rem;
-  --ms-flow-heading-3-mt: 0.5rem;
-  --ms-flow-heading-3-mb: 0.25rem;
-  --ms-flow-heading-4-mt: 0.5rem;
-  --ms-flow-heading-4-mb: 0.25rem;
-  --ms-flow-heading-5-mt: 0.5rem;
-  --ms-flow-heading-5-mb: 0.25rem;
-  --ms-flow-heading-6-mt: 0.5rem;
-  --ms-flow-heading-6-mb: 0.25rem;
+  --ms-weight-h1: 700;
+  --ms-weight-h2: 650;
+  --ms-weight-h3: 600;
+  --ms-weight-h4: 600;
+  --ms-leading-h1: 1.25;
+  --ms-leading-h2: 1.3;
+  --ms-leading-h3: 1.4;
+
+  /* More breathing room *above* headings (visual section break) and
+     tighter *below* (group the heading with the content it titles). */
+  --ms-flow-heading-1-mt: 1em;
+  --ms-flow-heading-1-mb: 0.4em;
+  --ms-flow-heading-2-mt: 0.9em;
+  --ms-flow-heading-2-mb: 0.35em;
+  --ms-flow-heading-3-mt: 0.8em;
+  --ms-flow-heading-3-mb: 0.3em;
+  --ms-flow-heading-4-mt: 0.7em;
+  --ms-flow-heading-4-mb: 0.25em;
+  --ms-flow-heading-5-mt: 0.6em;
+  --ms-flow-heading-5-mb: 0.2em;
+  --ms-flow-heading-6-mt: 0.6em;
+  --ms-flow-heading-6-mb: 0.2em;
+
+  /* ── Lists / quotes / code / tables / hr ──────────────────────────
+     All anchored to the same 0.75–1em rhythm so a paragraph next to a
+     list next to a quote reads as one continuous flow. */
+  --ms-flow-list-y: 0.75em;
+  --ms-flow-list-item-y: 0.3em;
+  --ms-flow-list-indent: 1.4em;
+  --ms-flow-blockquote-y: 0.85em;
+  --ms-flow-blockquote-indent: 1em;
+  --ms-flow-codeblock-y: 0.85em;
+  --ms-flow-table-y: 0.85em;
+  --ms-flow-hr-y: 1em;
 }
 
 /* Strip the leading/trailing margins so the first heading's `margin-top`
    and the last paragraph's `margin-bottom` don't blow past the bubble's
-   `py-2`. The library already sets `.paragraph-node { margin: 0 }` but
-   `.heading-N` selectors keep their margins — these resets cover both. */
+   padding. The library already sets `.paragraph-node { margin: 0 }` but
+   `.heading-node` and other block nodes keep theirs — this universal
+   reset covers all of them. */
+.markdown-bubble :deep(.markstream-vue > *:first-child),
 .markdown-bubble :deep(.markstream-vue *:first-child) {
   margin-top: 0;
 }
+.markdown-bubble :deep(.markstream-vue > *:last-child),
 .markdown-bubble :deep(.markstream-vue *:last-child) {
   margin-bottom: 0;
+}
+
+/* `text-wrap: pretty` avoids orphaned single-word last lines in
+   paragraphs; `balance` evens out short multi-line headings. Both are
+   no-ops on browsers without support, so they're safe to apply
+   unconditionally. */
+.markdown-bubble :deep(.paragraph-node) {
+  text-wrap: pretty;
+}
+.markdown-bubble :deep(.heading-node) {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+/* Inline code gets bumped from the library default of 0.8125em to
+   0.875em — at our small bubble size, 0.8125em rendered noticeably
+   smaller than surrounding prose and was hard to read. */
+.markdown-bubble :deep(.inline-code) {
+  font-size: 0.875em;
+}
+
+/* List items render their own paragraph wrapper which gets the global
+   paragraph margin. Inside a tight list, that doubles spacing. Drop
+   inner-paragraph margins so list-item spacing comes solely from
+   `--ms-flow-list-item-y`. (Note: the library already does this via
+   `li .paragraph-node { margin: 0 }`, but we keep the rule in case the
+   library's selector specificity shifts in a future release.) */
+.markdown-bubble :deep(.list-item .paragraph-node) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* ── Performance ───────────────────────────────────────────────────
+   Layout containment isolates each bubble's layout & paint work from
+   its neighbours. When the streaming tail's height grows, the browser
+   only re-lays-out *that* bubble's subtree — prior bubbles are skipped
+   entirely. Without `contain`, every chunk invalidates the full chat
+   column, so streaming gets jankier as history grows. */
+.markdown-bubble {
+  contain: layout style;
+}
+
+/* Belt-and-suspenders animation kill — universal selector with
+   `!important` is heavy-handed but guarantees no library rule sneaks
+   past the `--ms-duration-*` / `--*-fade-duration` overrides. Scoped
+   tightly to the markstream subtree so unrelated app animations
+   (sidebars, dialogs, the thinking dot) are unaffected. */
+.markdown-bubble :deep(.markstream-vue),
+.markdown-bubble :deep(.markstream-vue *),
+.markdown-bubble :deep(.markstream-vue *::before),
+.markdown-bubble :deep(.markstream-vue *::after) {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
 }
 </style>
