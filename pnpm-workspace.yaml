@@ -1,0 +1,7 @@
+allowBuilds:
+  "@firebase/util": false
+  esbuild: false
+  maplibre-gl: false
+  protobufjs: false
+  sharp: false
+  vue-demi: false

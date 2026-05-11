@@ -742,8 +742,7 @@ const botAgentConfigUpdateSchema = z.object({
 
 type BotAgentConfigUpdate = z.infer<typeof botAgentConfigUpdateSchema>
 
-const agentConfigDocPath = (teamId: string) =>
-  `teams/${teamId}/settings/agent`
+const agentConfigDocPath = (teamId: string) => `teams/${teamId}/settings/agent`
 
 /**
  * Merge a partial doc payload onto `DEFAULT_BOT_AGENT_CONFIG` so the
@@ -905,7 +904,8 @@ function buildSystemPromptFromConfig(
 function pickChatTools(config: BotAgentConfig, mode: BotChatMode) {
   const modeAllowsActionTools = MODE_CONFIG[mode].actionToolsEnabled
   const tools = []
-  if (modeAllowsActionTools && config.tools.getWeather) tools.push(getWeatherTool)
+  if (modeAllowsActionTools && config.tools.getWeather)
+    tools.push(getWeatherTool)
   if (modeAllowsActionTools && config.tools.rollDice) tools.push(rollDiceTool)
   if (config.tools.askQuestion) tools.push(askQuestionTool)
   return tools
