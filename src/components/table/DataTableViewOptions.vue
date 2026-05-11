@@ -48,7 +48,7 @@ function onPageSizeChange(val: unknown) {
         {{ $t("components.dataTable.view") }}
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent class="w-46">
+    <DropdownMenuContent class="w-50">
       <DropdownMenuLabel>
         {{ $t("components.dataTable.options") }}
       </DropdownMenuLabel>
@@ -59,7 +59,7 @@ function onPageSizeChange(val: unknown) {
             {{ $t("components.dataTable.display") }}
           </DropdownMenuSubTrigger>
         </DropdownMenuItem>
-        <DropdownMenuSubContent class="w-46">
+        <DropdownMenuSubContent class="w-50">
           <DropdownMenuLabel>{{
             $t("components.dataTable.columns")
           }}</DropdownMenuLabel>
@@ -90,7 +90,7 @@ function onPageSizeChange(val: unknown) {
             {{ $t("actions.select") }}
           </DropdownMenuSubTrigger>
         </DropdownMenuItem>
-        <DropdownMenuSubContent class="w-46">
+        <DropdownMenuSubContent class="w-50">
           <DropdownMenuLabel>
             {{ $t("components.dataTable.rows") }}
           </DropdownMenuLabel>
@@ -131,7 +131,7 @@ function onPageSizeChange(val: unknown) {
             {{ $t("actions.expand") }}
           </DropdownMenuSubTrigger>
         </DropdownMenuItem>
-        <DropdownMenuSubContent class="w-46">
+        <DropdownMenuSubContent class="w-50">
           <DropdownMenuLabel>
             {{ $t("components.dataTable.rows") }}
           </DropdownMenuLabel>
@@ -159,7 +159,7 @@ function onPageSizeChange(val: unknown) {
             {{ $t("components.dataTable.pagination") }}
           </DropdownMenuSubTrigger>
         </DropdownMenuItem>
-        <DropdownMenuSubContent class="w-46">
+        <DropdownMenuSubContent class="w-50">
           <DropdownMenuLabel>
             {{ $t("components.dataTable.pageSize") }}
           </DropdownMenuLabel>
@@ -191,7 +191,7 @@ function onPageSizeChange(val: unknown) {
             {{ $t("components.dataTable.navigation") }}
           </DropdownMenuSubTrigger>
         </DropdownMenuItem>
-        <DropdownMenuSubContent class="w-46">
+        <DropdownMenuSubContent class="w-50">
           <DropdownMenuLabel>
             {{ $t("components.dataTable.goTo") }}
           </DropdownMenuLabel>
@@ -242,7 +242,7 @@ function onPageSizeChange(val: unknown) {
             {{ $t("actions.filter") }}
           </DropdownMenuSubTrigger>
         </DropdownMenuItem>
-        <DropdownMenuSubContent class="w-46">
+        <DropdownMenuSubContent class="w-50">
           <DropdownMenuLabel>
             {{ $t("components.dataTable.column") }}
           </DropdownMenuLabel>
@@ -261,7 +261,7 @@ function onPageSizeChange(val: unknown) {
             {{ $t("components.dataTable.sorting") }}
           </DropdownMenuSubTrigger>
         </DropdownMenuItem>
-        <DropdownMenuSubContent class="w-46">
+        <DropdownMenuSubContent class="w-50">
           <DropdownMenuLabel>
             {{ $t("components.dataTable.column") }}
           </DropdownMenuLabel>

@@ -721,7 +721,7 @@ onUnmounted(() => {
                           </RouterLink>
                         </Button>
                       </ContextMenuTrigger>
-                      <ContextMenuContent class="w-46">
+                      <ContextMenuContent class="w-50">
                         <ContextMenuGroup>
                           <ContextMenuItem @click="openNewTab">
                             <IconPlus />
@@ -874,7 +874,7 @@ onUnmounted(() => {
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
-                    <DropdownMenuContent class="w-46" align="end">
+                    <DropdownMenuContent class="w-50" align="end">
                       <DropdownMenuGroup>
                         <DropdownMenuItem @click="openNewTab">
                           <IconPlus />
@@ -971,7 +971,7 @@ onUnmounted(() => {
                               {{ t("tabs.activeTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
-                          <DropdownMenuSubContent class="w-46">
+                          <DropdownMenuSubContent class="w-50">
                             <DropdownMenuLabel v-if="tabs.length === 0">
                               {{ t("tabs.activeTabsEmpty") }}
                             </DropdownMenuLabel>
@@ -1011,7 +1011,7 @@ onUnmounted(() => {
                               {{ t("tabs.recentClosedTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
-                          <DropdownMenuSubContent class="w-46">
+                          <DropdownMenuSubContent class="w-50">
                             <DropdownMenuLabel
                               v-if="recentlyClosed.length === 0"
                             >
@@ -1097,7 +1097,7 @@ onUnmounted(() => {
         </div>
       </div>
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-46">
+    <ContextMenuContent class="w-50">
       <ContextMenuGroup>
         <ContextMenuItem @click="openNewTab">
           <IconPlus />

@@ -192,7 +192,7 @@ useInfiniteScroll(
                     <IconMoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent class="w-46">
+                <DropdownMenuContent class="w-50">
                   <DropdownMenuSub>
                     <DropdownMenuItem as-child>
                       <DropdownMenuSubTrigger>
@@ -200,7 +200,7 @@ useInfiniteScroll(
                         Move all to
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
-                    <DropdownMenuSubContent class="w-46">
+                    <DropdownMenuSubContent class="w-50">
                       <DropdownMenuItem @click="markAllInbox(activeTab)">
                         <IconInbox />
                         Inbox
@@ -222,7 +222,7 @@ useInfiniteScroll(
                         Mark all as
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
-                    <DropdownMenuSubContent class="w-46">
+                    <DropdownMenuSubContent class="w-50">
                       <DropdownMenuItem @click="markAllRead(activeTab)">
                         <IconEye />
                         Read

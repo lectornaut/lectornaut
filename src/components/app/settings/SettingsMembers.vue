@@ -307,7 +307,7 @@ const formatCreatedAt = (
                                     <IconMoreHorizontal v-else />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent class="w-46">
+                                <DropdownMenuContent class="w-50">
                                   <AlertDialog>
                                     <AlertDialogTrigger as-child>
                                       <DropdownMenuItem @select.prevent>

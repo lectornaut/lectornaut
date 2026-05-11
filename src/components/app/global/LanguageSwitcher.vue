@@ -26,7 +26,7 @@ const { locale } = useI18n()
         <TooltipContent>
           {{ $t("components.languageSwitcher.tooltip") }}
         </TooltipContent>
-        <DropdownMenuContent class="w-46">
+        <DropdownMenuContent class="w-50">
           <DropdownMenuRadioGroup v-model="locale">
             <DropdownMenuRadioItem
               v-for="language in languages"

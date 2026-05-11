@@ -1030,7 +1030,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             <IconChevronDown class="size-3" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-46">
+        <DropdownMenuContent class="w-50">
           <DropdownMenuItem
             @click="editor?.chain().focus().setParagraph().run()"
           >
@@ -1226,7 +1226,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             <IconTable />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-46">
+        <DropdownMenuContent class="w-50">
           <DropdownMenuLabel class="text-xs">Table</DropdownMenuLabel>
           <DropdownMenuItem
             @click="editor?.chain().focus().addRowBefore().run()"

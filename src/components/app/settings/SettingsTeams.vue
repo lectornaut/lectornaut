@@ -341,7 +341,7 @@ const formatCreatedAt = (
                                       <IconMoreHorizontal />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent class="w-46">
+                                  <DropdownMenuContent class="w-50">
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <div>

@@ -1422,7 +1422,7 @@ const isFullscreen = useIsFullscreen()
                 <TooltipContent>
                   {{ t("components.fileDropOverlay.tooltips.more") }}
                 </TooltipContent>
-                <DropdownMenuContent class="w-46">
+                <DropdownMenuContent class="w-50">
                   <DropdownMenuItem
                     :disabled="!hasQueuedFiles || isMoving"
                     @click="clearQueuedFiles()"

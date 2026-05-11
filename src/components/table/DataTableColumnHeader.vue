@@ -28,7 +28,7 @@ defineOptions({
           <IconChevronsUpDown v-else />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent class="w-46">
+      <DropdownMenuContent class="w-50">
         <DropdownMenuItem @click="column.toggleSorting(false)">
           <IconArrowUp />
           Ascending

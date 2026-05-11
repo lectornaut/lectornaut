@@ -508,7 +508,7 @@ const randomIndex = () => {
                           <TooltipContent>{{
                             $t("components.hyper.attach")
                           }}</TooltipContent>
-                          <DropdownMenuContent class="w-46">
+                          <DropdownMenuContent class="w-50">
                             <DropdownMenuLabel>
                               {{ $t("components.hyper.attachToPrompt") }}
                             </DropdownMenuLabel>

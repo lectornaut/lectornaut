@@ -108,7 +108,7 @@ const { t } = useI18n()
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-46">
+        <ContextMenuContent class="w-50">
           <ContextMenuGroup>
             <ContextMenuItem as-child>
               <RouterLink to="/profile">

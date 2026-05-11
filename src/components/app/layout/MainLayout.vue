@@ -316,7 +316,7 @@ const closeTab = (id: string) => {
                   </div>
                 </ResizablePanel>
               </ContextMenuTrigger>
-              <ContextMenuContent class="w-46">
+              <ContextMenuContent class="w-50">
                 <ContextMenuItem @click="leftPanel?.collapse()">
                   <IconX /> {{ t("tooltips.closePanel") }}
                 </ContextMenuItem>
@@ -398,7 +398,7 @@ const closeTab = (id: string) => {
                       </div>
                     </ResizablePanel>
                   </ContextMenuTrigger>
-                  <ContextMenuContent class="w-46">
+                  <ContextMenuContent class="w-50">
                     <ContextMenuItem @click="router.go(0)">
                       <IconRefreshCcw /> {{ t("actions.refresh") }}
                     </ContextMenuItem>
@@ -631,7 +631,7 @@ const closeTab = (id: string) => {
                       </Tabs>
                     </ResizablePanel>
                   </ContextMenuTrigger>
-                  <ContextMenuContent class="w-46">
+                  <ContextMenuContent class="w-50">
                     <ContextMenuItem
                       @click="
                         topPanel?.isCollapsed
@@ -722,7 +722,7 @@ const closeTab = (id: string) => {
                   </div>
                 </ResizablePanel>
               </ContextMenuTrigger>
-              <ContextMenuContent class="w-46">
+              <ContextMenuContent class="w-50">
                 <ContextMenuItem @click="rightPanel?.collapse()">
                   <IconX /> {{ t("layouts.app.panel.close") }}
                 </ContextMenuItem>
@@ -839,7 +839,7 @@ const closeTab = (id: string) => {
                     </div>
                   </Draggable>
                 </ContextMenuTrigger>
-                <ContextMenuContent class="w-46">
+                <ContextMenuContent class="w-50">
                   <ContextMenuItem
                     @click="isPoppedOutMinimized = !isPoppedOutMinimized"
                   >

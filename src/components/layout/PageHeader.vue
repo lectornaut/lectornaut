@@ -40,7 +40,7 @@ const currentUser = useCurrentUser()
             {{ currentUser.displayName }}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-46">
+        <DropdownMenuContent class="w-50">
           <DropdownMenuLabel>
             <Item class="group" size="xs">
               <ItemMedia>

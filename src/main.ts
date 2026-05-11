@@ -31,6 +31,7 @@ const head = createHead()
 const pinia = createPinia()
 const app = createApp(App)
 
+app.use(pinia)
 app.use(VueFire, {
   firebaseApp,
   modules: [createAppCheckModule(), VueFireAuth()],
@@ -39,7 +40,13 @@ app.use(router)
 app.use(head)
 app.use(MotionPlugin)
 app.use(i18n)
-app.use(pinia)
+
+initTheme()
+initLanguage()
+initDeepLink()
+initHotkeys()
+initPwa()
+initSync()
 
 // Order matters: authReady must resolve before router.isReady() so the
 // initial navigation guard sees a settled `auth.currentUser`.
@@ -77,10 +84,3 @@ if (isTauri.value) {
     })
   }
 }
-
-initDeepLink()
-initTheme()
-initLanguage()
-initHotkeys()
-initPwa()
-initSync()
