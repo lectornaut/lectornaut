@@ -206,6 +206,12 @@ export const useLayoutStore = defineStore("layout", () => {
       // We only want to reset tabs when we have a valid ref but the doc doesn't exist
       if (!tabsDocRef.value) return
 
+      // VueFire emits `undefined` between docRef becoming non-null and the
+      // first snapshot landing. Treating that as "no saved tabs" would wipe
+      // tabs on the immediate fire — the `null` case below is the only one
+      // that signals Firestore-confirmed absence.
+      if (doc === undefined) return
+
       if (!doc) {
         // Reset tabs when switching to a team with no saved tabs
         tabs.value = []
@@ -263,6 +269,12 @@ export const useLayoutStore = defineStore("layout", () => {
   watch(
     navDocData,
     (doc) => {
+      // VueFire emits `undefined` before the first snapshot arrives. Without
+      // this guard the immediate fire would treat "loading" as "no saved nav"
+      // and reset `activeNavItems` to `defaultMenu`, flashing the default menu
+      // before the user's customized nav arrives from Firestore.
+      if (doc === undefined) return
+
       const navigationDoc = toLayoutNavigationDoc(doc)
       if (!navigationDoc) {
         if (!pendingNavigation.value && !navPending.value) {
@@ -488,6 +500,9 @@ export const useLayoutStore = defineStore("layout", () => {
   // ============================================================================
 
   // Persist Tabs (debounced)
+  // No `deep: true` — every tab mutation reassigns the array (or replaces tab
+  // objects via `.map`), so top-level reactivity catches all changes. A deep
+  // walk would run on every route navigation via `updateActiveTab`.
   watchDebounced(
     [tabs, activeTabId, recentlyClosed],
     () => {
@@ -496,10 +511,11 @@ export const useLayoutStore = defineStore("layout", () => {
       if (!tabsDocRef.value || tabsPending.value || !isHydrated.value) return
       persistTabs()
     },
-    { debounce: 500, deep: true }
+    { debounce: 500 }
   )
 
   // Persist Navigation (debounced)
+  // No `deep: true` — every mutation reassigns `activeNavItems`.
   watchDebounced(
     activeNavItems,
     () => {
@@ -507,7 +523,7 @@ export const useLayoutStore = defineStore("layout", () => {
       if (pendingNavigation.value) return
       persistNavigation()
     },
-    { debounce: 500, deep: true }
+    { debounce: 500 }
   )
 
   // Persist UI Layout State (debounced)

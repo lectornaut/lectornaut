@@ -183,13 +183,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     return workspaceById.value.get(workspaceId) ?? null
   })
 
-  const hasResolvedWorkspaceList = computed(() => {
-    if (!currentTeamId.value) return true
-    if (optimisticWorkspaces.value.length > 0) return true
-    if (workspacesQueryRef.value) return !isFirestoreLoading.value
-    return !isMembershipLoading.value || hasCurrentTeamMembership.value
-  })
-
   const isLoading = computed(() => {
     if (!currentTeamId.value) return false
     if (optimisticWorkspaces.value.length > 0) return false
@@ -197,19 +190,18 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     return isMembershipLoading.value && !hasCurrentTeamMembership.value
   })
 
-  // App-shell bootstrap is narrower than list loading: only block while we
-  // still don't know the current team's workspace selection or can't map the
-  // selected workspace ID to a workspace yet.
+  // App-shell bootstrap blocks the cascade until we have a definitive
+  // workspace state. A selected ID that doesn't yet map to a workspace keeps
+  // the spinner up — either the workspace will arrive from Firestore, or the
+  // stale-cleanup watcher below will null the selection out. Either way the
+  // shell re-evaluates. Cached hydration is intentionally NOT used to release
+  // the gate, because a stale cached list can claim "resolved" while still
+  // missing the selected workspace and flash the WorkspaceSelector.
   const isBootstrapping = computed(() => {
     if (!currentTeamId.value) return false
-    if (currentWorkspaceId.value) {
-      return !currentWorkspace.value && !hasResolvedWorkspaceList.value
-    }
-
-    return (
-      !hasResolvedCurrentWorkspaceSelection.value &&
-      !hasResolvedWorkspaceList.value
-    )
+    if (!hasResolvedCurrentWorkspaceSelection.value) return true
+    if (currentWorkspaceId.value) return !currentWorkspace.value
+    return false
   })
 
   const isWorkspacePending = computed(
@@ -235,11 +227,13 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   )
 
   // Sync optimistic state from Firestore only once VueFire has actually
-  // fetched for the current team. Guarding on `workspacesQueryRef` and
-  // `isFirestoreLoading` prevents the immediate fire from clobbering the
-  // hydrated cache with VueFire's initial empty-array default — which
-  // previously persisted `[]` to localStorage and left the app shell
-  // stuck on the bootstrap spinner when memberships were still loading.
+  // fetched for the current team. The `!queryRef` guard catches the case
+  // when memberships are still loading; the raw-data undefined check
+  // catches the case when memberships hydrated synchronously (so queryRef
+  // is non-null) but VueFire's async internal watcher hasn't yet reacted
+  // to the docRef change — at that moment `pending` is still false and
+  // the computed `firestoreWorkspaces` would have wrapped the undefined
+  // raw value as `[]`, which would otherwise wipe the hydrated cache.
   watch(
     [
       currentTeamId,
@@ -249,10 +243,11 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     ],
     ([teamId, data, loading, queryRef]) => {
       if (!teamId || loading || !queryRef) return
+      if (_vuefireWorkspaces.data.value === undefined) return
       if (pendingWorkspaceIds.value.size > 0) return
       if (data.some((workspace) => workspace.teamId !== teamId)) return
 
-      const nextWorkspaces = [...(data ?? [])]
+      const nextWorkspaces = [...data]
       optimisticWorkspaces.value = nextWorkspaces
       persistWorkspacesForTeam(teamId, nextWorkspaces)
     },

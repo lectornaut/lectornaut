@@ -201,9 +201,15 @@ export const useTeamStore = defineStore("teams", () => {
     async ([teamId, team, loading, membershipLoading]) => {
       if (!teamId || loading || membershipLoading) return
 
-      // If we have a teamId but no team data, and we're not loading,
-      // and we don't have a pending operation for this team
-      if (!team && !pendingTeamIds.value.has(teamId)) {
+      // VueFire emits `undefined` between docRef becoming non-null and the
+      // first snapshot landing. Only `null` signals "team genuinely missing".
+      // Without this distinction the watch can warn-log on the loading window
+      // and (in narrow timing windows) clear a valid currentTeamId.
+      if (team === undefined) return
+
+      // If Firestore confirmed the team doesn't exist and we don't have a
+      // pending operation for this team
+      if (team === null && !pendingTeamIds.value.has(teamId)) {
         console.warn(
           "[teamStore] Detected stale team ID (team deleted or membership removed), clearing...",
           teamId

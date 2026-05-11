@@ -195,7 +195,12 @@ export const useAuthStore = defineStore("auth", () => {
 
     optimisticMembershipPreferences.value =
       cached ?? defaultMembershipPreferences()
-    resolvedMembershipPreferencesTeamId.value = cached ? teamId : null
+    // resolvedMembershipPreferencesTeamId is intentionally NOT set here.
+    // The bootstrap gate consumes this flag and must wait for Firestore
+    // confirmation — a stale cache (e.g. workspace selected on another
+    // device since last sync) can disagree with Firestore, and trusting
+    // the cache would briefly fall through to WorkspaceSelector before
+    // Firestore corrects us. The Firestore watch below sets this flag.
   }
 
   const persistMembershipPreferencesForTeam = (
@@ -253,6 +258,17 @@ export const useAuthStore = defineStore("auth", () => {
     [currentUser, firestoreUserProfile, isFirestoreLoading],
     async ([user, profile, loading]) => {
       if (!user || loading) return
+      // VueFire's `data` is `undefined` until the first snapshot arrives;
+      // it only becomes `null` when the document genuinely doesn't exist.
+      // The immediate fire here runs during store setup, before VueFire's
+      // async internal watcher has reacted to the docRef becoming non-null,
+      // so `pending` is still false. Without this guard the `!profile`
+      // branch below would (a) overwrite hydrated profile fields like
+      // `username` and `isPublic` with defaults, briefly flashing them in
+      // dependent UI, and (b) trigger an unnecessary cloud function call
+      // to "create" a profile that already exists in Firestore.
+      // (Same race we guarded against in the membership-prefs watch below.)
+      if (profile === undefined) return
 
       if (!profile) {
         try {
@@ -317,6 +333,17 @@ export const useAuthStore = defineStore("auth", () => {
       if (!currentUser.value || !teamId || loading) {
         return
       }
+      // VueFire's `data` ref is `undefined` until the first snapshot lands;
+      // it only becomes `null` when the document genuinely doesn't exist.
+      // Without this guard, the immediate fire here would (a) wipe the
+      // hydrated cache by writing defaults to localStorage and (b) mark
+      // the selection as Firestore-resolved before Firestore has spoken —
+      // briefly flashing WorkspaceSelector before MainLayout renders.
+      // The race exists because `pending` is `false` at the moment the
+      // immediate fire runs: VueFire's internal watcher on the docRef is
+      // async (flush: 'pre'), so it hasn't yet reacted to the hydration
+      // that just set `currentTeamId`.
+      if (preferences === undefined) return
 
       const nextPreferences = preferences ?? defaultMembershipPreferences()
       optimisticMembershipPreferences.value = nextPreferences

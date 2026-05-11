@@ -81,41 +81,30 @@ onMounted(() => {
   <div
     class="bg-sidebar shadow-muted-foreground/5 mx-2 flex flex-1 items-center gap-2 overflow-clip rounded-b-xl border-x border-b p-2 shadow-xs"
   >
+    <div class="flex items-center gap-2">
+      <TooltipProvider>
+        <ButtonGroup>
+          <SubNavigationSidebarToggle v-if="leftActionEmpty" side="left" />
+          <div id="sub-nav-left-action" ref="leftActionDock" class="contents" />
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="outline" size="icon" as-child>
+                <RouterLink to="/home">
+                  <IconHome />
+                </RouterLink>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {{ t("components.subNavigation.tooltips.home") }}
+            </TooltipContent>
+          </Tooltip>
+        </ButtonGroup>
+      </TooltipProvider>
+    </div>
     <ContextMenu>
       <ContextMenuTrigger as-child>
         <Breadcrumb>
           <BreadcrumbList>
-            <TooltipProvider>
-              <ButtonGroup>
-                <SubNavigationSidebarToggle
-                  v-if="leftActionEmpty"
-                  side="left"
-                />
-                <div
-                  id="sub-nav-left-action"
-                  ref="leftActionDock"
-                  class="contents"
-                />
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <!-- <BreadcrumbItem>
-                      <BreadcrumbPage as-child>
-                        <BreadcrumbLink as-child> -->
-                    <Button variant="outline" size="icon" as-child>
-                      <RouterLink to="/new">
-                        <IconHome />
-                      </RouterLink>
-                    </Button>
-                    <!-- </BreadcrumbLink>
-                      </BreadcrumbPage>
-                    </BreadcrumbItem> -->
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ t("components.subNavigation.tooltips.home") }}
-                  </TooltipContent>
-                </Tooltip>
-              </ButtonGroup>
-            </TooltipProvider>
             <BreadcrumbSeparator class="text-muted-foreground/50" />
             <template
               v-for="item in displayBreadcrumbs"

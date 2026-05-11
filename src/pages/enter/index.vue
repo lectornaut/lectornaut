@@ -5,15 +5,34 @@ import {
   authenticateOAuth,
   handleSsoRedirectResult,
 } from "@/modules/auth"
+import { useCurrentUser } from "vuefire"
 
 useHead({
   title: "Enter",
 })
 
 const { t } = useI18n()
+const user = useCurrentUser()
+const route = useRoute()
+const router = useRouter()
 
 const authenticateInProgress = ref(true)
 const authenticateError = ref(false)
+
+// Pre-empt App.vue's requiresGuest watcher so the sign-in form never paints
+// for an already-authenticated user (e.g. post-OAuth, bookmarked /enter).
+watch(
+  user,
+  (current) => {
+    if (!current) return
+    const redirect =
+      typeof route.query?.redirect === "string"
+        ? route.query.redirect
+        : "/start"
+    router.replace(redirect)
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   authenticateInProgress.value = true
@@ -36,7 +55,7 @@ onMounted(async () => {
 <template>
   <OverlayScrollbarsWrapper class="bg-background">
     <div
-      v-if="authenticateInProgress"
+      v-if="user || authenticateInProgress"
       class="grid size-full grow place-items-center"
     >
       <div class="mx-auto flex flex-col justify-center">
