@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.0.9",
+  "packageManager": "pnpm@11.1.1",
   "scripts": {
     "clean": "rimraf lib src/shared",
     "copy:shared": "cpy \"../shared/**/*.ts\" src/shared",
@@ -30,7 +30,7 @@
     "firebase-functions": "^7.2.5",
     "genkit": "^1.33.0",
     "handlebars": "^4.7.9",
-    "mjml": "^5.2.0",
+    "mjml": "^5.2.1",
     "postmark": "^4.0.7",
     "stripe": "^22.1.1",
     "uuid": "^14.0.0"
