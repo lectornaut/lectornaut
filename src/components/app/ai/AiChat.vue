@@ -210,69 +210,75 @@ const renderedMessages = computed(() =>
 
 // ── Auto-scroll to latest message ─────────────────────────────────────
 //
-// Stickiness rule: while the user is at the bottom, every new turn,
-// streaming chunk, and the thinking indicator should auto-scroll. The
-// moment they scroll up to read history, we leave them alone — and
-// resume the moment they scroll back to the bottom.
+// Pin-to-bottom is delegated to CSS scroll anchoring. A 1px sentinel
+// (`.scroll-anchor`) sits at the end of the message list with
+// `overflow-anchor: auto`; every other element in the list has
+// `overflow-anchor: none`. The browser's scroll-anchoring algorithm
+// then only has the sentinel to lock onto — content growing *above*
+// it shifts the sentinel down, and the browser scrolls the container
+// to keep the sentinel at the same spot relative to the viewport. Net
+// effect: while the sentinel is on screen, scroll follows new
+// content; when the user scrolls up, the sentinel leaves the
+// viewport, anchoring suspends, and their position is preserved.
+// Stickiness emerges from the rules — no `stickToBottom` to track,
+// no scroll-direction heuristics to guard against false positives.
+//
+// Safari doesn't implement scroll anchoring (`overflow-anchor` is a
+// no-op there). We feature-detect and wire up a ResizeObserver
+// fallback that mirrors the CSS semantics: re-pin only when the
+// anchor is still in view.
 const scrollEl = ref<HTMLElement | null>(null)
 const contentEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null)
 
-// Small bottom offset so sub-pixel layout shifts (font metrics, image
-// loads) don't drop us out of the "at bottom" state.
-const { arrivedState } = useScroll(scrollEl, {
-  offset: { bottom: 4 },
-})
-
-// Mirror `arrivedState.bottom` directly. We deliberately don't use
-// `directions.top` here: when content shrinks (e.g., the thinking
-// indicator is replaced by the first chunk), the browser clamps
-// `scrollTop` and fires a scroll event with a negative delta, which
-// `useScroll` reports as `directions.top: true` — a false positive that
-// would un-stick us mid-stream. `arrivedState.bottom` stays stable
-// across content shrink (we're still at the bottom after clamping) and
-// content grow (no scroll event fires), so it only flips false on a
-// real user scroll-up.
-const stickToBottom = ref(true)
-watch(
-  () => arrivedState.bottom,
-  (atBottom) => {
-    stickToBottom.value = atBottom
-  }
-)
-
-// Switching sessions resets stickiness — a freshly opened chat should
-// always land at the latest turn, regardless of where the previous
-// session was scrolled.
-watch(sessionId, () => {
-  stickToBottom.value = true
-})
-
-const scrollToBottom = () => {
-  const el = scrollEl.value
-  if (!el) return
-  el.scrollTop = el.scrollHeight
+const scrollToAnchor = () => {
+  anchorEl.value?.scrollIntoView({ block: "end" })
 }
 
 const onScrollReady = (el: HTMLElement) => {
   scrollEl.value = el
-  // Catch the case where messages were already populated before OS
-  // finished its deferred init (e.g., direct nav to /bot/:id where
-  // `selectSession` resolved while the wrapper was still warming up).
-  nextTick(() => {
-    if (stickToBottom.value) scrollToBottom()
-  })
+  // CSS anchoring only takes effect once the sentinel is on screen,
+  // so we land there explicitly on first paint. Also covers direct
+  // navigations (e.g. /bot/:id) where messages were populated before
+  // the wrapper finished its deferred init.
+  nextTick(scrollToAnchor)
 }
 
-// ResizeObserver fires whenever the message column's height changes —
-// new turns, streaming chunks, and the thinking indicator's
-// appearance/disappearance all surface through it. Watching DOM size
-// directly (instead of `messages`) also covers height shifts that don't
-// correspond to a data mutation: images decoding, code blocks reflowing
-// after Shiki highlights, etc.
-useResizeObserver(contentEl, () => {
-  if (!stickToBottom.value) return
-  scrollToBottom()
+// Switching sessions: drop in at the new session's latest turn.
+watch(sessionId, () => {
+  nextTick(scrollToAnchor)
 })
+
+const supportsScrollAnchoring =
+  typeof CSS !== "undefined" && CSS.supports("overflow-anchor: auto")
+
+if (!supportsScrollAnchoring) {
+  // ── Safari fallback ─────────────────────────────────────────────────
+  // `scrollend` (Chrome 114+, Firefox 109+, Safari 18.2+) fires once
+  // when a scroll operation settles — both user wheel/touch motion
+  // and our own programmatic `scrollIntoView`. On each fire we
+  // recompute whether the user is parked within 4px of the bottom;
+  // the buffer absorbs sub-pixel font-metric / image-load shifts.
+  // ResizeObserver covers content growth: if we're pinned when
+  // content grows, re-pin via `scrollToAnchor`.
+  //
+  // Caveat: `pinned` only updates when scrolling *settles*, so a
+  // token streaming in during an in-flight scroll-up can briefly
+  // re-pin against the user before they release. The window is
+  // short (typical scroll completes in <200ms), but if it shows up
+  // in usage data, swap back to `useIntersectionObserver` on
+  // `anchorEl` — it updates state mid-scroll, at the cost of an
+  // extra observer.
+  const pinned = ref(true)
+  useEventListener(scrollEl, "scrollend", () => {
+    const s = scrollEl.value
+    if (!s) return
+    pinned.value = s.scrollHeight - s.scrollTop - s.clientHeight <= 4
+  })
+  useResizeObserver(contentEl, () => {
+    if (pinned.value) scrollToAnchor()
+  })
+}
 </script>
 
 <template>
@@ -284,7 +290,11 @@ useResizeObserver(contentEl, () => {
       <IconAiFill class="size-8 opacity-60" />
       <p>Ask anything to get started.</p>
     </div>
-    <div v-else ref="contentEl" class="mt-auto grid grid-cols-1 gap-2">
+    <div
+      v-else
+      ref="contentEl"
+      class="messages-list mt-auto grid grid-cols-1 gap-2"
+    >
       <ContextMenu
         v-for="({ message, blocks }, index) in renderedMessages"
         :key="message.id"
@@ -369,6 +379,9 @@ useResizeObserver(contentEl, () => {
         />
         <span>Thinking...</span>
       </div>
+      <!-- Scroll-anchor sentinel — see comment in <script setup>.
+           Must be the final child so the browser locks onto it. -->
+      <div ref="anchorEl" aria-hidden="true" class="scroll-anchor" />
     </div>
   </OverlayScrollbarsWrapper>
 </template>
@@ -521,5 +534,28 @@ useResizeObserver(contentEl, () => {
   animation-delay: 0s !important;
   transition-duration: 0s !important;
   transition-delay: 0s !important;
+}
+
+/* ── Auto-scroll via CSS scroll anchoring ──────────────────────────
+   Browsers run scroll anchoring by default — when content above the
+   viewport changes, they pick an in-view element and adjust scroll
+   so it stays visually put. We invert that for chat: disable
+   anchoring on every descendant of the message list, then re-enable
+   it only on a 1px sentinel pinned to the bottom. Now the algorithm
+   can *only* pick the sentinel — and as new content grows above it,
+   the browser scrolls to keep the sentinel on screen, effectively
+   tailing the latest message. When the user scrolls up, the sentinel
+   leaves the viewport, no anchor is available, anchoring suspends,
+   and the user's scroll position is preserved.
+
+   Safari (no `overflow-anchor` support) falls through to the JS
+   fallback wired up in <script setup>. */
+.messages-list,
+.messages-list :deep(*) {
+  overflow-anchor: none;
+}
+.scroll-anchor {
+  overflow-anchor: auto;
+  height: 1px;
 }
 </style>

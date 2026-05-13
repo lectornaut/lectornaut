@@ -285,22 +285,25 @@ const isEditing = (shortcut: Shortcut): boolean =>
                 <Item
                   v-for="(shortcut, shortcutIndex) in category.shortcuts"
                   :key="shortcutIndex"
-                  size="xs"
-                  class="px-0"
+                  class="p-0"
                 >
                   <ItemContent>
                     <ItemDescription>
-                      <div
-                        v-for="(step, stepIndex) in shortcut.description"
-                        :key="stepIndex"
-                        class="inline-flex items-center"
-                      >
-                        {{ step }}
-                        <IconChevronRight
-                          v-if="stepIndex < shortcut.description.length - 1"
-                          class="mx-1"
-                        />
-                      </div>
+                      <span class="grid grid-cols-1">
+                        <span class="truncate">
+                          <span
+                            v-for="(step, stepIndex) in shortcut.description"
+                            :key="stepIndex"
+                            class="inline-flex min-w-0 items-center"
+                          >
+                            <IconChevronRight
+                              v-if="stepIndex > 0"
+                              class="text-muted-foreground mx-1 shrink-0"
+                            />
+                            {{ step }}
+                          </span>
+                        </span>
+                      </span>
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions>

@@ -66,7 +66,7 @@ const productTour = driver({
   overlayColor: state.value === "light" ? "black" : "white",
   smoothScroll: true,
   stagePadding: 4,
-  stageRadius: 20,
+  stageRadius: 12,
   popoverClass: "driverjs-theme",
   popoverOffset: 8,
   showProgress: true,

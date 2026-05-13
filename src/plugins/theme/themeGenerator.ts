@@ -40,7 +40,7 @@ const ACCENT_FAMILIES = [
 
 const FONT_TOKENS = {
   sans: '"Geist Variable", "sans-serif"',
-  serif: '"Playfair Display Variable", "serif"',
+  serif: '"Bricolage Grotesque Variable", "serif"',
   mono: '"Geist Mono Variable", "monospace"',
 } as const
 

@@ -24,9 +24,9 @@ function closeSidebarOnMobile() {
         collapsible="offcanvas"
         variant="inset"
         class="shadow-muted-foreground/5 relative w-full p-0 transition-none!"
+        data-tauri-drag-region="deep"
       >
         <div
-          data-tauri-drag-region="deep"
           class="flex items-center justify-between gap-2 px-2 pt-2"
           :class="[{ 'pl-22': isTauri && !isFullscreen }]"
         >

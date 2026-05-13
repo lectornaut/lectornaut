@@ -215,9 +215,9 @@
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
   --font-sans: "Geist Variable", "sans-serif";
-  --font-serif: "Playfair Display Variable", "serif";
+  --font-serif: "Bricolage Grotesque Variable", "serif";
   --font-mono: "Geist Mono Variable", "monospace";
-  --font-display: "Playfair Display Variable", "serif";
+  --font-display: "Bricolage Grotesque Variable", "serif";
   --font-flex: var(--flex);
   --font-heading: var(--font-sans);
   --text-size: var(--size);

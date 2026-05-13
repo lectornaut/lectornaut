@@ -263,7 +263,7 @@ export default defineConfig({
         families: [
           "Geist Variable",
           "Geist Mono Variable",
-          "Playfair Display Variable",
+          "Bricolage Grotesque Variable",
         ],
       },
     }),

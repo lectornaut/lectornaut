@@ -46,7 +46,7 @@
   }
 
   :root[data-font="serif"] {
-    --flex: "Playfair Display Variable", "serif";
+    --flex: "Bricolage Grotesque Variable", "serif";
   }
 
   :root[data-font="mono"] {
