@@ -5,6 +5,8 @@ import type { Column } from "@tanstack/vue-table"
 import type { DateRange } from "reka-ui"
 import { computed, ref } from "vue"
 
+const { t } = useI18n()
+
 interface DateRangeValue {
   start?: string
   end?: string
@@ -24,7 +26,7 @@ const presets = computed(() => [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Today",
+    label: t("pages.home.presets.today"),
   },
   {
     id: 7,
@@ -34,7 +36,7 @@ const presets = computed(() => [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 7 days",
+    label: t("pages.home.presets.last7days"),
   },
   {
     id: 14,
@@ -44,7 +46,7 @@ const presets = computed(() => [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 14 days",
+    label: t("pages.home.presets.last14days"),
   },
   {
     id: 30,
@@ -54,7 +56,7 @@ const presets = computed(() => [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 30 days",
+    label: t("pages.home.presets.last30days"),
   },
   {
     id: 90,
@@ -64,7 +66,7 @@ const presets = computed(() => [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 3 months",
+    label: t("pages.home.presets.last3months"),
   },
   {
     id: 180,
@@ -74,7 +76,7 @@ const presets = computed(() => [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 6 months",
+    label: t("pages.home.presets.last6months"),
   },
   {
     id: 365,
@@ -84,7 +86,7 @@ const presets = computed(() => [
       }),
       end: today(getLocalTimeZone()),
     },
-    label: "Last 1 year",
+    label: t("pages.home.presets.last1year"),
   },
 ])
 
@@ -141,13 +143,16 @@ const hasRange = computed(
 
 const summary = computed(() => {
   if (filterValue.value.start && filterValue.value.end) {
-    return `${filterValue.value.start} – ${filterValue.value.end}`
+    return t("components.dataTable.rangeBoth", {
+      start: filterValue.value.start,
+      end: filterValue.value.end,
+    })
   }
   if (filterValue.value.start) {
-    return `From ${filterValue.value.start}`
+    return t("components.dataTable.from", { date: filterValue.value.start })
   }
   if (filterValue.value.end) {
-    return `Until ${filterValue.value.end}`
+    return t("components.dataTable.until", { date: filterValue.value.end })
   }
   return ""
 })
@@ -165,7 +170,7 @@ const clearFilter = () => {
     <PopoverTrigger as-child>
       <Button variant="outline" class="data-[state=open]:bg-accent">
         <IconCalendar />
-        {{ title ?? "Date" }}
+        {{ title ?? t("components.dataTable.dateLabel") }}
         <template v-if="hasRange">
           <Separator orientation="vertical" />
           <Badge variant="secondary">{{ summary }}</Badge>
@@ -176,7 +181,7 @@ const clearFilter = () => {
       <div class="p-2">
         <Select v-model="range">
           <SelectTrigger class="w-full">
-            <SelectValue placeholder="Select range" />
+            <SelectValue :placeholder="t('components.dataTable.selectRange')" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -200,7 +205,9 @@ const clearFilter = () => {
       />
       <Separator />
       <div class="grid p-2">
-        <Button variant="ghost" @click="clearFilter"> Clear filters </Button>
+        <Button variant="ghost" @click="clearFilter">
+          {{ t("components.dataTable.clearFilters") }}
+        </Button>
       </div>
     </PopoverContent>
   </Popover>

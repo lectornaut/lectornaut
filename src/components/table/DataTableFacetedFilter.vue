@@ -3,6 +3,8 @@ import { IconCirclePlus } from "@/data/icons"
 import type { Column } from "@tanstack/vue-table"
 import type { Component } from "vue"
 
+const { t } = useI18n()
+
 const props = defineProps<{
   column?: Column<TData, unknown>
   title?: string
@@ -32,7 +34,11 @@ const selectedValues = computed(
           </Badge>
           <div class="hidden gap-1 lg:flex">
             <Badge v-if="selectedValues.size > 2" variant="secondary">
-              {{ selectedValues.size }} selected
+              {{
+                t("components.dataTable.selectedCount", {
+                  count: selectedValues.size,
+                })
+              }}
             </Badge>
             <template v-else>
               <Badge
@@ -56,7 +62,7 @@ const selectedValues = computed(
           class="border-none focus:border-inherit focus:ring-0"
         />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>{{ t("components.dataTable.noResults") }}</CommandEmpty>
           <CommandGroup>
             <CommandItem
               v-for="option in options"
@@ -97,11 +103,11 @@ const selectedValues = computed(
             <CommandSeparator />
             <CommandGroup>
               <CommandItem
-                :value="{ label: 'Clear filters' }"
+                :value="{ label: t('components.dataTable.clearFilters') }"
                 class="justify-center"
                 @select="column?.setFilterValue(undefined)"
               >
-                Clear filters
+                {{ t("components.dataTable.clearFilters") }}
               </CommandItem>
             </CommandGroup>
           </template>

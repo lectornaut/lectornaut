@@ -16,6 +16,10 @@ import {
   type INotificationStatus,
 } from "@/types/notification"
 import {
+  FirestoreErrorCodes,
+  hasFirebaseErrorCode,
+} from "@/utils/firebase/firebase-errors"
+import {
   cloneState,
   createPendingSet,
   mergeOptimisticCollection,
@@ -388,6 +392,17 @@ export function useNotifications() {
         isLoading.value = false
       },
       (error) => {
+        // Benign during sign-out / token rotation: the listener emits
+        // one final permission-denied snapshot before the user watcher
+        // tears it down. Real errors (signed-in user, bad rule, etc.)
+        // still surface.
+        if (
+          !user.value &&
+          hasFirebaseErrorCode(error, FirestoreErrorCodes.PERMISSION_DENIED)
+        ) {
+          isLoading.value = false
+          return
+        }
         console.error("Error listening to notifications:", error)
         isLoading.value = false
       }

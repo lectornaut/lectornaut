@@ -133,9 +133,9 @@ const formatCreatedAt = (
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel>Teams</FieldLabel>
+            <FieldLabel>{{ t("settings.teamsList.label") }}</FieldLabel>
             <FieldDescription>
-              Manage your teams and switch between them.
+              {{ t("settings.teamsList.description") }}
             </FieldDescription>
           </FieldContent>
           <TooltipProvider>
@@ -147,7 +147,7 @@ const formatCreatedAt = (
                     @click="openTeamDialog('create')"
                   >
                     <IconPlus />
-                    Create Team
+                    {{ t("settings.teamsList.createTeam") }}
                   </Button>
                 </div>
               </TooltipTrigger>
@@ -168,7 +168,7 @@ const formatCreatedAt = (
                   <TableRow>
                     <TableHead class="w-1/4">
                       <Button variant="ghost" @click="toggleTeamSort('name')">
-                        Name
+                        {{ t("settings.teamsList.columnName") }}
                         <IconArrowUp
                           v-if="
                             teamSortKey === 'name' &&
@@ -184,13 +184,15 @@ const formatCreatedAt = (
                         <IconArrowUpDown v-else />
                       </Button>
                     </TableHead>
-                    <TableHead class="w-1/4">Role</TableHead>
+                    <TableHead class="w-1/4">{{
+                      t("settings.teamsList.columnRole")
+                    }}</TableHead>
                     <TableHead class="w-1/4">
                       <Button
                         variant="ghost"
                         @click="toggleTeamSort('created')"
                       >
-                        Created
+                        {{ t("settings.teamsList.columnCreated") }}
                         <IconArrowUp
                           v-if="
                             teamSortKey === 'created' &&
@@ -255,8 +257,10 @@ const formatCreatedAt = (
                                     ? teamLoading.team.isLoading(
                                         `photo-${membership.teamId}`
                                       )
-                                      ? "Uploading..."
-                                      : "Upload team photo"
+                                      ? t(
+                                          "settings.overview.teamPhoto.uploading"
+                                        )
+                                      : t("settings.teamsList.uploadPhoto")
                                     : getCannotEditTeamReason(membership)
                                 }}
                               </TooltipContent>
@@ -278,7 +282,7 @@ const formatCreatedAt = (
                               <TooltipContent>
                                 {{
                                   canEditTeam(membership)
-                                    ? "Remove team photo"
+                                    ? t("settings.teamsList.removePhoto")
                                     : getCannotEditTeamReason(membership)
                                 }}
                               </TooltipContent>
@@ -323,12 +327,12 @@ const formatCreatedAt = (
                             />
                             <template v-else>
                               <IconSwitchHorizontal />
-                              Switch
+                              {{ t("actions.switch") }}
                             </template>
                           </Button>
                           <Button v-else variant="outline" disabled>
                             <IconCheck />
-                            Current
+                            {{ t("settings.teamsList.current") }}
                           </Button>
                         </ButtonGroup>
                         <ButtonGroup>
@@ -354,7 +358,7 @@ const formatCreatedAt = (
                                             "
                                           >
                                             <IconLogOut />
-                                            Exit
+                                            {{ t("settings.members.exit") }}
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -380,7 +384,7 @@ const formatCreatedAt = (
                                             "
                                           >
                                             <IconPencil />
-                                            Edit
+                                            {{ t("actions.edit") }}
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -406,7 +410,7 @@ const formatCreatedAt = (
                                             "
                                           >
                                             <IconTrash />
-                                            Delete
+                                            {{ t("actions.delete") }}
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -420,7 +424,9 @@ const formatCreatedAt = (
                                     </Tooltip>
                                   </DropdownMenuContent>
                                 </TooltipTrigger>
-                                <TooltipContent>Actions</TooltipContent>
+                                <TooltipContent>{{
+                                  t("settings.teamsList.actionsTooltip")
+                                }}</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </DropdownMenu>
@@ -433,7 +439,7 @@ const formatCreatedAt = (
                       colspan="4"
                       class="text-muted-foreground h-24 text-center"
                     >
-                      No teams found.
+                      {{ t("settings.teamsList.noTeams") }}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -449,17 +455,21 @@ const formatCreatedAt = (
   <AlertDialog v-model:open="exitTeamDialog.isOpen.value">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Exit Team</AlertDialogTitle>
+        <AlertDialogTitle>{{
+          t("settings.teamsList.exitTitle")
+        }}</AlertDialogTitle>
         <AlertDialogDescription>
-          Are you sure you want to leave
-          <span class="text-foreground font-medium">{{
-            exitTeamDialog.item.value?.name
-          }}</span
-          >? You will lose access to all team resources.
+          <i18n-t keypath="settings.teamsList.exitConfirm" tag="span">
+            <template #name>
+              <span class="text-foreground font-medium">{{
+                exitTeamDialog.item.value?.name
+              }}</span>
+            </template>
+          </i18n-t>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
           class="text-current"
@@ -475,7 +485,7 @@ const formatCreatedAt = (
               teamLoading.team.isLoading(`exit-${exitTeamDialog.item.value.id}`)
             "
           />
-          Exit Team
+          {{ t("settings.teamsList.exitTitle") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -485,18 +495,21 @@ const formatCreatedAt = (
   <AlertDialog v-model:open="deleteTeamDialog.isOpen.value">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete Team</AlertDialogTitle>
+        <AlertDialogTitle>{{
+          t("settings.teamsList.deleteTitle")
+        }}</AlertDialogTitle>
         <AlertDialogDescription>
-          Are you sure you want to delete
-          <span class="text-foreground font-medium">{{
-            deleteTeamDialog.item.value?.name
-          }}</span
-          >? This action cannot be undone and will permanently delete the team
-          and all its workspaces.
+          <i18n-t keypath="settings.teamsList.deleteConfirm" tag="span">
+            <template #name>
+              <span class="text-foreground font-medium">{{
+                deleteTeamDialog.item.value?.name
+              }}</span>
+            </template>
+          </i18n-t>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
           class="text-current"
@@ -516,7 +529,7 @@ const formatCreatedAt = (
               )
             "
           />
-          Delete Team
+          {{ t("settings.teamsList.deleteTitle") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

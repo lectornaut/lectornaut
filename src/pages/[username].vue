@@ -404,7 +404,7 @@ useHead(() => ({
                       <Tooltip v-if="hiddenHeaderAvatarCount > 0">
                         <TooltipTrigger as-child>
                           <Avatar class="ring-background size-4 ring-2">
-                            <AvatarFallback class="text-[10px]">
+                            <AvatarFallback class="size-4">
                               +{{ hiddenHeaderAvatarCount }}
                             </AvatarFallback>
                           </Avatar>

@@ -18,6 +18,8 @@ import {
 } from "@/data/icons"
 import type { INotificationStatus } from "@/types/notification"
 
+const { t } = useI18n()
+
 type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
   getScrollElement: () => HTMLElement | undefined
 }>
@@ -105,12 +107,14 @@ useInfiniteScroll(
               <IconPin v-if="!isDocked" />
               <IconPinOff v-else />
             </Button>
-            <span class="font-semibold">Notifications</span>
+            <span class="font-semibold">{{
+              t("components.notifications.title")
+            }}</span>
           </div>
           <TabsList>
             <TabsTrigger value="inbox">
               <IconInbox />
-              Inbox
+              {{ t("components.notifications.inbox") }}
               <Badge
                 v-if="inboxUnreadCount > 0"
                 variant="secondary"
@@ -121,7 +125,7 @@ useInfiniteScroll(
             </TabsTrigger>
             <TabsTrigger value="saved">
               <IconBookmark />
-              Saved
+              {{ t("components.notifications.saved") }}
               <Badge
                 v-if="savedUnreadCount > 0"
                 variant="secondary"
@@ -132,7 +136,7 @@ useInfiniteScroll(
             </TabsTrigger>
             <TabsTrigger value="done">
               <IconCheck />
-              Done
+              {{ t("components.notifications.done") }}
               <Badge
                 v-if="doneUnreadCount > 0"
                 variant="secondary"
@@ -155,9 +159,11 @@ useInfiniteScroll(
               <EmptyMedia variant="icon">
                 <IconBell />
               </EmptyMedia>
-              <EmptyTitle> No notifications </EmptyTitle>
+              <EmptyTitle>
+                {{ t("components.notifications.emptyTitle") }}
+              </EmptyTitle>
               <EmptyDescription>
-                You have no notifications at this time.
+                {{ t("components.notifications.emptyDescription") }}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -197,21 +203,21 @@ useInfiniteScroll(
                     <DropdownMenuItem as-child>
                       <DropdownMenuSubTrigger>
                         <IconSquareMousePointer />
-                        Move all to
+                        {{ t("components.notifications.moveAllTo") }}
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
                     <DropdownMenuSubContent class="w-50">
                       <DropdownMenuItem @click="markAllInbox(activeTab)">
                         <IconInbox />
-                        Inbox
+                        {{ t("components.notifications.inbox") }}
                       </DropdownMenuItem>
                       <DropdownMenuItem @click="markAllSaved(activeTab)">
                         <IconBookmark />
-                        Saved
+                        {{ t("components.notifications.saved") }}
                       </DropdownMenuItem>
                       <DropdownMenuItem @click="markAllDone(activeTab)">
                         <IconCheck />
-                        Done
+                        {{ t("components.notifications.done") }}
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
@@ -219,24 +225,24 @@ useInfiniteScroll(
                     <DropdownMenuItem as-child>
                       <DropdownMenuSubTrigger>
                         <IconSquareDashedMousePointer />
-                        Mark all as
+                        {{ t("components.notifications.markAllAs") }}
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
                     <DropdownMenuSubContent class="w-50">
                       <DropdownMenuItem @click="markAllRead(activeTab)">
                         <IconEye />
-                        Read
+                        {{ t("components.notifications.read") }}
                       </DropdownMenuItem>
                       <DropdownMenuItem @click="markAllUnread(activeTab)">
                         <IconEyeOff />
-                        Unread
+                        {{ t("components.notifications.unread") }}
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem @click="deleteAllNotifications(activeTab)">
                     <IconTrash />
-                    Delete all
+                    {{ t("components.notifications.deleteAll") }}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -253,7 +259,7 @@ useInfiniteScroll(
               @click="markAllRead(activeTab)"
             >
               <IconCheckCheck />
-              Mark all read
+              {{ t("components.notifications.markAllRead") }}
             </Button>
           </div>
         </div>
@@ -266,7 +272,7 @@ useInfiniteScroll(
         <div
           class="size-full bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
         >
-          Sample Content
+          {{ t("components.notifications.sampleContent") }}
         </div>
       </div>
     </OverlayScrollbarsWrapper>

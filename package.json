@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.1.1",
+  "packageManager": "pnpm@10.33.4",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
@@ -218,9 +218,7 @@
   },
   "pnpm": {
     "overrides": {
-      "vite-plugin-pwa": {
-        "vite": "$vite"
-      },
+      "vite-plugin-pwa>vite": "$vite",
       "sharp": "^0.34.5"
     }
   }

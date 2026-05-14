@@ -25,15 +25,18 @@ import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import {
   archiveBotSession,
   deleteBotSession,
+  findBotSessionByPinnedNode,
   loadBotSession,
   renameBotSession,
   respondToBotInterrupt,
   sendBotMessage,
   updateBotSessionVisibility,
   type BotChatMode,
+  type BotChatNodeRef,
 } from "@/composables/useFunctions"
 import { useAuthStore } from "@/stores/authStore"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
+import type { WorkspaceNodeScope } from "@/types/nodes"
 import {
   createBotSessionsQuery,
   createSharedBotSessionsQuery,
@@ -48,7 +51,10 @@ export type BotChatRole = "user" | "agent"
 
 // Re-export so consumers (composer, side panel) only need to import
 // from `useBotChat`, not also from `useFunctions`.
-export type { BotChatMode }
+export type { BotChatMode, BotChatNodeRef }
+
+/** Cap mirrors `CONTEXT_NODE_MAX` on the server. */
+export const BOT_CHAT_MAX_ATTACHED_NODES = 10
 
 /**
  * Static catalog of action-context modes the user can switch between.
@@ -206,6 +212,52 @@ export interface BotChatContext {
   renameSession: (id: string, title: string) => Promise<void>
   archiveSession: (id: string, archived: boolean) => Promise<void>
   removeSession: (id: string) => Promise<void>
+  // ── Attached workspace nodes (context) ──────────────────────────────
+  /**
+   * Workspace nodes the user has attached to the current session. Sent
+   * with every `sendMessage` so the model sees them as ground-truth
+   * context for each turn. Persists for the lifetime of the session;
+   * cleared by `startNewSession`.
+   */
+  attachedNodes: Ref<BotChatNodeRef[]>
+  /** Capacity gate — disables the "+" button in the UI past the cap. */
+  canAttachMoreNodes: Ref<boolean>
+  /**
+   * Attach a workspace node to this chat session. Idempotent — re-
+   * attaching the same `(scope, nodeId)` pair is a no-op. Rejected
+   * silently when the session is already at `BOT_CHAT_MAX_ATTACHED_NODES`.
+   */
+  attachNode: (node: BotChatNodeRef) => void
+  /** Detach a previously-attached node. Idempotent on missing refs. */
+  detachNode: (node: BotChatNodeRef) => void
+  /** Drop every attached node. */
+  clearAttachedNodes: () => void
+  // ── Per-node sessions (NodeInspectorSidebar Bot tab) ────────────────
+  /**
+   * Bind this chat to a workspace node:
+   *   - Look up an existing session pinned to (scope, nodeId) for the
+   *     current user; if found, load it.
+   *   - Otherwise start a fresh session with `pinnedNode` set, so the
+   *     next `sendMessage` creates the pin server-side.
+   * Attached nodes are reset to `[node]` either way, so the node
+   * inspector's chat always grounds the model in the inspected file.
+   */
+  selectOrCreateNodeSession: (node: BotChatNodeRef) => Promise<void>
+  /**
+   * Force-start a brand-new pinned chat for a node, even when one
+   * already exists. Drops local state (messages, sessionId), attaches
+   * the node, and stages it as `pendingPinnedNode` so the next
+   * `sendMessage` server-creates the new pin. Multiple pinned chats
+   * per (user, node) are allowed — the inspector's history list
+   * surfaces older ones.
+   */
+  startNewPinnedNodeSession: (node: BotChatNodeRef) => void
+  /**
+   * `pinnedNode` is forwarded on the *next* `sendMessage` only when the
+   * session is brand new — exposed here so the UI can reflect "this
+   * chat is bound to that node" before the first send lands.
+   */
+  pendingPinnedNode: Ref<BotChatNodeRef | null>
 }
 
 export const BotChatContextKey: InjectionKey<BotChatContext> =
@@ -229,6 +281,56 @@ export function useBotChat(): BotChatContext {
   const isLoadingSession = ref(false)
   const isUpdatingVisibility = ref(false)
   const isMutatingSession = ref(false)
+
+  // ── Attached node context ─────────────────────────────────────────────
+  //
+  // The user picks nodes from the composer's node-picker sheet (or the
+  // inspector Bot tab auto-attaches the current node). These refs flow
+  // along on every `sendMessage` and `respondToInterrupt` so the server
+  // can re-fetch + inject them into the per-turn system prompt.
+  //
+  // `pendingPinnedNode` is a one-shot binding sent only on the *next*
+  // send while we're still in a no-session state — once the server
+  // returns a sessionId, the pin is persisted server-side and this ref
+  // becomes irrelevant for subsequent sends.
+
+  const attachedNodes = ref<BotChatNodeRef[]>([])
+  const pendingPinnedNode = ref<BotChatNodeRef | null>(null)
+
+  const canAttachMoreNodes = computed(
+    () => attachedNodes.value.length < BOT_CHAT_MAX_ATTACHED_NODES
+  )
+
+  const nodeRefMatches = (
+    a: BotChatNodeRef,
+    b: { scope: WorkspaceNodeScope; nodeId: string }
+  ): boolean => a.scope === b.scope && a.nodeId === b.nodeId
+
+  const attachNode = (node: BotChatNodeRef) => {
+    if (!node?.nodeId) return
+    if (
+      attachedNodes.value.some((existing) => nodeRefMatches(existing, node))
+    ) {
+      return
+    }
+    if (attachedNodes.value.length >= BOT_CHAT_MAX_ATTACHED_NODES) {
+      toast.error(
+        `You can attach up to ${BOT_CHAT_MAX_ATTACHED_NODES} items per chat.`
+      )
+      return
+    }
+    attachedNodes.value.push({ scope: node.scope, nodeId: node.nodeId })
+  }
+
+  const detachNode = (node: BotChatNodeRef) => {
+    attachedNodes.value = attachedNodes.value.filter(
+      (existing) => !nodeRefMatches(existing, node)
+    )
+  }
+
+  const clearAttachedNodes = () => {
+    attachedNodes.value = []
+  }
 
   // Action-context mode for the next send. Plain ref (not persisted on
   // the session doc) — the user can flip modes mid-conversation and the
@@ -421,6 +523,111 @@ export function useBotChat(): BotChatContext {
     abortInflightSend()
     sessionId.value = null
     messages.value = []
+    // Attached context is a per-session concept: a fresh chat shouldn't
+    // inherit the previous one's attached files. The composer's chip
+    // list updates automatically through the ref. `pendingPinnedNode`
+    // is also cleared so a stale node-tab binding can't leak into an
+    // unrelated new chat.
+    attachedNodes.value = []
+    pendingPinnedNode.value = null
+  }
+
+  /**
+   * Bind this composable to a node-pinned chat. If a session already
+   * exists for the (current user, node) pair, load it. Otherwise reset
+   * to a fresh-session state with the node staged as the pending pin so
+   * the first send creates the pin server-side. Either way, the node
+   * is also added to `attachedNodes` so the model sees it as context
+   * for every turn in this chat.
+   */
+  const selectOrCreateNodeSession = async (
+    node: BotChatNodeRef
+  ): Promise<void> => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    if (!teamId || !workspaceId) return
+    if (!node?.nodeId) return
+
+    abortInflightSend()
+
+    // Synchronous-first state: attach the inspected node immediately,
+    // and reset the local message list / pending pin so the inspector
+    // never shows stale chips or messages from a previously-selected
+    // node while the find/load below is in flight. If the find call
+    // resolves to an existing session we'll overwrite `sessionId` +
+    // `messages`; if it fails (offline, backend not deployed, etc.)
+    // the chip + empty-chat state still reflects the user's selection
+    // and a fresh send will still create the pin via `pendingPinnedNode`.
+    attachedNodes.value = [{ scope: node.scope, nodeId: node.nodeId }]
+    sessionId.value = null
+    messages.value = []
+    pendingPinnedNode.value = { scope: node.scope, nodeId: node.nodeId }
+
+    isLoadingSession.value = true
+    try {
+      const { data } = await findBotSessionByPinnedNode({
+        teamId,
+        workspaceId,
+        scope: node.scope,
+        nodeId: node.nodeId,
+      })
+
+      // Bail out if the user picked a different node while we were
+      // waiting — the later watcher invocation has already set its own
+      // synchronous state, and writing back stale values here would
+      // briefly flash the previous node's chat into view.
+      const stillCurrent =
+        attachedNodes.value.length === 1 &&
+        attachedNodes.value[0]?.scope === node.scope &&
+        attachedNodes.value[0]?.nodeId === node.nodeId
+      if (!stillCurrent) return
+
+      if (data.sessionId) {
+        // Existing pinned chat — load its history. The pin was
+        // persisted server-side at creation time, so we don't need to
+        // forward `pendingPinnedNode` on the next send.
+        const loaded = await loadBotSession({
+          teamId,
+          workspaceId,
+          sessionId: data.sessionId,
+        })
+        // Re-check after the second await for the same reason.
+        const stillCurrentAfterLoad =
+          attachedNodes.value.length === 1 &&
+          attachedNodes.value[0]?.scope === node.scope &&
+          attachedNodes.value[0]?.nodeId === node.nodeId
+        if (!stillCurrentAfterLoad) return
+
+        sessionId.value = loaded.data.sessionId
+        messages.value = loaded.data.messages.map(createMessage)
+        pendingPinnedNode.value = null
+      }
+      // else: no existing session — leave the synchronous state alone
+      // (sessionId null, messages empty, pendingPinnedNode set).
+    } catch (error) {
+      console.error("[useBotChat] selectOrCreateNodeSession failed:", error)
+      toast.error("Failed to open chat for this item.")
+    } finally {
+      isLoadingSession.value = false
+    }
+  }
+
+  /**
+   * Force a fresh pinned chat for the given node. Unlike
+   * `selectOrCreateNodeSession` (which resumes if a pinned session
+   * already exists), this always resets to a new-session state with
+   * the node staged as the pending pin — the next `sendMessage` will
+   * create another pinned-node entry server-side. Used by the
+   * inspector's "new chat" button so each click spawns a new chat
+   * while preserving older ones in history.
+   */
+  const startNewPinnedNodeSession = (node: BotChatNodeRef) => {
+    if (!node?.nodeId) return
+    abortInflightSend()
+    sessionId.value = null
+    messages.value = []
+    attachedNodes.value = [{ scope: node.scope, nodeId: node.nodeId }]
+    pendingPinnedNode.value = { scope: node.scope, nodeId: node.nodeId }
   }
 
   // Page unmount / composable teardown — kill any active stream so we
@@ -579,6 +786,21 @@ export function useBotChat(): BotChatContext {
     const controller = new AbortController()
     inflightController = controller
 
+    // Snapshot context refs at send time so a user toggling chips
+    // mid-stream doesn't change what the model sees this turn.
+    const contextNodes: BotChatNodeRef[] = attachedNodes.value.map((node) => ({
+      scope: node.scope,
+      nodeId: node.nodeId,
+    }))
+    // Only forward `pinnedNode` when we're creating a new session AND
+    // the caller (typically NodeInspectorSidebar's Bot tab) set a
+    // pending pin. The server ignores it on resumed sessions, but we
+    // clear it locally either way to keep the invariant clean.
+    const pinnedNode =
+      !sessionId.value && pendingPinnedNode.value
+        ? { ...pendingPinnedNode.value }
+        : undefined
+
     try {
       const result = await sendBotMessage.stream(
         {
@@ -587,6 +809,8 @@ export function useBotChat(): BotChatContext {
           sessionId: sessionId.value,
           message: trimmed,
           mode: mode.value,
+          contextNodes,
+          ...(pinnedNode ? { pinnedNode } : {}),
         },
         { signal: controller.signal }
       )
@@ -610,6 +834,9 @@ export function useBotChat(): BotChatContext {
       // The next Firestore snapshot will reconcile any drift wholesale.
       const agent = messages.value[agentIndex]
       if (agent?.role === "agent") agent.content = final.reply
+      // Pin persisted server-side as part of session creation; clear the
+      // local pending state so a subsequent send doesn't try to re-pin.
+      if (pinnedNode) pendingPinnedNode.value = null
     } catch (error) {
       // A user-driven cancel (session switch / unmount) lands here as an
       // AbortError — silent rollback, no toast.
@@ -684,6 +911,11 @@ export function useBotChat(): BotChatContext {
     const controller = new AbortController()
     inflightController = controller
 
+    const contextNodes: BotChatNodeRef[] = attachedNodes.value.map((node) => ({
+      scope: node.scope,
+      nodeId: node.nodeId,
+    }))
+
     try {
       const result = await respondToBotInterrupt.stream(
         {
@@ -694,6 +926,7 @@ export function useBotChat(): BotChatContext {
           name,
           response: answer,
           mode: mode.value,
+          contextNodes,
         },
         { signal: controller.signal }
       )
@@ -754,9 +987,33 @@ export function useBotChat(): BotChatContext {
       })
       sessionId.value = data.sessionId
       messages.value = data.messages.map(createMessage)
+      // Rehydrate chips from the session doc's `contextNodes` — the
+      // unified field, re-written on every send so it always reflects
+      // the latest attach/detach state. If the local listener hasn't
+      // observed the doc yet (cold-load race), `matched` is undefined
+      // and we leave the chip strip empty; the user can re-attach
+      // manually or the next snapshot will sync.
+      const matched = allMySessions.value.find((s) => s.id === data.sessionId)
+      attachedNodes.value = matched?.contextNodes
+        ? matched.contextNodes.map((node) => ({
+            scope: node.scope,
+            nodeId: node.nodeId,
+          }))
+        : []
+      pendingPinnedNode.value = null
     } catch (error) {
       console.error("[useBotChat] loadBotSession failed:", error)
-      toast.error("Failed to open chat. Please try again.")
+      // If the session is gone (deleted from another tab, the user
+      // just deleted it, or a stale link), don't leave the UI stuck
+      // on a chat we can't open. Drop to a fresh-session state so the
+      // page-level `state → URL` watcher pushes off /bot/{id}.
+      const code = (error as { code?: string })?.code
+      if (code === "functions/not-found" || code === "not-found") {
+        startNewSession()
+        toast.error("This chat is no longer available.")
+      } else {
+        toast.error("Failed to open chat. Please try again.")
+      }
     } finally {
       isLoadingSession.value = false
     }
@@ -818,12 +1075,22 @@ export function useBotChat(): BotChatContext {
     if (!teamId || !workspaceId) return
     if (isMutatingSession.value) return
 
+    // Optimistic local reset BEFORE the await: when we're deleting the
+    // active session, we drop sessionId/messages immediately so the
+    // page's `state → URL` watcher pushes off /bot/{id} right away.
+    // Doing this after the await leaves a race window — the Firestore
+    // listener can prune the doc from `mySessions`, which flips
+    // `activeSession` to null and (via its own watcher) calls
+    // startNewSession asynchronously. During that window the URL still
+    // points at the doomed id, and the doc's onSnapshot can surface a
+    // permission-denied error (rules need `resource.data` which no
+    // longer exists), leaving the UI showing a stale "Failed to open
+    // chat" toast for the session we just deleted.
+    if (sessionId.value === id) startNewSession()
+
     isMutatingSession.value = true
     try {
       await deleteBotSession({ teamId, workspaceId, sessionId: id })
-      // If the deleted session was the active one, drop local state so
-      // the empty composer view takes over.
-      if (sessionId.value === id) startNewSession()
       toast.success("Chat deleted.")
     } catch (error) {
       console.error("[useBotChat] deleteBotSession failed:", error)
@@ -906,5 +1173,13 @@ export function useBotChat(): BotChatContext {
     renameSession,
     archiveSession,
     removeSession,
+    attachedNodes,
+    canAttachMoreNodes,
+    attachNode,
+    detachNode,
+    clearAttachedNodes,
+    selectOrCreateNodeSession,
+    startNewPinnedNodeSession,
+    pendingPinnedNode,
   }
 }

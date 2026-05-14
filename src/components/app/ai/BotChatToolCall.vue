@@ -45,6 +45,7 @@ const props = defineProps<{
 }>()
 
 const botChat = inject(BotChatContextKey)
+const { t } = useI18n()
 
 const isInterrupt = computed(
   () => props.tool.isInterrupt === true && props.tool.output === undefined
@@ -171,7 +172,6 @@ const outputText = computed(() => formatJson(props.tool.output))
     >
       <Component
         :is="isInterrupt ? IconMessageCircle : IconWrench"
-        class="size-3.5 shrink-0"
         :class="isInterrupt ? 'text-primary' : 'text-muted-foreground'"
       />
       <span class="text-foreground truncate font-medium">{{ tool.name }}</span>
@@ -179,15 +179,17 @@ const outputText = computed(() => formatJson(props.tool.output))
         class="text-muted-foreground ml-auto flex shrink-0 items-center gap-1"
       >
         <template v-if="isInterrupt">
-          <span class="text-primary font-medium">Needs your input</span>
+          <span class="text-primary font-medium">
+            {{ t("ai.toolCall.needsInput") }}
+          </span>
         </template>
         <template v-else-if="isRunning">
-          <IconLoader2 class="size-3 animate-spin" />
-          <span>Running…</span>
+          <IconLoader2 class="animate-spin" />
+          <span>{{ t("ai.toolCall.running") }}</span>
         </template>
         <template v-else>
-          <IconCheck class="size-3" />
-          <span>Done</span>
+          <IconCheck />
+          <span>{{ t("ai.toolCall.done") }}</span>
         </template>
       </span>
       <IconChevronDown
@@ -199,7 +201,7 @@ const outputText = computed(() => formatJson(props.tool.output))
       <!-- Interrupt mode: render the question + choices form. -->
       <div
         v-if="isInterrupt && askQuestionInput"
-        class="border-primary/30 bg-primary/5 mt-1 space-y-2 rounded-md border p-3 text-xs"
+        class="border-primary/30 bg-primary/5 space-y-2 rounded-md border p-3 text-xs"
       >
         <p class="text-foreground text-sm font-medium">
           {{ askQuestionInput.question }}
@@ -225,7 +227,7 @@ const outputText = computed(() => formatJson(props.tool.output))
         >
           <Input
             v-model="customAnswer"
-            placeholder="Or type your own answer…"
+            :placeholder="t('ai.toolCall.customAnswer')"
             class="h-7 text-xs"
             :disabled="isSubmitting"
             @keydown="onCustomKeydown"
@@ -238,7 +240,7 @@ const outputText = computed(() => formatJson(props.tool.output))
             @click="submitCustom"
           >
             <Spinner v-if="submittingChoice === customAnswer.trim()" />
-            Send
+            {{ t("ai.toolCall.send") }}
           </Button>
         </div>
       </div>
@@ -246,40 +248,39 @@ const outputText = computed(() => formatJson(props.tool.output))
       <!-- the input schema. Rare; show a polite escape hatch. -->
       <div
         v-else-if="isInterrupt"
-        class="border-border bg-background/40 mt-1 rounded-md border p-2 text-xs"
+        class="border-border bg-background/40 rounded-md border p-2 text-xs"
       >
         <p class="text-muted-foreground italic">
-          The assistant tried to ask a question but didn't include valid
-          choices. Send another message to continue.
+          {{ t("ai.toolCall.malformedInterrupt") }}
         </p>
       </div>
       <!-- Normal tool card (running or done). -->
       <div
         v-else
-        class="border-border bg-background/40 mt-1 space-y-2 rounded-md border p-2 text-xs"
+        class="border-border bg-background/40 space-y-2 rounded-md border p-2 text-xs"
       >
         <div v-if="inputText">
           <p
-            class="text-muted-foreground mb-1 text-[10px] font-medium tracking-wide uppercase"
+            class="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase"
           >
-            Input
+            {{ t("ai.toolCall.input") }}
           </p>
           <pre
-            class="bg-muted text-foreground overflow-x-auto rounded px-2 py-1.5 font-mono text-[11px] leading-snug whitespace-pre-wrap"
+            class="bg-muted text-foreground overflow-x-auto rounded px-2 py-1.5 font-mono text-xs leading-snug whitespace-pre-wrap"
           ><code>{{ inputText }}</code></pre>
         </div>
         <div>
           <p
-            class="text-muted-foreground mb-1 text-[10px] font-medium tracking-wide uppercase"
+            class="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase"
           >
-            Output
+            {{ t("ai.toolCall.output") }}
           </p>
           <pre
             v-if="!isRunning"
-            class="bg-muted text-foreground overflow-x-auto rounded px-2 py-1.5 font-mono text-[11px] leading-snug whitespace-pre-wrap"
+            class="bg-muted text-foreground overflow-x-auto rounded px-2 py-1.5 font-mono text-xs leading-snug whitespace-pre-wrap"
           ><code>{{ outputText }}</code></pre>
           <p v-else class="text-muted-foreground italic">
-            Waiting for tool to return…
+            {{ t("ai.toolCall.waitingForReturn") }}
           </p>
         </div>
       </div>

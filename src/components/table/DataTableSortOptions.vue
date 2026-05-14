@@ -2,6 +2,8 @@
 import { IconArrowDown, IconArrowUp, IconArrowUpDown } from "@/data/icons"
 import type { Table } from "@tanstack/vue-table"
 
+const { t } = useI18n()
+
 const props = defineProps<{
   table: Table<TData>
 }>()
@@ -21,11 +23,13 @@ const columns = computed(() =>
     <DropdownMenuTrigger as-child>
       <Button variant="outline" class="data-[state=open]:bg-accent">
         <IconArrowUpDown />
-        Sort
+        {{ t("components.dataTable.sort") }}
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent class="w-50">
-      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+      <DropdownMenuLabel>{{
+        t("components.dataTable.sortByLabel")
+      }}</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuSub v-for="column in columns" :key="column.id">
@@ -35,16 +39,18 @@ const columns = computed(() =>
             </DropdownMenuSubTrigger>
           </DropdownMenuItem>
           <DropdownMenuSubContent class="w-50">
-            <DropdownMenuLabel>Order</DropdownMenuLabel>
+            <DropdownMenuLabel>{{
+              t("components.dataTable.sortOrder")
+            }}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem @click="column.toggleSorting(false)">
                 <IconArrowUp />
-                Ascending
+                {{ t("components.dataTable.ascending") }}
               </DropdownMenuItem>
               <DropdownMenuItem @click="column.toggleSorting(true)">
                 <IconArrowDown />
-                Descending
+                {{ t("components.dataTable.descending") }}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuSubContent>
@@ -53,7 +59,7 @@ const columns = computed(() =>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuItem @click="props.table.resetSorting()">
-          None
+          {{ t("components.dataTable.sortReset") }}
         </DropdownMenuItem>
       </DropdownMenuGroup>
     </DropdownMenuContent>

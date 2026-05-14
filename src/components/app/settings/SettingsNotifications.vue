@@ -188,11 +188,6 @@ const toBoolean = (value: unknown): boolean => value === true
                     !notificationSettings.channels.email ||
                     isSendingTestNotification !== null
                   "
-                  :aria-label="
-                    t('settings.notifications.channels.test', {
-                      channel: t('settings.notifications.channels.email.label'),
-                    })
-                  "
                   @click="sendTestNotification('email')"
                 >
                   <Spinner
@@ -242,11 +237,6 @@ const toBoolean = (value: unknown): boolean => value === true
                     !notificationSettings.channels.inApp ||
                     isSendingTestNotification !== null
                   "
-                  :aria-label="
-                    t('settings.notifications.channels.test', {
-                      channel: t('settings.notifications.channels.inApp.label'),
-                    })
-                  "
                   @click="sendTestNotification('inApp')"
                 >
                   <Spinner
@@ -295,13 +285,6 @@ const toBoolean = (value: unknown): boolean => value === true
                     isUpdatingNotifications ||
                     !notificationSettings.channels.native ||
                     isSendingTestNotification !== null
-                  "
-                  :aria-label="
-                    t('settings.notifications.channels.test', {
-                      channel: t(
-                        'settings.notifications.channels.native.label'
-                      ),
-                    })
                   "
                   @click="sendTestNotification('native')"
                 >

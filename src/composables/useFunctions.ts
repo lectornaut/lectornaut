@@ -500,6 +500,16 @@ export interface GetPublicTeamMembersResponse {
  */
 export type BotChatMode = "auto" | "agent" | "manual"
 
+/**
+ * Pointer to a workspace node attached to a chat turn. Mirrors the
+ * `NodeRefSchema` on the server. Both `contextNodes` (per-turn ground
+ * truth) and `pinnedNode` (one-shot session bind) use this shape.
+ */
+export interface BotChatNodeRef {
+  scope: WorkspaceNodeScope
+  nodeId: string
+}
+
 export interface SendBotMessageRequest {
   teamId: string
   workspaceId: string
@@ -511,6 +521,20 @@ export interface SendBotMessageRequest {
    * omitted, so older clients that predate the mode selector still work.
    */
   mode?: BotChatMode
+  /**
+   * Workspace nodes the user attached for this turn. The server fetches
+   * each node's content + attachment list and injects them into the
+   * system prompt as ground-truth context. Capped at 10 nodes server-
+   * side; over the cap the call is rejected.
+   */
+  contextNodes?: BotChatNodeRef[]
+  /**
+   * When provided AND `sessionId` is null/omitted, the newly-created
+   * session is pinned to this node so a future
+   * `findBotSessionByPinnedNode` call resumes the same chat. Used by
+   * the node inspector's Bot tab. Ignored on resumed sessions.
+   */
+  pinnedNode?: BotChatNodeRef
 }
 
 export interface SendBotMessageResponse {
@@ -599,6 +623,12 @@ export interface RespondToBotInterruptRequest {
   /** Must conform to the interrupt tool's outputSchema. */
   response: unknown
   mode?: BotChatMode
+  /**
+   * Forwarded to the resumed turn's system prompt so the model still
+   * sees attached files after picking up from an interrupt. Same shape
+   * as `SendBotMessageRequest.contextNodes`.
+   */
+  contextNodes?: BotChatNodeRef[]
 }
 
 export interface RespondToBotInterruptResponse {
@@ -615,6 +645,18 @@ export interface LoadBotSessionRequest {
 export interface LoadBotSessionResponse {
   sessionId: string
   messages: BotChatHistoryMessage[]
+}
+
+export interface FindBotSessionByPinnedNodeRequest {
+  teamId: string
+  workspaceId: string
+  scope: WorkspaceNodeScope
+  nodeId: string
+}
+
+export interface FindBotSessionByPinnedNodeResponse {
+  /** `null` when no session is pinned to this node for the caller yet. */
+  sessionId: string | null
 }
 
 export interface UpdateBotSessionVisibilityRequest {
@@ -1287,6 +1329,18 @@ export const loadBotSession = createTypedCallable<
 >("loadBotSession")
 
 /**
+ * Resolve the caller's bot chat that's pinned to a specific workspace
+ * node, if any. Returns `{ sessionId: null }` when no session has been
+ * created for the node yet — the client treats that as a signal to start
+ * a fresh session whose first send will carry `pinnedNode` and create
+ * the pin server-side.
+ */
+export const findBotSessionByPinnedNode = createTypedCallable<
+  FindBotSessionByPinnedNodeRequest,
+  FindBotSessionByPinnedNodeResponse
+>("findBotSessionByPinnedNode")
+
+/**
  * Change a bot chat session's visibility (private ↔ shared). Only the
  * session owner or a team admin may invoke; the server enforces this.
  * The "public" visibility is reserved for a future iteration and will
@@ -1454,6 +1508,7 @@ export function useFunctions() {
     // Bot chat operations
     sendBotMessage,
     loadBotSession,
+    findBotSessionByPinnedNode,
     updateBotSessionVisibility,
     renameBotSession,
     archiveBotSession,

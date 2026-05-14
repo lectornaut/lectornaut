@@ -1,6 +1,8 @@
 <script lang="ts" setup>
+import { useFileTreeSelection } from "@/composables/useFileTreeSelection"
 import {
   IconChevronRight,
+  IconCircleFilled,
   IconFile,
   IconFilePlus,
   IconFolder,
@@ -26,7 +28,6 @@ const props = defineProps<{
   teamId: string
   workspaceId: string
   nodeId: string
-  selectedNodeId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -36,19 +37,24 @@ const emit = defineEmits<{
   (e: "archive", node: WorkspaceNode): void
   (e: "unarchive", node: WorkspaceNode): void
   (e: "delete", node: WorkspaceNode): void
-  (e: "select", node: WorkspaceNode): void
 }>()
 
 const store = useFileTreeStore()
-const hasControlledSelection = computed(
-  () => props.selectedNodeId !== undefined
-)
+const { t } = useI18n()
+
+// `FileTree` provides this context for every descendant. The fallback
+// (null check) lets a `TreeNode` render outside a `FileTree` for unit
+// tests or storybook stories without crashing.
+const selection = useFileTreeSelection()
+const selectionMode = computed(() => selection?.mode.value ?? "none")
 
 const node = computed(() =>
   store.getNode(props.scope, props.teamId, props.workspaceId, props.nodeId)
 )
 
 const isFolder = computed(() => node.value?.type === "folder")
+
+const isSelected = computed(() => selection?.isSelected(props.nodeId) ?? false)
 
 const isExpanded = computed(() =>
   isFolder.value
@@ -92,12 +98,6 @@ const pagination = computed(() =>
   )
 )
 
-const selectedId = computed(() =>
-  hasControlledSelection.value
-    ? (props.selectedNodeId ?? null)
-    : store.getSelectedNodeId(props.scope, props.teamId, props.workspaceId)
-)
-
 const isDragOver = ref(false)
 
 const isValidDropEvent = (event: DragEvent) => {
@@ -124,18 +124,9 @@ const handleToggle = (open: boolean) => {
   }
 }
 
-const handleSelect = () => {
+const handleRowClick = () => {
   if (!node.value) return
-  if (hasControlledSelection.value) {
-    emit("select", node.value)
-    return
-  }
-  store.setSelectedNode(
-    props.scope,
-    props.teamId,
-    props.workspaceId,
-    node.value.id
-  )
+  selection?.onRowClick(node.value)
 }
 
 const handleDragStart = (event: DragEvent) => {
@@ -199,9 +190,9 @@ const handleDrop = async (event: DragEvent) => {
       draggedId,
       node.value.id
     )
-    showSuccessToast("Moved")
+    showSuccessToast(t("fileTree.toast.moved"))
   } catch (error) {
-    showErrorToast("Failed to move", (error as Error).message)
+    showErrorToast(t("fileTree.toast.moveFailed"), (error as Error).message)
   } finally {
     isDragOver.value = false
   }
@@ -230,40 +221,86 @@ const showEmptyState = computed(
     <template v-if="isFolder">
       <Collapsible :open="isExpanded" @update:open="handleToggle">
         <SidebarMenuItem>
+          <!--
+            Chevron is a real `<button>` rendered as a sibling of the
+            row. The absolute positioning mirrors the pattern used by
+            `SidebarMenuAction` (top-right) — we just mount it on the
+            left. The `@click.stop` keeps the click from bubbling out
+            of the chevron region in case something further up the tree
+            tries to catch it. The Collapsible primitive listens for
+            clicks on its trigger directly, so propagation stop is
+            safe.
+          -->
           <CollapsibleTrigger as-child>
-            <SidebarMenuButton
-              :is-active="selectedId === node.id"
-              :draggable="!node.isArchived"
-              :class="{
-                'bg-sidebar-accent/50 text-sidebar-accent-foreground ring-sidebar-ring ring-2':
-                  isDragOver,
-              }"
-              @click="handleSelect"
-              @dragstart="handleDragStart"
-              @dragenter="handleDragEnter"
-              @dragover="handleDragOver"
-              @dragleave="handleDragLeave"
-              @drop="handleDrop"
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              class="absolute top-1 left-1"
+              @click.stop
             >
               <Spinner v-if="isLoading" />
-              <template v-else>
-                <IconChevronRight
-                  class="transition"
-                  :class="{ 'rotate-90': isExpanded }"
-                />
-                <IconFolderOpen v-if="isExpanded" />
-                <IconFolder v-else />
-              </template>
-              <span
-                class="truncate"
-                :class="{
-                  'text-muted-foreground line-through': node.isArchived,
-                }"
-              >
-                {{ node.name }}
-              </span>
-            </SidebarMenuButton>
+              <IconChevronRight
+                v-else
+                class="transition-transform"
+                :class="{ 'rotate-90': isExpanded }"
+              />
+            </Button>
           </CollapsibleTrigger>
+          <SidebarMenuButton
+            class="pl-8"
+            :is-active="isSelected"
+            :draggable="!node.isArchived"
+            :class="{
+              'bg-sidebar-accent/50 text-sidebar-accent-foreground ring-sidebar-ring ring-2':
+                isDragOver,
+            }"
+            @click="handleRowClick"
+            @dragstart="handleDragStart"
+            @dragenter="handleDragEnter"
+            @dragover="handleDragOver"
+            @dragleave="handleDragLeave"
+            @drop="handleDrop"
+          >
+            <!--
+              Selection indicator. Renders only for "single" / "multiple"
+              modes — "none" gets nothing because the row highlight alone
+              carries the selection signal there. We use the real Checkbox
+              primitive (for proper a11y semantics) but make it
+              non-interactive — the row click is the single canonical
+              trigger. This avoids "did the checkbox or the row fire?"
+              double-handling ambiguity.
+            -->
+            <Checkbox
+              v-if="selectionMode === 'multiple'"
+              :model-value="isSelected"
+              tabindex="-1"
+              aria-hidden="true"
+              class="pointer-events-none"
+            />
+            <span
+              v-else-if="selectionMode === 'single'"
+              role="radio"
+              :aria-checked="isSelected"
+              :data-state="isSelected ? 'checked' : 'unchecked'"
+              class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-full border"
+            >
+              <IconCircleFilled
+                v-if="isSelected"
+                class="text-primary-foreground size-2!"
+              />
+            </span>
+
+            <IconFolderOpen v-if="isExpanded" />
+            <IconFolder v-else />
+            <span
+              class="truncate"
+              :class="{
+                'text-muted-foreground line-through': node.isArchived,
+              }"
+            >
+              {{ node.name }}
+            </span>
+          </SidebarMenuButton>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <SidebarMenuAction
@@ -277,11 +314,11 @@ const showEmptyState = computed(
               <template v-if="!node.isArchived">
                 <DropdownMenuItem @click="emit('create-folder', node)">
                   <IconFolderPlus />
-                  New Folder
+                  {{ t("fileTree.newFolder") }}
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="emit('create-file', node)">
                   <IconFilePlus />
-                  New File
+                  {{ t("fileTree.newFile") }}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </template>
@@ -290,27 +327,24 @@ const showEmptyState = computed(
                 @click="emit('rename', node)"
               >
                 <IconPencil />
-                Rename
+                {{ t("actions.rename") }}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 v-if="!node.isArchived"
                 @click="emit('archive', node)"
               >
                 <IconTrash />
-                Archive
+                {{ t("fileTree.archive") }}
               </DropdownMenuItem>
-              <template v-else>
-                <DropdownMenuItem @click="emit('unarchive', node)">
-                  <IconRefreshCcw />
-                  Unarchive
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem @click="emit('delete', node)">
-                  <IconTrash2 />
-                  Delete
-                </DropdownMenuItem>
-              </template>
+              <DropdownMenuItem v-else @click="emit('unarchive', node)">
+                <IconRefreshCcw />
+                {{ t("fileTree.unarchive") }}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem @click="emit('delete', node)">
+                <IconTrash2 />
+                {{ t("actions.delete") }}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>
@@ -323,17 +357,17 @@ const showEmptyState = computed(
               :team-id="props.teamId"
               :workspace-id="props.workspaceId"
               :node-id="childId"
-              :selected-node-id="props.selectedNodeId"
               @create-folder="emit('create-folder', $event)"
               @create-file="emit('create-file', $event)"
               @rename="emit('rename', $event)"
               @archive="emit('archive', $event)"
               @unarchive="emit('unarchive', $event)"
               @delete="emit('delete', $event)"
-              @select="emit('select', $event)"
             />
             <SidebarMenuItem v-if="showEmptyState">
-              <SidebarMenuButton disabled> Empty </SidebarMenuButton>
+              <SidebarMenuButton disabled>
+                {{ t("fileTree.emptyFolder") }}
+              </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem v-if="pagination.hasMore">
               <SidebarMenuButton
@@ -341,8 +375,10 @@ const showEmptyState = computed(
                 :disabled="pagination.loadingMore"
                 @click="loadMore"
               >
-                <span v-if="pagination.loadingMore">Loading...</span>
-                <span v-else>Load more</span>
+                <span v-if="pagination.loadingMore">
+                  {{ t("states.loading") }}
+                </span>
+                <span v-else>{{ t("fileTree.loadMore") }}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenuSub>
@@ -352,12 +388,38 @@ const showEmptyState = computed(
 
     <template v-else>
       <SidebarMenuItem>
+        <!--
+          Files have no chevron — render a width-matched spacer so the
+          file/folder icons of files and folders stay vertically aligned
+          inside the same parent list.
+        -->
         <SidebarMenuButton
-          :is-active="selectedId === node.id"
+          class="pl-8"
+          :is-active="isSelected"
           :draggable="!node.isArchived"
-          @click="handleSelect"
+          @click="handleRowClick"
           @dragstart="handleDragStart"
         >
+          <Checkbox
+            v-if="selectionMode === 'multiple'"
+            :model-value="isSelected"
+            tabindex="-1"
+            aria-hidden="true"
+            class="pointer-events-none"
+          />
+          <span
+            v-else-if="selectionMode === 'single'"
+            role="radio"
+            :aria-checked="isSelected"
+            :data-state="isSelected ? 'checked' : 'unchecked'"
+            class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-full border"
+          >
+            <IconCircleFilled
+              v-if="isSelected"
+              class="text-primary-foreground size-2!"
+            />
+          </span>
+
           <IconFile />
           <span
             class="truncate"
@@ -381,27 +443,24 @@ const showEmptyState = computed(
               @click="emit('rename', node)"
             >
               <IconPencil />
-              Rename
+              {{ t("actions.rename") }}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem
               v-if="!node.isArchived"
               @click="emit('archive', node)"
             >
               <IconTrash />
-              Archive
+              {{ t("fileTree.archive") }}
             </DropdownMenuItem>
-            <template v-else>
-              <DropdownMenuItem @click="emit('unarchive', node)">
-                <IconRefreshCcw />
-                Unarchive
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem @click="emit('delete', node)">
-                <IconTrash2 />
-                Delete
-              </DropdownMenuItem>
-            </template>
+            <DropdownMenuItem v-else @click="emit('unarchive', node)">
+              <IconRefreshCcw />
+              {{ t("fileTree.unarchive") }}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="emit('delete', node)">
+              <IconTrash2 />
+              {{ t("actions.delete") }}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

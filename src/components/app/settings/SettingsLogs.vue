@@ -7,6 +7,7 @@ import type { ILogEntry } from "@/types/logs"
 import type { Column, ColumnDef } from "@tanstack/vue-table"
 import { computed, h, onMounted } from "vue"
 
+const { t } = useI18n()
 const { logs, loading, error, hasMore, canViewLogs, fetchLogs } = useAuditLogs()
 
 const fetchAllLogs = async (reset = true) => {
@@ -24,7 +25,7 @@ const formatTimestamp = (entry: ILogEntry) => {
 }
 
 const formatActor = (entry: ILogEntry) =>
-  entry.actor?.email || entry.actor?.userId || "Unknown"
+  entry.actor?.email || entry.actor?.userId || t("settings.logs.unknownActor")
 
 const formatResource = (entry: ILogEntry) =>
   `${entry.resource.type}: ${entry.resource.id}`
@@ -50,7 +51,7 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
     header: ({ column }) =>
       h(DataTableColumnHeader, {
         column: toUnknownColumn(column),
-        title: "Timestamp",
+        title: t("settings.logs.columnTimestamp"),
       }),
     cell: ({ row }) =>
       h("span", { class: "truncate" }, formatTimestamp(row.original)),
@@ -80,7 +81,7 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
       return true
     },
     meta: {
-      filterTitle: "Date",
+      filterTitle: t("settings.logs.filterDate"),
       filterType: "dateRange",
     },
     enableSorting: true,
@@ -93,13 +94,13 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
     header: ({ column }) =>
       h(DataTableColumnHeader, {
         column: toUnknownColumn(column),
-        title: "Actor",
+        title: t("settings.logs.columnActor"),
       }),
     cell: ({ row }) =>
       h("span", { class: "truncate" }, formatActor(row.original)),
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     meta: {
-      filterTitle: "Actor",
+      filterTitle: t("settings.logs.filterActor"),
       filterOptions: actorOptions.value,
     },
     enableSorting: false,
@@ -111,7 +112,7 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
     header: ({ column }) =>
       h(DataTableColumnHeader, {
         column: toUnknownColumn(column),
-        title: "Action",
+        title: t("settings.logs.columnAction"),
       }),
     cell: ({ row }) =>
       h(Badge, { variant: "outline" }, () => String(row.getValue("action"))),
@@ -125,7 +126,7 @@ const columns = computed<ColumnDef<ILogEntry>[]>(() => [
     header: ({ column }) =>
       h(DataTableColumnHeader, {
         column: toUnknownColumn(column),
-        title: "Resource",
+        title: t("settings.logs.columnResource"),
       }),
     cell: ({ row }) =>
       h("span", { class: "truncate" }, formatResource(row.original)),
@@ -152,9 +153,11 @@ onMounted(() => {
                 <EmptyMedia variant="icon">
                   <IconAlertTriangle />
                 </EmptyMedia>
-                <EmptyTitle>No permission</EmptyTitle>
+                <EmptyTitle>{{
+                  t("settings.logs.noPermissionTitle")
+                }}</EmptyTitle>
                 <EmptyDescription>
-                  You do not have permission to view audit logs.
+                  {{ t("settings.logs.noPermissionDescription") }}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -170,7 +173,7 @@ onMounted(() => {
             </FieldContent>
             <Button variant="secondary" @click="refreshLogs">
               <IconRefreshCw />
-              Refresh
+              {{ t("settings.logs.refresh") }}
             </Button>
           </Field>
           <Field orientation="horizontal">

@@ -12,6 +12,8 @@ import {
   IconMicrosoftIcon,
   IconPencil,
 } from "@/data/icons"
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -19,30 +21,33 @@ import {
     <li class="flex items-center gap-3">
       <IconDisc />
       <p class="leading-loose first-line:leading-none">
-        <span class="font-semibold"> Agents </span>
+        <span class="font-semibold">
+          {{ t("landing.overview.agentsTitle") }}
+        </span>
         <span class="text-muted-foreground">
-          are the future of work. They can automate tasks, make decisions, and
-          collaborate with humans.
+          {{ t("landing.overview.agentsDescription") }}
         </span>
       </p>
     </li>
     <li class="flex items-center gap-3">
       <IconPencil />
       <p class="leading-loose first-line:leading-none">
-        <span class="font-semibold"> Create </span>
+        <span class="font-semibold">
+          {{ t("landing.overview.createTitle") }}
+        </span>
         <span class="text-muted-foreground">
-          tasks, assign them to your Agents, and track their progress. You can
-          focus on what matters most.
+          {{ t("landing.overview.createDescription") }}
         </span>
       </p>
     </li>
     <li class="flex items-center gap-3">
       <IconMessageCircleMore />
       <p class="leading-loose first-line:leading-none">
-        <span class="font-semibold"> Communicate </span>
+        <span class="font-semibold">
+          {{ t("landing.overview.communicateTitle") }}
+        </span>
         <span class="text-muted-foreground">
-          with your Agents using natural language. No need to learn a new
-          language or syntax.
+          {{ t("landing.overview.communicateDescription") }}
         </span>
       </p>
     </li>
@@ -50,38 +55,34 @@ import {
       <IconLeaf />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
-          Commitment to
+          {{ t("landing.overview.commitmentPrefix") }}
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              privacy
+              {{ t("landing.overview.privacy") }}
             </HoverCardTrigger>
             <HoverCardContent class="px-3 py-2">
-              We don't sell your data. We don't show ads. We don't have
-              investors. We are 100% bootstrapped.
+              {{ t("landing.overview.privacyTooltip") }}
             </HoverCardContent>
           </HoverCard>
           ,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              longevity
+              {{ t("landing.overview.longevity") }}
             </HoverCardTrigger>
             <HoverCardContent class="px-3 py-2">
-              We've been around since 2017. We are a small team of passionate
-              people. We are profitable. We are indie. We are here to stay.
+              {{ t("landing.overview.longevityTooltip") }}
             </HoverCardContent>
           </HoverCard>
           , and
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              beauty
+              {{ t("landing.overview.beauty") }}
             </HoverCardTrigger>
             <HoverCardContent class="px-3 py-2">
-              We care about design. We care about user experience. We care about
-              you. We are not a faceless corporation. We are committed to your
-              happiness.
+              {{ t("landing.overview.beautyTooltip") }}
             </HoverCardContent>
           </HoverCard>
-          . Watch our backstory.
+          . {{ t("landing.overview.watchBackstory") }}
         </span>
       </p>
     </li>
@@ -89,19 +90,21 @@ import {
       <IconHeart />
       <p class="leading-loose first-line:leading-none">
         <span class="text-muted-foreground">
-          Available on the
+          {{ t("landing.overview.availableOn") }}
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              Mac
+              {{ t("landing.overview.mac") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconApple class="h-8 w-8" />
                 <div class="flex flex-col">
-                  <p class="text-muted-foreground">Download on the</p>
-                  <span class="text-xl font-medium tracking-tight"
-                    >App Store</span
-                  >
+                  <p class="text-muted-foreground">
+                    {{ t("landing.overview.downloadOnThe") }}
+                  </p>
+                  <span class="text-xl font-medium tracking-tight">{{
+                    t("landing.overview.appStore")
+                  }}</span>
                 </div>
               </div>
             </HoverCardContent>
@@ -109,16 +112,18 @@ import {
           ,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              Windows
+              {{ t("landing.overview.windows") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconMicrosoftIcon class="h-8 w-8" />
                 <div class="flex flex-col">
-                  <p class="text-muted-foreground">Get it from</p>
-                  <span class="text-xl font-medium tracking-tight"
-                    >Microsoft</span
-                  >
+                  <p class="text-muted-foreground">
+                    {{ t("landing.overview.getItFrom") }}
+                  </p>
+                  <span class="text-xl font-medium tracking-tight">{{
+                    t("landing.overview.microsoft")
+                  }}</span>
                 </div>
               </div>
             </HoverCardContent>
@@ -126,16 +131,18 @@ import {
           ,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              Linux
+              {{ t("landing.overview.linux") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconFlathub class="h-8 w-8" />
                 <div class="flex flex-col">
-                  <p class="text-muted-foreground">Download on</p>
-                  <span class="text-xl font-medium tracking-tight"
-                    >Flathub</span
-                  >
+                  <p class="text-muted-foreground">
+                    {{ t("landing.overview.downloadOn") }}
+                  </p>
+                  <span class="text-xl font-medium tracking-tight">{{
+                    t("landing.overview.flathub")
+                  }}</span>
                 </div>
               </div>
             </HoverCardContent>
@@ -143,16 +150,18 @@ import {
           ,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              iOS
+              {{ t("landing.overview.ios") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconAppleAppStore class="h-8 w-8" />
                 <div class="flex flex-col">
-                  <p class="text-muted-foreground">Download on the</p>
-                  <span class="text-xl font-medium tracking-tight"
-                    >App Store</span
-                  >
+                  <p class="text-muted-foreground">
+                    {{ t("landing.overview.downloadOnThe") }}
+                  </p>
+                  <span class="text-xl font-medium tracking-tight">{{
+                    t("landing.overview.appStore")
+                  }}</span>
                 </div>
               </div>
             </HoverCardContent>
@@ -160,16 +169,18 @@ import {
           ,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              Android
+              {{ t("landing.overview.android") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconGooglePlayIcon class="h-8 w-8" />
                 <div class="flex flex-col">
-                  <p class="text-muted-foreground">Get it on</p>
-                  <span class="text-xl font-medium tracking-tight"
-                    >Google Play</span
-                  >
+                  <p class="text-muted-foreground">
+                    {{ t("landing.overview.getItOn") }}
+                  </p>
+                  <span class="text-xl font-medium tracking-tight">{{
+                    t("landing.overview.googlePlay")
+                  }}</span>
                 </div>
               </div>
             </HoverCardContent>
@@ -177,24 +188,26 @@ import {
           and
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              Web
+              {{ t("landing.overview.web") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
                 <IconCircleSolid class="h-8 w-8" />
                 <div class="flex flex-col">
-                  <p class="text-muted-foreground">Open</p>
+                  <p class="text-muted-foreground">
+                    {{ t("landing.overview.open") }}
+                  </p>
                   <span class="text-xl font-medium tracking-tight">
-                    template.app
+                    {{ t("landing.overview.templateApp") }}
                   </span>
                 </div>
               </div>
             </HoverCardContent>
           </HoverCard>
-          . Loved by
+          . {{ t("landing.overview.lovedBy") }}
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
-              100K + users</HoverCardTrigger
+              {{ t("landing.overview.users") }}</HoverCardTrigger
             >
             <HoverCardContent class="w-auto">
               <WallOfLove />

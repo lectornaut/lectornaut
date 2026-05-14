@@ -160,7 +160,8 @@ const saveAccountDetails = async () => {
         optimisticUsername.value = validation.normalized ?? usernameInput
         try {
           const isAvailable = await checkUsernameAvailability(usernameInput)
-          if (!isAvailable) throw new Error("Username is already taken")
+          if (!isAvailable)
+            throw new Error(t("components.teamDialog.errors.usernameTaken"))
           await claimUsername(usernameInput)
         } catch (error) {
           optimisticUsername.value = previousOptimisticUsername
@@ -210,10 +211,10 @@ const toggleIsPublic = async (value: boolean) => {
 
   try {
     await updateCurrentUserProfileVisibility(value)
-    toast.success("Profile visibility updated")
+    toast.success(t("settings.account.publicProfile.visibilityUpdated"))
   } catch (error) {
     optimisticIsPublic.value = previousIsPublic
-    toast.error("Failed to update profile visibility", {
+    toast.error(t("settings.account.publicProfile.visibilityUpdateFailed"), {
       description: (error as Error).message,
     })
   }
@@ -294,9 +295,9 @@ const handleRemoveProfilePicture = async () => {
     clearOptimisticPhotoPreview()
     await authStore.updateUserProfile({ photoURL: null })
     await deleteUserPhotoFile(user.value.uid)
-    toast.success("Profile picture removed")
+    toast.success(t("settings.account.profilePicture.removed"))
   } catch (error) {
-    toast.error("Failed to remove profile picture", {
+    toast.error(t("settings.account.profilePicture.removeFailed"), {
       description: (error as Error).message,
     })
   }

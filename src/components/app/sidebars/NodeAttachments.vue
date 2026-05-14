@@ -52,6 +52,8 @@ import { storeToRefs } from "pinia"
 import type { Component } from "vue"
 import { toRefs } from "vue"
 
+const { t } = useI18n()
+
 interface UploadState {
   id: string
   name: string
@@ -147,10 +149,10 @@ const isReadOnly = computed(
 const readOnlyMessage = computed(() => {
   if (!node.value) return null
   if (node.value.isArchived) {
-    return "Archived nodes are read-only. You can still open existing attachments."
+    return t("components.nodeAttachments.readOnlyArchived")
   }
   if (!canManageAttachments.value) {
-    return "You can view and download attachments, but only members, admins, and owners can edit them."
+    return t("components.nodeAttachments.readOnlyPermission")
   }
   return null
 })
@@ -183,7 +185,7 @@ const formatTimestamp = (
 }
 
 const formatMimeType = (value: string | null | undefined) => {
-  if (!value) return "Unknown type"
+  if (!value) return t("components.nodeAttachments.unknownType")
   return value
 }
 
@@ -285,13 +287,13 @@ const upsertUploadState = (next: UploadState) => {
 
 const getMutableContext = (): AttachmentMutationContext => {
   if (!teamId.value || !workspaceId.value || !node.value) {
-    throw new Error("Select a node before editing attachments.")
+    throw new Error(t("components.nodeAttachments.toasts.selectNode"))
   }
   if (node.value.isArchived) {
-    throw new Error("Archived nodes are read-only.")
+    throw new Error(t("components.nodeAttachments.toasts.archived"))
   }
   if (!canManageAttachments.value) {
-    throw new Error("You do not have permission to edit attachments.")
+    throw new Error(t("components.nodeAttachments.toasts.noPermission"))
   }
 
   return {
@@ -317,7 +319,7 @@ const processSelectedFiles = async (files: File[]) => {
     getMutableContext()
   } catch (contextError) {
     showErrorToast(
-      "Failed to upload attachment",
+      t("components.nodeAttachments.toasts.uploadFailedTitle"),
       (contextError as Error).message
     )
     return
@@ -349,17 +351,26 @@ const processSelectedFiles = async (files: File[]) => {
   if (successCount > 0) {
     showSuccessToast(
       successCount === 1
-        ? "Attachment uploaded"
-        : `${successCount} attachments uploaded`
+        ? t("components.nodeAttachments.toasts.uploadedSingle")
+        : t("components.nodeAttachments.toasts.uploadedMultiple", {
+            count: successCount,
+          })
     )
   }
 
   if (failureCount > 0) {
     showErrorToast(
-      failureCount === 1 ? "Attachment upload failed" : "Some uploads failed",
       failureCount === 1
-        ? "Check the failed upload below and try again."
-        : `${failureCount} files could not be uploaded.`
+        ? t("components.nodeAttachments.toasts.uploadFailedSingle")
+        : t("components.nodeAttachments.toasts.uploadFailedMultiple"),
+      failureCount === 1
+        ? t("components.nodeAttachments.toasts.uploadFailedSingleDescription")
+        : t(
+            "components.nodeAttachments.toasts.uploadFailedMultipleDescription",
+            {
+              count: failureCount,
+            }
+          )
     )
   }
 }
@@ -389,7 +400,7 @@ const downloadAttachmentInTauri = async (
     targetPath,
   })
   await revealItemInDir(targetPath)
-  showSuccessToast("Attachment downloaded")
+  showSuccessToast(t("components.nodeAttachments.toasts.downloaded"))
 }
 
 const downloadAttachment = async (attachment: WorkspaceNodeAttachment) => {
@@ -411,7 +422,7 @@ const downloadAttachment = async (attachment: WorkspaceNodeAttachment) => {
     }
   } catch (downloadError) {
     showErrorToast(
-      "Failed to download attachment",
+      t("components.nodeAttachments.toasts.downloadFailedTitle"),
       (downloadError as Error).message
     )
   } finally {
@@ -469,11 +480,16 @@ const handleEditSubmit = async () => {
     })
 
     showSuccessToast(
-      replacementFile.value ? "Attachment updated" : "Attachment renamed"
+      replacementFile.value
+        ? t("components.nodeAttachments.toasts.updated")
+        : t("components.nodeAttachments.toasts.renamed")
     )
     closeEditDialog()
   } catch (saveError) {
-    showErrorToast("Failed to update attachment", (saveError as Error).message)
+    showErrorToast(
+      t("components.nodeAttachments.toasts.updateFailedTitle"),
+      (saveError as Error).message
+    )
   } finally {
     isSavingEdit.value = false
   }
@@ -484,10 +500,10 @@ const handleDeleteConfirm = async (attachment: WorkspaceNodeAttachment) => {
     getMutableContext()
     deletingId.value = attachment.id
     await deleteAttachment(attachment)
-    showSuccessToast("Attachment deleted")
+    showSuccessToast(t("components.nodeAttachments.toasts.deleted"))
   } catch (deleteError) {
     showErrorToast(
-      "Failed to delete attachment",
+      t("components.nodeAttachments.toasts.deleteFailedTitle"),
       (deleteError as Error).message
     )
   } finally {
@@ -522,17 +538,24 @@ watch(selectedCreateFiles, async (files) => {
         <SidebarGroup>
           <SidebarGroupContent>
             <div v-if="!node" class="text-muted-foreground p-2 text-xs">
-              Select a file or folder to manage attachments.
+              {{ t("components.nodeAttachments.emptyNode") }}
             </div>
 
             <div v-else class="space-y-3 p-2">
               <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
-                  <p class="text-sm font-medium">Attachments</p>
+                  <p class="text-sm font-medium">
+                    {{ t("components.nodeAttachments.title") }}
+                  </p>
                   <p>
-                    {{ attachments.length }}
                     {{
-                      attachments.length === 1 ? "attachment" : "attachments"
+                      attachments.length === 1
+                        ? t("components.nodeAttachments.countSingular", {
+                            count: attachments.length,
+                          })
+                        : t("components.nodeAttachments.countPlural", {
+                            count: attachments.length,
+                          })
                     }}
                   </p>
                 </div>
@@ -543,7 +566,7 @@ watch(selectedCreateFiles, async (files) => {
                   @click="triggerFilePicker"
                 >
                   <IconUpload />
-                  Upload
+                  {{ t("components.nodeAttachments.upload") }}
                 </Button>
               </div>
 
@@ -553,14 +576,16 @@ watch(selectedCreateFiles, async (files) => {
 
               <div v-if="uploadStates.length" class="space-y-2 border p-2">
                 <div class="flex items-center justify-between gap-2">
-                  <p class="text-xs font-medium">Uploads</p>
+                  <p class="text-xs font-medium">
+                    {{ t("components.nodeAttachments.uploadsTitle") }}
+                  </p>
                   <Button
                     v-if="!uploadInProgress"
                     type="button"
                     variant="ghost"
                     @click="uploadStates = []"
                   >
-                    Clear
+                    {{ t("components.nodeAttachments.clear") }}
                   </Button>
                 </div>
 
@@ -583,7 +608,7 @@ watch(selectedCreateFiles, async (files) => {
                     <p>
                       {{
                         item.status === "uploading"
-                          ? "Uploading..."
+                          ? t("components.nodeAttachments.uploading")
                           : item.error
                       }}
                     </p>
@@ -606,7 +631,7 @@ watch(selectedCreateFiles, async (files) => {
                 class="text-muted-foreground flex items-center gap-2 text-xs"
               >
                 <Spinner />
-                Loading attachments...
+                {{ t("components.nodeAttachments.loadingAttachments") }}
               </div>
 
               <div v-else-if="error" class="space-y-2 border p-3">
@@ -622,7 +647,7 @@ watch(selectedCreateFiles, async (files) => {
                   @click="refreshAttachments"
                 >
                   <IconRefreshCcw />
-                  Retry
+                  {{ t("components.nodeAttachments.retry") }}
                 </Button>
               </div>
 
@@ -632,8 +657,8 @@ watch(selectedCreateFiles, async (files) => {
               >
                 {{
                   isReadOnly
-                    ? "No attachments are available for this node."
-                    : "No attachments yet. Upload files to keep node-specific assets here."
+                    ? t("components.nodeAttachments.emptyReadOnly")
+                    : t("components.nodeAttachments.emptyWritable")
                 }}
               </div>
 
@@ -717,7 +742,7 @@ watch(selectedCreateFiles, async (files) => {
                           variant="secondary"
                         >
                           <Spinner />
-                          Syncing
+                          {{ t("components.nodeAttachments.syncing") }}
                         </Badge>
                         <Badge variant="outline">
                           <IconArrowDownToLine />
@@ -731,10 +756,14 @@ watch(selectedCreateFiles, async (files) => {
                       <dl
                         class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs"
                       >
-                        <dt class="text-muted-foreground">Created</dt>
+                        <dt class="text-muted-foreground">
+                          {{ t("components.nodeAttachments.createdLabel") }}
+                        </dt>
                         <dd>{{ formatTimestamp(attachment.createdAt) }}</dd>
 
-                        <dt class="text-muted-foreground">Updated</dt>
+                        <dt class="text-muted-foreground">
+                          {{ t("components.nodeAttachments.updatedLabel") }}
+                        </dt>
                         <dd>{{ formatTimestamp(attachment.updatedAt) }}</dd>
                       </dl>
                     </div>
@@ -754,27 +783,30 @@ watch(selectedCreateFiles, async (files) => {
   >
     <DialogContent class="sm:max-w-lg">
       <DialogHeader>
-        <DialogTitle>Edit attachment</DialogTitle>
+        <DialogTitle>{{
+          t("components.nodeAttachments.editTitle")
+        }}</DialogTitle>
         <DialogDescription>
-          Rename the attachment or replace the stored file while keeping it
-          linked to the same node.
+          {{ t("components.nodeAttachments.editDescription") }}
         </DialogDescription>
       </DialogHeader>
 
       <form class="space-y-4" @submit.prevent="handleEditSubmit">
         <div class="space-y-2">
-          <Label for="attachment-display-name">File name</Label>
+          <Label for="attachment-display-name">{{
+            t("components.nodeAttachments.fileNameLabel")
+          }}</Label>
           <Input
             id="attachment-display-name"
             v-model="editDisplayName"
             :maxlength="ATTACHMENT_NAME_MAX_LENGTH"
-            placeholder="Enter a display name"
+            :placeholder="t('components.nodeAttachments.fileNamePlaceholder')"
           />
         </div>
 
         <div class="space-y-2">
           <Label :for="`attachment-replace-${replacementInputKey}`">
-            Replace file
+            {{ t("components.nodeAttachments.replaceFileLabel") }}
           </Label>
           <input
             :id="`attachment-replace-${replacementInputKey}`"
@@ -796,18 +828,18 @@ watch(selectedCreateFiles, async (files) => {
             </div>
 
             <Button type="button" variant="ghost" @click="clearReplacementFile">
-              Clear
+              {{ t("components.nodeAttachments.clear") }}
             </Button>
           </div>
         </div>
 
         <DialogFooter>
           <Button type="button" variant="ghost" @click="closeEditDialog">
-            Cancel
+            {{ t("actions.cancel") }}
           </Button>
           <Button type="submit" :disabled="!hasEditChanges || isSavingEdit">
             <Spinner v-if="isSavingEdit" />
-            Save
+            {{ t("actions.save") }}
           </Button>
         </DialogFooter>
       </form>
@@ -820,19 +852,21 @@ watch(selectedCreateFiles, async (files) => {
   >
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete attachment</AlertDialogTitle>
+        <AlertDialogTitle>{{
+          t("components.nodeAttachments.deleteTitle")
+        }}</AlertDialogTitle>
         <AlertDialogDescription>
-          Remove
+          {{ t("components.nodeAttachments.deleteDescriptionPrefix") }}
           <span class="font-medium">
             {{ attachmentToDelete?.displayName }}
           </span>
-          from this node. The stored file will be deleted as well.
+          {{ t("components.nodeAttachments.deleteDescriptionSuffix") }}
         </AlertDialogDescription>
       </AlertDialogHeader>
 
       <AlertDialogFooter>
         <AlertDialogCancel @click="closeDeleteDialog()">
-          Cancel
+          {{ t("actions.cancel") }}
         </AlertDialogCancel>
         <AlertDialogAction as-child>
           <Button
@@ -851,7 +885,7 @@ watch(selectedCreateFiles, async (files) => {
             "
           >
             <Spinner v-if="deletingId === attachmentToDelete?.id" />
-            Delete
+            {{ t("actions.delete") }}
           </Button>
         </AlertDialogAction>
       </AlertDialogFooter>

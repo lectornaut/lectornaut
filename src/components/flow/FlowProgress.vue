@@ -4,12 +4,21 @@ import {
   IconCircleMedium,
   IconCircleSmall,
 } from "@/data/icons"
-const steps = [
-  { name: "Create a workflow", status: "complete" },
-  { name: "Add a node", status: "complete" },
-  { name: "Run a workflow", status: "current" },
-  { name: "Publish an automation", status: "upcoming" },
-]
+
+const { t } = useI18n()
+
+const steps = computed(() => [
+  {
+    name: t("components.flow.progress.stepCreateWorkflow"),
+    status: "complete",
+  },
+  { name: t("components.flow.progress.stepAddNode"), status: "complete" },
+  { name: t("components.flow.progress.stepRunWorkflow"), status: "current" },
+  {
+    name: t("components.flow.progress.stepPublishAutomation"),
+    status: "upcoming",
+  },
+])
 </script>
 
 <template>
@@ -18,9 +27,9 @@ const steps = [
       <Card class="shadow-none">
         <CardHeader class="p-4">
           <CardTitle>
-            <span>My progress</span>
+            <span>{{ t("components.flow.progress.myProgress") }}</span>
             <Badge variant="secondary">
-              <span> Skip </span>
+              <span> {{ t("components.flow.progress.skip") }} </span>
               <IconArrowRightCircle />
             </Badge>
           </CardTitle>

@@ -5,7 +5,190 @@
     "mode": "Mode",
     "auto": "Auto",
     "agent": "Agent",
-    "manual": "Manual"
+    "manual": "Manual",
+    "attachContext": "Attach context",
+    "attachContextFull": "Attachment limit reached ({count})",
+    "attachContextDescription": "Pick workspace items to ground the model in your code and writing.",
+    "attachContextNoWorkspace": "Select a workspace before attaching context.",
+    "attachContextCount": "{count} of {max} items attached",
+    "attachedNodeDeleted": "Deleted file",
+    "attachedNodeArchived": "Archived",
+    "detachContextNode": "Detach {name}",
+    "scopeCode": "Code",
+    "scopeWrite": "Write",
+    "bot": "Bot",
+    "botEmpty": "Select a file or folder to chat about it.",
+    "botLoading": "Opening chat...",
+    "botHistory": "History",
+    "botHistoryHint": "Previous chats about this item",
+    "botHistoryEmpty": "No chats about this item yet.",
+    "newChat": "New chat",
+    "newChatHint": "Start a fresh chat with this item attached",
+    "searchChats": "Search chats",
+    "searchClear": "Clear search",
+    "filterSessions": "Filter chats",
+    "filterReset": "Reset",
+    "filterOnlyShared": "Shared with me",
+    "filterOnlyNodeAttached": "Has attached item",
+    "filterMode": "Mode",
+    "filterVisibility": "Visibility",
+    "filterNoResults": "No chats match these filters.",
+    "visibilityPrivate": "Private",
+    "visibilityShared": "Shared",
+    "visibilityPublic": "Public",
+    "archive": "Archive",
+    "archived": "Archived",
+    "unarchive": "Unarchive",
+    "restore": "Restore",
+    "untitledChat": "Untitled chat",
+    "untitledSession": "Untitled",
+    "chatActions": "Chat actions",
+    "renameChat": "Rename chat",
+    "renameChatHint": "Pick a name that helps you find this chat later.",
+    "chatTitle": "Title",
+    "chatTitlePlaceholder": "e.g. Q3 launch checklist",
+    "deleteChatTitle": "Delete this chat?",
+    "thisChat": "This chat",
+    "deleteChatConfirm": "will be permanently deleted, including all of its messages. This action cannot be undone.",
+    "botHistoryEmptyAll": "No chats yet. Start a new conversation to see it here.",
+    "sharedGroupLabel": "Shared · {label}",
+    "attachmentTooLarge": "Each attachment must be {size} MB or smaller.",
+    "placeholderArchived": "This chat is archived. Restore it to continue.",
+    "placeholderReadOnly": "This chat is read-only",
+    "showTools": "Show tools",
+    "hideTools": "Hide tools",
+    "chatEmpty": "Ask anything to get started.",
+    "thinking": "Thinking...",
+    "modes": {
+      "auto": {
+        "label": "Auto",
+        "longDescription": "Concise replies. Calls tools only when they directly help."
+      },
+      "agent": {
+        "label": "Agent",
+        "longDescription": "Calls tools eagerly to gather data and chains them when useful. Replies tend to be longer and narrate what's happening."
+      },
+      "manual": {
+        "label": "Manual",
+        "longDescription": "Tools are disabled — the assistant can explain and suggest, but won't take actions on your behalf. Useful when you only want feedback."
+      }
+    },
+    "sidebar": {
+      "modeDescription": "Mode steers how the assistant approaches each turn — what tools it can reach, how proactive it is, and how it phrases replies.",
+      "availableTools": "Available tools",
+      "toolsEnabledHint": "The assistant can call these on its own when relevant. Try one of the example prompts below.",
+      "toolsDisabled": "Tools are disabled in {mode} mode. Switch to {auto} or {agent} to re-enable them.",
+      "humanInTheLoop": "Human-in-the-Loop",
+      "humanInTheLoopHint": "The assistant can pause and ask you a clarifying question instead of guessing. These interrupts are available in every mode — including {manual}.",
+      "manageChat": "Manage chat",
+      "noSessionActions": "Send a message to start a chat — actions will appear here.",
+      "noSessionVisibility": "Send a message to start a chat — visibility can be set after.",
+      "restoreFromArchive": "Restore from archive",
+      "deleteChat": "Delete chat",
+      "cannotManage": "Only the owner or a team admin can manage this chat.",
+      "cannotChangeVisibility": "Only the owner or a team admin can change visibility.",
+      "visibility": "Visibility",
+      "shareConfirmTitle": "Share this chat with the team?",
+      "shareConfirmDescription": "Members of this workspace will be able to read every message in this chat. Owner and admins will also be able to send new messages. You can switch back to private at any time.",
+      "shareConfirmAction": "Share with team",
+      "visibilityPrivateSelf": "Only you can see this chat.",
+      "visibilityPrivateOther": "Only the owner can see this chat.",
+      "visibilitySharedLabel": "Shared with team",
+      "visibilitySharedDescription": "Members can read this chat. Owner and admins can keep editing.",
+      "visibilityPublicLabel": "Public",
+      "visibilityPublicDescription": "Anyone with the link can view. Coming soon."
+    },
+    "toolCatalog": {
+      "weather": {
+        "description": "Look up current weather for a location.",
+        "example": "What's the weather in Tokyo?"
+      },
+      "rollDice": {
+        "description": "Roll a six-sided die.",
+        "example": "Roll a die for me."
+      },
+      "askQuestion": {
+        "description": "Pauses the chat and asks you a multiple-choice question. Pick a choice (or type your own when allowed) to continue.",
+        "example": "Help me plan a backyard BBQ."
+      }
+    },
+    "details": {
+      "empty": "Start or open a chat to see its details.",
+      "readOnly": "Read-only",
+      "modeBadge": "{mode} mode",
+      "you": "You",
+      "formerMember": "Former member",
+      "teamMember": "Team member",
+      "created": "Created",
+      "lastActivity": "Last activity",
+      "messages": "Messages",
+      "archivedAt": "Archived",
+      "owner": "Owner"
+    },
+    "toolCall": {
+      "needsInput": "Needs your input",
+      "running": "Running…",
+      "done": "Done",
+      "customAnswer": "Or type your own answer…",
+      "send": "Send",
+      "malformedInterrupt": "The assistant tried to ask a question but didn't include valid choices. Send another message to continue.",
+      "input": "Input",
+      "output": "Output",
+      "waitingForReturn": "Waiting for tool to return…"
+    }
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "previousWeek": "Previous 7 days",
+    "older": "Older"
+  },
+  "fileTree": {
+    "documents": "Documents",
+    "newFolder": "New folder",
+    "newFile": "New file",
+    "empty": "No files yet.",
+    "emptyFolder": "Empty",
+    "loadMore": "Load more",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "collapseFolder": "Collapse folder",
+    "expandFolder": "Expand folder",
+    "createFolder": "Create Folder",
+    "createFile": "Create File",
+    "createHint": "Choose a name for your item.",
+    "renameTitle": "Rename",
+    "renameHint": "Update the name of this item.",
+    "archiveTitle": "Archive",
+    "archiveConfirm": "This will archive {name}. You can unarchive it later.",
+    "deleteTitle": "Delete",
+    "deleteConfirm": "This will permanently delete {name}. This action cannot be undone.",
+    "untitledPlaceholder": "Untitled",
+    "toast": {
+      "moved": "Moved",
+      "moveFailed": "Failed to move",
+      "folderCreated": "Folder created",
+      "fileCreated": "File created",
+      "createFailed": "Failed to create",
+      "renamed": "Renamed",
+      "renameFailed": "Failed to rename",
+      "unarchived": "Unarchived",
+      "unarchiveFailed": "Failed to unarchive",
+      "archived": "Archived",
+      "archiveFailed": "Failed to archive",
+      "deleted": "Deleted",
+      "deleteFailed": "Failed to delete"
+    }
+  },
+  "inspector": {
+    "tabs": {
+      "details": "Details",
+      "attachments": "Attachments",
+      "activity": "Activity"
+    },
+    "activity": {
+      "empty": "Select a file or folder to view activity history."
+    }
   },
   "actions": {
     "add": "Add",
@@ -18,6 +201,7 @@
     "create": "Create",
     "delete": "Delete",
     "dock": "Dock",
+    "done": "Done",
     "download": "Download",
     "duplicate": "Duplicate",
     "edit": "Edit",
@@ -105,6 +289,10 @@
   },
   "states": {
     "loading": "Loading...",
+    "creating": "Creating...",
+    "saving": "Saving...",
+    "archiving": "Archiving...",
+    "deleting": "Deleting...",
     "unavailable": "Unavailable",
     "offline": "You are offline",
     "synced": "Synced to cloud",
@@ -143,6 +331,7 @@
   "enter": {
     "title": "Enter",
     "subtitle": "Choose how you want to sign in.",
+    "triggerDescription": "Create an account or sign in to continue.",
     "signUp": "Sign up",
     "signIn": "Sign in",
     "alreadyHaveAccount": "Already have an account?",
@@ -262,6 +451,23 @@
       "plans": "Compare plans and update subscription."
     },
     "account": {
+      "messages": {
+        "settingsSaved": "Settings saved",
+        "settingsSavedDesc": "Your changes have been saved successfully.",
+        "noChangesToSave": "No changes to save.",
+        "someErrors": "Some changes could not be saved",
+        "reauthRequired": "Re-authentication required",
+        "reauthRequiredDesc": "For security reasons, you need to log in again before performing this action.",
+        "reauthLogoutAction": "Logout",
+        "verificationSent": "Verification email sent",
+        "verificationSentDesc": "Please check your inbox for the verification email.",
+        "verificationFailed": "Failed to send verification email",
+        "passwordUpdated": "Password updated",
+        "passwordUpdatedDesc": "Your password has been successfully updated.",
+        "passwordUpdateFailed": "Failed to update password",
+        "cannotDelete": "Cannot delete account",
+        "accountDeleted": "Account deleted"
+      },
       "profile": {
         "label": "Profile",
         "description": "Manage name and profile picture."
@@ -284,7 +490,11 @@
         "uploading": "Uploading...",
         "uploadingDesc": "Uploading your profile photo.",
         "failed": "Couldn't update profile photo",
-        "failedUpload": "Couldn't upload profile photo"
+        "failedUpload": "Couldn't upload profile photo",
+        "removed": "Profile picture removed",
+        "removeFailed": "Failed to remove profile picture",
+        "uploadStartFailed": "Unable to start profile photo upload.",
+        "resolveUrlFailed": "Unable to resolve uploaded profile picture URL."
       },
       "preferredName": {
         "label": "Preferred name",
@@ -298,7 +508,11 @@
         "description": "Let people view your profile via link.",
         "requiresUsername": "Add a username to enable",
         "turnOnToEnable": "Turn on to make profile public",
-        "availableAt": "Available at {url}"
+        "availableAt": "Available at {url}",
+        "cannotEnable": "Cannot enable public profile",
+        "cannotEnableDescription": "Please set a username first before making your profile public.",
+        "visibilityUpdated": "Profile visibility updated",
+        "visibilityUpdateFailed": "Failed to update profile visibility"
       },
       "username": {
         "label": "Username",
@@ -416,7 +630,8 @@
         "disabled": "Multi-factor authentication disabled",
         "failedDisable": "Failed to disable MFA",
         "disableConfirmTitle": "Disable multi-factor authentication?",
-        "disableConfirmDescription": "This removes all factors. You won't need a second step to sign in."
+        "disableConfirmDescription": "This removes all factors. You won't need a second step to sign in.",
+        "unsupportedFactorType": "Unsupported factor type"
       },
       "deleteAccount": {
         "label": "Delete account",
@@ -426,7 +641,8 @@
         "deleted": "Account deleted",
         "deletedDesc": "Your account was deleted.",
         "failed": "Couldn't delete account",
-        "confirmLabel": "Type 'delete my account' to confirm deletion."
+        "confirmLabel": "Type 'delete my account' to confirm deletion.",
+        "confirmRequired": "Please type 'delete my account' to confirm."
       }
     },
     "preferences": {
@@ -600,7 +816,50 @@
         "label": "Cancel subscription",
         "description": "Cancel at the end of the billing period."
       },
-      "noPermission": "Billing access required"
+      "noPermission": "Billing access required",
+      "noPermissionTitle": "No permission",
+      "noPermissionDescription": "You do not have permission to manage billing.",
+      "noActivePlan": "No active plan",
+      "noActivePlanDescription": "Subscribe to a plan to get started.",
+      "noActiveSubscription": "No active subscription",
+      "intervalMonthly": "Monthly",
+      "intervalAnnual": "Annual",
+      "intervalNotAvailable": "N/A",
+      "loading": "Loading...",
+      "unavailable": "Unavailable",
+      "lifecycleCancelled": "Cancelled",
+      "lifecycleScheduledOn": "Scheduled to cancel on {date}",
+      "lifecycleScheduledPeriodEnd": "Scheduled to cancel at period end",
+      "lifecycleRenewsOn": "Renews on {date}",
+      "lifecycleAutoRenews": "Auto-renews each billing cycle",
+      "actionRestore": "Restore plan",
+      "actionCancelled": "Cancelled",
+      "actionCancel": "Cancel subscription",
+      "actionDescriptionCancelledInactive": "This subscription is cancelled. Restore plan to resume service.",
+      "actionDescriptionCancelled": "This subscription has been cancelled.",
+      "actionDescriptionScheduledOn": "This subscription is scheduled to cancel on {date}. Restore plan to continue service.",
+      "actionDescriptionScheduledPeriodEnd": "This subscription is scheduled to cancel at period end. Restore plan to continue service.",
+      "actionDescriptionActive": "Cancel this subscription at the end of the current billing period.",
+      "actionDescriptionNone": "No active subscription to cancel.",
+      "cancelConfirmTitle": "Cancel subscription",
+      "cancelConfirmKeep": "Keep subscription",
+      "cancelConfirmCancel": "Cancel subscription",
+      "cancelConfirmSubjectTeam": "{teamName}'s subscription",
+      "cancelConfirmSubjectDefault": "This subscription",
+      "cancelConfirmUntilDate": "{subject} will stay active until {date} and then cancel automatically.",
+      "cancelConfirmAtPeriodEnd": "{subject} will cancel automatically at the end of the current billing period.",
+      "toasts": {
+        "selectTeamBeforeOpening": "Select a team before opening billing.",
+        "selectTeamBeforeCancelling": "Select a team before cancelling.",
+        "selectTeamBeforeRestoring": "Select a team before restoring.",
+        "noPermission": "You do not have permission to manage billing for this team.",
+        "noActiveSubscription": "No active subscription found for this team.",
+        "portalFailed": "Unable to open billing portal.",
+        "cancelSuccess": "Subscription will cancel at period end.",
+        "cancelFailed": "Unable to cancel subscription.",
+        "restoreSuccess": "Subscription restored. Auto-renewal is active.",
+        "restoreFailed": "Unable to restore subscription."
+      }
     },
     "plans": {
       "subscriptionPlan": {
@@ -632,12 +891,104 @@
       "features": "Features",
       "seatCount": "{count} seat | {count} seats",
       "perSeatMonthly": "{price} per seat per month",
-      "totalForSeats": "{total} total for {seats}"
+      "totalForSeats": "{total} total for {seats}",
+      "toasts": {
+        "planUpdated": "Plan updated successfully."
+      }
     },
     "logs": {
       "auditLogs": {
         "label": "Audit Logs",
         "description": "View system and activity logs for your team."
+      },
+      "noPermissionTitle": "No permission",
+      "noPermissionDescription": "You do not have permission to view audit logs.",
+      "unknownActor": "Unknown",
+      "columnTimestamp": "Timestamp",
+      "columnActor": "Actor",
+      "columnAction": "Action",
+      "columnResource": "Resource",
+      "filterDate": "Date",
+      "filterActor": "Actor",
+      "refresh": "Refresh"
+    },
+    "security": {
+      "enterprise": {
+        "title": "Enterprise Security",
+        "description": "SSO and advanced login method controls are available on the Enterprise plan. Upgrade to configure SAML, OIDC, and per-team authentication policies.",
+        "viewPlans": "View Plans"
+      },
+      "approvedDomains": {
+        "label": "Approved Domains",
+        "description": "Anyone with an email address at these domains is allowed to sign up and join this team automatically.",
+        "placeholder": "acme.com"
+      },
+      "authenticationMethods": {
+        "label": "Authentication Methods",
+        "description": "Control which authentication methods are available for your team members."
+      },
+      "emailPassword": {
+        "label": "Email & Password",
+        "description": "Traditional email and password sign-in."
+      },
+      "magicLink": {
+        "label": "Magic Link",
+        "description": "Passwordless sign-in via email link."
+      },
+      "google": {
+        "label": "Google",
+        "description": "Sign in with Google account."
+      },
+      "microsoft": {
+        "label": "Microsoft",
+        "description": "Sign in with Microsoft account."
+      },
+      "apple": {
+        "label": "Apple",
+        "description": "Sign in with Apple account."
+      },
+      "sso": {
+        "label": "SSO",
+        "description": "Enable Single Sign-On with SAML or OIDC identity providers.",
+        "configure": "Configure SSO",
+        "configuration": "SSO Configuration",
+        "configurationDescription": "Configure SAML or OIDC single sign-on for your organization.",
+        "active": "Active",
+        "onlyEnabledTitle": "SSO-only access",
+        "onlyEnabledDescription": "Only SSO is enabled. Users whose email domain is not configured for SSO will not be able to sign in. Enable at least one additional method to ensure all users retain access.",
+        "emailDomainsLabel": "Email Domains",
+        "emailDomainsDescription": "Add email domains that should use SSO (e.g., acme.com).",
+        "enforceLabel": "Enforce SSO",
+        "enforceDescription": "When enabled, users with matching email domains must use SSO. Password and social logins will be blocked for these users.",
+        "autoProvisionLabel": "Auto-provision Members",
+        "autoProvisionDescription": "Automatically create a team membership when a user signs in via SSO for the first time.",
+        "defaultRoleLabel": "Default Role",
+        "defaultRoleDescription": "The role assigned to auto-provisioned members.",
+        "removeLabel": "Remove SSO",
+        "removeDescription": "Remove SSO configuration. Users will fall back to other login methods.",
+        "protocolLabel": "Protocol",
+        "protocolDescription": "Choose your identity provider protocol.",
+        "samlIdpEntityIdLabel": "IdP Entity ID",
+        "samlIdpEntityIdDescription": "The entity ID of your SAML identity provider.",
+        "samlSsoUrlLabel": "SSO URL",
+        "samlSsoUrlDescription": "The single sign-on URL of your identity provider.",
+        "samlCertificateLabel": "Certificate",
+        "samlCertificateDescription": "The X.509 signing certificate from your identity provider (PEM format).",
+        "oidcIssuerLabel": "Issuer URL",
+        "oidcIssuerDescription": "The OIDC issuer URL (must support /.well-known/openid-configuration).",
+        "oidcClientIdLabel": "Client ID",
+        "oidcClientIdDescription": "The OIDC client ID registered with your identity provider.",
+        "oidcClientSecretLabel": "Client Secret",
+        "oidcClientSecretDescription": "The OIDC client secret. This is stored securely and never exposed to the client.",
+        "oidcClientIdPlaceholder": "client-id",
+        "oidcClientSecretPlaceholder": "client-secret",
+        "testConnection": "Test Connection",
+        "updateSso": "Update SSO",
+        "enableSso": "Enable SSO",
+        "removeConfirmTitle": "Remove SSO Configuration",
+        "removeConfirmDescription": "Are you sure you want to remove SSO? Users with SSO-enforced domains will need to use other login methods. This action cannot be undone.",
+        "invalidDomainFormat": "Invalid domain format",
+        "invalidDomainExample": "Use e.g. acme.com"
       }
     },
     "appearance": {
@@ -780,6 +1131,61 @@
         "lastOwnerCannotBeRemoved": "Cannot remove the last owner"
       }
     },
+    "teamsList": {
+      "label": "Teams",
+      "description": "Manage your teams and switch between them.",
+      "createTeam": "Create Team",
+      "columnName": "Name",
+      "columnRole": "Role",
+      "columnCreated": "Created",
+      "current": "Current",
+      "actionsTooltip": "Actions",
+      "uploadPhoto": "Upload team photo",
+      "removePhoto": "Remove team photo",
+      "noTeams": "No teams found.",
+      "exitTitle": "Exit Team",
+      "exitConfirm": "Are you sure you want to leave {name}? You will lose access to all team resources.",
+      "deleteTitle": "Delete Team",
+      "deleteConfirm": "Are you sure you want to delete {name}? This action cannot be undone and will permanently delete the team and all its workspaces."
+    },
+    "workspacesList": {
+      "label": "Workspaces",
+      "description": "Manage workspaces in your current team.",
+      "createWorkspace": "Create Workspace",
+      "columnName": "Name",
+      "columnDescription": "Description",
+      "columnCreated": "Created",
+      "current": "Current",
+      "actionsTooltip": "Actions",
+      "uploadPhoto": "Upload workspace photo",
+      "removePhoto": "Remove workspace photo",
+      "noWorkspaces": "No workspaces found.",
+      "noDescription": "No description",
+      "deleteTitle": "Delete Workspace",
+      "deleteConfirm": "Are you sure you want to delete {name}? This action cannot be undone and will permanently delete the workspace and all its content."
+    },
+    "members": {
+      "title": "Members",
+      "description": "Manage your team members and their roles.",
+      "inviteMember": "Invite Member",
+      "name": "Name",
+      "role": "Role",
+      "joined": "Joined",
+      "actions": "Actions",
+      "exit": "Exit",
+      "remove": "Remove",
+      "exitTeam": "Exit Team",
+      "removeMember": "Remove Member",
+      "exitConfirm": "Are you sure you want to leave this team? You will lose access to all team resources.",
+      "removeConfirm": "Are you sure you want to remove {name} from this team?",
+      "noMembers": "No members found.",
+      "roles": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "member": "Member",
+        "guest": "Guest"
+      }
+    },
     "unsavedChanges": "Unsaved changes"
   },
   "navigation": {
@@ -821,6 +1227,41 @@
     "cta": {
       "enter": "Enter",
       "description": "track expenses, set goals, and save money."
+    },
+    "overview": {
+      "agentsTitle": "Agents",
+      "agentsDescription": "are the future of work. They can automate tasks, make decisions, and collaborate with humans.",
+      "createTitle": "Create",
+      "createDescription": "tasks, assign them to your Agents, and track their progress. You can focus on what matters most.",
+      "communicateTitle": "Communicate",
+      "communicateDescription": "with your Agents using natural language. No need to learn a new language or syntax.",
+      "commitmentPrefix": "Commitment to",
+      "privacy": "privacy",
+      "privacyTooltip": "We don't sell your data. We don't show ads. We don't have investors. We are 100% bootstrapped.",
+      "longevity": "longevity",
+      "longevityTooltip": "We've been around since 2017. We are a small team of passionate people. We are profitable. We are indie. We are here to stay.",
+      "beauty": "beauty",
+      "beautyTooltip": "We care about design. We care about user experience. We care about you. We are not a faceless corporation. We are committed to your happiness.",
+      "watchBackstory": "Watch our backstory.",
+      "availableOn": "Available on the",
+      "mac": "Mac",
+      "windows": "Windows",
+      "linux": "Linux",
+      "ios": "iOS",
+      "android": "Android",
+      "web": "Web",
+      "downloadOnThe": "Download on the",
+      "appStore": "App Store",
+      "getItFrom": "Get it from",
+      "microsoft": "Microsoft",
+      "downloadOn": "Download on",
+      "flathub": "Flathub",
+      "getItOn": "Get it on",
+      "googlePlay": "Google Play",
+      "open": "Open",
+      "templateApp": "template.app",
+      "lovedBy": "Loved by",
+      "users": "100K + users"
     },
     "faq": {
       "tooltip": "FAQ",
@@ -1019,6 +1460,28 @@
     "runs": {
       "files": "Files"
     },
+    "code": {
+      "documents": "Documents",
+      "selectWorkspace": "Select a workspace to view documents.",
+      "emptyTitle": "No document selected",
+      "emptyDescription": "Select a workspace to view or edit documents.",
+      "placeholderStart": "Start coding...",
+      "placeholderSelect": "Select a file to view or edit.",
+      "titleWithFile": "{name} · Code",
+      "titleDefault": "Code"
+    },
+    "write": {
+      "documents": "Documents",
+      "selectWorkspace": "Select a workspace to view documents.",
+      "emptyTitle": "No document selected",
+      "emptyDescription": "Select a workspace to view or edit documents.",
+      "titleWithFile": "{name} · Write",
+      "titleDefault": "Write"
+    },
+    "deeplink": {
+      "continueTitle": "Continue in Lectornaut",
+      "continueDescription": "The app should open automatically. You can close this tab."
+    },
     "changelog": {
       "title": "Changelog",
       "subtitle": "The latest changes and improvements.",
@@ -1105,6 +1568,13 @@
       "billing": {
         "monthly": "Monthly",
         "annual": "Annual"
+      },
+      "errors": {
+        "selectTeam": "Select a team before managing billing.",
+        "noPermission": "You do not have permission to manage billing for this team."
+      },
+      "toasts": {
+        "planUpdated": "Plan updated successfully."
       },
       "plans": {
         "personal": {
@@ -1376,6 +1846,63 @@
         "activeSummary": "Current plan: {plan} ({interval}) • {status}",
         "activeReadOnly": "Plan is active. Options are read-only.",
         "noPermission": "Billing access is required to choose a plan."
+      },
+      "onboarding": {
+        "appFlow": {
+          "header": "Try all 3 demos to celebrate",
+          "progress": "{count} / 3",
+          "commandLabel": "Command and Search",
+          "commandDescription": "Use {keys} to open commands and search.",
+          "trySample": "Try sample",
+          "commandPlaceholder": "Type a command or search",
+          "sampleCommandsHeading": "Sample commands",
+          "commandNewTab": "Open new tab",
+          "commandToggleSettings": "Go to settings",
+          "commandAskAi": "Ask AI",
+          "commandDemoLabel": "Command demo: {label}",
+          "workspaceLabel": "Workspace Switcher",
+          "workspaceDescription": "Use {keys} to move between workspaces.",
+          "workspaceFallback": "Workspace",
+          "workspaceDemoLabel": "Workspace demo: switched to {name}",
+          "sampleWorkspacesHeading": "Sample workspaces",
+          "workspaceProduct": "Product",
+          "workspaceDesign": "Design",
+          "workspaceEngineering": "Engineering",
+          "shortcutsLabel": "Full Keyboard Shortcuts",
+          "shortcutsDescription": "Use {keys} to open keyboard shortcuts.",
+          "openSample": "Open sample",
+          "shortcutsDemoLabel": "Shortcuts demo: opened keyboard shortcuts",
+          "shortcutsDialogTitle": "Keyboard shortcuts",
+          "shortcutsDialogDescription": "Sample shortcuts panel used during onboarding.",
+          "shortcutCommands": "Commands",
+          "shortcutWorkspacePrevious": "Workspace previous",
+          "shortcutWorkspaceNext": "Workspace next"
+        },
+        "appearanceFlow": {
+          "baseLabel": "Base",
+          "baseDescription": "Select the base color for the application.",
+          "basePlaceholder": "Select a base color"
+        },
+        "teamWorkspaceFlow": {
+          "createTeam": "Create team",
+          "createTeamDescription": "Create a team to organize members and workspaces.",
+          "teamNamePlaceholder": "My Team",
+          "create": "Create",
+          "switchTeam": "Switch team",
+          "switchTeamDescription": "Use this to continue in the correct team context.",
+          "switch": "Switch",
+          "current": "Current",
+          "untitledTeam": "Untitled team",
+          "noTeams": "No teams yet. Create one to continue.",
+          "createWorkspace": "Create workspace",
+          "createWorkspaceDescription": "Create a workspace inside the current team.",
+          "workspaceNamePlaceholder": "My Workspace",
+          "workspaceDescriptionPlaceholder": "Optional description",
+          "switchWorkspace": "Switch workspace",
+          "switchWorkspaceDescription": "Pick the workspace you want to start with.",
+          "noDescription": "No description",
+          "noWorkspaces": "No workspaces yet. Create one in the current team."
+        }
       }
     },
     "exit": {
@@ -1477,6 +2004,16 @@
     }
   },
   "components": {
+    "ui": {
+      "close": "Close",
+      "sidebar": "Sidebar",
+      "sidebarDescription": "Displays the mobile sidebar.",
+      "toggleSidebar": "Toggle Sidebar",
+      "previousSlide": "Previous slide",
+      "nextSlide": "Next slide",
+      "more": "More",
+      "loading": "Loading"
+    },
     "dataTable": {
       "labels": "Labels",
       "actions": "Actions",
@@ -1486,6 +2023,35 @@
       "columns": "Columns",
       "rows": "Rows",
       "selected": "selected",
+      "selectedCount": "{count} selected",
+      "noResults": "No results found.",
+      "clearFilters": "Clear filters",
+      "noMatches": "No matches",
+      "sortAsc": "Asc",
+      "sortDesc": "Desc",
+      "sortNone": "Clear sort",
+      "sort": "Sort",
+      "sortByLabel": "Sort by",
+      "sortOrder": "Order",
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "sortReset": "None",
+      "groupBy": "Group by",
+      "groupByPlaceholder": "Group by column",
+      "groupNone": "No grouping",
+      "search": "Search",
+      "searchPlaceholder": "Search...",
+      "filterDateRange": "Date range",
+      "pickStart": "Pick start date",
+      "pickEnd": "Pick end date",
+      "pickDate": "Pick a date",
+      "to": "to",
+      "filterReset": "Reset",
+      "from": "From {date}",
+      "until": "Until {date}",
+      "rangeBoth": "{start} – {end}",
+      "dateLabel": "Date",
+      "selectRange": "Select range",
       "page": "Page {page} of {pages}",
       "pagination": "Pagination",
       "pageSize": "Page size",
@@ -1606,7 +2172,8 @@
         "publicTeamRequiresUsername": "Add a valid handle to enable public profile",
         "failedToCreate": "Couldn't create team",
         "failedToUpdate": "Couldn't update team",
-        "failedToInvite": "Couldn't send invitations"
+        "failedToInvite": "Couldn't send invitations",
+        "invalidInvitationRole": "Invalid invitation role."
       },
       "toasts": {
         "invitedAll": "Sent {count} invitation | Sent {count} invitations",
@@ -1674,7 +2241,8 @@
       },
       "errors": {
         "previewFile": "Couldn't open this file",
-        "revealFile": "Couldn't show this file in {location}"
+        "revealFile": "Couldn't show this file in {location}",
+        "attachmentTooLarge": "Each attachment must be {size} MB or smaller."
       },
       "locations": {
         "finder": "Finder",
@@ -1783,6 +2351,98 @@
         "used": "{percent}% used"
       }
     },
+    "terminal": {
+      "welcome": "Welcome to Lectornaut CLI",
+      "typeHelp": "Type \"help\" to see available commands.",
+      "helpHeader": "Lectornaut CLI",
+      "helpIntro": "is a command line interface (CLI) to interact with Lectornaut.",
+      "helpDescription": "A lightweight, open-source playload transformer and manager built with web technologies.",
+      "website": "Website",
+      "documentation": "Documentation",
+      "helpCmd": "show this help menu",
+      "jsCmd": "eval JavaScript code",
+      "clearCmd": "clear the terminal",
+      "commandNotFound": "\"{cmd}\" command not found",
+      "errorPrefix": "Error"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "inbox": "Inbox",
+      "saved": "Saved",
+      "done": "Done",
+      "emptyTitle": "No notifications",
+      "emptyDescription": "You have no notifications at this time.",
+      "moveAllTo": "Move all to",
+      "markAllAs": "Mark all as",
+      "read": "Read",
+      "unread": "Unread",
+      "deleteAll": "Delete all",
+      "markAllRead": "Mark all read",
+      "sampleContent": "Sample Content"
+    },
+    "workspaceDialog": {
+      "createTitle": "Create Workspace",
+      "editTitle": "Edit Workspace",
+      "createDescription": "Create a new workspace to organize your content within this team.",
+      "editDescription": "Update workspace details.",
+      "photoLabel": "Workspace Photo",
+      "uploadPhoto": "Upload workspace photo",
+      "removePhoto": "Remove photo",
+      "clickToChange": "Click to change",
+      "clickToUpload": "Click to upload",
+      "nameLabel": "Workspace Name",
+      "namePlaceholder": "My Workspace",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "A brief description of this workspace...",
+      "saveChanges": "Save Changes"
+    },
+    "nodeAttachments": {
+      "emptyNode": "Select a file or folder to manage attachments.",
+      "title": "Attachments",
+      "countSingular": "{count} attachment",
+      "countPlural": "{count} attachments",
+      "upload": "Upload",
+      "readOnlyArchived": "Archived nodes are read-only. You can still open existing attachments.",
+      "readOnlyPermission": "You can view and download attachments, but only members, admins, and owners can edit them.",
+      "uploadsTitle": "Uploads",
+      "clear": "Clear",
+      "uploading": "Uploading...",
+      "loadingAttachments": "Loading attachments...",
+      "retry": "Retry",
+      "emptyReadOnly": "No attachments are available for this node.",
+      "emptyWritable": "No attachments yet. Upload files to keep node-specific assets here.",
+      "syncing": "Syncing",
+      "unknownType": "Unknown type",
+      "createdLabel": "Created",
+      "updatedLabel": "Updated",
+      "editTitle": "Edit attachment",
+      "editDescription": "Rename the attachment or replace the stored file while keeping it linked to the same node.",
+      "fileNameLabel": "File name",
+      "fileNamePlaceholder": "Enter a display name",
+      "replaceFileLabel": "Replace file",
+      "deleteTitle": "Delete attachment",
+      "deleteDescriptionPrefix": "Remove",
+      "deleteDescriptionSuffix": "from this node. The stored file will be deleted as well.",
+      "toasts": {
+        "selectNode": "Select a node before editing attachments.",
+        "archived": "Archived nodes are read-only.",
+        "noPermission": "You do not have permission to edit attachments.",
+        "uploadFailedTitle": "Failed to upload attachment",
+        "downloadFailedTitle": "Failed to download attachment",
+        "updateFailedTitle": "Failed to update attachment",
+        "deleteFailedTitle": "Failed to delete attachment",
+        "uploadedSingle": "Attachment uploaded",
+        "uploadedMultiple": "{count} attachments uploaded",
+        "uploadFailedSingle": "Attachment upload failed",
+        "uploadFailedMultiple": "Some uploads failed",
+        "uploadFailedSingleDescription": "Check the failed upload below and try again.",
+        "uploadFailedMultipleDescription": "{count} files could not be uploaded.",
+        "downloaded": "Attachment downloaded",
+        "updated": "Attachment updated",
+        "renamed": "Attachment renamed",
+        "deleted": "Attachment deleted"
+      }
+    },
     "textEditor": {
       "summary": "Summary",
       "typeForCommands": "Type '/' for commands",
@@ -1841,12 +2501,118 @@
       "removeLink": "Remove Link",
       "openLink": "Open Link",
       "editLink": "Edit Link",
-      "linkPlaceholder": "Enter URL"
+      "linkPlaceholder": "Enter URL",
+      "stats": "{characters} chars · {words} words · {minutes} min read",
+      "blockText": "Text",
+      "blockH1": "H1",
+      "blockH2": "H2",
+      "blockH3": "H3",
+      "blockQuote": "Quote",
+      "blockCode": "Code",
+      "blockHeading1": "Heading 1",
+      "blockHeading2": "Heading 2",
+      "blockHeading3": "Heading 3",
+      "tableSelectLabel": "Select columns × rows",
+      "tablePickerLabel": "{cols} × {rows} columns × rows",
+      "tableTitle": "Table",
+      "tableAddRowAbove": "Add row above",
+      "tableAddRowBelow": "Add row below",
+      "tableAddColumnLeft": "Add column left",
+      "tableAddColumnRight": "Add column right",
+      "tableDeleteRow": "Delete row",
+      "tableDeleteColumn": "Delete column",
+      "tableDeleteTable": "Delete table",
+      "language": "Language",
+      "auto": "Auto",
+      "alignLeftButton": "Left",
+      "alignCenterButton": "Center",
+      "alignRightButton": "Right",
+      "widthLabel": "Width",
+      "textColorTitle": "Text color",
+      "highlightTitle": "Highlight",
+      "slashCommands": "Slash Commands",
+      "invalidUrl": "Invalid URL",
+      "invalidUrlDescription": "Please enter a valid URL.",
+      "slash": {
+        "heading1Title": "Heading 1",
+        "heading1Description": "Large section title",
+        "heading2Title": "Heading 2",
+        "heading2Description": "Medium section title",
+        "heading3Title": "Heading 3",
+        "heading3Description": "Small section title",
+        "headingsGroup": "Headings",
+        "bulletListTitle": "Bullet List",
+        "bulletListDescription": "Start an unordered list",
+        "orderedListTitle": "Numbered List",
+        "orderedListDescription": "Start an ordered list",
+        "taskListTitle": "Task List",
+        "taskListDescription": "Start a checklist",
+        "listsGroup": "Lists",
+        "blockquoteTitle": "Blockquote",
+        "blockquoteDescription": "Add a quote block",
+        "codeBlockTitle": "Code Block",
+        "codeBlockDescription": "Insert syntax-highlighted code",
+        "blocksGroup": "Blocks",
+        "imageTitle": "Image",
+        "imageDescription": "Insert image from URL",
+        "tableTitle": "Table",
+        "tableDescription": "Insert a 3x3 table",
+        "insertGroup": "Insert",
+        "highlightTitle": "Highlight",
+        "highlightDescription": "Highlight selected text",
+        "textColorTitle": "Text Color",
+        "textColorDescription": "Apply a text color",
+        "formattingGroup": "Formatting"
+      },
+      "imageDialog": {
+        "title": "Insert Image",
+        "description": "Insert an external image URL.",
+        "urlLabel": "Image URL",
+        "urlPlaceholder": "https://example.com/image.png",
+        "insertButton": "Insert Image",
+        "invalidUrl": "Enter a valid image URL (http/https)."
+      },
+      "linkDialog": {
+        "title": "Insert Link",
+        "description": "Add a URL for the selected text. Leave empty to remove.",
+        "urlLabel": "URL",
+        "urlPlaceholder": "https://example.com",
+        "remove": "Remove",
+        "apply": "Apply"
+      }
     },
     "flow": {
       "title": "Flow",
       "steps": "Steps",
       "actions": "Actions",
+      "progress": {
+        "title": "Workflow",
+        "subtitle": "Lectornaut workflow progress.",
+        "step": "Step {step} of {total}",
+        "myProgress": "My progress",
+        "skip": "Skip",
+        "stepCreateWorkflow": "Create a workflow",
+        "stepAddNode": "Add a node",
+        "stepRunWorkflow": "Run a workflow",
+        "stepPublishAutomation": "Publish an automation"
+      },
+      "stats": {
+        "totalMinutes": "Total minutes",
+        "totalMinutesDescription": "Total minutes across all agents in this organization for current month.",
+        "totalJobRuns": "Total job runs",
+        "totalJobRunsDescription": "Total job runs across all agents in this organization for current month.",
+        "avgJobRunTime": "Avg job run time",
+        "avgJobRunTimeDescription": "Average time taken by a job to run across all agents in this organization for current month.",
+        "avgJobQueueTime": "Avg job queue time",
+        "avgJobQueueTimeDescription": "Average time taken by a job to get queued across all agents in this organization for current month.",
+        "jobFailureRate": "Job failure rate",
+        "jobFailureRateDescription": "Percentage of jobs that failed across all agents in this organization for current month.",
+        "failedJobUsage": "Failed job usage",
+        "unitMins": "mins",
+        "unitRuns": "runs",
+        "unitSeconds": "seconds",
+        "unitMinutes": "minutes"
+      },
       "sidebar": {
         "widgets": "Widgets",
         "settings": "Settings"

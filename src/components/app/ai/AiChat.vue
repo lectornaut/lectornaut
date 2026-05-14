@@ -21,6 +21,7 @@ import "markstream-vue/index.css"
 import "katex/dist/katex.min.css"
 
 const isDark = usePreferredDark()
+const { t } = useI18n()
 
 const botChat = inject(BotChatContextKey)
 const messages = computed(() => botChat?.messages.value ?? [])
@@ -288,7 +289,7 @@ if (!supportsScrollAnchoring) {
       class="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-8 text-center text-sm"
     >
       <IconAiFill class="size-8 opacity-60" />
-      <p>Ask anything to get started.</p>
+      <p>{{ t("ai.chatEmpty") }}</p>
     </div>
     <div
       v-else
@@ -377,7 +378,7 @@ if (!supportsScrollAnchoring) {
         <span
           class="bg-muted-foreground inline-block size-1.5 animate-pulse rounded-full"
         />
-        <span>Thinking...</span>
+        <span>{{ t("ai.thinking") }}</span>
       </div>
       <!-- Scroll-anchor sentinel — see comment in <script setup>.
            Must be the final child so the browser locks onto it. -->

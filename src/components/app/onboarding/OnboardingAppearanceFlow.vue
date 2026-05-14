@@ -75,9 +75,11 @@ const getAccentOptionStyle = (optionId: string) =>
 
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="onboarding-base">Base</FieldLabel>
+            <FieldLabel for="onboarding-base">{{
+              t("pages.welcome.onboarding.appearanceFlow.baseLabel")
+            }}</FieldLabel>
             <FieldDescription>
-              Select the base color for the application.
+              {{ t("pages.welcome.onboarding.appearanceFlow.baseDescription") }}
             </FieldDescription>
           </FieldContent>
           <div class="flex items-center gap-2">
@@ -90,7 +92,11 @@ const getAccentOptionStyle = (optionId: string) =>
             />
             <Select id="onboarding-base" v-model="base">
               <SelectTrigger>
-                <SelectValue placeholder="Select a base color" />
+                <SelectValue
+                  :placeholder="
+                    t('pages.welcome.onboarding.appearanceFlow.basePlaceholder')
+                  "
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>

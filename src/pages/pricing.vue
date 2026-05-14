@@ -102,12 +102,12 @@ const handlePlanAction = async (planId: BillingPlanKey): Promise<void> => {
   }
 
   if (!currentTeam.value?.id) {
-    toast.error("Select a team before managing billing.")
+    toast.error(t("pages.pricing.errors.selectTeam"))
     return
   }
 
   if (!canManageBilling.value) {
-    toast.error("You do not have permission to manage billing for this team.")
+    toast.error(t("pages.pricing.errors.noPermission"))
     return
   }
 
@@ -123,7 +123,7 @@ const handlePlanAction = async (planId: BillingPlanKey): Promise<void> => {
         targetInterval: selectedInterval.value,
       })
       await refreshBilling()
-      toast.success("Plan updated successfully.")
+      toast.success(t("pages.pricing.toasts.planUpdated"))
       return
     }
 

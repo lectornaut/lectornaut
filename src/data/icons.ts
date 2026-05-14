@@ -25,6 +25,7 @@ import IconLucideAlignJustify from "~icons/lucide/align-justify"
 import IconLucideAlignLeft from "~icons/lucide/align-left"
 import IconLucideAlignRight from "~icons/lucide/align-right"
 import IconLucideAperture from "~icons/lucide/aperture"
+import IconLucideArchive from "~icons/lucide/archive"
 import IconLucideArrowBigUp from "~icons/lucide/arrow-big-up"
 import IconLucideArrowDown from "~icons/lucide/arrow-down"
 import IconLucideArrowDownToLine from "~icons/lucide/arrow-down-to-line"
@@ -249,7 +250,6 @@ import IconLucideXCircle from "~icons/lucide/x-circle"
 import IconLucideZap from "~icons/lucide/zap"
 import IconMaterialSymbolsCircle from "~icons/material-symbols/circle"
 import IconMdiApple from "~icons/mdi/apple"
-import IconMdiArchive from "~icons/mdi/archive"
 import IconMdiArrowRightCircle from "~icons/mdi/arrow-right-circle"
 import IconMdiCircle from "~icons/mdi/circle"
 import IconMdiCircleMedium from "~icons/mdi/circle-medium"
@@ -310,7 +310,7 @@ export {
   IconLogosAppleAppStore as IconAppleAppStore,
   IconMdiApple as IconAppleFilled,
   IconMingcuteGridFill as IconApps,
-  IconMdiArchive as IconArchive,
+  IconLucideArchive as IconArchive,
   IconLucideArrowBigUp as IconArrowBigUp,
   IconLucideArrowDown as IconArrowDown,
   IconLucideArrowDownToLine as IconArrowDownToLine,

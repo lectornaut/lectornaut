@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { IconLink, IconTrash } from "@/data/icons"
 
+const { t } = useI18n()
+
 const props = withDefaults(
   defineProps<{
     open: boolean
@@ -47,17 +49,21 @@ const remove = () => {
   <Dialog :open="open" @update:open="emit('update:open', $event)">
     <DialogContent class="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>Insert Link</DialogTitle>
+        <DialogTitle>{{
+          t("components.textEditor.linkDialog.title")
+        }}</DialogTitle>
         <DialogDescription>
-          Add a URL for the selected text. Leave empty to remove.
+          {{ t("components.textEditor.linkDialog.description") }}
         </DialogDescription>
       </DialogHeader>
       <div class="space-y-2">
-        <Label for="editor-link-input">URL</Label>
+        <Label for="editor-link-input">{{
+          t("components.textEditor.linkDialog.urlLabel")
+        }}</Label>
         <Input
           id="editor-link-input"
           v-model="href"
-          placeholder="https://example.com"
+          :placeholder="t('components.textEditor.linkDialog.urlPlaceholder')"
           autofocus
           @keydown.enter.prevent="submit"
         />
@@ -65,13 +71,15 @@ const remove = () => {
       <DialogFooter class="gap-2 sm:justify-between">
         <Button variant="outline" @click="remove">
           <IconTrash />
-          Remove
+          {{ t("components.textEditor.linkDialog.remove") }}
         </Button>
         <div class="flex gap-2">
-          <Button variant="ghost" @click="closeDialog">Cancel</Button>
+          <Button variant="ghost" @click="closeDialog">{{
+            t("actions.cancel")
+          }}</Button>
           <Button @click="submit">
             <IconLink />
-            Apply
+            {{ t("components.textEditor.linkDialog.apply") }}
           </Button>
         </div>
       </DialogFooter>

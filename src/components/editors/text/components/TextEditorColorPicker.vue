@@ -61,7 +61,7 @@ const emit = defineEmits<{
             v-if="activeColor === color.value"
             class="bg-background/85 absolute inset-0 flex items-center justify-center"
           >
-            <IconCheck class="size-3" />
+            <IconCheck />
           </span>
         </Button>
         <Button variant="ghost" size="icon" @click="emit('clear')">

@@ -6,6 +6,7 @@ import { emitter } from "@/modules/mitt"
 import MarkdownRender from "markstream-vue"
 import "markstream-vue/index.css"
 
+const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
 const isDark = usePreferredDark()
 
@@ -26,7 +27,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader>
-        <SheetTitle>Changelog</SheetTitle>
+        <SheetTitle>{{ t("pages.changelog.title") }}</SheetTitle>
       </SheetHeader>
       <OverlayScrollbarsWrapper>
         <div class="flex grow flex-col px-4">
@@ -66,11 +67,11 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       <SheetFooter>
         <Button variant="secondary" class="justify-start">
           <IconMessageCircle />
-          Get support
+          {{ t("components.support.getSupport") }}
         </Button>
         <Button variant="secondary" class="justify-start">
           <IconBookOpen />
-          Documentation
+          {{ t("components.support.documentation") }}
           <IconArrowUpRight />
         </Button>
       </SheetFooter>

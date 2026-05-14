@@ -147,7 +147,9 @@ const resolveUsernamePayload = async (
 
   if (!trimmedUsername) {
     if (requireUsername) {
-      throw new Error("Public team requires a username")
+      throw new Error(
+        t("components.teamDialog.errors.publicTeamRequiresUsername")
+      )
     }
     return currentUsername.value ? null : undefined
   }
@@ -158,14 +160,16 @@ const resolveUsernamePayload = async (
   }
 
   if (result.state === "invalid" || result.state === "taken") {
-    throw new Error(result.error || "Invalid username")
+    throw new Error(
+      result.error || t("components.teamDialog.errors.invalidUsername")
+    )
   }
 
   if (result.state === "available" && result.normalized) {
     return result.normalized
   }
 
-  throw new Error("Invalid username")
+  throw new Error(t("components.teamDialog.errors.invalidUsername"))
 }
 
 const toggleIsPublic = async (value: boolean) => {

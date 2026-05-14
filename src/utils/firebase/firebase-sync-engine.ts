@@ -9,7 +9,9 @@ import {
 } from "@/schemas/sync"
 import type { SyncBaseVersion, SyncMutationType } from "@/types/sync"
 import {
+  FirestoreErrorCodes,
   getFirestoreErrorMessage,
+  hasFirebaseErrorCode,
   isRetryableFirebaseError,
 } from "@/utils/firebase/firebase-errors"
 import {
@@ -925,6 +927,16 @@ const ensureAckListener = (userId: string) => {
       scheduleSync()
     },
     (error) => {
+      // Benign during sign-out / account switch: the listener emits one
+      // final permission-denied snapshot before handleUserChange clears
+      // it. Skip the log AND the retry — both are noise once the
+      // listener's user is gone.
+      if (
+        auth.currentUser?.uid !== userId &&
+        hasFirebaseErrorCode(error, FirestoreErrorCodes.PERMISSION_DENIED)
+      ) {
+        return
+      }
       console.error("[syncEngine] Failed to listen for operation acks:", error)
       scheduleSync(RETRY_BASE_DELAY_MS)
     }

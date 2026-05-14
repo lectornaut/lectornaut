@@ -21,6 +21,7 @@ import type { IBotSessionVisibility } from "@/types/domain"
 import { computed, inject, nextTick, ref, type Component } from "vue"
 
 const botChat = inject(BotChatContextKey)
+const { t } = useI18n()
 
 const sessionId = computed(() => botChat?.sessionId.value ?? null)
 const activeSession = computed(() => botChat?.activeSession.value ?? null)
@@ -86,23 +87,22 @@ interface VisibilityOption {
 const visibilityOptions = computed<VisibilityOption[]>(() => [
   {
     value: "private",
-    label: "Private",
+    label: t("ai.visibilityPrivate"),
     description: isActiveOwner.value
-      ? "Only you can see this chat."
-      : "Only the owner can see this chat.",
+      ? t("ai.sidebar.visibilityPrivateSelf")
+      : t("ai.sidebar.visibilityPrivateOther"),
     icon: IconLock,
   },
   {
     value: "shared",
-    label: "Shared with team",
-    description:
-      "Members can read this chat. Owner and admins can keep editing.",
+    label: t("ai.sidebar.visibilitySharedLabel"),
+    description: t("ai.sidebar.visibilitySharedDescription"),
     icon: IconUsers,
   },
   {
     value: "public",
-    label: "Public",
-    description: "Anyone with the link can view. Coming soon.",
+    label: t("ai.sidebar.visibilityPublicLabel"),
+    description: t("ai.sidebar.visibilityPublicDescription"),
     icon: IconGlobe,
     disabled: true,
   },
@@ -199,31 +199,29 @@ interface AvailableInterrupt {
   example: string
 }
 
-const availableTools: AvailableTool[] = [
+const availableTools = computed<AvailableTool[]>(() => [
   {
     name: "getWeather",
-    description: "Look up current weather for a location.",
-    example: "What's the weather in Tokyo?",
+    description: t("ai.toolCatalog.weather.description"),
+    example: t("ai.toolCatalog.weather.example"),
   },
   {
     name: "rollDice",
-    description: "Roll a six-sided die.",
-    example: "Roll a die for me.",
+    description: t("ai.toolCatalog.rollDice.description"),
+    example: t("ai.toolCatalog.rollDice.example"),
   },
-]
+])
 
 // Interrupt tools pause the chat and surface a form. Listed separately
 // from action tools because they're available in *every* mode (including
 // `manual`) — a clarifying question has no side effects.
-const availableInterrupts: AvailableInterrupt[] = [
+const availableInterrupts = computed<AvailableInterrupt[]>(() => [
   {
     name: "askQuestion",
-    description:
-      "Pauses the chat and asks you a multiple-choice question. Pick a " +
-      "choice (or type your own when allowed) to continue.",
-    example: "Help me plan a backyard BBQ.",
+    description: t("ai.toolCatalog.askQuestion.description"),
+    example: t("ai.toolCatalog.askQuestion.example"),
   },
-]
+])
 
 // ── Delete ───────────────────────────────────────────────────────────────────
 
@@ -248,12 +246,11 @@ const submitDelete = async () => {
       <SidebarGroup>
         <SidebarGroupLabel class="flex items-center gap-2">
           <Component :is="modeIcons[activeMode]" />
-          Mode
+          {{ t("ai.mode") }}
         </SidebarGroupLabel>
         <SidebarGroupContent class="space-y-2 p-2">
           <p class="text-muted-foreground text-xs">
-            Mode steers how the assistant approaches each turn — what tools it
-            can reach, how proactive it is, and how it phrases replies.
+            {{ t("ai.sidebar.modeDescription") }}
           </p>
           <RadioGroup
             :model-value="activeMode"
@@ -275,10 +272,10 @@ const submitDelete = async () => {
                   class="flex items-center gap-2 text-sm"
                 >
                   <Component :is="modeIcons[opt.value]" class="size-4" />
-                  {{ opt.label }}
+                  {{ t(`ai.modes.${opt.value}.label`) }}
                 </FieldLabel>
                 <p class="text-muted-foreground text-xs">
-                  {{ opt.longDescription }}
+                  {{ t(`ai.modes.${opt.value}.longDescription`) }}
                 </p>
               </FieldContent>
             </Field>
@@ -289,18 +286,28 @@ const submitDelete = async () => {
       <SidebarGroup>
         <SidebarGroupLabel class="flex items-center gap-2">
           <IconWrench />
-          Available tools
+          {{ t("ai.sidebar.availableTools") }}
         </SidebarGroupLabel>
         <SidebarGroupContent class="space-y-2 p-2">
           <p v-if="toolsAreEnabled" class="text-muted-foreground text-xs">
-            The assistant can call these on its own when relevant. Try one of
-            the example prompts below.
+            {{ t("ai.sidebar.toolsEnabledHint") }}
           </p>
-          <p v-else class="text-muted-foreground text-xs">
-            Tools are disabled in
-            <strong>{{ activeModeOption.label }}</strong> mode. Switch to
-            <strong>Auto</strong> or <strong>Agent</strong> to re-enable them.
-          </p>
+          <i18n-t
+            v-else
+            keypath="ai.sidebar.toolsDisabled"
+            tag="p"
+            class="text-muted-foreground text-xs"
+          >
+            <template #mode>
+              <strong>{{ t(`ai.modes.${activeMode}.label`) }}</strong>
+            </template>
+            <template #auto>
+              <strong>{{ t("ai.modes.auto.label") }}</strong>
+            </template>
+            <template #agent>
+              <strong>{{ t("ai.modes.agent.label") }}</strong>
+            </template>
+          </i18n-t>
           <ul class="space-y-2">
             <li
               v-for="tool in availableTools"
@@ -309,15 +316,15 @@ const submitDelete = async () => {
               :class="{ 'opacity-50': !toolsAreEnabled }"
             >
               <div class="flex items-center gap-2">
-                <IconWrench class="text-muted-foreground size-3.5" />
+                <IconWrench />
                 <code class="text-foreground text-xs font-medium">{{
                   tool.name
                 }}</code>
               </div>
-              <p class="text-muted-foreground mt-1 text-xs">
+              <p class="text-muted-foreground text-xs">
                 {{ tool.description }}
               </p>
-              <p class="text-muted-foreground/80 mt-1 text-[11px] italic">
+              <p class="text-muted-foreground/80 text-xs italic">
                 e.g. “{{ tool.example }}”
               </p>
             </li>
@@ -328,14 +335,18 @@ const submitDelete = async () => {
       <SidebarGroup>
         <SidebarGroupLabel class="flex items-center gap-2">
           <IconMessageCircle />
-          Human-in-the-Loop
+          {{ t("ai.sidebar.humanInTheLoop") }}
         </SidebarGroupLabel>
         <SidebarGroupContent class="space-y-2 p-2">
-          <p class="text-muted-foreground text-xs">
-            The assistant can pause and ask you a clarifying question instead of
-            guessing. These interrupts are available in every mode — including
-            <strong>Manual</strong>.
-          </p>
+          <i18n-t
+            keypath="ai.sidebar.humanInTheLoopHint"
+            tag="p"
+            class="text-muted-foreground text-xs"
+          >
+            <template #manual>
+              <strong>{{ t("ai.modes.manual.label") }}</strong>
+            </template>
+          </i18n-t>
           <ul class="space-y-2">
             <li
               v-for="interrupt in availableInterrupts"
@@ -343,15 +354,15 @@ const submitDelete = async () => {
               class="border-border/60 bg-background/40 rounded-md border p-2"
             >
               <div class="flex items-center gap-2">
-                <IconMessageCircle class="text-muted-foreground size-3.5" />
+                <IconMessageCircle />
                 <code class="text-foreground text-xs font-medium">{{
                   interrupt.name
                 }}</code>
               </div>
-              <p class="text-muted-foreground mt-1 text-xs">
+              <p class="text-muted-foreground text-xs">
                 {{ interrupt.description }}
               </p>
-              <p class="text-muted-foreground/80 mt-1 text-[11px] italic">
+              <p class="text-muted-foreground/80 text-xs italic">
                 e.g. “{{ interrupt.example }}”
               </p>
             </li>
@@ -360,10 +371,10 @@ const submitDelete = async () => {
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>Manage chat</SidebarGroupLabel>
+        <SidebarGroupLabel>{{ t("ai.sidebar.manageChat") }}</SidebarGroupLabel>
         <SidebarGroupContent class="grid gap-2 p-2">
           <p v-if="!sessionId" class="text-muted-foreground text-xs">
-            Send a message to start a chat — actions will appear here.
+            {{ t("ai.sidebar.noSessionActions") }}
           </p>
           <template v-else>
             <Button
@@ -373,7 +384,7 @@ const submitDelete = async () => {
               @click="openRename"
             >
               <IconPencil />
-              Rename
+              {{ t("actions.rename") }}
             </Button>
             <Button
               variant="secondary"
@@ -382,7 +393,11 @@ const submitDelete = async () => {
               @click="onArchiveToggle"
             >
               <Component :is="isActiveArchived ? IconRotateCcw : IconArchive" />
-              {{ isActiveArchived ? "Restore from archive" : "Archive" }}
+              {{
+                isActiveArchived
+                  ? t("ai.sidebar.restoreFromArchive")
+                  : t("ai.archive")
+              }}
             </Button>
             <Button
               variant="destructive"
@@ -391,10 +406,10 @@ const submitDelete = async () => {
               @click="openDelete"
             >
               <IconTrash2 />
-              Delete chat
+              {{ t("ai.sidebar.deleteChat") }}
             </Button>
             <p v-if="!canManage" class="text-muted-foreground text-xs">
-              Only the owner or a team admin can manage this chat.
+              {{ t("ai.sidebar.cannotManage") }}
             </p>
           </template>
         </SidebarGroupContent>
@@ -405,11 +420,11 @@ const submitDelete = async () => {
           <IconLock v-if="activeVisibility === 'private'" />
           <IconUsers v-else-if="activeVisibility === 'shared'" />
           <IconGlobe v-else />
-          Visibility
+          {{ t("ai.sidebar.visibility") }}
         </SidebarGroupLabel>
         <SidebarGroupContent class="space-y-2 p-2">
           <p v-if="!sessionId" class="text-muted-foreground text-xs">
-            Send a message to start a chat — visibility can be set after.
+            {{ t("ai.sidebar.noSessionVisibility") }}
           </p>
           <RadioGroup
             v-else
@@ -449,7 +464,7 @@ const submitDelete = async () => {
             v-if="sessionId && !canChangeVisibility"
             class="text-muted-foreground text-xs"
           >
-            Only the owner or a team admin can change visibility.
+            {{ t("ai.sidebar.cannotChangeVisibility") }}
           </p>
         </SidebarGroupContent>
       </SidebarGroup>
@@ -460,21 +475,23 @@ const submitDelete = async () => {
   <AlertDialog v-model:open="confirmShareOpen">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Share this chat with the team?</AlertDialogTitle>
+        <AlertDialogTitle>
+          {{ t("ai.sidebar.shareConfirmTitle") }}
+        </AlertDialogTitle>
         <AlertDialogDescription>
-          Members of this workspace will be able to read every message in this
-          chat. Owner and admins will also be able to send new messages. You can
-          switch back to private at any time.
+          {{ t("ai.sidebar.shareConfirmDescription") }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel @click="handleCancelShare">Cancel</AlertDialogCancel>
+        <AlertDialogCancel @click="handleCancelShare">
+          {{ t("actions.cancel") }}
+        </AlertDialogCancel>
         <AlertDialogAction
           :disabled="isUpdatingVisibility"
           @click.prevent="handleConfirmShare"
         >
           <Spinner v-if="isUpdatingVisibility" />
-          Share with team
+          {{ t("ai.sidebar.shareConfirmAction") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -484,18 +501,18 @@ const submitDelete = async () => {
   <Dialog v-model:open="renameDialogOpen">
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Rename chat</DialogTitle>
+        <DialogTitle>{{ t("ai.renameChat") }}</DialogTitle>
         <DialogDescription>
-          Pick a name that helps you find this chat later.
+          {{ t("ai.renameChatHint") }}
         </DialogDescription>
       </DialogHeader>
       <form class="grid gap-2" @submit.prevent="submitRename">
-        <Label for="bot-actions-rename-input">Title</Label>
+        <Label for="bot-actions-rename-input">{{ t("ai.chatTitle") }}</Label>
         <Input
           id="bot-actions-rename-input"
           ref="renameInputEl"
           v-model="renameInput"
-          placeholder="e.g. Q3 launch checklist"
+          :placeholder="t('ai.chatTitlePlaceholder')"
           maxlength="120"
           :disabled="isMutating"
         />
@@ -506,14 +523,14 @@ const submitDelete = async () => {
           :disabled="isMutating"
           @click="renameDialogOpen = false"
         >
-          Cancel
+          {{ t("actions.cancel") }}
         </Button>
         <Button
           :disabled="isMutating || !renameInput.trim()"
           @click="submitRename"
         >
           <Spinner v-if="isMutating" />
-          Save
+          {{ t("actions.save") }}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -523,17 +540,18 @@ const submitDelete = async () => {
   <AlertDialog v-model:open="deleteDialogOpen">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+        <AlertDialogTitle>{{ t("ai.deleteChatTitle") }}</AlertDialogTitle>
         <AlertDialogDescription>
           <span class="text-foreground font-medium">{{
-            activeSession?.title || "This chat"
+            activeSession?.title || t("ai.thisChat")
           }}</span>
-          will be permanently deleted, including all of its messages. This
-          action cannot be undone.
+          {{ t("ai.deleteChatConfirm") }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel :disabled="isMutating">Cancel</AlertDialogCancel>
+        <AlertDialogCancel :disabled="isMutating">
+          {{ t("actions.cancel") }}
+        </AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
           class="text-current"
@@ -541,7 +559,7 @@ const submitDelete = async () => {
           @click.prevent="submitDelete"
         >
           <Spinner v-if="isMutating" />
-          Delete
+          {{ t("actions.delete") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

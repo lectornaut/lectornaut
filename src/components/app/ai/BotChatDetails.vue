@@ -20,6 +20,7 @@ import { storeToRefs } from "pinia"
 import { computed, inject } from "vue"
 
 const botChat = inject(BotChatContextKey)
+const { t } = useI18n()
 const { currentUser } = storeToRefs(useAuthStore())
 const { teamMembers } = storeToRefs(useMembershipStore())
 
@@ -33,9 +34,8 @@ const isActiveArchived = computed(
   () => botChat?.isActiveArchived.value ?? false
 )
 const localMessageCount = computed(() => botChat?.messages.value.length ?? 0)
-const activeModeLabel = computed(
-  () => botChat?.activeModeOption.value.label ?? "Auto"
-)
+const activeMode = computed(() => botChat?.mode.value ?? "auto")
+const activeModeLabel = computed(() => t(`ai.modes.${activeMode.value}.label`))
 
 const tsToDate = (value: unknown): Date | null => {
   if (!value) return null
@@ -58,9 +58,9 @@ const visibilityIcon = (v: IBotSessionVisibility) => {
 }
 
 const visibilityLabel = (v: IBotSessionVisibility): string => {
-  if (v === "shared") return "Shared with team"
-  if (v === "public") return "Public"
-  return "Private"
+  if (v === "shared") return t("ai.sidebar.visibilitySharedLabel")
+  if (v === "public") return t("ai.sidebar.visibilityPublicLabel")
+  return t("ai.visibilityPrivate")
 }
 
 /**
@@ -95,10 +95,14 @@ const isOwnerFormer = computed(() => {
 const ownerLabel = computed(() => {
   const session = activeSession.value
   if (!session) return ""
-  if (session.ownerUid === currentUser.value?.uid) return "You"
-  if (isOwnerFormer.value) return "Former member"
+  if (session.ownerUid === currentUser.value?.uid) return t("ai.details.you")
+  if (isOwnerFormer.value) return t("ai.details.formerMember")
   const snapshot = ownerMember.value?.user
-  return snapshot?.displayName?.trim() || snapshot?.email || "Team member"
+  return (
+    snapshot?.displayName?.trim() ||
+    snapshot?.email ||
+    t("ai.details.teamMember")
+  )
 })
 
 const ownerPhotoURL = computed(() => ownerMember.value?.user?.photoURL ?? null)
@@ -127,19 +131,19 @@ const detailRows = computed<DetailRow[]>(() => {
   const rows: DetailRow[] = [
     {
       id: "created",
-      label: "Created",
+      label: t("ai.details.created"),
       value: formatAbsolute(createdAt.value),
       icon: IconCalendar,
     },
     {
       id: "updated",
-      label: "Last activity",
+      label: t("ai.details.lastActivity"),
       value: formatAbsolute(updatedAt.value),
       icon: IconClock,
     },
     {
       id: "messages",
-      label: "Messages",
+      label: t("ai.details.messages"),
       value: String(messageCount.value),
       icon: IconHash,
     },
@@ -147,7 +151,7 @@ const detailRows = computed<DetailRow[]>(() => {
   if (archivedAt.value) {
     rows.push({
       id: "archived",
-      label: "Archived",
+      label: t("ai.details.archivedAt"),
       value: formatAbsolute(archivedAt.value),
       icon: IconArchive,
     })
@@ -165,15 +169,15 @@ const detailRows = computed<DetailRow[]>(() => {
             v-if="!sessionId"
             class="text-muted-foreground flex flex-col items-center gap-2 py-6 text-center text-xs"
           >
-            <IconHistory class="size-5 opacity-60" />
-            <p>Start or open a chat to see its details.</p>
+            <IconHistory />
+            <p>{{ t("ai.details.empty") }}</p>
           </div>
           <template v-else>
             <div class="space-y-1">
               <p
                 class="text-foreground line-clamp-2 text-base leading-tight font-medium"
               >
-                {{ activeSession?.title || "Untitled chat" }}
+                {{ activeSession?.title || t("ai.untitledChat") }}
               </p>
               <p
                 v-if="activeSession?.preview"
@@ -184,16 +188,22 @@ const detailRows = computed<DetailRow[]>(() => {
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" class="gap-1">
+              <Badge variant="outline">
                 <Component :is="visibilityIcon(activeVisibility)" />
                 {{ visibilityLabel(activeVisibility) }}
               </Badge>
-              <Badge variant="outline"> {{ activeModeLabel }} mode </Badge>
-              <Badge v-if="isActiveOwner" variant="secondary">Owner</Badge>
-              <Badge v-else variant="secondary">Read-only</Badge>
-              <Badge v-if="isActiveArchived" variant="outline" class="gap-1">
+              <Badge variant="outline">
+                {{ t("ai.details.modeBadge", { mode: activeModeLabel }) }}
+              </Badge>
+              <Badge v-if="isActiveOwner" variant="secondary">
+                {{ t("ai.details.owner") }}
+              </Badge>
+              <Badge v-else variant="secondary">
+                {{ t("ai.details.readOnly") }}
+              </Badge>
+              <Badge v-if="isActiveArchived" variant="outline">
                 <IconArchive />
-                Archived
+                {{ t("ai.archived") }}
               </Badge>
             </div>
 
@@ -201,7 +211,7 @@ const detailRows = computed<DetailRow[]>(() => {
               <div class="flex items-start justify-between gap-2">
                 <dt class="text-muted-foreground flex items-center gap-2">
                   <IconUserRound />
-                  Owner
+                  {{ t("ai.details.owner") }}
                 </dt>
                 <dd
                   class="flex min-w-0 items-center gap-2 text-right"
@@ -217,8 +227,8 @@ const detailRows = computed<DetailRow[]>(() => {
                       :alt="ownerLabel"
                       referrerpolicy="no-referrer"
                     />
-                    <AvatarFallback class="text-[10px]">
-                      <IconUserRound v-if="isOwnerFormer" class="size-3" />
+                    <AvatarFallback>
+                      <IconUserRound v-if="isOwnerFormer" />
                       <template v-else>{{ getInitials(ownerLabel) }}</template>
                     </AvatarFallback>
                   </Avatar>

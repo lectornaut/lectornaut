@@ -3,6 +3,8 @@ import { useCollabPage } from "@/composables/useCollabPage"
 import { IconFileText } from "@/data/icons"
 import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
 
+const { t } = useI18n()
+
 definePage({
   // Single component handles `/write` (no file) and `/write/:nodeId` (open file).
   // The optional `:nodeId?` segment makes both addresses match here.
@@ -95,8 +97,8 @@ const collabDoc = computed(() => collabSession.value?.ydoc ?? null)
 
 useHead(() => ({
   title: selectedNode.value?.name
-    ? `${selectedNode.value.name} · Write`
-    : "Write",
+    ? t("pages.write.titleWithFile", { name: selectedNode.value.name })
+    : t("pages.write.titleDefault"),
 }))
 </script>
 
@@ -112,10 +114,12 @@ useHead(() => ({
             :scope="nodeScope"
           />
           <SidebarGroup v-else>
-            <SidebarGroupLabel>Documents</SidebarGroupLabel>
+            <SidebarGroupLabel>{{
+              t("pages.write.documents")
+            }}</SidebarGroupLabel>
             <SidebarGroupContent>
               <div class="text-muted-foreground px-4 py-2 text-xs">
-                Select a workspace to view documents.
+                {{ t("pages.write.selectWorkspace") }}
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -140,9 +144,9 @@ useHead(() => ({
         <EmptyMedia variant="icon">
           <IconFileText />
         </EmptyMedia>
-        <EmptyTitle>No document selected</EmptyTitle>
+        <EmptyTitle>{{ t("pages.write.emptyTitle") }}</EmptyTitle>
         <EmptyDescription>
-          Select a workspace to view or edit documents.
+          {{ t("pages.write.emptyDescription") }}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -166,7 +170,7 @@ useHead(() => ({
       @click="saveContent"
     >
       <Spinner v-if="isSaving" />
-      Save
+      {{ t("actions.save") }}
     </Button>
   </Teleport>
   <Teleport defer to="#right-sidebar">

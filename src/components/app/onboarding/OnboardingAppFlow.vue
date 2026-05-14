@@ -12,6 +12,8 @@ import {
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import confetti from "canvas-confetti"
 
+const { t } = useI18n()
+
 type DemoWorkspace = {
   id: string
   name: string
@@ -29,35 +31,42 @@ const completed = reactive({
 const hasCelebrated = ref(false)
 const lastDemoAction = ref<string | null>(null)
 
-const demoWorkspaces: DemoWorkspace[] = [
-  { id: "product", name: "Product" },
-  { id: "design", name: "Design" },
-  { id: "engineering", name: "Engineering" },
-]
-const activeWorkspaceId = ref(demoWorkspaces[0]?.id ?? "")
+const demoWorkspaces = computed<DemoWorkspace[]>(() => [
+  {
+    id: "product",
+    name: t("pages.welcome.onboarding.appFlow.workspaceProduct"),
+  },
+  { id: "design", name: t("pages.welcome.onboarding.appFlow.workspaceDesign") },
+  {
+    id: "engineering",
+    name: t("pages.welcome.onboarding.appFlow.workspaceEngineering"),
+  },
+])
+const activeWorkspaceId = ref(demoWorkspaces.value[0]?.id ?? "")
 const activeWorkspaceName = computed(
   () =>
-    demoWorkspaces.find((workspace) => workspace.id === activeWorkspaceId.value)
-      ?.name ?? "Workspace"
+    demoWorkspaces.value.find(
+      (workspace) => workspace.id === activeWorkspaceId.value
+    )?.name ?? t("pages.welcome.onboarding.appFlow.workspaceFallback")
 )
 
-const sampleCommands = [
+const sampleCommands = computed(() => [
   {
     id: "new-tab",
-    label: "Open new tab",
+    label: t("pages.welcome.onboarding.appFlow.commandNewTab"),
     icon: IconCommand,
   },
   {
     id: "toggle-settings",
-    label: "Go to settings",
+    label: t("pages.welcome.onboarding.appFlow.commandToggleSettings"),
     icon: IconSettings,
   },
   {
     id: "ask-ai",
-    label: "Ask AI",
+    label: t("pages.welcome.onboarding.appFlow.commandAskAi"),
     icon: IconSparkles,
   },
-]
+])
 
 const completionCount = computed(
   () =>
@@ -109,20 +118,28 @@ watch(isCompleted, (done) => {
 
 const runSampleCommand = (label: string) => {
   completed.command = true
-  lastDemoAction.value = `Command demo: ${label}`
+  lastDemoAction.value = t(
+    "pages.welcome.onboarding.appFlow.commandDemoLabel",
+    { label }
+  )
   commandDialogOpen.value = false
 }
 
 const selectWorkspace = (workspaceId: string) => {
   activeWorkspaceId.value = workspaceId
   completed.workspace = true
-  lastDemoAction.value = `Workspace demo: switched to ${activeWorkspaceName.value}`
+  lastDemoAction.value = t(
+    "pages.welcome.onboarding.appFlow.workspaceDemoLabel",
+    { name: activeWorkspaceName.value }
+  )
 }
 
 const openShortcutsDemo = () => {
   completed.shortcuts = true
   shortcutsDialogOpen.value = true
-  lastDemoAction.value = "Shortcuts demo: opened keyboard shortcuts"
+  lastDemoAction.value = t(
+    "pages.welcome.onboarding.appFlow.shortcutsDemoLabel"
+  )
 }
 </script>
 
@@ -130,8 +147,14 @@ const openShortcutsDemo = () => {
   <div class="p-4">
     <div class="mb-4 border p-3">
       <div class="flex items-center justify-between gap-3">
-        <p class="text-sm font-medium">Try all 3 demos to celebrate</p>
-        <Badge variant="secondary">{{ completionCount }} / 3</Badge>
+        <p class="text-sm font-medium">
+          {{ t("pages.welcome.onboarding.appFlow.header") }}
+        </p>
+        <Badge variant="secondary">{{
+          t("pages.welcome.onboarding.appFlow.progress", {
+            count: completionCount,
+          })
+        }}</Badge>
       </div>
       <p v-if="lastDemoAction" class="text-muted-foreground mt-2 text-xs">
         {{ lastDemoAction }}
@@ -142,10 +165,18 @@ const openShortcutsDemo = () => {
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel>Command and Search</FieldLabel>
+            <FieldLabel>{{
+              t("pages.welcome.onboarding.appFlow.commandLabel")
+            }}</FieldLabel>
             <FieldDescription>
-              Use <strong>{{ platformSpecialKey }} + K</strong> to open commands
-              and search.
+              <i18n-t
+                keypath="pages.welcome.onboarding.appFlow.commandDescription"
+                tag="span"
+              >
+                <template #keys>
+                  <strong>{{ platformSpecialKey }} + K</strong>
+                </template>
+              </i18n-t>
             </FieldDescription>
           </FieldContent>
           <div class="flex flex-col items-end gap-2">
@@ -157,14 +188,24 @@ const openShortcutsDemo = () => {
               <DialogTrigger as-child>
                 <Button variant="outline">
                   <IconSearch />
-                  Try sample
+                  {{ t("pages.welcome.onboarding.appFlow.trySample") }}
                 </Button>
               </DialogTrigger>
               <DialogContent class="bg-secondary p-1.5">
                 <Command class="border">
-                  <CommandInput placeholder="Type a command or search" />
+                  <CommandInput
+                    :placeholder="
+                      t('pages.welcome.onboarding.appFlow.commandPlaceholder')
+                    "
+                  />
                   <CommandList>
-                    <CommandGroup heading="Sample commands">
+                    <CommandGroup
+                      :heading="
+                        t(
+                          'pages.welcome.onboarding.appFlow.sampleCommandsHeading'
+                        )
+                      "
+                    >
                       <CommandItem
                         v-for="command in sampleCommands"
                         :key="command.id"
@@ -184,10 +225,18 @@ const openShortcutsDemo = () => {
 
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel>Workspace Switcher</FieldLabel>
+            <FieldLabel>{{
+              t("pages.welcome.onboarding.appFlow.workspaceLabel")
+            }}</FieldLabel>
             <FieldDescription>
-              Use <strong>{{ platformSpecialKey }} + Shift + ↑/↓</strong> to
-              move between workspaces.
+              <i18n-t
+                keypath="pages.welcome.onboarding.appFlow.workspaceDescription"
+                tag="span"
+              >
+                <template #keys>
+                  <strong>{{ platformSpecialKey }} + Shift + ↑/↓</strong>
+                </template>
+              </i18n-t>
             </FieldDescription>
           </FieldContent>
           <div class="flex flex-col items-end gap-2">
@@ -212,7 +261,13 @@ const openShortcutsDemo = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent class="w-50">
-                <DropdownMenuLabel> Sample workspaces </DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  {{
+                    t(
+                      "pages.welcome.onboarding.appFlow.sampleWorkspacesHeading"
+                    )
+                  }}
+                </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     v-for="workspace in demoWorkspaces"
@@ -234,10 +289,18 @@ const openShortcutsDemo = () => {
 
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel>Full Keyboard Shortcuts</FieldLabel>
+            <FieldLabel>{{
+              t("pages.welcome.onboarding.appFlow.shortcutsLabel")
+            }}</FieldLabel>
             <FieldDescription>
-              Use <strong>{{ platformSpecialKey }} + /</strong> to open keyboard
-              shortcuts.
+              <i18n-t
+                keypath="pages.welcome.onboarding.appFlow.shortcutsDescription"
+                tag="span"
+              >
+                <template #keys>
+                  <strong>{{ platformSpecialKey }} + /</strong>
+                </template>
+              </i18n-t>
             </FieldDescription>
           </FieldContent>
           <div class="flex flex-col items-end gap-2">
@@ -249,26 +312,38 @@ const openShortcutsDemo = () => {
               <DialogTrigger as-child>
                 <Button variant="outline" @click="openShortcutsDemo">
                   <IconKeyboard />
-                  Open sample
+                  {{ t("pages.welcome.onboarding.appFlow.openSample") }}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Keyboard shortcuts</DialogTitle>
+                  <DialogTitle>{{
+                    t("pages.welcome.onboarding.appFlow.shortcutsDialogTitle")
+                  }}</DialogTitle>
                   <DialogDescription>
-                    Sample shortcuts panel used during onboarding.
+                    {{
+                      t(
+                        "pages.welcome.onboarding.appFlow.shortcutsDialogDescription"
+                      )
+                    }}
                   </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-2">
                   <div class="flex items-center justify-between border p-2">
-                    <span class="text-sm">Commands</span>
+                    <span class="text-sm">{{
+                      t("pages.welcome.onboarding.appFlow.shortcutCommands")
+                    }}</span>
                     <KbdGroup>
                       <Kbd>{{ platformSpecialKey }}</Kbd>
                       <Kbd>K</Kbd>
                     </KbdGroup>
                   </div>
                   <div class="flex items-center justify-between border p-2">
-                    <span class="text-sm">Workspace previous</span>
+                    <span class="text-sm">{{
+                      t(
+                        "pages.welcome.onboarding.appFlow.shortcutWorkspacePrevious"
+                      )
+                    }}</span>
                     <KbdGroup>
                       <Kbd>{{ platformSpecialKey }}</Kbd>
                       <Kbd>Shift</Kbd>
@@ -276,7 +351,11 @@ const openShortcutsDemo = () => {
                     </KbdGroup>
                   </div>
                   <div class="flex items-center justify-between border p-2">
-                    <span class="text-sm">Workspace next</span>
+                    <span class="text-sm">{{
+                      t(
+                        "pages.welcome.onboarding.appFlow.shortcutWorkspaceNext"
+                      )
+                    }}</span>
                     <KbdGroup>
                       <Kbd>{{ platformSpecialKey }}</Kbd>
                       <Kbd>Shift</Kbd>

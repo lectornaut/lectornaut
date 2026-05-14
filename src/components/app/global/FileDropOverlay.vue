@@ -753,7 +753,11 @@ const materializeQueuedFileForUpload = async (
   }
 
   if (fileInfo.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
-    throw new Error("Each attachment must be 25 MB or smaller.")
+    throw new Error(
+      t("components.fileDropOverlay.errors.attachmentTooLarge", {
+        size: Math.round(NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES / (1024 * 1024)),
+      })
+    )
   }
 
   const bytes = await readFile(queuedFile.path)
@@ -1150,7 +1154,8 @@ const isFullscreen = useIsFullscreen()
                               :scope="'code'"
                               :team-id="currentTeamId"
                               :workspace-id="currentWorkspaceId"
-                              :selected-node-id="saveSheetTargetIds.code"
+                              selection-mode="single"
+                              :selection="saveSheetTargetIds.code"
                               @select="handleSaveTargetSelect('code', $event)"
                             />
                           </OverlayScrollbarsWrapper>
@@ -1165,7 +1170,8 @@ const isFullscreen = useIsFullscreen()
                               :scope="'write'"
                               :team-id="currentTeamId"
                               :workspace-id="currentWorkspaceId"
-                              :selected-node-id="saveSheetTargetIds.write"
+                              selection-mode="single"
+                              :selection="saveSheetTargetIds.write"
                               @select="handleSaveTargetSelect('write', $event)"
                             />
                           </OverlayScrollbarsWrapper>

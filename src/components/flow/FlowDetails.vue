@@ -6,61 +6,56 @@ const { t } = useI18n()
 const currentDate = new Date()
 const currentDateLabel = useDateFormat(currentDate, "D MMM YYYY")
 
-const stats = [
+const stats = computed(() => [
   {
-    name: "Total minutes",
+    name: t("components.flow.stats.totalMinutes"),
     value: "24",
     change: "+5%",
-    description:
-      "Total minutes across all agents in this organization for current month.",
+    description: t("components.flow.stats.totalMinutesDescription"),
     changeType: "positive",
     usage: 12,
     capacity: 50,
-    unit: "mins",
+    unit: t("components.flow.stats.unitMins"),
     showUpgrade: true,
   },
   {
-    name: "Total job runs",
+    name: t("components.flow.stats.totalJobRuns"),
     value: "12",
     change: "-2%",
-    description:
-      "Total job runs across all agents in this organization for current month.",
+    description: t("components.flow.stats.totalJobRunsDescription"),
     changeType: "negative",
     usage: 60,
     capacity: 20,
-    unit: "runs",
+    unit: t("components.flow.stats.unitRuns"),
     showUpgrade: false,
   },
   {
-    name: "Avg job run time",
+    name: t("components.flow.stats.avgJobRunTime"),
     value: "1m 19s",
     change: "+3s",
-    description:
-      "Average time taken by a job to run across all agents in this organization for current month.",
+    description: t("components.flow.stats.avgJobRunTimeDescription"),
     changeType: "positive",
     usage: 70,
     capacity: 2,
-    unit: "seconds",
+    unit: t("components.flow.stats.unitSeconds"),
     showUpgrade: false,
   },
   {
-    name: "Avg job queue time",
+    name: t("components.flow.stats.avgJobQueueTime"),
     value: "4s",
     change: "-1s",
-    description:
-      "Average time taken by a job to get queued across all agents in this organization for current month.",
+    description: t("components.flow.stats.avgJobQueueTimeDescription"),
     changeType: "positive",
     usage: 50,
     capacity: 10,
-    unit: "seconds",
+    unit: t("components.flow.stats.unitSeconds"),
     showUpgrade: false,
   },
   {
-    name: "Job failure rate",
+    name: t("components.flow.stats.jobFailureRate"),
     value: "10%",
     change: "+10%",
-    description:
-      "Percentage of jobs that failed across all agents in this organization for current month.",
+    description: t("components.flow.stats.jobFailureRateDescription"),
     changeType: "negative",
     usage: 90,
     capacity: 100,
@@ -68,18 +63,17 @@ const stats = [
     showUpgrade: true,
   },
   {
-    name: "Failed job usage",
+    name: t("components.flow.stats.failedJobUsage"),
     value: "24",
     change: "+4%",
-    description:
-      "Total minutes across all agents in this organization for current month.",
+    description: t("components.flow.stats.totalMinutesDescription"),
     changeType: "negative",
     usage: 85,
     capacity: 300,
-    unit: "minutes",
+    unit: t("components.flow.stats.unitMinutes"),
     showUpgrade: true,
   },
-]
+])
 
 const getUsagePercentage = (usage: number, capacity: number): number => {
   if (capacity === 0) return 0
@@ -102,21 +96,21 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   <IconCircleMedium class="text-[MediumSlateBlue]" />
                   <span class="text-xs text-[MediumSlateBlue]">
                     {{ Math.round(Math.random() * 100) }}
-                    runs
+                    {{ t("components.flow.details.runsUnit") }}
                   </span>
                 </span>
                 <span class="flex items-center gap-1">
                   <IconCircleMedium class="text-[MediumOrchid]" />
                   <span class="text-xs text-[MediumOrchid]">
                     {{ Math.round(Math.random() * 100) }}
-                    jobs
+                    {{ t("components.flow.details.jobsUnit") }}
                   </span>
                 </span>
                 <span class="flex items-center gap-1">
                   <IconCircleMedium class="text-[Crimson]" />
                   <span class="text-xs text-[Crimson]">
                     {{ Math.round(Math.random() * 100) }}
-                    errors
+                    {{ t("components.flow.details.errorsUnit") }}
                   </span>
                 </span>
               </div>
@@ -153,7 +147,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
             <div class="flex w-full items-center">
               <div class="flex grow flex-col gap-1">
                 <span class="text-muted-foreground truncate text-xs">
-                  First run
+                  {{ t("components.flow.details.firstRun") }}
                 </span>
                 <span>
                   {{ currentDateLabel }}
@@ -161,7 +155,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
               </div>
               <div class="flex grow flex-col gap-1">
                 <span class="text-muted-foreground truncate text-xs">
-                  Last run
+                  {{ t("components.flow.details.lastRun") }}
                 </span>
                 <span>
                   {{ currentDateLabel }}
@@ -203,8 +197,8 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                   <span> {{ stat.usage }} {{ stat.unit }} </span>
                 </CardTitle>
                 <CardDescription class="text-xs">
-                  {{ getUsagePercentage(stat.usage, stat.capacity) }}% used in
-                  billing cycle.
+                  {{ getUsagePercentage(stat.usage, stat.capacity) }}%
+                  {{ t("components.flow.details.usedInBillingCycle") }}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -218,12 +212,12 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
                 <div class="flex w-full flex-col gap-6">
                   <div class="flex grow flex-col items-center gap-1">
                     <span> {{ stat.usage }} {{ stat.unit }} </span>
-                    <span> Used </span>
+                    <span> {{ t("components.flow.details.used") }} </span>
                   </div>
                   <Separator />
                   <div class="flex grow flex-col items-center gap-1">
                     <span> {{ stat.capacity }} {{ stat.unit }} </span>
-                    <span> Reserved </span>
+                    <span> {{ t("components.flow.details.reserved") }} </span>
                   </div>
                 </div>
               </CardFooter>
@@ -288,7 +282,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
           <CardContent>
             <div class="flex items-center justify-between">
               <span class="text-muted-foreground truncate italic">
-                Add a description.
+                {{ t("components.flow.details.addDescription") }}
               </span>
               <!-- <Button variant="secondary" size="icon">
               <IconPencil />

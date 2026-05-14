@@ -2,6 +2,8 @@
 import { IconGroup, IconRotateCcw } from "@/data/icons"
 import type { Table } from "@tanstack/vue-table"
 
+const { t } = useI18n()
+
 const props = defineProps<{
   table: Table<TData>
 }>()
@@ -21,11 +23,13 @@ const columns = computed(() =>
     <DropdownMenuTrigger as-child>
       <Button variant="outline" class="data-[state=open]:bg-accent">
         <IconGroup />
-        Groups
+        {{ t("components.dataTable.groupBy") }}
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent class="w-50">
-      <DropdownMenuLabel>Group by</DropdownMenuLabel>
+      <DropdownMenuLabel>{{
+        t("components.dataTable.groupBy")
+      }}</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuCheckboxItem
@@ -42,7 +46,7 @@ const columns = computed(() =>
       <DropdownMenuGroup>
         <DropdownMenuItem @click="props.table.resetGrouping">
           <IconRotateCcw />
-          None
+          {{ t("components.dataTable.groupNone") }}
         </DropdownMenuItem>
       </DropdownMenuGroup>
     </DropdownMenuContent>

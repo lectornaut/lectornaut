@@ -137,7 +137,7 @@ const currentPlanLabel = computed(() => {
                       <Tooltip v-if="teamMembers.length > 3">
                         <TooltipTrigger as-child>
                           <Avatar class="ring-sidebar size-4 ring-2">
-                            <AvatarFallback class="text-[10px]">
+                            <AvatarFallback class="size-4">
                               +{{ teamMembers.length - 3 }}
                             </AvatarFallback>
                           </Avatar>

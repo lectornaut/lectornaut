@@ -1,3 +1,7 @@
+<script lang="ts" setup>
+const { t } = useI18n()
+</script>
+
 <template>
   <Dialog>
     <DialogTrigger as-child>
@@ -5,9 +9,9 @@
     </DialogTrigger>
     <DialogContent class="w-sm max-w-fit">
       <DialogHeader class="sr-only">
-        <DialogTitle>Enter</DialogTitle>
+        <DialogTitle>{{ t("enter.title") }}</DialogTitle>
         <DialogDescription>
-          Create an account or sign in to continue.
+          {{ t("enter.triggerDescription") }}
         </DialogDescription>
       </DialogHeader>
       <EnterContent />

@@ -13,6 +13,8 @@ import {
 import { showErrorToast } from "@/helpers/toast"
 import type { SsoProtocol } from "@/types/sso"
 
+const { t } = useI18n()
+
 const emit = defineEmits<{
   navigate: [tab: string]
 }>()
@@ -116,7 +118,10 @@ const filterValidDomains = (values: string[]): string[] => {
   const normalized = values.map((v) => v.trim().toLowerCase()).filter(Boolean)
   const valid = normalized.filter(isValidDomain)
   if (valid.length < normalized.length) {
-    showErrorToast("Invalid domain format", "Use e.g. acme.com")
+    showErrorToast(
+      t("settings.security.sso.invalidDomainFormat"),
+      t("settings.security.sso.invalidDomainExample")
+    )
   }
   return valid
 }
@@ -263,16 +268,16 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   <EmptyMedia variant="icon">
                     <IconShieldCheck />
                   </EmptyMedia>
-                  <EmptyTitle>Enterprise Security</EmptyTitle>
+                  <EmptyTitle>{{
+                    t("settings.security.enterprise.title")
+                  }}</EmptyTitle>
                   <EmptyDescription>
-                    SSO and advanced login method controls are available on the
-                    Enterprise plan. Upgrade to configure SAML, OIDC, and
-                    per-team authentication policies.
+                    {{ t("settings.security.enterprise.description") }}
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
                   <Button variant="outline" @click="emit('navigate', 'plans')">
-                    View Plans
+                    {{ t("settings.security.enterprise.viewPlans") }}
                   </Button>
                 </EmptyContent>
               </Empty>
@@ -289,10 +294,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
           <FieldSet>
             <Field>
               <FieldContent>
-                <FieldLabel for="approved-domains">Approved Domains</FieldLabel>
+                <FieldLabel for="approved-domains">{{
+                  t("settings.security.approvedDomains.label")
+                }}</FieldLabel>
                 <FieldDescription>
-                  Anyone with an email address at these domains is allowed to
-                  sign up and join this team automatically.
+                  {{ t("settings.security.approvedDomains.description") }}
                 </FieldDescription>
               </FieldContent>
               <TagsInput
@@ -318,7 +324,9 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   <TagsInputItemDelete />
                 </TagsInputItem>
                 <TagsInputInput
-                  placeholder="acme.com"
+                  :placeholder="
+                    t('settings.security.approvedDomains.placeholder')
+                  "
                   type="url"
                   class="border-none focus:border-inherit focus:ring-0"
                 />
@@ -336,7 +344,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         <IconCheck v-else />
                       </InputGroupButton>
                     </TooltipTrigger>
-                    <TooltipContent>Save</TooltipContent>
+                    <TooltipContent>{{ t("actions.save") }}</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </TagsInput>
@@ -347,19 +355,22 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
           <FieldSet>
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel>Authentication Methods</FieldLabel>
+                <FieldLabel>{{
+                  t("settings.security.authenticationMethods.label")
+                }}</FieldLabel>
                 <FieldDescription>
-                  Control which authentication methods are available for your
-                  team members.
+                  {{ t("settings.security.authenticationMethods.description") }}
                 </FieldDescription>
               </FieldContent>
             </Field>
 
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel>Email & Password</FieldLabel>
+                <FieldLabel>{{
+                  t("settings.security.emailPassword.label")
+                }}</FieldLabel>
                 <FieldDescription>
-                  Traditional email and password sign-in.
+                  {{ t("settings.security.emailPassword.description") }}
                 </FieldDescription>
               </FieldContent>
               <InputGroupButton
@@ -383,9 +394,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel>Magic Link</FieldLabel>
+                <FieldLabel>{{
+                  t("settings.security.magicLink.label")
+                }}</FieldLabel>
                 <FieldDescription>
-                  Passwordless sign-in via email link.
+                  {{ t("settings.security.magicLink.description") }}
                 </FieldDescription>
               </FieldContent>
               <InputGroupButton
@@ -409,9 +422,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel>Google</FieldLabel>
+                <FieldLabel>{{
+                  t("settings.security.google.label")
+                }}</FieldLabel>
                 <FieldDescription>
-                  Sign in with Google account.
+                  {{ t("settings.security.google.description") }}
                 </FieldDescription>
               </FieldContent>
               <InputGroupButton
@@ -433,9 +448,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel>Microsoft</FieldLabel>
+                <FieldLabel>{{
+                  t("settings.security.microsoft.label")
+                }}</FieldLabel>
                 <FieldDescription>
-                  Sign in with Microsoft account.
+                  {{ t("settings.security.microsoft.description") }}
                 </FieldDescription>
               </FieldContent>
               <InputGroupButton
@@ -459,9 +476,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel>Apple</FieldLabel>
+                <FieldLabel>{{
+                  t("settings.security.apple.label")
+                }}</FieldLabel>
                 <FieldDescription>
-                  Sign in with Apple account.
+                  {{ t("settings.security.apple.description") }}
                 </FieldDescription>
               </FieldContent>
               <InputGroupButton
@@ -483,9 +502,9 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel>SSO</FieldLabel>
+                <FieldLabel>{{ t("settings.security.sso.label") }}</FieldLabel>
                 <FieldDescription>
-                  Enable Single Sign-On with SAML or OIDC identity providers.
+                  {{ t("settings.security.sso.description") }}
                 </FieldDescription>
               </FieldContent>
               <TooltipProvider>
@@ -508,7 +527,9 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                       <IconSettings v-else />
                     </InputGroupButton>
                   </TooltipTrigger>
-                  <TooltipContent>Configure SSO</TooltipContent>
+                  <TooltipContent>{{
+                    t("settings.security.sso.configure")
+                  }}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <Switch
@@ -523,11 +544,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
               class="bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
             >
               <IconCircleAlert />
-              <AlertTitle>SSO-only access</AlertTitle>
+              <AlertTitle>{{
+                t("settings.security.sso.onlyEnabledTitle")
+              }}</AlertTitle>
               <AlertDescription>
-                Only SSO is enabled. Users whose email domain is not configured
-                for SSO will not be able to sign in. Enable at least one
-                additional method to ensure all users retain access.
+                {{ t("settings.security.sso.onlyEnabledDescription") }}
               </AlertDescription>
             </Alert>
           </FieldSet>
@@ -538,14 +559,14 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
             >
               <DialogHeader>
                 <DialogTitle class="flex items-center gap-2">
-                  SSO Configuration
+                  {{ t("settings.security.sso.configuration") }}
                   <Badge v-if="hasSso" variant="secondary">
-                    <IconShieldCheck class="size-3" />
-                    Active
+                    <IconShieldCheck />
+                    {{ t("settings.security.sso.active") }}
                   </Badge>
                 </DialogTitle>
                 <DialogDescription>
-                  Configure SAML or OIDC single sign-on for your organization.
+                  {{ t("settings.security.sso.configurationDescription") }}
                 </DialogDescription>
               </DialogHeader>
               <OverlayScrollbarsWrapper
@@ -556,10 +577,13 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                     <!-- Shared SSO Settings -->
                     <Field>
                       <FieldContent>
-                        <FieldLabel>Email Domains</FieldLabel>
+                        <FieldLabel>{{
+                          t("settings.security.sso.emailDomainsLabel")
+                        }}</FieldLabel>
                         <FieldDescription>
-                          Add email domains that should use SSO (e.g.,
-                          acme.com).
+                          {{
+                            t("settings.security.sso.emailDomainsDescription")
+                          }}
                         </FieldDescription>
                       </FieldContent>
                       <TagsInput
@@ -587,7 +611,9 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                           <TagsInputItemDelete />
                         </TagsInputItem>
                         <TagsInputInput
-                          placeholder="acme.com"
+                          :placeholder="
+                            t('settings.security.approvedDomains.placeholder')
+                          "
                           type="url"
                           class="border-none focus:border-inherit focus:ring-0"
                         />
@@ -603,37 +629,46 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                                 <IconCheck />
                               </InputGroupButton>
                             </TooltipTrigger>
-                            <TooltipContent>Save</TooltipContent>
+                            <TooltipContent>{{
+                              t("actions.save")
+                            }}</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </TagsInput>
                     </Field>
                     <Field orientation="horizontal">
                       <FieldContent>
-                        <FieldLabel>Enforce SSO</FieldLabel>
+                        <FieldLabel>{{
+                          t("settings.security.sso.enforceLabel")
+                        }}</FieldLabel>
                         <FieldDescription>
-                          When enabled, users with matching email domains must
-                          use SSO. Password and social logins will be blocked
-                          for these users.
+                          {{ t("settings.security.sso.enforceDescription") }}
                         </FieldDescription>
                       </FieldContent>
                       <Switch v-model="ssoEnforced" />
                     </Field>
                     <Field orientation="horizontal">
                       <FieldContent>
-                        <FieldLabel> Auto-provision Members </FieldLabel>
+                        <FieldLabel>{{
+                          t("settings.security.sso.autoProvisionLabel")
+                        }}</FieldLabel>
                         <FieldDescription>
-                          Automatically create a team membership when a user
-                          signs in via SSO for the first time.
+                          {{
+                            t("settings.security.sso.autoProvisionDescription")
+                          }}
                         </FieldDescription>
                       </FieldContent>
                       <Switch v-model="ssoAutoProvision" />
                     </Field>
                     <Field v-if="ssoAutoProvision" orientation="horizontal">
                       <FieldContent>
-                        <FieldLabel>Default Role</FieldLabel>
+                        <FieldLabel>{{
+                          t("settings.security.sso.defaultRoleLabel")
+                        }}</FieldLabel>
                         <FieldDescription>
-                          The role assigned to auto-provisioned members.
+                          {{
+                            t("settings.security.sso.defaultRoleDescription")
+                          }}
                         </FieldDescription>
                       </FieldContent>
                       <Select v-model="ssoDefaultRole">
@@ -642,8 +677,12 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="guest">Guest</SelectItem>
+                            <SelectItem value="member">{{
+                              t("labels.member")
+                            }}</SelectItem>
+                            <SelectItem value="guest">{{
+                              t("labels.guest")
+                            }}</SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -652,11 +691,10 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                     <Field v-if="hasSso" orientation="horizontal">
                       <FieldContent>
                         <FieldLabel class="text-destructive text-sm">
-                          Remove SSO
+                          {{ t("settings.security.sso.removeLabel") }}
                         </FieldLabel>
                         <FieldDescription>
-                          Remove SSO configuration. Users will fall back to
-                          other login methods.
+                          {{ t("settings.security.sso.removeDescription") }}
                         </FieldDescription>
                       </FieldContent>
                       <Button
@@ -667,7 +705,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                         <Spinner v-if="deleting" />
                         <template v-else>
                           <IconTrash />
-                          Remove SSO
+                          {{ t("settings.security.sso.removeLabel") }}
                         </template>
                       </Button>
                     </Field>
@@ -677,9 +715,11 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                     <!-- Protocol Selector -->
                     <Field orientation="horizontal">
                       <FieldContent>
-                        <FieldLabel>Protocol</FieldLabel>
+                        <FieldLabel>{{
+                          t("settings.security.sso.protocolLabel")
+                        }}</FieldLabel>
                         <FieldDescription>
-                          Choose your identity provider protocol.
+                          {{ t("settings.security.sso.protocolDescription") }}
                         </FieldDescription>
                       </FieldContent>
                       <Select v-model="ssoProtocol">
@@ -701,9 +741,15 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                     <template v-if="ssoProtocol === 'saml'">
                       <Field>
                         <FieldContent>
-                          <FieldLabel>IdP Entity ID</FieldLabel>
+                          <FieldLabel>{{
+                            t("settings.security.sso.samlIdpEntityIdLabel")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            The entity ID of your SAML identity provider.
+                            {{
+                              t(
+                                "settings.security.sso.samlIdpEntityIdDescription"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Input
@@ -714,9 +760,13 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
                       <Field>
                         <FieldContent>
-                          <FieldLabel>SSO URL</FieldLabel>
+                          <FieldLabel>{{
+                            t("settings.security.sso.samlSsoUrlLabel")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            The single sign-on URL of your identity provider.
+                            {{
+                              t("settings.security.sso.samlSsoUrlDescription")
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Input
@@ -727,10 +777,15 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
                       <Field>
                         <FieldContent>
-                          <FieldLabel>Certificate</FieldLabel>
+                          <FieldLabel>{{
+                            t("settings.security.sso.samlCertificateLabel")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            The X.509 signing certificate from your identity
-                            provider (PEM format).
+                            {{
+                              t(
+                                "settings.security.sso.samlCertificateDescription"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Textarea
@@ -746,10 +801,13 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                     <template v-if="ssoProtocol === 'oidc'">
                       <Field>
                         <FieldContent>
-                          <FieldLabel>Issuer URL</FieldLabel>
+                          <FieldLabel>{{
+                            t("settings.security.sso.oidcIssuerLabel")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            The OIDC issuer URL (must support
-                            /.well-known/openid-configuration).
+                            {{
+                              t("settings.security.sso.oidcIssuerDescription")
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Input
@@ -760,27 +818,44 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 
                       <Field>
                         <FieldContent>
-                          <FieldLabel>Client ID</FieldLabel>
+                          <FieldLabel>{{
+                            t("settings.security.sso.oidcClientIdLabel")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            The OIDC client ID registered with your identity
-                            provider.
+                            {{
+                              t("settings.security.sso.oidcClientIdDescription")
+                            }}
                           </FieldDescription>
                         </FieldContent>
-                        <Input v-model="oidcClientId" placeholder="client-id" />
+                        <Input
+                          v-model="oidcClientId"
+                          :placeholder="
+                            t('settings.security.sso.oidcClientIdPlaceholder')
+                          "
+                        />
                       </Field>
 
                       <Field>
                         <FieldContent>
-                          <FieldLabel>Client Secret</FieldLabel>
+                          <FieldLabel>{{
+                            t("settings.security.sso.oidcClientSecretLabel")
+                          }}</FieldLabel>
                           <FieldDescription>
-                            The OIDC client secret. This is stored securely and
-                            never exposed to the client.
+                            {{
+                              t(
+                                "settings.security.sso.oidcClientSecretDescription"
+                              )
+                            }}
                           </FieldDescription>
                         </FieldContent>
                         <Input
                           v-model="oidcClientSecret"
                           type="password"
-                          placeholder="client-secret"
+                          :placeholder="
+                            t(
+                              'settings.security.sso.oidcClientSecretPlaceholder'
+                            )
+                          "
                         />
                       </Field>
                     </template>
@@ -794,18 +869,22 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   @click="handleTestConnection"
                 >
                   <Spinner v-if="testing" />
-                  Test Connection
+                  {{ t("settings.security.sso.testConnection") }}
                 </Button>
                 <div class="flex gap-2">
                   <DialogClose as-child>
-                    <Button variant="ghost">Cancel</Button>
+                    <Button variant="ghost">{{ t("actions.cancel") }}</Button>
                   </DialogClose>
                   <Button
                     :disabled="saving || !canSaveSso"
                     @click="handleSaveSso"
                   >
                     <Spinner v-if="saving" />
-                    {{ hasSso ? "Update SSO" : "Enable SSO" }}
+                    {{
+                      hasSso
+                        ? t("settings.security.sso.updateSso")
+                        : t("settings.security.sso.enableSso")
+                    }}
                   </Button>
                 </div>
               </DialogFooter>
@@ -818,14 +897,15 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
     <AlertDialog v-model:open="deleteSsoDialog.isOpen.value">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove SSO Configuration</AlertDialogTitle>
+          <AlertDialogTitle>{{
+            t("settings.security.sso.removeConfirmTitle")
+          }}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to remove SSO? Users with SSO-enforced domains
-            will need to use other login methods. This action cannot be undone.
+            {{ t("settings.security.sso.removeConfirmDescription") }}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             class="text-current"
@@ -833,7 +913,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
             @click.prevent="handleDeleteSso"
           >
             <Spinner v-if="deleting" />
-            Remove SSO
+            {{ t("settings.security.sso.removeLabel") }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

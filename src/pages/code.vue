@@ -5,6 +5,8 @@ import { IconFileText } from "@/data/icons"
 import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
 import type { Extension } from "@codemirror/state"
 
+const { t } = useI18n()
+
 definePage({
   // Single component handles `/code` (no file) and `/code/:nodeId` (open file).
   // The optional `:nodeId?` segment makes both addresses match here.
@@ -50,8 +52,8 @@ const {
 
 useHead(() => ({
   title: selectedNode.value?.name
-    ? `${selectedNode.value.name} · Code`
-    : "Code",
+    ? t("pages.code.titleWithFile", { name: selectedNode.value.name })
+    : t("pages.code.titleDefault"),
 }))
 </script>
 
@@ -67,10 +69,12 @@ useHead(() => ({
             :scope="nodeScope"
           />
           <SidebarGroup v-else>
-            <SidebarGroupLabel>Documents</SidebarGroupLabel>
+            <SidebarGroupLabel>{{
+              t("pages.code.documents")
+            }}</SidebarGroupLabel>
             <SidebarGroupContent>
               <div class="text-muted-foreground px-4 py-2 text-xs">
-                Select a workspace to view documents.
+                {{ t("pages.code.selectWorkspace") }}
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -87,7 +91,9 @@ useHead(() => ({
         :read-only="editorReadOnly"
         :extensions="collabExtensions"
         :placeholder="
-          selectedFile ? 'Start coding...' : 'Select a file to view or edit.'
+          selectedFile
+            ? t('pages.code.placeholderStart')
+            : t('pages.code.placeholderSelect')
         "
       />
     </OverlayScrollbarsWrapper>
@@ -96,9 +102,9 @@ useHead(() => ({
         <EmptyMedia variant="icon">
           <IconFileText />
         </EmptyMedia>
-        <EmptyTitle>No document selected</EmptyTitle>
+        <EmptyTitle>{{ t("pages.code.emptyTitle") }}</EmptyTitle>
         <EmptyDescription>
-          Select a workspace to view or edit documents.
+          {{ t("pages.code.emptyDescription") }}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -122,7 +128,7 @@ useHead(() => ({
       @click="saveContent"
     >
       <Spinner v-if="isSaving" />
-      Save
+      {{ t("actions.save") }}
     </Button>
   </Teleport>
   <Teleport defer to="#right-sidebar">

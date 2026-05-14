@@ -406,7 +406,7 @@ const handleInvitationRoleChange = async (
   value: unknown
 ) => {
   if (!isMembershipRole(value)) {
-    toast.error("Invalid invitation role.")
+    toast.error(t("components.teamDialog.errors.invalidInvitationRole"))
     return
   }
   const invitation = visibleTeamInvitations.value.find(

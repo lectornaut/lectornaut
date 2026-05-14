@@ -350,4 +350,36 @@ export const botSessionSchema = z.object({
   updatedAt: timestampSchema.optional(),
   /** Set when archived; null/undefined when active. */
   archivedAt: timestampSchema.nullable().optional(),
+  /**
+   * Composite key `${ownerUid}:${scope}:${nodeId}` for single-equality
+   * Firestore queries against the chat's pinned node. Written once on
+   * session creation when launched from a node inspector tab; never
+   * overwritten. The pinned node itself lives as a normal entry inside
+   * `contextNodes` — this string only exists to power
+   * `findBotSessionByPinnedNode`'s indexed lookup.
+   */
+  pinnedNodeKey: z.string().optional(),
+  /**
+   * Complete chip set the user has attached to this chat. Re-written
+   * on every send so detaches propagate to the doc. Includes the
+   * pinned node, if any. Empty array means "no attachments this turn";
+   * `undefined` on a session doc means the chip list isn't known yet
+   * (cold-load race or pre-feature doc) and the UI shows no chips.
+   */
+  contextNodes: z
+    .array(
+      z.object({
+        scope: z.enum(["code", "write"]),
+        nodeId: z.string(),
+      })
+    )
+    .optional(),
+  /**
+   * Most recent turn's mode. Written by `FirestoreBotSessionStore.save`
+   * on every save and overwritten by subsequent turns. Drives the
+   * mode filter in the history sidebar; absent on sessions created
+   * before the field was introduced — treat as "unknown" in filters,
+   * not as a specific mode.
+   */
+  lastMode: z.enum(["auto", "agent", "manual"]).optional(),
 })

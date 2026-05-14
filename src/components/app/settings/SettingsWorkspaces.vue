@@ -17,6 +17,8 @@ import {
 import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types/domain"
 
+const { t } = useI18n()
+
 // Use workspace actions composable - all logic is now self-contained
 const {
   currentWorkspace,
@@ -125,9 +127,9 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel>Workspaces</FieldLabel>
+            <FieldLabel>{{ t("settings.workspacesList.label") }}</FieldLabel>
             <FieldDescription>
-              Manage workspaces in your current team.
+              {{ t("settings.workspacesList.description") }}
             </FieldDescription>
           </FieldContent>
           <TooltipProvider>
@@ -139,7 +141,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                     @click="openWorkspaceDialog('create')"
                   >
                     <IconPlus />
-                    Create Workspace
+                    {{ t("settings.workspacesList.createWorkspace") }}
                   </Button>
                 </div>
               </TooltipTrigger>
@@ -163,7 +165,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                         variant="ghost"
                         @click="toggleWorkspaceSort('name')"
                       >
-                        Name
+                        {{ t("settings.workspacesList.columnName") }}
                         <IconArrowUp
                           v-if="
                             workspaceSortKey === 'name' &&
@@ -179,13 +181,15 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                         <IconArrowUpDown v-else />
                       </Button>
                     </TableHead>
-                    <TableHead class="w-1/4">Description</TableHead>
+                    <TableHead class="w-1/4">{{
+                      t("settings.workspacesList.columnDescription")
+                    }}</TableHead>
                     <TableHead class="w-1/4">
                       <Button
                         variant="ghost"
                         @click="toggleWorkspaceSort('created')"
                       >
-                        Created
+                        {{ t("settings.workspacesList.columnCreated") }}
                         <IconArrowUp
                           v-if="
                             workspaceSortKey === 'created' &&
@@ -251,8 +255,10 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                     : workspaceLoading.isLoading(
                                           `photo-${workspace.id}`
                                         )
-                                      ? "Uploading..."
-                                      : "Upload workspace photo"
+                                      ? t(
+                                          "settings.overview.teamPhoto.uploading"
+                                        )
+                                      : t("settings.workspacesList.uploadPhoto")
                                 }}
                               </TooltipContent>
                             </Tooltip>
@@ -274,7 +280,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                 {{
                                   !canUpdateWorkspace
                                     ? getCannotUpdateWorkspaceReason
-                                    : "Remove workspace photo"
+                                    : t("settings.workspacesList.removePhoto")
                                 }}
                               </TooltipContent>
                             </Tooltip>
@@ -285,7 +291,10 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                             {{ workspace.name }}
                           </ItemTitle>
                           <ItemDescription class="truncate text-xs">
-                            {{ workspace.description || "No description" }}
+                            {{
+                              workspace.description ||
+                              t("settings.workspacesList.noDescription")
+                            }}
                           </ItemDescription>
                         </ItemContent>
                       </Item>
@@ -310,12 +319,12 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                             />
                             <template v-else>
                               <IconSwitchHorizontal />
-                              Switch
+                              {{ t("actions.switch") }}
                             </template>
                           </Button>
                           <Button v-else variant="outline" disabled>
                             <IconCheck />
-                            Current
+                            {{ t("settings.workspacesList.current") }}
                           </Button>
                         </ButtonGroup>
                         <ButtonGroup>
@@ -342,7 +351,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                             "
                                           >
                                             <IconPencil />
-                                            Edit
+                                            {{ t("actions.edit") }}
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -364,7 +373,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                             "
                                           >
                                             <IconTrash />
-                                            Delete
+                                            {{ t("actions.delete") }}
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -376,7 +385,9 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                     </Tooltip>
                                   </DropdownMenuContent>
                                 </TooltipTrigger>
-                                <TooltipContent>Actions</TooltipContent>
+                                <TooltipContent>{{
+                                  t("settings.workspacesList.actionsTooltip")
+                                }}</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </DropdownMenu>
@@ -389,7 +400,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                       colspan="4"
                       class="text-muted-foreground h-24 text-center"
                     >
-                      No workspaces found.
+                      {{ t("settings.workspacesList.noWorkspaces") }}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -405,18 +416,21 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
   <AlertDialog v-model:open="deleteWorkspaceDialog.isOpen.value">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
+        <AlertDialogTitle>{{
+          t("settings.workspacesList.deleteTitle")
+        }}</AlertDialogTitle>
         <AlertDialogDescription>
-          Are you sure you want to delete
-          <span class="text-foreground font-medium">{{
-            deleteWorkspaceDialog.item.value?.name
-          }}</span
-          >? This action cannot be undone and will permanently delete the
-          workspace and all its content.
+          <i18n-t keypath="settings.workspacesList.deleteConfirm" tag="span">
+            <template #name>
+              <span class="text-foreground font-medium">{{
+                deleteWorkspaceDialog.item.value?.name
+              }}</span>
+            </template>
+          </i18n-t>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
           class="text-current"
@@ -436,7 +450,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
               )
             "
           />
-          Delete Workspace
+          {{ t("settings.workspacesList.deleteTitle") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

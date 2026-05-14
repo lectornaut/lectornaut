@@ -153,7 +153,7 @@ async function verifyCode() {
       )
       assertion = PhoneMultiFactorGenerator.assertion(cred)
     } else {
-      toast.error("Unsupported factor type")
+      toast.error(t("settings.account.mfa.unsupportedFactorType"))
       return
     }
 

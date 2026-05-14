@@ -196,7 +196,7 @@ const errorMessage = computed(
                 {{ t("layouts.app.status.hovercard.errorDetails") }}
               </p>
               <p
-                class="text-muted-foreground mt-1 line-clamp-3 text-xs leading-relaxed"
+                class="text-muted-foreground line-clamp-3 text-xs leading-relaxed"
               >
                 {{ errorMessage }}
               </p>

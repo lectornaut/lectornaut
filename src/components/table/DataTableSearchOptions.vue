@@ -2,6 +2,8 @@
 import { IconSearch } from "@/data/icons"
 import type { Table } from "@tanstack/vue-table"
 
+const { t } = useI18n()
+
 const props = defineProps<{
   table: Table<TData>
 }>()
@@ -15,7 +17,7 @@ const props = defineProps<{
       <IconSearch />
     </span>
     <Input
-      placeholder="Search"
+      :placeholder="t('components.dataTable.search')"
       :model-value="(props.table.getState().globalFilter as string) ?? ''"
       class="pl-9"
       @input="

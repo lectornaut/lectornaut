@@ -94,6 +94,8 @@ import { createLowlight } from "lowlight"
 import type { Awareness } from "y-protocols/awareness"
 import type { Doc as YDoc } from "yjs"
 
+const { t } = useI18n()
+
 const props = withDefaults(
   defineProps<{
     modelValue?: string
@@ -399,7 +401,10 @@ const applyLinkFromDialog = (value: string) => {
 
   const normalized = normalizeLinkHref(value)
   if (normalized === null) {
-    showErrorToast("Invalid URL", "Please enter a valid URL.")
+    showErrorToast(
+      t("components.textEditor.invalidUrl"),
+      t("components.textEditor.invalidUrlDescription")
+    )
     return
   }
 
@@ -457,9 +462,9 @@ const insertTableFromPicker = (rows: number, cols: number) => {
 const createSlashCommands = (): SlashCommandItem[] => [
   {
     id: "heading-1",
-    title: "Heading 1",
-    description: "Large section title",
-    group: "Headings",
+    title: t("components.textEditor.slash.heading1Title"),
+    description: t("components.textEditor.slash.heading1Description"),
+    group: t("components.textEditor.slash.headingsGroup"),
     keywords: ["h1", "title"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleHeading({ level: 1 }).run()
@@ -467,9 +472,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "heading-2",
-    title: "Heading 2",
-    description: "Medium section title",
-    group: "Headings",
+    title: t("components.textEditor.slash.heading2Title"),
+    description: t("components.textEditor.slash.heading2Description"),
+    group: t("components.textEditor.slash.headingsGroup"),
     keywords: ["h2", "subtitle"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleHeading({ level: 2 }).run()
@@ -477,9 +482,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "heading-3",
-    title: "Heading 3",
-    description: "Small section title",
-    group: "Headings",
+    title: t("components.textEditor.slash.heading3Title"),
+    description: t("components.textEditor.slash.heading3Description"),
+    group: t("components.textEditor.slash.headingsGroup"),
     keywords: ["h3"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleHeading({ level: 3 }).run()
@@ -487,9 +492,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "bullet-list",
-    title: "Bullet List",
-    description: "Start an unordered list",
-    group: "Lists",
+    title: t("components.textEditor.slash.bulletListTitle"),
+    description: t("components.textEditor.slash.bulletListDescription"),
+    group: t("components.textEditor.slash.listsGroup"),
     keywords: ["list", "ul"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleBulletList().run()
@@ -497,9 +502,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "ordered-list",
-    title: "Numbered List",
-    description: "Start an ordered list",
-    group: "Lists",
+    title: t("components.textEditor.slash.orderedListTitle"),
+    description: t("components.textEditor.slash.orderedListDescription"),
+    group: t("components.textEditor.slash.listsGroup"),
     keywords: ["list", "ol", "numbered"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleOrderedList().run()
@@ -507,9 +512,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "task-list",
-    title: "Task List",
-    description: "Start a checklist",
-    group: "Lists",
+    title: t("components.textEditor.slash.taskListTitle"),
+    description: t("components.textEditor.slash.taskListDescription"),
+    group: t("components.textEditor.slash.listsGroup"),
     keywords: ["todo", "checklist", "task"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleTaskList().run()
@@ -517,9 +522,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "blockquote",
-    title: "Blockquote",
-    description: "Add a quote block",
-    group: "Blocks",
+    title: t("components.textEditor.slash.blockquoteTitle"),
+    description: t("components.textEditor.slash.blockquoteDescription"),
+    group: t("components.textEditor.slash.blocksGroup"),
     keywords: ["quote"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleBlockquote().run()
@@ -527,9 +532,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "code-block",
-    title: "Code Block",
-    description: "Insert syntax-highlighted code",
-    group: "Blocks",
+    title: t("components.textEditor.slash.codeBlockTitle"),
+    description: t("components.textEditor.slash.codeBlockDescription"),
+    group: t("components.textEditor.slash.blocksGroup"),
     keywords: ["code", "snippet"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleCodeBlock().run()
@@ -537,9 +542,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "insert-image-url",
-    title: "Image",
-    description: "Insert image from URL",
-    group: "Insert",
+    title: t("components.textEditor.slash.imageTitle"),
+    description: t("components.textEditor.slash.imageDescription"),
+    group: t("components.textEditor.slash.insertGroup"),
     keywords: ["image", "url", "media", "embed"],
     run: () => {
       openImageDialog()
@@ -547,9 +552,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "insert-table",
-    title: "Table",
-    description: "Insert a 3x3 table",
-    group: "Insert",
+    title: t("components.textEditor.slash.tableTitle"),
+    description: t("components.textEditor.slash.tableDescription"),
+    group: t("components.textEditor.slash.insertGroup"),
     keywords: ["table", "grid"],
     run: (activeEditor) => {
       activeEditor
@@ -561,9 +566,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "format-highlight",
-    title: "Highlight",
-    description: "Highlight selected text",
-    group: "Formatting",
+    title: t("components.textEditor.slash.highlightTitle"),
+    description: t("components.textEditor.slash.highlightDescription"),
+    group: t("components.textEditor.slash.formattingGroup"),
     keywords: ["highlight", "mark"],
     run: (activeEditor) => {
       activeEditor
@@ -575,9 +580,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
   },
   {
     id: "format-text-color",
-    title: "Text Color",
-    description: "Apply a text color",
-    group: "Formatting",
+    title: t("components.textEditor.slash.textColorTitle"),
+    description: t("components.textEditor.slash.textColorDescription"),
+    group: t("components.textEditor.slash.formattingGroup"),
     keywords: ["color", "text"],
     run: (activeEditor) => {
       activeEditor.chain().focus().setColor(DEFAULT_TEXT_COLOR).run()
@@ -612,7 +617,7 @@ const extensions = [
   Typography,
   Placeholder.configure({
     includeChildren: true,
-    placeholder: "Type '/' for commands",
+    placeholder: t("components.textEditor.typeForCommands"),
   }),
   TableOfContents.configure({
     getIndex: getHierarchicalIndexes,
@@ -875,39 +880,39 @@ const hoverSlashCommand = (index: number) => {
 const tablePickerLabel = computed(() => {
   const { rows, cols } = tablePickerSelection.value
   if (!rows || !cols) {
-    return "Select columns × rows"
+    return t("components.textEditor.tableSelectLabel")
   }
 
-  return `${cols} × ${rows} columns × rows`
+  return t("components.textEditor.tablePickerLabel", { cols, rows })
 })
 
 const currentBlockLabel = computed(() => {
   const activeEditor = editor.value
   if (!activeEditor) {
-    return "Text"
+    return t("components.textEditor.blockText")
   }
 
   if (activeEditor.isActive("heading", { level: 1 })) {
-    return "H1"
+    return t("components.textEditor.blockH1")
   }
 
   if (activeEditor.isActive("heading", { level: 2 })) {
-    return "H2"
+    return t("components.textEditor.blockH2")
   }
 
   if (activeEditor.isActive("heading", { level: 3 })) {
-    return "H3"
+    return t("components.textEditor.blockH3")
   }
 
   if (activeEditor.isActive("blockquote")) {
-    return "Quote"
+    return t("components.textEditor.blockQuote")
   }
 
   if (activeEditor.isActive("codeBlock")) {
-    return "Code"
+    return t("components.textEditor.blockCode")
   }
 
-  return "Text"
+  return t("components.textEditor.blockText")
 })
 
 const currentCodeLanguage = computed(() => {
@@ -976,8 +981,13 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {{ editorStats.characters }} chars · {{ editorStats.words }} words ·
-            {{ editorStats.readingMinutes }} min read
+            {{
+              t("components.textEditor.stats", {
+                characters: editorStats.characters,
+                words: editorStats.words,
+                minutes: editorStats.readingMinutes,
+              })
+            }}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -1027,45 +1037,45 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         <DropdownMenuTrigger as-child>
           <Button variant="outline" class="h-8 px-2.5 text-xs">
             {{ currentBlockLabel }}
-            <IconChevronDown class="size-3" />
+            <IconChevronDown />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent class="w-50">
           <DropdownMenuItem
             @click="editor?.chain().focus().setParagraph().run()"
           >
-            Text
+            {{ t("components.textEditor.blockText") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
           >
             <IconHeading1 />
-            Heading 1
+            {{ t("components.textEditor.heading1") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
           >
             <IconHeading2 />
-            Heading 2
+            {{ t("components.textEditor.heading2") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()"
           >
             <IconHeading3 />
-            Heading 3
+            {{ t("components.textEditor.heading3") }}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             @click="editor?.chain().focus().toggleBlockquote().run()"
           >
             <IconQuote />
-            Blockquote
+            {{ t("components.textEditor.blockquote") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().toggleCodeBlock().run()"
           >
             <IconCode />
-            Code block
+            {{ t("components.textEditor.codeBlock") }}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1140,7 +1150,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           (editor?.getAttributes('textStyle').color as string | undefined) ??
           null
         "
-        title="Text color"
+        :title="t('components.textEditor.textColorTitle')"
         @select="editor?.chain().focus().setColor($event).run()"
         @clear="editor?.chain().focus().unsetColor().run()"
       >
@@ -1155,7 +1165,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           (editor?.getAttributes('highlight').color as string | undefined) ??
           null
         "
-        title="Highlight"
+        :title="t('components.textEditor.highlightTitle')"
         @select="editor?.chain().focus().setHighlight({ color: $event }).run()"
         @clear="editor?.chain().focus().unsetHighlight().run()"
       >
@@ -1227,40 +1237,42 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent class="w-50">
-          <DropdownMenuLabel class="text-xs">Table</DropdownMenuLabel>
+          <DropdownMenuLabel class="text-xs">{{
+            t("components.textEditor.tableTitle")
+          }}</DropdownMenuLabel>
           <DropdownMenuItem
             @click="editor?.chain().focus().addRowBefore().run()"
           >
-            Add row above
+            {{ t("components.textEditor.tableAddRowAbove") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().addRowAfter().run()"
           >
-            Add row below
+            {{ t("components.textEditor.tableAddRowBelow") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().addColumnBefore().run()"
           >
-            Add column left
+            {{ t("components.textEditor.tableAddColumnLeft") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().addColumnAfter().run()"
           >
-            Add column right
+            {{ t("components.textEditor.tableAddColumnRight") }}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem @click="editor?.chain().focus().deleteRow().run()">
-            Delete row
+            {{ t("components.textEditor.tableDeleteRow") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().deleteColumn().run()"
           >
-            Delete column
+            {{ t("components.textEditor.tableDeleteColumn") }}
           </DropdownMenuItem>
           <DropdownMenuItem
             @click="editor?.chain().focus().deleteTable().run()"
           >
-            Delete table
+            {{ t("components.textEditor.tableDeleteTable") }}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1271,11 +1283,13 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           @update:model-value="setCodeLanguage"
         >
           <SelectTrigger class="h-8 w-full">
-            <SelectValue placeholder="Language" />
+            <SelectValue :placeholder="t('components.textEditor.language')" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="auto">Auto</SelectItem>
+              <SelectItem value="auto">{{
+                t("components.textEditor.auto")
+              }}</SelectItem>
               <SelectItem
                 v-for="language in CODE_BLOCK_LANGUAGES"
                 :key="language"
@@ -1293,20 +1307,20 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         class="border-border/70 bg-muted/30 flex items-center gap-1 border px-1 py-0.5"
       >
         <Button variant="ghost" @click="applyImageAttrs({ align: 'left' })">
-          Left
+          {{ t("components.textEditor.alignLeftButton") }}
         </Button>
         <Button variant="ghost" @click="applyImageAttrs({ align: 'center' })">
-          Center
+          {{ t("components.textEditor.alignCenterButton") }}
         </Button>
         <Button variant="ghost" @click="applyImageAttrs({ align: 'right' })">
-          Right
+          {{ t("components.textEditor.alignRightButton") }}
         </Button>
         <Select
           :model-value="String(editor.getAttributes('image').width || '100%')"
           @update:model-value="applyImageAttrs({ width: $event })"
         >
           <SelectTrigger class="h-8 w-20">
-            <SelectValue placeholder="Width" />
+            <SelectValue :placeholder="t('components.textEditor.widthLabel')" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -1360,7 +1374,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     :y="slashPanelPosition.y"
     :items="slashPanelState?.items ?? []"
     :selected-index="slashPanelState?.selectedIndex ?? 0"
-    label="Slash Commands"
+    :label="t('components.textEditor.slashCommands')"
     @select="selectSlashCommand"
     @hover="hoverSlashCommand"
   />

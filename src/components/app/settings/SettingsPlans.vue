@@ -169,7 +169,7 @@ const saveChanges = async () => {
 
       activePlanId.value = selectedPlanId.value
       activeBillingCycle.value = billingCycle.value
-      toast.success("Plan updated successfully.")
+      toast.success(t("settings.plans.toasts.planUpdated"))
       discardChanges()
       return
     }

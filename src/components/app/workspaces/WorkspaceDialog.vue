@@ -153,13 +153,17 @@ const handleSubmit = async () => {
     <DialogContent class="w-md max-w-fit">
       <DialogHeader>
         <DialogTitle>
-          {{ mode === "create" ? "Create Workspace" : "Edit Workspace" }}
+          {{
+            mode === "create"
+              ? t("components.workspaceDialog.createTitle")
+              : t("components.workspaceDialog.editTitle")
+          }}
         </DialogTitle>
         <DialogDescription>
           {{
             mode === "create"
-              ? "Create a new workspace to organize your content within this team."
-              : "Update workspace details."
+              ? t("components.workspaceDialog.createDescription")
+              : t("components.workspaceDialog.editDescription")
           }}
         </DialogDescription>
       </DialogHeader>
@@ -169,7 +173,7 @@ const handleSubmit = async () => {
         <Field class="grid gap-2">
           <div class="flex flex-col items-center gap-2">
             <FieldLabel class="text-secondary-foreground text-xs">
-              Workspace Photo
+              {{ t("components.workspaceDialog.photoLabel") }}
             </FieldLabel>
             <div class="group relative">
               <TooltipProvider>
@@ -215,7 +219,7 @@ const handleSubmit = async () => {
                     }}
                   </TooltipContent>
                   <TooltipContent v-else>
-                    Upload workspace photo
+                    {{ t("components.workspaceDialog.uploadPhoto") }}
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip
@@ -235,12 +239,18 @@ const handleSubmit = async () => {
                       <IconX />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent> Remove photo </TooltipContent>
+                  <TooltipContent>
+                    {{ t("components.workspaceDialog.removePhoto") }}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
             <p>
-              {{ photoPreview ? "Click to change" : "Click to upload" }}
+              {{
+                photoPreview
+                  ? t("components.workspaceDialog.clickToChange")
+                  : t("components.workspaceDialog.clickToUpload")
+              }}
             </p>
           </div>
         </Field>
@@ -248,7 +258,7 @@ const handleSubmit = async () => {
         <!-- Workspace Name -->
         <Field class="grid gap-2">
           <FieldLabel class="text-secondary-foreground text-xs" for="name">
-            Workspace Name
+            {{ t("components.workspaceDialog.nameLabel") }}
           </FieldLabel>
           <TooltipProvider>
             <Tooltip>
@@ -257,7 +267,9 @@ const handleSubmit = async () => {
                   <Input
                     id="name"
                     v-model="workspaceName"
-                    placeholder="My Workspace"
+                    :placeholder="
+                      t('components.workspaceDialog.namePlaceholder')
+                    "
                     :disabled="
                       (!canCreateWorkspace && mode === 'create') ||
                       (!canUpdateWorkspace && mode === 'edit')
@@ -288,7 +300,7 @@ const handleSubmit = async () => {
             class="text-secondary-foreground text-xs"
             for="description"
           >
-            Description
+            {{ t("components.workspaceDialog.descriptionLabel") }}
           </FieldLabel>
           <TooltipProvider>
             <Tooltip>
@@ -297,7 +309,9 @@ const handleSubmit = async () => {
                   <Textarea
                     id="description"
                     v-model="workspaceDescription"
-                    placeholder="A brief description of this workspace..."
+                    :placeholder="
+                      t('components.workspaceDialog.descriptionPlaceholder')
+                    "
                     :disabled="
                       (!canCreateWorkspace && mode === 'create') ||
                       (!canUpdateWorkspace && mode === 'edit')
@@ -333,7 +347,11 @@ const handleSubmit = async () => {
           @click="handleSubmit"
         >
           <Spinner v-if="isLoading" />
-          {{ mode === "create" ? "Create Workspace" : "Save Changes" }}
+          {{
+            mode === "create"
+              ? t("components.workspaceDialog.createTitle")
+              : t("components.workspaceDialog.saveChanges")
+          }}
         </Button>
       </DialogFooter>
     </DialogContent>

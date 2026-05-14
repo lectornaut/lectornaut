@@ -8,6 +8,8 @@ import {
   IconUsers,
 } from "@/data/icons"
 
+const { t } = useI18n()
+
 const {
   currentTeam,
   memberships,
@@ -72,9 +74,15 @@ const handleCreateWorkspace = async () => {
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="onboarding-team-name">Create team</FieldLabel>
+            <FieldLabel for="onboarding-team-name">{{
+              t("pages.welcome.onboarding.teamWorkspaceFlow.createTeam")
+            }}</FieldLabel>
             <FieldDescription>
-              Create a team to organize members and workspaces.
+              {{
+                t(
+                  "pages.welcome.onboarding.teamWorkspaceFlow.createTeamDescription"
+                )
+              }}
             </FieldDescription>
           </FieldContent>
           <TooltipProvider>
@@ -84,7 +92,11 @@ const handleCreateWorkspace = async () => {
                   <Input
                     id="onboarding-team-name"
                     v-model="newTeamName"
-                    placeholder="My Team"
+                    :placeholder="
+                      t(
+                        'pages.welcome.onboarding.teamWorkspaceFlow.teamNamePlaceholder'
+                      )
+                    "
                     :disabled="!canCreateTeam"
                     @keyup.enter="handleCreateTeam"
                   />
@@ -95,7 +107,9 @@ const handleCreateWorkspace = async () => {
                     <Spinner v-if="isCreatingTeam" />
                     <template v-else>
                       <IconPlus />
-                      Create
+                      {{
+                        t("pages.welcome.onboarding.teamWorkspaceFlow.create")
+                      }}
                     </template>
                   </Button>
                 </div>
@@ -109,9 +123,15 @@ const handleCreateWorkspace = async () => {
 
         <Field orientation="horizontal">
           <FieldContent class="w-full">
-            <FieldLabel>Switch team</FieldLabel>
+            <FieldLabel>{{
+              t("pages.welcome.onboarding.teamWorkspaceFlow.switchTeam")
+            }}</FieldLabel>
             <FieldDescription>
-              Use this to continue in the correct team context.
+              {{
+                t(
+                  "pages.welcome.onboarding.teamWorkspaceFlow.switchTeamDescription"
+                )
+              }}
             </FieldDescription>
 
             <div v-if="isTeamLoading" class="flex justify-center py-6">
@@ -125,7 +145,12 @@ const handleCreateWorkspace = async () => {
               >
                 <div class="min-w-0">
                   <p class="truncate text-sm font-medium">
-                    {{ membership.team?.name || "Untitled team" }}
+                    {{
+                      membership.team?.name ||
+                      t(
+                        "pages.welcome.onboarding.teamWorkspaceFlow.untitledTeam"
+                      )
+                    }}
                   </p>
                   <p class="text-muted-foreground text-xs capitalize">
                     {{ membership.role }}
@@ -145,12 +170,12 @@ const handleCreateWorkspace = async () => {
                   />
                   <template v-else>
                     <IconSwitchHorizontal />
-                    Switch
+                    {{ t("pages.welcome.onboarding.teamWorkspaceFlow.switch") }}
                   </template>
                 </Button>
                 <Button v-else variant="outline" disabled>
                   <IconCheck />
-                  Current
+                  {{ t("pages.welcome.onboarding.teamWorkspaceFlow.current") }}
                 </Button>
               </div>
               <div
@@ -158,7 +183,7 @@ const handleCreateWorkspace = async () => {
                 class="text-muted-foreground flex items-center gap-2 border px-3 py-4 text-sm"
               >
                 <IconUsers />
-                No teams yet. Create one to continue.
+                {{ t("pages.welcome.onboarding.teamWorkspaceFlow.noTeams") }}
               </div>
             </div>
           </FieldContent>
@@ -171,10 +196,16 @@ const handleCreateWorkspace = async () => {
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="onboarding-workspace-name">
-              Create workspace
+              {{
+                t("pages.welcome.onboarding.teamWorkspaceFlow.createWorkspace")
+              }}
             </FieldLabel>
             <FieldDescription>
-              Create a workspace inside the current team.
+              {{
+                t(
+                  "pages.welcome.onboarding.teamWorkspaceFlow.createWorkspaceDescription"
+                )
+              }}
             </FieldDescription>
           </FieldContent>
           <TooltipProvider>
@@ -184,14 +215,22 @@ const handleCreateWorkspace = async () => {
                   <Input
                     id="onboarding-workspace-name"
                     v-model="newWorkspaceName"
-                    placeholder="My Workspace"
+                    :placeholder="
+                      t(
+                        'pages.welcome.onboarding.teamWorkspaceFlow.workspaceNamePlaceholder'
+                      )
+                    "
                     :disabled="!canCreateWorkspace"
                     @keyup.enter="handleCreateWorkspace"
                   />
                   <Input
                     id="onboarding-workspace-description"
                     v-model="newWorkspaceDescription"
-                    placeholder="Optional description"
+                    :placeholder="
+                      t(
+                        'pages.welcome.onboarding.teamWorkspaceFlow.workspaceDescriptionPlaceholder'
+                      )
+                    "
                     :disabled="!canCreateWorkspace"
                     @keyup.enter="handleCreateWorkspace"
                   />
@@ -202,7 +241,9 @@ const handleCreateWorkspace = async () => {
                     <Spinner v-if="isCreatingWorkspace" />
                     <template v-else>
                       <IconPlus />
-                      Create
+                      {{
+                        t("pages.welcome.onboarding.teamWorkspaceFlow.create")
+                      }}
                     </template>
                   </Button>
                 </div>
@@ -216,9 +257,15 @@ const handleCreateWorkspace = async () => {
 
         <Field orientation="horizontal">
           <FieldContent class="w-full">
-            <FieldLabel>Switch workspace</FieldLabel>
+            <FieldLabel>{{
+              t("pages.welcome.onboarding.teamWorkspaceFlow.switchWorkspace")
+            }}</FieldLabel>
             <FieldDescription>
-              Pick the workspace you want to start with.
+              {{
+                t(
+                  "pages.welcome.onboarding.teamWorkspaceFlow.switchWorkspaceDescription"
+                )
+              }}
             </FieldDescription>
 
             <div v-if="isWorkspaceLoading" class="flex justify-center py-6">
@@ -235,7 +282,12 @@ const handleCreateWorkspace = async () => {
                     {{ workspace.name }}
                   </p>
                   <p class="text-muted-foreground truncate text-xs">
-                    {{ workspace.description || "No description" }}
+                    {{
+                      workspace.description ||
+                      t(
+                        "pages.welcome.onboarding.teamWorkspaceFlow.noDescription"
+                      )
+                    }}
                   </p>
                 </div>
                 <Button
@@ -247,19 +299,21 @@ const handleCreateWorkspace = async () => {
                   <Spinner v-if="workspaceLoading.isLoading(workspace.id)" />
                   <template v-else>
                     <IconSwitchHorizontal />
-                    Switch
+                    {{ t("pages.welcome.onboarding.teamWorkspaceFlow.switch") }}
                   </template>
                 </Button>
                 <Button v-else variant="outline" disabled>
                   <IconCheck />
-                  Current
+                  {{ t("pages.welcome.onboarding.teamWorkspaceFlow.current") }}
                 </Button>
               </div>
               <div
                 v-if="workspaces.length === 0"
                 class="text-muted-foreground border px-3 py-4 text-sm"
               >
-                No workspaces yet. Create one in the current team.
+                {{
+                  t("pages.welcome.onboarding.teamWorkspaceFlow.noWorkspaces")
+                }}
               </div>
             </div>
           </FieldContent>

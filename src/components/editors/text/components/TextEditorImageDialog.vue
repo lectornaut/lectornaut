@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { IconImage, IconLink } from "@/data/icons"
 
+const { t } = useI18n()
+
 const props = defineProps<{
   open: boolean
 }>()
@@ -59,7 +61,7 @@ watch(
 const insertFromUrl = () => {
   const normalized = validateImageUrl(imageUrl.value)
   if (!normalized) {
-    error.value = "Enter a valid image URL (http/https)."
+    error.value = t("components.textEditor.imageDialog.invalidUrl")
     return
   }
 
@@ -76,27 +78,35 @@ const insertFromUrl = () => {
   <Dialog :open="open" @update:open="emit('update:open', $event)">
     <DialogContent class="sm:max-w-lg">
       <DialogHeader>
-        <DialogTitle>Insert Image</DialogTitle>
-        <DialogDescription> Insert an external image URL. </DialogDescription>
+        <DialogTitle>{{
+          t("components.textEditor.imageDialog.title")
+        }}</DialogTitle>
+        <DialogDescription>{{
+          t("components.textEditor.imageDialog.description")
+        }}</DialogDescription>
       </DialogHeader>
 
       <div class="space-y-4">
         <div class="space-y-2">
-          <Label for="editor-image-url">Image URL</Label>
+          <Label for="editor-image-url">{{
+            t("components.textEditor.imageDialog.urlLabel")
+          }}</Label>
           <Input
             id="editor-image-url"
             v-model="imageUrl"
-            placeholder="https://example.com/image.png"
+            :placeholder="t('components.textEditor.imageDialog.urlPlaceholder')"
             @keydown.enter.prevent="insertFromUrl"
           />
         </div>
 
         <div class="flex justify-end gap-2">
-          <Button variant="ghost" @click="closeDialog">Cancel</Button>
+          <Button variant="ghost" @click="closeDialog">{{
+            t("actions.cancel")
+          }}</Button>
           <Button @click="insertFromUrl">
             <IconLink />
             <IconImage />
-            Insert Image
+            {{ t("components.textEditor.imageDialog.insertButton") }}
           </Button>
         </div>
       </div>

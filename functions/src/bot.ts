@@ -301,7 +301,32 @@ class FirestoreBotSessionStore implements SessionStore {
      * Firestore reads.
      */
     private readonly titleMaxLength: number = TITLE_MAX_LENGTH,
-    private readonly previewMaxLength: number = PREVIEW_MAX_LENGTH
+    private readonly previewMaxLength: number = PREVIEW_MAX_LENGTH,
+    /**
+     * Composite `${ownerUid}:${scope}:${nodeId}` index key for the
+     * caller's node-pinned chat lookup. Written once on session
+     * creation; never rewritten on subsequent saves. The pin's
+     * scope/nodeId live as a normal entry inside `contextNodes` — this
+     * field exists only to power `findBotSessionByPinnedNode`'s
+     * single-equality Firestore query.
+     */
+    private readonly pinnedNodeKey?: string,
+    /**
+     * The full chip set the user has attached on the current turn.
+     * Re-written on every save so detaches and reorders propagate
+     * immediately. Includes the pinned node, if any — there is no
+     * separate `pinnedNode` field on the doc. Empty array is a
+     * meaningful state ("no chips") distinct from `undefined` on
+     * docs that haven't been re-saved since this field was introduced.
+     */
+    private readonly contextNodes: NodeRef[] = [],
+    /**
+     * Mode for the turn that triggered this save. Persisted as a
+     * denormalized `lastMode` field so the history sidebar can filter
+     * sessions by mode without parsing the SessionData blob. The most
+     * recent turn wins — earlier turns' modes are not retained.
+     */
+    private readonly turnMode?: BotChatMode
   ) {}
 
   private docRef(sessionId: string) {
@@ -349,15 +374,32 @@ class FirestoreBotSessionStore implements SessionStore {
       preview: derivePreview(messages, this.previewMaxLength),
       messageCount: messages.length,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      // The complete chip set, including the pinned node if any.
+      // Re-written every turn so a detach shrinks the array on the doc
+      // rather than leaving stale entries. Empty array is meaningful
+      // ("no attachments this turn") and distinct from `undefined` on
+      // legacy docs.
+      contextNodes: this.contextNodes,
     }
 
-    // Title is set once on creation and frozen afterward — the rename
-    // callable is the sole writer past that point. createdAt and the
-    // null archivedAt sentinel are also one-shot writes.
+    // Most recent turn's mode. Overwriting (rather than appending to a
+    // history) keeps the field cheap and "filter by current mode"
+    // intuitive — switching mode mid-conversation updates which bucket
+    // the chat shows up in.
+    if (this.turnMode) update.lastMode = this.turnMode
+
+    // Title, createdAt, the null archivedAt sentinel, and pinnedNodeKey
+    // are all one-shot writes — set on creation, never updated by
+    // subsequent sends. (Rename is its own callable; the pin's
+    // queryable identity is fixed when the chat is first launched
+    // from an inspector tab.)
     if (isNew) {
       update.title = deriveTitle(messages, this.titleMaxLength)
       update.createdAt = admin.firestore.FieldValue.serverTimestamp()
       update.archivedAt = null
+      if (this.pinnedNodeKey) {
+        update.pinnedNodeKey = this.pinnedNodeKey
+      }
     }
 
     await ref.set(update, { merge: true })
@@ -895,6 +937,262 @@ function buildSystemPromptFromConfig(
   return `${config.systemPromptBase}\n\n${config.promptSuffixes[mode]}`
 }
 
+// ===========================================================================
+// Node-context loading — fetch attached workspace nodes and their
+// attachments, then format them as a markdown block to append to the
+// per-turn system prompt.
+// ===========================================================================
+
+interface NodeContextAttachment {
+  name: string
+  mimeType: string | null
+  size: number | null
+  content?: string
+  contentTruncated?: boolean
+}
+
+interface NodeContextEntry {
+  scope: "code" | "write"
+  nodeId: string
+  name: string
+  type: "folder" | "file"
+  content?: string
+  contentTruncated?: boolean
+  attachments: NodeContextAttachment[]
+}
+
+function isTextLikeMime(mime: string | null | undefined): boolean {
+  if (!mime) return false
+  return TEXT_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix))
+}
+
+/**
+ * Resolve one `{scope, nodeId}` ref into a self-contained context entry:
+ * the node's metadata + content + attachment list (with text-like
+ * attachment bodies inlined under `MAX_ATTACHMENT_INLINE_BYTES`).
+ *
+ * Returns `null` when the node doesn't exist or is archived — callers
+ * filter nulls instead of failing the whole turn, so a stale attachment
+ * chip in the UI doesn't block the user's send.
+ */
+async function fetchNodeContext(
+  teamId: string,
+  workspaceId: string,
+  ref: NodeRef
+): Promise<NodeContextEntry | null> {
+  const nodeSnap = await db
+    .doc(`teams/${teamId}/workspaces/${workspaceId}/${ref.scope}/${ref.nodeId}`)
+    .get()
+  if (!nodeSnap.exists) return null
+  const data = nodeSnap.data() ?? {}
+  if (data.isArchived === true) return null
+
+  const type =
+    data.type === "folder" || data.type === "file"
+      ? (data.type as "folder" | "file")
+      : "file"
+  const name = typeof data.name === "string" ? data.name : ref.nodeId
+
+  const rawContent = typeof data.content === "string" ? data.content : ""
+  let content: string | undefined
+  let contentTruncated = false
+  if (rawContent.length > 0) {
+    if (rawContent.length > MAX_NODE_CONTENT_BYTES) {
+      content = rawContent.slice(0, MAX_NODE_CONTENT_BYTES)
+      contentTruncated = true
+    } else {
+      content = rawContent
+    }
+  }
+
+  // Attachments live in a subcollection alongside the node doc. We pull
+  // metadata for every attachment and inline content for the small
+  // text-like ones — binaries (images, PDFs, archives) get name + mime +
+  // size only, which is enough for the model to acknowledge them.
+  const attachmentsSnap = await db
+    .collection(
+      `teams/${teamId}/workspaces/${workspaceId}/${ref.scope}/${ref.nodeId}/attachments`
+    )
+    .get()
+
+  const attachments: NodeContextAttachment[] = []
+  for (const attSnap of attachmentsSnap.docs) {
+    const att = attSnap.data() ?? {}
+    const mimeType = typeof att.mimeType === "string" ? att.mimeType : null
+    const size = typeof att.size === "number" ? att.size : null
+    const storagePath =
+      typeof att.storagePath === "string" ? att.storagePath : null
+    const displayName =
+      typeof att.displayName === "string" && att.displayName
+        ? att.displayName
+        : "attachment"
+
+    let attContent: string | undefined
+    let attTruncated = false
+    if (
+      storagePath &&
+      isTextLikeMime(mimeType) &&
+      (size === null || size <= MAX_ATTACHMENT_INLINE_BYTES)
+    ) {
+      try {
+        const [buffer] = await admin
+          .storage()
+          .bucket()
+          .file(storagePath)
+          .download()
+        const text = buffer.toString("utf8")
+        if (text.length > MAX_ATTACHMENT_INLINE_BYTES) {
+          attContent = text.slice(0, MAX_ATTACHMENT_INLINE_BYTES)
+          attTruncated = true
+        } else {
+          attContent = text
+        }
+      } catch {
+        // Storage read failed — fall through with metadata only so the
+        // model still knows the attachment exists.
+      }
+    }
+
+    attachments.push({
+      name: displayName,
+      mimeType,
+      size,
+      ...(attContent !== undefined ? { content: attContent } : {}),
+      ...(attTruncated ? { contentTruncated: true } : {}),
+    })
+  }
+
+  return {
+    scope: ref.scope,
+    nodeId: ref.nodeId,
+    name,
+    type,
+    ...(content !== undefined ? { content } : {}),
+    ...(contentTruncated ? { contentTruncated: true } : {}),
+    attachments,
+  }
+}
+
+function formatBytes(bytes: number | null): string {
+  if (bytes === null) return "unknown size"
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+/**
+ * Pick a code-fence length that the content can't escape. CommonMark
+ * requires the closing fence to have at least as many backticks as the
+ * opening, so by scanning for the longest backtick run inside `content`
+ * and using one more, we guarantee no malicious file can prematurely
+ * close the fence and inject text at the system-prompt level.
+ *
+ * Without this, a node whose body contained ``` would terminate the
+ * fence and the model would see whatever followed as bare system-prompt
+ * text — a high-trust position the user shouldn't be able to reach
+ * through file content.
+ */
+function pickCodeFence(content: string): string {
+  let longestRun = 0
+  let currentRun = 0
+  for (let i = 0; i < content.length; i += 1) {
+    if (content.charCodeAt(i) === 0x60 /* ` */) {
+      currentRun += 1
+      if (currentRun > longestRun) longestRun = currentRun
+    } else {
+      currentRun = 0
+    }
+  }
+  return "`".repeat(Math.max(3, longestRun + 1))
+}
+
+/**
+ * Render a set of node-context entries as a markdown block appended to
+ * the per-turn system prompt. Returns "" when no entries — the caller
+ * uses the empty string to skip the join and keep the system prompt
+ * byte-identical to the no-context path.
+ */
+function buildContextPromptBlock(entries: NodeContextEntry[]): string {
+  if (entries.length === 0) return ""
+
+  const lines: string[] = [
+    "# Attached workspace context",
+    "",
+    "The user attached the following workspace items as context for this " +
+      "turn. Treat them as ground truth when relevant. Quote sparingly; " +
+      "summarize when paraphrasing is clearer.",
+    "",
+  ]
+
+  for (const entry of entries) {
+    const scopeLabel = entry.scope === "code" ? "Code" : "Write"
+    lines.push(`## ${scopeLabel} ${entry.type}: ${entry.name}`)
+    if (entry.type === "folder") {
+      lines.push("_(folder — no inline content)_")
+    } else if (entry.content) {
+      const fence = pickCodeFence(entry.content)
+      lines.push(fence, entry.content, fence)
+      if (entry.contentTruncated) lines.push("_(content truncated)_")
+    } else {
+      lines.push("_(empty file)_")
+    }
+
+    if (entry.attachments.length > 0) {
+      lines.push("", "### Attachments")
+      for (const att of entry.attachments) {
+        lines.push(
+          `- **${att.name}** — ${att.mimeType ?? "unknown type"}, ${formatBytes(att.size)}`
+        )
+        if (att.content) {
+          // Fence is sized against the raw content so even an attachment
+          // body packed with backticks can't close the block prematurely.
+          // Indentation here is purely cosmetic (nests under the bullet)
+          // and doesn't factor into the fence-escape safety.
+          const fence = pickCodeFence(att.content)
+          const indented = att.content.replace(/\n/g, "\n  ")
+          lines.push(`  ${fence}`, `  ${indented}`, `  ${fence}`)
+          if (att.contentTruncated) lines.push("  _(content truncated)_")
+        }
+      }
+    }
+    lines.push("")
+  }
+
+  return lines.join("\n")
+}
+
+/**
+ * Fetch context entries for every requested ref. Sequential to keep
+ * memory + concurrent Storage requests bounded — with `CONTEXT_NODE_MAX = 10`
+ * the wall-clock cost is still dwarfed by model latency.
+ */
+async function loadContextEntries(
+  teamId: string,
+  workspaceId: string,
+  refs: readonly NodeRef[]
+): Promise<NodeContextEntry[]> {
+  const entries: NodeContextEntry[] = []
+  for (const ref of refs) {
+    const entry = await fetchNodeContext(teamId, workspaceId, ref)
+    if (entry) entries.push(entry)
+  }
+  return entries
+}
+
+/**
+ * Deterministic Firestore-queryable key for a (user, node) pin. Written
+ * once on session creation to power `findBotSessionByPinnedNode`'s
+ * indexed lookup. The pin's `scope`/`nodeId` are not stored as their
+ * own field — they live as a normal entry inside `contextNodes`.
+ */
+function pinnedNodeKey(
+  ownerUid: string,
+  scope: "code" | "write",
+  nodeId: string
+): string {
+  return `${ownerUid}:${scope}:${nodeId}`
+}
+
 /**
  * Pick which tools to register with the chat for a given (config, mode).
  *   - Mode strips action tools in `manual` (existing behavior).
@@ -995,6 +1293,40 @@ async function readSessionDoc(
 // sendBotMessage — Genkit flow with streaming, exposed via onCallGenkit.
 // ===========================================================================
 
+// ===========================================================================
+// Node context — workspace files/folders the user attached to a chat turn.
+// ===========================================================================
+//
+// Two related shapes share the same `{scope, nodeId}` ref:
+//   - `contextNodes` — per-turn attachments. Their content + attachment
+//     metadata is fetched and injected into that turn's system prompt so
+//     the model can ground its reply in the user's actual files.
+//   - `pinnedNode`   — a one-shot field written when a new session is
+//     created. Lets the NodeInspectorSidebar Bot tab find "the chat for
+//     this node" later via `findBotSessionByPinnedNode`. Ignored when
+//     resuming an existing session.
+//
+// `CONTEXT_NODE_MAX` caps prompt size; without it a misbehaving client
+// could attach hundreds of files per turn and blow past the model's
+// context window (and our token budget).
+
+const CONTEXT_NODE_MAX = 10
+const MAX_NODE_CONTENT_BYTES = 100_000
+const MAX_ATTACHMENT_INLINE_BYTES = 50_000
+const TEXT_MIME_PREFIXES = [
+  "text/",
+  "application/json",
+  "application/xml",
+  "application/javascript",
+  "application/typescript",
+]
+
+const NodeRefSchema = z.object({
+  scope: z.enum(["code", "write"]),
+  nodeId: z.string().min(1),
+})
+type NodeRef = z.infer<typeof NodeRefSchema>
+
 const SendBotMessageInput = z.object({
   teamId: z.string().min(1),
   workspaceId: z.string().min(1),
@@ -1007,6 +1339,19 @@ const SendBotMessageInput = z.object({
    * `auto` — older clients that don't send the field still work.
    */
   mode: z.enum(BOT_CHAT_MODES).default("auto"),
+  /**
+   * Workspace nodes the user attached to this turn. Fetched server-side
+   * and injected into the system prompt as ground-truth context. Capped
+   * at `CONTEXT_NODE_MAX` to bound prompt size and Firestore reads.
+   */
+  contextNodes: z.array(NodeRefSchema).max(CONTEXT_NODE_MAX).default([]),
+  /**
+   * Set only when creating a new session, to bind it to a specific
+   * workspace node. Enables `findBotSessionByPinnedNode` to resume the
+   * same chat the next time the node's inspector tab opens. Ignored on
+   * resumed sessions (the pin is set once, at creation).
+   */
+  pinnedNode: NodeRefSchema.optional(),
 })
 
 const SendBotMessageOutput = z.object({
@@ -1254,17 +1599,52 @@ const sendBotMessageFlow = ai.defineFlow(
     // see their changes apply on the next send, not after a deploy.
     const agentConfig = await loadTeamAgentConfig(teamId)
 
+    // Resolve the effective session id. Resumed chats reuse their
+    // existing id; fresh sends create a new session. A `pinnedNode`
+    // on a fresh send creates ANOTHER pinned chat for the same
+    // (user, node) pair — multiple pins per node are intentional so
+    // a "new chat" button in the node inspector can spin up a fresh
+    // conversation while preserving the prior one in history.
+    const effectiveSessionId: string | null = sessionId ?? null
+
+    // The pinned-node key flows into the store only when we're about
+    // to create a brand-new session. The store writes it when `isNew`
+    // and never again — dropping it on resumed sessions keeps the
+    // invariant "pinnedNodeKey → exactly one new session" crisp.
+    const newSessionPinnedNodeKey =
+      !effectiveSessionId && input.pinnedNode
+        ? pinnedNodeKey(
+            auth.uid,
+            input.pinnedNode.scope,
+            input.pinnedNode.nodeId
+          )
+        : undefined
+
     const store = new FirestoreBotSessionStore(
       teamId,
       workspaceId,
       auth.uid,
       agentConfig.titleMaxLength,
-      agentConfig.previewMaxLength
+      agentConfig.previewMaxLength,
+      newSessionPinnedNodeKey,
+      input.contextNodes,
+      mode
     )
 
-    const session = sessionId
-      ? await ai.loadSession(sessionId, { store })
+    const session = effectiveSessionId
+      ? await ai.loadSession(effectiveSessionId, { store })
       : ai.createSession({ store })
+
+    // Resolve attached workspace nodes into a context block for the
+    // system prompt. Missing/archived nodes are silently skipped so a
+    // stale chip in the client UI doesn't surface as a hard error mid-
+    // conversation. With `CONTEXT_NODE_MAX = 10` this is bounded.
+    const contextEntries = await loadContextEntries(
+      teamId,
+      workspaceId,
+      input.contextNodes
+    )
+    const contextBlock = buildContextPromptBlock(contextEntries)
 
     // Build the action context for this turn. `auth` mirrors the existing
     // verified Firebase identity; `mode` is the per-turn capability gate
@@ -1282,16 +1662,22 @@ const sendBotMessageFlow = ai.defineFlow(
     // actions. Per-workspace tool toggles further strip individual tools.
     const chatTools = pickChatTools(agentConfig, mode)
 
-    // System prompt is mode-aware. We set it on every turn (including
-    // resumed sessions) so a user who flips modes mid-conversation
-    // immediately gets the new behavior. Genkit replaces the system
-    // segment when one is provided to chat() — earlier turns aren't
-    // rewritten on disk, but the active turn picks it up. Model + gen
-    // config are also workspace-scoped overrides; admins can swap models
-    // without touching the source.
+    // System prompt is mode-aware AND context-augmented. We set it on
+    // every turn (including resumed sessions) so a user who flips modes
+    // or removes attached nodes mid-conversation immediately gets the
+    // new behavior. Genkit replaces the system segment when one is
+    // provided to chat() — earlier turns aren't rewritten on disk, but
+    // the active turn picks it up. Model + gen config are also
+    // workspace-scoped overrides; admins can swap models without
+    // touching the source.
+    const baseSystem = buildSystemPromptFromConfig(agentConfig, mode)
+    const systemPrompt = contextBlock
+      ? `${baseSystem}\n\n${contextBlock}`
+      : baseSystem
+
     const chat = session.chat({
       model: googleAI.model(agentConfig.model),
-      system: buildSystemPromptFromConfig(agentConfig, mode),
+      system: systemPrompt,
       tools: chatTools,
       context: actionContext,
       config: {
@@ -1376,6 +1762,13 @@ const RespondToBotInterruptInput = z.object({
   response: z.unknown(),
   /** Mode at the moment of response — drives system prompt + tool set. */
   mode: z.enum(BOT_CHAT_MODES).default("auto"),
+  /**
+   * Same shape as `SendBotMessageInput.contextNodes` — passed through so
+   * a chat that resumes from an interrupt keeps the attached files in
+   * scope. Without this, the model would lose grounding the moment it
+   * returned from a clarifying question.
+   */
+  contextNodes: z.array(NodeRefSchema).max(CONTEXT_NODE_MAX).default([]),
 })
 
 const RespondToBotInterruptOutput = z.object({
@@ -1483,7 +1876,14 @@ const respondToBotInterruptFlow = ai.defineFlow(
       workspaceId,
       auth.uid,
       agentConfig.titleMaxLength,
-      agentConfig.previewMaxLength
+      agentConfig.previewMaxLength,
+      // No pinnedNodeKey — interrupts always run on an existing
+      // session, and the pin's index is set on creation only.
+      // contextNodes flow through so the persisted chip list reflects
+      // what the user sees in the composer right now.
+      undefined,
+      input.contextNodes,
+      mode
     )
     const session = await ai.loadSession(sessionId, { store })
 
@@ -1545,12 +1945,25 @@ const respondToBotInterruptFlow = ai.defineFlow(
     }
     const chatTools = pickChatTools(agentConfig, mode)
 
+    // Carry node context through the resume so the model still sees
+    // attached files when it picks up after the interrupt.
+    const contextEntries = await loadContextEntries(
+      teamId,
+      workspaceId,
+      input.contextNodes
+    )
+    const contextBlock = buildContextPromptBlock(contextEntries)
+    const baseSystem = buildSystemPromptFromConfig(agentConfig, mode)
+    const systemPrompt = contextBlock
+      ? `${baseSystem}\n\n${contextBlock}`
+      : baseSystem
+
     // Resume: no new prompt, just the resolved interrupt fed back in.
     // Genkit appends the toolResponse to the message history and lets
     // the model continue.
     const chat = session.chat({
       model: googleAI.model(agentConfig.model),
-      system: buildSystemPromptFromConfig(agentConfig, mode),
+      system: systemPrompt,
       tools: chatTools,
       context: actionContext,
       config: {
@@ -1672,6 +2085,77 @@ export const loadBotSession = onCall<LoadBotSessionRequest>(
     return { sessionId, messages }
   }
 )
+
+// ===========================================================================
+// findBotSessionByPinnedNode — resolve the caller's chat that's pinned to
+// a specific workspace node, if any.
+// ===========================================================================
+//
+// The NodeInspectorSidebar's Bot tab calls this on open so each node has a
+// stable, resumable chat per user. We key on `pinnedNodeKey` (a single
+// composite string of `${ownerUid}:${scope}:${nodeId}`) so the query is a
+// single equality clause — no composite index needed. Returns null when no
+// session exists yet; the next `sendBotMessage` will create one with the
+// matching `pinnedNode`.
+
+interface FindBotSessionByPinnedNodeRequest {
+  teamId: string
+  workspaceId: string
+  scope: "code" | "write"
+  nodeId: string
+}
+
+interface FindBotSessionByPinnedNodeResponse {
+  sessionId: string | null
+}
+
+export const findBotSessionByPinnedNode =
+  onCall<FindBotSessionByPinnedNodeRequest>(
+    {
+      ...CALLABLE_OPTS,
+      enforceAppCheck: true,
+    },
+    async (request): Promise<FindBotSessionByPinnedNodeResponse> => {
+      const auth = requireVerifiedAuth(request.auth)
+      const { teamId, workspaceId, scope, nodeId } = request.data ?? {}
+
+      if (typeof teamId !== "string" || !teamId) {
+        throw new HttpsError("invalid-argument", "teamId is required.")
+      }
+      if (typeof workspaceId !== "string" || !workspaceId) {
+        throw new HttpsError("invalid-argument", "workspaceId is required.")
+      }
+      if (scope !== "code" && scope !== "write") {
+        throw new HttpsError(
+          "invalid-argument",
+          'scope must be "code" or "write".'
+        )
+      }
+      if (typeof nodeId !== "string" || !nodeId) {
+        throw new HttpsError("invalid-argument", "nodeId is required.")
+      }
+
+      // Membership gate — non-members shouldn't even know whether the
+      // session exists. We don't widen access for shared sessions here:
+      // the Bot tab is a per-user "ask about this node" view; collab
+      // chats live on the bot page's history sidebar.
+      await getMembershipRole(teamId, auth.uid)
+
+      // Multiple pinned chats can exist for the same (user, node) pair
+      // — each "new chat" click in the inspector creates another. We
+      // resume the most recently active one by default; the history
+      // list in the inspector shows the rest.
+      const snap = await db
+        .collection(`teams/${teamId}/workspaces/${workspaceId}/botSessions`)
+        .where("pinnedNodeKey", "==", pinnedNodeKey(auth.uid, scope, nodeId))
+        .orderBy("updatedAt", "desc")
+        .limit(1)
+        .get()
+
+      if (snap.empty) return { sessionId: null }
+      return { sessionId: snap.docs[0].id }
+    }
+  )
 
 interface UpdateBotSessionVisibilityRequest {
   teamId: string

@@ -2,6 +2,7 @@
 import { useCurrentUser } from "vuefire"
 import XTerminal from "xterminal"
 
+const { t } = useI18n()
 const user = useCurrentUser()
 
 const terminalEl = ref<HTMLElement | null>(null)
@@ -15,9 +16,9 @@ const promptUser = () => {
 }
 
 term.once("load", () => {
-  term.writeln(`<strong>Welcome to Lectornaut CLI</strong>`)
+  term.writeln(`<strong>${t("components.terminal.welcome")}</strong>`)
   term.writeln(
-    `<span class="text-secondary-foreground">Type "help" to see available commands.</span>\n`
+    `<span class="text-secondary-foreground">${t("components.terminal.typeHelp")}</span>\n`
   )
   promptUser()
 })
@@ -28,13 +29,13 @@ const manual = `
   |、˜〵
   じしˍ,)ノ
 
-<strong>Lectornaut CLI</strong> is a command line interface (CLI) to interact with Lectornaut.
-A lightweight, open-source playload transformer and manager built with web technologies.
+<strong>${t("components.terminal.helpHeader")}</strong> ${t("components.terminal.helpIntro")}
+${t("components.terminal.helpDescription")}
 
-Website: <a href="https://lectornaut.com" target="_blank" rel="noopener" class="text-primary underline">lectornaut.com</a>
-Documentation: <a href="https://lectornaut.com/docs" target="_blank" rel="noopener" class="text-primary underline">lectornaut.com/docs</a>
+${t("components.terminal.website")}: <a href="https://lectornaut.com" target="_blank" rel="noopener" class="text-primary underline">lectornaut.com</a>
+${t("components.terminal.documentation")}: <a href="https://lectornaut.com/docs" target="_blank" rel="noopener" class="text-primary underline">lectornaut.com/docs</a>
 
-<ul class="list-[square] list-inside marker:text-muted-foreground"><li><span class="text-destructive">help</span> - <span class="text-muted-foreground">show this help menu</span></li><li><span class="text-destructive">js</span> - <span class="text-muted-foreground">eval JavaScript code</span></li><li><span class="text-destructive">clear</span> - <span class="text-muted-foreground">clear the terminal</span></li></ul>`
+<ul class="list-[square] list-inside marker:text-muted-foreground"><li><span class="text-destructive">help</span> - <span class="text-muted-foreground">${t("components.terminal.helpCmd")}</span></li><li><span class="text-destructive">js</span> - <span class="text-muted-foreground">${t("components.terminal.jsCmd")}</span></li><li><span class="text-destructive">clear</span> - <span class="text-muted-foreground">${t("components.terminal.clearCmd")}</span></li></ul>`
 
 const execute = (term: XTerminal, command = "") => {
   if (!command) {
@@ -60,7 +61,7 @@ const execute = (term: XTerminal, command = "") => {
       term.clear()
       return Promise.resolve("")
     default:
-      return Promise.reject(`"${cmd}" command not found`)
+      return Promise.reject(t("components.terminal.commandNotFound", { cmd }))
   }
 }
 

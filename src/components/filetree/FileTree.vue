@@ -3,6 +3,10 @@ import {
   provideSidebarContext,
   useSidebar,
 } from "@/components/ui/sidebar/utils"
+import {
+  provideFileTreeSelection,
+  type FileTreeSelectionMode,
+} from "@/composables/useFileTreeSelection"
 import { IconChevronRight, IconFilePlus, IconFolderPlus } from "@/data/icons"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
@@ -14,21 +18,40 @@ import {
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue"
 import TreeNode from "./TreeNode.vue"
 
-const props = defineProps<{
-  teamId: string
-  workspaceId: string
-  scope: WorkspaceNodeScope
-  selectedNodeId?: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    teamId: string
+    workspaceId: string
+    scope: WorkspaceNodeScope
+    /**
+     * How the tree renders selection state.
+     *   - "none":     row click writes to the file-tree store; highlight
+     *                 tracks the store. Routing pages use this.
+     *   - "single":   row click emits `select`; highlight tracks the
+     *                 string passed in `selection`.
+     *   - "multiple": row click emits `select`; highlight tracks the
+     *                 array passed in `selection`.
+     */
+    selectionMode?: FileTreeSelectionMode
+    /**
+     * Read-only selection state. The shape must match `selectionMode`:
+     * a string (or null) for "single", an array for "multiple",
+     * ignored for "none".
+     */
+    selection?: string | readonly string[] | null
+  }>(),
+  {
+    selectionMode: "none",
+    selection: null,
+  }
+)
 
 const emit = defineEmits<{
   (e: "select", node: WorkspaceNode): void
 }>()
 
 const store = useFileTreeStore()
-const hasControlledSelection = computed(
-  () => props.selectedNodeId !== undefined
-)
+const { t } = useI18n()
 const treeSidebarOpen = ref(true)
 const treeSidebarOpenMobile = ref(false)
 const treeSidebarIsMobile = ref(false)
@@ -52,6 +75,53 @@ if (!existingSidebarContext) {
     },
   })
 }
+
+// ── Selection context ────────────────────────────────────────────────────────
+//
+// Computed set of "currently highlighted" ids. Built once per change so
+// nested `TreeNode`s can ask `isSelected(id)` in O(1) without re-deriving
+// from the raw selection prop each call. The store fallback applies only
+// in "none" mode — the page-level routes write their current node into
+// the store and we render whatever the store says is selected.
+
+const selectionMode = computed<FileTreeSelectionMode>(() => props.selectionMode)
+
+const selectedIds = computed<Set<string>>(() => {
+  if (selectionMode.value === "multiple") {
+    return new Set(Array.isArray(props.selection) ? props.selection : [])
+  }
+  if (selectionMode.value === "single") {
+    const id = typeof props.selection === "string" ? props.selection : null
+    return new Set(id ? [id] : [])
+  }
+  // "none": follow the store so URL-driven selection still highlights.
+  const storeId = store.getSelectedNodeId(
+    props.scope,
+    props.teamId,
+    props.workspaceId
+  )
+  return new Set(storeId ? [storeId] : [])
+})
+
+provideFileTreeSelection({
+  mode: selectionMode,
+  isSelected: (id: string) => selectedIds.value.has(id),
+  onRowClick: (node: WorkspaceNode) => {
+    if (selectionMode.value === "none") {
+      store.setSelectedNode(
+        props.scope,
+        props.teamId,
+        props.workspaceId,
+        node.id
+      )
+      return
+    }
+    // For "single" and "multiple", the parent owns the selection state.
+    // It also decides whether a click means "set" or "toggle", since
+    // that depends on context (e.g. the AI composer caps at 10).
+    emit("select", node)
+  },
+})
 
 const rootChildren = computed(() =>
   store.getChildrenIds(
@@ -154,9 +224,12 @@ const handleUnarchive = async (node: WorkspaceNode) => {
       props.workspaceId,
       node.id
     )
-    showSuccessToast("Unarchived")
+    showSuccessToast(t("fileTree.toast.unarchived"))
   } catch (error) {
-    showErrorToast("Failed to unarchive", (error as Error).message)
+    showErrorToast(
+      t("fileTree.toast.unarchiveFailed"),
+      (error as Error).message
+    )
   }
 }
 
@@ -172,7 +245,10 @@ const handleCreated = async (nodeId: string) => {
 
   if (dialogs.create.type !== "file") return
 
-  if (hasControlledSelection.value) {
+  // For controlled modes the parent decides what to do with the new
+  // file. For "none", we set it as the store's selection so the route
+  // can react and open the editor.
+  if (selectionMode.value !== "none") {
     const createdNode = await store.ensureNodeLoaded(
       props.scope,
       props.teamId,
@@ -213,12 +289,14 @@ const handleCreateSubmit = async () => {
           )
 
     showSuccessToast(
-      dialogs.create.type === "folder" ? "Folder created" : "File created"
+      dialogs.create.type === "folder"
+        ? t("fileTree.toast.folderCreated")
+        : t("fileTree.toast.fileCreated")
     )
     await handleCreated(nodeId)
     dialogs.create.open = false
   } catch (error) {
-    showErrorToast("Failed to create", (error as Error).message)
+    showErrorToast(t("fileTree.toast.createFailed"), (error as Error).message)
   } finally {
     isCreating.value = false
   }
@@ -237,10 +315,10 @@ const handleRenameSubmit = async () => {
       dialogs.rename.node.id,
       renameName.value
     )
-    showSuccessToast("Renamed")
+    showSuccessToast(t("fileTree.toast.renamed"))
     dialogs.rename.open = false
   } catch (error) {
-    showErrorToast("Failed to rename", (error as Error).message)
+    showErrorToast(t("fileTree.toast.renameFailed"), (error as Error).message)
   } finally {
     isRenaming.value = false
   }
@@ -293,9 +371,9 @@ const handleRootDrop = async (event: DragEvent) => {
       draggedId,
       ROOT_PARENT_ID
     )
-    showSuccessToast("Moved")
+    showSuccessToast(t("fileTree.toast.moved"))
   } catch (error) {
-    showErrorToast("Failed to move", (error as Error).message)
+    showErrorToast(t("fileTree.toast.moveFailed"), (error as Error).message)
   }
 }
 
@@ -310,10 +388,10 @@ const handleArchiveConfirm = async () => {
       props.workspaceId,
       dialogs.archive.node.id
     )
-    showSuccessToast("Archived")
+    showSuccessToast(t("fileTree.toast.archived"))
     dialogs.archive.open = false
   } catch (error) {
-    showErrorToast("Failed to archive", (error as Error).message)
+    showErrorToast(t("fileTree.toast.archiveFailed"), (error as Error).message)
   } finally {
     isArchiving.value = false
   }
@@ -330,10 +408,10 @@ const handleDeleteConfirm = async () => {
       props.workspaceId,
       dialogs.delete.node.id
     )
-    showSuccessToast("Deleted")
+    showSuccessToast(t("fileTree.toast.deleted"))
     dialogs.delete.open = false
   } catch (error) {
-    showErrorToast("Failed to delete", (error as Error).message)
+    showErrorToast(t("fileTree.toast.deleteFailed"), (error as Error).message)
   } finally {
     isDeleting.value = false
   }
@@ -375,7 +453,7 @@ onBeforeUnmount(() => {
     <Collapsible default-open class="group/collapsible">
       <SidebarGroupLabel as-child>
         <CollapsibleTrigger class="w-full">
-          Documents
+          {{ t("fileTree.documents") }}
           <IconChevronRight
             class="mr-auto ml-1 size-3! transition-transform group-data-[state=open]/collapsible:rotate-90"
           />
@@ -391,7 +469,7 @@ onBeforeUnmount(() => {
                       <IconFolderPlus />
                     </InputGroupButton>
                   </TooltipTrigger>
-                  <TooltipContent> New folder </TooltipContent>
+                  <TooltipContent>{{ t("fileTree.newFolder") }}</TooltipContent>
                 </Tooltip>
               </ButtonGroup>
               <ButtonGroup>
@@ -404,7 +482,7 @@ onBeforeUnmount(() => {
                       <IconFilePlus />
                     </InputGroupButton>
                   </TooltipTrigger>
-                  <TooltipContent> New file </TooltipContent>
+                  <TooltipContent>{{ t("fileTree.newFile") }}</TooltipContent>
                 </Tooltip>
               </ButtonGroup>
             </ButtonGroup>
@@ -430,24 +508,22 @@ onBeforeUnmount(() => {
               :team-id="props.teamId"
               :workspace-id="props.workspaceId"
               :node-id="childId"
-              :selected-node-id="props.selectedNodeId"
               @create-folder="openCreateDialog('folder', $event.id)"
               @create-file="openCreateDialog('file', $event.id)"
               @rename="openRenameDialog"
               @archive="openArchiveDialog"
               @unarchive="handleUnarchive"
               @delete="openDeleteDialog"
-              @select="emit('select', $event)"
             />
           </SidebarMenu>
           <div v-if="rootLoading" class="text-muted-foreground p-2 text-xs">
-            Loading...
+            {{ t("states.loading") }}
           </div>
           <div
             v-else-if="rootChildren.length === 0"
             class="text-muted-foreground p-2 text-xs"
           >
-            No files yet.
+            {{ t("fileTree.empty") }}
           </div>
           <div v-if="rootPagination.hasMore" class="p-2">
             <Button
@@ -456,8 +532,10 @@ onBeforeUnmount(() => {
               :disabled="rootPagination.loadingMore"
               @click="loadMoreRoot"
             >
-              <span v-if="rootPagination.loadingMore">Loading...</span>
-              <span v-else>Load more</span>
+              <span v-if="rootPagination.loadingMore">
+                {{ t("states.loading") }}
+              </span>
+              <span v-else>{{ t("fileTree.loadMore") }}</span>
             </Button>
           </div>
         </SidebarGroupContent>
@@ -473,17 +551,19 @@ onBeforeUnmount(() => {
       <DialogHeader>
         <DialogTitle>
           {{
-            dialogs.create.type === "folder" ? "Create Folder" : "Create File"
+            dialogs.create.type === "folder"
+              ? t("fileTree.createFolder")
+              : t("fileTree.createFile")
           }}
         </DialogTitle>
-        <DialogDescription> Choose a name for your item. </DialogDescription>
+        <DialogDescription>{{ t("fileTree.createHint") }}</DialogDescription>
       </DialogHeader>
       <form class="space-y-4" @submit.prevent="handleCreateSubmit">
         <div class="space-y-2">
           <Input
             id="node-name"
             v-model="createName"
-            placeholder="Untitled"
+            :placeholder="t('fileTree.untitledPlaceholder')"
             autocomplete="off"
           />
         </div>
@@ -493,10 +573,10 @@ onBeforeUnmount(() => {
             variant="ghost"
             @click="dialogs.create.open = false"
           >
-            Cancel
+            {{ t("actions.cancel") }}
           </Button>
           <Button type="submit" :disabled="isCreating || !createName.trim()">
-            {{ isCreating ? "Creating..." : "Create" }}
+            {{ isCreating ? t("states.creating") : t("actions.create") }}
           </Button>
         </DialogFooter>
       </form>
@@ -509,18 +589,18 @@ onBeforeUnmount(() => {
   >
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Rename</DialogTitle>
-        <DialogDescription>Update the name of this item.</DialogDescription>
+        <DialogTitle>{{ t("fileTree.renameTitle") }}</DialogTitle>
+        <DialogDescription>{{ t("fileTree.renameHint") }}</DialogDescription>
       </DialogHeader>
       <form class="space-y-4" @submit.prevent="handleRenameSubmit">
         <div class="grid gap-2">
           <Label class="text-secondary-foreground text-xs" for="rename-name">
-            Name
+            {{ t("labels.name") }}
           </Label>
           <Input
             id="rename-name"
             v-model="renameName"
-            placeholder="Untitled"
+            :placeholder="t('fileTree.untitledPlaceholder')"
             autocomplete="off"
           />
         </div>
@@ -530,10 +610,10 @@ onBeforeUnmount(() => {
             variant="ghost"
             @click="dialogs.rename.open = false"
           >
-            Cancel
+            {{ t("actions.cancel") }}
           </Button>
           <Button type="submit" :disabled="isRenaming || !renameName.trim()">
-            {{ isRenaming ? "Saving..." : "Save" }}
+            {{ isRenaming ? t("states.saving") : t("actions.save") }}
           </Button>
         </DialogFooter>
       </form>
@@ -546,18 +626,18 @@ onBeforeUnmount(() => {
   >
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Archive</AlertDialogTitle>
+        <AlertDialogTitle>{{ t("fileTree.archiveTitle") }}</AlertDialogTitle>
         <AlertDialogDescription>
-          This will archive
-          <span class="font-medium">
-            {{ dialogs.archive.node?.name }}
-          </span>
-          . You can unarchive it later.
+          {{
+            t("fileTree.archiveConfirm", {
+              name: dialogs.archive.node?.name ?? "",
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel @click="dialogs.archive.open = false">
-          Cancel
+          {{ t("actions.cancel") }}
         </AlertDialogCancel>
         <AlertDialogAction as-child>
           <Button
@@ -566,7 +646,7 @@ onBeforeUnmount(() => {
             :disabled="isArchiving"
             @click="handleArchiveConfirm"
           >
-            {{ isArchiving ? "Archiving..." : "Archive" }}
+            {{ isArchiving ? t("states.archiving") : t("fileTree.archive") }}
           </Button>
         </AlertDialogAction>
       </AlertDialogFooter>
@@ -579,18 +659,18 @@ onBeforeUnmount(() => {
   >
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete</AlertDialogTitle>
+        <AlertDialogTitle>{{ t("fileTree.deleteTitle") }}</AlertDialogTitle>
         <AlertDialogDescription>
-          This will permanently delete
-          <span class="font-medium">
-            {{ dialogs.delete.node?.name }}
-          </span>
-          . This action cannot be undone.
+          {{
+            t("fileTree.deleteConfirm", {
+              name: dialogs.delete.node?.name ?? "",
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel @click="dialogs.delete.open = false">
-          Cancel
+          {{ t("actions.cancel") }}
         </AlertDialogCancel>
         <AlertDialogAction as-child>
           <Button
@@ -599,7 +679,7 @@ onBeforeUnmount(() => {
             :disabled="isDeleting"
             @click="handleDeleteConfirm"
           >
-            {{ isDeleting ? "Deleting..." : "Delete" }}
+            {{ isDeleting ? t("states.deleting") : t("actions.delete") }}
           </Button>
         </AlertDialogAction>
       </AlertDialogFooter>

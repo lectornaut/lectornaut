@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { IconCheckCircle } from "@/data/icons"
 
+const { t } = useI18n()
+
 definePage({
   // Transient redirect page — no chrome.
   meta: {
@@ -32,9 +34,9 @@ onMounted(() => {
           <EmptyMedia variant="icon">
             <IconCheckCircle />
           </EmptyMedia>
-          <EmptyTitle>Continue in Lectornaut</EmptyTitle>
+          <EmptyTitle>{{ t("pages.deeplink.continueTitle") }}</EmptyTitle>
           <EmptyDescription>
-            The app should open automatically. You can close this tab.
+            {{ t("pages.deeplink.continueDescription") }}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>

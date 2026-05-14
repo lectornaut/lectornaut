@@ -105,9 +105,9 @@ const formatCreatedAt = (
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel>Members</FieldLabel>
+            <FieldLabel>{{ t("settings.members.title") }}</FieldLabel>
             <FieldDescription>
-              Manage your team members and their roles.
+              {{ t("settings.members.description") }}
             </FieldDescription>
           </FieldContent>
           <TooltipProvider>
@@ -119,7 +119,7 @@ const formatCreatedAt = (
                     @click="openInviteDialog"
                   >
                     <IconPlus />
-                    Invite Member
+                    {{ t("settings.members.inviteMember") }}
                   </Button>
                 </div>
               </TooltipTrigger>
@@ -140,7 +140,7 @@ const formatCreatedAt = (
                   <TableRow>
                     <TableHead class="w-1/4">
                       <Button variant="ghost" @click="toggleMemberSort('name')">
-                        Name
+                        {{ t("settings.members.name") }}
                         <IconArrowUp
                           v-if="
                             memberSortKey === 'name' &&
@@ -156,13 +156,15 @@ const formatCreatedAt = (
                         <IconArrowUpDown v-else />
                       </Button>
                     </TableHead>
-                    <TableHead class="w-1/4">Role</TableHead>
+                    <TableHead class="w-1/4">
+                      {{ t("settings.members.role") }}
+                    </TableHead>
                     <TableHead class="w-1/4">
                       <Button
                         variant="ghost"
                         @click="toggleMemberSort('joined')"
                       >
-                        Joined
+                        {{ t("settings.members.joined") }}
                         <IconArrowUp
                           v-if="
                             memberSortKey === 'joined' &&
@@ -221,12 +223,18 @@ const formatCreatedAt = (
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectGroup>
-                                    <SelectItem value="owner">Owner</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="member"
-                                      >Member</SelectItem
-                                    >
-                                    <SelectItem value="guest">Guest</SelectItem>
+                                    <SelectItem value="owner">
+                                      {{ t("settings.members.roles.owner") }}
+                                    </SelectItem>
+                                    <SelectItem value="admin">
+                                      {{ t("settings.members.roles.admin") }}
+                                    </SelectItem>
+                                    <SelectItem value="member">
+                                      {{ t("settings.members.roles.member") }}
+                                    </SelectItem>
+                                    <SelectItem value="guest">
+                                      {{ t("settings.members.roles.guest") }}
+                                    </SelectItem>
                                   </SelectGroup>
                                 </SelectContent>
                               </Select>
@@ -254,10 +262,18 @@ const formatCreatedAt = (
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="owner">Owner</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="guest">Guest</SelectItem>
+                            <SelectItem value="owner">
+                              {{ t("settings.members.roles.owner") }}
+                            </SelectItem>
+                            <SelectItem value="admin">
+                              {{ t("settings.members.roles.admin") }}
+                            </SelectItem>
+                            <SelectItem value="member">
+                              {{ t("settings.members.roles.member") }}
+                            </SelectItem>
+                            <SelectItem value="guest">
+                              {{ t("settings.members.roles.guest") }}
+                            </SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -314,8 +330,8 @@ const formatCreatedAt = (
                                         <IconLogOut />
                                         {{
                                           member.userId === user?.uid
-                                            ? "Exit"
-                                            : "Remove"
+                                            ? t("settings.members.exit")
+                                            : t("settings.members.remove")
                                         }}
                                       </DropdownMenuItem>
                                     </AlertDialogTrigger>
@@ -324,22 +340,35 @@ const formatCreatedAt = (
                                         <AlertDialogTitle>
                                           {{
                                             member.userId === user?.uid
-                                              ? "Exit Team"
-                                              : "Remove Member"
+                                              ? t("settings.members.exitTeam")
+                                              : t(
+                                                  "settings.members.removeMember"
+                                                )
                                           }}
                                         </AlertDialogTitle>
                                         <AlertDialogDescription>
                                           {{
                                             member.userId === user?.uid
-                                              ? "Are you sure you want to leave this team? You will lose access to all team resources."
-                                              : `Are you sure you want to remove ${member.user?.displayName || member.user?.email} from this team?`
+                                              ? t(
+                                                  "settings.members.exitConfirm"
+                                                )
+                                              : t(
+                                                  "settings.members.removeConfirm",
+                                                  {
+                                                    name:
+                                                      member.user
+                                                        ?.displayName ||
+                                                      member.user?.email ||
+                                                      "",
+                                                  }
+                                                )
                                           }}
                                         </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
-                                        <AlertDialogCancel
-                                          >Cancel</AlertDialogCancel
-                                        >
+                                        <AlertDialogCancel>
+                                          {{ t("actions.cancel") }}
+                                        </AlertDialogCancel>
                                         <AlertDialogAction
                                           variant="destructive"
                                           class="text-current"
@@ -361,8 +390,8 @@ const formatCreatedAt = (
                                           />
                                           {{
                                             member.userId === user?.uid
-                                              ? "Exit"
-                                              : "Remove"
+                                              ? t("settings.members.exit")
+                                              : t("settings.members.remove")
                                           }}
                                         </AlertDialogAction>
                                       </AlertDialogFooter>
@@ -370,7 +399,9 @@ const formatCreatedAt = (
                                   </AlertDialog>
                                 </DropdownMenuContent>
                               </TooltipTrigger>
-                              <TooltipContent>Actions</TooltipContent>
+                              <TooltipContent>
+                                {{ t("settings.members.actions") }}
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </DropdownMenu>
@@ -382,7 +413,7 @@ const formatCreatedAt = (
                       colspan="4"
                       class="text-muted-foreground h-24 text-center"
                     >
-                      No members found.
+                      {{ t("settings.members.noMembers") }}
                     </TableCell>
                   </TableRow>
                 </TableBody>

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { BotChatContextKey } from "@/composables/useBotChat"
+import { useBotSessionFilter } from "@/composables/useBotSessionFilter"
 import {
   IconArchive,
   IconGlobe,
@@ -10,8 +11,10 @@ import {
   IconPencil,
   IconPlus,
   IconRotateCcw,
+  IconSearch,
   IconTrash2,
   IconUsers,
+  IconX,
 } from "@/data/icons"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
 import { Timestamp } from "firebase/firestore"
@@ -19,12 +22,33 @@ import { computed, inject, nextTick, ref } from "vue"
 import { useRouter } from "vue-router"
 
 const botChat = inject(BotChatContextKey)
+const { t } = useI18n()
 
-const mySessions = computed(() => botChat?.mySessions.value ?? [])
-const archivedMySessions = computed(
+// Filter + search state — instance-local, so the history sidebar's
+// filter state doesn't leak into the inspector's Bot tab (or vice
+// versa). Each composable call returns a fresh, independently reactive
+// piece of state.
+const filter = useBotSessionFilter()
+
+const rawMySessions = computed(() => botChat?.mySessions.value ?? [])
+const rawArchivedMySessions = computed(
   () => botChat?.archivedMySessions.value ?? []
 )
-const sharedSessions = computed(() => botChat?.sharedSessions.value ?? [])
+const rawSharedSessions = computed(() => botChat?.sharedSessions.value ?? [])
+
+// Pipe each list through the filter. Search and most checkbox filters
+// apply uniformly, but `onlyShared` is naturally about the *other*
+// list — applying it to `mySessions` would hide everything since I'm
+// always the owner. We special-case it: when `onlyShared` is true, the
+// "my chats" group disappears entirely and only `sharedSessions`
+// shows. This matches user intent ("show me chats shared with me").
+const mySessions = computed(() =>
+  filter.state.onlyShared ? [] : filter.filter(rawMySessions.value)
+)
+const archivedMySessions = computed(() =>
+  filter.state.onlyShared ? [] : filter.filter(rawArchivedMySessions.value)
+)
+const sharedSessions = computed(() => filter.filter(rawSharedSessions.value))
 const activeSessionId = computed(() => botChat?.sessionId.value ?? null)
 const isLoadingSessions = computed(
   () => botChat?.isLoadingSessions.value ?? false
@@ -70,9 +94,9 @@ const visibilityIcon = (visibility: IBotSessionVisibility) => {
 }
 
 const visibilityLabel = (visibility: IBotSessionVisibility): string => {
-  if (visibility === "shared") return "Shared with team"
-  if (visibility === "public") return "Public"
-  return "Private"
+  if (visibility === "shared") return t("ai.visibilityShared")
+  if (visibility === "public") return t("ai.visibilityPublic")
+  return t("ai.visibilityPrivate")
 }
 
 const groupByTime = (sessions: IBotSession[]): SessionGroup[] => {
@@ -95,22 +119,41 @@ const groupByTime = (sessions: IBotSession[]): SessionGroup[] => {
   }
 
   const out: SessionGroup[] = []
-  if (today.length) out.push({ label: "Today", items: today })
-  if (yesterday.length) out.push({ label: "Yesterday", items: yesterday })
-  if (lastWeek.length) out.push({ label: "Previous 7 days", items: lastWeek })
-  if (older.length) out.push({ label: "Older", items: older })
+  if (today.length) out.push({ label: t("time.today"), items: today })
+  if (yesterday.length)
+    out.push({ label: t("time.yesterday"), items: yesterday })
+  if (lastWeek.length)
+    out.push({ label: t("time.previousWeek"), items: lastWeek })
+  if (older.length) out.push({ label: t("time.older"), items: older })
   return out
 }
 
 const myGroups = computed(() => groupByTime(mySessions.value))
 const sharedGroups = computed(() => groupByTime(sharedSessions.value))
 
+const hasAnyRawSessions = computed(
+  () =>
+    rawMySessions.value.length > 0 ||
+    rawSharedSessions.value.length > 0 ||
+    rawArchivedMySessions.value.length > 0
+)
+const hasAnyFilteredSessions = computed(
+  () =>
+    mySessions.value.length > 0 ||
+    sharedSessions.value.length > 0 ||
+    archivedMySessions.value.length > 0
+)
 const isEmpty = computed(
+  () => !isLoadingSessions.value && !hasAnyRawSessions.value
+)
+// Distinct "no results" state — the user has chats, but the active
+// filter/search hides all of them. Different copy clarifies what's
+// happening so the user knows to reset the filter, not start sending.
+const isFilteredEmpty = computed(
   () =>
     !isLoadingSessions.value &&
-    mySessions.value.length === 0 &&
-    sharedSessions.value.length === 0 &&
-    archivedMySessions.value.length === 0
+    hasAnyRawSessions.value &&
+    !hasAnyFilteredSessions.value
 )
 
 // ── Dialogs ─────────────────────────────────────────────────────────────────
@@ -181,12 +224,46 @@ const onArchiveToggle = (session: IBotSession) => {
   <Sidebar collapsible="none" class="w-full">
     <SidebarHeader>
       <div class="flex items-center justify-between gap-2">
-        <span class="text-foreground ml-2 text-base font-medium">History</span>
-        <Button variant="ghost" size="icon" @click="onNewChat">
-          <IconPlus />
-          <span class="sr-only">New chat</span>
-        </Button>
+        <span class="text-foreground ml-2 text-base font-medium">
+          {{ t("labels.history") }}
+        </span>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="onNewChat">
+              <IconPlus />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{{ $t("ai.newChat") }}</TooltipContent>
+        </Tooltip>
       </div>
+      <InputGroup>
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
+        <InputGroupInput
+          v-model="filter.state.search"
+          :placeholder="$t('ai.searchChats')"
+          class="text-xs"
+        />
+        <!-- Clear-search + filter menu live in a single trailing addon. -->
+        <!-- The clear button conditionally renders (only when there's a -->
+        <!-- search query); the filter menu is always available so the -->
+        <!-- user can change filters even with no search text. -->
+        <InputGroupAddon align="inline-end">
+          <Tooltip v-if="filter.state.search">
+            <TooltipTrigger as-child>
+              <InputGroupButton
+                size="icon-xs"
+                @click="filter.state.search = ''"
+              >
+                <IconX />
+              </InputGroupButton>
+            </TooltipTrigger>
+            <TooltipContent>{{ $t("ai.searchClear") }}</TooltipContent>
+          </Tooltip>
+          <BotSessionFilterMenu :filter="filter" />
+        </InputGroupAddon>
+      </InputGroup>
     </SidebarHeader>
     <Separator />
     <SidebarContent>
@@ -195,8 +272,18 @@ const onArchiveToggle = (session: IBotSession) => {
           v-if="isEmpty"
           class="text-muted-foreground flex flex-col items-center gap-2 p-6 text-center text-xs"
         >
-          <IconHistory class="size-5 opacity-60" />
-          <p>No chats yet. Start a new conversation to see it here.</p>
+          <IconHistory />
+          <p>{{ t("ai.botHistoryEmptyAll") }}</p>
+        </div>
+        <div
+          v-else-if="isFilteredEmpty"
+          class="text-muted-foreground flex flex-col items-center gap-2 p-6 text-center text-xs"
+        >
+          <IconHistory />
+          <p>{{ $t("ai.filterNoResults") }}</p>
+          <Button variant="ghost" size="sm" @click="filter.reset()">
+            {{ $t("ai.filterReset") }}
+          </Button>
         </div>
 
         <template v-if="mySessions.length > 0">
@@ -223,14 +310,19 @@ const onArchiveToggle = (session: IBotSession) => {
                         <span class="flex min-w-0 grow flex-col">
                           <span class="flex items-center gap-1.5">
                             <span class="truncate text-sm">
-                              {{ item.title || "New chat" }}
+                              {{ item.title || t("ai.newChat") }}
                             </span>
-                            <Component
-                              :is="visibilityIcon(item.visibility)"
-                              v-if="item.visibility !== 'private'"
-                              class="text-muted-foreground size-3 shrink-0"
-                              :aria-label="visibilityLabel(item.visibility)"
-                            />
+                            <Tooltip v-if="item.visibility !== 'private'">
+                              <TooltipTrigger as-child>
+                                <Component
+                                  :is="visibilityIcon(item.visibility)"
+                                  class="text-muted-foreground"
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{ visibilityLabel(item.visibility) }}
+                              </TooltipContent>
+                            </Tooltip>
                           </span>
                           <span
                             v-if="item.preview"
@@ -239,9 +331,7 @@ const onArchiveToggle = (session: IBotSession) => {
                             {{ item.preview }}
                           </span>
                         </span>
-                        <span
-                          class="text-muted-foreground shrink-0 text-[10px]"
-                        >
+                        <span class="text-muted-foreground shrink-0 text-xs">
                           {{ formatRelative(sessionDate(item)) }}
                         </span>
                       </SidebarMenuButton>
@@ -249,48 +339,56 @@ const onArchiveToggle = (session: IBotSession) => {
                     <ContextMenuContent>
                       <ContextMenuItem @click="openRename(item)">
                         <IconPencil />
-                        Rename
+                        {{ t("actions.rename") }}
                       </ContextMenuItem>
                       <ContextMenuItem @click="onArchiveToggle(item)">
                         <IconArchive />
-                        Archive
+                        {{ t("ai.archive") }}
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                       <ContextMenuItem @click="openDelete(item)">
                         <IconTrash2 />
-                        Delete
+                        {{ t("actions.delete") }}
                       </ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-                        aria-label="Chat actions"
-                        @click.stop
-                      >
-                        <IconMoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem @click="openRename(item)">
-                        <IconPencil />
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem @click="onArchiveToggle(item)">
-                        <IconArchive />
-                        Archive
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem @click="openDelete(item)">
-                        <IconTrash2 />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <DropdownMenu>
+                        <TooltipTrigger as-child>
+                          <DropdownMenuTrigger as-child>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                              @click.stop
+                            >
+                              <IconMoreHorizontal />
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>{{
+                          t("ai.chatActions")
+                        }}</TooltipContent>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem @click="openRename(item)">
+                            <IconPencil />
+                            {{ t("actions.rename") }}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem @click="onArchiveToggle(item)">
+                            <IconArchive />
+                            {{ t("ai.archive") }}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem @click="openDelete(item)">
+                            <IconTrash2 />
+                            {{ t("actions.delete") }}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </Tooltip>
+                  </TooltipProvider>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
@@ -305,7 +403,9 @@ const onArchiveToggle = (session: IBotSession) => {
           >
             <SidebarGroupLabel class="flex items-center gap-2">
               <IconUsers />
-              <span>Shared · {{ group.label }}</span>
+              <span>{{
+                t("ai.sharedGroupLabel", { label: group.label })
+              }}</span>
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -323,12 +423,16 @@ const onArchiveToggle = (session: IBotSession) => {
                     <span class="flex min-w-0 grow flex-col">
                       <span class="flex items-center gap-1.5">
                         <span class="truncate text-sm">
-                          {{ item.title || "Untitled" }}
+                          {{ item.title || t("ai.untitledSession") }}
                         </span>
-                        <IconUsers
-                          class="text-muted-foreground size-3 shrink-0"
-                          aria-label="Shared with team"
-                        />
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <IconUsers class="text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ t("ai.visibilityShared") }}
+                          </TooltipContent>
+                        </Tooltip>
                       </span>
                       <span
                         v-if="item.preview"
@@ -337,7 +441,7 @@ const onArchiveToggle = (session: IBotSession) => {
                         {{ item.preview }}
                       </span>
                     </span>
-                    <span class="text-muted-foreground shrink-0 text-[10px]">
+                    <span class="text-muted-foreground shrink-0 text-xs">
                       {{ formatRelative(sessionDate(item)) }}
                     </span>
                   </SidebarMenuButton>
@@ -352,7 +456,7 @@ const onArchiveToggle = (session: IBotSession) => {
           <SidebarGroup>
             <SidebarGroupLabel class="flex items-center gap-2">
               <IconArchive />
-              Archived
+              {{ t("ai.archived") }}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -371,7 +475,7 @@ const onArchiveToggle = (session: IBotSession) => {
                         <IconArchive class="mt-0.5 shrink-0" />
                         <span class="flex min-w-0 grow flex-col">
                           <span class="truncate text-sm">
-                            {{ item.title || "Untitled" }}
+                            {{ item.title || t("ai.untitledSession") }}
                           </span>
                           <span
                             v-if="item.preview"
@@ -380,9 +484,7 @@ const onArchiveToggle = (session: IBotSession) => {
                             {{ item.preview }}
                           </span>
                         </span>
-                        <span
-                          class="text-muted-foreground shrink-0 text-[10px]"
-                        >
+                        <span class="text-muted-foreground shrink-0 text-xs">
                           {{ formatRelative(sessionDate(item)) }}
                         </span>
                       </SidebarMenuButton>
@@ -390,45 +492,49 @@ const onArchiveToggle = (session: IBotSession) => {
                     <ContextMenuContent>
                       <ContextMenuItem @click="onArchiveToggle(item)">
                         <IconRotateCcw />
-                        Restore
+                        {{ t("ai.restore") }}
                       </ContextMenuItem>
                       <ContextMenuItem @click="openRename(item)">
                         <IconPencil />
-                        Rename
+                        {{ t("actions.rename") }}
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                       <ContextMenuItem @click="openDelete(item)">
                         <IconTrash2 />
-                        Delete
+                        {{ t("actions.delete") }}
                       </ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>
 
                   <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-                        aria-label="Chat actions"
-                        @click.stop
-                      >
-                        <IconMoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <DropdownMenuTrigger as-child>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                            @click.stop
+                          >
+                            <IconMoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>{{ t("ai.chatActions") }}</TooltipContent>
+                    </Tooltip>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem @click="onArchiveToggle(item)">
                         <IconRotateCcw />
-                        Restore
+                        {{ t("ai.restore") }}
                       </DropdownMenuItem>
                       <DropdownMenuItem @click="openRename(item)">
                         <IconPencil />
-                        Rename
+                        {{ t("actions.rename") }}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem @click="openDelete(item)">
                         <IconTrash2 />
-                        Delete
+                        {{ t("actions.delete") }}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -445,18 +551,18 @@ const onArchiveToggle = (session: IBotSession) => {
   <Dialog v-model:open="renameDialogOpen">
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Rename chat</DialogTitle>
+        <DialogTitle>{{ t("ai.renameChat") }}</DialogTitle>
         <DialogDescription>
-          Pick a name that helps you find this chat later.
+          {{ t("ai.renameChatHint") }}
         </DialogDescription>
       </DialogHeader>
       <form class="grid gap-2" @submit.prevent="submitRename">
-        <Label for="bot-rename-input">Title</Label>
+        <Label for="bot-rename-input">{{ t("ai.chatTitle") }}</Label>
         <Input
           id="bot-rename-input"
           ref="renameInputEl"
           v-model="renameInput"
-          placeholder="e.g. Q3 launch checklist"
+          :placeholder="t('ai.chatTitlePlaceholder')"
           maxlength="120"
           :disabled="isMutating"
         />
@@ -467,14 +573,14 @@ const onArchiveToggle = (session: IBotSession) => {
           :disabled="isMutating"
           @click="renameDialogOpen = false"
         >
-          Cancel
+          {{ t("actions.cancel") }}
         </Button>
         <Button
           :disabled="isMutating || !renameInput.trim()"
           @click="submitRename"
         >
           <Spinner v-if="isMutating" />
-          Save
+          {{ t("actions.save") }}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -484,17 +590,18 @@ const onArchiveToggle = (session: IBotSession) => {
   <AlertDialog v-model:open="deleteDialogOpen">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+        <AlertDialogTitle>{{ t("ai.deleteChatTitle") }}</AlertDialogTitle>
         <AlertDialogDescription>
           <span class="text-foreground font-medium">{{
-            deleteTarget?.title || "This chat"
+            deleteTarget?.title || t("ai.thisChat")
           }}</span>
-          will be permanently deleted, including all of its messages. This
-          action cannot be undone.
+          {{ t("ai.deleteChatConfirm") }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel :disabled="isMutating">Cancel</AlertDialogCancel>
+        <AlertDialogCancel :disabled="isMutating">
+          {{ t("actions.cancel") }}
+        </AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
           class="text-current"
@@ -502,7 +609,7 @@ const onArchiveToggle = (session: IBotSession) => {
           @click.prevent="submitDelete"
         >
           <Spinner v-if="isMutating" />
-          Delete
+          {{ t("actions.delete") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

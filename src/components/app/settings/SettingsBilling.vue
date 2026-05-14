@@ -49,7 +49,7 @@ const currentPlanMeta = computed(() => {
 })
 
 const planLabel = computed(() => {
-  if (!currentPlanMeta.value) return "No active subscription"
+  if (!currentPlanMeta.value) return t("settings.billing.noActiveSubscription")
   return t(currentPlanMeta.value.titleKey)
 })
 
@@ -70,9 +70,11 @@ const currentPlanDescriptionLabel = computed(() => {
 })
 
 const intervalLabel = computed(() => {
-  if (billing.value?.interval === "month") return "Monthly"
-  if (billing.value?.interval === "year") return "Annual"
-  return "N/A"
+  if (billing.value?.interval === "month")
+    return t("settings.billing.intervalMonthly")
+  if (billing.value?.interval === "year")
+    return t("settings.billing.intervalAnnual")
+  return t("settings.billing.intervalNotAvailable")
 })
 
 const seatCount = computed(() => {
@@ -111,11 +113,13 @@ const formatCurrencyAmount = (
 const currentPlanUnitPriceLabel = computed(() => {
   const planKey = billing.value?.planKey
   const interval = billing.value?.interval
-  if (!planKey || !interval) return "N/A"
+  if (!planKey || !interval) return t("settings.billing.intervalNotAvailable")
 
   const price = catalog.value?.[planKey]?.[interval]
   if (!price?.currency || typeof price.unitAmount !== "number") {
-    return isCatalogLoading.value ? "Loading..." : "Unavailable"
+    return isCatalogLoading.value
+      ? t("settings.billing.loading")
+      : t("settings.billing.unavailable")
   }
 
   const intervalSuffix = interval === "year" ? "/year" : "/month"
@@ -125,11 +129,13 @@ const currentPlanUnitPriceLabel = computed(() => {
 const currentPlanTotalPriceLabel = computed(() => {
   const planKey = billing.value?.planKey
   const interval = billing.value?.interval
-  if (!planKey || !interval) return "N/A"
+  if (!planKey || !interval) return t("settings.billing.intervalNotAvailable")
 
   const price = catalog.value?.[planKey]?.[interval]
   if (!price?.currency || typeof price.unitAmount !== "number") {
-    return isCatalogLoading.value ? "Loading..." : "Unavailable"
+    return isCatalogLoading.value
+      ? t("settings.billing.loading")
+      : t("settings.billing.unavailable")
   }
 
   const total = price.unitAmount * seatCount.value
@@ -139,7 +145,8 @@ const currentPlanTotalPriceLabel = computed(() => {
 
 const currentPeriodEndLabel = computed(() => {
   const currentPeriodEnd = billing.value?.currentPeriodEnd
-  if (typeof currentPeriodEnd !== "number") return "N/A"
+  if (typeof currentPeriodEnd !== "number")
+    return t("settings.billing.intervalNotAvailable")
   return useDateFormat(currentPeriodEnd * 1000, "MMM D, YYYY").value
 })
 
@@ -157,23 +164,28 @@ const isCancellationScheduled = computed(() => {
 })
 
 const billingLifecycleLabel = computed(() => {
-  if (isCancelled.value) return "Cancelled"
+  if (isCancelled.value) return t("settings.billing.lifecycleCancelled")
 
+  const notAvailable = t("settings.billing.intervalNotAvailable")
   if (isCancellationScheduled.value) {
-    if (currentPeriodEndLabel.value !== "N/A") {
-      return `Scheduled to cancel on ${currentPeriodEndLabel.value}`
+    if (currentPeriodEndLabel.value !== notAvailable) {
+      return t("settings.billing.lifecycleScheduledOn", {
+        date: currentPeriodEndLabel.value,
+      })
     }
-    return "Scheduled to cancel at period end"
+    return t("settings.billing.lifecycleScheduledPeriodEnd")
   }
 
   if (hasActiveSubscription.value) {
-    if (currentPeriodEndLabel.value !== "N/A") {
-      return `Renews on ${currentPeriodEndLabel.value}`
+    if (currentPeriodEndLabel.value !== notAvailable) {
+      return t("settings.billing.lifecycleRenewsOn", {
+        date: currentPeriodEndLabel.value,
+      })
     }
-    return "Auto-renews each billing cycle"
+    return t("settings.billing.lifecycleAutoRenews")
   }
 
-  return "No active subscription"
+  return t("settings.billing.noActiveSubscription")
 })
 
 const canManagePortal = computed(
@@ -203,42 +215,51 @@ const canCancelSubscription = computed(
 )
 
 const subscriptionActionLabel = computed(() => {
-  if (canRestorePlan.value) return "Restore plan"
-  if (isCancelled.value) return "Cancelled"
-  return "Cancel subscription"
+  if (canRestorePlan.value) return t("settings.billing.actionRestore")
+  if (isCancelled.value) return t("settings.billing.actionCancelled")
+  return t("settings.billing.actionCancel")
 })
 
 const subscriptionActionDescription = computed(() => {
+  const notAvailable = t("settings.billing.intervalNotAvailable")
   if (isCancelled.value) {
     if (!hasActiveSubscription.value) {
-      return "This subscription is cancelled. Restore plan to resume service."
+      return t("settings.billing.actionDescriptionCancelledInactive")
     }
-    return "This subscription has been cancelled."
+    return t("settings.billing.actionDescriptionCancelled")
   }
 
   if (isCancellationScheduled.value) {
-    if (currentPeriodEndLabel.value !== "N/A") {
-      return `This subscription is scheduled to cancel on ${currentPeriodEndLabel.value}. Restore plan to continue service.`
+    if (currentPeriodEndLabel.value !== notAvailable) {
+      return t("settings.billing.actionDescriptionScheduledOn", {
+        date: currentPeriodEndLabel.value,
+      })
     }
-    return "This subscription is scheduled to cancel at period end. Restore plan to continue service."
+    return t("settings.billing.actionDescriptionScheduledPeriodEnd")
   }
 
   if (hasActiveSubscription.value) {
-    return "Cancel this subscription at the end of the current billing period."
+    return t("settings.billing.actionDescriptionActive")
   }
 
-  return "No active subscription to cancel."
+  return t("settings.billing.actionDescriptionNone")
 })
 
 const cancelSubscriptionConfirmationDescription = computed(() => {
   const teamName = currentTeam.value?.name?.trim()
-  const subject = teamName ? `${teamName}'s subscription` : "This subscription"
+  const subject = teamName
+    ? t("settings.billing.cancelConfirmSubjectTeam", { teamName })
+    : t("settings.billing.cancelConfirmSubjectDefault")
 
-  if (currentPeriodEndLabel.value !== "N/A") {
-    return `${subject} will stay active until ${currentPeriodEndLabel.value} and then cancel automatically.`
+  const notAvailable = t("settings.billing.intervalNotAvailable")
+  if (currentPeriodEndLabel.value !== notAvailable) {
+    return t("settings.billing.cancelConfirmUntilDate", {
+      subject,
+      date: currentPeriodEndLabel.value,
+    })
   }
 
-  return `${subject} will cancel automatically at the end of the current billing period.`
+  return t("settings.billing.cancelConfirmAtPeriodEnd", { subject })
 })
 
 const openPlansTab = () => {
@@ -249,17 +270,17 @@ const openBillingPortal = async (
   trigger: Extract<BillingActionTrigger, "payment-method" | "billing-history">
 ): Promise<void> => {
   if (!currentTeam.value?.id) {
-    toast.error("Select a team before opening billing.")
+    toast.error(t("settings.billing.toasts.selectTeamBeforeOpening"))
     return
   }
 
   if (!canManageBilling.value) {
-    toast.error("You do not have permission to manage billing for this team.")
+    toast.error(t("settings.billing.toasts.noPermission"))
     return
   }
 
   if (!hasActiveSubscription.value) {
-    toast.error("No active subscription found for this team.")
+    toast.error(t("settings.billing.toasts.noActiveSubscription"))
     return
   }
 
@@ -277,7 +298,7 @@ const openBillingPortal = async (
       throw error
     }
   } catch (error) {
-    toast.error("Unable to open billing portal.", {
+    toast.error(t("settings.billing.toasts.portalFailed"), {
       description: error instanceof Error ? error.message : String(error),
     })
   } finally {
@@ -290,12 +311,12 @@ const cancelTeamSubscription = async (
   trigger: Extract<BillingActionTrigger, "cancel-dialog">
 ): Promise<boolean> => {
   if (!currentTeam.value?.id) {
-    toast.error("Select a team before cancelling.")
+    toast.error(t("settings.billing.toasts.selectTeamBeforeCancelling"))
     return false
   }
 
   if (!canManageBilling.value) {
-    toast.error("You do not have permission to manage billing for this team.")
+    toast.error(t("settings.billing.toasts.noPermission"))
     return false
   }
 
@@ -307,10 +328,10 @@ const cancelTeamSubscription = async (
       when: "period_end",
     })
     await refreshBilling()
-    toast.success("Subscription will cancel at period end.")
+    toast.success(t("settings.billing.toasts.cancelSuccess"))
     return true
   } catch (error) {
-    toast.error("Unable to cancel subscription.", {
+    toast.error(t("settings.billing.toasts.cancelFailed"), {
       description: error instanceof Error ? error.message : String(error),
     })
     return false
@@ -322,12 +343,12 @@ const cancelTeamSubscription = async (
 
 const restoreTeamSubscription = async (): Promise<void> => {
   if (!currentTeam.value?.id) {
-    toast.error("Select a team before restoring.")
+    toast.error(t("settings.billing.toasts.selectTeamBeforeRestoring"))
     return
   }
 
   if (!canManageBilling.value) {
-    toast.error("You do not have permission to manage billing for this team.")
+    toast.error(t("settings.billing.toasts.noPermission"))
     return
   }
 
@@ -339,9 +360,9 @@ const restoreTeamSubscription = async (): Promise<void> => {
         teamId: currentTeam.value.id,
       })
       await refreshBilling()
-      toast.success("Subscription restored. Auto-renewal is active.")
+      toast.success(t("settings.billing.toasts.restoreSuccess"))
     } catch (error) {
-      toast.error("Unable to restore subscription.", {
+      toast.error(t("settings.billing.toasts.restoreFailed"), {
         description: error instanceof Error ? error.message : String(error),
       })
     } finally {
@@ -385,9 +406,11 @@ const handleSubscriptionAction = async (): Promise<void> => {
                 <EmptyMedia variant="icon">
                   <IconBadgeDollarSign />
                 </EmptyMedia>
-                <EmptyTitle>No permission</EmptyTitle>
+                <EmptyTitle>{{
+                  t("settings.billing.noPermissionTitle")
+                }}</EmptyTitle>
                 <EmptyDescription>
-                  You do not have permission to manage billing.
+                  {{ t("settings.billing.noPermissionDescription") }}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -429,9 +452,11 @@ const handleSubscriptionAction = async (): Promise<void> => {
                 <IconBadgeDollarSign />
               </ItemMedia>
               <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate"> No active plan </ItemTitle>
+                <ItemTitle class="truncate">
+                  {{ t("settings.billing.noActivePlan") }}
+                </ItemTitle>
                 <ItemDescription class="truncate text-xs">
-                  Subscribe to a plan to get started.
+                  {{ t("settings.billing.noActivePlanDescription") }}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
@@ -554,13 +579,17 @@ const handleSubscriptionAction = async (): Promise<void> => {
   <AlertDialog v-model:open="isCancelSubscriptionDialogOpen">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Cancel subscription</AlertDialogTitle>
+        <AlertDialogTitle>{{
+          t("settings.billing.cancelConfirmTitle")
+        }}</AlertDialogTitle>
         <AlertDialogDescription>
           {{ cancelSubscriptionConfirmationDescription }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Keep subscription</AlertDialogCancel>
+        <AlertDialogCancel>{{
+          t("settings.billing.cancelConfirmKeep")
+        }}</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
           class="text-current"
@@ -573,7 +602,9 @@ const handleSubscriptionAction = async (): Promise<void> => {
               activeBillingActionTrigger === 'cancel-dialog'
             "
           />
-          <template v-else>Cancel subscription</template>
+          <template v-else>{{
+            t("settings.billing.cancelConfirmCancel")
+          }}</template>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

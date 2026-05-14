@@ -197,14 +197,14 @@ const saveChanges = async () => {
     }
 
     if (errors.length > 0) {
-      toast.error("Some changes could not be saved", {
+      toast.error(t("settings.account.messages.someErrors"), {
         description: errors.join(", "),
       })
     } else {
-      toast.success("Settings saved", {
+      toast.success(t("settings.account.messages.settingsSaved"), {
         description: changesMade
-          ? "Your changes have been saved successfully."
-          : "No changes to save.",
+          ? t("settings.account.messages.settingsSavedDesc")
+          : t("settings.account.messages.noChangesToSave"),
       })
     }
   } finally {
@@ -247,9 +247,8 @@ const isUpdatingPublicProfile = ref(false)
 const toggleIsPublic = async (value: boolean) => {
   // Only allow enabling public profile if username is set
   if (value && !hasUsername.value) {
-    toast.error("Cannot enable public profile", {
-      description:
-        "Please set a username first before making your profile public.",
+    toast.error(t("settings.account.publicProfile.cannotEnable"), {
+      description: t("settings.account.publicProfile.cannotEnableDescription"),
     })
     return
   }
@@ -260,10 +259,10 @@ const toggleIsPublic = async (value: boolean) => {
 
   try {
     await updateCurrentUserProfileVisibility(value)
-    toast.success("Profile visibility updated")
+    toast.success(t("settings.account.publicProfile.visibilityUpdated"))
   } catch (error) {
     optimisticIsPublic.value = previousIsPublic
-    toast.error("Failed to update profile visibility", {
+    toast.error(t("settings.account.publicProfile.visibilityUpdateFailed"), {
       description: (error as Error).message,
     })
   } finally {
@@ -292,12 +291,12 @@ const sendVerificationEmail = async () => {
 
   await sendEmailVerification(user.value!)
     .then(() => {
-      toast.info("Verification email sent", {
-        description: "Please check your inbox for the verification email.",
+      toast.info(t("settings.account.messages.verificationSent"), {
+        description: t("settings.account.messages.verificationSentDesc"),
       })
     })
     .catch((error) => {
-      toast.error("Failed to send verification email", {
+      toast.error(t("settings.account.messages.verificationFailed"), {
         description: error.message,
       })
     })
@@ -313,11 +312,10 @@ const handleAuthError = async (error: unknown, defaultMessage: string) => {
     "code" in error &&
     (error as { code: string }).code === "auth/requires-recent-login"
   ) {
-    toast.error("Re-authentication required", {
-      description:
-        "For security reasons, you need to log in again before performing this action.",
+    toast.error(t("settings.account.messages.reauthRequired"), {
+      description: t("settings.account.messages.reauthRequiredDesc"),
       action: {
-        label: "Logout",
+        label: t("settings.account.messages.reauthLogoutAction"),
         onClick: async () => {
           // Full logout and redirect to /enter
           await logout()
@@ -340,12 +338,12 @@ const changeEmail = async () => {
 
   await verifyBeforeUpdateEmail(user.value!, newEmail.value)
     .then(() => {
-      toast.info("Verification email sent", {
-        description: "Please check your inbox for the verification email.",
+      toast.info(t("settings.account.messages.verificationSent"), {
+        description: t("settings.account.messages.verificationSentDesc"),
       })
     })
     .catch((error) => {
-      handleAuthError(error, "Failed to send verification email")
+      handleAuthError(error, t("settings.account.messages.verificationFailed"))
     })
     .finally(() => {
       changingEmail.value = false
@@ -359,13 +357,16 @@ const changePassword = async () => {
 
   await updatePassword(user.value!, newPassword.value)
     .then(() => {
-      toast.success("Password updated", {
-        description: "Your password has been successfully updated.",
+      toast.success(t("settings.account.messages.passwordUpdated"), {
+        description: t("settings.account.messages.passwordUpdatedDesc"),
       })
       newPassword.value = ""
     })
     .catch((error) => {
-      handleAuthError(error, "Failed to update password")
+      handleAuthError(
+        error,
+        t("settings.account.messages.passwordUpdateFailed")
+      )
     })
     .finally(() => {
       changingPassword.value = false
@@ -380,7 +381,7 @@ const isDeleteAccountInputValid = computed(
 
 const deleteAccount = async () => {
   if (!isDeleteAccountInputValid.value) {
-    toast.error("Please type 'delete my account' to confirm.")
+    toast.error(t("settings.account.deleteAccount.confirmRequired"))
     return
   }
   deletingAccount.value = true
@@ -422,7 +423,7 @@ const deleteAccount = async () => {
 
     if (errors.length > 0) {
       // Show the first error to the user
-      toast.error("Cannot delete account", {
+      toast.error(t("settings.account.messages.cannotDelete"), {
         description: errors[0],
       })
       // STOP: Do not proceed with any cleanup
@@ -442,11 +443,11 @@ const deleteAccount = async () => {
 
     // 5. Delete User Account
     await deleteUser(user.value!)
-    toast.success("Account deleted", {
-      description: "Your account has been successfully deleted.",
+    toast.success(t("settings.account.messages.accountDeleted"), {
+      description: t("settings.account.deleteAccount.deletedDesc"),
     })
   } catch (error) {
-    handleAuthError(error, "Failed to delete account")
+    handleAuthError(error, t("settings.account.deleteAccount.failed"))
   } finally {
     deletingAccount.value = false
     deleteAccountInput.value = ""
@@ -499,14 +500,18 @@ const profilePhotoUpload = usePhotoUpload({
         async () => {
           const uploadPromise = upload(file)
           if (!uploadPromise) {
-            throw new Error("Unable to start profile photo upload.")
+            throw new Error(
+              t("settings.account.profilePicture.uploadStartFailed")
+            )
           }
 
           await uploadPromise
           const [nextPhotoURL] = await refresh()
 
           if (!nextPhotoURL) {
-            throw new Error("Unable to resolve uploaded profile picture URL.")
+            throw new Error(
+              t("settings.account.profilePicture.resolveUrlFailed")
+            )
           }
 
           await authStore.updateUserProfile({ photoURL: nextPhotoURL })
@@ -537,10 +542,10 @@ const handleRemoveProfilePicture = async () => {
     clearOptimisticPhotoPreview()
     await authStore.updateUserProfile({ photoURL: null })
     await deleteUserPhotoFile(user.value.uid)
-    toast.success("Profile picture removed")
+    toast.success(t("settings.account.profilePicture.removed"))
   } catch (error) {
     console.error("Error removing profile picture:", error)
-    toast.error("Failed to remove profile picture", {
+    toast.error(t("settings.account.profilePicture.removeFailed"), {
       description: (error as Error).message,
     })
   }
