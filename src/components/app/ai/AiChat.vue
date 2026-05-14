@@ -15,6 +15,7 @@ import {
   IconReply,
   IconTrash,
 } from "@/data/icons"
+import { useAuthStore } from "@/stores/authStore"
 import Avatar from "vue-boring-avatars"
 import { inject } from "vue"
 import "markstream-vue/index.css"
@@ -27,6 +28,32 @@ const botChat = inject(BotChatContextKey)
 const messages = computed(() => botChat?.messages.value ?? [])
 const isSending = computed(() => botChat?.isSending.value ?? false)
 const sessionId = computed(() => botChat?.sessionId.value ?? null)
+
+// Avatar seed for a user turn. `vue-boring-avatars` is a deterministic
+// hash of the `name` string, so feeding it the *real* sender uid gives
+// every human a distinct, stable avatar — and crucially, the right one
+// for the right message in shared/public chats where multiple admins
+// can post into the same session.
+//
+// Resolution order (per message):
+//   1. `message.authorUid` — server-stamped on every user turn in
+//      `FirestoreBotSessionStore.save()`. The most accurate signal.
+//   2. Session owner uid — fallback for legacy messages saved before
+//      authorship tracking existed. Imperfect (it'll wrongly attribute
+//      admin turns to the owner in old shared chats), but better than
+//      a single shared avatar for everyone.
+//   3. Current user uid — used for the brief window before the very
+//      first server save, when neither `authorUid` nor `activeSession`
+//      is populated yet.
+//   4. Literal "User" — defensive fallback so the avatar component
+//      never receives an empty string (which would hash to a
+//      degenerate same-everywhere avatar).
+const authStore = useAuthStore()
+const messageAvatarSeed = (message: BotChatMessage): string =>
+  message.authorUid ??
+  botChat?.activeSession.value?.ownerUid ??
+  authStore.currentUser?.uid ??
+  "User"
 
 // While streaming, `useBotChat` pushes an empty agent placeholder before
 // chunks arrive and mutates its `.content` / `.segments` in place. Hide
@@ -294,10 +321,10 @@ if (!supportsScrollAnchoring) {
     <div
       v-else
       ref="contentEl"
-      class="messages-list mt-auto grid grid-cols-1 gap-2"
+      class="messages-list mt-auto grid grid-cols-1 gap-2 p-2"
     >
       <ContextMenu
-        v-for="({ message, blocks }, index) in renderedMessages"
+        v-for="{ message, blocks } in renderedMessages"
         :key="message.id"
       >
         <ContextMenuTrigger>
@@ -305,7 +332,7 @@ if (!supportsScrollAnchoring) {
             <Avatar
               v-if="message.role === 'user'"
               variant="beam"
-              :name="`Agent ${index + 1}`"
+              :name="messageAvatarSeed(message)"
               :colors="[
                 'var(--color-chart-1)',
                 'var(--color-chart-2)',

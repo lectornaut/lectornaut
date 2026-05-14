@@ -62,14 +62,14 @@ interface UploadState {
 }
 
 const props = defineProps<{
-  teamId: string | null
-  workspaceId: string | null
+  teamId: string
+  workspaceId: string
   scope: WorkspaceNodeScope
-  node: WorkspaceNode | null
+  node: WorkspaceNode
 }>()
 
 const { teamId, workspaceId, node } = toRefs(props)
-const nodeId = computed(() => node.value?.id ?? null)
+const nodeId = computed(() => node.value.id)
 
 const authStore = useAuthStore()
 const membershipStore = useMembershipStore()
@@ -77,18 +77,16 @@ const membershipStore = useMembershipStore()
 const { currentUser } = storeToRefs(authStore)
 const { memberships } = storeToRefs(membershipStore)
 
-const attachmentContext = computed<AttachmentMutationContext | null>(() => {
-  if (!teamId.value || !workspaceId.value || !node.value) {
-    return null
-  }
-
-  return {
-    teamId: teamId.value,
-    workspaceId: workspaceId.value,
-    nodeId: node.value.id,
-    scope: props.scope,
-  }
-})
+// Declared as nullable union to satisfy `useNodeAttachmentsState`'s
+// `MaybeRefOrGetter<AttachmentMutationContext | null>` contract (other
+// callers may pass null). Within this component the inspector's v-if
+// guarantees non-null, so we always return a populated context.
+const attachmentContext = computed<AttachmentMutationContext | null>(() => ({
+  teamId: teamId.value,
+  workspaceId: workspaceId.value,
+  nodeId: node.value.id,
+  scope: props.scope,
+}))
 const {
   attachments,
   loading,
@@ -143,11 +141,10 @@ const canManageAttachments = computed(() =>
 )
 
 const isReadOnly = computed(
-  () => !node.value || node.value.isArchived || !canManageAttachments.value
+  () => node.value.isArchived || !canManageAttachments.value
 )
 
 const readOnlyMessage = computed(() => {
-  if (!node.value) return null
   if (node.value.isArchived) {
     return t("components.nodeAttachments.readOnlyArchived")
   }
@@ -286,9 +283,6 @@ const upsertUploadState = (next: UploadState) => {
 }
 
 const getMutableContext = (): AttachmentMutationContext => {
-  if (!teamId.value || !workspaceId.value || !node.value) {
-    throw new Error(t("components.nodeAttachments.toasts.selectNode"))
-  }
   if (node.value.isArchived) {
     throw new Error(t("components.nodeAttachments.toasts.archived"))
   }
@@ -532,250 +526,235 @@ watch(selectedCreateFiles, async (files) => {
 </script>
 
 <template>
-  <Sidebar collapsible="none" class="w-full">
-    <SidebarContent>
-      <OverlayScrollbarsWrapper>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <div v-if="!node" class="text-muted-foreground p-2 text-xs">
-              {{ t("components.nodeAttachments.emptyNode") }}
+  <div class="flex size-full min-h-0 flex-1 flex-col">
+    <ButtonGroup class="w-full px-2">
+      <Button
+        variant="outline"
+        size="sm"
+        class="grow justify-start"
+        :disabled="isReadOnly"
+        @click="triggerFilePicker"
+      >
+        <IconUpload />
+        <span>{{ t("components.nodeAttachments.upload") }}</span>
+      </Button>
+    </ButtonGroup>
+    <OverlayScrollbarsWrapper>
+      <div class="p-2">
+        <div v-if="readOnlyMessage" class="text-muted-foreground text-xs">
+          {{ readOnlyMessage }}
+        </div>
+
+        <div v-if="uploadStates.length" class="space-y-2 rounded-xl border p-2">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-medium">
+              {{ t("components.nodeAttachments.uploadsTitle") }}
+            </p>
+            <Button
+              v-if="!uploadInProgress"
+              type="button"
+              variant="ghost"
+              size="sm"
+              @click="uploadStates = []"
+            >
+              {{ t("components.nodeAttachments.clear") }}
+            </Button>
+          </div>
+
+          <div
+            v-for="item in uploadStates"
+            :key="item.id"
+            class="flex items-start gap-2 rounded-xl border p-2"
+          >
+            <Spinner
+              v-if="item.status === 'uploading'"
+              class="mt-0.5 size-3.5 shrink-0"
+            />
+            <IconCircleAlert
+              v-else
+              class="text-destructive mt-0.5 size-3.5 shrink-0"
+            />
+
+            <div class="min-w-0 grow">
+              <p class="truncate text-xs font-medium">{{ item.name }}</p>
+              <p class="text-muted-foreground text-xs">
+                {{
+                  item.status === "uploading"
+                    ? t("components.nodeAttachments.uploading")
+                    : item.error
+                }}
+              </p>
             </div>
 
-            <div v-else class="space-y-3 p-2">
-              <div class="flex items-start justify-between gap-3">
-                <div class="space-y-1">
-                  <p class="text-sm font-medium">
-                    {{ t("components.nodeAttachments.title") }}
-                  </p>
-                  <p>
-                    {{
-                      attachments.length === 1
-                        ? t("components.nodeAttachments.countSingular", {
-                            count: attachments.length,
-                          })
-                        : t("components.nodeAttachments.countPlural", {
-                            count: attachments.length,
-                          })
-                    }}
-                  </p>
-                </div>
+            <Button
+              v-if="item.status === 'error'"
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              @click="dismissUploadState(item.id)"
+            >
+              <IconX />
+            </Button>
+          </div>
+        </div>
 
-                <Button
-                  :disabled="isReadOnly"
-                  class="shrink-0"
-                  @click="triggerFilePicker"
-                >
-                  <IconUpload />
-                  {{ t("components.nodeAttachments.upload") }}
-                </Button>
+        <div
+          v-if="loading && attachments.length === 0"
+          class="text-muted-foreground flex items-center gap-2 text-xs"
+        >
+          <Spinner />
+          {{ t("components.nodeAttachments.loadingAttachments") }}
+        </div>
+
+        <div v-else-if="error" class="space-y-2 rounded-xl border p-2">
+          <div class="text-destructive flex items-start gap-2 text-xs">
+            <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+            <span>{{ error }}</span>
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click="refreshAttachments"
+          >
+            <IconRefreshCcw />
+            {{ t("components.nodeAttachments.retry") }}
+          </Button>
+        </div>
+
+        <div
+          v-else-if="attachments.length === 0"
+          class="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-xs"
+        >
+          {{
+            isReadOnly
+              ? t("components.nodeAttachments.emptyReadOnly")
+              : t("components.nodeAttachments.emptyWritable")
+          }}
+        </div>
+
+        <div v-else class="space-y-2">
+          <article
+            v-for="attachment in attachments"
+            :key="attachment.id"
+            class="rounded-xl border p-2"
+          >
+            <div class="flex items-start gap-2">
+              <div
+                class="bg-muted flex size-9 shrink-0 items-center justify-center rounded border"
+              >
+                <Component
+                  :is="resolveAttachmentIcon(attachment)"
+                  class="text-muted-foreground size-4"
+                />
               </div>
 
-              <div v-if="readOnlyMessage">
-                {{ readOnlyMessage }}
-              </div>
-
-              <div v-if="uploadStates.length" class="space-y-2 border p-2">
-                <div class="flex items-center justify-between gap-2">
-                  <p class="text-xs font-medium">
-                    {{ t("components.nodeAttachments.uploadsTitle") }}
-                  </p>
-                  <Button
-                    v-if="!uploadInProgress"
-                    type="button"
-                    variant="ghost"
-                    @click="uploadStates = []"
-                  >
-                    {{ t("components.nodeAttachments.clear") }}
-                  </Button>
-                </div>
-
-                <div
-                  v-for="item in uploadStates"
-                  :key="item.id"
-                  class="flex items-start gap-2 border p-2"
-                >
-                  <Spinner
-                    v-if="item.status === 'uploading'"
-                    class="mt-0.5 size-3.5 shrink-0"
-                  />
-                  <IconCircleAlert
-                    v-else
-                    class="text-destructive mt-0.5 size-3.5 shrink-0"
-                  />
-
-                  <div class="min-w-0 grow">
-                    <p class="truncate text-xs font-medium">{{ item.name }}</p>
-                    <p>
-                      {{
-                        item.status === "uploading"
-                          ? t("components.nodeAttachments.uploading")
-                          : item.error
-                      }}
+              <div class="min-w-0 grow space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-medium">
+                      {{ attachment.displayName }}
+                    </p>
+                    <p class="text-muted-foreground truncate text-xs">
+                      {{ attachment.originalName }}
                     </p>
                   </div>
 
-                  <Button
-                    v-if="item.status === 'error'"
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    @click="dismissUploadState(item.id)"
-                  >
-                    <IconX />
-                  </Button>
-                </div>
-              </div>
-
-              <div
-                v-if="loading && attachments.length === 0"
-                class="text-muted-foreground flex items-center gap-2 text-xs"
-              >
-                <Spinner />
-                {{ t("components.nodeAttachments.loadingAttachments") }}
-              </div>
-
-              <div v-else-if="error" class="space-y-2 border p-3">
-                <div class="text-destructive flex items-start gap-2 text-xs">
-                  <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
-                  <span>{{ error }}</span>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  class="w-full"
-                  @click="refreshAttachments"
-                >
-                  <IconRefreshCcw />
-                  {{ t("components.nodeAttachments.retry") }}
-                </Button>
-              </div>
-
-              <div
-                v-else-if="attachments.length === 0"
-                class="text-muted-foreground border border-dashed p-4 text-xs"
-              >
-                {{
-                  isReadOnly
-                    ? t("components.nodeAttachments.emptyReadOnly")
-                    : t("components.nodeAttachments.emptyWritable")
-                }}
-              </div>
-
-              <div v-else class="space-y-2">
-                <article
-                  v-for="attachment in attachments"
-                  :key="attachment.id"
-                  class="border p-3"
-                >
-                  <div class="flex items-start gap-3">
-                    <div
-                      class="bg-muted flex size-9 shrink-0 items-center justify-center border"
+                  <div class="flex shrink-0 items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      :disabled="
+                        downloadingIds.includes(attachment.id) ||
+                        isAttachmentPending(attachment.id) ||
+                        !attachment.storagePath
+                      "
+                      @click="downloadAttachment(attachment)"
                     >
-                      <Component
-                        :is="resolveAttachmentIcon(attachment)"
-                        class="text-muted-foreground size-4"
-                      />
-                    </div>
+                      <Spinner v-if="downloadingIds.includes(attachment.id)" />
+                      <IconArrowDownToLine v-else />
+                    </Button>
 
-                    <div class="min-w-0 grow space-y-3">
-                      <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                          <p class="truncate text-sm font-medium">
-                            {{ attachment.displayName }}
-                          </p>
-                          <p class="text-muted-foreground truncate text-xs">
-                            {{ attachment.originalName }}
-                          </p>
-                        </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      :disabled="
+                        isReadOnly || isAttachmentPending(attachment.id)
+                      "
+                      @click="openEditDialog(attachment)"
+                    >
+                      <IconPencil />
+                    </Button>
 
-                        <div class="flex shrink-0 items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            :disabled="
-                              downloadingIds.includes(attachment.id) ||
-                              isAttachmentPending(attachment.id) ||
-                              !attachment.storagePath
-                            "
-                            @click="downloadAttachment(attachment)"
-                          >
-                            <Spinner
-                              v-if="downloadingIds.includes(attachment.id)"
-                            />
-                            <IconArrowDownToLine v-else />
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            :disabled="
-                              isReadOnly || isAttachmentPending(attachment.id)
-                            "
-                            @click="openEditDialog(attachment)"
-                          >
-                            <IconPencil />
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            :disabled="
-                              isReadOnly ||
-                              deletingId === attachment.id ||
-                              isAttachmentPending(attachment.id)
-                            "
-                            @click="openDeleteDialog(attachment)"
-                          >
-                            <Spinner v-if="deletingId === attachment.id" />
-                            <IconTrash2 v-else />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div class="flex flex-wrap gap-1.5">
-                        <Badge
-                          v-if="isAttachmentPending(attachment.id)"
-                          variant="secondary"
-                        >
-                          <Spinner />
-                          {{ t("components.nodeAttachments.syncing") }}
-                        </Badge>
-                        <Badge variant="outline">
-                          <IconArrowDownToLine />
-                          {{ formatAttachmentSize(attachment.size) }}
-                        </Badge>
-                        <Badge variant="outline">
-                          {{ formatMimeType(attachment.mimeType) }}
-                        </Badge>
-                      </div>
-
-                      <dl
-                        class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs"
-                      >
-                        <dt class="text-muted-foreground">
-                          {{ t("components.nodeAttachments.createdLabel") }}
-                        </dt>
-                        <dd>{{ formatTimestamp(attachment.createdAt) }}</dd>
-
-                        <dt class="text-muted-foreground">
-                          {{ t("components.nodeAttachments.updatedLabel") }}
-                        </dt>
-                        <dd>{{ formatTimestamp(attachment.updatedAt) }}</dd>
-                      </dl>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      :disabled="
+                        isReadOnly ||
+                        deletingId === attachment.id ||
+                        isAttachmentPending(attachment.id)
+                      "
+                      @click="openDeleteDialog(attachment)"
+                    >
+                      <Spinner v-if="deletingId === attachment.id" />
+                      <IconTrash2 v-else />
+                    </Button>
                   </div>
-                </article>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5">
+                  <Badge
+                    v-if="isAttachmentPending(attachment.id)"
+                    variant="secondary"
+                  >
+                    <Spinner />
+                    {{ t("components.nodeAttachments.syncing") }}
+                  </Badge>
+                  <Badge variant="outline">
+                    <IconArrowDownToLine />
+                    {{ formatAttachmentSize(attachment.size) }}
+                  </Badge>
+                  <Badge variant="outline">
+                    {{ formatMimeType(attachment.mimeType) }}
+                  </Badge>
+                </div>
+
+                <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs">
+                  <dt class="text-muted-foreground">
+                    {{ t("components.nodeAttachments.createdLabel") }}
+                  </dt>
+                  <dd>{{ formatTimestamp(attachment.createdAt) }}</dd>
+
+                  <dt class="text-muted-foreground">
+                    {{ t("components.nodeAttachments.updatedLabel") }}
+                  </dt>
+                  <dd>{{ formatTimestamp(attachment.updatedAt) }}</dd>
+                </dl>
               </div>
             </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </OverlayScrollbarsWrapper>
-    </SidebarContent>
-  </Sidebar>
+          </article>
+        </div>
+      </div>
+    </OverlayScrollbarsWrapper>
+    <div class="p-2">
+      <p class="text-muted-foreground text-xs">
+        {{
+          attachments.length === 1
+            ? t("components.nodeAttachments.countSingular", {
+                count: attachments.length,
+              })
+            : t("components.nodeAttachments.countPlural", {
+                count: attachments.length,
+              })
+        }}
+      </p>
+    </div>
+  </div>
 
   <Dialog
     :open="editDialogOpen"

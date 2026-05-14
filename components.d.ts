@@ -263,6 +263,7 @@ declare module 'vue' {
     NavigationMenuViewport: typeof import('./src/components/ui/navigation-menu/NavigationMenuViewport.vue')['default']
     NodeActivityLog: typeof import('./src/components/app/sidebars/NodeActivityLog.vue')['default']
     NodeAttachments: typeof import('./src/components/app/sidebars/NodeAttachments.vue')['default']
+    NodeBot: typeof import('./src/components/app/sidebars/NodeBot.vue')['default']
     NodeDetails: typeof import('./src/components/app/sidebars/NodeDetails.vue')['default']
     NodeInspectorSidebar: typeof import('./src/components/app/sidebars/NodeInspectorSidebar.vue')['default']
     NotificationItem: typeof import('./src/components/app/layout/NotificationItem.vue')['default']

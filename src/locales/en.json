@@ -26,13 +26,21 @@
     "newChatHint": "Start a fresh chat with this item attached",
     "searchChats": "Search chats",
     "searchClear": "Clear search",
-    "filterSessions": "Filter chats",
+    "filterSessions": "Filter",
     "filterReset": "Reset",
     "filterOnlyShared": "Shared with me",
     "filterOnlyNodeAttached": "Has attached item",
     "filterMode": "Mode",
     "filterVisibility": "Visibility",
     "filterNoResults": "No chats match these filters.",
+    "groupBy": "Group by",
+    "groupByNone": "None",
+    "groupByDate": "Date",
+    "groupByVisibility": "Visibility",
+    "sortBy": "Sort by",
+    "sortByRecency": "Recency",
+    "sortByCreated": "Created",
+    "sortByAlphabetical": "Alphabetical",
     "visibilityPrivate": "Private",
     "visibilityShared": "Shared",
     "visibilityPublic": "Public",
@@ -185,6 +193,12 @@
       "details": "Details",
       "attachments": "Attachments",
       "activity": "Activity"
+    },
+    "details": {
+      "empty": "Select a file or folder to view its details."
+    },
+    "attachments": {
+      "empty": "Select a file or folder to manage its attachments."
     },
     "activity": {
       "empty": "Select a file or folder to view activity history."
@@ -2074,7 +2088,6 @@
       "collapseAll": "Collapse all",
       "column": "Column",
       "sorting": "Sorting",
-      "groupBy": "Group by",
       "sortBy": "Sort by"
     },
     "teamSelector": {
@@ -2397,7 +2410,6 @@
       "saveChanges": "Save Changes"
     },
     "nodeAttachments": {
-      "emptyNode": "Select a file or folder to manage attachments.",
       "title": "Attachments",
       "countSingular": "{count} attachment",
       "countPlural": "{count} attachments",
@@ -2424,7 +2436,6 @@
       "deleteDescriptionPrefix": "Remove",
       "deleteDescriptionSuffix": "from this node. The stored file will be deleted as well.",
       "toasts": {
-        "selectNode": "Select a node before editing attachments.",
         "archived": "Archived nodes are read-only.",
         "noPermission": "You do not have permission to edit attachments.",
         "uploadFailedTitle": "Failed to upload attachment",

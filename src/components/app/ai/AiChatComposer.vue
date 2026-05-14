@@ -328,7 +328,7 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
 </script>
 
 <template>
-  <Collapsible v-model:open="toolsOpen" class="bg-secondary mx-2 mb-2 rounded">
+  <Collapsible v-model:open="toolsOpen" class="bg-secondary m-2 rounded">
     <TooltipProvider>
       <Tooltip>
         <CollapsibleTrigger as-child>
@@ -344,7 +344,7 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
       </Tooltip>
     </TooltipProvider>
     <CollapsibleContent>
-      <ItemGroup class="p-1">
+      <ItemGroup class="px-1 pb-1">
         <Item
           v-for="tool in BOT_TOOL_CATALOG"
           :key="tool.name"
@@ -365,13 +365,12 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
     </CollapsibleContent>
     <div
       v-if="hasAttachedNodes"
-      class="flex flex-wrap items-center gap-1 px-2 pt-2"
+      class="flex flex-wrap items-center gap-1 px-1 pb-1"
     >
       <Badge
         v-for="node in attachedNodeDetails"
         :key="`${node.scope}:${node.nodeId}`"
-        :variant="node.status === 'ok' ? 'secondary' : 'destructive'"
-        class="gap-1 pr-1"
+        :variant="node.status === 'ok' ? 'outline' : 'secondary'"
       >
         <Component :is="node.type === 'folder' ? IconFolder : IconFile" />
         <span v-if="node.status === 'deleted'" class="max-w-40 truncate italic">
@@ -393,7 +392,7 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
           <Tooltip>
             <TooltipTrigger as-child>
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="icon-xs"
                 :disabled="isReadOnly || isSending"
                 @click="

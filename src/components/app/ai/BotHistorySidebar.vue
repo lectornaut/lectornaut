@@ -3,10 +3,10 @@ import { BotChatContextKey } from "@/composables/useBotChat"
 import { useBotSessionFilter } from "@/composables/useBotSessionFilter"
 import {
   IconArchive,
+  IconChevronRight,
   IconGlobe,
   IconHistory,
   IconLock,
-  IconMessageCircleMore,
   IconMoreHorizontal,
   IconPencil,
   IconPlus,
@@ -45,8 +45,13 @@ const rawSharedSessions = computed(() => botChat?.sharedSessions.value ?? [])
 const mySessions = computed(() =>
   filter.state.onlyShared ? [] : filter.filter(rawMySessions.value)
 )
+// Archived is rendered as a single flat block, so just apply the
+// global `sortBy` — grouping doesn't add value for a typically-small
+// list users open infrequently.
 const archivedMySessions = computed(() =>
-  filter.state.onlyShared ? [] : filter.filter(rawArchivedMySessions.value)
+  filter.state.onlyShared
+    ? []
+    : filter.sortSessions(filter.filter(rawArchivedMySessions.value))
 )
 const sharedSessions = computed(() => filter.filter(rawSharedSessions.value))
 const activeSessionId = computed(() => botChat?.sessionId.value ?? null)
@@ -54,17 +59,6 @@ const isLoadingSessions = computed(
   () => botChat?.isLoadingSessions.value ?? false
 )
 const isMutating = computed(() => botChat?.isMutatingSession.value ?? false)
-
-interface SessionGroup {
-  label: string
-  items: IBotSession[]
-}
-
-const startOfToday = () => {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
-}
 
 const formatRelative = (date: Date | null): string => {
   if (!date) return ""
@@ -99,37 +93,23 @@ const visibilityLabel = (visibility: IBotSessionVisibility): string => {
   return t("ai.visibilityPrivate")
 }
 
-const groupByTime = (sessions: IBotSession[]): SessionGroup[] => {
-  const today: IBotSession[] = []
-  const yesterday: IBotSession[] = []
-  const lastWeek: IBotSession[] = []
-  const older: IBotSession[] = []
-
-  const todayStart = startOfToday()
-  const yesterdayStart = todayStart - 24 * 60 * 60 * 1000
-  const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000
-
-  for (const s of sessions) {
-    const date = sessionDate(s)
-    const ts = date ? date.getTime() : 0
-    if (ts >= todayStart) today.push(s)
-    else if (ts >= yesterdayStart) yesterday.push(s)
-    else if (ts >= weekStart) lastWeek.push(s)
-    else older.push(s)
-  }
-
-  const out: SessionGroup[] = []
-  if (today.length) out.push({ label: t("time.today"), items: today })
-  if (yesterday.length)
-    out.push({ label: t("time.yesterday"), items: yesterday })
-  if (lastWeek.length)
-    out.push({ label: t("time.previousWeek"), items: lastWeek })
-  if (older.length) out.push({ label: t("time.older"), items: older })
-  return out
+// The composable emits stable keys ("today" / "private" / "all" / …)
+// rather than localized strings, so i18n stays in the component layer.
+// This switch maps every key the composable can produce to its label.
+const groupLabel = (key: string): string => {
+  if (key === "today") return t("time.today")
+  if (key === "yesterday") return t("time.yesterday")
+  if (key === "lastWeek") return t("time.previousWeek")
+  if (key === "older") return t("time.older")
+  if (key === "private") return t("ai.visibilityPrivate")
+  if (key === "shared") return t("ai.visibilityShared")
+  if (key === "public") return t("ai.visibilityPublic")
+  // `all` is the only key emitted when groupBy=none.
+  return t("labels.history")
 }
 
-const myGroups = computed(() => groupByTime(mySessions.value))
-const sharedGroups = computed(() => groupByTime(sharedSessions.value))
+const myGroups = computed(() => filter.groupSessions(mySessions.value))
+const sharedGroups = computed(() => filter.groupSessions(sharedSessions.value))
 
 const hasAnyRawSessions = computed(
   () =>
@@ -224,48 +204,41 @@ const onArchiveToggle = (session: IBotSession) => {
   <Sidebar collapsible="none" class="w-full">
     <SidebarHeader>
       <div class="flex items-center justify-between gap-2">
-        <span class="text-foreground ml-2 text-base font-medium">
-          {{ t("labels.history") }}
-        </span>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="ghost" size="icon" @click="onNewChat">
-              <IconPlus />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{{ $t("ai.newChat") }}</TooltipContent>
-        </Tooltip>
+        <Button variant="outline" @click="onNewChat">
+          <IconPlus />
+          {{ $t("ai.newChat") }}
+        </Button>
+        <InputGroup>
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            v-model="filter.state.search"
+            :placeholder="$t('ai.searchChats')"
+          />
+          <!-- Clear-search + filter menu live in a single trailing addon. -->
+          <!-- The clear button conditionally renders (only when there's a -->
+          <!-- search query); the filter menu is always available so the -->
+          <!-- user can change filters even with no search text. -->
+          <InputGroupAddon align="inline-end">
+            <TooltipProvider v-if="filter.state.search">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    size="icon-xs"
+                    @click="filter.state.search = ''"
+                  >
+                    <IconX />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>{{ $t("ai.searchClear") }}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <BotSessionFilterMenu :filter="filter" />
+          </InputGroupAddon>
+        </InputGroup>
       </div>
-      <InputGroup>
-        <InputGroupAddon>
-          <IconSearch />
-        </InputGroupAddon>
-        <InputGroupInput
-          v-model="filter.state.search"
-          :placeholder="$t('ai.searchChats')"
-          class="text-xs"
-        />
-        <!-- Clear-search + filter menu live in a single trailing addon. -->
-        <!-- The clear button conditionally renders (only when there's a -->
-        <!-- search query); the filter menu is always available so the -->
-        <!-- user can change filters even with no search text. -->
-        <InputGroupAddon align="inline-end">
-          <Tooltip v-if="filter.state.search">
-            <TooltipTrigger as-child>
-              <InputGroupButton
-                size="icon-xs"
-                @click="filter.state.search = ''"
-              >
-                <IconX />
-              </InputGroupButton>
-            </TooltipTrigger>
-            <TooltipContent>{{ $t("ai.searchClear") }}</TooltipContent>
-          </Tooltip>
-          <BotSessionFilterMenu :filter="filter" />
-        </InputGroupAddon>
-      </InputGroup>
     </SidebarHeader>
-    <Separator />
     <SidebarContent>
       <OverlayScrollbarsWrapper>
         <div
@@ -287,40 +260,165 @@ const onArchiveToggle = (session: IBotSession) => {
         </div>
 
         <template v-if="mySessions.length > 0">
-          <SidebarGroup v-for="group in myGroups" :key="`mine-${group.label}`">
-            <SidebarGroupLabel class="flex items-center gap-2">
-              <IconHistory v-if="group.label === 'Today'" />
-              {{ group.label }}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem
-                  v-for="item in group.items"
-                  :key="item.id"
-                  class="group/history relative"
-                >
-                  <ContextMenu>
-                    <ContextMenuTrigger as-child>
+          <SidebarGroup v-for="group in myGroups" :key="`mine-${group.key}`">
+            <Collapsible default-open class="group/collapsible">
+              <SidebarGroupLabel as-child>
+                <CollapsibleTrigger class="flex w-full items-center gap-2">
+                  {{ groupLabel(group.key) }}
+                  <IconChevronRight
+                    class="ml-auto size-3! transition-transform group-data-[state=open]/collapsible:rotate-90"
+                  />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem
+                      v-for="item in group.items"
+                      :key="item.id"
+                      class="group/history relative"
+                    >
+                      <ContextMenu>
+                        <ContextMenuTrigger as-child>
+                          <SidebarMenuButton
+                            :is-active="item.id === activeSessionId"
+                            class="h-auto items-start gap-2 py-2 pr-8"
+                            @click="onSelectSession(item.id)"
+                          >
+                            <span class="flex min-w-0 grow flex-col">
+                              <span class="flex items-center gap-1.5">
+                                <span class="truncate text-sm">
+                                  {{ item.title || t("ai.newChat") }}
+                                </span>
+                                <Tooltip v-if="item.visibility !== 'private'">
+                                  <TooltipTrigger as-child>
+                                    <Component
+                                      :is="visibilityIcon(item.visibility)"
+                                      class="text-muted-foreground"
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{ visibilityLabel(item.visibility) }}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </span>
+                              <span
+                                v-if="item.preview"
+                                class="text-muted-foreground line-clamp-1 text-xs"
+                              >
+                                {{ item.preview }}
+                              </span>
+                            </span>
+                            <span
+                              class="text-muted-foreground shrink-0 text-xs"
+                            >
+                              {{ formatRelative(sessionDate(item)) }}
+                            </span>
+                          </SidebarMenuButton>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem @click="openRename(item)">
+                            <IconPencil />
+                            {{ t("actions.rename") }}
+                          </ContextMenuItem>
+                          <ContextMenuItem @click="onArchiveToggle(item)">
+                            <IconArchive />
+                            {{ t("ai.archive") }}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem @click="openDelete(item)">
+                            <IconTrash2 />
+                            {{ t("actions.delete") }}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <DropdownMenu>
+                            <TooltipTrigger as-child>
+                              <DropdownMenuTrigger as-child>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                                  @click.stop
+                                >
+                                  <IconMoreHorizontal />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>{{
+                              t("ai.chatActions")
+                            }}</TooltipContent>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem @click="openRename(item)">
+                                <IconPencil />
+                                {{ t("actions.rename") }}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem @click="onArchiveToggle(item)">
+                                <IconArchive />
+                                {{ t("ai.archive") }}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem @click="openDelete(item)">
+                                <IconTrash2 />
+                                {{ t("actions.delete") }}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarGroup>
+        </template>
+
+        <template v-if="sharedSessions.length > 0">
+          <Separator class="my-1" />
+          <SidebarGroup
+            v-for="group in sharedGroups"
+            :key="`shared-${group.key}`"
+          >
+            <Collapsible default-open class="group/collapsible">
+              <SidebarGroupLabel as-child>
+                <CollapsibleTrigger class="flex w-full items-center gap-2">
+                  <IconUsers />
+                  <span>{{
+                    t("ai.sharedGroupLabel", { label: groupLabel(group.key) })
+                  }}</span>
+                  <IconChevronRight
+                    class="ml-auto size-3! transition-transform group-data-[state=open]/collapsible:rotate-90"
+                  />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem
+                      v-for="item in group.items"
+                      :key="item.id"
+                      class="group/history relative"
+                    >
                       <SidebarMenuButton
                         :is-active="item.id === activeSessionId"
-                        class="h-auto items-start gap-2 py-2 pr-8"
+                        class="h-auto items-start gap-2 py-2"
                         @click="onSelectSession(item.id)"
                       >
-                        <IconMessageCircleMore class="mt-0.5 shrink-0" />
                         <span class="flex min-w-0 grow flex-col">
                           <span class="flex items-center gap-1.5">
                             <span class="truncate text-sm">
-                              {{ item.title || t("ai.newChat") }}
+                              {{ item.title || t("ai.untitledSession") }}
                             </span>
-                            <Tooltip v-if="item.visibility !== 'private'">
+                            <Tooltip>
                               <TooltipTrigger as-child>
-                                <Component
-                                  :is="visibilityIcon(item.visibility)"
-                                  class="text-muted-foreground"
-                                />
+                                <IconUsers class="text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                {{ visibilityLabel(item.visibility) }}
+                                {{ t("ai.visibilityShared") }}
                               </TooltipContent>
                             </Tooltip>
                           </span>
@@ -335,50 +433,104 @@ const onArchiveToggle = (session: IBotSession) => {
                           {{ formatRelative(sessionDate(item)) }}
                         </span>
                       </SidebarMenuButton>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem @click="openRename(item)">
-                        <IconPencil />
-                        {{ t("actions.rename") }}
-                      </ContextMenuItem>
-                      <ContextMenuItem @click="onArchiveToggle(item)">
-                        <IconArchive />
-                        {{ t("ai.archive") }}
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem @click="openDelete(item)">
-                        <IconTrash2 />
-                        {{ t("actions.delete") }}
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarGroup>
+        </template>
 
-                  <TooltipProvider>
-                    <Tooltip>
-                      <DropdownMenu>
-                        <TooltipTrigger as-child>
-                          <DropdownMenuTrigger as-child>
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-                              @click.stop
+        <template v-if="archivedMySessions.length > 0">
+          <Separator class="my-1" />
+          <SidebarGroup>
+            <Collapsible default-open class="group/collapsible">
+              <SidebarGroupLabel as-child>
+                <CollapsibleTrigger class="flex w-full items-center gap-2">
+                  <IconArchive />
+                  {{ t("ai.archived") }}
+                  <IconChevronRight
+                    class="ml-auto size-3! transition-transform group-data-[state=open]/collapsible:rotate-90"
+                  />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem
+                      v-for="item in archivedMySessions"
+                      :key="item.id"
+                      class="group/history relative"
+                    >
+                      <ContextMenu>
+                        <ContextMenuTrigger as-child>
+                          <SidebarMenuButton
+                            :is-active="item.id === activeSessionId"
+                            class="h-auto items-start gap-2 py-2 pr-8 opacity-70"
+                            @click="onSelectSession(item.id)"
+                          >
+                            <IconArchive class="mt-0.5 shrink-0" />
+                            <span class="flex min-w-0 grow flex-col">
+                              <span class="truncate text-sm">
+                                {{ item.title || t("ai.untitledSession") }}
+                              </span>
+                              <span
+                                v-if="item.preview"
+                                class="text-muted-foreground line-clamp-1 text-xs"
+                              >
+                                {{ item.preview }}
+                              </span>
+                            </span>
+                            <span
+                              class="text-muted-foreground shrink-0 text-xs"
                             >
-                              <IconMoreHorizontal />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>{{
-                          t("ai.chatActions")
-                        }}</TooltipContent>
+                              {{ formatRelative(sessionDate(item)) }}
+                            </span>
+                          </SidebarMenuButton>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem @click="onArchiveToggle(item)">
+                            <IconRotateCcw />
+                            {{ t("ai.restore") }}
+                          </ContextMenuItem>
+                          <ContextMenuItem @click="openRename(item)">
+                            <IconPencil />
+                            {{ t("actions.rename") }}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem @click="openDelete(item)">
+                            <IconTrash2 />
+                            {{ t("actions.delete") }}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <DropdownMenuTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                                @click.stop
+                              >
+                                <IconMoreHorizontal />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            t("ai.chatActions")
+                          }}</TooltipContent>
+                        </Tooltip>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem @click="onArchiveToggle(item)">
+                            <IconRotateCcw />
+                            {{ t("ai.restore") }}
+                          </DropdownMenuItem>
                           <DropdownMenuItem @click="openRename(item)">
                             <IconPencil />
                             {{ t("actions.rename") }}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem @click="onArchiveToggle(item)">
-                            <IconArchive />
-                            {{ t("ai.archive") }}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem @click="openDelete(item)">
@@ -387,160 +539,11 @@ const onArchiveToggle = (session: IBotSession) => {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </Tooltip>
-                  </TooltipProvider>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </template>
-
-        <template v-if="sharedSessions.length > 0">
-          <Separator class="my-1" />
-          <SidebarGroup
-            v-for="group in sharedGroups"
-            :key="`shared-${group.label}`"
-          >
-            <SidebarGroupLabel class="flex items-center gap-2">
-              <IconUsers />
-              <span>{{
-                t("ai.sharedGroupLabel", { label: group.label })
-              }}</span>
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem
-                  v-for="item in group.items"
-                  :key="item.id"
-                  class="group/history relative"
-                >
-                  <SidebarMenuButton
-                    :is-active="item.id === activeSessionId"
-                    class="h-auto items-start gap-2 py-2"
-                    @click="onSelectSession(item.id)"
-                  >
-                    <IconMessageCircleMore class="mt-0.5 shrink-0" />
-                    <span class="flex min-w-0 grow flex-col">
-                      <span class="flex items-center gap-1.5">
-                        <span class="truncate text-sm">
-                          {{ item.title || t("ai.untitledSession") }}
-                        </span>
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <IconUsers class="text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {{ t("ai.visibilityShared") }}
-                          </TooltipContent>
-                        </Tooltip>
-                      </span>
-                      <span
-                        v-if="item.preview"
-                        class="text-muted-foreground line-clamp-1 text-xs"
-                      >
-                        {{ item.preview }}
-                      </span>
-                    </span>
-                    <span class="text-muted-foreground shrink-0 text-xs">
-                      {{ formatRelative(sessionDate(item)) }}
-                    </span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </template>
-
-        <template v-if="archivedMySessions.length > 0">
-          <Separator class="my-1" />
-          <SidebarGroup>
-            <SidebarGroupLabel class="flex items-center gap-2">
-              <IconArchive />
-              {{ t("ai.archived") }}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem
-                  v-for="item in archivedMySessions"
-                  :key="item.id"
-                  class="group/history relative"
-                >
-                  <ContextMenu>
-                    <ContextMenuTrigger as-child>
-                      <SidebarMenuButton
-                        :is-active="item.id === activeSessionId"
-                        class="h-auto items-start gap-2 py-2 pr-8 opacity-70"
-                        @click="onSelectSession(item.id)"
-                      >
-                        <IconArchive class="mt-0.5 shrink-0" />
-                        <span class="flex min-w-0 grow flex-col">
-                          <span class="truncate text-sm">
-                            {{ item.title || t("ai.untitledSession") }}
-                          </span>
-                          <span
-                            v-if="item.preview"
-                            class="text-muted-foreground line-clamp-1 text-xs"
-                          >
-                            {{ item.preview }}
-                          </span>
-                        </span>
-                        <span class="text-muted-foreground shrink-0 text-xs">
-                          {{ formatRelative(sessionDate(item)) }}
-                        </span>
-                      </SidebarMenuButton>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem @click="onArchiveToggle(item)">
-                        <IconRotateCcw />
-                        {{ t("ai.restore") }}
-                      </ContextMenuItem>
-                      <ContextMenuItem @click="openRename(item)">
-                        <IconPencil />
-                        {{ t("actions.rename") }}
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem @click="openDelete(item)">
-                        <IconTrash2 />
-                        {{ t("actions.delete") }}
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-
-                  <DropdownMenu>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <DropdownMenuTrigger as-child>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-                            @click.stop
-                          >
-                            <IconMoreHorizontal />
-                          </Button>
-                        </DropdownMenuTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>{{ t("ai.chatActions") }}</TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem @click="onArchiveToggle(item)">
-                        <IconRotateCcw />
-                        {{ t("ai.restore") }}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem @click="openRename(item)">
-                        <IconPencil />
-                        {{ t("actions.rename") }}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem @click="openDelete(item)">
-                        <IconTrash2 />
-                        {{ t("actions.delete") }}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
           </SidebarGroup>
         </template>
       </OverlayScrollbarsWrapper>

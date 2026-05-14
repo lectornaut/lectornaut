@@ -14,19 +14,24 @@ import {
   IconUpload,
 } from "@/data/icons"
 import type { ILogEntry } from "@/types/logs"
-import { toRefs } from "vue"
 
 type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
   getScrollElement: () => HTMLElement | undefined
 }>
 
 const props = defineProps<{
-  teamId: string | null
-  workspaceId: string | null
-  documentId: string | null
+  teamId: string
+  workspaceId: string
+  documentId: string
 }>()
 
-const { teamId, workspaceId, documentId } = toRefs(props)
+// `useNodeActivityLogs` takes nullable refs because it serves other callers
+// that can be "not yet ready". This component is gated by the inspector's
+// v-if so the values are always non-null here — widen at the boundary.
+const teamId = computed<string | null>(() => props.teamId)
+const workspaceId = computed<string | null>(() => props.workspaceId)
+const documentId = computed<string | null>(() => props.documentId)
+
 const scrollableContainer = useTemplateRef<OverlayScrollbarsWrapperRef>(
   "scrollableContainer"
 )
@@ -65,10 +70,6 @@ const ACTION_ICONS = {
   "content.attachment.update": IconRefreshCcw,
   "content.attachment.delete": IconTrash2,
 } as const
-
-const hasSelectedNode = computed(() =>
-  Boolean(teamId.value && workspaceId.value && documentId.value)
-)
 
 const resolveTimestamp = (entry: ILogEntry) => entry.timestamp?.toDate?.()
 
@@ -148,116 +149,96 @@ useInfiniteScroll(
   },
   {
     distance: 10,
-    canLoadMore: () =>
-      hasSelectedNode.value &&
-      canViewLogs.value &&
-      hasMore.value &&
-      !loading.value,
+    canLoadMore: () => canViewLogs.value && hasMore.value && !loading.value,
   }
 )
 </script>
 
 <template>
-  <Sidebar collapsible="none" class="w-full">
-    <SidebarContent>
-      <OverlayScrollbarsWrapper ref="scrollableContainer">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <div
-              v-if="!hasSelectedNode"
-              class="text-muted-foreground p-2 text-xs"
+  <div class="flex size-full min-h-0 flex-1 flex-col">
+    <OverlayScrollbarsWrapper ref="scrollableContainer">
+      <div class="space-y-3 p-2">
+        <div v-if="!canViewLogs" class="text-muted-foreground text-xs">
+          You do not have permission to view activity history.
+        </div>
+
+        <div v-else-if="loading && logs.length === 0">
+          <div class="text-muted-foreground flex items-center gap-2 text-xs">
+            <Spinner />
+            Loading activity history...
+          </div>
+        </div>
+
+        <div v-else-if="error" class="space-y-2">
+          <div class="text-destructive flex items-start gap-2 text-xs">
+            <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+            <span>{{ error }}</span>
+          </div>
+          <Button variant="secondary" class="w-full" @click="refreshLogs">
+            Retry
+          </Button>
+        </div>
+
+        <div
+          v-else-if="logs.length === 0"
+          class="text-muted-foreground text-xs"
+        >
+          No history available for this item.
+        </div>
+
+        <template v-else>
+          <Stepper
+            orientation="vertical"
+            :model-value="-1"
+            class="flex flex-col gap-0"
+          >
+            <StepperItem
+              v-for="(entry, index) in logs"
+              :key="entry.id"
+              :step="index + 1"
+              class="flex items-start self-stretch"
             >
-              Select a file or folder to view activity history.
-            </div>
-
-            <div
-              v-else-if="!canViewLogs"
-              class="text-muted-foreground p-2 text-xs"
-            >
-              You do not have permission to view activity history.
-            </div>
-
-            <div v-else-if="loading && logs.length === 0" class="p-2">
-              <div
-                class="text-muted-foreground flex items-center gap-2 text-xs"
-              >
-                <Spinner />
-                Loading activity history...
+              <div class="relative flex flex-col items-center self-stretch">
+                <StepperIndicator as-child>
+                  <Button variant="outline" size="icon">
+                    <Component :is="getActionIcon(entry)" />
+                  </Button>
+                </StepperIndicator>
+                <StepperSeparator
+                  v-if="index < logs.length - 1"
+                  orientation="vertical"
+                  class="bg-border w-px grow"
+                />
               </div>
-            </div>
 
-            <div v-else-if="error" class="space-y-2 p-2">
-              <div class="text-destructive flex items-start gap-2 text-xs">
-                <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
-                <span>{{ error }}</span>
+              <div class="flex grow flex-col gap-2">
+                <StepperTitle>
+                  {{ formatActor(entry) }}
+                </StepperTitle>
+                <StepperDescription v-if="formatChangeSummary(entry)">
+                  {{ formatChangeSummary(entry) }}
+                </StepperDescription>
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-xs font-medium">
+                    {{ formatAction(entry) }}
+                  </p>
+                  <time
+                    class="text-muted-foreground shrink-0 text-xs"
+                    :datetime="formatTimestampDateTime(entry)"
+                    :title="formatTimestampTitle(entry)"
+                  >
+                    {{ formatTimestamp(entry) }}
+                  </time>
+                </div>
               </div>
-              <Button variant="secondary" class="w-full" @click="refreshLogs">
-                Retry
-              </Button>
-            </div>
+            </StepperItem>
+          </Stepper>
 
-            <div
-              v-else-if="logs.length === 0"
-              class="text-muted-foreground p-2 text-xs"
-            >
-              No history available for this item.
-            </div>
-
-            <template v-else>
-              <Stepper
-                orientation="vertical"
-                :model-value="-1"
-                class="flex flex-col gap-0"
-              >
-                <StepperItem
-                  v-for="(entry, index) in logs"
-                  :key="entry.id"
-                  :step="index + 1"
-                  class="flex items-start self-stretch"
-                >
-                  <div class="relative flex flex-col items-center self-stretch">
-                    <StepperIndicator as-child>
-                      <Button variant="outline" size="icon">
-                        <Component :is="getActionIcon(entry)" />
-                      </Button>
-                    </StepperIndicator>
-                    <StepperSeparator
-                      v-if="index < logs.length - 1"
-                      orientation="vertical"
-                      class="bg-border w-px grow"
-                    />
-                  </div>
-
-                  <div class="flex grow flex-col gap-2 p-2">
-                    <StepperTitle>
-                      {{ formatActor(entry) }}
-                    </StepperTitle>
-                    <StepperDescription v-if="formatChangeSummary(entry)">
-                      {{ formatChangeSummary(entry) }}
-                    </StepperDescription>
-                    <div class="flex items-start justify-between gap-2">
-                      <p class="text-xs font-medium">
-                        {{ formatAction(entry) }}
-                      </p>
-                      <time
-                        class="text-muted-foreground shrink-0 text-xs"
-                        :datetime="formatTimestampDateTime(entry)"
-                        :title="formatTimestampTitle(entry)"
-                      >
-                        {{ formatTimestamp(entry) }}
-                      </time>
-                    </div>
-                  </div>
-                </StepperItem>
-              </Stepper>
-
-              <div v-if="loading" class="flex justify-center p-2">
-                <Spinner />
-              </div>
-            </template>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </OverlayScrollbarsWrapper>
-    </SidebarContent>
-  </Sidebar>
+          <div v-if="loading" class="flex justify-center">
+            <Spinner />
+          </div>
+        </template>
+      </div>
+    </OverlayScrollbarsWrapper>
+  </div>
 </template>

@@ -1,6 +1,6 @@
 /**
- * useBotSessionFilter — reactive filter + search state for bot chat
- * lists. Used by the `/bot` page's history sidebar and the node
+ * useBotSessionFilter — reactive filter + search + view state for bot
+ * chat lists. Used by the `/bot` page's history sidebar and the node
  * inspector's Bot tab, each with its own independent instance.
  *
  * Filters available:
@@ -13,6 +13,14 @@
  *   - `modes`          set — empty = all; otherwise match `lastMode`
  *   - `visibilities`   set — empty = all; otherwise match `visibility`
  *
+ * View options (don't hide rows, just reshape the list):
+ *   - `groupBy`        none (single bucket) | date (today / yesterday /
+ *                      previous 7 days / older) | visibility (private /
+ *                      shared / public)
+ *   - `sortBy`         recency (most recent activity, i.e. `updatedAt`
+ *                      desc — the default) | created (`createdAt` desc)
+ *                      | alphabetical (title A–Z)
+ *
  * Match semantics are defensively pure: callers pass a session and the
  * current user uid; we return a boolean. This keeps the composable
  * usable from `computed()` blocks without coupling it to a particular
@@ -21,8 +29,23 @@
 import type { BotChatMode } from "@/composables/useFunctions"
 import { useAuthStore } from "@/stores/authStore"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
+import { Timestamp } from "firebase/firestore"
 import { storeToRefs } from "pinia"
 import { computed, reactive } from "vue"
+
+export const BOT_SESSION_GROUP_BY_VALUES = [
+  "none",
+  "date",
+  "visibility",
+] as const
+export type BotSessionGroupBy = (typeof BOT_SESSION_GROUP_BY_VALUES)[number]
+
+export const BOT_SESSION_SORT_BY_VALUES = [
+  "recency",
+  "created",
+  "alphabetical",
+] as const
+export type BotSessionSortBy = (typeof BOT_SESSION_SORT_BY_VALUES)[number]
 
 export interface BotSessionFilterState {
   search: string
@@ -34,6 +57,23 @@ export interface BotSessionFilterState {
   modes: Set<BotChatMode>
   /** Empty set = match all visibilities. */
   visibilities: Set<IBotSessionVisibility>
+  groupBy: BotSessionGroupBy
+  sortBy: BotSessionSortBy
+}
+
+/**
+ * A bucket of sessions emitted by `groupSessions`. The `key` is a
+ * stable identifier the caller maps to a localized label — keeping
+ * i18n out of this composable.
+ *
+ * Possible keys, by `state.groupBy`:
+ *   - `none`        → "all"
+ *   - `date`        → "today" | "yesterday" | "lastWeek" | "older"
+ *   - `visibility`  → "private" | "shared" | "public"
+ */
+export interface BotSessionGroup {
+  key: string
+  items: IBotSession[]
 }
 
 export const BOT_CHAT_MODE_VALUES: readonly BotChatMode[] = [
@@ -54,6 +94,11 @@ const defaultState = (): BotSessionFilterState => ({
   onlyNodeAttached: false,
   modes: new Set(),
   visibilities: new Set(),
+  // Defaults mirror the historical behavior — date buckets sorted by
+  // most-recent activity — so the upgrade is invisible to users who
+  // never open the filter menu.
+  groupBy: "date",
+  sortBy: "recency",
 })
 
 export function useBotSessionFilter() {
@@ -121,12 +166,110 @@ export function useBotSessionFilter() {
   const filter = (sessions: IBotSession[]): IBotSession[] =>
     sessions.filter(matches)
 
+  // Defensive: Firestore reads come back as `Timestamp` instances, but
+  // typing is permissive (the schema marks both `createdAt`/`updatedAt`
+  // as optional). Anything that isn't a Timestamp sorts as "epoch zero"
+  // so it doesn't get hoisted to the top by accident.
+  const tsMillis = (
+    value: IBotSession["updatedAt"] | IBotSession["createdAt"]
+  ): number => (value instanceof Timestamp ? value.toMillis() : 0)
+
+  /**
+   * Returns a fresh array — never mutate the caller's input, which is
+   * usually a `computed` reading from a vuefire reactive collection.
+   */
+  const sortSessions = (sessions: IBotSession[]): IBotSession[] => {
+    const arr = sessions.slice()
+    if (state.sortBy === "recency") {
+      arr.sort((a, b) => tsMillis(b.updatedAt) - tsMillis(a.updatedAt))
+    } else if (state.sortBy === "created") {
+      arr.sort((a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt))
+    } else {
+      // Alphabetical: `localeCompare` with case-insensitive sensitivity
+      // so "apple" and "Apple" land together; untitled chats (empty
+      // title) sink to the bottom so they don't crowd the top of the
+      // alphabet.
+      arr.sort((a, b) => {
+        const ta = (a.title ?? "").trim()
+        const tb = (b.title ?? "").trim()
+        if (!ta && !tb) return 0
+        if (!ta) return 1
+        if (!tb) return -1
+        return ta.localeCompare(tb, undefined, { sensitivity: "base" })
+      })
+    }
+    return arr
+  }
+
+  const startOfToday = () => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d.getTime()
+  }
+
+  /**
+   * Group + sort sessions into ordered buckets ready for rendering.
+   * Sort runs first so within-bucket order is consistent with the
+   * global `sortBy`. Empty buckets are dropped so the UI never renders
+   * an empty `Collapsible`.
+   */
+  const groupSessions = (sessions: IBotSession[]): BotSessionGroup[] => {
+    const sorted = sortSessions(sessions)
+    if (sorted.length === 0) return []
+
+    if (state.groupBy === "none") {
+      return [{ key: "all", items: sorted }]
+    }
+
+    if (state.groupBy === "visibility") {
+      const buckets: Record<IBotSessionVisibility, IBotSession[]> = {
+        private: [],
+        shared: [],
+        public: [],
+      }
+      for (const s of sorted) buckets[s.visibility].push(s)
+      const out: BotSessionGroup[] = []
+      for (const key of BOT_CHAT_VISIBILITY_VALUES) {
+        if (buckets[key].length > 0) out.push({ key, items: buckets[key] })
+      }
+      return out
+    }
+
+    // date — bucket against `updatedAt` regardless of the current
+    // `sortBy`, so "Today / Yesterday / …" always reflect when a chat
+    // was last touched. (Sorting by created+grouping by date would
+    // otherwise put a recently-active old chat in "Older", which is
+    // surprising.)
+    const today: IBotSession[] = []
+    const yesterday: IBotSession[] = []
+    const lastWeek: IBotSession[] = []
+    const older: IBotSession[] = []
+    const todayStart = startOfToday()
+    const yesterdayStart = todayStart - 24 * 60 * 60 * 1000
+    const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000
+    for (const s of sorted) {
+      const ts = tsMillis(s.updatedAt)
+      if (ts >= todayStart) today.push(s)
+      else if (ts >= yesterdayStart) yesterday.push(s)
+      else if (ts >= weekStart) lastWeek.push(s)
+      else older.push(s)
+    }
+    const out: BotSessionGroup[] = []
+    if (today.length) out.push({ key: "today", items: today })
+    if (yesterday.length) out.push({ key: "yesterday", items: yesterday })
+    if (lastWeek.length) out.push({ key: "lastWeek", items: lastWeek })
+    if (older.length) out.push({ key: "older", items: older })
+    return out
+  }
+
   const reset = () => {
     state.search = ""
     state.onlyShared = false
     state.onlyNodeAttached = false
     state.modes.clear()
     state.visibilities.clear()
+    state.groupBy = "date"
+    state.sortBy = "recency"
   }
 
   const toggleMode = (mode: BotChatMode) => {
@@ -152,17 +295,27 @@ export function useBotSessionFilter() {
   const setOnlyNodeAttached = (value: boolean) => {
     state.onlyNodeAttached = value
   }
+  const setGroupBy = (value: BotSessionGroupBy) => {
+    state.groupBy = value
+  }
+  const setSortBy = (value: BotSessionSortBy) => {
+    state.sortBy = value
+  }
 
   return {
     state,
     isActive,
     matches,
     filter,
+    sortSessions,
+    groupSessions,
     reset,
     toggleMode,
     toggleVisibility,
     setSearch,
     setOnlyShared,
     setOnlyNodeAttached,
+    setGroupBy,
+    setSortBy,
   }
 }

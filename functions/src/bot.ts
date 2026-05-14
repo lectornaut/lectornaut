@@ -72,6 +72,14 @@ interface ChatMessage {
   role: ChatRole
   content: string
   segments?: MessageSegment[]
+  /**
+   * Firebase uid of the human who sent this message. Only populated for
+   * user-role messages — agents have no human author. Filled in by
+   * `FirestoreBotSessionStore.save()` (the extractor itself can't know
+   * authorship because Genkit's thread doesn't carry it). Optional on
+   * read to handle legacy docs persisted before this field existed.
+   */
+  authorUid?: string
 }
 
 interface ToolRequestLike {
@@ -326,7 +334,19 @@ class FirestoreBotSessionStore implements SessionStore {
      * sessions by mode without parsing the SessionData blob. The most
      * recent turn wins — earlier turns' modes are not retained.
      */
-    private readonly turnMode?: BotChatMode
+    private readonly turnMode?: BotChatMode,
+    /**
+     * Firebase uid of the human who triggered this turn (the caller of
+     * `sendBotMessage` / `respondToBotInterrupt`). `save()` uses it to
+     * stamp the new user-role message with its real author so the
+     * client can render per-sender avatars in shared chats — where
+     * multiple admins may post turns into the same session and the
+     * `ownerUid` heuristic falls apart.
+     *
+     * Optional because the interrupt-response path doesn't produce a
+     * new user message; in that case nothing needs tagging.
+     */
+    private readonly senderUid?: string
   ) {}
 
   private docRef(sessionId: string) {
@@ -347,6 +367,38 @@ class FirestoreBotSessionStore implements SessionStore {
     const snap = await ref.get()
     const isNew = !snap.exists
     const messages = extractMessagesFromSessionData(data)
+
+    // Stamp each user-role message with its author uid. Genkit's thread
+    // doesn't carry authorship, so we reconstruct it from two sources:
+    //
+    //   • Prior saves — every user-role message in the existing doc
+    //     already has its `authorUid` (or `undefined` for legacy docs
+    //     written before this field existed). We carry these forward
+    //     positionally, matching the i-th user-role message in the new
+    //     extracted list to the i-th user-role message of the prior doc.
+    //
+    //   • This turn — the *tail* user-role message (the one Genkit just
+    //     appended in response to `chat.sendStream(message)`) wasn't in
+    //     the prior doc. It gets `this.senderUid`.
+    //
+    // The positional zip works because user-role messages can only be
+    // appended by `sendBotMessage` (one per successful turn); they're
+    // never inserted in the middle of the thread or removed.
+    if (this.senderUid) {
+      const priorMessages =
+        (snap.data()?.messages as ChatMessage[] | undefined) ?? []
+      const priorUserAuthors: (string | undefined)[] = []
+      for (const m of priorMessages) {
+        if (m?.role === "user") priorUserAuthors.push(m.authorUid)
+      }
+      let userIndex = 0
+      for (const m of messages) {
+        if (m.role !== "user") continue
+        const carried = priorUserAuthors[userIndex]
+        m.authorUid = carried ?? this.senderUid
+        userIndex++
+      }
+    }
 
     // Genkit's SessionData has `state?: S` and other optional fields that
     // arrive as `undefined` when not used. Firestore's default validator
@@ -1628,7 +1680,8 @@ const sendBotMessageFlow = ai.defineFlow(
       agentConfig.previewMaxLength,
       newSessionPinnedNodeKey,
       input.contextNodes,
-      mode
+      mode,
+      auth.uid
     )
 
     const session = effectiveSessionId
@@ -1883,7 +1936,12 @@ const respondToBotInterruptFlow = ai.defineFlow(
       // what the user sees in the composer right now.
       undefined,
       input.contextNodes,
-      mode
+      mode,
+      // Interrupt response doesn't append a new user-role message
+      // (it resolves a pending tool inside the same agent turn), so
+      // the tagging loop in save() will no-op. Pass `auth.uid` anyway
+      // for symmetry — costs nothing and keeps the call sites uniform.
+      auth.uid
     )
     const session = await ai.loadSession(sessionId, { store })
 

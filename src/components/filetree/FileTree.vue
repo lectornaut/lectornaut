@@ -443,6 +443,57 @@ watch(
   { immediate: true }
 )
 
+// ── Reveal-on-selection ──────────────────────────────────────────────────────
+//
+// When the active selection points to a node deep in the tree, walk up the
+// parent chain and expand each ancestor folder so the highlighted row is
+// actually visible. `selectedIds` already unifies "none", "single", and
+// "multiple" above, so one watcher covers all three modes.
+//
+// `revealEpoch` cancels in-flight walks when the selection changes mid-run:
+// each `await store.ensureNodeLoaded` may hit Firestore and resume into
+// stale state, so we bail when our epoch is no longer the latest. Manual
+// collapses by the user are preserved — the watcher only fires when
+// `selectedIds` itself changes, not on every render.
+
+let revealEpoch = 0
+
+const revealSelectedNodes = async () => {
+  const epoch = ++revealEpoch
+  const ids = selectedIds.value
+  if (!ids.size) return
+
+  const scope = props.scope
+  const teamId = props.teamId
+  const workspaceId = props.workspaceId
+  const visited = new Set<string>()
+
+  for (const id of ids) {
+    let cursorId: string | null = id
+    while (cursorId && cursorId !== ROOT_PARENT_ID) {
+      if (visited.has(cursorId)) break
+      visited.add(cursorId)
+
+      const node = await store.ensureNodeLoaded(
+        scope,
+        teamId,
+        workspaceId,
+        cursorId
+      )
+      if (epoch !== revealEpoch) return
+      if (!node) break
+
+      const parentId = node.parentId
+      if (parentId && parentId !== ROOT_PARENT_ID) {
+        store.expandFolder(scope, teamId, workspaceId, parentId)
+      }
+      cursorId = parentId
+    }
+  }
+}
+
+watch(selectedIds, () => revealSelectedNodes(), { immediate: true })
+
 onBeforeUnmount(() => {
   store.releaseWorkspace(props.scope, props.teamId, props.workspaceId)
 })

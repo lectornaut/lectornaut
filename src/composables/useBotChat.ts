@@ -146,16 +146,27 @@ export interface BotChatMessage {
   content: string
   /** Present on agent messages with tool calls; absent for plain text. */
   segments?: BotChatSegment[]
+  /**
+   * Firebase uid of the human who sent this message. Only populated for
+   * user-role messages — agent turns have no human author. Drives
+   * per-sender avatar rendering so shared/public sessions, where
+   * multiple admins can post, attribute each turn to the right person.
+   * Undefined on legacy messages (saved before authorship was tracked
+   * server-side); the UI falls back to the session's `ownerUid` then.
+   */
+  authorUid?: string
 }
 
 const createMessage = (m: {
   role: BotChatRole
   content: string
   segments?: BotChatSegment[]
+  authorUid?: string
 }): BotChatMessage => ({
   id: crypto.randomUUID(),
   role: m.role,
   content: m.content,
+  authorUid: m.authorUid,
   // Deep-clone segments so reactive mutations on this instance don't leak
   // back into the caller's object (e.g. server snapshot data passed into
   // `messages.value = serverMessages.map(createMessage)`). The `tool`
@@ -765,7 +776,18 @@ export function useBotChat(): BotChatContext {
     // see a "this is read-only" error narrated at them.
     if (!canEditActive.value) return
 
-    messages.value.push(createMessage({ role: "user", content: trimmed }))
+    // Tag the optimistic user bubble with the current user's uid so the
+    // avatar renders correctly from frame one. The server will write the
+    // same value on its end (`save()` stamps `authorUid` from the
+    // verified `auth.uid`), so the snapshot reconcile is a no-op for
+    // this field.
+    messages.value.push(
+      createMessage({
+        role: "user",
+        content: trimmed,
+        authorUid: currentUser.value?.uid,
+      })
+    )
     // Empty agent placeholder; chunks mutate `.content` and `.segments`
     // in place as they stream in, so the bubble grows without the array
     // shape changing. Object identity is load-bearing: the renderer's

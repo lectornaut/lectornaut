@@ -68,13 +68,13 @@ watch(botChat.sessionId, (id) => {
         <TabsList class="bg-transparent p-2">
           <TabsTrigger
             value="details"
-            class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none"
+            class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none!"
           >
             Details
           </TabsTrigger>
           <TabsTrigger
             value="actions"
-            class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none"
+            class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none!"
           >
             Actions
           </TabsTrigger>

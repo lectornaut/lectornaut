@@ -94,7 +94,7 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                           <TabsTrigger
                             :value="item.id"
                             as-child
-                            class="data-[state=active]:bg-sidebar-accent text-secondary-foreground data-[state=active]:text-sidebar-accent-foreground data-[state=active]:shadow-none"
+                            class="data-[state=active]:bg-sidebar-accent text-secondary-foreground data-[state=active]:text-sidebar-accent-foreground data-[state=active]:shadow-none!"
                           >
                             <SidebarMenuButton
                               :is-active="item.id === activeTab"

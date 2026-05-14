@@ -14,7 +14,7 @@ import { storeToRefs } from "pinia"
 import { toRef } from "vue"
 
 const props = defineProps<{
-  node: WorkspaceNode | null
+  node: WorkspaceNode
 }>()
 
 const node = toRef(props, "node")
@@ -57,142 +57,129 @@ const formatActor = (userId: string | null | undefined) => {
   return member.user?.displayName || member.user?.email || member.userId
 }
 
-const nodeTypeLabel = computed(() => {
-  if (!node.value) return "—"
-  return node.value.type === "file" ? "File" : "Folder"
-})
+const nodeTypeLabel = computed(() =>
+  node.value.type === "file" ? "File" : "Folder"
+)
 
-const nodeParentLabel = computed(() => {
-  if (!node.value) return "—"
-  return node.value.parentId === ROOT_PARENT_ID ? "Root" : node.value.parentId
-})
+const nodeParentLabel = computed(() =>
+  node.value.parentId === ROOT_PARENT_ID ? "Root" : node.value.parentId
+)
 
-const nodeStatusLabel = computed(() => {
-  if (!node.value) return "—"
-  return node.value.isArchived ? "Archived" : "Active"
-})
+const nodeStatusLabel = computed(() =>
+  node.value.isArchived ? "Archived" : "Active"
+)
 </script>
 
 <template>
-  <Sidebar collapsible="none" class="w-full">
-    <SidebarContent>
-      <OverlayScrollbarsWrapper>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <div v-if="!node" class="text-muted-foreground p-2 text-xs">
-              Select a file or folder to view its details.
-            </div>
+  <div class="flex size-full min-h-0 flex-1 flex-col">
+    <OverlayScrollbarsWrapper>
+      <div class="space-y-3 p-2">
+        <dl class="space-y-4">
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconUserRound />
+              Author
+            </dt>
+            <dd class="text-right break-all">
+              {{ formatActor(node.createdBy) }}
+            </dd>
+          </div>
 
-            <div v-else class="space-y-3 p-2">
-              <dl class="space-y-4">
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconUserRound />
-                    Author
-                  </dt>
-                  <dd class="text-right break-all">
-                    {{ formatActor(node.createdBy) }}
-                  </dd>
-                </div>
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconUserRound />
+              Updated by
+            </dt>
+            <dd class="text-right break-all">
+              {{ formatActor(node.updatedBy) }}
+            </dd>
+          </div>
 
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconUserRound />
-                    Updated by
-                  </dt>
-                  <dd class="text-right break-all">
-                    {{ formatActor(node.updatedBy) }}
-                  </dd>
-                </div>
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconCalendar />
+              Created
+            </dt>
+            <dd class="text-right">
+              {{ formatTimestamp(node.createdAt) }}
+            </dd>
+          </div>
 
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconCalendar />
-                    Created
-                  </dt>
-                  <dd class="text-right">
-                    {{ formatTimestamp(node.createdAt) }}
-                  </dd>
-                </div>
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconClock />
+              Updated
+            </dt>
+            <dd class="text-right">
+              {{ formatTimestamp(node.updatedAt) }}
+            </dd>
+          </div>
 
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconClock />
-                    Updated
-                  </dt>
-                  <dd class="text-right">
-                    {{ formatTimestamp(node.updatedAt) }}
-                  </dd>
-                </div>
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconInfo />
+              Type
+            </dt>
+            <dd class="text-right">
+              {{ nodeTypeLabel }}
+            </dd>
+          </div>
 
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconInfo />
-                    Type
-                  </dt>
-                  <dd class="text-right">
-                    {{ nodeTypeLabel }}
-                  </dd>
-                </div>
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconInfo />
+              Status
+            </dt>
+            <dd class="text-right">
+              {{ nodeStatusLabel }}
+            </dd>
+          </div>
 
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconInfo />
-                    Status
-                  </dt>
-                  <dd class="text-right">
-                    {{ nodeStatusLabel }}
-                  </dd>
-                </div>
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconFolder />
+              Parent
+            </dt>
+            <dd class="text-right break-all">
+              {{ nodeParentLabel }}
+            </dd>
+          </div>
 
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconFolder />
-                    Parent
-                  </dt>
-                  <dd class="text-right break-all">
-                    {{ nodeParentLabel }}
-                  </dd>
-                </div>
+          <div
+            v-if="node.isArchived"
+            class="flex items-start justify-between gap-2"
+          >
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconCalendar />
+              Archived
+            </dt>
+            <dd class="text-right">
+              {{ formatTimestamp(node.archivedAt) }}
+            </dd>
+          </div>
 
-                <div
-                  v-if="node.isArchived"
-                  class="flex items-start justify-between gap-2"
-                >
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconCalendar />
-                    Archived
-                  </dt>
-                  <dd class="text-right">
-                    {{ formatTimestamp(node.archivedAt) }}
-                  </dd>
-                </div>
+          <div
+            v-if="node.isArchived"
+            class="flex items-start justify-between gap-2"
+          >
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconUserRound />
+              Archived by
+            </dt>
+            <dd class="text-right break-all">
+              {{ formatActor(node.archivedBy) }}
+            </dd>
+          </div>
 
-                <div
-                  v-if="node.isArchived"
-                  class="flex items-start justify-between gap-2"
-                >
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconUserRound />
-                    Archived by
-                  </dt>
-                  <dd class="text-right break-all">
-                    {{ formatActor(node.archivedBy) }}
-                  </dd>
-                </div>
-
-                <div class="flex items-start justify-between gap-2">
-                  <dt class="text-muted-foreground flex items-center gap-2">
-                    <IconHash />
-                    Node ID
-                  </dt>
-                  <dd class="text-right break-all">{{ node.id }}</dd>
-                </div>
-              </dl>
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </OverlayScrollbarsWrapper>
-    </SidebarContent>
-  </Sidebar>
+          <div class="flex items-start justify-between gap-2">
+            <dt class="text-muted-foreground flex items-center gap-2">
+              <IconHash />
+              Node ID
+            </dt>
+            <dd class="text-right break-all">{{ node.id }}</dd>
+          </div>
+        </dl>
+      </div>
+    </OverlayScrollbarsWrapper>
+  </div>
 </template>

@@ -2,6 +2,10 @@
 import {
   BOT_CHAT_MODE_VALUES,
   BOT_CHAT_VISIBILITY_VALUES,
+  BOT_SESSION_GROUP_BY_VALUES,
+  BOT_SESSION_SORT_BY_VALUES,
+  type BotSessionGroupBy,
+  type BotSessionSortBy,
   useBotSessionFilter,
 } from "@/composables/useBotSessionFilter"
 import { IconListFilter } from "@/data/icons"
@@ -35,6 +39,18 @@ const visibilityLabel = (v: IBotSessionVisibility): string => {
   if (v === "private") return t("ai.visibilityPrivate")
   if (v === "shared") return t("ai.visibilityShared")
   return t("ai.visibilityPublic")
+}
+
+const groupByLabel = (g: BotSessionGroupBy): string => {
+  if (g === "none") return t("ai.groupByNone")
+  if (g === "date") return t("ai.groupByDate")
+  return t("ai.groupByVisibility")
+}
+
+const sortByLabel = (s: BotSessionSortBy): string => {
+  if (s === "recency") return t("ai.sortByRecency")
+  if (s === "created") return t("ai.sortByCreated")
+  return t("ai.sortByAlphabetical")
 }
 
 // The active-filter dot is anchored to the trigger so users can tell
@@ -72,19 +88,15 @@ const keepMenuOpen = (event: Event) => {
         </TooltipTrigger>
         <TooltipContent>{{ t("ai.filterSessions") }}</TooltipContent>
         <DropdownMenuContent align="end" class="w-56">
-          <DropdownMenuLabel
-            class="flex items-center justify-between gap-2 py-1"
-          >
-            <span>{{ t("ai.filterSessions") }}</span>
-            <Button
+          <DropdownMenuLabel class="flex items-center justify-between gap-2">
+            {{ t("ai.filterSessions") }}
+            <Badge
               v-if="filter.isActive.value"
               variant="ghost"
-              size="sm"
-              class="h-auto px-1 py-0.5 text-xs font-normal"
               @click.stop="filter.reset()"
             >
               {{ t("ai.filterReset") }}
-            </Button>
+            </Badge>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
@@ -141,6 +153,57 @@ const keepMenuOpen = (event: Event) => {
               >
                 {{ visibilityLabel(v) }}
               </DropdownMenuCheckboxItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSeparator />
+
+          <!-- View options: groupBy + sortBy use `DropdownMenuRadioGroup` -->
+          <!-- so the radio items handle mutual-exclusion for us. Unlike -->
+          <!-- the checkbox items above they close the menu by default, -->
+          <!-- so we don't reuse `keepMenuOpen` here — picking a sort/group -->
+          <!-- is a one-and-done choice. -->
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              {{ t("ai.groupBy") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent class="w-44">
+              <DropdownMenuRadioGroup
+                :model-value="filter.state.groupBy"
+                @update:model-value="
+                  (v) => filter.setGroupBy(v as BotSessionGroupBy)
+                "
+              >
+                <DropdownMenuRadioItem
+                  v-for="g in BOT_SESSION_GROUP_BY_VALUES"
+                  :key="g"
+                  :value="g"
+                >
+                  {{ groupByLabel(g) }}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              {{ t("ai.sortBy") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent class="w-44">
+              <DropdownMenuRadioGroup
+                :model-value="filter.state.sortBy"
+                @update:model-value="
+                  (v) => filter.setSortBy(v as BotSessionSortBy)
+                "
+              >
+                <DropdownMenuRadioItem
+                  v-for="s in BOT_SESSION_SORT_BY_VALUES"
+                  :key="s"
+                  :value="s"
+                >
+                  {{ sortByLabel(s) }}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         </DropdownMenuContent>

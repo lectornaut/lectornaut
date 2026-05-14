@@ -258,6 +258,18 @@ export const botSessionMessageSchema = z.object({
    * a single `content` text bubble.
    */
   segments: z.array(botMessageSegmentSchema).optional(),
+  /**
+   * The Firebase uid of the human who sent this message. Only populated
+   * for user-role messages (agent messages have no human author). Drives
+   * per-message avatar rendering in shared/public sessions where the
+   * session's `ownerUid` is no longer a safe proxy — admins can also
+   * post into shared chats, so the owner-uid heuristic would falsely
+   * attribute their turns to the chat creator.
+   *
+   * Absent on legacy messages saved before this field existed; the UI
+   * falls back to the session's `ownerUid` for those.
+   */
+  authorUid: z.string().optional(),
 })
 
 /**
