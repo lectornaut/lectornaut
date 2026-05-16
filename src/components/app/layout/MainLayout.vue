@@ -704,9 +704,9 @@ const closeTab = (id: string) => {
                 <ResizablePanel
                   ref="rightPanel"
                   collapsible
-                  :min-size="15"
-                  :default-size="20"
-                  :max-size="25"
+                  :min-size="25"
+                  :default-size="30"
+                  :max-size="40"
                   :collapsed-size="0"
                   as-child
                   :inert="rightPanel?.isCollapsed"
