@@ -907,9 +907,6 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     if (!existing) {
       throw new Error("Node not found")
     }
-    if (!existing.isArchived) {
-      throw new Error("Archive the node before deleting it permanently")
-    }
 
     const key = workspaceKey(scope, teamId, workspaceId)
     const { nodes, children } = getWorkspaceBuckets(key)

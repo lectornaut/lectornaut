@@ -1398,6 +1398,41 @@ export const updateTeamAgentConfig = createTypedCallable<
 >("updateTeamAgentConfig")
 
 // =============================================================================
+// Node Summarize Request/Response Types — structured output demo.
+// =============================================================================
+
+export interface SummarizeNodeRequest {
+  teamId: string
+  workspaceId: string
+  scope: "code" | "write"
+  nodeId: string
+}
+
+/**
+ * Structured summary produced by the server. Matches the Zod schema in
+ * `functions/src/botSummarize.ts` — keep both in sync. Field shapes
+ * come from `output: { schema }` on the server's `ai.generate` call.
+ */
+export interface SummarizeNodeResponse {
+  summary: string
+  keyPoints: string[]
+  suggestedTags: string[]
+  /** Wire-name of the model that produced the summary. */
+  model: string
+}
+
+/**
+ * Summarize a workspace node. Demonstrates structured output — the
+ * server uses `ai.generate({ output: { schema } })` to force the model
+ * into a JSON shape that's validated before reaching the client. No
+ * streaming; the caller blocks on the full structured payload.
+ */
+export const summarizeNode = createTypedCallable<
+  SummarizeNodeRequest,
+  SummarizeNodeResponse
+>("summarizeNode")
+
+// =============================================================================
 // Composable Hook
 // =============================================================================
 
@@ -1517,5 +1552,8 @@ export function useFunctions() {
     // Team agent config operations
     getTeamAgentConfig,
     updateTeamAgentConfig,
+
+    // Structured-output sub-flows
+    summarizeNode,
   }
 }

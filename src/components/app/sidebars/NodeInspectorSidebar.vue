@@ -32,7 +32,13 @@ const { t } = useI18n()
       </TabsList>
 
       <TabsContent value="details" class="size-full h-0 min-h-0 min-w-0 grow">
-        <NodeDetails v-if="teamId && workspaceId && node" :node="node" />
+        <NodeDetails
+          v-if="teamId && workspaceId && node"
+          :team-id="teamId"
+          :workspace-id="workspaceId"
+          :scope="scope"
+          :node="node"
+        />
         <div v-else class="text-muted-foreground p-3 text-xs">
           {{ t("inspector.details.empty") }}
         </div>

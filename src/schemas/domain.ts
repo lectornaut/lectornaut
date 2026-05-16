@@ -285,17 +285,29 @@ export const botSessionMessageSchema = z.object({
 // ─── Workspace agent (bot) config ────────────────────────────────────────────
 
 /**
- * Models the bot can be pinned to. Mirrors the server-side allowlist in
- * `functions/src/bot.ts` (`BOT_AGENT_MODELS`) — keep the two in sync. The
- * UI catalog of label/description per model lives in `helpers/defaults.ts`.
+ * Models the bot can be pinned to, spanning all three providers. Mirrors
+ * the server-side allowlist in `functions/src/bot.ts` (`BOT_AGENT_MODELS`)
+ * — keep the two in sync. The UI catalog (label/description/provider
+ * per model) lives in `helpers/defaults.ts`. Wire-name prefixes are
+ * load-bearing — the server's `resolveModel()` dispatches by prefix
+ * (`gemini-*` → Google, `claude-*` → Anthropic, `gpt-*` → OpenAI).
  */
 export const botAgentModelSchema = z.enum([
+  // Google Gemini
   "gemini-3-flash-preview",
   "gemini-2.5-pro",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
+  // Anthropic Claude
+  "claude-opus-4-5",
+  "claude-sonnet-4-5",
+  "claude-haiku-4-5",
+  // OpenAI
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gpt-4-turbo",
 ])
 
 /**
@@ -310,6 +322,19 @@ export const botAgentToolTogglesSchema = z.object({
    * clarifying question — useful for non-interactive workflows.
    */
   askQuestion: z.boolean(),
+  /**
+   * Semantic search over workspace nodes (RAG). Read-only so it's
+   * exposed in every mode, including `manual`. Disable to keep chats
+   * grounded only in the user's explicitly-attached context.
+   */
+  searchWorkspaceNodes: z.boolean(),
+  /**
+   * Structured-output summarization of a workspace node from chat.
+   * Read-only so it's exposed in every mode. Mirrors the inspector's
+   * "Generate summary" button — disable to remove the chat-driven
+   * route only (the inspector button keeps working).
+   */
+  summarizeNode: z.boolean(),
 })
 
 /**

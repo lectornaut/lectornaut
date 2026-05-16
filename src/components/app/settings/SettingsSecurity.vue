@@ -873,7 +873,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                 </Button>
                 <div class="flex gap-2">
                   <DialogClose as-child>
-                    <Button variant="ghost">{{ t("actions.cancel") }}</Button>
+                    <Button variant="outline">{{ t("actions.cancel") }}</Button>
                   </DialogClose>
                   <Button
                     :disabled="saving || !canSaveSso"

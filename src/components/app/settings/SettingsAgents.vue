@@ -4,10 +4,24 @@ import { IconRotateCcw } from "@/data/icons"
 import {
   botAgentBounds,
   botChatModes,
+  botModelProviders,
   botModels,
   defaultBotAgentConfig,
 } from "@/helpers/defaults"
 import type { IBotAgentConfig } from "@/types/domain"
+
+// Group the flat model catalog by provider for the picker. Iterating
+// `botModelProviders` first preserves the canonical display order
+// (Google → Anthropic → OpenAI) regardless of how `botModels` happens
+// to be sorted. `models` is empty when a provider has no models in the
+// allowlist; the template skips empty groups so we don't render a
+// header with nothing underneath.
+const modelsByProvider = computed(() =>
+  botModelProviders.map((provider) => ({
+    ...provider,
+    models: botModels.filter((m) => m.provider === provider.id),
+  }))
+)
 
 const { t } = useI18n()
 
@@ -134,29 +148,41 @@ const formatTopP = (value: number) => value.toFixed(2)
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectGroup>
-                          <SelectItem
-                            v-for="model in botModels"
-                            :key="model.id"
-                            :value="model.id"
-                          >
-                            <div class="flex flex-col items-start gap-0.5">
-                              <span class="flex items-center gap-2">
-                                {{ model.name }}
-                                <Badge
-                                  v-if="model.badge"
-                                  variant="secondary"
-                                  class="text-xs"
-                                >
-                                  {{ model.badge }}
-                                </Badge>
-                              </span>
-                              <span class="text-muted-foreground text-xs">
-                                {{ model.description }}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        </SelectGroup>
+                        <template
+                          v-for="(group, groupIndex) in modelsByProvider"
+                          :key="group.id"
+                        >
+                          <SelectGroup v-if="group.models.length > 0">
+                            <SelectLabel>{{ group.name }}</SelectLabel>
+                            <SelectItem
+                              v-for="model in group.models"
+                              :key="model.id"
+                              :value="model.id"
+                            >
+                              <div class="flex flex-col items-start gap-0.5">
+                                <span class="flex items-center gap-2">
+                                  {{ model.name }}
+                                  <Badge
+                                    v-if="model.badge"
+                                    variant="secondary"
+                                    class="text-xs"
+                                  >
+                                    {{ model.badge }}
+                                  </Badge>
+                                </span>
+                                <span class="text-muted-foreground text-xs">
+                                  {{ model.description }}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          </SelectGroup>
+                          <SelectSeparator
+                            v-if="
+                              group.models.length > 0 &&
+                              groupIndex < modelsByProvider.length - 1
+                            "
+                          />
+                        </template>
                       </SelectContent>
                     </Select>
                   </div>
@@ -477,6 +503,40 @@ const formatTopP = (value: number) => value.toFixed(2)
             <Switch
               id="agent-tool-ask"
               v-model="draft.tools.askQuestion"
+              :disabled="!canEdit"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-tool-search-nodes">
+                {{ t("settings.agents.tools.searchWorkspaceNodes.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{
+                  t("settings.agents.tools.searchWorkspaceNodes.description")
+                }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-tool-search-nodes"
+              v-model="draft.tools.searchWorkspaceNodes"
+              :disabled="!canEdit"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-tool-summarize-node">
+                {{ t("settings.agents.tools.summarizeNode.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.tools.summarizeNode.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-tool-summarize-node"
+              v-model="draft.tools.summarizeNode"
               :disabled="!canEdit"
             />
           </Field>

@@ -204,6 +204,20 @@
     },
     "activity": {
       "empty": "Select a file or folder to view activity history."
+    },
+    "summary": {
+      "title": "AI summary",
+      "generate": "Generate",
+      "regenerate": "Regenerate",
+      "loading": "Summarizing…",
+      "empty": "Get an AI-generated summary, key points, and topic tags for this node.",
+      "archivedHint": "Restore this node to generate a summary.",
+      "keyPoints": "Key points",
+      "tags": "Tags",
+      "modelFooter": "Generated with {model}",
+      "errorArchived": "This node is archived — restore it before summarizing.",
+      "errorNotFound": "Node not found.",
+      "errorGeneric": "Couldn't generate a summary. Try again."
     }
   },
   "actions": {
@@ -1083,6 +1097,14 @@
         "askQuestion": {
           "label": "Ask user (clarify)",
           "description": "Lets the bot pause and ask a clarifying question with choices."
+        },
+        "searchWorkspaceNodes": {
+          "label": "Search workspace",
+          "description": "Semantic search over the team's workspace nodes so the bot can pull in relevant files the user hasn't attached. Read-only — available in every mode."
+        },
+        "summarizeNode": {
+          "label": "Summarize node (chat)",
+          "description": "Lets the bot generate a structured summary (overview, key points, tags) of an attached node from inside a chat turn. Same output shape as the inspector's Generate button. Read-only — available in every mode."
         }
       },
       "limits": {

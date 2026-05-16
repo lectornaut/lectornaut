@@ -1929,12 +1929,6 @@ export const deleteWorkspaceNode = onCall(
     }
 
     const before = nodeSnap.data() ?? {}
-    if (!before.isArchived) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Node must be archived before permanent deletion."
-      )
-    }
 
     const idsToDelete = new Set<string>([nodeId])
     const queue: string[] = [nodeId]

@@ -171,55 +171,124 @@ export const defaultSize: SizeId = "base"
 // Bot agent (workspace AI client) — model catalog + per-workspace defaults.
 // ────────────────────────────────────────────────────────────────────────────
 //
-// `botModels` is the UI catalog: each entry powers one row in the model
-// dropdown. The wire-name `id` MUST match the server-side allowlist in
-// `functions/src/bot.ts` (`BOT_AGENT_MODELS`) — keep both in sync, or the
-// update callable will reject the chosen model with `invalid-argument`.
+// `botModels` is the flat UI catalog: each entry powers one row in the
+// model dropdown. Each row carries a `provider` so the model picker can
+// group entries by provider (Google / Anthropic / OpenAI). The wire-name
+// `id` MUST match the server-side allowlist in `functions/src/bot.ts`
+// (`BOT_AGENT_MODELS`) — keep both in sync, or the update callable will
+// reject the chosen model with `invalid-argument`. The server's
+// `resolveModel()` dispatches by prefix (`gemini-*` → Google,
+// `claude-*` → Anthropic, `gpt-*` → OpenAI), so introducing a new
+// family also requires updating that dispatcher.
+//
+// `botModelProviders` is the *display order* + label of the provider
+// groups; the model picker iterates this list and renders one
+// `<SelectGroup>` per provider.
 //
 // `defaultBotAgentConfig` mirrors the server's `DEFAULT_BOT_AGENT_CONFIG`.
 // We duplicate it on the client so the form has something to render before
 // the first callable response lands and so the "Reset to defaults" button
 // has a target shape.
 
+export const botModelProviders = [
+  { id: "google", name: "Google Gemini" },
+  { id: "anthropic", name: "Anthropic Claude" },
+  { id: "openai", name: "OpenAI" },
+] as const satisfies readonly { id: string; name: string }[]
+
+export type IBotModelProvider = (typeof botModelProviders)[number]["id"]
+
 export const botModels = [
+  // Google Gemini
   {
     id: "gemini-3-flash-preview",
+    provider: "google",
     name: "Gemini 3 Flash (Preview)",
     description: "Latest preview — fast, capable, multimodal.",
     badge: "Preview",
   },
   {
     id: "gemini-2.5-pro",
+    provider: "google",
     name: "Gemini 2.5 Pro",
-    description: "Most capable — best for complex reasoning.",
+    description: "Most capable Gemini — best for complex reasoning.",
     badge: "Pro",
   },
   {
     id: "gemini-2.5-flash",
+    provider: "google",
     name: "Gemini 2.5 Flash",
     description: "Balanced speed and quality.",
     badge: null,
   },
   {
     id: "gemini-2.5-flash-lite",
+    provider: "google",
     name: "Gemini 2.5 Flash Lite",
     description: "Lightweight — cheapest 2.5-class option.",
     badge: null,
   },
   {
     id: "gemini-2.0-flash",
+    provider: "google",
     name: "Gemini 2.0 Flash",
     description: "Stable, mature workhorse.",
     badge: null,
   },
   {
     id: "gemini-2.0-flash-lite",
+    provider: "google",
     name: "Gemini 2.0 Flash Lite",
-    description: "Lowest cost — best for simple queries.",
+    description: "Lowest cost Gemini — best for simple queries.",
+    badge: null,
+  },
+  // Anthropic Claude
+  {
+    id: "claude-opus-4-5",
+    provider: "anthropic",
+    name: "Claude Opus 4.5",
+    description: "Most capable Claude — long-form reasoning and writing.",
+    badge: "Opus",
+  },
+  {
+    id: "claude-sonnet-4-5",
+    provider: "anthropic",
+    name: "Claude Sonnet 4.5",
+    description: "Balanced Claude — strong general-purpose default.",
+    badge: null,
+  },
+  {
+    id: "claude-haiku-4-5",
+    provider: "anthropic",
+    name: "Claude Haiku 4.5",
+    description: "Fastest, cheapest Claude — good for quick replies.",
+    badge: null,
+  },
+  // OpenAI
+  {
+    id: "gpt-4o",
+    provider: "openai",
+    name: "GPT-4o",
+    description: "OpenAI flagship — multimodal, broad capability.",
+    badge: null,
+  },
+  {
+    id: "gpt-4o-mini",
+    provider: "openai",
+    name: "GPT-4o mini",
+    description: "Smaller, faster, and cheaper than GPT-4o.",
+    badge: null,
+  },
+  {
+    id: "gpt-4-turbo",
+    provider: "openai",
+    name: "GPT-4 Turbo",
+    description: "Previous-gen GPT-4 — stable, well-tested.",
     badge: null,
   },
 ] as const satisfies readonly {
   id: IBotAgentModel
+  provider: IBotModelProvider
   name: string
   description: string
   badge: string | null
@@ -275,6 +344,8 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     getWeather: true,
     rollDice: true,
     askQuestion: true,
+    searchWorkspaceNodes: true,
+    summarizeNode: true,
   },
   titleMaxLength: 80,
   previewMaxLength: 200,

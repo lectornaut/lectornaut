@@ -1410,7 +1410,7 @@ const handleSubmit = async () => {
 
       <DialogFooter>
         <DialogClose as-child>
-          <Button :disabled="isLoading">
+          <Button variant="outline" :disabled="isLoading">
             {{ t("common.actions.cancel") }}
           </Button>
         </DialogClose>

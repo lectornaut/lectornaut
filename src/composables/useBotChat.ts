@@ -34,6 +34,7 @@ import {
   type BotChatMode,
   type BotChatNodeRef,
 } from "@/composables/useFunctions"
+import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
 import type { WorkspaceNodeScope } from "@/types/nodes"
@@ -359,12 +360,41 @@ export function useBotChat(): BotChatContext {
     attachedNodes.value = []
   }
 
+  // Team-scoped agent config — read directly from the Pinia store so
+  // we share state with `SettingsAgents.vue`'s form. An admin saving a
+  // new default mode propagates here in the same tick; no manual
+  // invalidation or duplicate fetch. We only consume `defaultMode`
+  // (to seed the composer + reset on `startNewSession`); the store
+  // owns the writes.
+  const agentConfigStore = useAgentConfigStore()
+  const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+  const teamDefaultMode = computed<BotChatMode>(
+    () => teamAgentConfig.value.defaultMode ?? DEFAULT_BOT_CHAT_MODE
+  )
+
   // Action-context mode for the next send. Plain ref (not persisted on
   // the session doc) — the user can flip modes mid-conversation and the
-  // server applies the chosen mode to the active turn only. Defaulting
-  // here means new chats start in `auto`; switching sessions doesn't
-  // reset because the composable instance lives across the page lifetime.
-  const mode = ref<BotChatMode>(DEFAULT_BOT_CHAT_MODE)
+  // server applies the chosen mode to the active turn only. Initialized
+  // to the team default (admin-configurable in Settings → Agents) then
+  // carried across turns. Seeded with whatever `teamDefaultMode` resolves
+  // to synchronously (the cached `defaultBotAgentConfig` fallback in
+  // `useAgentConfig` makes this non-null from the first read).
+  const mode = ref<BotChatMode>(teamDefaultMode.value)
+  // Re-seed when the team's defaultMode flips IFF no chat is in progress
+  // — i.e. no messages exchanged AND no session pinned. This catches:
+  //   - initial async resolution after the team's config doc loads
+  //     (the synchronous seed above was based on the local defaults)
+  //   - team switches (currentTeamId flips, agent config refetches)
+  //   - admin saves a new default while the user is sitting on an empty
+  //     composer — still pristine, so it's safe to apply.
+  // The condition deliberately doesn't track "user clicked the mode
+  // dropdown but hasn't sent yet": admin saves are rare, and racing
+  // them against an unsent user pick isn't worth the state machine.
+  watch(teamDefaultMode, (next) => {
+    if (messages.value.length === 0 && sessionId.value === null) {
+      mode.value = next
+    }
+  })
   const activeModeOption = computed<BotChatModeOption>(
     () =>
       BOT_CHAT_MODE_OPTIONS.find((o) => o.value === mode.value) ??
@@ -557,6 +587,11 @@ export function useBotChat(): BotChatContext {
     // unrelated new chat.
     attachedNodes.value = []
     pendingPinnedNode.value = null
+    // Reset to the team's configured default mode. The user's prior
+    // pick was scoped to the just-ended conversation; a new chat should
+    // start from the admin's preference (Settings → Agents → Default
+    // mode). Falls back to `auto` if the agent config hasn't loaded.
+    mode.value = teamDefaultMode.value
   }
 
   /**

@@ -425,7 +425,9 @@ const startOnboarding = () => {
           </DialogHeader>
           <DialogFooter class="grid grid-cols-1 gap-2">
             <DialogClose as-child>
-              <Button> {{ $t("components.support.sendRequest") }} </Button>
+              <Button variant="outline">
+                {{ $t("components.support.sendRequest") }}
+              </Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>

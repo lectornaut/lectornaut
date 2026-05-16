@@ -23,6 +23,8 @@
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@genkit-ai/anthropic": "^0.2.0",
+    "@genkit-ai/compat-oai": "^1.34.0",
     "@genkit-ai/firebase": "^1.34.0",
     "@genkit-ai/google-genai": "^1.34.0",
     "@google-cloud/functions-framework": "5.0.2",

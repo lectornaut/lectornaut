@@ -28,7 +28,6 @@
  * `updateBotSessionVisibility` callable.
  */
 
-import { googleAI } from "@genkit-ai/google-genai"
 import { onCallGenkit } from "firebase-functions/https"
 import {
   HttpsError,
@@ -37,9 +36,11 @@ import {
 } from "firebase-functions/v2/https"
 import { z, type SessionData, type SessionStore } from "genkit/beta"
 import { admin, db } from "./firebase.js"
-import { ai } from "./genkitClient.js"
+import { ai, resolveModel } from "./genkitClient.js"
+import { searchWorkspaceNodesTool } from "./botRag.js"
+import { summarizeNodeTool } from "./botSummarize.js"
 import { CALLABLE_OPTS, GENKIT_OPTS } from "./runtimeConfig.js"
-import { geminiApiKey } from "./secrets.js"
+import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
 import type { IMembershipRole } from "./types.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
@@ -521,14 +522,22 @@ const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
 
 /**
  * Action context shape — what flows into Genkit's `chat({ context })` and
- * shows up as the second argument of every tool handler. Includes the
- * existing Firebase auth (already validated at the callable boundary) so
- * tools can do uid-based filtering, plus the chat mode for capability
- * gating. Add fields here when introducing context-aware features.
+ * shows up as the second argument of every tool handler. Includes:
+ *
+ *   - `auth`     — verified Firebase identity (already gated at the
+ *                  callable boundary; tools use it for uid-scoped reads).
+ *   - `mode`     — current chat mode, for capability gating inside tools.
+ *   - `teamId` / `workspaceId` — the workspace the chat is bound to. Used
+ *                  by workspace-aware tools like `searchWorkspaceNodes`
+ *                  to scope retrieval (the model can't override these).
+ *
+ * Add fields here when introducing context-aware features.
  */
 interface BotActionContext {
   auth?: { uid: string }
   mode: BotChatMode
+  teamId: string
+  workspaceId: string
 }
 
 // ===========================================================================
@@ -686,17 +695,33 @@ const INTERRUPT_TOOL_NAMES = new Set<string>(["askQuestion"])
 // can read it.
 
 /**
- * Allowlist of model wire-names. Picked manually so a typo in the
- * settings UI can't route a chat to a non-existent or private model;
- * the Zod enum on the update path enforces the same set.
+ * Allowlist of model wire-names spanning all three providers (Google,
+ * Anthropic, OpenAI). Picked manually so a typo in the settings UI can't
+ * route a chat to a non-existent or private model; the Zod enum on the
+ * update path enforces the same set.
+ *
+ * Prefix conventions are also load-bearing — `resolveModel(name)` in
+ * `genkitClient.ts` dispatches by prefix (`gemini-*`, `claude-*`,
+ * `gpt-*`/`o1-*`/`o3-*`). Adding a model here that doesn't match one of
+ * those prefixes will throw at chat time. To add a new family, extend
+ * `resolveModel` first, then this list.
  */
 const BOT_AGENT_MODELS = [
+  // Google Gemini
   "gemini-3-flash-preview",
   "gemini-2.5-pro",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
+  // Anthropic Claude
+  "claude-opus-4-5",
+  "claude-sonnet-4-5",
+  "claude-haiku-4-5",
+  // OpenAI
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gpt-4-turbo",
 ] as const
 
 type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
@@ -710,6 +735,18 @@ interface BotAgentToolToggles {
    * wants strictly non-interactive replies (e.g. background jobs).
    */
   askQuestion: boolean
+  /**
+   * Semantic search over workspace nodes (RAG). Read-only so it's
+   * exposed in every mode, including `manual`. Disable to keep chats
+   * grounded only in the user's explicitly-attached context.
+   */
+  searchWorkspaceNodes: boolean
+  /**
+   * Structured-output summarization of a workspace node. Read-only so
+   * it's exposed in every mode. Mirrors the inspector's "Generate
+   * summary" button — disable to remove the chat-driven route only.
+   */
+  summarizeNode: boolean
 }
 
 interface BotAgentConfig {
@@ -754,6 +791,8 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
     getWeather: true,
     rollDice: true,
     askQuestion: true,
+    searchWorkspaceNodes: true,
+    summarizeNode: true,
   },
   titleMaxLength: TITLE_MAX_LENGTH,
   previewMaxLength: PREVIEW_MAX_LENGTH,
@@ -817,6 +856,8 @@ const botAgentConfigUpdateSchema = z.object({
       getWeather: z.boolean(),
       rollDice: z.boolean(),
       askQuestion: z.boolean(),
+      searchWorkspaceNodes: z.boolean(),
+      summarizeNode: z.boolean(),
     })
     .partial()
     .optional(),
@@ -918,6 +959,14 @@ function applyAgentConfigOverrides(
       typeof rawTools.askQuestion === "boolean"
         ? rawTools.askQuestion
         : DEFAULT_BOT_AGENT_CONFIG.tools.askQuestion,
+    searchWorkspaceNodes:
+      typeof rawTools.searchWorkspaceNodes === "boolean"
+        ? rawTools.searchWorkspaceNodes
+        : DEFAULT_BOT_AGENT_CONFIG.tools.searchWorkspaceNodes,
+    summarizeNode:
+      typeof rawTools.summarizeNode === "boolean"
+        ? rawTools.summarizeNode
+        : DEFAULT_BOT_AGENT_CONFIG.tools.summarizeNode,
   }
 
   const defaultMode =
@@ -975,7 +1024,15 @@ function applyAgentConfigOverrides(
   }
 }
 
-async function loadTeamAgentConfig(teamId: string): Promise<BotAgentConfig> {
+/**
+ * Load the effective agent config for a team. Exported so sibling
+ * sub-flows (e.g. `botSummarize.ts`) can use the team's chosen model +
+ * generation knobs without duplicating the Firestore read + merge
+ * logic.
+ */
+export async function loadTeamAgentConfig(
+  teamId: string
+): Promise<BotAgentConfig> {
   const snap = await db.doc(agentConfigDocPath(teamId)).get()
   if (!snap.exists) return { ...DEFAULT_BOT_AGENT_CONFIG }
   return applyAgentConfigOverrides(snap.data())
@@ -1179,6 +1236,12 @@ function buildContextPromptBlock(entries: NodeContextEntry[]): string {
   for (const entry of entries) {
     const scopeLabel = entry.scope === "code" ? "Code" : "Write"
     lines.push(`## ${scopeLabel} ${entry.type}: ${entry.name}`)
+    // Surface scope + nodeId so tools that take a node ref
+    // (e.g. `summarizeNode`) can be invoked against an attached node.
+    // The model uses these IDs to call the tool; the user just sees the
+    // friendly heading above. Kept on a single subtle line so it doesn't
+    // crowd the rendered prompt for the model.
+    lines.push(`_node ref: scope=\`${entry.scope}\`, id=\`${entry.nodeId}\`_`)
     if (entry.type === "folder") {
       lines.push("_(folder — no inline content)_")
     } else if (entry.content) {
@@ -1250,6 +1313,8 @@ function pinnedNodeKey(
  *   - Mode strips action tools in `manual` (existing behavior).
  *   - Workspace-level toggles strip individual tools regardless of mode.
  *   - Interrupt tools (askQuestion) are gateable too — opt-in disable.
+ *   - Read-only tools (searchWorkspaceNodes) are exposed in every mode
+ *     including `manual` since they only retrieve, never act.
  */
 function pickChatTools(config: BotAgentConfig, mode: BotChatMode) {
   const modeAllowsActionTools = MODE_CONFIG[mode].actionToolsEnabled
@@ -1258,6 +1323,8 @@ function pickChatTools(config: BotAgentConfig, mode: BotChatMode) {
     tools.push(getWeatherTool)
   if (modeAllowsActionTools && config.tools.rollDice) tools.push(rollDiceTool)
   if (config.tools.askQuestion) tools.push(askQuestionTool)
+  if (config.tools.searchWorkspaceNodes) tools.push(searchWorkspaceNodesTool)
+  if (config.tools.summarizeNode) tools.push(summarizeNodeTool)
   return tools
 }
 
@@ -1275,7 +1342,7 @@ function pickChatTools(config: BotAgentConfig, mode: BotChatMode) {
  * TypeScript's flaky narrowing of property accesses like `request.auth.uid`
  * across the call boundary.
  */
-function requireVerifiedAuth(auth: AuthData | undefined): AuthData {
+export function requireVerifiedAuth(auth: AuthData | undefined): AuthData {
   if (!auth) {
     throw new HttpsError("unauthenticated", "Sign-in required.")
   }
@@ -1292,7 +1359,7 @@ function requireVerifiedAuth(auth: AuthData | undefined): AuthData {
  * Read the caller's membership doc and return their role. Throws if the
  * caller has no membership in the team.
  */
-async function getMembershipRole(
+export async function getMembershipRole(
   teamId: string,
   uid: string
 ): Promise<IMembershipRole> {
@@ -1701,11 +1768,15 @@ const sendBotMessageFlow = ai.defineFlow(
 
     // Build the action context for this turn. `auth` mirrors the existing
     // verified Firebase identity; `mode` is the per-turn capability gate
-    // chosen in the composer dropdown. Tools get the full object via
-    // their second handler arg.
+    // chosen in the composer dropdown; `teamId`/`workspaceId` scope any
+    // workspace-aware tool (e.g. `searchWorkspaceNodes`) to the calling
+    // user's workspace — the model controls only the query, not the
+    // collection. Tools get the full object via their second handler arg.
     const actionContext: BotActionContext = {
       auth: { uid: auth.uid },
       mode,
+      teamId,
+      workspaceId,
     }
 
     // `manual` strips action tools so even a jailbroken prompt can't get
@@ -1729,7 +1800,7 @@ const sendBotMessageFlow = ai.defineFlow(
       : baseSystem
 
     const chat = session.chat({
-      model: googleAI.model(agentConfig.model),
+      model: resolveModel(agentConfig.model),
       system: systemPrompt,
       tools: chatTools,
       context: actionContext,
@@ -1761,7 +1832,7 @@ const sendBotMessageFlow = ai.defineFlow(
 export const sendBotMessage = onCallGenkit(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey],
+    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },
@@ -2000,6 +2071,8 @@ const respondToBotInterruptFlow = ai.defineFlow(
     const actionContext: BotActionContext = {
       auth: { uid: auth.uid },
       mode,
+      teamId,
+      workspaceId,
     }
     const chatTools = pickChatTools(agentConfig, mode)
 
@@ -2020,7 +2093,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
     // Genkit appends the toolResponse to the message history and lets
     // the model continue.
     const chat = session.chat({
-      model: googleAI.model(agentConfig.model),
+      model: resolveModel(agentConfig.model),
       system: systemPrompt,
       tools: chatTools,
       context: actionContext,
@@ -2073,7 +2146,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
 export const respondToBotInterrupt = onCallGenkit(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey],
+    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },
