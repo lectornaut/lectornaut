@@ -284,6 +284,14 @@ export const botSessionMessageSchema = z.object({
  */
 // ─── Workspace agent (bot) config ────────────────────────────────────────────
 
+export const botAgentProviderSchema = z.enum(["google", "anthropic", "openai"])
+
+export const botAgentProviderTogglesSchema = z.object({
+  google: z.boolean(),
+  anthropic: z.boolean(),
+  openai: z.boolean(),
+})
+
 /**
  * Models the bot can be pinned to, spanning all three providers. Mirrors
  * the server-side allowlist in `functions/src/bot.ts` (`BOT_AGENT_MODELS`)
@@ -350,6 +358,7 @@ export const botAgentDefaultModeSchema = z.enum(["auto", "agent", "manual"])
  * UI form binds against this shape.
  */
 export const botAgentConfigSchema = z.object({
+  providers: botAgentProviderTogglesSchema,
   model: botAgentModelSchema,
   temperature: z.number().min(0).max(2),
   topP: z.number().min(0).max(1),

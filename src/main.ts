@@ -16,6 +16,11 @@ import "@geoql/v-maplibre/dist/v-maplibre.css"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
 import "maplibre-gl/dist/maplibre-gl.css"
+import {
+  enableKatex,
+  enableMermaid,
+  preloadCodeBlockRuntime,
+} from "markstream-vue"
 import { ClickScrollPlugin, OverlayScrollbars } from "overlayscrollbars"
 import "overlayscrollbars/overlayscrollbars.scriptingenabled.css"
 import { createPinia } from "pinia"
@@ -47,6 +52,20 @@ initDeepLink()
 initHotkeys()
 initPwa()
 initSync()
+
+// Explicit opt-in for KaTeX (`$inline$` / `$$block$$` math) and
+// Mermaid (` ```mermaid ` blocks). markstream-vue would auto-enable
+// these the moment their peer packages exist in node_modules, but
+// stating intent in code protects against a peer being silently
+// removed in a future cleanup pass.
+enableKatex()
+enableMermaid()
+
+// Warm the Shiki highlighter (via `stream-markdown`) off the critical
+// path so the first fenced code block in a chat bubble or changelog
+// entry doesn't pay the cold-start parse cost. No-op when no code-block
+// runtime peer is installed.
+preloadCodeBlockRuntime()
 
 // Order matters: authReady must resolve before router.isReady() so the
 // initial navigation guard sees a settled `auth.currentUser`.

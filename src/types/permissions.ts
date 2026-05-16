@@ -1,8 +1,8 @@
 /**
- * Re-exports from the shared permissions module (single source of truth).
+ * Re-exports from the @lectornaut/shared workspace package (single source of truth).
  *
  * Client code should continue importing from "@/types/permissions" — this file
- * simply delegates to the canonical definitions in shared/permissions.ts.
+ * simply delegates to the canonical definitions in the shared workspace package.
  */
 export {
   Capabilities,
@@ -13,4 +13,4 @@ export {
   type IMembershipRole,
   type PermissionContext,
   type Scope,
-} from "@shared/permissions"
+} from "@lectornaut/shared/permissions"

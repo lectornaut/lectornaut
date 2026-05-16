@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { ResizablePanel } from "@/components/ui/resizable"
 import { useSidebar } from "@/components/ui/sidebar"
 import {
   IconArrowBigUp,

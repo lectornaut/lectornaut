@@ -6,27 +6,19 @@ import {
   botChatModes,
   botModelProviders,
   botModels,
+  defaultBotModelProviderToggles,
   defaultBotAgentConfig,
 } from "@/helpers/defaults"
-import type { IBotAgentConfig } from "@/types/domain"
-
-// Group the flat model catalog by provider for the picker. Iterating
-// `botModelProviders` first preserves the canonical display order
-// (Google → Anthropic → OpenAI) regardless of how `botModels` happens
-// to be sorted. `models` is empty when a provider has no models in the
-// allowlist; the template skips empty groups so we don't render a
-// header with nothing underneath.
-const modelsByProvider = computed(() =>
-  botModelProviders.map((provider) => ({
-    ...provider,
-    models: botModels.filter((m) => m.provider === provider.id),
-  }))
-)
+import type { IBotAgentConfig, IBotModelProvider } from "@/types/domain"
 
 const { t } = useI18n()
 
 const cloneConfig = (source: IBotAgentConfig): IBotAgentConfig => ({
   ...source,
+  providers: {
+    ...defaultBotModelProviderToggles,
+    ...source.providers,
+  },
   promptSuffixes: { ...source.promptSuffixes },
   tools: { ...source.tools },
 })
@@ -64,6 +56,63 @@ const isDirty = computed(
   () => JSON.stringify(draft.value) !== JSON.stringify(config.value)
 )
 
+const availableModels = computed(() =>
+  botModels.filter((model) => draft.value.providers[model.provider])
+)
+
+// Group the flat model catalog by enabled provider for the picker.
+// Iterating `botModelProviders` first preserves the canonical display
+// order (Google → Anthropic → OpenAI) regardless of how `botModels` is
+// sorted.
+const modelsByProvider = computed(() =>
+  botModelProviders
+    .map((provider) => ({
+      ...provider,
+      models: draft.value.providers[provider.id]
+        ? botModels.filter((model) => model.provider === provider.id)
+        : [],
+    }))
+    .filter((group) => group.models.length > 0)
+)
+
+const enabledProviderCount = computed(
+  () =>
+    botModelProviders.filter((provider) => draft.value.providers[provider.id])
+      .length
+)
+
+const isLastEnabledProvider = (providerId: IBotModelProvider) =>
+  draft.value.providers[providerId] && enabledProviderCount.value <= 1
+
+const getProviderModelCount = (providerId: IBotModelProvider) =>
+  botModels.filter((model) => model.provider === providerId).length
+
+const ensureSelectedModelIsAvailable = () => {
+  if (availableModels.value.some((model) => model.id === draft.value.model)) {
+    return
+  }
+  draft.value.model =
+    availableModels.value[0]?.id ?? defaultBotAgentConfig.model
+}
+
+const setProviderEnabled = (
+  providerId: IBotModelProvider,
+  enabled: boolean
+) => {
+  if (!enabled && isLastEnabledProvider(providerId)) return
+
+  draft.value.providers[providerId] = enabled
+  ensureSelectedModelIsAvailable()
+}
+
+watch(
+  () => draft.value.providers,
+  () => {
+    ensureSelectedModelIsAvailable()
+  },
+  { deep: true }
+)
+
 // Slider bindings — reka-ui's Slider expects an array model even for
 // single-thumb usage. These computed wrappers translate between the
 // scalar field on the draft and the [n] array the slider needs.
@@ -88,6 +137,7 @@ const handleSave = async () => {
   // payload is small (<2 KB) so there's no real cost.
   await save({
     model: draft.value.model,
+    providers: { ...draft.value.providers },
     temperature: draft.value.temperature,
     topP: draft.value.topP,
     topK: draft.value.topK,
@@ -122,6 +172,67 @@ const formatTopP = (value: number) => value.toFixed(2)
         <Spinner />
       </div>
       <FieldGroup v-else>
+        <!-- Providers -->
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.agents.providers.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.providers.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
+
+          <TooltipProvider>
+            <Field
+              v-for="provider in botModelProviders"
+              :key="provider.id"
+              orientation="horizontal"
+            >
+              <FieldContent>
+                <FieldLabel :for="`agent-provider-${provider.id}`">
+                  {{ provider.name }}
+                </FieldLabel>
+                <FieldDescription>
+                  {{
+                    t(`settings.agents.providers.${provider.id}.description`, {
+                      count: getProviderModelCount(provider.id),
+                    })
+                  }}
+                </FieldDescription>
+              </FieldContent>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <span class="inline-block">
+                    <Switch
+                      :id="`agent-provider-${provider.id}`"
+                      :model-value="draft.providers[provider.id]"
+                      :disabled="!canEdit || isLastEnabledProvider(provider.id)"
+                      @update:model-value="
+                        (value) =>
+                          setProviderEnabled(provider.id, Boolean(value))
+                      "
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent
+                  v-if="!canEdit || isLastEnabledProvider(provider.id)"
+                >
+                  {{
+                    !canEdit
+                      ? cannotEditReason
+                      : t("settings.agents.providers.minimumRequired")
+                  }}
+                </TooltipContent>
+              </Tooltip>
+            </Field>
+          </TooltipProvider>
+        </FieldSet>
+
+        <FieldSeparator />
+
         <!-- Model -->
         <FieldSet>
           <Field orientation="horizontal">

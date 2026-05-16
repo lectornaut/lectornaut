@@ -4,6 +4,8 @@ import type {
   botAgentConfigSchema,
   botAgentDefaultModeSchema,
   botAgentModelSchema,
+  botAgentProviderSchema,
+  botAgentProviderTogglesSchema,
   botAgentToolTogglesSchema,
   botChatRoleSchema,
   botMessageSegmentSchema,
@@ -59,6 +61,10 @@ export type IBotSessionMessage = z.infer<typeof botSessionMessageSchema>
 export type IBotMessageSegment = z.infer<typeof botMessageSegmentSchema>
 export type IBotToolCall = z.infer<typeof botToolCallSchema>
 
+export type IBotModelProvider = z.infer<typeof botAgentProviderSchema>
+export type IBotAgentProviderToggles = z.infer<
+  typeof botAgentProviderTogglesSchema
+>
 export type IBotAgentModel = z.infer<typeof botAgentModelSchema>
 export type IBotAgentDefaultMode = z.infer<typeof botAgentDefaultModeSchema>
 export type IBotAgentToolToggles = z.infer<typeof botAgentToolTogglesSchema>

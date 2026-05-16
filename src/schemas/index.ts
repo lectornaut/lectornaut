@@ -6,7 +6,6 @@
  * — it keeps the dependency graph flat and makes tree-shaking predictable.
  *
  * Layout:
- *   _dev         — shouldValidate flag and env-flag gating
  *   _primitives  — shared timestamp primitives (Timestamp, FieldValue)
  *   _registry    — Firestore path → schema pair lookup (populated in PR 4)
  *   _utils       — parseSafe, parseOrWarn, assertValid, zodConverter,
@@ -24,7 +23,6 @@
  *   sync         — outbox operation + sync mutate payload
  */
 
-export * from "./_dev"
 export * from "./_primitives"
 export * from "./_registry"
 export * from "./_utils"

@@ -7,7 +7,6 @@ import {
   type SnapshotOptions,
 } from "firebase/firestore"
 import type { ZodError, ZodObject, ZodRawShape, ZodType } from "zod"
-import { isDev, shouldValidate } from "./_dev"
 
 /**
  * Schema validation utilities shared across every boundary.
@@ -82,15 +81,16 @@ export function setSchemaViolationSink(sink: Sink): void {
  * Non-throwing: logs on failure and returns null. Use for streaming reads
  * where one corrupt row must not throw the whole list.
  *
- * When `shouldValidate` is false (prod default), the raw cast is returned
- * without running the schema — zero overhead on the hot path.
+ * In prod, returns the raw cast without running the schema — zero overhead
+ * on the hot path. The dev/prod gate is a compile-time constant, so the
+ * branch is eliminated by the minifier in production builds.
  */
 export function parseSafe<T>(
   schema: ZodType<T>,
   data: unknown,
   context: string
 ): T | null {
-  if (!shouldValidate) return data as T
+  if (!import.meta.env.DEV) return data as T
   const result = schema.safeParse(data)
   if (result.success) return result.data
   violationSink({ context, error: result.error, raw: data })
@@ -98,8 +98,9 @@ export function parseSafe<T>(
 }
 
 /**
- * Read-path default. In dev, throws on failure (loud). In prod, logs and
- * returns the raw cast so the UI still renders.
+ * Read-path default. In dev, throws on failure (loud). In prod, skips
+ * validation entirely and returns the raw cast — zero overhead on the
+ * hot path, dead branch eliminated by the minifier.
  *
  * Used inside `zodConverter`, so every Firestore snapshot flows through it.
  */
@@ -108,18 +109,17 @@ export function parseOrWarn<T>(
   data: unknown,
   context: string
 ): T {
-  if (!shouldValidate) return data as T
+  if (!import.meta.env.DEV) return data as T
   const result = schema.safeParse(data)
   if (result.success) return result.data
   violationSink({ context, error: result.error, raw: data })
-  if (isDev) throw result.error
-  return data as T
+  throw result.error
 }
 
 /**
  * Write-path default. Throws in dev AND prod. Blocks bad data reaching
- * Firestore. Ignores `shouldValidate` — bad writes are rare, expensive,
- * and worth the overhead.
+ * Firestore. Runs unconditionally — bad writes are rare, expensive, and
+ * worth the overhead.
  */
 export function assertValid<T>(
   schema: ZodType<T>,
@@ -220,13 +220,16 @@ export function zodConverter<T extends DocumentData>(
 /**
  * Validate a Firestore `.update()` / `.set(…, { merge: true })` payload.
  *
+ * In prod, the entire function body is eliminated by the minifier — all
+ * keys pass through without validation. The rules below apply in dev.
+ *
  * Rules:
  *   - FieldValue sentinels (serverTimestamp, arrayUnion, increment, …)
  *     pass through without validation.
  *   - Dotted field paths like `"billing.stripeCustomerId"` pass through.
  *     Resolving nested schemas is complex and the benefit is small —
  *     Firestore security rules guard structural integrity.
- *   - Unknown keys warn in dev, pass in prod.
+ *   - Unknown keys warn (and pass).
  *   - Flat keys with plain values are validated against the field's own
  *     schema in isolation. Invalid values throw `SchemaValidationError`.
  */
@@ -235,16 +238,14 @@ export function validatePartialUpdate(
   data: Record<string, unknown>,
   context: string
 ): Record<string, unknown> {
-  if (!shouldValidate) return data
+  if (!import.meta.env.DEV) return data
   const shape = schema.shape as Record<string, ZodType<unknown>>
   for (const [key, value] of Object.entries(data)) {
     if (value instanceof FieldValue) continue
     if (key.includes(".")) continue
     const fieldSchema = shape[key]
     if (!fieldSchema) {
-      if (isDev) {
-        console.warn(`[schema] ${context}: unknown field "${key}"`, value)
-      }
+      console.warn(`[schema] ${context}: unknown field "${key}"`, value)
       continue
     }
     const result = fieldSchema.safeParse(value)

@@ -1,4 +1,4 @@
-import { MEMBERSHIP_ROLES } from "@shared/permissions"
+import { MEMBERSHIP_ROLES } from "@lectornaut/shared/permissions"
 import { z } from "zod"
 import { timestampInputSchema, timestampSchema } from "./_primitives"
 import { teamSchema, userProfileSchema } from "./domain"

@@ -469,7 +469,7 @@ const onArchiveToggle = (session: IBotSession) => {
                             class="h-auto items-start gap-2 py-2 pr-8 opacity-70"
                             @click="onSelectSession(item.id)"
                           >
-                            <IconArchive class="mt-0.5 shrink-0" />
+                            <IconArchive />
                             <span class="flex min-w-0 grow flex-col">
                               <span class="truncate text-sm">
                                 {{ item.title || t("ai.untitledSession") }}

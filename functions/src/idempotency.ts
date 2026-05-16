@@ -3,10 +3,6 @@ import { admin, db } from "./firebase.js"
 
 const DEFAULT_EVENT_LOCK_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const DEFAULT_STALE_PROCESSING_MS = 10 * 60 * 1000
-// Disabled by default to minimize per-event Firestore read/write overhead.
-const IDEMPOTENCY_LOCKS_ENABLED =
-  process.env.ENABLE_IDEMPOTENCY_LOCKS === "true" ||
-  process.env.ENABLE_IDEMPOTENCY_LOCKS === "1"
 
 type EventLockStatus = "processing" | "done" | "error"
 
@@ -47,11 +43,6 @@ export async function runIdempotentEvent(
   options: RunIdempotentEventOptions,
   action: () => Promise<void>
 ): Promise<{ executed: boolean }> {
-  if (!IDEMPOTENCY_LOCKS_ENABLED) {
-    await action()
-    return { executed: true }
-  }
-
   const now = Date.now()
   const ttlMs = Math.max(60_000, options.ttlMs ?? DEFAULT_EVENT_LOCK_TTL_MS)
   const staleProcessingMs = Math.max(
@@ -127,10 +118,6 @@ export async function runIdempotentEvent(
 export async function cleanupExpiredIdempotencyLocks(
   options: { batchSize: number } = { batchSize: 450 }
 ): Promise<number> {
-  if (!IDEMPOTENCY_LOCKS_ENABLED) {
-    return 0
-  }
-
   const batchSize = Math.max(1, Math.min(450, options.batchSize))
   const now = admin.firestore.Timestamp.now()
   let totalDeleted = 0

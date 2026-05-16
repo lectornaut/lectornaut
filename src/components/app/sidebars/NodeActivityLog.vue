@@ -221,7 +221,7 @@ useInfiniteScroll(
 
         <div v-else-if="error" class="space-y-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
-            <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+            <IconAlertTriangle />
             <span>{{ error }}</span>
           </div>
           <Button variant="secondary" class="w-full" @click="refreshLogs">

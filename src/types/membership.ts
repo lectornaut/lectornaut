@@ -20,7 +20,7 @@ export {
   isMembershipRole,
   MEMBERSHIP_ROLES,
   type IMembershipRole,
-} from "@shared/permissions"
+} from "@lectornaut/shared/permissions"
 
 export type IMembershipRecord = z.infer<typeof membershipRecordSchema>
 export type IMembershipUserSnapshot = z.infer<

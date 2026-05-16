@@ -241,6 +241,32 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "code",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "embedding",
+          "vectorConfig": {
+            "dimension": 768,
+            "flat": {}
+          }
+        }
+      ]
+    },
+    {
+      "collectionGroup": "write",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "embedding",
+          "vectorConfig": {
+            "dimension": 768,
+            "flat": {}
+          }
+        }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -269,32 +295,6 @@
         {
           "order": "DESCENDING",
           "queryScope": "COLLECTION_GROUP"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "code",
-      "fieldPath": "embedding",
-      "indexes": [
-        {
-          "queryScope": "COLLECTION",
-          "vectorConfig": {
-            "dimension": 768,
-            "flat": {}
-          }
-        }
-      ]
-    },
-    {
-      "collectionGroup": "write",
-      "fieldPath": "embedding",
-      "indexes": [
-        {
-          "queryScope": "COLLECTION",
-          "vectorConfig": {
-            "dimension": 768,
-            "flat": {}
-          }
         }
       ]
     }

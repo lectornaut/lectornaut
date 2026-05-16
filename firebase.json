@@ -19,7 +19,7 @@
   "functions": [
     {
       "runtime": "nodejs22",
-      "source": "functions",
+      "source": "functions-deploy",
       "codebase": "default",
       "ignore": [
         "node_modules",
@@ -28,7 +28,7 @@
         "firebase-debug.*.log",
         "*.local"
       ],
-      "predeploy": ["pnpm --prefix \"$RESOURCE_DIR\" run build"]
+      "predeploy": ["pnpm --prefix functions run build"]
     }
   ]
 }

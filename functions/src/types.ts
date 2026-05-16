@@ -161,8 +161,8 @@ export const normalizeComparable = (value: unknown): number | string | null => {
 }
 
 // ============================================================================
-// Permission & Role Types — re-exported from shared single source of truth.
-// The shared/ directory is copied into src/shared/ at build time.
+// Permission & Role Types — re-exported via the local permissions shim, which
+// in turn re-exports from shared/permissions.ts (the single source of truth).
 // ============================================================================
 
 export {
@@ -179,9 +179,9 @@ export {
   type IMembershipRole,
   type PermissionContext,
   type Scope,
-} from "./shared/permissions.js"
+} from "./permissions.js"
 
-import type { IMembershipRole } from "./shared/permissions.js"
+import type { IMembershipRole } from "./permissions.js"
 
 // Types that are only used in functions (not shared with client)
 export type NodeType = "folder" | "file"

@@ -264,7 +264,6 @@ const submitDelete = async () => {
               <RadioGroupItem
                 :id="`bot-mode-${opt.value}`"
                 :value="opt.value"
-                class="mt-0.5"
               />
               <FieldContent>
                 <FieldLabel
@@ -444,7 +443,6 @@ const submitDelete = async () => {
                 :id="`bot-visibility-${opt.value}`"
                 :value="opt.value"
                 :disabled="opt.disabled"
-                class="mt-0.5"
               />
               <FieldContent>
                 <FieldLabel

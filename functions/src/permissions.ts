@@ -1,7 +1,8 @@
 /**
- * Re-exports from the shared permissions module (single source of truth).
+ * Re-exports from the @lectornaut/shared workspace package (single source of truth).
  *
- * Functions code should continue importing from "./permissions.js" — this file
- * simply delegates to the canonical definitions copied from shared/ at build time.
+ * Functions code should import from "./permissions.js" — this shim delegates
+ * to the workspace package. At build time, esbuild inlines the shared module
+ * into the deploy bundle, so it doesn't need to be installed in Cloud Build.
  */
-export { can, roleCan } from "./shared/permissions.js"
+export * from "@lectornaut/shared/permissions"

@@ -35,10 +35,15 @@ import {
   type CallableRequest,
 } from "firebase-functions/v2/https"
 import { z, type SessionData, type SessionStore } from "genkit/beta"
-import { admin, db } from "./firebase.js"
-import { ai, resolveModel } from "./genkitClient.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
+import { admin, db } from "./firebase.js"
+import {
+  ai,
+  assertAiModelProviderConfigured,
+  isAiModelProviderConfigured,
+  resolveModel,
+} from "./genkitClient.js"
 import { CALLABLE_OPTS, GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
 import type { IMembershipRole } from "./types.js"
@@ -530,6 +535,8 @@ const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
  *   - `teamId` / `workspaceId` — the workspace the chat is bound to. Used
  *                  by workspace-aware tools like `searchWorkspaceNodes`
  *                  to scope retrieval (the model can't override these).
+ *   - `googleProviderEnabled` — whether Google-backed tools such as
+ *                  workspace semantic search are allowed for this team.
  *
  * Add fields here when introducing context-aware features.
  */
@@ -538,6 +545,7 @@ interface BotActionContext {
   mode: BotChatMode
   teamId: string
   workspaceId: string
+  googleProviderEnabled: boolean
 }
 
 // ===========================================================================
@@ -683,6 +691,7 @@ const INTERRUPT_TOOL_NAMES = new Set<string>(["askQuestion"])
 // concern, not a per-workspace one. The doc is read on every chat turn
 // (one extra Firestore read per send — negligible against model latency)
 // and used to drive:
+//   - provider availability (Google / Anthropic / OpenAI)
 //   - the model passed to `session.chat({ model })`
 //   - the system prompt (base + per-mode suffix)
 //   - generation knobs (temperature, topP, topK, maxOutputTokens)
@@ -693,6 +702,10 @@ const INTERRUPT_TOOL_NAMES = new Set<string>(["askQuestion"])
 // field-by-field, so teams without a config doc keep working without a
 // migration. Only owners + admins can write the doc; every team member
 // can read it.
+
+const BOT_MODEL_PROVIDERS = ["google", "anthropic", "openai"] as const
+
+type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
 
 /**
  * Allowlist of model wire-names spanning all three providers (Google,
@@ -725,6 +738,28 @@ const BOT_AGENT_MODELS = [
 ] as const
 
 type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
+const DEFAULT_BOT_AGENT_MODEL: BotAgentModel = BOT_AGENT_MODELS[0]
+
+const BOT_MODEL_PROVIDER_BY_MODEL: Record<BotAgentModel, BotModelProvider> = {
+  "gemini-3-flash-preview": "google",
+  "gemini-2.5-pro": "google",
+  "gemini-2.5-flash": "google",
+  "gemini-2.5-flash-lite": "google",
+  "gemini-2.0-flash": "google",
+  "gemini-2.0-flash-lite": "google",
+  "claude-opus-4-5": "anthropic",
+  "claude-sonnet-4-5": "anthropic",
+  "claude-haiku-4-5": "anthropic",
+  "gpt-4o": "openai",
+  "gpt-4o-mini": "openai",
+  "gpt-4-turbo": "openai",
+}
+
+const DEFAULT_BOT_AGENT_PROVIDERS: Record<BotModelProvider, boolean> = {
+  google: true,
+  anthropic: true,
+  openai: true,
+}
 
 interface BotAgentToolToggles {
   getWeather: boolean
@@ -750,6 +785,8 @@ interface BotAgentToolToggles {
 }
 
 interface BotAgentConfig {
+  /** Provider availability policy for this team. */
+  providers: Record<BotModelProvider, boolean>
   model: BotAgentModel
   /** [0, 2]; lower = more deterministic. */
   temperature: number
@@ -774,7 +811,8 @@ interface BotAgentConfig {
 }
 
 const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
-  model: "gemini-3-flash-preview",
+  providers: { ...DEFAULT_BOT_AGENT_PROVIDERS },
+  model: DEFAULT_BOT_AGENT_MODEL,
   temperature: 0.7,
   topP: 0.95,
   topK: 40,
@@ -798,6 +836,13 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   previewMaxLength: PREVIEW_MAX_LENGTH,
 }
 
+const cloneDefaultBotAgentConfig = (): BotAgentConfig => ({
+  ...DEFAULT_BOT_AGENT_CONFIG,
+  providers: { ...DEFAULT_BOT_AGENT_CONFIG.providers },
+  promptSuffixes: { ...DEFAULT_BOT_AGENT_CONFIG.promptSuffixes },
+  tools: { ...DEFAULT_BOT_AGENT_CONFIG.tools },
+})
+
 /**
  * Bounds enforced both client-side (slider min/max) and server-side
  * (zod refines). Centralizing here keeps the two sides honest — change
@@ -815,6 +860,14 @@ const BOT_AGENT_BOUNDS = {
 } as const
 
 const botAgentConfigUpdateSchema = z.object({
+  providers: z
+    .object({
+      google: z.boolean(),
+      anthropic: z.boolean(),
+      openai: z.boolean(),
+    })
+    .partial()
+    .optional(),
   model: z.enum(BOT_AGENT_MODELS).optional(),
   temperature: z
     .number()
@@ -879,6 +932,55 @@ type BotAgentConfigUpdate = z.infer<typeof botAgentConfigUpdateSchema>
 
 const agentConfigDocPath = (teamId: string) => `teams/${teamId}/settings/agent`
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function hasEnabledProvider(
+  providers: Record<BotModelProvider, boolean>
+): boolean {
+  return BOT_MODEL_PROVIDERS.some((provider) => providers[provider])
+}
+
+function normalizeProviderToggles(
+  raw: unknown
+): Record<BotModelProvider, boolean> {
+  const rawProviders = isRecord(raw) ? raw : {}
+  const providers: Record<BotModelProvider, boolean> = {
+    ...DEFAULT_BOT_AGENT_PROVIDERS,
+  }
+
+  for (const provider of BOT_MODEL_PROVIDERS) {
+    if (typeof rawProviders[provider] === "boolean") {
+      providers[provider] = rawProviders[provider]
+    }
+  }
+
+  return hasEnabledProvider(providers)
+    ? providers
+    : { ...DEFAULT_BOT_AGENT_PROVIDERS }
+}
+
+function firstModelForEnabledProviders(
+  providers: Record<BotModelProvider, boolean>
+): BotAgentModel {
+  return (
+    BOT_AGENT_MODELS.find(
+      (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]]
+    ) ?? DEFAULT_BOT_AGENT_CONFIG.model
+  )
+}
+
+function assertEnabledProvidersConfigured(
+  providers: Record<BotModelProvider, boolean>
+): void {
+  for (const provider of BOT_MODEL_PROVIDERS) {
+    if (providers[provider]) {
+      assertAiModelProviderConfigured(provider)
+    }
+  }
+}
+
 /**
  * Merge a partial doc payload onto `DEFAULT_BOT_AGENT_CONFIG` so the
  * caller always sees a fully-populated config — even for workspaces
@@ -889,13 +991,17 @@ const agentConfigDocPath = (teamId: string) => `teams/${teamId}/settings/agent`
 function applyAgentConfigOverrides(
   raw: Record<string, unknown> | undefined
 ): BotAgentConfig {
-  if (!raw) return { ...DEFAULT_BOT_AGENT_CONFIG }
+  if (!raw) return cloneDefaultBotAgentConfig()
 
-  const model =
+  const providers = normalizeProviderToggles(raw.providers)
+  const configuredModel =
     typeof raw.model === "string" &&
     (BOT_AGENT_MODELS as readonly string[]).includes(raw.model)
       ? (raw.model as BotAgentModel)
       : DEFAULT_BOT_AGENT_CONFIG.model
+  const model = providers[BOT_MODEL_PROVIDER_BY_MODEL[configuredModel]]
+    ? configuredModel
+    : firstModelForEnabledProviders(providers)
 
   const numberOrDefault = (
     value: unknown,
@@ -976,6 +1082,7 @@ function applyAgentConfigOverrides(
       : DEFAULT_BOT_AGENT_CONFIG.defaultMode
 
   return {
+    providers,
     model,
     temperature: numberOrDefault(
       raw.temperature,
@@ -1034,7 +1141,7 @@ export async function loadTeamAgentConfig(
   teamId: string
 ): Promise<BotAgentConfig> {
   const snap = await db.doc(agentConfigDocPath(teamId)).get()
-  if (!snap.exists) return { ...DEFAULT_BOT_AGENT_CONFIG }
+  if (!snap.exists) return cloneDefaultBotAgentConfig()
   return applyAgentConfigOverrides(snap.data())
 }
 
@@ -1314,16 +1421,21 @@ function pinnedNodeKey(
  *   - Workspace-level toggles strip individual tools regardless of mode.
  *   - Interrupt tools (askQuestion) are gateable too — opt-in disable.
  *   - Read-only tools (searchWorkspaceNodes) are exposed in every mode
- *     including `manual` since they only retrieve, never act.
+ *     including `manual` since they only retrieve, never act. It is
+ *     still Google-gated because the current retriever uses Gemini
+ *     embeddings under the hood.
  */
 function pickChatTools(config: BotAgentConfig, mode: BotChatMode) {
   const modeAllowsActionTools = MODE_CONFIG[mode].actionToolsEnabled
+  const googleBackedSearchAvailable =
+    config.providers.google && isAiModelProviderConfigured("google")
   const tools = []
   if (modeAllowsActionTools && config.tools.getWeather)
     tools.push(getWeatherTool)
   if (modeAllowsActionTools && config.tools.rollDice) tools.push(rollDiceTool)
   if (config.tools.askQuestion) tools.push(askQuestionTool)
-  if (config.tools.searchWorkspaceNodes) tools.push(searchWorkspaceNodesTool)
+  if (config.tools.searchWorkspaceNodes && googleBackedSearchAvailable)
+    tools.push(searchWorkspaceNodesTool)
   if (config.tools.summarizeNode) tools.push(summarizeNodeTool)
   return tools
 }
@@ -1777,6 +1889,8 @@ const sendBotMessageFlow = ai.defineFlow(
       mode,
       teamId,
       workspaceId,
+      googleProviderEnabled:
+        agentConfig.providers.google && isAiModelProviderConfigured("google"),
     }
 
     // `manual` strips action tools so even a jailbroken prompt can't get
@@ -2073,6 +2187,8 @@ const respondToBotInterruptFlow = ai.defineFlow(
       mode,
       teamId,
       workspaceId,
+      googleProviderEnabled:
+        agentConfig.providers.google && isAiModelProviderConfigured("google"),
     }
     const chatTools = pickChatTools(agentConfig, mode)
 
@@ -2572,7 +2688,11 @@ interface UpdateTeamAgentConfigResponse {
 }
 
 export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
+  {
+    ...CALLABLE_OPTS,
+    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    enforceAppCheck: true,
+  },
   async (request): Promise<UpdateTeamAgentConfigResponse> => {
     const auth = requireVerifiedAuth(request.auth)
     const { teamId, updates } = request.data ?? {}
@@ -2604,9 +2724,43 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
     }
 
     const ref = db.doc(agentConfigDocPath(teamId))
+    const existingSnap = await ref.get()
+    const currentConfig = applyAgentConfigOverrides(existingSnap.data())
+    const nextProviders = {
+      ...currentConfig.providers,
+      ...(parsed.data.providers ?? {}),
+    }
+
+    if (!hasEnabledProvider(nextProviders)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "At least one AI provider must stay enabled."
+      )
+    }
+    assertEnabledProvidersConfigured(nextProviders)
+
+    let nextModel = parsed.data.model ?? currentConfig.model
+    if (!nextProviders[BOT_MODEL_PROVIDER_BY_MODEL[nextModel]]) {
+      if (parsed.data.model) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Selected model belongs to a disabled AI provider."
+        )
+      }
+      nextModel = firstModelForEnabledProviders(nextProviders)
+    }
+
+    const updatesToWrite: Record<string, unknown> = { ...parsed.data }
+    if (parsed.data.providers) {
+      updatesToWrite.providers = nextProviders
+      updatesToWrite.model = nextModel
+    } else if (parsed.data.model) {
+      updatesToWrite.model = nextModel
+    }
+
     await ref.set(
       {
-        ...parsed.data,
+        ...updatesToWrite,
         teamId,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedBy: auth.uid,

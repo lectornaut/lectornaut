@@ -151,218 +151,213 @@ const nodeStatusLabel = computed(() =>
 
 <template>
   <div class="flex size-full min-h-0 flex-1 flex-col">
-    <OverlayScrollbarsWrapper>
-      <div class="space-y-3 p-2">
-        <!-- AI summary — structured output (summary / keyPoints / tags). -->
-        <section
-          class="bg-card flex flex-col gap-2 rounded-md border p-3 text-sm"
+    <Card size="sm" class="w-full px-2 pb-2 shadow-none">
+      <CardHeader>
+        <CardTitle class="flex items-center gap-1.5">
+          <IconSparkles class="text-muted-foreground size-4" />
+          {{ t("inspector.summary.title") }}
+        </CardTitle>
+        <CardAction>
+          <Button
+            v-if="!summary && !isSummarizing"
+            size="sm"
+            variant="secondary"
+            :disabled="node.isArchived"
+            @click="handleGenerateSummary"
+          >
+            {{ t("inspector.summary.generate") }}
+          </Button>
+          <Button
+            v-else-if="summary && !isSummarizing"
+            size="sm"
+            variant="ghost"
+            @click="handleGenerateSummary"
+          >
+            <IconRefreshCw />
+            {{ t("inspector.summary.regenerate") }}
+          </Button>
+          <div
+            v-else-if="isSummarizing"
+            class="text-muted-foreground flex items-center gap-1.5 text-xs"
+          >
+            <Spinner />
+            {{ t("inspector.summary.loading") }}
+          </div>
+        </CardAction>
+      </CardHeader>
+
+      <CardContent>
+        <div
+          v-if="!summary && !isSummarizing && !summaryError"
+          class="text-muted-foreground text-xs"
         >
-          <header class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-1.5">
-              <IconSparkles class="text-muted-foreground size-4" />
-              <span class="font-medium">
-                {{ t("inspector.summary.title") }}
-              </span>
-            </div>
-            <Button
-              v-if="!summary && !isSummarizing"
-              size="sm"
-              variant="secondary"
-              :disabled="node.isArchived"
-              @click="handleGenerateSummary"
-            >
-              {{ t("inspector.summary.generate") }}
-            </Button>
-            <Button
-              v-else-if="summary && !isSummarizing"
-              size="sm"
-              variant="ghost"
-              @click="handleGenerateSummary"
-            >
-              <IconRefreshCw class="size-3.5" />
-              {{ t("inspector.summary.regenerate") }}
-            </Button>
-            <div
-              v-else-if="isSummarizing"
-              class="text-muted-foreground flex items-center gap-1.5 text-xs"
-            >
-              <Spinner class="size-3.5" />
-              {{ t("inspector.summary.loading") }}
-            </div>
-          </header>
+          {{
+            node.isArchived
+              ? t("inspector.summary.archivedHint")
+              : t("inspector.summary.empty")
+          }}
+        </div>
 
-          <div
-            v-if="!summary && !isSummarizing && !summaryError"
-            class="text-muted-foreground text-xs"
-          >
-            {{
-              node.isArchived
-                ? t("inspector.summary.archivedHint")
-                : t("inspector.summary.empty")
-            }}
+        <div
+          v-if="summaryError && !isSummarizing"
+          class="text-destructive text-xs"
+        >
+          {{ summaryError }}
+        </div>
+
+        <div v-if="summary" class="flex flex-col gap-3">
+          <p class="text-foreground leading-relaxed">
+            {{ summary.summary }}
+          </p>
+
+          <div v-if="summary.keyPoints.length > 0" class="flex flex-col gap-1">
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("inspector.summary.keyPoints") }}
+            </span>
+            <ul class="text-foreground list-inside list-disc space-y-1">
+              <li
+                v-for="(point, idx) in summary.keyPoints"
+                :key="idx"
+                class="leading-relaxed"
+              >
+                {{ point }}
+              </li>
+            </ul>
           </div>
 
           <div
-            v-if="summaryError && !isSummarizing"
-            class="text-destructive text-xs"
+            v-if="summary.suggestedTags.length > 0"
+            class="flex flex-col gap-1"
           >
-            {{ summaryError }}
-          </div>
-
-          <div v-if="summary" class="flex flex-col gap-3 pt-1">
-            <p class="text-foreground leading-relaxed">
-              {{ summary.summary }}
-            </p>
-
-            <div
-              v-if="summary.keyPoints.length > 0"
-              class="flex flex-col gap-1"
-            >
-              <span class="text-muted-foreground text-xs font-medium uppercase">
-                {{ t("inspector.summary.keyPoints") }}
-              </span>
-              <ul class="text-foreground list-inside list-disc space-y-1">
-                <li
-                  v-for="(point, idx) in summary.keyPoints"
-                  :key="idx"
-                  class="leading-relaxed"
-                >
-                  {{ point }}
-                </li>
-              </ul>
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("inspector.summary.tags") }}
+            </span>
+            <div class="flex flex-wrap gap-1">
+              <Badge
+                v-for="tag in summary.suggestedTags"
+                :key="tag"
+                variant="secondary"
+                class="text-xs"
+              >
+                {{ tag }}
+              </Badge>
             </div>
-
-            <div
-              v-if="summary.suggestedTags.length > 0"
-              class="flex flex-col gap-1"
-            >
-              <span class="text-muted-foreground text-xs font-medium uppercase">
-                {{ t("inspector.summary.tags") }}
-              </span>
-              <div class="flex flex-wrap gap-1">
-                <Badge
-                  v-for="tag in summary.suggestedTags"
-                  :key="tag"
-                  variant="secondary"
-                  class="text-xs"
-                >
-                  {{ tag }}
-                </Badge>
-              </div>
-            </div>
-
-            <p class="text-muted-foreground text-xs">
-              {{ t("inspector.summary.modelFooter", { model: summary.model }) }}
-            </p>
           </div>
-        </section>
+        </div>
+      </CardContent>
 
-        <dl class="space-y-4">
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconUserRound />
-              Author
-            </dt>
-            <dd class="text-right break-all">
-              {{ formatActor(node.createdBy) }}
-            </dd>
-          </div>
+      <CardFooter v-if="summary">
+        <p class="text-muted-foreground text-xs">
+          {{ t("inspector.summary.modelFooter", { model: summary.model }) }}
+        </p>
+      </CardFooter>
+    </Card>
+    <OverlayScrollbarsWrapper>
+      <dl class="space-y-2 p-2">
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconUserRound />
+            Author
+          </dt>
+          <dd class="text-right break-all">
+            {{ formatActor(node.createdBy) }}
+          </dd>
+        </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconUserRound />
-              Updated by
-            </dt>
-            <dd class="text-right break-all">
-              {{ formatActor(node.updatedBy) }}
-            </dd>
-          </div>
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconUserRound />
+            Updated by
+          </dt>
+          <dd class="text-right break-all">
+            {{ formatActor(node.updatedBy) }}
+          </dd>
+        </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconCalendar />
-              Created
-            </dt>
-            <dd class="text-right">
-              {{ formatTimestamp(node.createdAt) }}
-            </dd>
-          </div>
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconCalendar />
+            Created
+          </dt>
+          <dd class="text-right">
+            {{ formatTimestamp(node.createdAt) }}
+          </dd>
+        </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconClock />
-              Updated
-            </dt>
-            <dd class="text-right">
-              {{ formatTimestamp(node.updatedAt) }}
-            </dd>
-          </div>
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconClock />
+            Updated
+          </dt>
+          <dd class="text-right">
+            {{ formatTimestamp(node.updatedAt) }}
+          </dd>
+        </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconInfo />
-              Type
-            </dt>
-            <dd class="text-right">
-              {{ nodeTypeLabel }}
-            </dd>
-          </div>
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconInfo />
+            Type
+          </dt>
+          <dd class="text-right">
+            {{ nodeTypeLabel }}
+          </dd>
+        </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconInfo />
-              Status
-            </dt>
-            <dd class="text-right">
-              {{ nodeStatusLabel }}
-            </dd>
-          </div>
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconInfo />
+            Status
+          </dt>
+          <dd class="text-right">
+            {{ nodeStatusLabel }}
+          </dd>
+        </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconFolder />
-              Parent
-            </dt>
-            <dd class="text-right break-all">
-              {{ nodeParentLabel }}
-            </dd>
-          </div>
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconFolder />
+            Parent
+          </dt>
+          <dd class="text-right break-all">
+            {{ nodeParentLabel }}
+          </dd>
+        </div>
 
-          <div
-            v-if="node.isArchived"
-            class="flex items-start justify-between gap-2"
-          >
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconCalendar />
-              Archived
-            </dt>
-            <dd class="text-right">
-              {{ formatTimestamp(node.archivedAt) }}
-            </dd>
-          </div>
+        <div
+          v-if="node.isArchived"
+          class="flex items-start justify-between gap-2"
+        >
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconCalendar />
+            Archived
+          </dt>
+          <dd class="text-right">
+            {{ formatTimestamp(node.archivedAt) }}
+          </dd>
+        </div>
 
-          <div
-            v-if="node.isArchived"
-            class="flex items-start justify-between gap-2"
-          >
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconUserRound />
-              Archived by
-            </dt>
-            <dd class="text-right break-all">
-              {{ formatActor(node.archivedBy) }}
-            </dd>
-          </div>
+        <div
+          v-if="node.isArchived"
+          class="flex items-start justify-between gap-2"
+        >
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconUserRound />
+            Archived by
+          </dt>
+          <dd class="text-right break-all">
+            {{ formatActor(node.archivedBy) }}
+          </dd>
+        </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <dt class="text-muted-foreground flex items-center gap-2">
-              <IconHash />
-              Node ID
-            </dt>
-            <dd class="text-right break-all">{{ node.id }}</dd>
-          </div>
-        </dl>
-      </div>
+        <div class="flex items-start justify-between gap-2">
+          <dt class="text-muted-foreground flex items-center gap-2">
+            <IconHash />
+            Node ID
+          </dt>
+          <dd class="text-right break-all">{{ node.id }}</dd>
+        </div>
+      </dl>
     </OverlayScrollbarsWrapper>
   </div>
 </template>

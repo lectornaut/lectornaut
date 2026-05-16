@@ -70,7 +70,7 @@ const works: Artwork[] = [
   <ScrollArea class="h-80 w-72 whitespace-nowrap">
     <div class="flex h-max flex-col gap-4 p-4">
       <div v-for="artwork in works" :key="artwork.id">
-        <figure class="shrink-0">
+        <figure>
           <div class="overflow-auto overscroll-none scroll-smooth">
             <img
               :src="artwork.art"

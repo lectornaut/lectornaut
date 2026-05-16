@@ -40,6 +40,13 @@ export const useAgentConfigStore = defineStore("agentConfig", () => {
   const authStore = useAuthStore()
   const { currentTeamId } = storeToRefs(authStore)
 
+  const cloneDefaultConfig = (): IBotAgentConfig => ({
+    ...defaultBotAgentConfig,
+    providers: { ...defaultBotAgentConfig.providers },
+    promptSuffixes: { ...defaultBotAgentConfig.promptSuffixes },
+    tools: { ...defaultBotAgentConfig.tools },
+  })
+
   /**
    * Effective config — always fully populated. Initialized to the
    * bundled defaults so consumers reading synchronously (e.g.
@@ -48,7 +55,7 @@ export const useAgentConfigStore = defineStore("agentConfig", () => {
    * lands. Reassigned wholesale on each fetch / successful save so
    * reactive bindings observe a single transition.
    */
-  const config = ref<IBotAgentConfig>({ ...defaultBotAgentConfig })
+  const config = ref<IBotAgentConfig>(cloneDefaultConfig())
   const hasOverrides = ref(false)
   const isLoading = ref(false)
   const isSaving = ref(false)
@@ -75,7 +82,7 @@ export const useAgentConfigStore = defineStore("agentConfig", () => {
     if (!teamId) {
       // No team selected — reset to bundled defaults so the form (and
       // any other consumer) doesn't show a stale team's values.
-      config.value = { ...defaultBotAgentConfig }
+      config.value = cloneDefaultConfig()
       hasOverrides.value = false
       loadedTeamId.value = null
       loadError.value = null

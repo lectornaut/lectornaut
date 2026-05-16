@@ -527,7 +527,7 @@ watch(selectedCreateFiles, async (files) => {
 
 <template>
   <div class="flex size-full min-h-0 flex-1 flex-col">
-    <ButtonGroup class="w-full px-2">
+    <ButtonGroup class="w-full px-2 pb-2">
       <Button
         variant="outline"
         size="sm"
@@ -565,14 +565,8 @@ watch(selectedCreateFiles, async (files) => {
             :key="item.id"
             class="flex items-start gap-2 rounded-xl border p-2"
           >
-            <Spinner
-              v-if="item.status === 'uploading'"
-              class="mt-0.5 size-3.5 shrink-0"
-            />
-            <IconCircleAlert
-              v-else
-              class="text-destructive mt-0.5 size-3.5 shrink-0"
-            />
+            <Spinner v-if="item.status === 'uploading'" />
+            <IconCircleAlert v-else class="text-destructive shrink-0" />
 
             <div class="min-w-0 grow">
               <p class="truncate text-xs font-medium">{{ item.name }}</p>
@@ -606,7 +600,7 @@ watch(selectedCreateFiles, async (files) => {
 
         <div v-else-if="error" class="space-y-2 rounded-xl border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
-            <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+            <IconAlertTriangle />
             <span>{{ error }}</span>
           </div>
 

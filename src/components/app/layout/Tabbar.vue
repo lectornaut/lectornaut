@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import TabIcon from "@/components/app/layout/TabIcon.vue"
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"

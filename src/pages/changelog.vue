@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 import { changelog } from "@/data/changelog"
-import MarkdownRender from "markstream-vue"
-import "markstream-vue/index.css"
 
 definePage({
   meta: {
@@ -14,7 +12,6 @@ useHead({
 })
 
 const { t } = useI18n()
-const isDark = usePreferredDark()
 </script>
 
 <template>
@@ -48,45 +45,10 @@ const isDark = usePreferredDark()
           <div
             class="changelog-markdown text-muted-foreground text-sm md:text-base"
           >
-            <MarkdownRender
-              custom-id="changelog"
-              :is-dark="isDark"
-              :code-block-props="{
-                theme: { light: 'vitesse-light', dark: 'vitesse-dark' },
-              }"
-              :content="entry.content"
-            />
+            <AppMarkdown surface="changelog-page" :content="entry.content" />
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-/* markstream-vue's `.markstream-vue` wrapper redefines every `--ms-*`
-   typography variable on itself, shadowing anything we set on a parent.
-   Push our overrides onto that wrapper directly via `:deep()` so they
-   actually win the cascade — and keep them in `em` units so the
-   container's `text-sm md:text-base` stays the source of truth. */
-.changelog-markdown :deep(.markstream-vue) {
-  --ms-text-body: 1em;
-  --ms-leading-body: 1.6;
-  --ms-flow-paragraph-y: 1rem;
-  --ms-text-h3: 1.1em;
-  --ms-text-h4: 1em;
-  --ms-flow-heading-3-mt: 1.5rem;
-  --ms-flow-heading-3-mb: 0.5rem;
-  --ms-flow-heading-4-mt: 1rem;
-  --ms-flow-heading-4-mb: 0.25rem;
-}
-
-/* Strip leading/trailing margins so the first heading and last paragraph
-   don't blow past the entry's own padding. */
-.changelog-markdown :deep(.markstream-vue *:first-child) {
-  margin-top: 0;
-}
-.changelog-markdown :deep(.markstream-vue *:last-child) {
-  margin-bottom: 0;
-}
-</style>

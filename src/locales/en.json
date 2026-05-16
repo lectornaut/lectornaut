@@ -67,6 +67,7 @@
     "hideTools": "Hide tools",
     "chatEmpty": "Ask anything to get started.",
     "thinking": "Thinking...",
+    "reasoning": "Reasoning",
     "reply": "Reply",
     "messageCopied": "Copied to clipboard",
     "modes": {
@@ -144,7 +145,23 @@
       "malformedInterrupt": "The assistant tried to ask a question but didn't include valid choices. Send another message to continue.",
       "input": "Input",
       "output": "Output",
-      "waitingForReturn": "Waiting for tool to return…"
+      "waitingForReturn": "Waiting for tool to return…",
+      "dice": {
+        "rolled": "Rolled"
+      },
+      "search": {
+        "scopeCode": "Code",
+        "scopeWrite": "Write",
+        "resultCount": "{count} match | {count} matches",
+        "truncated": "(more available)",
+        "empty": "No matching nodes."
+      },
+      "summarize": {
+        "heading": "Structured summary",
+        "keyPoints": "Key points",
+        "tags": "Tags",
+        "modelFooter": "Generated with {model}"
+      }
     }
   },
   "time": {
@@ -1038,9 +1055,23 @@
       "resetDefaults": "Reset to defaults",
       "resetDefaultsDescription": "Restore all agent settings to their default values.",
       "unsavedChanges": "You have unsaved changes.",
+      "providers": {
+        "label": "Providers",
+        "description": "Choose which AI providers are available to this team. At least one provider must stay enabled.",
+        "minimumRequired": "At least one provider must stay enabled.",
+        "google": {
+          "description": "{count} Gemini models available for team AI features."
+        },
+        "anthropic": {
+          "description": "{count} Claude models available for team AI features."
+        },
+        "openai": {
+          "description": "{count} OpenAI models available for team AI features."
+        }
+      },
       "model": {
         "label": "Model",
-        "description": "Pick which large language model powers chats for this team.",
+        "description": "Pick the default model from this team's enabled providers.",
         "placeholder": "Select a model"
       },
       "generation": {

@@ -41,6 +41,7 @@ import type {
   BillingPlanKey,
   IBotAgentConfig,
   IBotAgentModel,
+  IBotModelProvider,
 } from "@/types/domain"
 
 export const languages = [
@@ -183,7 +184,11 @@ export const defaultSize: SizeId = "base"
 //
 // `botModelProviders` is the *display order* + label of the provider
 // groups; the model picker iterates this list and renders one
-// `<SelectGroup>` per provider.
+// `<SelectGroup>` per enabled provider.
+//
+// `defaultBotModelProviderToggles` is the team-level provider policy
+// default. Existing teams without a saved agent settings doc get all
+// providers enabled until an owner/admin changes the settings.
 //
 // `defaultBotAgentConfig` mirrors the server's `DEFAULT_BOT_AGENT_CONFIG`.
 // We duplicate it on the client so the form has something to render before
@@ -194,9 +199,16 @@ export const botModelProviders = [
   { id: "google", name: "Google Gemini" },
   { id: "anthropic", name: "Anthropic Claude" },
   { id: "openai", name: "OpenAI" },
-] as const satisfies readonly { id: string; name: string }[]
+] as const satisfies readonly { id: IBotModelProvider; name: string }[]
 
-export type IBotModelProvider = (typeof botModelProviders)[number]["id"]
+export const defaultBotModelProviderToggles: Record<
+  IBotModelProvider,
+  boolean
+> = {
+  google: true,
+  anthropic: true,
+  openai: true,
+}
 
 export const botModels = [
   // Google Gemini
@@ -313,6 +325,7 @@ export const botChatModes = [
 ] as const
 
 export const defaultBotAgentConfig: IBotAgentConfig = {
+  providers: { ...defaultBotModelProviderToggles },
   model: "gemini-3-flash-preview",
   temperature: 0.7,
   topP: 0.95,

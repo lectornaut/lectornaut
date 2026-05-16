@@ -22,6 +22,9 @@
  * recompute the embedding when content changes, and store the vector
  * back on the same doc. A `embedHash` field acts as the loop guard so a
  * trigger that just *wrote* an embedding doesn't re-fire forever.
+ * Because this retrieval path is Gemini-embedding-backed, both the chat
+ * tool and the embed-on-write triggers respect the team's Google
+ * provider toggle.
  *
  * Vector index for the `embedding` field must exist in Firestore before
  * `findNearest()` will accept queries — see `firestore.indexes.json`.
@@ -37,7 +40,7 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore"
 import { z } from "genkit/beta"
 
 import { db } from "./firebase.js"
-import { ai } from "./genkitClient.js"
+import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 import { TRIGGER_OPTS } from "./runtimeConfig.js"
 import { geminiApiKey } from "./secrets.js"
 
@@ -100,6 +103,7 @@ const workspaceNodesRetriever = defineFirestoreRetriever(ai, {
 interface RagToolContext {
   teamId?: string
   workspaceId?: string
+  googleProviderEnabled?: boolean
 }
 
 const SEARCH_SCOPES = ["code", "write", "both"] as const
@@ -171,12 +175,19 @@ export const searchWorkspaceNodesTool = ai.defineTool(
     const ctx = (context ?? {}) as RagToolContext
     const teamId = ctx.teamId
     const workspaceId = ctx.workspaceId
+    if (ctx.googleProviderEnabled === false) {
+      logger.info("[searchWorkspaceNodes] skipped because Google is disabled")
+      return { results: [], truncated: false }
+    }
+
     if (!teamId || !workspaceId) {
       // Action context didn't carry the workspace — defensive fallback so
       // the model gets an empty result rather than a crash on the first
       // call from a code path that hasn't been updated to populate the
       // new context fields yet.
-      logger.warn("[searchWorkspaceNodes] missing teamId/workspaceId in context")
+      logger.warn(
+        "[searchWorkspaceNodes] missing teamId/workspaceId in context"
+      )
       return { results: [], truncated: false }
     }
 
@@ -274,7 +285,57 @@ interface NodeDocPartialShape {
   type?: unknown
   content?: unknown
   isArchived?: unknown
+  embedding?: unknown
   embedHash?: unknown
+}
+
+const agentConfigDocPath = (teamId: string) => `teams/${teamId}/settings/agent`
+
+async function isGoogleProviderEnabledForTeam(
+  teamId: string
+): Promise<boolean> {
+  try {
+    const snap = await db.doc(agentConfigDocPath(teamId)).get()
+    const providers = snap.data()?.providers
+    if (
+      typeof providers !== "object" ||
+      providers === null ||
+      Array.isArray(providers)
+    ) {
+      return true
+    }
+
+    const google = (providers as Record<string, unknown>).google
+    return typeof google === "boolean" ? google : true
+  } catch (err) {
+    logger.warn(`[embedNode] provider config lookup failed team=${teamId}`, {
+      err: String(err),
+    })
+    return true
+  }
+}
+
+async function clearNodeEmbedding(params: {
+  afterRef: FirebaseFirestore.DocumentReference
+  scope: "code" | "write"
+  teamId: string
+  workspaceId: string
+  nodeId: string
+  reason: string
+}): Promise<void> {
+  const { afterRef, scope, teamId, workspaceId, nodeId, reason } = params
+  try {
+    await afterRef.update({
+      embedding: FieldValue.delete(),
+      embedHash: FieldValue.delete(),
+      embedAt: FieldValue.delete(),
+    })
+  } catch (err) {
+    logger.warn(
+      `[embedNode] clear failed scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId} reason=${reason}`,
+      { err: String(err) }
+    )
+  }
 }
 
 /**
@@ -302,25 +363,35 @@ async function syncNodeEmbedding(params: {
   // immutable on create so we don't bother with that branch.
   if (after.type !== "file") return
 
-  const content =
-    typeof after.content === "string" ? after.content.trim() : ""
+  const googleProviderEnabled = await isGoogleProviderEnabledForTeam(teamId)
+  if (!googleProviderEnabled) {
+    if (after.embedHash || after.embedding) {
+      await clearNodeEmbedding({
+        afterRef,
+        scope,
+        teamId,
+        workspaceId,
+        nodeId,
+        reason: "google-provider-disabled",
+      })
+    }
+    return
+  }
+
+  const content = typeof after.content === "string" ? after.content.trim() : ""
 
   if (!content) {
     // Empty file — clear prior embedding so old vectors don't shadow
     // the now-empty doc in search results.
-    if (after.embedHash) {
-      try {
-        await afterRef.update({
-          embedding: FieldValue.delete(),
-          embedHash: FieldValue.delete(),
-          embedAt: FieldValue.delete(),
-        })
-      } catch (err) {
-        logger.warn(
-          `[embedNode] clear failed scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId}`,
-          { err: String(err) }
-        )
-      }
+    if (after.embedHash || after.embedding) {
+      await clearNodeEmbedding({
+        afterRef,
+        scope,
+        teamId,
+        workspaceId,
+        nodeId,
+        reason: "empty-content",
+      })
     }
     return
   }
@@ -334,6 +405,13 @@ async function syncNodeEmbedding(params: {
   // Loop guard: if the embedding on disk was made from this exact text,
   // nothing changed and we'd burn an API call for no reason.
   if (after.embedHash === hash) return
+
+  if (!isAiModelProviderConfigured("google")) {
+    logger.warn(
+      `[embedNode] skipped because Google provider secret is missing team=${teamId} workspace=${workspaceId} node=${nodeId}`
+    )
+    return
+  }
 
   try {
     const embeddings = await ai.embed({

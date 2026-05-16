@@ -7,7 +7,7 @@
     "outDir": "dist",
     "rootDir": ".",
     "sourceMap": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -21,17 +21,16 @@
     "types": [
       "node",
       "vite/client",
-      "vite-plugin-pwa/vue",
+      "vite-plugin-pwa/client",
+      "vite-plugin-pwa/pwa-assets",
+      "vite-plugin-vue-layouts/client",
       "unplugin-fonts/client",
       "unplugin-icons/types/vue",
-      "vite-plugin-pwa/pwa-assets",
       "unplugin-turbo-console/client",
-      "vite-plugin-vue-layouts/client",
       "@intlify/unplugin-vue-i18n/messages"
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*": ["./src/*"]
     }
   },
   "vueCompilerOptions": {
@@ -46,7 +45,6 @@
     "./src/**/*.tsx",
     "./src/**/*.vue",
     "./src/**/*.json",
-    "./shared/**/*.ts",
     "./vite.config.ts"
   ],
   "files": ["./components.d.ts", "./auto-imports.d.ts", "./typed-router.d.ts"]
