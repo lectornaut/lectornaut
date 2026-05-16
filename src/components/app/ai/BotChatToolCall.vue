@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 /**
  * BotChatToolCall — renders one tool invocation segment from an agent
- * message. Three render modes, picked by `tool` shape:
+ * message. Four render modes, picked by `tool` shape:
  *
  *   1. Pending interrupt (`isInterrupt && output === undefined`):
  *      The chat is paused waiting for the user to answer an
@@ -12,10 +12,16 @@
  *      A normal tool is executing on the server. Shows a spinner.
  *      In practice this state is brief — execution is fast.
  *
- *   3. Done (`output` set):
+ *   3. Resolved interrupt (`isInterrupt && output` set):
+ *      The user answered an `askQuestion`. Renders the question with
+ *      the chosen answer highlighted, instead of dumping the JSON
+ *      input/output through the generic done view. Without this
+ *      dedicated branch, the JSON dump would briefly flash in the
+ *      card body during the auto-collapse animation.
+ *
+ *   4. Done (`output` set, not an interrupt):
  *      Tool returned. Shows the JSON input and output collapsed by
- *      default. For a resolved interrupt, the `output` is the user's
- *      answer (e.g. `{ answer: "Tokyo" }`).
+ *      default.
  *
  * The card body is collapsible so a chat with several tool calls
  * doesn't dominate the message column. Default state: open while
@@ -96,6 +102,21 @@ const askQuestionInput = computed<AskQuestionInput | null>(() => {
     choices,
     allowOther: obj.allowOther === true,
   }
+})
+
+const isResolvedInterrupt = computed(
+  () => props.tool.isInterrupt === true && props.tool.output !== undefined
+)
+
+// Narrow `tool.output` to the `{ answer: string }` shape produced by
+// `respondToInterrupt`. Anything else returns null and we fall through
+// to the generic JSON view.
+const interruptAnswer = computed<string | null>(() => {
+  if (!isResolvedInterrupt.value) return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  return typeof obj.answer === "string" ? obj.answer : null
 })
 
 const customAnswer = ref("")
@@ -210,7 +231,6 @@ const outputText = computed(() => formatJson(props.tool.output))
           <Button
             v-for="choice in askQuestionInput.choices"
             :key="choice"
-            type="button"
             variant="outline"
             size="sm"
             :disabled="isSubmitting"
@@ -228,14 +248,11 @@ const outputText = computed(() => formatJson(props.tool.output))
           <Input
             v-model="customAnswer"
             :placeholder="t('ai.toolCall.customAnswer')"
-            class="h-7 text-xs"
             :disabled="isSubmitting"
             @keydown="onCustomKeydown"
           />
           <Button
-            type="button"
             size="sm"
-            class="h-7 px-2 text-xs"
             :disabled="!customAnswer.trim() || isSubmitting"
             @click="submitCustom"
           >
@@ -252,6 +269,21 @@ const outputText = computed(() => formatJson(props.tool.output))
       >
         <p class="text-muted-foreground italic">
           {{ t("ai.toolCall.malformedInterrupt") }}
+        </p>
+      </div>
+      <!-- Resolved interrupt: show the question with the chosen -->
+      <!-- answer highlighted. Skips the generic JSON dump that would -->
+      <!-- otherwise flash briefly during the auto-collapse. -->
+      <div
+        v-else-if="isResolvedInterrupt && askQuestionInput && interruptAnswer"
+        class="border-primary/30 bg-primary/5 space-y-1.5 rounded-md border p-3 text-xs"
+      >
+        <p class="text-foreground text-sm font-medium">
+          {{ askQuestionInput.question }}
+        </p>
+        <p class="text-primary flex items-center gap-1.5">
+          <IconCheck class="size-3.5 shrink-0" />
+          <span class="font-medium">{{ interruptAnswer }}</span>
         </p>
       </div>
       <!-- Normal tool card (running or done). -->

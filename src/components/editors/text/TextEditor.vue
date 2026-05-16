@@ -1210,11 +1210,9 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             @mouseleave="clearTablePickerSelection"
           >
             <div v-for="row in TABLE_PICKER_ROWS" :key="row" class="flex gap-1">
-              <button
+              <Button
                 v-for="col in TABLE_PICKER_COLS"
                 :key="`${row}-${col}`"
-                type="button"
-                class="size-4 border transition-colors"
                 :class="
                   col <= tablePickerSelection.cols &&
                   row <= tablePickerSelection.rows

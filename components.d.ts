@@ -49,6 +49,7 @@ declare module 'vue' {
     BotChatDetails: typeof import('./src/components/app/ai/BotChatDetails.vue')['default']
     BotChatToolCall: typeof import('./src/components/app/ai/BotChatToolCall.vue')['default']
     BotHistorySidebar: typeof import('./src/components/app/ai/BotHistorySidebar.vue')['default']
+    BotInspectorSidebar: typeof import('./src/components/app/sidebars/BotInspectorSidebar.vue')['default']
     BotSessionFilterMenu: typeof import('./src/components/app/ai/BotSessionFilterMenu.vue')['default']
     BotSessionFilterPopover: typeof import('./src/components/app/ai/BotSessionFilterPopover.vue')['default']
     Breadcrumb: typeof import('./src/components/ui/breadcrumb/Breadcrumb.vue')['default']

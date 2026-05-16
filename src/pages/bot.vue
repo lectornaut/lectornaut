@@ -63,29 +63,6 @@ watch(botChat.sessionId, (id) => {
   </Teleport>
   <AiChatShell />
   <Teleport defer to="#right-sidebar">
-    <Sidebar collapsible="none" class="w-full">
-      <Tabs default-value="details" class="size-full min-h-0 min-w-0 gap-0">
-        <TabsList class="bg-transparent p-2">
-          <TabsTrigger
-            value="details"
-            class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none!"
-          >
-            Details
-          </TabsTrigger>
-          <TabsTrigger
-            value="actions"
-            class="data-[state=active]:bg-muted p-2! text-xs leading-0 data-[state=active]:shadow-none!"
-          >
-            Actions
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="details" class="size-full h-0 min-h-0 min-w-0 grow">
-          <BotChatDetails />
-        </TabsContent>
-        <TabsContent value="actions" class="size-full h-0 min-h-0 min-w-0 grow">
-          <BotChatActions />
-        </TabsContent>
-      </Tabs>
-    </Sidebar>
+    <BotInspectorSidebar />
   </Teleport>
 </template>

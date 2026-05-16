@@ -552,7 +552,6 @@ watch(selectedCreateFiles, async (files) => {
             </p>
             <Button
               v-if="!uploadInProgress"
-              type="button"
               variant="ghost"
               size="sm"
               @click="uploadStates = []"
@@ -588,7 +587,6 @@ watch(selectedCreateFiles, async (files) => {
 
             <Button
               v-if="item.status === 'error'"
-              type="button"
               variant="ghost"
               size="icon-sm"
               @click="dismissUploadState(item.id)"
@@ -613,7 +611,6 @@ watch(selectedCreateFiles, async (files) => {
           </div>
 
           <Button
-            type="button"
             variant="secondary"
             size="sm"
             class="w-full"
@@ -664,7 +661,6 @@ watch(selectedCreateFiles, async (files) => {
 
                   <div class="flex shrink-0 items-center gap-1">
                     <Button
-                      type="button"
                       variant="ghost"
                       size="icon-sm"
                       :disabled="
@@ -679,7 +675,6 @@ watch(selectedCreateFiles, async (files) => {
                     </Button>
 
                     <Button
-                      type="button"
                       variant="ghost"
                       size="icon-sm"
                       :disabled="
@@ -691,7 +686,6 @@ watch(selectedCreateFiles, async (files) => {
                     </Button>
 
                     <Button
-                      type="button"
                       variant="ghost"
                       size="icon-sm"
                       :disabled="
@@ -787,11 +781,10 @@ watch(selectedCreateFiles, async (files) => {
           <Label :for="`attachment-replace-${replacementInputKey}`">
             {{ t("components.nodeAttachments.replaceFileLabel") }}
           </Label>
-          <input
+          <Input
             :id="`attachment-replace-${replacementInputKey}`"
             :key="replacementInputKey"
             type="file"
-            class="file:text-foreground border-input h-8 w-full min-w-0 border bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium"
             @change="handleReplacementSelected"
           />
 
@@ -806,14 +799,14 @@ watch(selectedCreateFiles, async (files) => {
               </p>
             </div>
 
-            <Button type="button" variant="ghost" @click="clearReplacementFile">
+            <Button variant="ghost" @click="clearReplacementFile">
               {{ t("components.nodeAttachments.clear") }}
             </Button>
           </div>
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" @click="closeEditDialog">
+          <Button @click="closeEditDialog">
             {{ t("actions.cancel") }}
           </Button>
           <Button type="submit" :disabled="!hasEditChanges || isSavingEdit">

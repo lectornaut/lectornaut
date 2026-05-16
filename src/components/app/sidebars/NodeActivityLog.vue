@@ -13,7 +13,10 @@ import {
   IconTrash2,
   IconUpload,
 } from "@/data/icons"
+import { useAuthStore } from "@/stores/authStore"
+import { useMembershipStore } from "@/stores/membershipStore"
 import type { ILogEntry } from "@/types/logs"
+import { storeToRefs } from "pinia"
 
 type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
   getScrollElement: () => HTMLElement | undefined
@@ -42,6 +45,13 @@ const { logs, loading, error, hasMore, canViewLogs, fetchLogs } =
     workspaceId,
     documentId,
   })
+
+const { currentUser, userProfile } = storeToRefs(useAuthStore())
+const { teamMembers } = storeToRefs(useMembershipStore())
+
+const teamMembersByUserId = computed(
+  () => new Map(teamMembers.value.map((member) => [member.userId, member]))
+)
 
 const ACTION_LABELS = {
   "content.create": "Created",
@@ -90,8 +100,48 @@ const formatTimestampDateTime = (entry: ILogEntry) => {
   return timestamp ? timestamp.toISOString() : undefined
 }
 
-const formatActor = (entry: ILogEntry) =>
-  entry.actor?.email || entry.actor?.userId || "Unknown"
+interface ResolvedActor {
+  name: string
+  email: string | null
+}
+
+const resolveActor = (entry: ILogEntry): ResolvedActor => {
+  const userId = entry.actor?.userId
+  const fallbackEmail = entry.actor?.email ?? null
+
+  if (!userId) {
+    return { name: fallbackEmail ?? "Unknown", email: null }
+  }
+
+  let displayName: string | null = null
+  let email = fallbackEmail
+
+  if (currentUser.value?.uid === userId) {
+    displayName =
+      userProfile.value?.displayName || currentUser.value.displayName || null
+    email = currentUser.value.email ?? email
+  } else {
+    const member = teamMembersByUserId.value.get(userId)
+    if (member) {
+      displayName = member.user?.displayName ?? null
+      email = member.user?.email ?? email
+    }
+  }
+
+  const name = displayName || email || userId
+  return {
+    name,
+    email: email && email !== name ? email : null,
+  }
+}
+
+const actorsByEntryId = computed(() => {
+  const map = new Map<string, ResolvedActor>()
+  for (const entry of logs.value) {
+    map.set(entry.id, resolveActor(entry))
+  }
+  return map
+})
 
 const formatAction = (entry: ILogEntry) => {
   const label = ACTION_LABELS[entry.action as keyof typeof ACTION_LABELS]
@@ -200,7 +250,7 @@ useInfiniteScroll(
             >
               <div class="relative flex flex-col items-center self-stretch">
                 <StepperIndicator as-child>
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon-xs">
                     <Component :is="getActionIcon(entry)" />
                   </Button>
                 </StepperIndicator>
@@ -211,17 +261,19 @@ useInfiniteScroll(
                 />
               </div>
 
-              <div class="flex grow flex-col gap-2">
-                <StepperTitle>
-                  {{ formatActor(entry) }}
-                </StepperTitle>
-                <StepperDescription v-if="formatChangeSummary(entry)">
-                  {{ formatChangeSummary(entry) }}
-                </StepperDescription>
-                <div class="flex items-start justify-between gap-2">
-                  <p class="text-xs font-medium">
-                    {{ formatAction(entry) }}
-                  </p>
+              <div class="flex min-w-0 grow flex-col gap-2 p-2">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex min-w-0 flex-col">
+                    <StepperTitle class="truncate">
+                      {{ actorsByEntryId.get(entry.id)?.name }}
+                    </StepperTitle>
+                    <span
+                      v-if="actorsByEntryId.get(entry.id)?.email"
+                      class="text-muted-foreground truncate text-xs"
+                    >
+                      {{ actorsByEntryId.get(entry.id)?.email }}
+                    </span>
+                  </div>
                   <time
                     class="text-muted-foreground shrink-0 text-xs"
                     :datetime="formatTimestampDateTime(entry)"
@@ -230,6 +282,12 @@ useInfiniteScroll(
                     {{ formatTimestamp(entry) }}
                   </time>
                 </div>
+                <p class="text-xs font-medium">
+                  {{ formatAction(entry) }}
+                </p>
+                <StepperDescription v-if="formatChangeSummary(entry)">
+                  {{ formatChangeSummary(entry) }}
+                </StepperDescription>
               </div>
             </StepperItem>
           </Stepper>

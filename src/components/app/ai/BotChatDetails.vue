@@ -161,7 +161,7 @@ const detailRows = computed<DetailRow[]>(() => {
 </script>
 
 <template>
-  <SidebarContent>
+  <div class="flex size-full min-h-0 flex-1 flex-col">
     <OverlayScrollbarsWrapper>
       <SidebarGroup>
         <SidebarGroupContent class="space-y-3 p-2">
@@ -253,5 +253,5 @@ const detailRows = computed<DetailRow[]>(() => {
         </SidebarGroupContent>
       </SidebarGroup>
     </OverlayScrollbarsWrapper>
-  </SidebarContent>
+  </div>
 </template>

@@ -67,6 +67,8 @@
     "hideTools": "Hide tools",
     "chatEmpty": "Ask anything to get started.",
     "thinking": "Thinking...",
+    "reply": "Reply",
+    "messageCopied": "Copied to clipboard",
     "modes": {
       "auto": {
         "label": "Auto",

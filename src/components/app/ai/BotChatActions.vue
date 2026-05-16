@@ -241,7 +241,7 @@ const submitDelete = async () => {
 </script>
 
 <template>
-  <SidebarContent>
+  <div class="flex size-full min-h-0 flex-1 flex-col">
     <OverlayScrollbarsWrapper>
       <SidebarGroup>
         <SidebarGroupLabel class="flex items-center gap-2">
@@ -469,7 +469,7 @@ const submitDelete = async () => {
         </SidebarGroupContent>
       </SidebarGroup>
     </OverlayScrollbarsWrapper>
-  </SidebarContent>
+  </div>
 
   <!-- Confirm sharing -->
   <AlertDialog v-model:open="confirmShareOpen">
@@ -518,11 +518,7 @@ const submitDelete = async () => {
         />
       </form>
       <DialogFooter>
-        <Button
-          variant="ghost"
-          :disabled="isMutating"
-          @click="renameDialogOpen = false"
-        >
+        <Button :disabled="isMutating" @click="renameDialogOpen = false">
           {{ t("actions.cancel") }}
         </Button>
         <Button

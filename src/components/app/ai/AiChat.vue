@@ -8,13 +8,8 @@ import MarkdownRender, {
   getMarkdown,
   parseMarkdownToStructure,
 } from "markstream-vue"
-import {
-  IconAiFill,
-  IconCopy,
-  IconPenLine,
-  IconReply,
-  IconTrash,
-} from "@/data/icons"
+import { IconAiFill, IconCopy, IconReply } from "@/data/icons"
+import { toast } from "vue-sonner"
 import { useAuthStore } from "@/stores/authStore"
 import Avatar from "vue-boring-avatars"
 import { inject } from "vue"
@@ -54,6 +49,41 @@ const messageAvatarSeed = (message: BotChatMessage): string =>
   botChat?.activeSession.value?.ownerUid ??
   authStore.currentUser?.uid ??
   "User"
+
+// ── Copy / Reply (context menu actions) ──────────────────────────────────
+//
+// Both actions read `message.content` — for agent turns this is the
+// running text concatenation built up in `useBotChat.appendText`, i.e.
+// the prose without tool-call payloads. That's the natural plain-text
+// view of the bubble: copying or quoting it gives the user the words,
+// not the JSON the model emitted to fetch a file. Tool segments stay
+// where they belong — inline cards in the bubble.
+const { copy: copyToClipboard } = useClipboard({ legacy: true })
+
+const handleCopyMessage = async (message: BotChatMessage) => {
+  const text = message.content
+  if (!text) return
+  await copyToClipboard(text)
+  toast.success(t("ai.messageCopied"))
+}
+
+// Markdown blockquote: every line prefixed with "> ". An empty line
+// keeps its prefix so the quoted block reads as one contiguous quote
+// in the rendered bubble — without it, markdown-it would split the
+// quote at the gap and the second half would render as a normal
+// paragraph.
+const blockquote = (text: string): string =>
+  text
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n")
+
+const handleReplyMessage = (message: BotChatMessage) => {
+  if (!botChat) return
+  const text = message.content
+  if (!text) return
+  botChat.pendingComposerDraft.value = blockquote(text)
+}
 
 // While streaming, `useBotChat` pushes an empty agent placeholder before
 // chunks arrive and mutates its `.content` / `.segments` in place. Hide
@@ -375,27 +405,20 @@ if (!supportsScrollAnchoring) {
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuGroup>
-            <ContextMenuItem>
-              <IconCopy />
-              Copy
-            </ContextMenuItem>
-            <ContextMenuItem>
-              <IconReply />
-              Reply
-            </ContextMenuItem>
-          </ContextMenuGroup>
-          <ContextMenuSeparator />
-          <ContextMenuGroup>
-            <ContextMenuItem v-if="message.role === 'user'">
-              <IconPenLine />
-              Edit
-            </ContextMenuItem>
-            <ContextMenuItem>
-              <IconTrash />
-              Delete
-            </ContextMenuItem>
-          </ContextMenuGroup>
+          <ContextMenuItem
+            :disabled="!message.content"
+            @select="handleCopyMessage(message)"
+          >
+            <IconCopy />
+            {{ t("actions.copy") }}
+          </ContextMenuItem>
+          <ContextMenuItem
+            :disabled="!message.content"
+            @select="handleReplyMessage(message)"
+          >
+            <IconReply />
+            {{ t("ai.reply") }}
+          </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
       <div
@@ -539,13 +562,39 @@ if (!supportsScrollAnchoring) {
   margin-bottom: 0;
 }
 
-/* ── Performance ───────────────────────────────────────────────────
-   Layout containment isolates each bubble's layout & paint work from
-   its neighbours. When the streaming tail's height grows, the browser
-   only re-lays-out *that* bubble's subtree — prior bubbles are skipped
-   entirely. Without `contain`, every chunk invalidates the full chat
-   column, so streaming gets jankier as history grows. */
+/* ── Width / overflow ───────────────────────────────────────────────
+   `w-max` (Tailwind `width: max-content`) gives bubbles their natural
+   content-sized silhouette — short messages stay short, long ones
+   grow. Without an upper bound, a single unbreakable token (URL,
+   hash, long inline code, KaTeX run, tool-output row) lets the
+   bubble grow past the column and produces a horizontal scroll on
+   the OverlayScrollbars viewport even when nothing visibly clips.
+   Capping at `max-width: 100%` keeps the natural sizing intact while
+   binding the bubble to its row.
+
+   The cap only binds because of `min-width: 0`: flex items default
+   to `min-width: auto` ("don't shrink below intrinsic content"), and
+   that default silently overrides `max-width` — the bubble would
+   refuse the cap because content would have to overflow. Resetting
+   to 0 releases the constraint.
+
+   `overflow-wrap: anywhere` is the final piece: with `max-width`
+   active, long tokens have to break somewhere to stay inside. The
+   `anywhere` value (vs `break-word`) only breaks mid-token when no
+   other break point fits, so normal prose still wraps on spaces.
+   Code blocks (`white-space: pre`) ignore `overflow-wrap` and scroll
+   themselves via markstream's `pre` styles — no double-handling.
+
+   ── Performance ───────────────────────────────────────────────────
+   `contain: layout style` isolates each bubble's layout & paint from
+   its neighbours. When the streaming tail's height grows, the
+   browser only re-lays-out *that* bubble's subtree — prior bubbles
+   are skipped. Without `contain`, every chunk invalidates the full
+   chat column, so streaming gets jankier as history grows. */
 .markdown-bubble {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
   contain: layout style;
 }
 
@@ -585,5 +634,23 @@ if (!supportsScrollAnchoring) {
 .scroll-anchor {
   overflow-anchor: auto;
   height: 1px;
+}
+
+/* ── Grid-track width binding ──────────────────────────────────────
+   `grid-cols-1` resolves to `grid-template-columns: minmax(0, 1fr)`,
+   which *should* clamp the column to the container width. It doesn't
+   in practice, because grid items default to `min-width: auto` — the
+   item refuses to shrink below intrinsic content, the column grows
+   with it, and the OverlayScrollbars viewport gets a horizontal
+   scroll. The actual grid child is reka-ui's
+   `[data-slot="context-menu-trigger"]` (ContextMenuRoot renders no
+   DOM), so we pin both the direct child *and* the trigger to
+   `min-width: 0`. The `> *` rule alone covers most cases; the
+   `:deep()` selector is belt-and-suspenders in case reka-ui ever
+   adds an intermediate wrapper. */
+.messages-list > *,
+.messages-list :deep([data-slot="context-menu-trigger"]) {
+  min-width: 0;
+  max-width: 100%;
 }
 </style>

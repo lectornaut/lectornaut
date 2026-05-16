@@ -296,6 +296,39 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 }
 
+// ── Reply prefill ────────────────────────────────────────────────────────────
+//
+// `AiChat` (sibling component) writes a Markdown blockquote of the
+// message being replied to into `pendingComposerDraft`. We consume it
+// once: prepend (separated by a blank line so the user's pre-existing
+// draft stays grouped as its own paragraph), focus the textarea, park
+// the caret at the end, then reset the ref to null so the same reply
+// doesn't get re-injected on subsequent runs of the watcher.
+//
+// Read-only / archived sessions: still allowed. The textarea is
+// disabled in those modes so the user can't add to it or send, but
+// they can read the quote and the model's response that prompted it.
+// Suppressing the prefill there would silently swallow the click,
+// which is worse UX than showing the quote in a disabled state.
+watch(
+  () => botChat?.pendingComposerDraft.value ?? null,
+  (next) => {
+    if (next === null) return
+    const existing = userInput.value
+    userInput.value = existing.trim().length
+      ? `${next}\n\n${existing}`
+      : `${next}\n\n`
+    if (botChat) botChat.pendingComposerDraft.value = null
+    nextTick(() => {
+      const el = textareaRef.value?.$el
+      if (!el) return
+      el.focus()
+      const caret = userInput.value.length
+      el.setSelectionRange(caret, caret)
+    })
+  }
+)
+
 // ── Tool picker ──────────────────────────────────────────────────────────────
 //
 // Click the AI badge on top of the composer to expand a list of tools the

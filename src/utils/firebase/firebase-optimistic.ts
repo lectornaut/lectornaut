@@ -21,50 +21,42 @@ import { computed, isRef, ref, shallowRef, toRaw } from "vue"
 // ============================================================================
 
 /**
- * Recursively unwraps Vue reactive proxies so that structuredClone can
- * process the resulting plain object tree.
+ * Deep clones an object to preserve previous state for rollback.
+ *
+ * Recursively unwraps Vue reactive proxies (toRaw) and clones arrays/objects.
+ * Firestore Timestamp-like objects are shared by reference so their class
+ * identity (and `toDate()`) survives the clone — `structuredClone` would
+ * strip the prototype and break every `value.toDate()` call downstream.
+ * Dates are cloned defensively because they are mutable.
  */
-function deepToRaw<T>(value: T): T {
+function deepClone<T>(value: T): T {
   const raw = toRaw(value)
 
   if (raw == null || typeof raw !== "object") return raw
 
-  // Firestore Timestamp-like objects are immutable — return as-is
+  // Firestore Timestamp-like objects are immutable — preserve identity so
+  // `toDate()` and sort comparators keep working after cloning.
   if ("seconds" in (raw as object) && "nanoseconds" in (raw as object)) {
     return raw
   }
 
-  // Date objects must be preserved — structuredClone handles them correctly
   if (raw instanceof Date) {
-    return raw
+    return new Date(raw.getTime()) as T
   }
 
   if (Array.isArray(raw)) {
-    return raw.map(deepToRaw) as T
+    return raw.map(deepClone) as T
   }
 
   const result: Record<string, unknown> = {}
   for (const key of Object.keys(raw as Record<string, unknown>)) {
-    result[key] = deepToRaw((raw as Record<string, unknown>)[key])
+    result[key] = deepClone((raw as Record<string, unknown>)[key])
   }
   return result as T
 }
 
-/**
- * Deep clones an object to preserve previous state for rollback.
- * Firestore Timestamp-like objects are treated as immutable and returned as-is.
- */
 export function cloneState<T>(state: T): T {
-  if (state == null || typeof state !== "object") return state
-
-  // Firestore Timestamp-like objects are immutable — no need to clone
-  if ("seconds" in (state as object) && "nanoseconds" in (state as object)) {
-    return state
-  }
-
-  // Deeply unwrap Vue reactive proxies before cloning — structuredClone
-  // cannot handle Proxy objects and throws DataCloneError.
-  return structuredClone(deepToRaw(state))
+  return deepClone(state)
 }
 
 // ============================================================================

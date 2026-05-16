@@ -571,11 +571,7 @@ const onArchiveToggle = (session: IBotSession) => {
         />
       </form>
       <DialogFooter>
-        <Button
-          variant="ghost"
-          :disabled="isMutating"
-          @click="renameDialogOpen = false"
-        >
+        <Button :disabled="isMutating" @click="renameDialogOpen = false">
           {{ t("actions.cancel") }}
         </Button>
         <Button

@@ -269,6 +269,15 @@ export interface BotChatContext {
    * chat is bound to that node" before the first send lands.
    */
   pendingPinnedNode: Ref<BotChatNodeRef | null>
+  /**
+   * One-shot text the composer consumes by prepending to its current
+   * draft and then resetting back to null. Wired by the in-chat context
+   * menu's "Reply" action to inject a Markdown blockquote of the message
+   * being replied to. Kept on the shared context (rather than via an
+   * event bus) so any future "stuff this into the composer" affordance
+   * — quick-prompt buttons, drag-drop, etc. — has a single channel.
+   */
+  pendingComposerDraft: Ref<string | null>
 }
 
 export const BotChatContextKey: InjectionKey<BotChatContext> =
@@ -307,6 +316,13 @@ export function useBotChat(): BotChatContext {
 
   const attachedNodes = ref<BotChatNodeRef[]>([])
   const pendingPinnedNode = ref<BotChatNodeRef | null>(null)
+  // One-shot composer prefill. `AiChat` sets this from the context menu
+  // (Reply → blockquote of the message), `AiChatComposer` watches it,
+  // prepends to its local draft, then resets the ref to null. Lives here
+  // (not as a local ref in the composer) so the chat view — a sibling
+  // component — can reach the composer through the already-shared
+  // BotChatContext without a separate event channel.
+  const pendingComposerDraft = ref<string | null>(null)
 
   const canAttachMoreNodes = computed(
     () => attachedNodes.value.length < BOT_CHAT_MAX_ATTACHED_NODES
@@ -1203,5 +1219,6 @@ export function useBotChat(): BotChatContext {
     selectOrCreateNodeSession,
     startNewPinnedNodeSession,
     pendingPinnedNode,
+    pendingComposerDraft,
   }
 }
