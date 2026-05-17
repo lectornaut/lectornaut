@@ -1059,6 +1059,10 @@
         "label": "Providers",
         "description": "Choose which AI providers are available to this team. At least one provider must stay enabled.",
         "minimumRequired": "At least one provider must stay enabled.",
+        "configureModels": "Configure models",
+        "modelsLabel": "Models",
+        "modelsMinimum": "At least one model must stay enabled.",
+        "modelsEnabledCount": "{enabled} of {total} enabled",
         "google": {
           "description": "{count} Gemini models available for team AI features."
         },

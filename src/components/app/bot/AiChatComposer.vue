@@ -15,23 +15,25 @@ import {
   IconPlus,
   IconX,
 } from "@/data/icons"
+import { findBotModel } from "@/helpers/defaults"
+import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { storeToRefs } from "pinia"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
 
-const props = withDefaults(
-  defineProps<{
-    placeholder?: string
-    usageLabel?: string
-  }>(),
-  {
-    usageLabel: "52% used",
-  }
-)
-
 const { t } = useI18n()
+
+// No `withDefaults` here: the placeholder default depends on `t()` from
+// `useI18n()`, which is `const`-bound inside setup and thus unavailable
+// at the module-scope evaluation point where the compiler hoists prop
+// defaults. The fallback is applied at the consumption site below
+// (`inputPlaceholder`) instead, which has full access to local refs.
+const props = defineProps<{
+  placeholder?: string
+}>()
+
 const userInput = ref("")
 const textareaRef = ref<{ $el?: HTMLTextAreaElement } | null>(null)
 
@@ -268,6 +270,16 @@ const modeLabel = (value: BotChatMode): string => {
   if (value === "agent") return t("ai.agent")
   return t("ai.manual")
 }
+
+// ── Active model (read-only display) ─────────────────────────────────────────
+//
+// Surfaced in the composer's toolbar so the user always sees which model
+// will run their next message. Sourced from the team's agent config
+// store — the canonical Pinia source the Settings → Agents form writes
+// to, so an admin saving a new model propagates here in the same tick.
+const agentConfigStore = useAgentConfigStore()
+const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+const activeModel = computed(() => findBotModel(teamAgentConfig.value.model))
 
 const inputPlaceholder = computed(() => {
   if (isActiveArchived.value) return t("ai.placeholderArchived")
@@ -582,9 +594,35 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
             </SelectGroup>
           </SelectContent>
         </Select>
-        <InputGroupText class="ml-auto text-xs">
-          {{ usageLabel }}
-        </InputGroupText>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <InputGroupText class="ml-auto gap-1 text-xs">
+                {{ activeModel.name }}
+                <Badge v-if="activeModel.badge" variant="secondary">
+                  {{ activeModel.badge }}
+                </Badge>
+              </InputGroupText>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div class="flex flex-col gap-0.5">
+                <span class="font-medium">{{ activeModel.name }}</span>
+                <span
+                  v-if="activeModel.providerName"
+                  class="text-muted-foreground text-xs"
+                >
+                  {{ activeModel.providerName }}
+                </span>
+                <span
+                  v-if="activeModel.description"
+                  class="text-muted-foreground text-xs"
+                >
+                  {{ activeModel.description }}
+                </span>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <Separator orientation="vertical" class="my-2" />
         <TooltipProvider>
           <Tooltip>

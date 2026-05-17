@@ -41,6 +41,7 @@ import type {
   BillingPlanKey,
   IBotAgentConfig,
   IBotAgentModel,
+  IBotAgentModelToggles,
   IBotModelProvider,
 } from "@/types/domain"
 
@@ -306,6 +307,54 @@ export const botModels = [
   badge: string | null
 }[]
 
+export type BotModelEntry = (typeof botModels)[number]
+
+export interface BotModelInfo {
+  id: string
+  name: string
+  description: string
+  badge: string | null
+  providerId: IBotModelProvider | null
+  providerName: string
+}
+
+// Look up catalog metadata for a model id. Falls back to a synthetic
+// entry when the id isn't in the static catalog — the server can
+// (and will) ship new models before the client catalog catches up,
+// and the UI shouldn't crash on a `summary.model` it doesn't know.
+export const findBotModel = (id: string | null | undefined): BotModelInfo => {
+  if (!id) {
+    return {
+      id: "",
+      name: "Unknown",
+      description: "",
+      badge: null,
+      providerId: null,
+      providerName: "",
+    }
+  }
+  const entry = botModels.find((m) => m.id === id)
+  if (!entry) {
+    return {
+      id,
+      name: id,
+      description: "",
+      badge: null,
+      providerId: null,
+      providerName: "",
+    }
+  }
+  const provider = botModelProviders.find((p) => p.id === entry.provider)
+  return {
+    id: entry.id,
+    name: entry.name,
+    description: entry.description,
+    badge: entry.badge,
+    providerId: entry.provider,
+    providerName: provider?.name ?? "",
+  }
+}
+
 export const botChatModes = [
   {
     id: "auto",
@@ -324,8 +373,21 @@ export const botChatModes = [
   },
 ] as const
 
+// Per-model availability toggles default. The form binds against this
+// shape; the server normalizes missing keys to `true` on read so a
+// newly-added model id starts enabled even for teams that saved their
+// config before the model existed.
+//
+// `Object.fromEntries` + `as` is the most concise way to build a strict
+// `Record<K, V>` from an array — `reduce` can't seed an empty object
+// the compiler will accept as already satisfying the full record.
+export const defaultBotModelToggles: IBotAgentModelToggles = Object.fromEntries(
+  botModels.map((model) => [model.id, true])
+) as IBotAgentModelToggles
+
 export const defaultBotAgentConfig: IBotAgentConfig = {
   providers: { ...defaultBotModelProviderToggles },
+  models: { ...defaultBotModelToggles },
   model: "gemini-3-flash-preview",
   temperature: 0.7,
   topP: 0.95,

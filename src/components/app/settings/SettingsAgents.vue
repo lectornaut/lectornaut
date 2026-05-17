@@ -1,15 +1,20 @@
 <script lang="ts" setup>
 import { useAgentConfig } from "@/composables/useAgentConfig"
-import { IconRotateCcw } from "@/data/icons"
+import { IconRotateCcw, IconSettings } from "@/data/icons"
 import {
   botAgentBounds,
   botChatModes,
   botModelProviders,
   botModels,
   defaultBotModelProviderToggles,
+  defaultBotModelToggles,
   defaultBotAgentConfig,
 } from "@/helpers/defaults"
-import type { IBotAgentConfig, IBotModelProvider } from "@/types/domain"
+import type {
+  IBotAgentConfig,
+  IBotAgentModel,
+  IBotModelProvider,
+} from "@/types/domain"
 
 const { t } = useI18n()
 
@@ -18,6 +23,13 @@ const cloneConfig = (source: IBotAgentConfig): IBotAgentConfig => ({
   providers: {
     ...defaultBotModelProviderToggles,
     ...source.providers,
+  },
+  // Per-model toggles: layer `source.models` on top of `defaultBotModelToggles`
+  // so a model the server hasn't seen yet (catalog drift) still has a
+  // sane default on the form before any save round-trips.
+  models: {
+    ...defaultBotModelToggles,
+    ...source.models,
   },
   promptSuffixes: { ...source.promptSuffixes },
   tools: { ...source.tools },
@@ -56,20 +68,47 @@ const isDirty = computed(
   () => JSON.stringify(draft.value) !== JSON.stringify(config.value)
 )
 
+// A model is *enabled* when its per-model toggle is on. Missing keys are
+// treated as `true` so a brand-new model id (catalog ahead of saved doc)
+// starts available without requiring an explicit save.
+const isModelEnabled = (modelId: IBotAgentModel): boolean =>
+  draft.value.models[modelId] !== false
+
+// A model is *available* when both its provider AND its per-model
+// toggle are on — the picker only ever surfaces models matching both.
 const availableModels = computed(() =>
-  botModels.filter((model) => draft.value.providers[model.provider])
+  botModels.filter(
+    (model) => draft.value.providers[model.provider] && isModelEnabled(model.id)
+  )
+)
+
+// The model/mode `<SelectItem>`s render a rich two-line layout (name +
+// description). Without overriding the `<SelectValue>` slot, reka-ui
+// clones that same multi-line content into the trigger and the field
+// grows two rows tall. These computeds let the trigger render *just*
+// the name (the first line) while the dropdown keeps its richer layout.
+const selectedModel = computed(
+  () => botModels.find((model) => model.id === draft.value.model) ?? null
+)
+const selectedMode = computed(
+  () => botChatModes.find((mode) => mode.id === draft.value.defaultMode) ?? null
 )
 
 // Group the flat model catalog by enabled provider for the picker.
 // Iterating `botModelProviders` first preserves the canonical display
 // order (Google → Anthropic → OpenAI) regardless of how `botModels` is
-// sorted.
+// sorted. Per-provider lists also respect the per-model toggles so a
+// fully-disabled provider (zero enabled models) drops out of the picker
+// even when its provider switch is on.
 const modelsByProvider = computed(() =>
   botModelProviders
     .map((provider) => ({
       ...provider,
       models: draft.value.providers[provider.id]
-        ? botModels.filter((model) => model.provider === provider.id)
+        ? botModels.filter(
+            (model) =>
+              model.provider === provider.id && isModelEnabled(model.id)
+          )
         : [],
     }))
     .filter((group) => group.models.length > 0)
@@ -81,11 +120,70 @@ const enabledProviderCount = computed(
       .length
 )
 
-const isLastEnabledProvider = (providerId: IBotModelProvider) =>
-  draft.value.providers[providerId] && enabledProviderCount.value <= 1
-
 const getProviderModelCount = (providerId: IBotModelProvider) =>
   botModels.filter((model) => model.provider === providerId).length
+
+// Per-provider catalog used to populate each provider's "Configure
+// models" dropdown. Independent of the provider's switch state so the
+// menu still lists every model — the disabled state of individual
+// checkboxes communicates the constraints instead.
+const getProviderModels = (providerId: IBotModelProvider) =>
+  botModels.filter((model) => model.provider === providerId)
+
+// Count of enabled models within a provider — drives the "X of Y
+// enabled" caption shown under the provider's label.
+const getProviderEnabledModelCount = (providerId: IBotModelProvider) =>
+  getProviderModels(providerId).filter((model) => isModelEnabled(model.id))
+    .length
+
+// Lookup map: model id → its provider id. Used by the per-model guard
+// to answer "is this model *currently* contributing to the available
+// pool?" in O(1) instead of re-scanning `botModels`.
+const modelProviderById = computed<Record<IBotAgentModel, IBotModelProvider>>(
+  () =>
+    botModels.reduce(
+      (acc, model) => {
+        acc[model.id] = model.provider
+        return acc
+      },
+      {} as Record<IBotAgentModel, IBotModelProvider>
+    )
+)
+
+// Count of *available* models — those where BOTH the provider toggle
+// and the per-model toggle are on. Mirrors the server's
+// `hasEnabledModel(providers, models)` check exactly; both guards below
+// gate on this same count so the form can never reach a state the
+// server would reject on save.
+const availableModelCount = computed(() => availableModels.value.length)
+
+// Provider toggle is "last-enabled" when disabling it would break the
+// `at least one (provider on AND model on) pair` invariant — either
+// because it's the only on provider OR because every other on provider
+// has zero on models, so its slice is the only source of available
+// models in the form.
+const isLastEnabledProvider = (providerId: IBotModelProvider): boolean => {
+  if (!draft.value.providers[providerId]) return false
+  if (enabledProviderCount.value <= 1) return true
+  const survivors = botModels.filter(
+    (model) =>
+      model.provider !== providerId &&
+      draft.value.providers[model.provider] &&
+      isModelEnabled(model.id)
+  )
+  return survivors.length === 0
+}
+
+// Per-model guard. Locked when this model is the only thing keeping
+// the available pool non-empty. A model whose provider is currently
+// off doesn't count toward the pool, so unchecking it is always allowed
+// — re-enabling its provider would re-surface other choices anyway.
+const isLastEnabledModel = (modelId: IBotAgentModel): boolean => {
+  if (!isModelEnabled(modelId)) return false
+  const providerId = modelProviderById.value[modelId]
+  if (!providerId || !draft.value.providers[providerId]) return false
+  return availableModelCount.value <= 1
+}
 
 const ensureSelectedModelIsAvailable = () => {
   if (availableModels.value.some((model) => model.id === draft.value.model)) {
@@ -105,8 +203,41 @@ const setProviderEnabled = (
   ensureSelectedModelIsAvailable()
 }
 
+const setModelEnabled = (modelId: IBotAgentModel, enabled: boolean) => {
+  // Disallow unchecking the model if doing so would leave the
+  // available pool (provider on AND model on) empty. The server
+  // enforces the same invariant via `hasEnabledModel`; failing the
+  // toggle on the client avoids a doomed round-trip.
+  if (!enabled && isLastEnabledModel(modelId)) return
+
+  draft.value.models[modelId] = enabled
+  ensureSelectedModelIsAvailable()
+}
+
+// Picks the right tooltip message for a locked provider Switch. The
+// generic "last provider" copy is misleading when the actual reason is
+// "every other provider has its models toggled off"; this surfaces the
+// model-level constraint instead. The active reason is determined by
+// counts, not by *which* provider is hovered — so this is a getter,
+// not a per-provider function.
+const providerDisableReason = computed<string>(() => {
+  if (!canEdit.value) return cannotEditReason.value ?? ""
+  if (enabledProviderCount.value <= 1) {
+    return t("settings.agents.providers.minimumRequired")
+  }
+  return t("settings.agents.providers.modelsMinimum")
+})
+
 watch(
   () => draft.value.providers,
+  () => {
+    ensureSelectedModelIsAvailable()
+  },
+  { deep: true }
+)
+
+watch(
+  () => draft.value.models,
   () => {
     ensureSelectedModelIsAvailable()
   },
@@ -138,6 +269,7 @@ const handleSave = async () => {
   await save({
     model: draft.value.model,
     providers: { ...draft.value.providers },
+    models: { ...draft.value.models },
     temperature: draft.value.temperature,
     topP: draft.value.topP,
     topK: draft.value.topK,
@@ -163,6 +295,15 @@ const handleResetDefaults = () => {
 
 const formatTemperature = (value: number) => value.toFixed(2)
 const formatTopP = (value: number) => value.toFixed(2)
+
+// Keep the per-provider model dropdown open while the user toggles
+// multiple checkboxes. `DropdownMenuCheckboxItem` auto-closes the
+// menu on select; preventing the default `select` event keeps it open
+// so admins can adjust several models in a row without re-opening
+// the trigger between each click.
+const keepMenuOpen = (event: Event) => {
+  event.preventDefault()
+}
 </script>
 
 <template>
@@ -201,8 +342,72 @@ const formatTopP = (value: number) => value.toFixed(2)
                       count: getProviderModelCount(provider.id),
                     })
                   }}
+                  ·
+                  {{
+                    t("settings.agents.providers.modelsEnabledCount", {
+                      enabled: getProviderEnabledModelCount(provider.id),
+                      total: getProviderModelCount(provider.id),
+                    })
+                  }}
                 </FieldDescription>
               </FieldContent>
+
+              <Tooltip>
+                <DropdownMenu>
+                  <TooltipTrigger as-child>
+                    <DropdownMenuTrigger as-child>
+                      <InputGroupButton
+                        variant="ghost"
+                        size="icon-xs"
+                        :disabled="!canEdit || !draft.providers[provider.id]"
+                      >
+                        <IconSettings />
+                      </InputGroupButton>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("settings.agents.providers.configureModels") }}
+                  </TooltipContent>
+                  <DropdownMenuContent align="end" class="w-72">
+                    <DropdownMenuLabel>
+                      {{ t("settings.agents.providers.modelsLabel") }} ·
+                      {{ provider.name }}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      v-for="model in getProviderModels(provider.id)"
+                      :key="model.id"
+                      :model-value="isModelEnabled(model.id)"
+                      :disabled="
+                        !canEdit ||
+                        (isModelEnabled(model.id) &&
+                          isLastEnabledModel(model.id))
+                      "
+                      @update:model-value="
+                        (value) => setModelEnabled(model.id, Boolean(value))
+                      "
+                      @select="keepMenuOpen"
+                    >
+                      <div class="flex flex-col items-start gap-0.5">
+                        <span class="flex items-center gap-2">
+                          {{ model.name }}
+                          <Badge
+                            v-if="model.badge"
+                            variant="secondary"
+                            class="text-xs"
+                          >
+                            {{ model.badge }}
+                          </Badge>
+                        </span>
+                        <span class="text-muted-foreground text-xs">
+                          {{ model.description }}
+                        </span>
+                      </div>
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger as-child>
                   <span class="inline-block">
@@ -220,11 +425,7 @@ const formatTopP = (value: number) => value.toFixed(2)
                 <TooltipContent
                   v-if="!canEdit || isLastEnabledProvider(provider.id)"
                 >
-                  {{
-                    !canEdit
-                      ? cannotEditReason
-                      : t("settings.agents.providers.minimumRequired")
-                  }}
+                  {{ providerDisableReason }}
                 </TooltipContent>
               </Tooltip>
             </Field>
@@ -256,7 +457,21 @@ const formatTopP = (value: number) => value.toFixed(2)
                       <SelectTrigger class="w-full">
                         <SelectValue
                           :placeholder="t('settings.agents.model.placeholder')"
-                        />
+                        >
+                          <span
+                            v-if="selectedModel"
+                            class="flex items-center gap-2"
+                          >
+                            {{ selectedModel.name }}
+                            <Badge
+                              v-if="selectedModel.badge"
+                              variant="secondary"
+                              class="text-xs"
+                            >
+                              {{ selectedModel.badge }}
+                            </Badge>
+                          </span>
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <template
@@ -321,7 +536,9 @@ const formatTopP = (value: number) => value.toFixed(2)
                 :disabled="!canEdit"
               >
                 <SelectTrigger class="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    <span v-if="selectedMode">{{ selectedMode.name }}</span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
@@ -757,7 +974,7 @@ const formatTopP = (value: number) => value.toFixed(2)
     </div>
     <DialogFooter
       v-if="!isLoading && isDirty && canEdit"
-      class="bg-background/50 sticky bottom-3 z-10 m-3 flex items-center gap-2 border p-2 backdrop-blur-lg"
+      class="bg-background/90 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-lg border p-2 shadow-lg backdrop-blur-lg"
     >
       <p class="text-muted-foreground mr-auto ml-2 text-xs">
         {{ t("settings.unsavedChanges") }}

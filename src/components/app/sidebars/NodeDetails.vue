@@ -151,7 +151,7 @@ const nodeStatusLabel = computed(() =>
 
 <template>
   <div class="flex size-full min-h-0 flex-1 flex-col">
-    <Card size="sm" class="w-full px-2 pb-2 shadow-none">
+    <Card size="sm" class="m-2 shadow-none">
       <CardHeader>
         <CardTitle class="flex items-center gap-1.5">
           <IconSparkles class="text-muted-foreground size-4" />

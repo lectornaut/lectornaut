@@ -761,6 +761,26 @@ const DEFAULT_BOT_AGENT_PROVIDERS: Record<BotModelProvider, boolean> = {
   openai: true,
 }
 
+type BotAgentModelToggles = Record<BotAgentModel, boolean>
+
+/**
+ * Per-model availability toggles. Layered on top of `providers`: a model
+ * is *available* iff its provider is enabled AND its toggle is true.
+ * Lets admins narrow what users can pick (e.g. only Gemini Pro, no
+ * Flash variants) without flipping an entire provider off.
+ *
+ * Default is everything-true so existing teams keep their picker intact
+ * after this field is introduced; the normalizer fills in the same
+ * defaults for any model id missing from a partially-saved doc, so a
+ * new model id added to `BOT_AGENT_MODELS` after this writes a doc
+ * still defaults to enabled on the next read.
+ */
+const DEFAULT_BOT_AGENT_MODEL_TOGGLES: BotAgentModelToggles =
+  BOT_AGENT_MODELS.reduce((acc, model) => {
+    acc[model] = true
+    return acc
+  }, {} as BotAgentModelToggles)
+
 interface BotAgentToolToggles {
   getWeather: boolean
   rollDice: boolean
@@ -787,6 +807,12 @@ interface BotAgentToolToggles {
 interface BotAgentConfig {
   /** Provider availability policy for this team. */
   providers: Record<BotModelProvider, boolean>
+  /**
+   * Per-model availability toggles. Combined with `providers` (AND): a
+   * model only shows up in the picker when its provider AND its
+   * per-model toggle are both true.
+   */
+  models: BotAgentModelToggles
   model: BotAgentModel
   /** [0, 2]; lower = more deterministic. */
   temperature: number
@@ -812,6 +838,7 @@ interface BotAgentConfig {
 
 const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   providers: { ...DEFAULT_BOT_AGENT_PROVIDERS },
+  models: { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES },
   model: DEFAULT_BOT_AGENT_MODEL,
   temperature: 0.7,
   topP: 0.95,
@@ -839,6 +866,7 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
 const cloneDefaultBotAgentConfig = (): BotAgentConfig => ({
   ...DEFAULT_BOT_AGENT_CONFIG,
   providers: { ...DEFAULT_BOT_AGENT_CONFIG.providers },
+  models: { ...DEFAULT_BOT_AGENT_CONFIG.models },
   promptSuffixes: { ...DEFAULT_BOT_AGENT_CONFIG.promptSuffixes },
   tools: { ...DEFAULT_BOT_AGENT_CONFIG.tools },
 })
@@ -868,6 +896,11 @@ const botAgentConfigUpdateSchema = z.object({
     })
     .partial()
     .optional(),
+  // Partial record so the client can patch a single toggle. Each key is
+  // validated against the model allowlist by the enum; the merge in
+  // `updateTeamAgentConfig` layers the patch onto the saved record so
+  // omitted models keep their prior state.
+  models: z.record(z.enum(BOT_AGENT_MODELS), z.boolean()).optional(),
   model: z.enum(BOT_AGENT_MODELS).optional(),
   temperature: z
     .number()
@@ -971,6 +1004,57 @@ function firstModelForEnabledProviders(
   )
 }
 
+/**
+ * Pick the first model that's available under BOTH the provider toggles
+ * and the per-model toggles. Falls back to the first model whose
+ * provider is enabled (ignoring the per-model toggle) so an
+ * over-restrictive `models` map can never strand the team with no
+ * resolvable model — chat would otherwise fail at dispatch time.
+ */
+function firstAvailableModel(
+  providers: Record<BotModelProvider, boolean>,
+  models: BotAgentModelToggles
+): BotAgentModel {
+  return (
+    BOT_AGENT_MODELS.find(
+      (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]] && models[model]
+    ) ?? firstModelForEnabledProviders(providers)
+  )
+}
+
+function hasEnabledModel(
+  providers: Record<BotModelProvider, boolean>,
+  models: BotAgentModelToggles
+): boolean {
+  return BOT_AGENT_MODELS.some(
+    (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]] && models[model]
+  )
+}
+
+/**
+ * Normalize the raw `models` map from Firestore. Missing keys default
+ * to `true` — newly-introduced models in the allowlist start
+ * enabled for teams that saved their config before the model existed.
+ * If the user managed to disable every model, restore the all-true
+ * default; the resolver further ensures at least one model is
+ * actually pickable under the active providers.
+ */
+function normalizeModelToggles(raw: unknown): BotAgentModelToggles {
+  const rawModels = isRecord(raw) ? raw : {}
+  const models: BotAgentModelToggles = { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES }
+
+  for (const model of BOT_AGENT_MODELS) {
+    if (typeof rawModels[model] === "boolean") {
+      models[model] = rawModels[model] as boolean
+    }
+  }
+
+  if (!BOT_AGENT_MODELS.some((model) => models[model])) {
+    return { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES }
+  }
+  return models
+}
+
 function assertEnabledProvidersConfigured(
   providers: Record<BotModelProvider, boolean>
 ): void {
@@ -994,14 +1078,18 @@ function applyAgentConfigOverrides(
   if (!raw) return cloneDefaultBotAgentConfig()
 
   const providers = normalizeProviderToggles(raw.providers)
+  const models = normalizeModelToggles(raw.models)
   const configuredModel =
     typeof raw.model === "string" &&
     (BOT_AGENT_MODELS as readonly string[]).includes(raw.model)
       ? (raw.model as BotAgentModel)
       : DEFAULT_BOT_AGENT_CONFIG.model
-  const model = providers[BOT_MODEL_PROVIDER_BY_MODEL[configuredModel]]
+  const isConfiguredModelAvailable =
+    providers[BOT_MODEL_PROVIDER_BY_MODEL[configuredModel]] &&
+    models[configuredModel]
+  const model = isConfiguredModelAvailable
     ? configuredModel
-    : firstModelForEnabledProviders(providers)
+    : firstAvailableModel(providers, models)
 
   const numberOrDefault = (
     value: unknown,
@@ -1083,6 +1171,7 @@ function applyAgentConfigOverrides(
 
   return {
     providers,
+    models,
     model,
     temperature: numberOrDefault(
       raw.temperature,
@@ -2730,6 +2819,10 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
       ...currentConfig.providers,
       ...(parsed.data.providers ?? {}),
     }
+    const nextModels: BotAgentModelToggles = {
+      ...currentConfig.models,
+      ...(parsed.data.models ?? {}),
+    }
 
     if (!hasEnabledProvider(nextProviders)) {
       throw new HttpsError(
@@ -2737,22 +2830,32 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
         "At least one AI provider must stay enabled."
       )
     }
+    if (!hasEnabledModel(nextProviders, nextModels)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "At least one model must stay available."
+      )
+    }
     assertEnabledProvidersConfigured(nextProviders)
 
     let nextModel = parsed.data.model ?? currentConfig.model
-    if (!nextProviders[BOT_MODEL_PROVIDER_BY_MODEL[nextModel]]) {
+    const isNextModelAvailable =
+      nextProviders[BOT_MODEL_PROVIDER_BY_MODEL[nextModel]] &&
+      nextModels[nextModel]
+    if (!isNextModelAvailable) {
       if (parsed.data.model) {
         throw new HttpsError(
           "invalid-argument",
-          "Selected model belongs to a disabled AI provider."
+          "Selected model is unavailable — provider disabled or model toggled off."
         )
       }
-      nextModel = firstModelForEnabledProviders(nextProviders)
+      nextModel = firstAvailableModel(nextProviders, nextModels)
     }
 
     const updatesToWrite: Record<string, unknown> = { ...parsed.data }
-    if (parsed.data.providers) {
+    if (parsed.data.providers || parsed.data.models) {
       updatesToWrite.providers = nextProviders
+      updatesToWrite.models = nextModels
       updatesToWrite.model = nextModel
     } else if (parsed.data.model) {
       updatesToWrite.model = nextModel

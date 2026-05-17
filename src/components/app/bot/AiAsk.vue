@@ -67,7 +67,7 @@ const openHistory = () => {
           </TooltipContent>
         </SheetTrigger>
         <Teleport v-if="isDocked" defer to="#right-dock" :disabled="!isDocked">
-          <AiChatShell :placeholder="t('ai.placeholder')" />
+          <AiChatShell />
         </Teleport>
         <SheetContent
           class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
@@ -86,7 +86,7 @@ const openHistory = () => {
               </Button>
             </div>
           </SheetHeader>
-          <AiChatShell :placeholder="t('ai.placeholder')" />
+          <AiChatShell />
         </SheetContent>
       </Tooltip>
     </TooltipProvider>

@@ -727,6 +727,7 @@ export interface GetTeamAgentConfigResponse {
  */
 export type UpdateTeamAgentConfigPatch = Partial<{
   providers: Partial<IBotAgentConfig["providers"]>
+  models: Partial<IBotAgentConfig["models"]>
   model: IBotAgentConfig["model"]
   temperature: number
   topP: number

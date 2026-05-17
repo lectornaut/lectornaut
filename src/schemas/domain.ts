@@ -319,6 +319,17 @@ export const botAgentModelSchema = z.enum([
 ])
 
 /**
+ * Per-model availability toggles. Layered on top of `providers`: a model
+ * is *available* iff its provider is enabled AND its toggle is true.
+ * The server normalizes missing keys to `true` on read, so a newly-added
+ * model id starts enabled even for teams whose config doc predates it.
+ */
+export const botAgentModelTogglesSchema = z.record(
+  botAgentModelSchema,
+  z.boolean()
+)
+
+/**
  * Per-tool feature flags. Disabled tools are simply not registered with
  * the chat — the model never sees them in its tool catalog.
  */
@@ -359,6 +370,7 @@ export const botAgentDefaultModeSchema = z.enum(["auto", "agent", "manual"])
  */
 export const botAgentConfigSchema = z.object({
   providers: botAgentProviderTogglesSchema,
+  models: botAgentModelTogglesSchema,
   model: botAgentModelSchema,
   temperature: z.number().min(0).max(2),
   topP: z.number().min(0).max(1),

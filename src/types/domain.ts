@@ -4,6 +4,7 @@ import type {
   botAgentConfigSchema,
   botAgentDefaultModeSchema,
   botAgentModelSchema,
+  botAgentModelTogglesSchema,
   botAgentProviderSchema,
   botAgentProviderTogglesSchema,
   botAgentToolTogglesSchema,
@@ -66,6 +67,7 @@ export type IBotAgentProviderToggles = z.infer<
   typeof botAgentProviderTogglesSchema
 >
 export type IBotAgentModel = z.infer<typeof botAgentModelSchema>
+export type IBotAgentModelToggles = z.infer<typeof botAgentModelTogglesSchema>
 export type IBotAgentDefaultMode = z.infer<typeof botAgentDefaultModeSchema>
 export type IBotAgentToolToggles = z.infer<typeof botAgentToolTogglesSchema>
 export type IBotAgentConfig = z.infer<typeof botAgentConfigSchema>
