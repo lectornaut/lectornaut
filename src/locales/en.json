@@ -3,6 +3,7 @@
   "ai": {
     "placeholder": "Ask, search, or chat...",
     "mode": "Mode",
+    "model": "Model",
     "auto": "Auto",
     "agent": "Agent",
     "manual": "Manual",

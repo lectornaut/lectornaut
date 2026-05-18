@@ -440,4 +440,18 @@ export const botSessionSchema = z.object({
    * not as a specific mode.
    */
   lastMode: z.enum(["auto", "agent", "manual"]).optional(),
+  /**
+   * Most recent turn's model. Written by `FirestoreBotSessionStore.save`
+   * on every save and overwritten by subsequent turns. Used to rehydrate
+   * the composer's model picker when the user re-opens a chat, so the
+   * conversation continues on whichever model the last turn ran on
+   * (rather than snapping back to the team's admin default each visit).
+   * Absent on sessions created before the field was introduced — the
+   * client falls back to the team's default model in that case. The
+   * server validates against the team's current provider/model allowlist
+   * before writing, so a model an admin has since disabled cannot be
+   * persisted further (the next send falls back to the team default
+   * and overwrites this field accordingly).
+   */
+  lastModel: botAgentModelSchema.optional(),
 })

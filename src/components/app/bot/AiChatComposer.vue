@@ -16,9 +16,9 @@ import {
   IconX,
 } from "@/data/icons"
 import { findBotModel } from "@/helpers/defaults"
-import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
+import type { IBotAgentModel } from "@/types/domain"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { storeToRefs } from "pinia"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
@@ -271,15 +271,46 @@ const modeLabel = (value: BotChatMode): string => {
   return t("ai.manual")
 }
 
-// ── Active model (read-only display) ─────────────────────────────────────────
+// ── Active model picker ──────────────────────────────────────────────────────
 //
-// Surfaced in the composer's toolbar so the user always sees which model
-// will run their next message. Sourced from the team's agent config
-// store — the canonical Pinia source the Settings → Agents form writes
-// to, so an admin saving a new model propagates here in the same tick.
-const agentConfigStore = useAgentConfigStore()
-const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
-const activeModel = computed(() => findBotModel(teamAgentConfig.value.model))
+// Mirrors the mode dropdown's pattern: bind directly to `botChat.model`
+// so the next `sendMessage` automatically picks up the chosen model and
+// the side-panel (when it gains a model surface) stays in sync. The
+// composable owns the seed-from-team-default, rehydrate-on-session-load,
+// and clamp-to-allowlist behaviors so this component only renders.
+//
+// `availableModelsByProvider` is already filtered+grouped by the team's
+// current provider/model toggles, so admins disabling a publisher
+// removes its group here in the same tick — no extra plumbing.
+//
+// The `??` fallback never fires in practice (the `/bot` route and the
+// inspector tab both `provide()` the context before mounting this
+// component), but matches the mode dropdown's "default to auto"
+// pattern so the trigger always has *something* to render.
+const model = computed<IBotAgentModel>(
+  () => botChat?.model.value ?? "gemini-3-flash-preview"
+)
+const availableModelsByProvider = computed(
+  () => botChat?.availableModelsByProvider.value ?? []
+)
+// Catalog lookup for the *currently selected* model so the trigger
+// renders a compact name + badge identical to the read-only display
+// it replaces. `findBotModel` returns a synthetic stub for unknown ids
+// so an out-of-catalog wire-name (server ahead of client) still
+// renders something instead of crashing the trigger.
+const activeModel = computed(() => findBotModel(model.value))
+const onModelChange = (next: unknown) => {
+  if (!botChat) return
+  if (typeof next !== "string") return
+  // Defensive — server clamps to the allowlist on receive, but rejecting
+  // out-of-list picks here avoids a UI flicker where the trigger shows
+  // a model that the next send would silently substitute.
+  const allowed = availableModelsByProvider.value.some((group) =>
+    group.models.some((entry) => entry.id === next)
+  )
+  if (!allowed) return
+  botChat.model.value = next as IBotAgentModel
+}
 
 const inputPlaceholder = computed(() => {
   if (isActiveArchived.value) return t("ai.placeholderArchived")
@@ -373,12 +404,12 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
 </script>
 
 <template>
-  <Collapsible v-model:open="toolsOpen" class="bg-secondary m-2 rounded">
+  <Collapsible v-model:open="toolsOpen" class="bg-muted m-2 rounded">
     <TooltipProvider>
       <Tooltip>
         <CollapsibleTrigger as-child>
           <TooltipTrigger as-child>
-            <Badge variant="ghost" class="m-1">
+            <Badge variant="ghost" class="m-2">
               <IconAiFill />
             </Badge>
           </TooltipTrigger>
@@ -389,33 +420,31 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
       </Tooltip>
     </TooltipProvider>
     <CollapsibleContent>
-      <ItemGroup class="px-1 pb-1">
-        <Item
-          v-for="tool in BOT_TOOL_CATALOG"
-          :key="tool.name"
-          size="xs"
-          class="hover:bg-muted"
-          :disabled="isReadOnly"
-          @click="insertToolPrompt(tool)"
-        >
-          <ItemMedia variant="icon">
-            <Component :is="tool.icon" />
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle>{{ tool.label }}</ItemTitle>
-            <ItemDescription>{{ tool.description }}</ItemDescription>
-          </ItemContent>
-        </Item>
-      </ItemGroup>
+      <div class="flex flex-wrap items-center gap-2 px-2 pb-2">
+        <TooltipProvider>
+          <Tooltip v-for="tool in BOT_TOOL_CATALOG" :key="tool.name">
+            <TooltipTrigger as-child>
+              <Badge
+                :class="{ 'pointer-events-none opacity-50': isReadOnly }"
+                @click="insertToolPrompt(tool)"
+              >
+                <Component :is="tool.icon" />
+                {{ tool.label }}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{{ tool.description }}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     </CollapsibleContent>
     <div
       v-if="hasAttachedNodes"
-      class="flex flex-wrap items-center gap-1 px-1 pb-1"
+      class="flex flex-wrap items-center gap-2 px-2 pb-2"
     >
       <Badge
         v-for="node in attachedNodeDetails"
         :key="`${node.scope}:${node.nodeId}`"
-        :variant="node.status === 'ok' ? 'outline' : 'secondary'"
+        :variant="node.status === 'ok' ? 'secondary' : 'outline'"
       >
         <Component :is="node.type === 'folder' ? IconFolder : IconFile" />
         <span v-if="node.status === 'deleted'" class="max-w-40 truncate italic">
@@ -436,9 +465,9 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button
-                variant="secondary"
+              <InputGroupButton
                 size="icon-xs"
+                class="size-3"
                 :disabled="isReadOnly || isSending"
                 @click="
                   detachAttachedNode({
@@ -448,7 +477,7 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
                 "
               >
                 <IconX />
-              </Button>
+              </InputGroupButton>
             </TooltipTrigger>
             <TooltipContent>
               {{ t("ai.detachContextNode", { name: node.name }, node.name) }}
@@ -571,7 +600,9 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
           <InputGroupButton variant="ghost" as-child>
             <SelectTrigger>
               <SelectValue :placeholder="t('ai.mode')">
-                {{ modeLabel(mode) }}
+                <span class="flex items-center gap-2">
+                  {{ modeLabel(mode) }}
+                </span>
               </SelectValue>
             </SelectTrigger>
           </InputGroupButton>
@@ -583,7 +614,7 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
                 :value="option.value"
               >
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-sm font-medium">
+                  <span class="flex items-center gap-2 text-sm font-medium">
                     {{ modeLabel(option.value) }}
                   </span>
                   <span class="text-muted-foreground text-xs">
@@ -594,35 +625,58 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
             </SelectGroup>
           </SelectContent>
         </Select>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <InputGroupText class="ml-auto gap-1 text-xs">
-                {{ activeModel.name }}
-                <Badge v-if="activeModel.badge" variant="secondary">
-                  {{ activeModel.badge }}
-                </Badge>
-              </InputGroupText>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div class="flex flex-col gap-0.5">
-                <span class="font-medium">{{ activeModel.name }}</span>
-                <span
-                  v-if="activeModel.providerName"
-                  class="text-muted-foreground text-xs"
-                >
-                  {{ activeModel.providerName }}
+        <Select :model-value="model" @update:model-value="onModelChange">
+          <InputGroupButton variant="ghost" class="ml-auto" as-child>
+            <SelectTrigger>
+              <SelectValue :placeholder="t('ai.model')">
+                <span class="flex items-center gap-2">
+                  {{ activeModel.name }}
+                  <Badge
+                    v-if="activeModel.badge"
+                    variant="secondary"
+                    class="text-xs"
+                  >
+                    {{ activeModel.badge }}
+                  </Badge>
                 </span>
-                <span
-                  v-if="activeModel.description"
-                  class="text-muted-foreground text-xs"
+              </SelectValue>
+            </SelectTrigger>
+          </InputGroupButton>
+          <SelectContent>
+            <template
+              v-for="(group, groupIndex) in availableModelsByProvider"
+              :key="group.id"
+            >
+              <SelectGroup>
+                <SelectLabel>{{ group.name }}</SelectLabel>
+                <SelectItem
+                  v-for="entry in group.models"
+                  :key="entry.id"
+                  :value="entry.id"
                 >
-                  {{ activeModel.description }}
-                </span>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+                  <div class="flex flex-col gap-0.5">
+                    <span class="flex items-center gap-2 text-sm font-medium">
+                      {{ entry.name }}
+                      <Badge
+                        v-if="entry.badge"
+                        variant="secondary"
+                        class="text-xs"
+                      >
+                        {{ entry.badge }}
+                      </Badge>
+                    </span>
+                    <span class="text-muted-foreground text-xs">
+                      {{ entry.description }}
+                    </span>
+                  </div>
+                </SelectItem>
+              </SelectGroup>
+              <SelectSeparator
+                v-if="groupIndex < availableModelsByProvider.length - 1"
+              />
+            </template>
+          </SelectContent>
+        </Select>
         <Separator orientation="vertical" class="my-2" />
         <TooltipProvider>
           <Tooltip>

@@ -34,9 +34,19 @@ import {
   type BotChatMode,
   type BotChatNodeRef,
 } from "@/composables/useFunctions"
+import {
+  botModelProviders,
+  botModels,
+  type BotModelEntry,
+} from "@/helpers/defaults"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
-import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
+import type {
+  IBotAgentModel,
+  IBotModelProvider,
+  IBotSession,
+  IBotSessionVisibility,
+} from "@/types/domain"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import {
   createBotSessionsQuery,
@@ -194,6 +204,26 @@ export interface BotChatContext {
   mode: Ref<BotChatMode>
   /** Convenience: `BOT_CHAT_MODE_OPTIONS` entry matching `mode.value`. */
   activeModeOption: Ref<BotChatModeOption>
+  /**
+   * Active model id used for the next `sendMessage`. New chats seed
+   * from the team's admin default; switching to an existing chat
+   * rehydrates from its persisted `lastModel`. The user can swap mid-
+   * conversation; the server clamps to the team's current allowlist
+   * before applying.
+   */
+  model: Ref<IBotAgentModel>
+  /**
+   * Provider-grouped list of currently allowed (provider on AND model
+   * on) models the user can pick from. Drives the composer's model
+   * picker — re-derived whenever an admin saves new policy. Each group
+   * carries its provider id + display name plus the matching catalog
+   * entries (badge/description included); groups with zero allowed
+   * models are filtered out (so a fully-disabled publisher disappears
+   * from the picker entirely).
+   */
+  availableModelsByProvider: Ref<
+    { id: IBotModelProvider; name: string; models: BotModelEntry[] }[]
+  >
   mySessions: Ref<IBotSession[]>
   archivedMySessions: Ref<IBotSession[]>
   sharedSessions: Ref<IBotSession[]>
@@ -401,6 +431,91 @@ export function useBotChat(): BotChatContext {
       BOT_CHAT_MODE_OPTIONS[0]
   )
 
+  // ── Model selection ───────────────────────────────────────────────────
+  //
+  // Mirrors the mode pattern almost exactly: plain ref seeded from the
+  // team's admin-configured default, forwarded on every send/respond,
+  // re-seeded when (a) the team's default flips while the session is
+  // pristine, (b) the team's allowlist tightens such that the current
+  // pick is no longer allowed, or (c) the user opens an existing chat
+  // — in which case we rehydrate from the session's persisted
+  // `lastModel` for continuity. This is the one place where model
+  // diverges from mode: a chat's last-used model survives leaving the
+  // chat, whereas mode always resets to the team default on session
+  // switch. Persistence makes the picker behave like "this chat is
+  // pinned to a model unless you explicitly change it", which is what
+  // users expect for a setting that has real performance/cost impact.
+
+  const teamDefaultModel = computed<IBotAgentModel>(
+    () => teamAgentConfig.value.model
+  )
+
+  /**
+   * Currently allowed (provider on AND model on) models, grouped by
+   * provider for the composer's `<Select>`. `!== false` treats missing
+   * toggles as enabled, matching the server's normalize-on-read behavior
+   * — a brand-new model id that lands client-side before a team has saved
+   * an updated config doc still shows up rather than disappearing.
+   *
+   * Provider iteration order is taken from `botModelProviders` (the
+   * canonical display order); a provider with zero allowed models drops
+   * out of the picker entirely so a fully-disabled publisher doesn't
+   * leave an empty group.
+   */
+  const availableModelsByProvider = computed(() => {
+    const cfg = teamAgentConfig.value
+    return botModelProviders
+      .filter((provider) => cfg.providers[provider.id] !== false)
+      .map((provider) => ({
+        id: provider.id,
+        name: provider.name,
+        models: botModels.filter(
+          (model) =>
+            model.provider === provider.id && cfg.models[model.id] !== false
+        ) as BotModelEntry[],
+      }))
+      .filter((group) => group.models.length > 0)
+  })
+
+  /** Flat helper used by the in-allowlist check below. */
+  const isModelAvailable = (id: IBotAgentModel | string): boolean =>
+    availableModelsByProvider.value.some((group) =>
+      group.models.some((model) => model.id === id)
+    )
+
+  // Initial seed picks the team default. `useAgentConfig` provides a
+  // synchronous fallback to `defaultBotAgentConfig.model` until the
+  // team's config doc lands, so this never reads `undefined`.
+  const model = ref<IBotAgentModel>(teamDefaultModel.value)
+
+  // Re-seed when the team's default flips IFF the session is pristine
+  // (no messages exchanged AND no session pinned). Mirrors the mode
+  // watcher's invariants — admin saves are rare, and racing them
+  // against an unsent user pick isn't worth the state machine.
+  watch(teamDefaultModel, (next) => {
+    if (messages.value.length === 0 && sessionId.value === null) {
+      model.value = next
+    }
+  })
+
+  // Safety net: if an admin tightens the allowlist (disables a provider
+  // or unchecks a model) such that the currently-selected model is no
+  // longer allowed, fall back to the team default. The server applies
+  // the same clamp on every send, so without this the picker would show
+  // a "stuck" selection that silently maps to a different model on the
+  // wire. Re-seeding here keeps the UI honest. Skipped when the team
+  // default itself is missing from `availableModels` (impossible in
+  // practice — the admin form enforces at least one available model —
+  // but defensive anyway).
+  watch(availableModelsByProvider, () => {
+    if (!isModelAvailable(model.value)) {
+      const fallback = isModelAvailable(teamDefaultModel.value)
+        ? teamDefaultModel.value
+        : availableModelsByProvider.value[0]?.models[0]?.id
+      if (fallback) model.value = fallback
+    }
+  })
+
   // Cancellation handle for the in-flight `sendBotMessage.stream(...)`.
   // Aborted whenever the user switches to a different session, starts a
   // new chat, or the composable's scope is disposed (page unmount). This
@@ -592,6 +707,10 @@ export function useBotChat(): BotChatContext {
     // start from the admin's preference (Settings → Agents → Default
     // mode). Falls back to `auto` if the agent config hasn't loaded.
     mode.value = teamDefaultMode.value
+    // Same story for model: a fresh chat always boots on the team
+    // default model. Continuity (rehydrating to the last-used model) is
+    // an existing-chat concept and handled by `selectSession`.
+    model.value = teamDefaultModel.value
   }
 
   /**
@@ -882,6 +1001,7 @@ export function useBotChat(): BotChatContext {
           sessionId: sessionId.value,
           message: trimmed,
           mode: mode.value,
+          model: model.value,
           contextNodes,
           ...(pinnedNode ? { pinnedNode } : {}),
         },
@@ -999,6 +1119,7 @@ export function useBotChat(): BotChatContext {
           name,
           response: answer,
           mode: mode.value,
+          model: model.value,
           contextNodes,
         },
         { signal: controller.signal }
@@ -1073,6 +1194,21 @@ export function useBotChat(): BotChatContext {
             nodeId: node.nodeId,
           }))
         : []
+      // Rehydrate the model picker from the session's persisted
+      // `lastModel` so the chat continues on whichever model produced
+      // its history (Opus's reply followed by a switch to Haiku reads
+      // confusingly). Three fallback rungs cover the realistic gaps:
+      //   - `matched` missing (cold-load race) → team default
+      //   - `lastModel` missing (pre-feature session) → team default
+      //   - `lastModel` no longer allowed (admin disabled it after
+      //     this chat last ran) → team default
+      // In all three cases the user's next send will overwrite
+      // `lastModel` on the doc with whatever the picker shows.
+      const persistedModel = matched?.lastModel
+      model.value =
+        persistedModel && isModelAvailable(persistedModel)
+          ? persistedModel
+          : teamDefaultModel.value
       pendingPinnedNode.value = null
     } catch (error) {
       console.error("[useBotChat] loadBotSession failed:", error)
@@ -1227,6 +1363,8 @@ export function useBotChat(): BotChatContext {
     canSend,
     mode,
     activeModeOption,
+    model,
+    availableModelsByProvider,
     mySessions,
     archivedMySessions,
     sharedSessions,

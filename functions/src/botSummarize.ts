@@ -37,6 +37,7 @@ import { db } from "./firebase.js"
 import { ai, resolveModel } from "./genkitClient.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import { extractPlainText } from "./tiptapText.js"
 
 // ===========================================================================
 // Schemas
@@ -134,7 +135,12 @@ async function loadNodeForSummary(
       ? (data.type as "folder" | "file")
       : "file"
   const name = typeof data.name === "string" ? data.name : input.nodeId
-  const content = typeof data.content === "string" ? data.content : ""
+  // `write` nodes persist Tiptap JSON in `content`; `code` nodes store
+  // raw source. `extractPlainText` flattens the Tiptap tree to text
+  // leaves and passes non-JSON content through unchanged, so the model
+  // sees actual prose rather than ProseMirror structural noise.
+  const rawContent = typeof data.content === "string" ? data.content : ""
+  const content = extractPlainText(rawContent)
   const isArchived = data.isArchived === true
   return { name, type, content, isArchived }
 }

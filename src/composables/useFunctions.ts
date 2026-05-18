@@ -10,6 +10,7 @@ import type {
   BillingInterval,
   BillingPlanKey,
   IBotAgentConfig,
+  IBotAgentModel,
   IBotSessionVisibility,
   ITeamBilling,
 } from "@/types/domain"
@@ -522,6 +523,16 @@ export interface SendBotMessageRequest {
    */
   mode?: BotChatMode
   /**
+   * Per-turn model override. Optional — server falls back to the team's
+   * admin-configured default when omitted, and silently substitutes the
+   * default if the requested model isn't currently allowed by the team's
+   * provider/model toggles. The server persists the *effective* model
+   * (i.e. after that allowlist clamp) as `lastModel` on the session
+   * doc, so the next client load rehydrates with the actually-used
+   * model rather than a value the team policy would now reject.
+   */
+  model?: IBotAgentModel
+  /**
    * Workspace nodes the user attached for this turn. The server fetches
    * each node's content + attachment list and injects them into the
    * system prompt as ground-truth context. Capped at 10 nodes server-
@@ -623,6 +634,12 @@ export interface RespondToBotInterruptRequest {
   /** Must conform to the interrupt tool's outputSchema. */
   response: unknown
   mode?: BotChatMode
+  /**
+   * Per-turn model override. Same semantics as
+   * `SendBotMessageRequest.model` — server falls back to the team
+   * default if the requested model is no longer allowed.
+   */
+  model?: IBotAgentModel
   /**
    * Forwarded to the resumed turn's system prompt so the model still
    * sees attached files after picking up from an interrupt. Same shape

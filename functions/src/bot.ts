@@ -342,6 +342,16 @@ class FirestoreBotSessionStore implements SessionStore {
      */
     private readonly turnMode?: BotChatMode,
     /**
+     * Effective model for the turn that triggered this save — the value
+     * after the calling flow clamped a client-supplied override against
+     * the team's current provider/model allowlist. Persisted as a
+     * denormalized `lastModel` field so the client can rehydrate the
+     * composer's model picker when it re-opens this chat (giving the
+     * conversation a per-chat continuity that mode deliberately lacks).
+     * Most recent turn wins — earlier turns' models are not retained.
+     */
+    private readonly turnModel?: BotAgentModel,
+    /**
      * Firebase uid of the human who triggered this turn (the caller of
      * `sendBotMessage` / `respondToBotInterrupt`). `save()` uses it to
      * stamp the new user-role message with its real author so the
@@ -411,7 +421,15 @@ class FirestoreBotSessionStore implements SessionStore {
     // rejects any undefined value in a write — so we round-trip through
     // JSON to drop them. The blob is JSON-serializable by contract (the
     // SessionStore interface is built for this round-trip).
+    //
+    // The same hazard applies to the denormalized `messages` array
+    // extracted above: tool outputs can carry `undefined` properties
+    // (e.g. an optional `distance` field a search tool didn't compute),
+    // and any such value would explode the Firestore write later. Round-
+    // tripping here makes the save path bulletproof regardless of which
+    // tool the model invoked this turn.
     const sanitizedData = JSON.parse(JSON.stringify(data))
+    const sanitizedMessages = JSON.parse(JSON.stringify(messages))
 
     const update: Record<string, unknown> = {
       // The codebase's `zodConverter` reads `id` from the document body
@@ -427,8 +445,10 @@ class FirestoreBotSessionStore implements SessionStore {
       // Denormalized flat messages for real-time client subscriptions.
       // Clients shouldn't need to parse the opaque SessionData blob; this
       // field is the canonical "what does the conversation look like
-      // right now" for every snapshot listener.
-      messages,
+      // right now" for every snapshot listener. Use the sanitized copy
+      // — the in-place `messages` may carry `undefined` values from tool
+      // outputs that Firestore would reject.
+      messages: sanitizedMessages,
       preview: derivePreview(messages, this.previewMaxLength),
       messageCount: messages.length,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -445,6 +465,14 @@ class FirestoreBotSessionStore implements SessionStore {
     // intuitive — switching mode mid-conversation updates which bucket
     // the chat shows up in.
     if (this.turnMode) update.lastMode = this.turnMode
+
+    // Most recent turn's effective model. Same overwrite-on-save shape
+    // as `lastMode`; the client reads this on session re-open to
+    // restore the picker (see `useBotChat.selectSession`). Only the
+    // effective model lands here — if the caller's requested override
+    // failed the allowlist clamp upstream, this field reflects the
+    // fallback model that actually ran, not the rejected request.
+    if (this.turnModel) update.lastModel = this.turnModel
 
     // Title, createdAt, the null archivedAt sentinel, and pinnedNodeKey
     // are all one-shot writes — set on creation, never updated by
@@ -1029,6 +1057,40 @@ function hasEnabledModel(
   return BOT_AGENT_MODELS.some(
     (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]] && models[model]
   )
+}
+
+/**
+ * Clamp a per-turn model override against the team's current
+ * provider/model allowlist. Returns:
+ *   - `requested` when it's a known wire-name AND both its provider
+ *     and per-model toggles are on under `agentConfig`
+ *   - `agentConfig.model` otherwise (no override, unknown id, or one
+ *     the team policy no longer allows)
+ *
+ * The Zod enum on `SendBotMessageInput.model` already rejects garbage
+ * wire-names at the boundary, so the `BOT_AGENT_MODELS` membership
+ * check here is defense-in-depth — keeps the function honest if it's
+ * ever called from an internal path that bypassed the input schema.
+ *
+ * Authoritative server clamp: clients are free to ship any allowed
+ * model id, but stale clients that hold onto a now-disabled id cannot
+ * escape policy by sending it on the wire. The flow persists the
+ * *effective* (post-clamp) model as `lastModel` so the next client
+ * load rehydrates with whatever actually ran.
+ */
+function resolveEffectiveModel(
+  requested: BotAgentModel | undefined,
+  agentConfig: BotAgentConfig
+): BotAgentModel {
+  if (!requested) return agentConfig.model
+  if (!(BOT_AGENT_MODELS as readonly string[]).includes(requested)) {
+    return agentConfig.model
+  }
+  const providerEnabled =
+    agentConfig.providers[BOT_MODEL_PROVIDER_BY_MODEL[requested]]
+  const modelEnabled = agentConfig.models[requested]
+  if (providerEnabled && modelEnabled) return requested
+  return agentConfig.model
 }
 
 /**
@@ -1660,6 +1722,17 @@ const SendBotMessageInput = z.object({
    */
   mode: z.enum(BOT_CHAT_MODES).default("auto"),
   /**
+   * Per-turn model override picked by the user in the composer's model
+   * dropdown. Optional — when omitted (or when the requested id isn't
+   * currently allowed by the team's provider/model toggles) the flow
+   * silently falls back to `agentConfig.model`. The clamp keeps admin
+   * policy authoritative; a client that holds onto a stale id (because
+   * an admin just disabled it) can't escape the allowlist via a
+   * crafted payload. The zod enum here is the first line of defense —
+   * unknown wire-names are rejected before they reach the clamp.
+   */
+  model: z.enum(BOT_AGENT_MODELS).optional(),
+  /**
    * Workspace nodes the user attached to this turn. Fetched server-side
    * and injected into the system prompt as ground-truth context. Capped
    * at `CONTEXT_NODE_MAX` to bound prompt size and Firestore reads.
@@ -1759,6 +1832,28 @@ interface ChatStreamResult {
  * Returns the resolved final response so the caller can use
  * `final.text` for the unary reply.
  */
+/**
+ * Detect Genkit's "model exhausted its tool budget" error so the chat
+ * flow can convert it into a user-visible message instead of letting
+ * `onCallGenkit` wrap it as `INTERNAL`.
+ *
+ * Matches on `status === "ABORTED"` AND the message string mentioning
+ * tool-iteration exhaustion — narrowing past `ABORTED` alone, which
+ * Genkit also uses for legitimate user-initiated cancellations that
+ * should keep propagating.
+ */
+function isToolIterationsExceededError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false
+  const e = err as {
+    status?: string
+    originalMessage?: string
+    message?: string
+  }
+  if (e.status !== "ABORTED") return false
+  const msg = e.originalMessage ?? e.message ?? ""
+  return msg.includes("maximum tool call iterations")
+}
+
 async function streamChatToClient(
   result: ChatStreamResult,
   sendChunk: (chunk: SendBotMessageStreamPayload) => void,
@@ -1821,7 +1916,32 @@ async function streamChatToClient(
     }
   }
 
-  const final = await result.response
+  // `result.response` rejects with a `GenkitError` whose `status` is
+  // `ABORTED` when the model exhausts its tool-call budget without
+  // producing a final text. Without this catch, that reject would
+  // propagate to `onCallGenkit`, which wraps it as the opaque
+  // `INTERNAL` the client sees — and then the optimistic UI rollback
+  // makes the chat look like it was wiped. Convert the abort into a
+  // user-visible "couldn't find that" reply on the same stream so the
+  // chat ends gracefully instead of vanishing.
+  let final: Awaited<ChatStreamResult["response"]>
+  try {
+    final = await result.response
+  } catch (err) {
+    if (isToolIterationsExceededError(err)) {
+      const fallback =
+        "I tried a few searches but couldn't pin down what you're after. Could you give me more specific terms — a document name or a phrase from inside it — or attach the file to this turn so I can read it directly?"
+      sendChunk({ chunk: fallback })
+      // Stub return — caller only uses `final.text` for the unary reply.
+      // Cast is justified because the streaming protocol with the client
+      // already concluded successfully via `sendChunk`; the outer flow
+      // is just turning the same text into its unary echo.
+      return { text: fallback, messages: [] } as unknown as Awaited<
+        ChatStreamResult["response"]
+      >
+    }
+    throw err
+  }
 
   let sweepCallSeq = 0
   let sweepResultSeq = 0
@@ -1940,6 +2060,15 @@ const sendBotMessageFlow = ai.defineFlow(
           )
         : undefined
 
+    // Per-turn model: respect the client's pick when it's still allowed
+    // under the team's current toggles; otherwise fall back to the
+    // team's configured default. The *effective* value (post-clamp)
+    // flows into both `session.chat({ model })` and the SessionStore so
+    // the dispatched model and the persisted `lastModel` field can't
+    // diverge — important for the client's "rehydrate picker on
+    // session re-open" behavior.
+    const effectiveModel = resolveEffectiveModel(input.model, agentConfig)
+
     const store = new FirestoreBotSessionStore(
       teamId,
       workspaceId,
@@ -1949,6 +2078,7 @@ const sendBotMessageFlow = ai.defineFlow(
       newSessionPinnedNodeKey,
       input.contextNodes,
       mode,
+      effectiveModel,
       auth.uid
     )
 
@@ -2003,7 +2133,7 @@ const sendBotMessageFlow = ai.defineFlow(
       : baseSystem
 
     const chat = session.chat({
-      model: resolveModel(agentConfig.model),
+      model: resolveModel(effectiveModel),
       system: systemPrompt,
       tools: chatTools,
       context: actionContext,
@@ -2089,6 +2219,14 @@ const RespondToBotInterruptInput = z.object({
   response: z.unknown(),
   /** Mode at the moment of response — drives system prompt + tool set. */
   mode: z.enum(BOT_CHAT_MODES).default("auto"),
+  /**
+   * Per-turn model override. Same semantics + allowlist clamp as
+   * `SendBotMessageInput.model`. Forwarded so a user resuming an
+   * interrupted chat doesn't snap back to the team default just
+   * because the interrupt-response codepath went through a different
+   * callable.
+   */
+  model: z.enum(BOT_AGENT_MODELS).optional(),
   /**
    * Same shape as `SendBotMessageInput.contextNodes` — passed through so
    * a chat that resumes from an interrupt keeps the attached files in
@@ -2198,6 +2336,10 @@ const respondToBotInterruptFlow = ai.defineFlow(
     }
 
     const agentConfig = await loadTeamAgentConfig(teamId)
+    // Same allowlist clamp as `sendBotMessageFlow` — the user can flip
+    // the model picker mid-question and have their answer-turn run on
+    // the new model.
+    const effectiveModel = resolveEffectiveModel(input.model, agentConfig)
     const store = new FirestoreBotSessionStore(
       teamId,
       workspaceId,
@@ -2211,6 +2353,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
       undefined,
       input.contextNodes,
       mode,
+      effectiveModel,
       // Interrupt response doesn't append a new user-role message
       // (it resolves a pending tool inside the same agent turn), so
       // the tagging loop in save() will no-op. Pass `auth.uid` anyway
@@ -2298,7 +2441,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
     // Genkit appends the toolResponse to the message history and lets
     // the model continue.
     const chat = session.chat({
-      model: resolveModel(agentConfig.model),
+      model: resolveModel(effectiveModel),
       system: systemPrompt,
       tools: chatTools,
       context: actionContext,

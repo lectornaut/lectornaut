@@ -43,23 +43,41 @@ import { db } from "./firebase.js"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 import { TRIGGER_OPTS } from "./runtimeConfig.js"
 import { geminiApiKey } from "./secrets.js"
+import { extractPlainText } from "./tiptapText.js"
 
 // ===========================================================================
 // Embedder + Retriever
 // ===========================================================================
 
-/**
- * 768-dim Gemini embedder. Chosen over the 3072-dim `gemini-embedding-2`
- * variants because (a) 768 dims is plenty for workspace-scale retrieval
- * (thousands, not millions, of nodes) and (b) smaller vectors mean
- * cheaper Firestore writes/reads and faster nearest-neighbor scans.
- */
-const NODE_EMBEDDER = googleAI.embedder("gemini-embedding-001")
-
-/** Dimension count of the embedder above — referenced by the Firestore vector
+/** Dimension count of the embedder below — referenced by the Firestore vector
  *  index in `firestore.indexes.json`. Changing the embedder requires changing
- *  this constant AND rebuilding the index. */
+ *  this constant AND rebuilding the index. Firestore's vector index caps at
+ *  2048 dims, so this can never exceed that. */
 export const NODE_EMBEDDING_DIM = 768
+
+/**
+ * Gemini embedder, pinned to 768-dim output. Chosen over the 3072-dim
+ * `gemini-embedding-2` variants because (a) 768 dims is plenty for
+ * workspace-scale retrieval (thousands, not millions, of nodes), (b)
+ * smaller vectors mean cheaper Firestore writes/reads and faster
+ * nearest-neighbor scans, and (c) 3072 exceeds Firestore's vector index
+ * cap anyway.
+ *
+ * `outputDimensionality: NODE_EMBEDDING_DIM` is **required**, not optional
+ * — the Google API returns 3072-dim vectors by default for this model
+ * (it's a Matryoshka embedding model). Without this option the embed
+ * call succeeds but the result is rejected by the dim guard in
+ * `syncNodeEmbedding`, leaving nodes un-indexed.
+ *
+ * The option lives on the embedder *reference* so it applies to both
+ * the write-side embed-on-trigger path AND the read-side query-embed
+ * path inside `defineFirestoreRetriever` — otherwise the two would
+ * produce vectors of different shapes and `findNearest()` would never
+ * match.
+ */
+const NODE_EMBEDDER = googleAI.embedder("gemini-embedding-001", {
+  outputDimensionality: NODE_EMBEDDING_DIM,
+})
 
 /**
  * Maximum content bytes fed to the embedder. The model accepts ~2k tokens
@@ -175,8 +193,27 @@ export const searchWorkspaceNodesTool = ai.defineTool(
     const ctx = (context ?? {}) as RagToolContext
     const teamId = ctx.teamId
     const workspaceId = ctx.workspaceId
+
+    // Genkit-on-Zod gotcha: `.default()` in the input schema is *not*
+    // applied to the runtime input object passed to the handler. The Zod
+    // schema is converted to JSON Schema for the LLM (which sees these as
+    // optional), and Genkit doesn't re-parse through Zod before invoking
+    // us. So when the model omits a defaulted field, we receive
+    // `undefined` here — and silently produce nonsense downstream (e.g.
+    // a collection path ending in `/undefined`). Default in the handler
+    // too, regardless of what the schema says.
+    const scope: (typeof SEARCH_SCOPES)[number] = input.scope ?? "both"
+    const limit = input.limit ?? 5
+
+    // Diagnostic breadcrumbs are at debug level so they don't show up in
+    // routine `firebase functions:log` output. Crank the function's log
+    // severity (or filter with `--severity DEBUG`) to surface them when
+    // diagnosing a "no results" regression.
+    logger.debug(
+      `[searchWorkspaceNodes] enter query=${JSON.stringify(input.query)} scope=${scope} limit=${limit} team=${teamId ?? "n/a"} workspace=${workspaceId ?? "n/a"} googleEnabled=${ctx.googleProviderEnabled !== false}`
+    )
     if (ctx.googleProviderEnabled === false) {
-      logger.info("[searchWorkspaceNodes] skipped because Google is disabled")
+      logger.debug("[searchWorkspaceNodes] skipped because Google is disabled")
       return { results: [], truncated: false }
     }
 
@@ -192,24 +229,29 @@ export const searchWorkspaceNodesTool = ai.defineTool(
     }
 
     const scopes: Array<"code" | "write"> =
-      input.scope === "both" ? ["code", "write"] : [input.scope]
+      scope === "both" ? ["code", "write"] : [scope]
     // Pull a few extra per scope so the merged-and-clipped result list
-    // can't end up shorter than `input.limit` when one scope has fewer
+    // can't end up shorter than `limit` when one scope has fewer
     // matches than its quota.
-    const perScopeFetch = Math.min(10, Math.max(2, input.limit))
+    const perScopeFetch = Math.min(10, Math.max(2, limit))
 
     const merged: Array<z.infer<typeof searchResultSchema>> = []
 
     for (const scope of scopes) {
+      const collectionPath = `teams/${teamId}/workspaces/${workspaceId}/${scope}`
       try {
         const docs = await ai.retrieve({
           retriever: workspaceNodesRetriever,
           query: input.query,
           options: {
-            collection: `teams/${teamId}/workspaces/${workspaceId}/${scope}`,
+            collection: collectionPath,
             limit: perScopeFetch,
           },
         })
+
+        logger.debug(
+          `[searchWorkspaceNodes] retrieve scope=${scope} path=${collectionPath} got=${docs.length} ids=${docs.map((d) => String((d.metadata as Record<string, unknown> | undefined)?.id ?? "?")).join(",")} archived=${docs.map((d) => String((d.metadata as Record<string, unknown> | undefined)?.isArchived ?? "?")).join(",")}`
+        )
 
         for (const doc of docs) {
           const meta = (doc.metadata ?? {}) as Record<string, unknown>
@@ -239,7 +281,18 @@ export const searchWorkspaceNodesTool = ai.defineTool(
               ? `${rawText.slice(0, SNIPPET_MAX_LENGTH)}…`
               : rawText
 
-          merged.push({ nodeId, scope, name, type, snippet, distance })
+          // Omit `distance` rather than set it to undefined when the
+          // retriever doesn't surface a `_distance` metadata field
+          // (current default — `_distance` isn't on our `metadataFields`
+          // whitelist). Firestore's admin SDK rejects writes that contain
+          // any `undefined`, and tool outputs land in the persisted
+          // session blob, so emitting `{ distance: undefined }` here
+          // crashes the session save downstream.
+          merged.push(
+            typeof distance === "number"
+              ? { nodeId, scope, name, type, snippet, distance }
+              : { nodeId, scope, name, type, snippet }
+          )
         }
       } catch (err) {
         logger.warn(
@@ -258,8 +311,11 @@ export const searchWorkspaceNodesTool = ai.defineTool(
       return da - db_
     })
 
-    const limited = merged.slice(0, input.limit)
-    return { results: limited, truncated: merged.length > input.limit }
+    const limited = merged.slice(0, limit)
+    logger.debug(
+      `[searchWorkspaceNodes] result merged=${merged.length} returned=${limited.length} truncated=${merged.length > limit} distances=${limited.map((r) => r.distance?.toFixed(4) ?? "n/a").join(",")}`
+    )
+    return { results: limited, truncated: merged.length > limit }
   }
 )
 
@@ -356,15 +412,33 @@ async function syncNodeEmbedding(params: {
 }): Promise<void> {
   const { after, afterRef, scope, teamId, workspaceId, nodeId } = params
 
-  if (!after || !afterRef) return // delete — nothing to embed
+  // Diagnostic breadcrumbs — debug level so quiet by default; raise the
+  // function's log severity (or filter `--severity DEBUG`) when chasing
+  // an "embeddings not generating" regression.
+  logger.debug(
+    `[embedNode] enter scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId} hasAfter=${Boolean(after)} afterType=${typeof after?.type === "string" ? after.type : "n/a"} contentLen=${typeof after?.content === "string" ? after.content.length : -1}`
+  )
+
+  if (!after || !afterRef) {
+    logger.debug(`[embedNode] result=skip-delete node=${nodeId}`)
+    return
+  }
 
   // Folders: nothing to embed. If a file was just demoted to a folder
   // we'd want to clear the prior embedding; in this app `type` is
   // immutable on create so we don't bother with that branch.
-  if (after.type !== "file") return
+  if (after.type !== "file") {
+    logger.debug(
+      `[embedNode] result=skip-folder node=${nodeId} type=${String(after.type)}`
+    )
+    return
+  }
 
   const googleProviderEnabled = await isGoogleProviderEnabledForTeam(teamId)
   if (!googleProviderEnabled) {
+    logger.debug(
+      `[embedNode] result=skip-google-disabled team=${teamId} node=${nodeId}`
+    )
     if (after.embedHash || after.embedding) {
       await clearNodeEmbedding({
         afterRef,
@@ -378,9 +452,18 @@ async function syncNodeEmbedding(params: {
     return
   }
 
-  const content = typeof after.content === "string" ? after.content.trim() : ""
+  // Workspace `write` nodes persist content as JSON-stringified Tiptap;
+  // `code` nodes store raw source. `extractPlainText` flattens Tiptap to
+  // the textual leaves and passes non-JSON content through unchanged, so
+  // both scopes get sensible embedding input from one call.
+  const rawContent =
+    typeof after.content === "string" ? after.content.trim() : ""
+  const content = extractPlainText(rawContent).trim()
 
   if (!content) {
+    logger.debug(
+      `[embedNode] result=skip-empty-content node=${nodeId} rawContentType=${typeof after.content} rawLen=${typeof after.content === "string" ? after.content.length : -1} extractedLen=${content.length}`
+    )
     // Empty file — clear prior embedding so old vectors don't shadow
     // the now-empty doc in search results.
     if (after.embedHash || after.embedding) {
@@ -404,7 +487,10 @@ async function syncNodeEmbedding(params: {
 
   // Loop guard: if the embedding on disk was made from this exact text,
   // nothing changed and we'd burn an API call for no reason.
-  if (after.embedHash === hash) return
+  if (after.embedHash === hash) {
+    logger.debug(`[embedNode] result=skip-hash-match node=${nodeId}`)
+    return
+  }
 
   if (!isAiModelProviderConfigured("google")) {
     logger.warn(
@@ -431,6 +517,9 @@ async function syncNodeEmbedding(params: {
       embedHash: hash,
       embedAt: FieldValue.serverTimestamp(),
     })
+    logger.debug(
+      `[embedNode] result=success scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId} bytes=${truncated.length} dim=${vector.length}`
+    )
   } catch (err) {
     logger.warn(
       `[embedNode] embed failed scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId}`,
