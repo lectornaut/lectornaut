@@ -41,6 +41,7 @@ import {
   type CreateTeamAgentDraft,
   type UpdateTeamAgentPatch,
 } from "@/composables/useFunctions"
+import { BUILT_IN_AGENTS, hydrateBuiltInAgent } from "@/data/builtInAgents"
 import { firestore } from "@/modules/firebase"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
@@ -71,8 +72,14 @@ const DEFAULT_TOOL_TOGGLES: ITeamAgent["tools"] = {
   summarizeNode: true,
   // Mirrors the server-side default — see the JSDoc on
   // `botAgentToolTogglesSchema.customAgents`. Present for type
-  // alignment; the per-agent value is never consumed by dispatch.
+  // alignment; the per-agent value is never consumed by dispatch
+  // (the team config's value is the canonical gate).
   customAgents: true,
+  // Likewise carried for type alignment with the team-level toggle
+  // schema — the per-agent value is ignored. Custom tools are gated
+  // by the team-level `customTools` flag and (in the future) per-tool
+  // assignments to agents.
+  customTools: true,
 }
 
 /**
@@ -145,7 +152,27 @@ function snapshotToAgent(
         typeof toolsRaw.customAgents === "boolean"
           ? (toolsRaw.customAgents as boolean)
           : DEFAULT_TOOL_TOGGLES.customAgents,
+      // Likewise present for shape alignment only — see `DEFAULT_TOOL_TOGGLES.customTools`.
+      customTools:
+        typeof toolsRaw.customTools === "boolean"
+          ? (toolsRaw.customTools as boolean)
+          : DEFAULT_TOOL_TOGGLES.customTools,
     },
+    // Per-custom-tool overrides for this agent. Reads only boolean
+    // values (mirrors the server-side normalizer) so a malformed
+    // entry can't poison the dispatch path. Empty default — missing
+    // keys at dispatch time mean "use the team-level state."
+    customTools: (() => {
+      const raw = data.customTools
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+      const out: Record<string, boolean> = {}
+      for (const [key, value] of Object.entries(
+        raw as Record<string, unknown>
+      )) {
+        if (typeof value === "boolean") out[key] = value
+      }
+      return out
+    })(),
     // Default-true so docs written before `enabled` existed continue
     // dispatching normally — same normalization as the server's
     // `normalizeAgentDoc`. The lifecycle UI shows them as "active"
@@ -254,32 +281,61 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
   // deleted) derived from two fields (`enabled`, `archivedAt`) plus
   // doc-presence. Views below carve up the collection by use case:
   //
-  //   - selectableAgents — what pickers (sidebar + composer badges)
-  //     render. Enabled AND non-archived only.
-  //   - disabledAgents   — admin-only view: agents with `enabled =
-  //     false` and `archivedAt = null`. Stay in their own collapsed
-  //     section so the active list isn't noisy.
-  //   - archivedAgents   — admin-only view: archived regardless of
-  //     `enabled`. Still dispatch in ongoing chats (the new "archive
-  //     = deprecate" semantics), so they're not removed from the
-  //     team's data plane the way deleted ones are.
-  //
-  // The `activeAgents` alias preserves the historical (pre-disable)
-  // semantics so the sidebar / composer / Agents.vue don't need to
-  // rename their bindings — it's now just sugar for
-  // `selectableAgents`.
+  //   - selectableAgents — admin CRUD list (SettingsCustomAgents /
+  //     SettingsAgents). Selectable custom agents only — built-ins
+  //     have no Firestore doc and can't be edited/archived through
+  //     this surface, so including them here would surface rows with
+  //     non-functional Edit/Archive buttons.
+  //   - pickerAgents     — what end-user pickers (composer badges,
+  //     sidebar `Agents.vue`) render. Built-ins (gated per-id by
+  //     `agentConfig.builtInAgents`) come first in their declared
+  //     order, then selectable custom agents alphabetized. Mirrors
+  //     the server's `[...builtInAgents, ...customAgents]` ordering
+  //     in `prepareChatTurn` so the on-screen list matches dispatch.
+  //   - allAgents        — built-ins + every custom (including
+  //     disabled and archived). Used by `useBotChat.activeAgent` to
+  //     resolve the id of the currently-bound agent regardless of
+  //     lifecycle state — without built-ins here, picking a built-in
+  //     would render the composer badge as "Deleted" because the
+  //     lookup would miss.
+  //   - disabledAgents / archivedAgents — admin-only views for the
+  //     lifecycle sections in `SettingsCustomAgents`. Built-ins
+  //     never appear here (the concept doesn't apply — the only
+  //     on/off knob for a built-in is the team-config toggle, edited
+  //     elsewhere).
 
   /**
-   * Agents the user can select from pickers: enabled AND non-archived
-   * AND the team-wide feature is on. Sorted by name for stable
-   * rendering. This is what `Agents.vue`, the composer's agent
-   * picker, and the active agents section of the management dialog
-   * all render.
+   * Hydrated built-in presets allowed by the team's config. Gating
+   * mirrors the server (`functions/src/builtInAgents.ts::listBuiltInAgents`)
+   * so what the user sees in the picker matches what dispatch will
+   * actually use:
+   *   - team-wide `customAgents` OFF  → empty list (the feature gate
+   *     hides built-ins AND customs uniformly).
+   *   - per-id `builtInAgents[<id>] === false` → that preset filtered
+   *     out; missing keys normalize to enabled (opt-out semantics).
    *
-   * When `customAgentsEnabled` is false, returns `[]` immediately so
-   * pickers collapse without any further filtering — the visible
-   * surface for the feature disappears, and admins must re-enable
-   * the toggle from `SettingsAgents.vue` to bring it back.
+   * Order is the declaration order in `BUILT_IN_AGENTS` — keep
+   * customer-facing presets first there. Empty when no team is loaded.
+   */
+  const builtInAgents = computed<ITeamAgent[]>(() => {
+    if (!customAgentsEnabled.value) return []
+    const teamId = currentTeamId.value
+    if (!teamId) return []
+    const toggles = teamAgentConfig.value.builtInAgents
+    return BUILT_IN_AGENTS.filter(
+      (definition) => toggles?.[definition.id] !== false
+    ).map((definition) => hydrateBuiltInAgent(teamId, definition))
+  })
+
+  /**
+   * Custom agents the admin can manage from the CRUD UI — enabled
+   * AND non-archived. Sorted by name for stable rendering. Used by
+   * `SettingsCustomAgents.vue` + `SettingsAgents.vue`'s row list;
+   * built-ins are deliberately absent because the management
+   * affordances (edit / archive / disable) don't apply to them.
+   *
+   * When `customAgentsEnabled` is false, returns `[]` so the admin
+   * UI's active section collapses to the empty state.
    */
   const selectableAgents = computed<ITeamAgent[]>(() => {
     if (!customAgentsEnabled.value) return []
@@ -290,12 +346,45 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
   })
 
   /**
-   * Backwards-compat alias for `selectableAgents`. Several consumers
-   * (composer, sidebar) reference this name; keeping the alias means
-   * the lifecycle change doesn't touch their call sites — they
-   * automatically gain the new selectability semantics.
+   * What end-user pickers render: built-ins first (in declaration
+   * order, customer-facing personas surface first), then selectable
+   * custom agents alphabetically. This is the merged view the
+   * composer's badge row and `Agents.vue` sidebar bind to — it
+   * matches the server's `[...builtInAgents, ...customAgents]`
+   * ordering in `prepareChatTurn`, so what the user picks visually
+   * lines up with the transfer roster the model sees.
+   *
+   * Empty when `customAgentsEnabled` is false (both inner computeds
+   * return `[]` in that state).
    */
-  const activeAgents = selectableAgents
+  const pickerAgents = computed<ITeamAgent[]>(() => [
+    ...builtInAgents.value,
+    ...selectableAgents.value,
+  ])
+
+  /**
+   * Union of built-ins + every custom record (including disabled and
+   * archived). Used by `useBotChat.activeAgent` to resolve the
+   * currently-bound agent's display record regardless of lifecycle
+   * state — without this, picking a built-in would render the
+   * composer's status badge as "Deleted" because the lookup against
+   * the customs-only `agents` ref would miss. Mirrors how
+   * `prepareChatTurn` resolves available agents server-side, plus
+   * the not-currently-selectable customs the badge still needs to
+   * render (e.g. archived agents pinned to an ongoing session).
+   */
+  const allAgents = computed<ITeamAgent[]>(() => [
+    ...builtInAgents.value,
+    ...agents.value,
+  ])
+
+  /**
+   * Backwards-compat alias for `pickerAgents`. The old `activeAgents`
+   * name predates built-in support; consumers that imported it for
+   * the picker surface automatically pick up the merged list without
+   * a rename.
+   */
+  const activeAgents = pickerAgents
 
   /**
    * Disabled agents — `enabled === false` AND not archived. Admin-
@@ -494,6 +583,9 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
 
   return {
     agents,
+    builtInAgents,
+    allAgents,
+    pickerAgents,
     activeAgents,
     selectableAgents,
     disabledAgents,

@@ -1,6 +1,11 @@
 <script lang="ts" setup>
 import { BotChatContextKey } from "@/composables/useBotChat"
 import {
+  BOT_TOOL_CATALOG,
+  type BotToolDescriptor,
+  type BotToolName,
+} from "@/data/botTools"
+import {
   IconArchive,
   IconCalendar,
   IconClock,
@@ -8,16 +13,24 @@ import {
   IconHash,
   IconHistory,
   IconLock,
+  IconMessageCircle,
   IconUserRound,
   IconUsers,
+  IconWrench,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
+import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IBotSessionVisibility } from "@/types/domain"
+import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
+import type {
+  IBotSessionVisibility,
+  ITeamAgent,
+  ITeamCustomTool,
+} from "@/types/domain"
 import { Timestamp } from "firebase/firestore"
 import { storeToRefs } from "pinia"
-import { computed, inject } from "vue"
+import { computed, inject, type Component } from "vue"
 
 const botChat = inject(BotChatContextKey)
 const { t } = useI18n()
@@ -115,6 +128,154 @@ const messageCount = computed(() => {
   // Prefer server-derived count (covers history not yet fetched into the
   // local list); fall back to the local list for fresh new chats.
   return activeSession.value?.messageCount ?? localMessageCount.value
+})
+
+// ── Available tools (dynamic per agent + team config + mode) ──────────────
+//
+// Mirrors the server's `pickChatTools` dispatch logic (see
+// `functions/src/bot.ts`) so the panel shows exactly what the next
+// turn will have access to — not a stale static list. Three inputs
+// converge into the visible set:
+//
+//   1. The team's tool toggles (`teamAgentConfig.tools`) — admin gate.
+//   2. The active agent's per-tool overrides (`activeAgent.tools`) —
+//      persona gate. `null` activeAgent (default persona) skips this
+//      filter entirely, matching the server.
+//   3. The active mode — `manual` mode hides action tools at dispatch
+//      (HITL interrupts stay available because they have no side
+//      effects).
+//
+// Filters 1+2 apply to BOTH built-in and custom tools. Filter 3 only
+// affects the action-tools section; the interrupts section ignores it
+// and renders enabled tools at full opacity.
+const activeAgent = computed<ITeamAgent | null>(
+  () => botChat?.activeAgent.value ?? null
+)
+const activeModeOption = computed(() => botChat?.activeModeOption.value)
+const toolsAreEnabled = computed(
+  () => activeModeOption.value?.toolsEnabled ?? true
+)
+
+const agentConfigStore = useAgentConfigStore()
+const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+
+const teamCustomToolsStore = useTeamCustomToolsStore()
+const { selectableTools: teamSelectableCustomTools } =
+  storeToRefs(teamCustomToolsStore)
+
+/**
+ * Names of catalog tools that are *interrupts* (pause the chat and
+ * surface a form) rather than side-effecting actions. The split
+ * matters in the UI because action tools dim in manual mode while
+ * interrupts stay live. Server-side mirror lives at
+ * `functions/src/bot.ts::INTERRUPT_TOOL_NAMES` — keep both in sync if
+ * a new HITL tool ships. Set so future entries are O(1) lookups.
+ */
+const INTERRUPT_TOOL_NAMES: ReadonlySet<BotToolName> = new Set(["askQuestion"])
+
+/**
+ * Shared display shape for the two tool lists. Custom tools and
+ * built-ins funnel into this so the template renders a uniform card
+ * regardless of source; the `kind: "custom"` discriminator powers
+ * the "Custom" badge (same affordance custom agents and custom tool
+ * picker entries already use).
+ */
+interface AvailableToolEntry {
+  key: string
+  name: string
+  description: string
+  example: string
+  icon: Component
+  kind: "builtin" | "custom"
+}
+
+/**
+ * Project a `BotToolDescriptor` into the display shape. Catalog
+ * `name` doubles as the model-callable wire name (the user-facing
+ * "what is this tool called" affordance), so it surfaces in both the
+ * label and the `<code>` chip in the template.
+ */
+const builtInEntry = (tool: BotToolDescriptor): AvailableToolEntry => ({
+  key: tool.name,
+  name: tool.name,
+  description: tool.description,
+  example: tool.example,
+  icon: tool.icon,
+  kind: "builtin",
+})
+
+/**
+ * Project an admin-authored custom tool. Uses `displayName` when set,
+ * falling back to the wire-name (`tool.name`) so a half-configured
+ * record still renders something meaningful. Mirrors the composer's
+ * `buildCustomToolExample` pattern (`"Use <Name> to …"`) so the
+ * example line in the details panel reads consistently with the slash
+ * menu's prompt insertion.
+ */
+const customEntry = (tool: ITeamCustomTool): AvailableToolEntry => {
+  const displayLabel = tool.displayName.trim() || tool.name
+  return {
+    key: tool.id,
+    name: displayLabel,
+    description: tool.description,
+    example: `Use ${displayLabel} to …`,
+    icon: IconWrench,
+    kind: "custom",
+  }
+}
+
+/**
+ * Action tools (everything except interrupts). Filters the catalog
+ * + custom tools against the team×agent intersection. Mode dimming
+ * is purely a template concern (opacity only) — the dispatch-level
+ * gate happens server-side; the panel still surfaces what *would*
+ * be available if the user flipped back to a tool-enabled mode, so
+ * they know what they're losing in `manual`.
+ */
+const availableActionTools = computed<AvailableToolEntry[]>(() => {
+  const teamTools = teamAgentConfig.value.tools
+  const agentTools = activeAgent.value?.tools
+  const agentCustomToolOverrides = activeAgent.value?.customTools
+  const entries: AvailableToolEntry[] = []
+
+  for (const tool of BOT_TOOL_CATALOG) {
+    if (INTERRUPT_TOOL_NAMES.has(tool.name)) continue
+    if (teamTools[tool.name] === false) continue
+    if (agentTools && agentTools[tool.name] === false) continue
+    entries.push(builtInEntry(tool))
+  }
+
+  for (const tool of teamSelectableCustomTools.value) {
+    if (
+      agentCustomToolOverrides &&
+      agentCustomToolOverrides[tool.id] === false
+    ) {
+      continue
+    }
+    entries.push(customEntry(tool))
+  }
+
+  return entries
+})
+
+/**
+ * Interrupt tools. Same team×agent intersection as action tools,
+ * but no mode filtering — HITL interrupts are available even in
+ * `manual` (a clarifying question has no side effects). Currently
+ * just `askQuestion`; the set lookup makes adding a second
+ * interrupt a one-line schema change.
+ */
+const availableInterruptTools = computed<AvailableToolEntry[]>(() => {
+  const teamTools = teamAgentConfig.value.tools
+  const agentTools = activeAgent.value?.tools
+  const entries: AvailableToolEntry[] = []
+  for (const tool of BOT_TOOL_CATALOG) {
+    if (!INTERRUPT_TOOL_NAMES.has(tool.name)) continue
+    if (teamTools[tool.name] === false) continue
+    if (agentTools && agentTools[tool.name] === false) continue
+    entries.push(builtInEntry(tool))
+  }
+  return entries
 })
 
 interface DetailRow {
@@ -250,6 +411,127 @@ const detailRows = computed<DetailRow[]>(() => {
               </div>
             </dl>
           </template>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <!--
+        Available tools — dynamic per (team config × active agent ×
+        mode). Migrated here from BotChatActions because the panel
+        previously rendered a stale hardcoded list (just getWeather +
+        rollDice) that ignored both the agent picker and the team's
+        custom tools. The intersection mirrors `pickChatTools`
+        server-side, so the visible list always matches what the next
+        turn will actually have access to.
+      -->
+      <SidebarGroup>
+        <SidebarGroupLabel class="flex items-center gap-2">
+          <IconWrench />
+          {{ t("ai.sidebar.availableTools") }}
+        </SidebarGroupLabel>
+        <SidebarGroupContent class="space-y-2 p-2">
+          <p v-if="toolsAreEnabled" class="text-muted-foreground text-xs">
+            {{ t("ai.sidebar.toolsEnabledHint") }}
+          </p>
+          <i18n-t
+            v-else
+            keypath="ai.sidebar.toolsDisabled"
+            tag="p"
+            class="text-muted-foreground text-xs"
+          >
+            <template #mode>
+              <strong>{{ t(`ai.modes.${activeMode}.label`) }}</strong>
+            </template>
+            <template #auto>
+              <strong>{{ t("ai.modes.auto.label") }}</strong>
+            </template>
+            <template #agent>
+              <strong>{{ t("ai.modes.agent.label") }}</strong>
+            </template>
+          </i18n-t>
+          <Empty
+            v-if="availableActionTools.length === 0"
+            class="rounded border border-dashed p-4"
+          >
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconWrench />
+              </EmptyMedia>
+              <EmptyTitle>{{ t("ai.sidebar.noTools") }}</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+          <ul v-else class="space-y-2">
+            <li
+              v-for="tool in availableActionTools"
+              :key="tool.key"
+              class="border-border/60 bg-background/40 rounded-md border p-2 transition-opacity"
+              :class="{ 'opacity-50': !toolsAreEnabled }"
+            >
+              <div class="flex items-center gap-2">
+                <Component :is="tool.icon" />
+                <code class="text-foreground text-xs font-medium">{{
+                  tool.name
+                }}</code>
+                <Badge
+                  v-if="tool.kind === 'custom'"
+                  variant="secondary"
+                  class="ml-auto text-xs"
+                >
+                  {{ t("ai.tools.customBadge") }}
+                </Badge>
+              </div>
+              <p class="text-muted-foreground text-xs">
+                {{ tool.description }}
+              </p>
+              <p class="text-muted-foreground/80 text-xs italic">
+                e.g. “{{ tool.example }}”
+              </p>
+            </li>
+          </ul>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <!--
+        Human-in-the-Loop — interrupt tools. Same team×agent
+        intersection as action tools but no mode filter: a clarifying
+        question has no side effects, so it's available even in
+        manual mode. The section hides entirely when the intersection
+        produces nothing (e.g. an agent that disables askQuestion).
+      -->
+      <SidebarGroup v-if="availableInterruptTools.length > 0">
+        <SidebarGroupLabel class="flex items-center gap-2">
+          <IconMessageCircle />
+          {{ t("ai.sidebar.humanInTheLoop") }}
+        </SidebarGroupLabel>
+        <SidebarGroupContent class="space-y-2 p-2">
+          <i18n-t
+            keypath="ai.sidebar.humanInTheLoopHint"
+            tag="p"
+            class="text-muted-foreground text-xs"
+          >
+            <template #manual>
+              <strong>{{ t("ai.modes.manual.label") }}</strong>
+            </template>
+          </i18n-t>
+          <ul class="space-y-2">
+            <li
+              v-for="interrupt in availableInterruptTools"
+              :key="interrupt.key"
+              class="border-border/60 bg-background/40 rounded-md border p-2"
+            >
+              <div class="flex items-center gap-2">
+                <Component :is="interrupt.icon" />
+                <code class="text-foreground text-xs font-medium">{{
+                  interrupt.name
+                }}</code>
+              </div>
+              <p class="text-muted-foreground text-xs">
+                {{ interrupt.description }}
+              </p>
+              <p class="text-muted-foreground/80 text-xs italic">
+                e.g. “{{ interrupt.example }}”
+              </p>
+            </li>
+          </ul>
         </SidebarGroupContent>
       </SidebarGroup>
     </OverlayScrollbarsWrapper>

@@ -374,6 +374,16 @@ export const botAgentToolTogglesSchema = z.object({
    * predate this field keep the feature enabled by default.
    */
   customAgents: z.boolean(),
+  /**
+   * Team-wide gate for the entire custom-tools feature — sibling of
+   * `customAgents` for the second axis of admin-authored bot
+   * extension. When false, the dispatcher skips the Firestore read
+   * for `teams/{teamId}/tools` entirely and registers zero custom
+   * tools that turn, even ones that an active custom agent's per-
+   * agent toggle has enabled. Equivalent to "the team has opted out
+   * of admin-authored tools as a category."
+   */
+  customTools: z.boolean(),
 })
 
 /**
@@ -382,6 +392,24 @@ export const botAgentToolTogglesSchema = z.object({
  * type carries it cleanly without a circular import.
  */
 export const botAgentDefaultModeSchema = z.enum(["auto", "agent", "manual"])
+
+/**
+ * Per-built-in-agent feature flags. Each key is a fixed preset id
+ * (`_researcher`, `_writer`, etc.) and the value is whether the team
+ * has the preset enabled. Disabled built-ins are filtered out of
+ * pickers, the transfer roster, and dispatch — they behave exactly
+ * like a custom agent with `enabled: false`. Missing keys normalize
+ * to `true` server-side so a newly-added preset is opt-out, not
+ * opt-in, for existing teams.
+ *
+ * Lives at the config level (not under `tools`) so the toggles read
+ * symmetrically with per-model toggles (`models: { … }`) rather than
+ * leaking the agent feature into the per-tool feature-flag space.
+ */
+export const botAgentBuiltInAgentTogglesSchema = z.record(
+  z.string(),
+  z.boolean()
+)
 
 /**
  * Effective workspace agent config — every field is required because
@@ -404,6 +432,12 @@ export const botAgentConfigSchema = z.object({
     manual: z.string().max(2000),
   }),
   tools: botAgentToolTogglesSchema,
+  /**
+   * Per-built-in-agent on/off map. See
+   * `botAgentBuiltInAgentTogglesSchema`. Sibling of `tools` — a
+   * separate axis (which *agents* exist) from which *tools* exist.
+   */
+  builtInAgents: botAgentBuiltInAgentTogglesSchema,
   titleMaxLength: z.number().int().min(20).max(200),
   previewMaxLength: z.number().int().min(50).max(500),
 })
@@ -460,6 +494,23 @@ export const teamAgentSchema = z.object({
    */
   tools: botAgentToolTogglesSchema,
   /**
+   * Per-custom-tool toggles. Keyed by `ITeamCustomTool.id` — the
+   * Firestore-generated id of each admin-authored tool. Missing keys
+   * normalize to `true` (opt-out convention shared with
+   * `agentConfig.builtInAgents` and per-model toggles), so a newly-
+   * created custom tool is automatically available to every existing
+   * agent. Dispatch in `bot.ts` reads this map AND the team-level
+   * `agentConfig.tools.customTools` gate; a tool fires only when both
+   * are true and the tool itself is enabled + non-archived.
+   *
+   * Persisted as a flat record because the set of custom tools is
+   * unbounded (admins can create many), so a fixed-shape schema
+   * (like the built-in `tools` object) doesn't fit. Empty `{}` is
+   * the default for new agents — every existing custom tool light
+   * up automatically via the missing-key fallback.
+   */
+  customTools: z.record(z.string(), z.boolean()),
+  /**
    * Admin-level on/off switch. Independent of `archivedAt` — together
    * they form the agent's lifecycle status:
    *   - enabled=true,  archivedAt=null      → "active"   (selectable; runs)
@@ -497,6 +548,180 @@ export const teamAgentSchema = z.object({
  * the server fill in id / teamId / createdByUid on create.
  */
 export const teamAgentWriteSchema = teamAgentSchema.extend({
+  id: z.string().optional(),
+  teamId: z.string().optional(),
+  createdByUid: z.string().optional(),
+  archivedAt: z.union([timestampInputSchema, z.null()]).optional(),
+  createdAt: timestampInputSchema,
+  updatedAt: timestampInputSchema,
+})
+
+// ─── Team-scoped custom tools (admin-authored bot tool catalog) ─────────────
+
+/**
+ * One field on a custom tool's input or output schema. Limited to
+ * primitive types because the model has to see something it can
+ * generate a valid value for; nested objects and arrays would balloon
+ * the editor UI complexity without paying for themselves in real
+ * workflows. `description` rides through to the Genkit tool's schema
+ * as `z.X().describe(description)` so the model sees it.
+ */
+export const customToolFieldSchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(40)
+    /**
+     * Must be a valid JS identifier-ish — the field name becomes a key
+     * in the Zod object passed to Genkit, and arbitrary punctuation
+     * confuses the model's argument-generation. Enforces the same set
+     * the server uses to whitelist field keys.
+     */
+    .regex(/^[a-z][a-zA-Z0-9_]*$/, {
+      message:
+        "Must start with a lowercase letter and contain only letters, digits, or underscores.",
+    }),
+  type: z.enum(["string", "number", "boolean"]),
+  description: z.string().max(200),
+  required: z.boolean(),
+})
+
+/**
+ * The "what does this tool do" payload. Discriminated by `kind` so the
+ * server's dispatcher can pick the right handler without prop-existence
+ * sniffing. Adding a new action type is a 3-touch edit: this union,
+ * the server's `executeCustomTool`, and the editor sub-form.
+ *
+ *   - **httpWebhook** — call any URL. The most flexible primitive.
+ *     `bodyTemplate` uses `{{fieldName}}` interpolation against the
+ *     model's tool input; missing keys interpolate to "" to keep
+ *     templates resilient.
+ *
+ *   - **constant** — return a fixed JSON value. Useful for stub tools
+ *     during prompt development and for tools whose contract is "the
+ *     model just needs this exact static piece of info."
+ *
+ *   - **promptTemplate** — sub-call the model with a templated prompt.
+ *     Lets admins build tools that wrap a one-shot LLM call (e.g. "Polish
+ *     this draft"). Uses the team's configured model unless overridden.
+ *
+ *   - **workspaceSearch** — pre-canned `searchWorkspaceNodes` query.
+ *     `defaultLimit` and `scope` are baked in; the model only fills the
+ *     query string. Lets admins ship narrow, contextually-named search
+ *     tools (e.g. `findRunbook`) without exposing the broad-scope tool.
+ */
+export const customToolActionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("httpWebhook"),
+    url: z.string().url().max(2048),
+    method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
+    /** Each entry is one HTTP header. Values interpolate `{{field}}`. */
+    headers: z.array(
+      z.object({
+        name: z.string().min(1).max(80),
+        value: z.string().max(1000),
+      })
+    ),
+    /** Raw body string. `{{field}}` interpolation against tool inputs. */
+    bodyTemplate: z.string().max(8000),
+    /** Hard cap on response bytes returned to the model (default 16KB). */
+    maxResponseBytes: z.number().int().min(256).max(65536),
+    timeoutMs: z.number().int().min(1000).max(30_000),
+  }),
+  z.object({
+    kind: z.literal("constant"),
+    /** JSON-encoded value. Parsed server-side; surfaced verbatim to the model. */
+    value: z.string().max(8000),
+  }),
+  z.object({
+    kind: z.literal("promptTemplate"),
+    /** `{{field}}` interpolation against tool inputs. */
+    prompt: z.string().min(1).max(4000),
+    /**
+     * Optional override of the team's default model. `null` keeps the
+     * sub-call on whichever model the chat is currently using.
+     */
+    model: botAgentModelSchema.nullable(),
+  }),
+  z.object({
+    kind: z.literal("workspaceSearch"),
+    /**
+     * Restricts which node scope the canned search runs over. `null`
+     * means "both" — same default the broad-scope tool uses.
+     */
+    scope: z.enum(["code", "write"]).nullable(),
+    /** Hard cap on returned nodes (the model never sees more). */
+    defaultLimit: z.number().int().min(1).max(20),
+    /**
+     * Filter hint baked into the user query. Surfaced to the model in
+     * the tool's description so the model knows the tool's "topic" up
+     * front; appended to the user query at dispatch time. Empty string
+     * means "no filter."
+     */
+    filterHint: z.string().max(200),
+  }),
+])
+
+/**
+ * One team-scoped custom tool. Stored at
+ *   teams/{teamId}/tools/{toolId}
+ *
+ * Mirrors `teamAgentSchema`'s lifecycle (enabled / archivedAt / hard
+ * delete) so admins can deprecate a tool without breaking ongoing
+ * chats. Identity carries name, description, input/output schemas,
+ * and an action discriminator. The dispatcher (`bot.ts`) builds a
+ * Genkit `defineTool` from each enabled+non-archived doc on every
+ * chat turn (cached for 5s, mirroring `teamAgents.ts`).
+ */
+export const teamCustomToolSchema = z.object({
+  id: z.string(),
+  teamId: z.string(),
+  /**
+   * Display name AND the tool's wire-name for the model. Must be a
+   * valid identifier — Genkit names the tool by this string and the
+   * model invokes it by the same string, so spaces or punctuation
+   * confuse the dispatch path.
+   */
+  name: z
+    .string()
+    .min(1)
+    .max(40)
+    .regex(/^[a-z][a-zA-Z0-9_]*$/, {
+      message:
+        "Must start with a lowercase letter and contain only letters, digits, or underscores.",
+    }),
+  /** Free-form display label shown in the UI when the wire-name reads awkward. */
+  displayName: z.string().max(60),
+  /**
+   * Shown to the MODEL as the tool's description — what to call it for,
+   * what each input means, expected output. The model uses this to
+   * decide when to invoke; vague descriptions lead to under-utilization
+   * or over-utilization. Required to keep the bar high.
+   */
+  description: z.string().min(1).max(500),
+  /**
+   * Seed for `vue-boring-avatars` — same as ITeamAgent.avatarSeed.
+   * Falls back to `name` at render time when empty.
+   */
+  avatarSeed: z.string().max(40),
+  /** Field-level definition of what the model passes as input. */
+  inputSchema: z.object({
+    fields: z.array(customToolFieldSchema).max(10),
+  }),
+  /** Field-level definition of what the tool returns to the model. */
+  outputSchema: z.object({
+    fields: z.array(customToolFieldSchema).max(10),
+  }),
+  action: customToolActionSchema,
+  /** Admin on/off toggle. See ITeamAgent.enabled for the lifecycle matrix. */
+  enabled: z.boolean(),
+  archivedAt: timestampSchema.nullable().optional(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+  createdByUid: z.string(),
+})
+
+export const teamCustomToolWriteSchema = teamCustomToolSchema.extend({
   id: z.string().optional(),
   teamId: z.string().optional(),
   createdByUid: z.string().optional(),

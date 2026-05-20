@@ -6,7 +6,8 @@ import {
   type BotChatMode,
   type BotChatNodeRef,
 } from "@/composables/useBotChat"
-import { BOT_TOOL_CATALOG, type BotToolDescriptor } from "@/data/botTools"
+import { isBuiltInAgentId } from "@/data/builtInAgents"
+import { BOT_TOOL_CATALOG } from "@/data/botTools"
 import {
   IconAiFill,
   IconArrowUp,
@@ -14,6 +15,7 @@ import {
   IconFile,
   IconFolder,
   IconPlus,
+  IconWrench,
   IconX,
 } from "@/data/icons"
 import { findBotModel } from "@/helpers/defaults"
@@ -21,10 +23,16 @@ import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
-import type { IBotAgentModel, ITeamAgent } from "@/types/domain"
+import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
+import type {
+  IBotAgentModel,
+  ITeamAgent,
+  ITeamCustomTool,
+} from "@/types/domain"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { storeToRefs } from "pinia"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
+import type { Component } from "vue"
 import Avatar from "vue-boring-avatars"
 
 const { t } = useI18n()
@@ -324,12 +332,13 @@ const onModelChange = (next: unknown) => {
 // up the change.
 //
 // Two related lists govern this UI:
-//   - `selectableAgents` (the store's filtered view) — what the user
-//     can PICK FROM. Enabled, non-archived only.
+//   - `pickerAgents` (the store's merged view) — what the user can
+//     PICK FROM. Built-in presets (gated by `agentConfig.builtInAgents`)
+//     come first, then enabled non-archived custom agents.
 //   - `activeAgent` (the composable's full-list lookup) — the record
 //     for the currently-bound agent, possibly disabled / archived /
 //     deleted. Powers the badge label + status sub-label even when
-//     the agent has fallen out of `selectableAgents`.
+//     the agent has fallen out of `pickerAgents`.
 //
 // The status sub-label ("Disabled" / "Archived" / "Deleted") comes
 // from `botChat.activeAgentStatus` and renders inline on the active
@@ -337,7 +346,7 @@ const onModelChange = (next: unknown) => {
 // under a different persona than the badge name suggests.
 
 const teamAgentsStore = useTeamAgentsStore()
-const { selectableAgents: availableAgents } = storeToRefs(teamAgentsStore)
+const { pickerAgents: availableAgents } = storeToRefs(teamAgentsStore)
 const activeAgentId = computed<string | null>(
   () => botChat?.activeAgentId.value ?? null
 )
@@ -508,19 +517,93 @@ watch(
 const agentConfigStore = useAgentConfigStore()
 const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
 
-const availableTools = computed<readonly BotToolDescriptor[]>(() => {
+const teamCustomToolsStore = useTeamCustomToolsStore()
+const { selectableTools: teamSelectableCustomTools } =
+  storeToRefs(teamCustomToolsStore)
+
+/**
+ * Shared display shape for the composer's tool picker. Both built-in
+ * `BotToolDescriptor`s and admin-authored `ITeamCustomTool`s funnel
+ * into this shape so the picker renders a single uniform list. The
+ * `kind` discriminator lets the template tag custom tools with a
+ * "Custom" badge without re-deriving from the source.
+ */
+interface ComposerToolEntry {
+  /** Unique render key — wire-name for built-ins, doc id for custom. */
+  key: string
+  /** What the model invokes by — also what the user sees on the badge. */
+  label: string
+  description: string
+  icon: Component
+  /** Prompt text inserted into the textarea on pick. */
+  example: string
+  kind: "builtin" | "custom"
+}
+
+/**
+ * Synthesize a sentence-opener for a custom tool's slash-menu example.
+ * Mirrors the built-in catalog's "user fills in the rest" pattern
+ * (e.g. `"What's the weather in "`). We deliberately mention the tool
+ * by name — admins author these and want them discoverable, unlike
+ * built-ins where the design intentionally hides the wire-name from
+ * users. A trailing space leaves the caret in a natural position for
+ * the user to keep typing.
+ */
+const buildCustomToolExample = (tool: ITeamCustomTool): string => {
+  const displayLabel = tool.displayName.trim() || tool.name
+  return `Use ${displayLabel} to `
+}
+
+const availableTools = computed<readonly ComposerToolEntry[]>(() => {
   const teamTools = teamAgentConfig.value.tools
   const agentTools = activeAgent.value?.tools
-  return BOT_TOOL_CATALOG.filter((tool) => {
-    if (teamTools[tool.name] === false) return false
-    if (agentTools && agentTools[tool.name] === false) return false
-    return true
-  })
+  const agentCustomToolOverrides = activeAgent.value?.customTools
+  const entries: ComposerToolEntry[] = []
+
+  // Built-ins — apply the same team×agent intersection the server
+  // dispatcher uses (`pickChatTools` in `functions/src/bot.ts`).
+  for (const tool of BOT_TOOL_CATALOG) {
+    if (teamTools[tool.name] === false) continue
+    if (agentTools && agentTools[tool.name] === false) continue
+    entries.push({
+      key: tool.name,
+      label: tool.label,
+      description: tool.description,
+      icon: tool.icon,
+      example: tool.example,
+      kind: "builtin",
+    })
+  }
+
+  // Custom tools — `selectableTools` already filters by the team-wide
+  // `customTools` gate + per-tool `enabled && !archivedAt`. Layer the
+  // per-agent override on top here so the picker mirrors what the
+  // dispatcher would actually register on the next send. Missing keys
+  // default to enabled (`!== false`), matching the opt-out convention
+  // shared with built-in toggles.
+  for (const tool of teamSelectableCustomTools.value) {
+    if (
+      agentCustomToolOverrides &&
+      agentCustomToolOverrides[tool.id] === false
+    ) {
+      continue
+    }
+    entries.push({
+      key: tool.id,
+      label: tool.displayName.trim() || tool.name,
+      description: tool.description,
+      icon: IconWrench,
+      example: buildCustomToolExample(tool),
+      kind: "custom",
+    })
+  }
+
+  return entries
 })
 
 const toolsOpen = ref(false)
 
-const insertToolPrompt = (tool: BotToolDescriptor) => {
+const insertToolPrompt = (tool: ComposerToolEntry) => {
   const el = textareaRef.value?.$el
   if (el) {
     const start = el.selectionStart ?? userInput.value.length
@@ -562,14 +645,31 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
         class="flex flex-wrap items-center gap-2 px-2 pb-2"
       >
         <TooltipProvider>
-          <Tooltip v-for="tool in availableTools" :key="tool.name">
+          <Tooltip v-for="tool in availableTools" :key="tool.key">
             <TooltipTrigger as-child>
               <Badge
                 :class="{ 'pointer-events-none opacity-50': isReadOnly }"
                 @click="insertToolPrompt(tool)"
               >
                 <Component :is="tool.icon" />
-                {{ tool.label }}
+                <!--
+                  Custom tools render the wire-name in a monospace
+                  span — visual cue that this is an identifier the
+                  model invokes by, separating it from built-ins
+                  whose labels are prose ("Weather", "Roll dice").
+                  Built-ins keep their plain-text label.
+                -->
+                <span v-if="tool.kind === 'custom'" class="font-mono text-xs">{{
+                  tool.label
+                }}</span>
+                <template v-else>{{ tool.label }}</template>
+                <Badge
+                  v-if="tool.kind === 'custom'"
+                  variant="secondary"
+                  class="text-xs"
+                >
+                  {{ t("ai.tools.customBadge") }}
+                </Badge>
               </Badge>
             </TooltipTrigger>
             <TooltipContent>{{ tool.description }}</TooltipContent>
@@ -626,6 +726,20 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
                   />
                 </span>
                 {{ agent.name }}
+                <!--
+                  Mirrors the "Custom" tag on custom tools — built-ins
+                  ship with the app, custom agents are admin-authored,
+                  so the badge distinguishes the two sources at a
+                  glance. `isBuiltInAgentId` keys off the `_` prefix
+                  convention; no need to recompute server-side.
+                -->
+                <Badge
+                  v-if="!isBuiltInAgentId(agent.id)"
+                  variant="secondary"
+                  class="text-xs"
+                >
+                  {{ t("ai.agents.customBadge") }}
+                </Badge>
               </Badge>
             </TooltipTrigger>
             <TooltipContent v-if="agent.description">

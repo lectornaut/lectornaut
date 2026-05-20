@@ -57,14 +57,27 @@ export const DEFAULT_AGENT_ID = "_default"
  * record when one is dispatchable; returns `null` to mean "use the
  * team default persona".
  *
- * Lookup precedence:
- *   1. `requestedId` — the per-turn override from the composer (or
- *      sidebar avatar click). The client passes the agent it's
- *      currently displaying in the active-agent badge.
- *   2. `sessionPersistedId` — the value persisted on the session doc
- *      from the previous turn. Picks up the "sticky agent" across
- *      reloads (and across transfers committed by previous turns).
- *   3. `null` — default persona.
+ * Lookup precedence — three wire states for `requestedId`, each
+ * distinct (the Zod schema is `z.string().nullable().optional()`):
+ *
+ *   1. `requestedId: string` — per-turn override from the composer
+ *      (or sidebar click). Try to resolve; if it points to a
+ *      missing/disabled agent, falls back to the team default.
+ *   2. `requestedId: null` — user explicitly cleared the binding
+ *      ("Default" badge clicked). Dispatch the team default; do NOT
+ *      inherit from `sessionPersistedId`. Without this branch, picking
+ *      Default after a Research turn would silently re-dispatch
+ *      Research because `null ?? sessionPersistedId` falls through.
+ *   3. `requestedId: undefined` — field absent from the request
+ *      (legacy clients, or a resume flow that didn't re-send the
+ *      field). Fall back to `sessionPersistedId` so the sticky agent
+ *      across turns / reloads / committed transfers stays bound.
+ *
+ * `null` vs `undefined` is load-bearing here. `??` collapses them,
+ * which broke "switch to Default": the composer sent `null` after the
+ * user picked Default, but the resolver inherited the prior session-
+ * persisted agent, the persistence layer then re-stamped that id onto
+ * the doc, and a reload showed the previous agent in the picker.
  *
  * State semantics — what causes a fallback to null (= default):
  *   - **deleted** (id not found in `availableAgents`): the agent's
@@ -93,9 +106,13 @@ export function resolveActiveAgent(args: {
   sessionPersistedId: string | null | undefined
   availableAgents: TeamAgentDoc[]
 }): TeamAgentDoc | null {
-  const candidate = normalizeAgentId(
-    args.requestedId ?? args.sessionPersistedId ?? null
-  )
+  // Distinguish "client omitted the field" from "client explicitly
+  // chose Default". `undefined` → inherit from session-persisted;
+  // `null` or a real id → take the request at face value. See the
+  // JSDoc above for why `??` is wrong here.
+  const requested =
+    args.requestedId === undefined ? args.sessionPersistedId : args.requestedId
+  const candidate = normalizeAgentId(requested)
   if (!candidate) return null
 
   const match = args.availableAgents.find((agent) => agent.id === candidate)

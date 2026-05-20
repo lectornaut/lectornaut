@@ -15,7 +15,6 @@ import {
   IconRotateCcw,
   IconTrash2,
   IconUsers,
-  IconWrench,
 } from "@/data/icons"
 import type { IBotSessionVisibility } from "@/types/domain"
 import { computed, inject, nextTick, ref, type Component } from "vue"
@@ -50,10 +49,6 @@ const isMutating = computed(() => botChat?.isMutatingSession.value ?? false)
 
 const modeOptions = BOT_CHAT_MODE_OPTIONS
 const activeMode = computed<BotChatMode>(() => botChat?.mode.value ?? "auto")
-const activeModeOption = computed(
-  () => botChat?.activeModeOption.value ?? modeOptions[0]
-)
-const toolsAreEnabled = computed(() => activeModeOption.value.toolsEnabled)
 
 // Per-mode icon. Lives here (not on the option object in the composable)
 // because the composable is plain TypeScript and component imports
@@ -179,50 +174,6 @@ const onArchiveToggle = () => {
   void botChat?.archiveSession(id, !isActiveArchived.value)
 }
 
-// ── Available tools ──────────────────────────────────────────────────────────
-//
-// Mirror of the server-side tool catalog declared in
-// `functions/src/bot.ts` (`BOT_TOOLS`). Kept as a static mirror because
-// the catalog is small and changes rarely; if it grows or becomes
-// team-scoped, promote to a `listBotTools` callable so the two stay in
-// lock-step automatically.
-
-interface AvailableTool {
-  name: string
-  description: string
-  example: string
-}
-
-interface AvailableInterrupt {
-  name: string
-  description: string
-  example: string
-}
-
-const availableTools = computed<AvailableTool[]>(() => [
-  {
-    name: "getWeather",
-    description: t("ai.toolCatalog.weather.description"),
-    example: t("ai.toolCatalog.weather.example"),
-  },
-  {
-    name: "rollDice",
-    description: t("ai.toolCatalog.rollDice.description"),
-    example: t("ai.toolCatalog.rollDice.example"),
-  },
-])
-
-// Interrupt tools pause the chat and surface a form. Listed separately
-// from action tools because they're available in *every* mode (including
-// `manual`) — a clarifying question has no side effects.
-const availableInterrupts = computed<AvailableInterrupt[]>(() => [
-  {
-    name: "askQuestion",
-    description: t("ai.toolCatalog.askQuestion.description"),
-    example: t("ai.toolCatalog.askQuestion.example"),
-  },
-])
-
 // ── Delete ───────────────────────────────────────────────────────────────────
 
 const deleteDialogOpen = ref(false)
@@ -279,93 +230,6 @@ const submitDelete = async () => {
               </FieldContent>
             </Field>
           </RadioGroup>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupLabel class="flex items-center gap-2">
-          <IconWrench />
-          {{ t("ai.sidebar.availableTools") }}
-        </SidebarGroupLabel>
-        <SidebarGroupContent class="space-y-2 p-2">
-          <p v-if="toolsAreEnabled" class="text-muted-foreground text-xs">
-            {{ t("ai.sidebar.toolsEnabledHint") }}
-          </p>
-          <i18n-t
-            v-else
-            keypath="ai.sidebar.toolsDisabled"
-            tag="p"
-            class="text-muted-foreground text-xs"
-          >
-            <template #mode>
-              <strong>{{ t(`ai.modes.${activeMode}.label`) }}</strong>
-            </template>
-            <template #auto>
-              <strong>{{ t("ai.modes.auto.label") }}</strong>
-            </template>
-            <template #agent>
-              <strong>{{ t("ai.modes.agent.label") }}</strong>
-            </template>
-          </i18n-t>
-          <ul class="space-y-2">
-            <li
-              v-for="tool in availableTools"
-              :key="tool.name"
-              class="border-border/60 bg-background/40 rounded-md border p-2 transition-opacity"
-              :class="{ 'opacity-50': !toolsAreEnabled }"
-            >
-              <div class="flex items-center gap-2">
-                <IconWrench />
-                <code class="text-foreground text-xs font-medium">{{
-                  tool.name
-                }}</code>
-              </div>
-              <p class="text-muted-foreground text-xs">
-                {{ tool.description }}
-              </p>
-              <p class="text-muted-foreground/80 text-xs italic">
-                e.g. “{{ tool.example }}”
-              </p>
-            </li>
-          </ul>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupLabel class="flex items-center gap-2">
-          <IconMessageCircle />
-          {{ t("ai.sidebar.humanInTheLoop") }}
-        </SidebarGroupLabel>
-        <SidebarGroupContent class="space-y-2 p-2">
-          <i18n-t
-            keypath="ai.sidebar.humanInTheLoopHint"
-            tag="p"
-            class="text-muted-foreground text-xs"
-          >
-            <template #manual>
-              <strong>{{ t("ai.modes.manual.label") }}</strong>
-            </template>
-          </i18n-t>
-          <ul class="space-y-2">
-            <li
-              v-for="interrupt in availableInterrupts"
-              :key="interrupt.name"
-              class="border-border/60 bg-background/40 rounded-md border p-2"
-            >
-              <div class="flex items-center gap-2">
-                <IconMessageCircle />
-                <code class="text-foreground text-xs font-medium">{{
-                  interrupt.name
-                }}</code>
-              </div>
-              <p class="text-muted-foreground text-xs">
-                {{ interrupt.description }}
-              </p>
-              <p class="text-muted-foreground/80 text-xs italic">
-                e.g. “{{ interrupt.example }}”
-              </p>
-            </li>
-          </ul>
         </SidebarGroupContent>
       </SidebarGroup>
 

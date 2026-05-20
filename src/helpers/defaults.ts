@@ -37,6 +37,7 @@ import {
   IconUserCog,
   IconUserRound,
   IconUsersRound,
+  IconWrench,
 } from "@/data/icons"
 import type {
   BillingPlanKey,
@@ -423,6 +424,21 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     searchWorkspaceNodes: true,
     summarizeNode: true,
     customAgents: true,
+    customTools: true,
+  },
+  /**
+   * Default-true for every shipped preset id — see the registry in
+   * `src/data/builtInAgents.ts`. New teams pick up every preset
+   * automatically; admins toggle off the ones they don't want their
+   * members to see in the picker. Server normalizes missing keys to
+   * `true` so a newly-added preset is opt-out (not opt-in) for
+   * existing teams.
+   */
+  builtInAgents: {
+    _researcher: true,
+    _writer: true,
+    _summarizer: true,
+    _code: true,
   },
   titleMaxLength: 80,
   previewMaxLength: 200,
@@ -441,6 +457,31 @@ export const botAgentBounds = {
   promptSuffix: { max: 2000 },
   titleMaxLength: { min: 20, max: 200, step: 1 },
   previewMaxLength: { min: 50, max: 500, step: 1 },
+  /**
+   * Custom-tool field caps. Mirror the Zod schema in
+   * `src/schemas/domain.ts::teamCustomToolSchema` — keep them in
+   * lockstep so the form's `maxlength` and the server validation
+   * reject the same overshoot.
+   */
+  customTool: {
+    name: { min: 1, max: 40 },
+    displayName: { max: 60 },
+    description: { min: 1, max: 500 },
+    avatarSeed: { max: 40 },
+    fieldsMax: 10,
+    fieldName: { min: 1, max: 40 },
+    fieldDescription: { max: 200 },
+    httpUrl: { max: 2048 },
+    httpHeaderName: { min: 1, max: 80 },
+    httpHeaderValue: { max: 1000 },
+    httpBody: { max: 8000 },
+    httpResponseBytes: { min: 256, max: 65536, step: 256, default: 16384 },
+    httpTimeoutMs: { min: 1000, max: 30_000, step: 500, default: 10_000 },
+    constantValue: { max: 8000 },
+    promptTemplate: { min: 1, max: 4000 },
+    workspaceSearchLimit: { min: 1, max: 20, step: 1, default: 5 },
+    workspaceSearchFilter: { max: 200 },
+  },
 } as const
 
 export const defaultMenu = [
@@ -1230,6 +1271,12 @@ export const defaultSettingsTabs = [
         icon: IconSparkles,
         id: "ai",
         description: "settings.descriptions.ai",
+      },
+      {
+        name: "settings.titles.tools",
+        icon: IconWrench,
+        id: "tools",
+        description: "settings.descriptions.tools",
       },
       {
         name: "settings.titles.agents",

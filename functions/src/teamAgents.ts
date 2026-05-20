@@ -108,6 +108,17 @@ interface TeamAgentDoc {
   promptSuffixes: TeamAgentPromptSuffixes
   tools: TeamAgentToolToggles
   /**
+   * Per-custom-tool toggles. Keyed by `TeamCustomToolDoc.id`. Missing
+   * keys normalize to `true` — see the schema JSDoc. Dispatch in
+   * `bot.ts` filters the team's custom tools through this map after
+   * the team-level `agentConfig.tools.customTools` gate, so a tool
+   * fires only when:
+   *   - team-wide customTools feature is on,
+   *   - the tool itself is enabled + non-archived,
+   *   - this agent's per-tool toggle is not explicitly `false`.
+   */
+  customTools: Record<string, boolean>
+  /**
    * Admin on/off toggle. `false` = "disabled" — dispatch silently
    * substitutes the team default for this agent. Independent of
    * `archivedAt`; see `teamAgentSchema` JSDoc for the full status
@@ -277,6 +288,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Filter a raw map into a `Record<string, boolean>`. Drops any key
+ * whose value isn't a boolean — keeps the per-agent
+ * `customTools` map clean even if a malformed write landed on the
+ * Firestore doc (e.g. a string `"false"` slipping through an old
+ * client). Used by the agent doc normalizer.
+ */
+function normalizeBooleanRecord(raw: unknown): Record<string, boolean> {
+  if (!isRecord(raw)) return {}
+  const out: Record<string, boolean> = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === "boolean") out[key] = value
+  }
+  return out
+}
+
+/**
  * Normalize a raw Firestore doc into the canonical `TeamAgentDoc` shape
  * the client expects — missing keys default to "" / `true` so old docs
  * (or docs written before a new tool key was added) read consistently.
@@ -347,6 +374,13 @@ function normalizeAgentDoc(
       // no consumer uses. The team-level `BotAgentToolToggles.customAgents`
       // is the canonical (and only consumed) source.
     },
+    // Per-custom-tool toggles — keyed by custom-tool id. Only boolean
+    // values are accepted; everything else is dropped so the doc
+    // can't ship a malformed entry that confuses dispatch. Missing
+    // keys at dispatch time normalize to `true` via the
+    // `!== false` check, so the empty default below is the
+    // every-tool-enabled state.
+    customTools: normalizeBooleanRecord(data.customTools),
     // Default-true so docs written before `enabled` existed continue
     // dispatching normally — the lifecycle feature only marks them
     // "disabled" when an admin explicitly flips the toggle.
@@ -380,6 +414,17 @@ const toolTogglesPatchSchema = z
   })
   .partial()
 
+/**
+ * Per-custom-tool toggles patch shape. Open-ended `Record<string, boolean>`
+ * because the keys are Firestore-generated custom-tool ids — they're
+ * unbounded and known only at runtime. Server-side we don't validate
+ * that the keys reference real custom-tool ids; a stale id (e.g. tool
+ * deleted between the form open and save) is harmless because dispatch
+ * only consults the map for tools that still exist in
+ * `listTeamCustomTools`.
+ */
+const customToolsTogglesPatchSchema = z.record(z.string(), z.boolean())
+
 const promptSuffixesPatchSchema = z
   .object({
     auto: z.string().max(AGENT_BOUNDS.promptSuffix.max),
@@ -404,6 +449,7 @@ const teamAgentCreateSchema = z.object({
     .max(AGENT_BOUNDS.systemPromptBase.max),
   promptSuffixes: promptSuffixesPatchSchema.optional(),
   tools: toolTogglesPatchSchema.optional(),
+  customTools: customToolsTogglesPatchSchema.optional(),
 })
 
 /**
@@ -430,6 +476,7 @@ const teamAgentUpdateSchema = z.object({
     .optional(),
   promptSuffixes: promptSuffixesPatchSchema.optional(),
   tools: toolTogglesPatchSchema.optional(),
+  customTools: customToolsTogglesPatchSchema.optional(),
   enabled: z.boolean().optional(),
 })
 
@@ -498,6 +545,12 @@ export const createTeamAgent = onCall<CreateTeamAgentRequest>(
         ...DEFAULT_TOOL_TOGGLES,
         ...(parsed.data.tools ?? {}),
       },
+      // Per-custom-tool overrides — empty when the form didn't send
+      // any. Missing keys at dispatch time normalize to enabled (the
+      // `!== false` check), so a brand-new agent automatically picks
+      // up every existing custom tool without a separate "select all"
+      // affordance in the editor.
+      customTools: parsed.data.customTools ?? {},
       // New agents start enabled — admins explicitly toggle off later
       // if they want to gate the agent without archiving.
       enabled: true,
@@ -595,6 +648,18 @@ export const updateTeamAgent = onCall<UpdateTeamAgentRequest>(
         ...currentTools,
         ...parsed.data.tools,
       }
+    }
+    if (parsed.data.customTools !== undefined) {
+      // Custom-tool overrides REPLACE the existing map wholesale —
+      // not merged. Reason: the editor renders the full set of tool
+      // ids on save, so what's not in the patch is intentionally
+      // "should default to enabled" (key absent). A merge here would
+      // make it impossible for the admin to UN-set a key once it
+      // landed (a removed-from-form id would silently retain the
+      // old value). The trade-off: an offline patch that touches
+      // only one id and ships back a single-entry map will reset
+      // every other id to the default. The editor never does that.
+      updates.customTools = parsed.data.customTools
     }
     if (parsed.data.enabled !== undefined) {
       updates.enabled = parsed.data.enabled

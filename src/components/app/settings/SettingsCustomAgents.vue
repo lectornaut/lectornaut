@@ -3,7 +3,12 @@ import { useTeamAgents } from "@/composables/useTeamAgents"
 import { BOT_TOOL_CATALOG } from "@/data/botTools"
 import { emitter } from "@/modules/mitt"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
-import type { IBotAgentConfig, ITeamAgent } from "@/types/domain"
+import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
+import type {
+  IBotAgentConfig,
+  ITeamAgent,
+  ITeamCustomTool,
+} from "@/types/domain"
 import { storeToRefs } from "pinia"
 import { onBeforeUnmount, onMounted } from "vue"
 import Avatar from "vue-boring-avatars"
@@ -65,6 +70,34 @@ const teamTools = computed<IBotAgentConfig["tools"]>(
   () => teamConfig.value.tools
 )
 
+// Silent consumer of the custom tools store — we only need the catalog
+// (no CRUD here). Bypasses `useTeamCustomTools` so the dialog doesn't
+// double-emit toasts when the settings page already owns them.
+const teamCustomToolsStore = useTeamCustomToolsStore()
+const { tools: allCustomTools } = storeToRefs(teamCustomToolsStore)
+
+/**
+ * Non-archived custom tools the agent editor surfaces. Archived ones
+ * are filtered out because admins can't reasonably configure overrides
+ * for a tool that's been deprecated — the row would always read
+ * "Archived" with no actionable state. Disabled-at-team tools STAY in
+ * the list so admins can preconfigure per-agent state ahead of a
+ * future re-enable; we surface their disabled-at-team status as a
+ * Badge (same affordance built-in tools get when toggled off at team
+ * level).
+ */
+const customToolsForAgent = computed<ITeamCustomTool[]>(() =>
+  allCustomTools.value
+    .filter((tool) => !tool.archivedAt)
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+)
+
+/** Team-wide gate — when off, the whole sub-section is "disabled at team." */
+const customToolsFeatureOn = computed<boolean>(
+  () => teamTools.value.customTools !== false
+)
+
 // ── Dialog state ────────────────────────────────────────────────────────────
 
 const open = ref(false)
@@ -120,6 +153,15 @@ interface AgentDraft {
     manual: string
   }
   tools: ITeamAgent["tools"]
+  /**
+   * Per-custom-tool overrides keyed by tool id. Missing keys default
+   * to enabled at dispatch time, so the editor only stores explicit
+   * `false` entries — the absence of a key is "use the team-level
+   * state." See the server-side merge note: the editor sends the
+   * FULL set of known ids on save, so a removed-from-list tool id
+   * reverts to the default rather than retaining a stale `false`.
+   */
+  customTools: Record<string, boolean>
 }
 
 const DEFAULT_DRAFT: AgentDraft = {
@@ -139,7 +181,9 @@ const DEFAULT_DRAFT: AgentDraft = {
     // Carried for type alignment with the team-level toggle schema —
     // ignored at the per-agent dispatch layer (see ITeamAgent JSDoc).
     customAgents: true,
+    customTools: true,
   },
+  customTools: {},
 }
 
 const cloneDraft = (source: ITeamAgent | null): AgentDraft => {
@@ -148,6 +192,7 @@ const cloneDraft = (source: ITeamAgent | null): AgentDraft => {
       ...DEFAULT_DRAFT,
       promptSuffixes: { ...DEFAULT_DRAFT.promptSuffixes },
       tools: { ...DEFAULT_DRAFT.tools },
+      customTools: { ...DEFAULT_DRAFT.customTools },
     }
   }
   return {
@@ -157,6 +202,7 @@ const cloneDraft = (source: ITeamAgent | null): AgentDraft => {
     systemPromptBase: source.systemPromptBase,
     promptSuffixes: { ...source.promptSuffixes },
     tools: { ...source.tools },
+    customTools: { ...(source.customTools ?? {}) },
   }
 }
 
@@ -254,6 +300,53 @@ const setToolEnabled = (name: ToolRow["name"], value: boolean): void => {
   draft.value.tools[name] = value
 }
 
+/**
+ * Toggle a custom tool's per-agent override. The draft holds the FULL
+ * set of known ids on save (see `prepareDraftForSave` below); writing
+ * the flag here is enough to land it. Reassigning the object (vs.
+ * mutating a key) is the simplest way to keep Vue's reactive tracking
+ * stable when the underlying record changes shape — same trick used
+ * for `draft.builtInAgents` in SettingsAgents.vue.
+ */
+const setCustomToolEnabled = (toolId: string, value: boolean): void => {
+  draft.value.customTools = {
+    ...draft.value.customTools,
+    [toolId]: value,
+  }
+}
+
+const isCustomToolEnabledForAgent = (toolId: string): boolean =>
+  draft.value.customTools[toolId] !== false
+
+/**
+ * Build the customTools map sent on save. Two things happen here:
+ *
+ *   1. We include EVERY known tool id (from the team's catalog) so the
+ *      server's "replace, don't merge" update semantics don't leave
+ *      stale `false` entries hanging around for tools the admin
+ *      flipped back to enabled in this edit.
+ *
+ *   2. For tools NOT in the team catalog but already in the draft
+ *      (e.g. a tool deleted between dialog-open and save), the entry
+ *      is dropped — the server normalizer ignores unknown ids
+ *      anyway, but pruning here keeps the doc clean.
+ *
+ * Tools whose effective state is `true` (the default) are emitted as
+ * `true` rather than omitted, because the server replaces the map
+ * wholesale — omitting would default to enabled, which is the same
+ * outcome, but explicit booleans keep the Firestore doc readable.
+ */
+const prepareDraftForSave = (): AgentDraft => {
+  const customTools: Record<string, boolean> = {}
+  for (const tool of customToolsForAgent.value) {
+    customTools[tool.id] = isCustomToolEnabledForAgent(tool.id)
+  }
+  return {
+    ...draft.value,
+    customTools,
+  }
+}
+
 // ── External event channel ──────────────────────────────────────────────────
 
 type OpenPayload = { agentId?: string } | "new" | undefined
@@ -295,11 +388,12 @@ onBeforeUnmount(() => {
 
 const handleEditorSave = async (): Promise<void> => {
   if (!canSave.value) return
+  const payload = prepareDraftForSave()
   const target = editingAgent.value
   if (target) {
-    await update(target.id, draft.value)
+    await update(target.id, payload)
   } else {
-    const created = await create(draft.value)
+    const created = await create(payload)
     if (!created) return
   }
   open.value = false
@@ -563,6 +657,93 @@ const handleEditorSave = async (): Promise<void> => {
                 </Tooltip>
               </Field>
             </TooltipProvider>
+
+            <!--
+              ── Custom tools sub-section ──
+              Only renders when the team has at least one non-archived
+              custom tool; the entire group falls out of the editor
+              otherwise so the heading doesn't dangle empty. The
+              team-wide `customTools` gate is treated the same way as a
+              built-in tool's team-level switch — the "Disabled at
+              team" badge appears on the sub-heading and the Switches
+              go disabled. Per-tool team-level state (`tool.enabled`)
+              gets its own per-row badge so admins can still
+              preconfigure overrides for tools they've toggled off but
+              not yet archived.
+            -->
+            <template v-if="customToolsForAgent.length > 0">
+              <Field orientation="vertical">
+                <FieldContent>
+                  <FieldLabel class="flex items-center gap-2">
+                    {{ t("settings.agents.custom.customToolsHeader") }}
+                    <Badge v-if="!customToolsFeatureOn" variant="outline">
+                      {{ t("settings.agents.custom.tools.disabledAtTeam") }}
+                    </Badge>
+                  </FieldLabel>
+                  <FieldDescription>
+                    {{ t("settings.agents.custom.customToolsHeaderDesc") }}
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+
+              <TooltipProvider>
+                <Field
+                  v-for="tool in customToolsForAgent"
+                  :key="tool.id"
+                  orientation="horizontal"
+                >
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-custom-tool-${tool.id}-${editingAgent?.id ?? 'new'}`"
+                      class="flex items-center gap-2"
+                    >
+                      <!--
+                        Use displayName when admins set it; otherwise
+                        the wire-name (the model-facing string).
+                        Matches the row in the team-level Custom tools
+                        list so admins recognize the same identity
+                        across surfaces.
+                      -->
+                      <span class="font-mono text-sm">
+                        {{ tool.displayName || tool.name }}
+                      </span>
+                      <Badge v-if="tool.enabled === false" variant="outline">
+                        {{ t("settings.agents.custom.tools.disabledAtTeam") }}
+                      </Badge>
+                    </FieldLabel>
+                    <FieldDescription v-if="tool.description">
+                      {{ tool.description }}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <span class="inline-block">
+                        <Switch
+                          :id="`agent-custom-tool-${tool.id}-${editingAgent?.id ?? 'new'}`"
+                          :model-value="isCustomToolEnabledForAgent(tool.id)"
+                          :disabled="
+                            !canManage ||
+                            !customToolsFeatureOn ||
+                            tool.enabled === false
+                          "
+                          @update:model-value="
+                            (value) =>
+                              setCustomToolEnabled(tool.id, Boolean(value))
+                          "
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      v-if="!customToolsFeatureOn || tool.enabled === false"
+                    >
+                      {{
+                        t("settings.agents.custom.tools.disabledAtTeamTooltip")
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </Field>
+              </TooltipProvider>
+            </template>
           </FieldSet>
         </FieldGroup>
       </OverlayScrollbarsWrapper>

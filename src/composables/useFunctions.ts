@@ -13,8 +13,10 @@ import type {
   IBotAgentModel,
   IBotAgentToolToggles,
   IBotSessionVisibility,
+  ICustomToolAction,
   ITeamAgent,
   ITeamBilling,
+  ITeamCustomTool,
 } from "@/types/domain"
 import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
@@ -780,6 +782,7 @@ export type UpdateTeamAgentConfigPatch = Partial<{
   systemPromptBase: string
   promptSuffixes: Partial<IBotAgentConfig["promptSuffixes"]>
   tools: Partial<IBotAgentConfig["tools"]>
+  builtInAgents: Partial<IBotAgentConfig["builtInAgents"]>
   titleMaxLength: number
   previewMaxLength: number
 }>
@@ -813,6 +816,16 @@ export interface CreateTeamAgentDraft {
   systemPromptBase: string
   promptSuffixes?: Partial<ITeamAgent["promptSuffixes"]>
   tools?: Partial<IBotAgentToolToggles>
+  /**
+   * Per-custom-tool overrides — keyed by `ITeamCustomTool.id`. Missing
+   * keys default to enabled at dispatch time, so an empty `{}` (or
+   * omitting the field entirely) means "every custom tool is
+   * available to this agent." Listing a key with `false` overrides
+   * that single tool. The agent editor sends the full set of known
+   * ids on save so a removed-from-form id reverts to the default,
+   * not to its prior `false` value.
+   */
+  customTools?: Record<string, boolean>
 }
 
 export interface CreateTeamAgentRequest {
@@ -900,6 +913,95 @@ export interface DeleteTeamAgentRequest {
 
 export interface DeleteTeamAgentResponse {
   agentId: string
+  deleted: true
+}
+
+// =============================================================================
+// Team Custom Tools Request/Response Types
+// =============================================================================
+
+/**
+ * Creation payload for `createTeamCustomTool`. Required fields:
+ *   - `name`        — wire-name. Must match `/^[a-z][a-zA-Z0-9_]*$/`.
+ *   - `description` — the description the model sees.
+ *   - `inputSchema` / `outputSchema` — field lists (may be empty).
+ *   - `action`      — discriminated union with the implementation.
+ *
+ * `displayName` and `avatarSeed` default server-side when omitted.
+ */
+export interface CreateTeamCustomToolDraft {
+  name: string
+  displayName?: string
+  description: string
+  avatarSeed?: string
+  inputSchema: ITeamCustomTool["inputSchema"]
+  outputSchema: ITeamCustomTool["outputSchema"]
+  action: ICustomToolAction
+}
+
+export interface CreateTeamCustomToolRequest {
+  teamId: string
+  draft: CreateTeamCustomToolDraft
+}
+
+export interface CreateTeamCustomToolResponse {
+  tool: ITeamCustomTool
+}
+
+/**
+ * Update payload — every field optional; only sent fields are written.
+ * `enabled` rides along here for symmetry; prefer `setTeamCustomToolEnabled`
+ * for the row's Switch (cleaner audit trail).
+ */
+export type UpdateTeamCustomToolPatch = Partial<CreateTeamCustomToolDraft> & {
+  enabled?: boolean
+}
+
+export interface UpdateTeamCustomToolRequest {
+  teamId: string
+  toolId: string
+  patch: UpdateTeamCustomToolPatch
+}
+
+export interface UpdateTeamCustomToolResponse {
+  tool: ITeamCustomTool
+}
+
+export interface ArchiveTeamCustomToolRequest {
+  teamId: string
+  toolId: string
+}
+
+export interface ArchiveTeamCustomToolResponse {
+  tool: ITeamCustomTool
+}
+
+export interface RestoreTeamCustomToolRequest {
+  teamId: string
+  toolId: string
+}
+
+export interface RestoreTeamCustomToolResponse {
+  tool: ITeamCustomTool
+}
+
+export interface SetTeamCustomToolEnabledRequest {
+  teamId: string
+  toolId: string
+  enabled: boolean
+}
+
+export interface SetTeamCustomToolEnabledResponse {
+  tool: ITeamCustomTool
+}
+
+export interface DeleteTeamCustomToolRequest {
+  teamId: string
+  toolId: string
+}
+
+export interface DeleteTeamCustomToolResponse {
+  toolId: string
   deleted: true
 }
 
@@ -1621,6 +1723,40 @@ export const deleteTeamAgent = createTypedCallable<
 >("deleteTeamAgent")
 
 // =============================================================================
+// Team Custom Tools Functions
+// =============================================================================
+
+export const createTeamCustomTool = createTypedCallable<
+  CreateTeamCustomToolRequest,
+  CreateTeamCustomToolResponse
+>("createTeamCustomTool")
+
+export const updateTeamCustomTool = createTypedCallable<
+  UpdateTeamCustomToolRequest,
+  UpdateTeamCustomToolResponse
+>("updateTeamCustomTool")
+
+export const archiveTeamCustomTool = createTypedCallable<
+  ArchiveTeamCustomToolRequest,
+  ArchiveTeamCustomToolResponse
+>("archiveTeamCustomTool")
+
+export const restoreTeamCustomTool = createTypedCallable<
+  RestoreTeamCustomToolRequest,
+  RestoreTeamCustomToolResponse
+>("restoreTeamCustomTool")
+
+export const setTeamCustomToolEnabled = createTypedCallable<
+  SetTeamCustomToolEnabledRequest,
+  SetTeamCustomToolEnabledResponse
+>("setTeamCustomToolEnabled")
+
+export const deleteTeamCustomTool = createTypedCallable<
+  DeleteTeamCustomToolRequest,
+  DeleteTeamCustomToolResponse
+>("deleteTeamCustomTool")
+
+// =============================================================================
 // Node Summarize Request/Response Types — structured output demo.
 // =============================================================================
 
@@ -1783,6 +1919,14 @@ export function useFunctions() {
     restoreTeamAgent,
     setTeamAgentEnabled,
     deleteTeamAgent,
+
+    // Team custom tool CRUD
+    createTeamCustomTool,
+    updateTeamCustomTool,
+    archiveTeamCustomTool,
+    restoreTeamCustomTool,
+    setTeamCustomToolEnabled,
+    deleteTeamCustomTool,
 
     // Structured-output sub-flows
     summarizeNode,

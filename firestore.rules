@@ -298,6 +298,16 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Team-scoped custom tools (admin-authored Genkit tools). Same
+      // gating model as agents: any member can READ so the future tool
+      // picker / activity log can render the catalog; writes are
+      // callable-only and admin-gated server-side by
+      // `assertAdminRole` inside `teamCustomTools.ts`.
+      match /tools/{toolId} {
+        allow read: if isTeamMember(teamId);
+        allow write: if false;
+      }
+
       match /memberships/{userId} {
         allow read: if isTeamMember(teamId) || isOwnMembershipDoc();
         // Create is handled by Cloud Functions (invite/accept flow)

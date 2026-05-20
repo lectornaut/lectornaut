@@ -1,6 +1,7 @@
 import type {
   billingIntervalSchema,
   billingPlanKeySchema,
+  botAgentBuiltInAgentTogglesSchema,
   botAgentConfigSchema,
   botAgentDefaultModeSchema,
   botAgentModelSchema,
@@ -14,9 +15,12 @@ import type {
   botSessionSchema,
   botSessionVisibilitySchema,
   botToolCallSchema,
+  customToolActionSchema,
+  customToolFieldSchema,
   membershipPreferencesSchema,
   teamAgentSchema,
   teamBillingSchema,
+  teamCustomToolSchema,
   teamSchema,
   userPreferencesSchema,
   userProfileSchema,
@@ -71,6 +75,16 @@ export type IBotAgentModel = z.infer<typeof botAgentModelSchema>
 export type IBotAgentModelToggles = z.infer<typeof botAgentModelTogglesSchema>
 export type IBotAgentDefaultMode = z.infer<typeof botAgentDefaultModeSchema>
 export type IBotAgentToolToggles = z.infer<typeof botAgentToolTogglesSchema>
+export type IBotAgentBuiltInAgentToggles = z.infer<
+  typeof botAgentBuiltInAgentTogglesSchema
+>
 export type IBotAgentConfig = z.infer<typeof botAgentConfigSchema>
 
 export type ITeamAgent = z.infer<typeof teamAgentSchema>
+
+// ─── Custom tools ───────────────────────────────────────────────────────────
+
+export type ICustomToolField = z.infer<typeof customToolFieldSchema>
+export type ICustomToolAction = z.infer<typeof customToolActionSchema>
+export type ICustomToolActionKind = ICustomToolAction["kind"]
+export type ITeamCustomTool = z.infer<typeof teamCustomToolSchema>

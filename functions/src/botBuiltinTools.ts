@@ -76,6 +76,16 @@ export interface BotActionContext {
    */
   availableTransferAgentIds?: string[]
   /**
+   * Wire-name of the model currently driving the chat. Used by
+   * admin-authored `promptTemplate` custom tools whose stored `model`
+   * override is null (= "follow the chat's current model"). Populated
+   * by the dispatcher with the post-clamp `effectiveModel`, so an
+   * admin-disabled provider can't sneak back in via a sub-tool.
+   * Absent on legacy code paths that haven't been updated to pass it
+   * — handlers fall back to a hardcoded default model in that case.
+   */
+  effectiveModel?: string
+  /**
    * OUTPUT field — written by `transferToAgentTool`'s handler when the
    * model decides to hand off. The dispatcher reads this after
    * `streamChatToClient` completes and, if set, persists the new

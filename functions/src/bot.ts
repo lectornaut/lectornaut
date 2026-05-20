@@ -30,7 +30,12 @@
 
 import { onCallGenkit } from "firebase-functions/https"
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https"
-import { z, type SessionData, type SessionStore } from "genkit/beta"
+import {
+  z,
+  type SessionData,
+  type SessionStore,
+  type ToolArgument,
+} from "genkit/beta"
 import {
   buildAgentSystemPrompt,
   normalizeActiveAgentIdForStorage,
@@ -65,6 +70,7 @@ import {
 } from "./botContext.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
+import { listBuiltInAgents } from "./builtInAgents.js"
 import { admin, db } from "./firebase.js"
 import {
   ai,
@@ -75,6 +81,10 @@ import { aiMiddlewares } from "./genkitMiddleware.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
 import { listTeamAgents, type TeamAgentDoc } from "./teamAgents.js"
+import {
+  buildCustomToolForChat,
+  listTeamCustomTools,
+} from "./teamCustomTools.js"
 import type { IMembershipRole } from "./types.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
@@ -670,7 +680,14 @@ function pickChatTools(
   // — that flag is team-only and has no per-agent counterpart.
   const agentAllows = (name: ChatToolName): boolean =>
     !agent || agent.tools[name] !== false
-  const tools = []
+  // Typed as Genkit's `ToolArgument` union — accepts every flavor of
+  // tool reference Genkit's `chat({ tools })` understands: strict
+  // ToolAction (the built-in tools), MultipartToolAction (any
+  // interrupt tool), or a string lookup. Custom tools synthesize
+  // their schemas from admin-defined field lists at runtime so they
+  // come back as a wider ZodObject; `ToolArgument` is the supertype
+  // that lets the heterogeneous mix coexist without per-push casts.
+  const tools: ToolArgument[] = []
   if (
     modeAllowsActionTools &&
     config.tools.getWeather &&
@@ -1035,6 +1052,58 @@ interface ChatStreamResult {
 }
 
 /**
+ * Collect all tool-call and tool-result refs from a pre-turn Genkit
+ * thread, keyed identically to `streamChatToClientInner`'s `refKey()`.
+ *
+ * Why this exists: `chat.sendStream(...).response.messages` returns the
+ * full session thread, not just this turn's new exchange. The sweep
+ * pass that re-emits "missed" tool events (see `streamChatToClient`)
+ * therefore walks the entire history. Without seeding its dedup sets
+ * with prior refs, every new turn re-emits every historical
+ * `toolCall` / `toolResult` chunk — the client appends them to the new
+ * agent bubble's segments and the UI shows duplicated tool cards from
+ * older turns. Pre-marking the prior refs makes the sweep skip them
+ * cleanly while still catching legitimately-missed events from the
+ * *current* turn (the original purpose of the sweep).
+ *
+ * Sequence-number fallback (`${name}#${seq}`) intentionally mirrors
+ * `refKey()` so the dedup aligns for the rare case where Genkit emits
+ * a ref-less tool part. In practice every modern provider supplies
+ * stable refs and the fallback is just belt-and-suspenders.
+ */
+function collectPriorTurnToolRefs(data: SessionData | undefined): {
+  calls: string[]
+  results: string[]
+} {
+  const calls: string[] = []
+  const results: string[] = []
+  if (!data?.threads) return { calls, results }
+  const thread = data.threads[MAIN_THREAD]
+  if (!Array.isArray(thread)) return { calls, results }
+  let callSeq = 0
+  let resultSeq = 0
+  for (const raw of thread as MessageLike[]) {
+    const content = raw?.content
+    if (!Array.isArray(content)) continue
+    for (const part of content as PartLike[]) {
+      if (part.toolRequest && part.toolRequest.name) {
+        if (part.toolRequest.partial) continue
+        const ref =
+          part.toolRequest.ref ?? `${part.toolRequest.name}#${callSeq}`
+        calls.push(`call:${ref}`)
+        callSeq++
+      } else if (part.toolResponse && part.toolResponse.name) {
+        const ref =
+          part.toolResponse.ref ?? `${part.toolResponse.name}#${resultSeq}`
+        results.push(`result:${ref}`)
+        resultSeq++
+      }
+    }
+  }
+  return { calls, results }
+}
+
+/**
  * Pump a Genkit `chat.sendStream(...)` result out to the client as
  * `SendBotMessageStreamPayload` chunks.
  *
@@ -1052,9 +1121,14 @@ interface ChatStreamResult {
  * Both passes dedupe via the same ref-keyed sets, so a part that *did*
  * surface in the live stream isn't double-emitted in the sweep.
  *
- * `preSentToolResults` lets a caller pre-mark refs as "already emitted"
- * — used by `respondToBotInterruptFlow` to avoid double-emitting the
- * just-resolved interrupt's toolResult after the resume kicks off.
+ * `preSentToolCalls` / `preSentToolResults` let a caller pre-mark refs
+ * as "already emitted" so the sweep skips them:
+ *   - `preSentToolResults` is also used by `respondToBotInterruptFlow`
+ *     to avoid double-emitting the just-resolved interrupt's toolResult
+ *     after the resume kicks off.
+ *   - Both fields are populated from the pre-turn session thread (see
+ *     `collectPriorTurnToolRefs`) so the sweep doesn't resurface
+ *     historical tool round-trips into the new turn's agent bubble.
  *
  * Returns the resolved final response so the caller can use
  * `final.text` for the unary reply.
@@ -1120,7 +1194,10 @@ class TurnTimeoutError extends Error {
 async function streamChatToClient(
   result: ChatStreamResult,
   sendChunk: (chunk: SendBotMessageStreamPayload) => void,
-  options: { preSentToolResults?: Iterable<string> } = {}
+  options: {
+    preSentToolCalls?: Iterable<string>
+    preSentToolResults?: Iterable<string>
+  } = {}
 ): Promise<Awaited<ChatStreamResult["response"]>> {
   // Race the actual stream consumer against a wall-clock deadline.
   // Whoever finishes first decides the outcome. The timer is always
@@ -1170,9 +1247,12 @@ async function streamChatToClient(
 async function streamChatToClientInner(
   result: ChatStreamResult,
   sendChunk: (chunk: SendBotMessageStreamPayload) => void,
-  options: { preSentToolResults?: Iterable<string> } = {}
+  options: {
+    preSentToolCalls?: Iterable<string>
+    preSentToolResults?: Iterable<string>
+  } = {}
 ): Promise<Awaited<ChatStreamResult["response"]>> {
-  const sentToolCalls = new Set<string>()
+  const sentToolCalls = new Set<string>(options.preSentToolCalls ?? [])
   const sentToolResults = new Set<string>(options.preSentToolResults ?? [])
   const refKey = (
     part: ToolRequestLike | ToolResponseLike,
@@ -1414,18 +1494,37 @@ async function prepareChatTurn(opts: {
   // send, not after a deploy.
   const agentConfig = await loadTeamAgentConfig(teamId)
 
-  // Resolve active custom agent. Lookup precedence: input override →
-  // session-persisted → null (team default). Team-wide `customAgents`
-  // gate short-circuits the agents collection read when the feature is
-  // disabled — `resolveActiveAgent` then returns null even for sessions
-  // with a pinned `activeAgentId`, so dispatch silently uses default.
-  const customAgents = agentConfig.tools.customAgents
-    ? await listTeamAgents(teamId)
+  // Resolve active agent. Lookup precedence: input override →
+  // session-persisted → null (team default). Two independently-gated
+  // sources merge into a single available-agents list:
+  //
+  //   - **Built-in presets** (Researcher / Writer / Summarizer / Code
+  //     helper) are always synthesizable from the local registry; the
+  //     team's per-preset toggle in `agentConfig.builtInAgents` filters
+  //     them. The team-wide `customAgents` feature gate ALSO hides
+  //     built-ins — admins who disable the feature don't want any
+  //     personas surfacing in pickers regardless of source, and the
+  //     toggle's UI copy says "custom agents" because that's how the
+  //     surface area is presented, not because built-ins are exempt.
+  //
+  //   - **Custom agents** (Firestore-backed) are fetched only when the
+  //     team-wide `customAgents` gate is on. Disabled, archived, and
+  //     deleted states are gated downstream by `resolveActiveAgent`.
+  //
+  // Concatenation order is built-ins first → custom agents after.
+  // Order matters for the transfer roster (the model picks the FIRST
+  // matching id when it has duplicates, though custom ids never collide
+  // with the `_`-prefixed presets).
+  const agentsEnabled = agentConfig.tools.customAgents
+  const builtInAgents = agentsEnabled
+    ? listBuiltInAgents(teamId, agentConfig.builtInAgents)
     : []
+  const customAgents = agentsEnabled ? await listTeamAgents(teamId) : []
+  const availableAgents: TeamAgentDoc[] = [...builtInAgents, ...customAgents]
   const activeAgent = resolveActiveAgent({
     requestedId: activeAgentId,
     sessionPersistedId: existingSession?.activeAgentId ?? null,
-    availableAgents: customAgents,
+    availableAgents,
   })
 
   // What gets persisted on the doc this turn. Three cases:
@@ -1493,12 +1592,27 @@ async function prepareChatTurn(opts: {
   // When a custom agent is active we include the team default
   // (`id: ""`) so the model has a way back to the generic assistant.
   // When no agent is active, only custom agents are eligible targets.
-  const transferRoster = buildTransferRoster(activeAgent, customAgents)
+  const transferRoster = buildTransferRoster(activeAgent, availableAgents)
+
+  // Custom tools — admin-authored Genkit tools. Gated by the team-wide
+  // `customTools` feature flag. The list returned is every enabled +
+  // non-archived doc; the tool factory rebuilds each one as a Genkit
+  // tool every turn so admin schema changes propagate without a
+  // deploy. Empty list when the feature is off OR the team has no
+  // custom tools.
+  const customTools = agentConfig.tools.customTools
+    ? await listTeamCustomTools(teamId)
+    : []
+  const dispatchableCustomTools = customTools.filter(
+    (tool) => tool.enabled && !tool.archivedAt
+  )
 
   // Action context fed into `chat({ context })`. `availableTransferAgentIds`
   // is the runtime allowlist enforced by `transferToAgent`'s handler;
   // `requestedTransferAgentId` starts undefined and the handler writes
-  // it on a successful transfer call.
+  // it on a successful transfer call. `effectiveModel` lets
+  // promptTemplate custom tools fall back to the chat's current model
+  // when no admin override is set.
   const actionContext: BotActionContext = {
     auth: { uid: auth.uid },
     mode,
@@ -1508,18 +1622,33 @@ async function prepareChatTurn(opts: {
       agentConfig.providers.google && isAiModelProviderConfigured("google"),
     availableTransferAgentIds:
       transferRoster.length > 0 ? transferRoster.map((r) => r.id) : undefined,
+    effectiveModel,
   }
 
   // Tool catalog — `manual` mode strips action tools; per-team toggles
   // strip individual tools; the active agent layers ON TOP (a tool
   // fires only when both team AND agent allow it). `transferToAgent`
   // joins the catalog only when at least one other agent is reachable.
+  // Custom tools are appended after the built-ins; each one rebuilds
+  // its Genkit registration per-turn (admin schema changes apply
+  // without a deploy).
   const chatTools = pickChatTools(
     agentConfig,
     mode,
     activeAgent,
     transferRoster.length
   )
+  for (const tool of dispatchableCustomTools) {
+    // Per-agent intersection — mirrors the built-in `agentAllows()`
+    // pattern. Missing keys normalize to `true` (the `!== false`
+    // check), so a custom tool the admin hasn't explicitly opted-
+    // out of stays available to every agent automatically. Default
+    // persona (`activeAgent === null`) always gets every tool.
+    if (activeAgent && activeAgent.customTools[tool.id] === false) {
+      continue
+    }
+    chatTools.push(buildCustomToolForChat(tool))
+  }
 
   // System prompt is mode-aware, context-augmented, AND agent-aware.
   // When a custom agent is active, its `systemPromptBase + suffix`
@@ -1578,29 +1707,40 @@ const sendBotMessageFlow = ai.defineFlow(
       throw new HttpsError("invalid-argument", "message cannot be empty.")
     }
 
-    const { chat, session, actionContext } = await prepareChatTurn({
-      auth,
-      teamId: input.teamId,
-      workspaceId: input.workspaceId,
-      sessionId: input.sessionId ?? null,
-      mode: input.mode,
-      contextNodes: input.contextNodes,
-      activeAgentId: input.activeAgentId,
-      model: input.model,
-      pinnedNode: input.pinnedNode,
-      requireExistingSession: false,
-      archivedSessionMessage:
-        "This chat is archived. Restore it before sending new messages.",
-    })
+    const { chat, session, actionContext, existingSession } =
+      await prepareChatTurn({
+        auth,
+        teamId: input.teamId,
+        workspaceId: input.workspaceId,
+        sessionId: input.sessionId ?? null,
+        mode: input.mode,
+        contextNodes: input.contextNodes,
+        activeAgentId: input.activeAgentId,
+        model: input.model,
+        pinnedNode: input.pinnedNode,
+        requireExistingSession: false,
+        archivedSessionMessage:
+          "This chat is archived. Restore it before sending new messages.",
+      })
 
     // Emit the session id before we touch the model. For brand-new sessions
     // this lets the client update the URL immediately; for resumed sessions
     // it's a redundant confirmation but harmless.
     sendChunk({ sessionId: session.id })
 
+    // Pre-mark every historical tool-call/result ref so the post-stream
+    // sweep doesn't re-emit them into the new turn's agent bubble. See
+    // `collectPriorTurnToolRefs` for the why — empty arrays for a brand-
+    // new session (no existingSession), so this is a no-op on first turns.
+    const priorRefs = collectPriorTurnToolRefs(existingSession?.data)
+
     const final = await streamChatToClient(
       chat.sendStream(message) as ChatStreamResult,
-      sendChunk
+      sendChunk,
+      {
+        preSentToolCalls: priorRefs.calls,
+        preSentToolResults: priorRefs.results,
+      }
     )
 
     // Post-turn: commit any cross-agent transfer the model requested
@@ -1868,20 +2008,28 @@ const respondToBotInterruptFlow = ai.defineFlow(
       },
     })
 
-    // Pre-mark the just-answered interrupt's ref so `streamChatToClient`'s
-    // post-stream sweep doesn't double-emit a toolResult for it (the
-    // `sendChunk` above already sent it). Keyed identically to the
-    // helper's internal `refKey(..., "result", ...)` output.
-    const preSent = interruptPart.toolRequest.ref
-      ? [`result:${interruptPart.toolRequest.ref}`]
-      : []
+    // Pre-mark every historical tool-call/result ref (same reasoning as
+    // in `sendBotMessageFlow`: `final.messages` covers the full thread,
+    // and without seeding we'd resurface prior turns' tool cards). Then
+    // also pre-mark the just-answered interrupt's *toolResult* ref so
+    // the sweep doesn't double-emit it — we already emitted it via the
+    // pre-stream `sendChunk` above to make the form vanish instantly.
+    // The interrupt's *toolCall* ref is naturally covered by the prior
+    // sweep skip (it lives in the pre-turn thread).
+    const priorRefs = collectPriorTurnToolRefs(existing.data)
+    const preSentResults = interruptPart.toolRequest.ref
+      ? [...priorRefs.results, `result:${interruptPart.toolRequest.ref}`]
+      : priorRefs.results
 
     const final = await streamChatToClient(
       chat.sendStream({
         resume: { respond: [respondPart] },
       }) as ChatStreamResult,
       sendChunk,
-      { preSentToolResults: preSent }
+      {
+        preSentToolCalls: priorRefs.calls,
+        preSentToolResults: preSentResults,
+      }
     )
 
     // Post-turn cross-agent transfer commit, mirroring the same step

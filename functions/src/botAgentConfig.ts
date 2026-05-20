@@ -208,7 +208,8 @@ export type ChatToolName = (typeof CHAT_TOOL_NAMES)[number]
 
 /**
  * Per-tool registration toggles for the team config. Includes every
- * `ChatToolName` plus the team-wide `customAgents` feature flag.
+ * `ChatToolName` plus the team-wide `customAgents` + `customTools`
+ * feature flags.
  */
 export interface BotAgentToolToggles extends Record<ChatToolName, boolean> {
   /**
@@ -217,11 +218,28 @@ export interface BotAgentToolToggles extends Record<ChatToolName, boolean> {
    * sessions that have an `activeAgentId` pinned.
    */
   customAgents: boolean
+  /**
+   * Team-wide gate for admin-authored custom tools. When false,
+   * `listTeamCustomTools` is skipped on the dispatch path and no
+   * `defineTool`-built custom tools are registered with Genkit that
+   * turn — equivalent to "the team has opted out of admin-authored
+   * tools as a category."
+   */
+  customTools: boolean
 }
 
 // ===========================================================================
 // BotAgentConfig — the canonical "effective config" shape
 // ===========================================================================
+
+/**
+ * Per-built-in-agent on/off map. Each key is a fixed preset id
+ * (`_researcher`, `_writer`, …) and the value is whether the team has
+ * the preset enabled. Missing keys normalize to `true` — admins
+ * opt out, not in, of new presets shipped after their team's config
+ * doc was first written.
+ */
+export type BotAgentBuiltInAgentToggles = Record<string, boolean>
 
 export interface BotAgentConfig {
   /** Provider availability policy for this team. */
@@ -249,6 +267,11 @@ export interface BotAgentConfig {
   promptSuffixes: Record<BotChatMode, string>
   /** Per-tool feature flags. Disabled tools are simply not registered. */
   tools: BotAgentToolToggles
+  /**
+   * Per-built-in-agent on/off map. Sibling of `tools` — a separate
+   * axis (which *agents* exist) from which *tools* exist.
+   */
+  builtInAgents: BotAgentBuiltInAgentToggles
   /** Truncation length for the auto-derived chat title (set on creation). */
   titleMaxLength: number
   /** Truncation length for the sidebar preview (re-derived every save). */
@@ -285,6 +308,17 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
     searchWorkspaceNodes: true,
     summarizeNode: true,
     customAgents: true,
+    customTools: true,
+  },
+  // Default every shipped preset to enabled. Adding a new preset id
+  // here lights it up for every team automatically (until an admin
+  // toggles it off). Missing keys at read time also normalize to
+  // `true` — see `normalizeBuiltInAgentToggles` below.
+  builtInAgents: {
+    _researcher: true,
+    _writer: true,
+    _summarizer: true,
+    _code: true,
   },
   titleMaxLength: TITLE_MAX_LENGTH,
   previewMaxLength: PREVIEW_MAX_LENGTH,
@@ -296,6 +330,7 @@ const cloneDefaultBotAgentConfig = (): BotAgentConfig => ({
   models: { ...DEFAULT_BOT_AGENT_CONFIG.models },
   promptSuffixes: { ...DEFAULT_BOT_AGENT_CONFIG.promptSuffixes },
   tools: { ...DEFAULT_BOT_AGENT_CONFIG.tools },
+  builtInAgents: { ...DEFAULT_BOT_AGENT_CONFIG.builtInAgents },
 })
 
 /**
@@ -368,9 +403,11 @@ const botAgentConfigUpdateSchema = z.object({
       searchWorkspaceNodes: z.boolean(),
       summarizeNode: z.boolean(),
       customAgents: z.boolean(),
+      customTools: z.boolean(),
     })
     .partial()
     .optional(),
+  builtInAgents: z.record(z.string(), z.boolean()).optional(),
   titleMaxLength: z
     .number()
     .int()
@@ -591,8 +628,14 @@ const botAgentConfigDocSchema = z
         customAgents: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.customAgents
         ),
+        customTools: cappedToolToggle(
+          DEFAULT_BOT_AGENT_CONFIG.tools.customTools
+        ),
       })
       .catch({ ...DEFAULT_BOT_AGENT_CONFIG.tools }),
+    builtInAgents: z
+      .record(z.string(), z.boolean())
+      .catch({ ...DEFAULT_BOT_AGENT_CONFIG.builtInAgents }),
     titleMaxLength: clampedInt(
       BOT_AGENT_BOUNDS.titleMaxLength.min,
       BOT_AGENT_BOUNDS.titleMaxLength.max,
@@ -627,6 +670,14 @@ function applyAgentConfigOverrides(
 
   const parsed = botAgentConfigDocSchema.parse(raw)
 
+  // Merge the saved `builtInAgents` map under the defaults so a newly
+  // shipped preset id (not yet in the team's saved doc) starts
+  // enabled — same opt-out convention as per-model toggles.
+  const builtInAgents: BotAgentBuiltInAgentToggles = {
+    ...DEFAULT_BOT_AGENT_CONFIG.builtInAgents,
+    ...parsed.builtInAgents,
+  }
+
   return {
     providers,
     models,
@@ -639,6 +690,7 @@ function applyAgentConfigOverrides(
     systemPromptBase: parsed.systemPromptBase,
     promptSuffixes: parsed.promptSuffixes,
     tools: parsed.tools,
+    builtInAgents,
     titleMaxLength: parsed.titleMaxLength,
     previewMaxLength: parsed.previewMaxLength,
   }

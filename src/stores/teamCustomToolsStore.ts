@@ -1,0 +1,400 @@
+/**
+ * Team Custom Tools Store — Firestore-backed catalog of admin-authored
+ * Genkit tools. Mirrors `teamAgentsStore.ts` in shape and intent:
+ *
+ *   - Live subscription to `teams/{teamId}/tools` for any team member
+ *     (reads are open by the Firestore rule; writes are callable-only
+ *     and gated server-side).
+ *   - Race-safe team-switching: stale snapshots after a team switch
+ *     are dropped instead of clobbering newer state.
+ *   - Derived views (`selectableTools` / `disabledTools` /
+ *     `archivedTools`) mirror the agent lifecycle so the settings UI
+ *     can reuse the same active/disabled/archived collapsible pattern.
+ *   - The team-wide `customTools` feature gate (from
+ *     `agentConfigStore.config.tools.customTools`) short-circuits
+ *     `selectableTools` to an empty array — the chat dispatcher
+ *     enforces the same gate server-side.
+ */
+
+import {
+  archiveTeamCustomTool as archiveTeamCustomToolFn,
+  createTeamCustomTool as createTeamCustomToolFn,
+  deleteTeamCustomTool as deleteTeamCustomToolFn,
+  restoreTeamCustomTool as restoreTeamCustomToolFn,
+  setTeamCustomToolEnabled as setTeamCustomToolEnabledFn,
+  updateTeamCustomTool as updateTeamCustomToolFn,
+  type CreateTeamCustomToolDraft,
+  type UpdateTeamCustomToolPatch,
+} from "@/composables/useFunctions"
+import { firestore } from "@/modules/firebase"
+import { useAgentConfigStore } from "@/stores/agentConfigStore"
+import { useAuthStore } from "@/stores/authStore"
+import type { ICustomToolAction, ITeamCustomTool } from "@/types/domain"
+import {
+  collection,
+  onSnapshot,
+  Timestamp,
+  type QueryDocumentSnapshot,
+  type Unsubscribe,
+} from "firebase/firestore"
+import { defineStore, storeToRefs } from "pinia"
+import { computed, ref, watch } from "vue"
+
+// ─── Defaults ──────────────────────────────────────────────────────────────
+
+const DEFAULT_ACTION: ICustomToolAction = {
+  kind: "constant",
+  value: '{ "ok": true }',
+}
+
+const DEFAULT_FIELDS: ITeamCustomTool["inputSchema"] = { fields: [] }
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function normalizeFields(
+  raw: unknown
+): ITeamCustomTool["inputSchema"]["fields"] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((f) => {
+      if (!isRecord(f)) return null
+      const name = typeof f.name === "string" ? f.name : null
+      const type =
+        f.type === "string" || f.type === "number" || f.type === "boolean"
+          ? f.type
+          : null
+      if (!name || !type) return null
+      return {
+        name,
+        type,
+        description: typeof f.description === "string" ? f.description : "",
+        required: f.required === true,
+      }
+    })
+    .filter((f): f is ITeamCustomTool["inputSchema"]["fields"][number] => !!f)
+}
+
+function normalizeAction(raw: unknown): ICustomToolAction {
+  if (!isRecord(raw)) return { ...DEFAULT_ACTION }
+  switch (raw.kind) {
+    case "httpWebhook":
+      return {
+        kind: "httpWebhook",
+        url: typeof raw.url === "string" ? raw.url : "",
+        method:
+          raw.method === "GET" ||
+          raw.method === "POST" ||
+          raw.method === "PUT" ||
+          raw.method === "PATCH" ||
+          raw.method === "DELETE"
+            ? raw.method
+            : "POST",
+        headers: Array.isArray(raw.headers)
+          ? raw.headers
+              .map((h: unknown) =>
+                isRecord(h) &&
+                typeof h.name === "string" &&
+                typeof h.value === "string"
+                  ? { name: h.name, value: h.value }
+                  : null
+              )
+              .filter((h): h is { name: string; value: string } => !!h)
+          : [],
+        bodyTemplate:
+          typeof raw.bodyTemplate === "string" ? raw.bodyTemplate : "",
+        maxResponseBytes:
+          typeof raw.maxResponseBytes === "number"
+            ? raw.maxResponseBytes
+            : 16384,
+        timeoutMs: typeof raw.timeoutMs === "number" ? raw.timeoutMs : 10_000,
+      }
+    case "constant":
+      return {
+        kind: "constant",
+        value: typeof raw.value === "string" ? raw.value : "",
+      }
+    case "promptTemplate":
+      return {
+        kind: "promptTemplate",
+        prompt: typeof raw.prompt === "string" ? raw.prompt : "",
+        model: typeof raw.model === "string" ? (raw.model as never) : null,
+      }
+    case "workspaceSearch":
+      return {
+        kind: "workspaceSearch",
+        scope: raw.scope === "code" || raw.scope === "write" ? raw.scope : null,
+        defaultLimit:
+          typeof raw.defaultLimit === "number" ? raw.defaultLimit : 5,
+        filterHint: typeof raw.filterHint === "string" ? raw.filterHint : "",
+      }
+    default:
+      return { ...DEFAULT_ACTION }
+  }
+}
+
+function snapshotToTool(
+  teamId: string,
+  snap: QueryDocumentSnapshot
+): ITeamCustomTool {
+  const data = snap.data() ?? {}
+  const inputSchemaRaw = isRecord(data.inputSchema) ? data.inputSchema : {}
+  const outputSchemaRaw = isRecord(data.outputSchema) ? data.outputSchema : {}
+  return {
+    id: snap.id,
+    teamId,
+    name: typeof data.name === "string" ? data.name : "",
+    displayName: typeof data.displayName === "string" ? data.displayName : "",
+    description: typeof data.description === "string" ? data.description : "",
+    avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
+    inputSchema: {
+      fields: normalizeFields(
+        (inputSchemaRaw as Record<string, unknown>).fields
+      ),
+    },
+    outputSchema: {
+      fields: normalizeFields(
+        (outputSchemaRaw as Record<string, unknown>).fields
+      ),
+    },
+    action: normalizeAction(data.action),
+    enabled: typeof data.enabled === "boolean" ? data.enabled : true,
+    archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt : null,
+    createdAt:
+      data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
+    updatedAt:
+      data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.now(),
+    createdByUid:
+      typeof data.createdByUid === "string" ? data.createdByUid : "",
+  }
+}
+
+// Avoid unused warning until consumers reference the defaults — keeps
+// the export clean for future extension.
+void DEFAULT_FIELDS
+
+// ─── Store ─────────────────────────────────────────────────────────────────
+
+export const useTeamCustomToolsStore = defineStore("teamCustomTools", () => {
+  const authStore = useAuthStore()
+  const { currentTeamId } = storeToRefs(authStore)
+
+  const agentConfigStore = useAgentConfigStore()
+  const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+
+  // Team-wide gate — sibling of `customAgentsEnabled`. When false:
+  //   - `selectableTools` returns [] so pickers and tool-row displays
+  //     show "feature disabled" hints rather than the catalog.
+  //   - The server's dispatcher skips the Firestore read entirely.
+  //
+  // Admins still see disabled + archived buckets in settings so they
+  // can edit existing tools while the gate is flipped off.
+  const customToolsEnabled = computed<boolean>(
+    () => teamAgentConfig.value.tools.customTools !== false
+  )
+
+  const tools = ref<ITeamCustomTool[]>([])
+  const isLoading = ref(false)
+  const isSaving = ref(false)
+  const loadError = ref<string | null>(null)
+  const loadedTeamId = ref<string | null>(null)
+
+  let unsubscribe: Unsubscribe | null = null
+
+  const teardownSubscription = (): void => {
+    if (unsubscribe) {
+      unsubscribe()
+      unsubscribe = null
+    }
+  }
+
+  const startSubscription = (teamId: string): void => {
+    teardownSubscription()
+    isLoading.value = true
+    loadError.value = null
+    const ref = collection(firestore, `teams/${teamId}/tools`)
+    unsubscribe = onSnapshot(
+      ref,
+      (snap) => {
+        if (currentTeamId.value !== teamId) return
+        tools.value = snap.docs.map((doc) => snapshotToTool(teamId, doc))
+        loadedTeamId.value = teamId
+        isLoading.value = false
+      },
+      (error) => {
+        if (currentTeamId.value !== teamId) return
+        console.error("[teamCustomToolsStore] subscription error:", error)
+        loadError.value =
+          error instanceof Error ? error.message : "Failed to load tools."
+        isLoading.value = false
+      }
+    )
+  }
+
+  // ── Derived views ──────────────────────────────────────────────────────
+
+  /** Enabled + non-archived + team-gate on. Empty when the gate is off. */
+  const selectableTools = computed<ITeamCustomTool[]>(() => {
+    if (!customToolsEnabled.value) return []
+    return tools.value
+      .filter((t) => t.enabled !== false && !t.archivedAt)
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+  })
+
+  const disabledTools = computed<ITeamCustomTool[]>(() =>
+    tools.value
+      .filter((t) => t.enabled === false && !t.archivedAt)
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+  )
+
+  const archivedTools = computed<ITeamCustomTool[]>(() =>
+    tools.value
+      .filter((t) => !!t.archivedAt)
+      .slice()
+      .sort((a, b) => {
+        const aTime = a.archivedAt?.toMillis() ?? 0
+        const bTime = b.archivedAt?.toMillis() ?? 0
+        return bTime - aTime
+      })
+  )
+
+  const getById = (toolId: string): ITeamCustomTool | null =>
+    tools.value.find((t) => t.id === toolId) ?? null
+
+  // ── Mutations (admin only — server enforces) ──────────────────────────
+
+  const create = async (
+    draft: CreateTeamCustomToolDraft
+  ): Promise<ITeamCustomTool> => {
+    const teamId = currentTeamId.value
+    if (!teamId) {
+      throw new Error("Cannot create a tool without an active team.")
+    }
+    if (isSaving.value) throw new Error("Tool save already in progress.")
+    isSaving.value = true
+    try {
+      const { data } = await createTeamCustomToolFn({ teamId, draft })
+      return data.tool
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const update = async (
+    toolId: string,
+    patch: UpdateTeamCustomToolPatch
+  ): Promise<ITeamCustomTool> => {
+    const teamId = currentTeamId.value
+    if (!teamId) throw new Error("Cannot update a tool without an active team.")
+    if (isSaving.value) throw new Error("Tool save already in progress.")
+    isSaving.value = true
+    try {
+      const { data } = await updateTeamCustomToolFn({ teamId, toolId, patch })
+      return data.tool
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const archive = async (toolId: string): Promise<ITeamCustomTool> => {
+    const teamId = currentTeamId.value
+    if (!teamId)
+      throw new Error("Cannot archive a tool without an active team.")
+    if (isSaving.value) throw new Error("Tool save already in progress.")
+    isSaving.value = true
+    try {
+      const { data } = await archiveTeamCustomToolFn({ teamId, toolId })
+      return data.tool
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const restore = async (toolId: string): Promise<ITeamCustomTool> => {
+    const teamId = currentTeamId.value
+    if (!teamId)
+      throw new Error("Cannot restore a tool without an active team.")
+    if (isSaving.value) throw new Error("Tool save already in progress.")
+    isSaving.value = true
+    try {
+      const { data } = await restoreTeamCustomToolFn({ teamId, toolId })
+      return data.tool
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const setEnabled = async (
+    toolId: string,
+    enabled: boolean
+  ): Promise<ITeamCustomTool> => {
+    const teamId = currentTeamId.value
+    if (!teamId) throw new Error("Cannot toggle a tool without an active team.")
+    if (isSaving.value) throw new Error("Tool save already in progress.")
+    isSaving.value = true
+    try {
+      const { data } = await setTeamCustomToolEnabledFn({
+        teamId,
+        toolId,
+        enabled,
+      })
+      return data.tool
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const remove = async (toolId: string): Promise<void> => {
+    const teamId = currentTeamId.value
+    if (!teamId) throw new Error("Cannot delete a tool without an active team.")
+    if (isSaving.value) throw new Error("Tool save already in progress.")
+    isSaving.value = true
+    try {
+      await deleteTeamCustomToolFn({ teamId, toolId })
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  // ── Lifecycle: (re)subscribe when team flips ──────────────────────────
+
+  watch(
+    currentTeamId,
+    (teamId) => {
+      teardownSubscription()
+      if (!teamId) {
+        tools.value = []
+        loadedTeamId.value = null
+        isLoading.value = false
+        loadError.value = null
+        return
+      }
+      startSubscription(teamId)
+    },
+    { immediate: true }
+  )
+
+  return {
+    tools,
+    selectableTools,
+    disabledTools,
+    archivedTools,
+    customToolsEnabled,
+    isLoading,
+    isSaving,
+    loadError,
+    loadedTeamId,
+    getById,
+    create,
+    update,
+    archive,
+    restore,
+    setEnabled,
+    remove,
+  }
+})

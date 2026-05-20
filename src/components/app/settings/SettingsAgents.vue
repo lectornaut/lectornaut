@@ -1,41 +1,52 @@
 <script lang="ts" setup>
 import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
 import { useTeamAgents } from "@/composables/useTeamAgents"
+import { BUILT_IN_AGENTS } from "@/data/builtInAgents"
 import { IconBot, IconChevronDown, IconCirclePlus } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import type { IBotAgentConfig, ITeamAgent } from "@/types/domain"
 
 /**
- * SettingsAgents — two sibling sections:
+ * SettingsAgents — three sibling sections, top-to-bottom:
  *
- *   1. **Built-in tools** — feature flags for the bot's first-party
- *      tool surface (getWeather, rollDice, askQuestion,
- *      searchWorkspaceNodes, summarizeNode). Saved as the `tools`
- *      subset of `agentConfig`.
+ *   1. **Built-in agents** — per-preset feature toggles for the four
+ *      shipped personas (Researcher / Writer / Summarizer / Code
+ *      helper). Saved as `agentConfig.builtInAgents` (a string-keyed
+ *      record). Disabling a preset hides it from the pickers and the
+ *      cross-agent transfer roster — same effect as setting a custom
+ *      agent's `enabled` to false.
  *
- *   2. **Custom agents** — team-wide feature gate toggle + an inline
- *      list of the team's agents (active + collapsible Disabled +
- *      collapsible Archived). Per-agent edit, archive/restore,
- *      enable/disable, and hard-delete actions sit on each row. A
- *      "New agent" button opens the (now editor-only)
+ *   2. **Custom agents (team-wide gate)** — `agentConfig.tools
+ *      .customAgents`. Top-of-section toggle that controls whether
+ *      the entire custom-agents feature is visible to members. Sits
+ *      under `tools.*` in the schema but conceptually belongs to the
+ *      Agents page.
+ *
+ *   3. **Custom agents (inline list)** — active + collapsible
+ *      Disabled + collapsible Archived. Per-agent edit, archive /
+ *      restore, enable/disable, and hard-delete actions sit on each
+ *      row. A "New agent" button opens the editor-only
  *      `SettingsCustomAgents` dialog in create mode; row edit opens
  *      the same dialog with that agent loaded.
  *
- * High-level AI config (providers, model, generation params, system
- * prompts, display limits, restore-defaults) lives in the sibling
- * `SettingsAi` page. Both pages back the same Pinia-backed
- * `useAgentConfig` store; this page sends ONLY the `tools` field on
- * save so a parallel edit on the AI tab can't be clobbered. The
- * dirty-aware watcher preserves in-flight tool edits across saves
- * triggered by the AI tab.
+ * Built-in tools + custom tools (and the `customTools` gate) live on
+ * the sibling `SettingsTools` page. High-level AI config (providers,
+ * model, generation params, prompts, …) lives on `SettingsAi`. All
+ * three pages back the same Pinia-backed `useAgentConfig` store.
+ *
+ * Field ownership within `tools.*`: this page owns ONLY
+ * `tools.customAgents`. SettingsTools owns the other six. To avoid
+ * clobbering SettingsTools' edits on save, the handler bases its
+ * `tools` payload on `config.value.tools` (latest server state) and
+ * overlays only `customAgents` — Firestore's `{merge:true}` is a
+ * shallow top-level merge so sending the full `tools` object always
+ * replaces it.
  */
 
 const { t } = useI18n()
 
-// ── Tool toggles (built-in tools + customAgents gate) ───────────────────────
+// ── Top-level dirty / save handling ─────────────────────────────────────────
 
-// i18n strings handed to the composable as a getter so locale changes
-// flow into toasts and `cannotEditReason` tooltip without remounting.
 const configMessagesGetter = () => ({
   permissionRequired: t("settings.agents.permissionRequired"),
   saveSuccess: t("settings.agents.saveSuccess"),
@@ -49,18 +60,26 @@ const { config, isLoading, isSaving, canEdit, save } =
 const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
 
 /**
- * Dirty check is scoped to `tools` only — the rest of the draft is a
- * read-through copy from the shared config, and a save on the AI tab
- * legitimately changes those fields without meaning this page is
- * dirty.
+ * Dirty check is scoped to the fields this page owns:
+ * `builtInAgents` (top-level) and `tools.customAgents` (single nested
+ * key — the rest of `tools.*` belongs to SettingsTools). A `tools`
+ * save from SettingsTools must NOT register as dirty here.
  */
-const isDirty = computed(
-  () => JSON.stringify(draft.value.tools) !== JSON.stringify(config.value.tools)
-)
+const isDirty = computed(() => {
+  const draftSlice = {
+    builtInAgents: draft.value.builtInAgents,
+    customAgents: draft.value.tools.customAgents,
+  }
+  const configSlice = {
+    builtInAgents: config.value.builtInAgents,
+    customAgents: config.value.tools.customAgents,
+  }
+  return JSON.stringify(draftSlice) !== JSON.stringify(configSlice)
+})
 
 // Dirty-aware re-clone: snap to the canonical config only when this
-// page has no unsaved changes. Lets an AI-tab save propagate here
-// without clobbering an in-flight tool toggle change.
+// page has no unsaved changes. Lets a sibling-tab save (AI or Tools)
+// propagate here without clobbering an in-flight toggle change.
 watch(
   config,
   (next) => {
@@ -70,18 +89,50 @@ watch(
 )
 
 /**
- * Save the tools subset only — providers, model, prompts, etc. live
- * in `SettingsAi` and are deliberately omitted here so a save on
- * this page can't clobber an in-flight edit on the AI tab.
+ * Save only the fields this page owns. The `tools` payload is built
+ * by overlaying `tools.customAgents` onto the latest `config.value
+ * .tools` — necessary because Firestore's `{merge:true}` is a
+ * top-level shallow merge, so sending the partial `tools` object
+ * would clobber SettingsTools' edits to the other tool keys.
  */
 const handleSave = async () => {
   await save({
-    tools: { ...draft.value.tools },
+    tools: {
+      ...config.value.tools,
+      customAgents: draft.value.tools.customAgents,
+    },
+    builtInAgents: { ...draft.value.builtInAgents },
   })
 }
 
 const handleDiscard = () => {
   draft.value = cloneAgentConfig(config.value)
+}
+
+// ── Built-in agents (per-preset toggles) ───────────────────────────────────
+
+/**
+ * Static catalog of presets to render. Each row binds against
+ * `draft.builtInAgents[<id>]` — missing keys default to `true` on the
+ * client AND server, so a newly-shipped preset starts enabled for
+ * every team.
+ */
+const builtInAgentRows = computed(() =>
+  BUILT_IN_AGENTS.map((agent) => ({
+    id: agent.id,
+    fallbackName: agent.name,
+    fallbackDescription: agent.description,
+  }))
+)
+
+const isBuiltInAgentEnabled = (id: string): boolean =>
+  draft.value.builtInAgents[id] !== false
+
+const setBuiltInAgentEnabled = (id: string, value: boolean): void => {
+  draft.value.builtInAgents = {
+    ...draft.value.builtInAgents,
+    [id]: value,
+  }
 }
 
 // ── Custom agents (inline list) ─────────────────────────────────────────────
@@ -167,33 +218,74 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
         <Spinner />
       </div>
       <FieldGroup v-else>
-        <!-- ── Custom agents ──────────────────────────────────────────── -->
+        <!-- ── Built-in agents (per-preset toggles) ──────────────────── -->
+        <!--
+          One Switch per shipped preset. The team-wide `customAgents`
+          gate still applies on top: when that's off, the pickers
+          collapse entirely regardless of these per-preset toggles
+          (server short-circuits the available-agents list). Admins
+          who want a fully-curated agent surface can disable presets
+          they don't want their team to see WITHOUT disabling the
+          whole feature.
+        -->
         <FieldSet>
-          <!--
-            Pure section header — no control. Matches the header
-            pattern used by every other FieldSet in this page and the
-            sibling AI page (Providers, Generation parameters, …).
-            The team-wide feature gate lives in its own Field below
-            so the header isn't doing double duty.
-          -->
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel>
-                {{ t("settings.agents.custom.label") }}
+                {{ t("settings.agents.builtInAgents.label") }}
               </FieldLabel>
               <FieldDescription>
-                {{ t("settings.agents.custom.sectionDescription") }}
+                {{ t("settings.agents.builtInAgents.sectionDescription") }}
               </FieldDescription>
             </FieldContent>
           </Field>
 
+          <Field
+            v-for="row in builtInAgentRows"
+            :key="row.id"
+            orientation="horizontal"
+          >
+            <FieldContent>
+              <FieldLabel :for="`builtin-agent-${row.id}`">
+                {{
+                  t(
+                    `settings.agents.builtInAgents.${row.id}.label`,
+                    row.fallbackName
+                  )
+                }}
+              </FieldLabel>
+              <FieldDescription>
+                {{
+                  t(
+                    `settings.agents.builtInAgents.${row.id}.description`,
+                    row.fallbackDescription
+                  )
+                }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              :id="`builtin-agent-${row.id}`"
+              :model-value="isBuiltInAgentEnabled(row.id)"
+              :disabled="!canEdit"
+              @update:model-value="
+                (value) => setBuiltInAgentEnabled(row.id, Boolean(value))
+              "
+            />
+          </Field>
+        </FieldSet>
+
+        <FieldSeparator />
+
+        <!-- ── Custom agents ──────────────────────────────────────────── -->
+        <FieldSet>
           <!--
-            Team-wide feature gate. When off, the sidebar's Agents
-            section collapses to a single "feature disabled" hint and
-            the per-agent sheets stop rendering. The list below stays
-            visible to admins so they can manage agents even while the
-            feature is gated team-wide — turning it back on then
-            instantly surfaces them in the sidebar.
+            Team-wide feature gate doubles as the section header. When
+            off, the sidebar's Agents section collapses to a single
+            "feature disabled" hint and the per-agent sheets stop
+            rendering. The list below stays visible to admins so they
+            can manage agents even while the feature is gated team-
+            wide — turning it back on then instantly surfaces them in
+            the sidebar.
           -->
           <Field orientation="horizontal">
             <FieldContent>
@@ -420,104 +512,6 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
               </Collapsible>
             </template>
           </div>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- ── Built-in tools ─────────────────────────────────────────── -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.tools.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-weather">
-                {{ t("settings.agents.tools.getWeather.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.getWeather.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-weather"
-              v-model="draft.tools.getWeather"
-              :disabled="!canEdit"
-            />
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-dice">
-                {{ t("settings.agents.tools.rollDice.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.rollDice.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-dice"
-              v-model="draft.tools.rollDice"
-              :disabled="!canEdit"
-            />
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-ask">
-                {{ t("settings.agents.tools.askQuestion.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.askQuestion.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-ask"
-              v-model="draft.tools.askQuestion"
-              :disabled="!canEdit"
-            />
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-search-nodes">
-                {{ t("settings.agents.tools.searchWorkspaceNodes.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{
-                  t("settings.agents.tools.searchWorkspaceNodes.description")
-                }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-search-nodes"
-              v-model="draft.tools.searchWorkspaceNodes"
-              :disabled="!canEdit"
-            />
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-summarize-node">
-                {{ t("settings.agents.tools.summarizeNode.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.summarizeNode.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-summarize-node"
-              v-model="draft.tools.summarizeNode"
-              :disabled="!canEdit"
-            />
-          </Field>
         </FieldSet>
       </FieldGroup>
     </div>

@@ -5,11 +5,11 @@
  * + interrupt tools), `functions/src/botRag.ts` (semantic search),
  * and `functions/src/botSummarize.ts` (structured summarization).
  *
- * `BotToolName` excludes `customAgents` deliberately — that key on
- * `IBotAgentToolToggles` is a *feature gate* for the whole custom-
- * agents UI, not a model-callable tool. Including it in this catalog
- * would surface a meaningless entry in the composer's slash menu and
- * in per-agent tool subset UIs.
+ * `BotToolName` excludes `customAgents` AND `customTools` deliberately
+ * — those keys on `IBotAgentToolToggles` are *feature gates* (whole
+ * custom-agents UI; whole custom-tools UI) rather than model-callable
+ * tools. Including either in this catalog would surface a meaningless
+ * entry in the composer's slash menu and in per-agent tool subset UIs.
  *
  * Type-level exhaustiveness: `CATALOG_BY_NAME` is typed as
  * `Record<BotToolName, BotToolDescriptor>`, so adding a new tool to
@@ -42,7 +42,10 @@ import {
 import type { IBotAgentToolToggles } from "@/types/domain"
 import type { Component } from "vue"
 
-export type BotToolName = Exclude<keyof IBotAgentToolToggles, "customAgents">
+export type BotToolName = Exclude<
+  keyof IBotAgentToolToggles,
+  "customAgents" | "customTools"
+>
 
 export interface BotToolDescriptor {
   name: BotToolName

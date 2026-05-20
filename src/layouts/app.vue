@@ -101,5 +101,12 @@ onMounted(async () => {
       Settings dialog to be open first.
     -->
     <SettingsCustomAgents />
+    <!--
+      Custom tools editor dialog — sibling of the custom agents
+      dialog. Listens for `Dialog.CustomTools.Open` so settings rows
+      (and, in the future, the composer's tool drawer) can open it
+      from anywhere without depending on the Settings shell.
+    -->
+    <SettingsCustomTools />
   </SidebarProvider>
 </template>

@@ -38,12 +38,13 @@ import { computed } from "vue"
 import { toast } from "vue-sonner"
 
 /**
- * Every top-level `IBotAgentConfig` key *except* `tools`. The Agents
- * settings tab owns `tools`; the AI settings tab owns everything else.
- * Centralizing the split here keeps `SettingsAi` and `SettingsAgents`
- * from drifting when a new field is added — adding it to the AI side
- * is now a one-touch edit (this list) instead of a three-touch edit
- * (dirty-comparison subset + save-patch payload + reset fallthrough).
+ * Every top-level `IBotAgentConfig` key *except* `tools` and
+ * `builtInAgents`. The Agents settings tab owns those two; the AI
+ * settings tab owns everything else. Centralizing the split here
+ * keeps `SettingsAi` and `SettingsAgents` from drifting when a new
+ * field is added — adding it to the AI side is now a one-touch edit
+ * (this list) instead of a three-touch edit (dirty-comparison subset
+ * + save-patch payload + reset fallthrough).
  *
  * `satisfies` keeps the array literal narrow (the tuple types each key
  * exactly) AND enforces the type — any key here that isn't on
@@ -62,7 +63,10 @@ export const AI_CONFIG_KEYS = [
   "promptSuffixes",
   "titleMaxLength",
   "previewMaxLength",
-] as const satisfies readonly Exclude<keyof IBotAgentConfig, "tools">[]
+] as const satisfies readonly Exclude<
+  keyof IBotAgentConfig,
+  "tools" | "builtInAgents"
+>[]
 
 export type AiConfigKey = (typeof AI_CONFIG_KEYS)[number]
 
@@ -98,8 +102,9 @@ export function pickAiAgentConfig(
  *      a sane default on the form before any save round-trips.
  *
  *   2. Spreads the nested objects (`providers`, `models`,
- *      `promptSuffixes`, `tools`) so mutations to the draft don't
- *      leak back into the upstream store via shared references.
+ *      `promptSuffixes`, `tools`, `builtInAgents`) so mutations to the
+ *      draft don't leak back into the upstream store via shared
+ *      references.
  */
 export function cloneAgentConfig(source: IBotAgentConfig): IBotAgentConfig {
   return {
@@ -114,6 +119,7 @@ export function cloneAgentConfig(source: IBotAgentConfig): IBotAgentConfig {
     },
     promptSuffixes: { ...source.promptSuffixes },
     tools: { ...source.tools },
+    builtInAgents: { ...(source.builtInAgents ?? {}) },
   }
 }
 

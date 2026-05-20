@@ -141,6 +141,11 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 <SettingsAi />
               </OverlayScrollbarsWrapper>
             </TabsContent>
+            <TabsContent :class="tabContentClass" value="tools">
+              <OverlayScrollbarsWrapper>
+                <SettingsTools />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
             <TabsContent :class="tabContentClass" value="agents">
               <OverlayScrollbarsWrapper>
                 <SettingsAgents />

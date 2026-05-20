@@ -565,7 +565,10 @@ export function useBotChat(): BotChatContext {
   // archived, this is `null` — the UI treats that identically to "no
   // agent selected" so a stale id never paints a broken badge.
   const teamAgentsStore = useTeamAgentsStore()
-  const { agents: allTeamAgents } = storeToRefs(teamAgentsStore)
+  // `allAgents` = built-ins + every custom (incl. disabled/archived).
+  // Using the customs-only `agents` ref here would misclassify a
+  // built-in selection as "deleted" because the lookup would miss.
+  const { allAgents: allTeamAgents } = storeToRefs(teamAgentsStore)
   const activeAgentId = ref<string | null>(null)
 
   /**

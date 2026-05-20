@@ -66,6 +66,9 @@
     "placeholderReadOnly": "This chat is read-only",
     "showTools": "Show tools",
     "hideTools": "Hide tools",
+    "tools": {
+      "customBadge": "Custom"
+    },
     "chatEmpty": "Ask anything to get started.",
     "thinking": "Thinking...",
     "reasoning": "Reasoning",
@@ -85,7 +88,8 @@
       "disabledTooltip": "This agent is disabled — your messages run under the team default.",
       "archivedTooltip": "This agent is archived (deprecated) but still active for this chat.",
       "deletedTooltip": "This agent has been deleted — your messages run under the team default.",
-      "deletedAgentLabel": "Deleted agent"
+      "deletedAgentLabel": "Deleted agent",
+      "customBadge": "Custom"
     },
     "modes": {
       "auto": {
@@ -106,6 +110,7 @@
       "availableTools": "Available tools",
       "toolsEnabledHint": "The assistant can call these on its own when relevant. Try one of the example prompts below.",
       "toolsDisabled": "Tools are disabled in {mode} mode. Switch to {auto} or {agent} to re-enable them.",
+      "noTools": "No tools enabled for this agent.",
       "humanInTheLoop": "Human-in-the-Loop",
       "humanInTheLoopHint": "The assistant can pause and ask you a clarifying question instead of guessing. These interrupts are available in every mode — including {manual}.",
       "manageChat": "Manage chat",
@@ -482,6 +487,7 @@
       "team": "Team",
       "workspace": "Workspace",
       "ai": "AI",
+      "tools": "Tools",
       "agents": "Agents",
       "members": "Members",
       "overview": "Overview",
@@ -502,7 +508,8 @@
       "appearance": "Theme, colors, and typography.",
       "security": "Password, MFA, and domain controls.",
       "ai": "Provider keys, default model, system prompts, and generation parameters.",
-      "agents": "Tools and custom agent personas the team can pick from.",
+      "tools": "Built-in tools and admin-authored custom tools the bot can call.",
+      "agents": "Built-in presets and custom agent personas the team can pick from.",
       "members": "Members, roles, and access.",
       "overview": "Team details, visibility, and access.",
       "teams": "Create and manage teams.",
@@ -1164,6 +1171,10 @@
           "label": "Custom agents",
           "description": "Lets members pick from team-scoped agent personas (with their own system prompts + tool subsets) in chats. Turn off to hide the picker and force every chat to run under the team default.",
           "configure": "Configure custom agents"
+        },
+        "customTools": {
+          "label": "Custom tools",
+          "description": "Lets admins ship their own model-callable tools — HTTP webhooks, prompt templates, canned workspace searches. Turn off to remove every admin-authored tool from the model's catalog."
         }
       },
       "limits": {
@@ -1251,6 +1262,159 @@
           "description": "Pick which tools this agent can call. Tools disabled at the team level can't be enabled here.",
           "disabledAtTeam": "Disabled at team level",
           "disabledAtTeamTooltip": "Enable this tool in the team's tool settings above before assigning it to an agent."
+        },
+        "customToolsHeader": "Custom tools",
+        "customToolsHeaderDesc": "Admin-authored tools the agent can call. New tools default to enabled for every agent — disable any you don't want this persona to use."
+      },
+      "builtInAgents": {
+        "label": "Built-in agents",
+        "sectionDescription": "Ship-with-the-app personas your team can pick alongside custom agents. Disable any preset to remove it from members' pickers and the cross-agent transfer roster.",
+        "_researcher": {
+          "label": "Researcher",
+          "description": "Pulls grounded answers from the workspace. Cites sources from the team's notes and files."
+        },
+        "_writer": {
+          "label": "Writer",
+          "description": "Long-form drafting persona. Structured output with clear headings, transitions, and a single argumentative spine."
+        },
+        "_summarizer": {
+          "label": "Summarizer",
+          "description": "Terse bullet-point summaries. Pairs with the summarize-node tool for structured node digests."
+        },
+        "_code": {
+          "label": "Code helper",
+          "description": "Programming-focused persona. Reads files, suggests changes, and uses fenced code blocks with language tags."
+        }
+      },
+      "customTools": {
+        "label": "Custom tools",
+        "sectionDescription": "Build admin-authored Genkit tools — HTTP webhooks, prompt templates, canned searches, or constant stubs. The model invokes them by the names you define.",
+        "dialogTitle": "Manage custom tools",
+        "editorTitleNew": "New custom tool",
+        "editorTitleEdit": "Edit tool: {name}",
+        "newTool": "New tool",
+        "available": "Available tools",
+        "availableDescription": "Tools the model can call in chats. Use the row menu to edit, archive, or hard-delete.",
+        "archivedBadge": "Archived",
+        "disabledBadge": "Disabled",
+        "archive": "Archive",
+        "restore": "Restore",
+        "create": "Create",
+        "edit": "Edit",
+        "actions": "Tool actions",
+        "deleteForever": "Delete forever",
+        "deleteConfirmTitle": "Delete this tool forever?",
+        "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will lose access on their next turn. This cannot be undone.",
+        "enabledTooltip": "Tool is enabled. Click to disable — the model will stop seeing it in its catalog.",
+        "disabledTooltip": "Tool is disabled. Click to re-enable.",
+        "empty": "No custom tools yet.",
+        "emptyHint": "Create one to extend the model with your own callable tool.",
+        "activeSection": "Active ({count})",
+        "archivedSection": "Archived ({count})",
+        "disabledSection": "Disabled ({count})",
+        "createSuccess": "Tool created.",
+        "createError": "Failed to create tool.",
+        "updateSuccess": "Tool updated.",
+        "updateError": "Failed to update tool.",
+        "archiveSuccess": "Tool archived.",
+        "archiveError": "Failed to archive tool.",
+        "restoreSuccess": "Tool restored.",
+        "restoreError": "Failed to restore tool.",
+        "enableSuccess": "Tool enabled.",
+        "disableSuccess": "Tool disabled.",
+        "setEnabledError": "Failed to update tool status.",
+        "deleteSuccess": "Tool deleted.",
+        "deleteError": "Failed to delete tool.",
+        "name": {
+          "label": "Wire name",
+          "description": "How the model calls this tool — must start with a lowercase letter and contain only letters, digits, or underscores.",
+          "placeholder": "e.g. lookupCustomer"
+        },
+        "displayName": {
+          "label": "Display name",
+          "description": "Optional human-friendly label shown in lists. Defaults to the wire name when blank.",
+          "placeholder": "e.g. Look up customer"
+        },
+        "description": {
+          "label": "Description",
+          "description": "What the model sees in its tool catalog. The clearer you make this, the better the model decides when to invoke.",
+          "placeholder": "Use this tool when…"
+        },
+        "avatarSeed": {
+          "label": "Avatar seed",
+          "description": "Optional. Used to generate the avatar pattern; defaults to the tool name when blank.",
+          "placeholder": "Leave blank to use the name"
+        },
+        "input": {
+          "label": "Input schema",
+          "description": "Fields the model passes when invoking. Add up to 10; required fields the model must always include, optional ones it may omit.",
+          "addField": "Add input field",
+          "emptyHint": "No input fields. The model will call this tool with no arguments."
+        },
+        "output": {
+          "label": "Output schema",
+          "description": "Documentation for the model on what fields come back. The tool's actual return is sent verbatim — this list shapes the model's expectations.",
+          "addField": "Add output field",
+          "emptyHint": "No output fields documented yet."
+        },
+        "field": {
+          "name": "Name",
+          "namePlaceholder": "e.g. customerId",
+          "type": "Type",
+          "description": "Description",
+          "descriptionPlaceholder": "Shown to the model as context",
+          "required": "Required",
+          "remove": "Remove field"
+        },
+        "action": {
+          "label": "Action",
+          "description": "What happens when the model invokes this tool.",
+          "kind": "Kind",
+          "kinds": {
+            "httpWebhook": "HTTP webhook",
+            "constant": "Constant response",
+            "promptTemplate": "Prompt template",
+            "workspaceSearch": "Workspace search filter"
+          },
+          "kindDescriptions": {
+            "httpWebhook": "Call an external URL with templated method, headers, and body.",
+            "constant": "Return a fixed JSON value. Useful for stubs and testing.",
+            "promptTemplate": "Sub-call the model with a templated prompt; return the text.",
+            "workspaceSearch": "A pre-canned workspace search with a fixed scope and filter."
+          },
+          "httpWebhook": {
+            "url": "URL",
+            "urlPlaceholder": "https://api.example.com/lookup",
+            "method": "Method",
+            "headers": "Headers",
+            "headerName": "Header name",
+            "headerValue": "Value",
+            "addHeader": "Add header",
+            "removeHeader": "Remove header",
+            "bodyTemplate": "Body template",
+            "bodyTemplateHint": "Use {syntax} to interpolate tool inputs.",
+            "maxResponseBytes": "Max response bytes",
+            "timeoutMs": "Timeout (ms)"
+          },
+          "constant": {
+            "value": "Value (JSON or text)",
+            "valuePlaceholder": "e.g. {example}"
+          },
+          "promptTemplate": {
+            "prompt": "Prompt",
+            "promptHint": "Use {syntax} to interpolate tool inputs.",
+            "model": "Model override",
+            "modelNone": "Follow chat's current model"
+          },
+          "workspaceSearch": {
+            "scope": "Scope",
+            "scopeAny": "Both (code + write)",
+            "scopeCode": "Code only",
+            "scopeWrite": "Write only",
+            "defaultLimit": "Result limit",
+            "filterHint": "Filter prefix",
+            "filterHintHelp": "Prepended to the model's query to narrow searches (e.g. \"runbook\" or \"design doc\")."
+          }
         }
       }
     },

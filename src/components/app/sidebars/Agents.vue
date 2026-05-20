@@ -11,15 +11,18 @@ import Avatar from "vue-boring-avatars"
 const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
 
-// Live agents list from the Pinia store. The store's `activeAgents`
-// alias resolves to `selectableAgents` (enabled AND non-archived) AND
-// gates on the team-wide `customAgents` toggle — so when the feature
-// is disabled team-wide, this list goes empty automatically and the
+// Live agents list from the Pinia store. `pickerAgents` is the merged
+// view: built-in presets (gated per-id by `agentConfig.builtInAgents`)
+// followed by selectable custom agents. The team-wide `customAgents`
+// toggle short-circuits both inner lists to empty, so when the feature
+// is disabled team-wide this list goes empty automatically and the
 // per-agent sheets stop rendering. Admins can still re-enable from
 // the SettingsAgents page (the Settings icon below is always visible
-// for that reason).
+// for that reason). The local binding stays `activeAgents` to keep
+// the template diff minimal — semantics now include built-ins.
 const teamAgentsStore = useTeamAgentsStore()
-const { activeAgents, customAgentsEnabled } = storeToRefs(teamAgentsStore)
+const { pickerAgents: activeAgents, customAgentsEnabled } =
+  storeToRefs(teamAgentsStore)
 
 const membershipStore = useMembershipStore()
 const { isOwner, isAdmin } = storeToRefs(membershipStore)
