@@ -7,6 +7,7 @@ import {
   IconLogOut,
   IconMoreHorizontal,
   IconPlus,
+  IconUsers,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
 import type { IMembershipRole } from "@/types/membership"
@@ -409,11 +410,17 @@ const formatCreatedAt = (
                     </TableCell>
                   </TableRow>
                   <TableRow v-if="teamMembers.length === 0">
-                    <TableCell
-                      colspan="4"
-                      class="text-muted-foreground h-24 text-center"
-                    >
-                      {{ t("settings.members.noMembers") }}
+                    <TableCell colspan="4">
+                      <Empty>
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <IconUsers />
+                          </EmptyMedia>
+                          <EmptyTitle>
+                            {{ t("settings.members.noMembers") }}
+                          </EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
                     </TableCell>
                   </TableRow>
                 </TableBody>

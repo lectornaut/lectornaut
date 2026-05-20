@@ -13,6 +13,7 @@ import {
   IconPlus,
   IconSwitchHorizontal,
   IconTrash,
+  IconUsersRound,
   IconX,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
@@ -435,11 +436,17 @@ const formatCreatedAt = (
                     </TableCell>
                   </TableRow>
                   <TableRow v-if="memberships.length === 0">
-                    <TableCell
-                      colspan="4"
-                      class="text-muted-foreground h-24 text-center"
-                    >
-                      {{ t("settings.teamsList.noTeams") }}
+                    <TableCell colspan="4">
+                      <Empty>
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <IconUsersRound />
+                          </EmptyMedia>
+                          <EmptyTitle>
+                            {{ t("settings.teamsList.noTeams") }}
+                          </EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
                     </TableCell>
                   </TableRow>
                 </TableBody>

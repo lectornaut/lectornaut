@@ -30,6 +30,7 @@ import {
   IconScroll,
   IconSettings,
   IconShieldCheck,
+  IconSparkles,
   IconSun,
   IconSunMoon,
   IconUSA,
@@ -421,6 +422,7 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
+    customAgents: true,
   },
   titleMaxLength: 80,
   previewMaxLength: 200,
@@ -1222,6 +1224,12 @@ export const defaultSettingsTabs = [
         icon: IconLock,
         id: "security",
         description: "settings.descriptions.security",
+      },
+      {
+        name: "settings.titles.ai",
+        icon: IconSparkles,
+        id: "ai",
+        description: "settings.descriptions.ai",
       },
       {
         name: "settings.titles.agents",

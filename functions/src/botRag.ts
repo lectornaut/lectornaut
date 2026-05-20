@@ -1,7 +1,7 @@
 /**
  * Workspace RAG — semantic retrieval over team workspace nodes.
  *
- * Three moving parts:
+ * Four moving parts:
  *
  *   1. An embedder (`googleAI.embedder('gemini-embedding-001')`) — 768
  *      dimensions, fits comfortably under Firestore's vector index cap.
@@ -11,20 +11,28 @@
  *      `options.collection` so the same retriever can serve any
  *      `teams/{teamId}/workspaces/{workspaceId}/{scope}` subcollection.
  *
- *   3. A `searchWorkspaceNodes` tool — exposed to the model in the bot's
- *      tool list. Pulls `teamId` / `workspaceId` from the action context
- *      so the model can never search outside the calling user's
- *      workspace (the model controls only the natural-language query,
- *      not the collection scope).
+ *   3. A `workspaceNodeIndexer` (Genkit `ai.defineIndexer`) — the
+ *      write-side companion that takes a `Document` plus a
+ *      `{ scope, teamId, workspaceId, nodeId }` option object,
+ *      embeds the text, and writes the vector + content-hash back
+ *      to the node's doc. Hash-guard lives inside so any caller
+ *      (Firestore trigger, bulk reindex, Dev UI invocation) gets
+ *      the same loop protection.
+ *
+ *   4. A `searchWorkspaceNodes` tool — exposed to the model in the
+ *      bot's tool list. Pulls `teamId` / `workspaceId` from the
+ *      action context so the model can never search outside the
+ *      calling user's workspace (the model controls only the
+ *      natural-language query, not the collection scope).
  *
  * Embeddings are produced server-side via two Firestore triggers
- * (one per scope — `code`, `write`) that fire on document write,
- * recompute the embedding when content changes, and store the vector
- * back on the same doc. A `embedHash` field acts as the loop guard so a
- * trigger that just *wrote* an embedding doesn't re-fire forever.
- * Because this retrieval path is Gemini-embedding-backed, both the chat
- * tool and the embed-on-write triggers respect the team's Google
- * provider toggle.
+ * (one per scope — `code`, `write`) that fire on document write and
+ * dispatch through the indexer. The trigger handles the upstream
+ * concerns (folder skip, provider-toggle, empty-content clearing);
+ * the indexer handles the embed + persist + hash-guard. Because this
+ * retrieval path is Gemini-embedding-backed, both the chat tool and
+ * the embed-on-write triggers respect the team's Google provider
+ * toggle.
  *
  * Vector index for the `embedding` field must exist in Firestore before
  * `findNearest()` will accept queries — see `firestore.indexes.json`.
@@ -37,10 +45,11 @@ import { googleAI } from "@genkit-ai/google-genai"
 import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { onDocumentWritten } from "firebase-functions/v2/firestore"
-import { z } from "genkit/beta"
+import { Document, z } from "genkit/beta"
 
 import { db } from "./firebase.js"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
+import { redactText } from "./genkitMiddleware.js"
 import { TRIGGER_OPTS } from "./runtimeConfig.js"
 import { geminiApiKey } from "./secrets.js"
 import { extractPlainText } from "./tiptapText.js"
@@ -110,6 +119,118 @@ const workspaceNodesRetriever = defineFirestoreRetriever(ai, {
 })
 
 // ===========================================================================
+// Indexer — write-side companion to `workspaceNodesRetriever`
+// ===========================================================================
+
+/**
+ * Options passed via `ai.index({ ..., options })`. Zod-validated, so we
+ * intentionally avoid stuffing Firestore reference objects through here
+ * — the four path components are enough to reconstruct the `DocumentReference`
+ * inside the handler.
+ */
+const WorkspaceNodeIndexerOptionsSchema = z.object({
+  scope: z.enum(["code", "write"]),
+  teamId: z.string().min(1),
+  workspaceId: z.string().min(1),
+  nodeId: z.string().min(1),
+})
+
+/**
+ * Formal Genkit indexer that wraps the per-node "embed + write back to
+ * Firestore" step. Two reasons to define it rather than calling
+ * `ai.embed` directly:
+ *
+ *   1. **Dev UI visibility.** The indexer shows up as a typed,
+ *      runnable action with input/option schemas — useful when
+ *      debugging "why isn't this node showing up in search?" from
+ *      `genkit start`.
+ *   2. **Reusable from anywhere.** Any future surface (e.g. a
+ *      bulk-reindex callable, a one-off backfill script) calls
+ *      `ai.index(...)` instead of reaching into the Firestore-trigger
+ *      handler's internals.
+ *
+ * The Firestore triggers (`embedCodeNodeOnWrite` / `embedWriteNodeOnWrite`)
+ * remain thin adapters: they receive the document write, extract the
+ * text, and call this indexer. The hash-guard and provider-toggle
+ * checks live inside the indexer so they apply uniformly regardless of
+ * which caller invokes it.
+ *
+ * `embedderInfo.label` is metadata for tooling — it doesn't change
+ * the model selection (the embedder is hardwired to `NODE_EMBEDDER`
+ * so the read- and write-sides produce identically-shaped vectors).
+ */
+export const workspaceNodeIndexer = ai.defineIndexer(
+  {
+    name: "workspaceNodes",
+    embedderInfo: {
+      label: `gemini-embedding-001 (${NODE_EMBEDDING_DIM}-dim)`,
+    },
+    configSchema: WorkspaceNodeIndexerOptionsSchema,
+  },
+  async (docs, opts) => {
+    // Per-call we expect exactly one document (one node per Firestore
+    // trigger fire). Looping keeps the indexer reusable for batch
+    // reindexes without changing the contract.
+    for (const doc of docs) {
+      const afterRef = db.doc(
+        `teams/${opts.teamId}/workspaces/${opts.workspaceId}/${opts.scope}/${opts.nodeId}`
+      )
+
+      // `Document` parts are tagged with `kind`; the text content is
+      // joined into one string. We don't expect media parts here.
+      const text = doc.text
+      if (!text) {
+        logger.debug(
+          `[workspaceNodeIndexer] result=skip-empty-doc node=${opts.nodeId}`
+        )
+        continue
+      }
+
+      const truncated =
+        text.length > MAX_EMBED_INPUT_BYTES
+          ? text.slice(0, MAX_EMBED_INPUT_BYTES)
+          : text
+      const hash = sha256Hex(truncated)
+
+      // Loop guard: if the stored hash matches the new content's hash,
+      // the existing embedding is already correct and we'd burn a paid
+      // API call for nothing. Mirrors `syncNodeEmbedding`'s pre-`ai.embed`
+      // gate — kept *inside* the indexer so bulk-reindex callers get
+      // the same protection.
+      const snapshot = await afterRef.get()
+      const existingHash = snapshot.get("embedHash")
+      if (existingHash === hash) {
+        logger.debug(
+          `[workspaceNodeIndexer] result=skip-hash-match node=${opts.nodeId}`
+        )
+        continue
+      }
+
+      const embeddings = await ai.embed({
+        embedder: NODE_EMBEDDER,
+        content: truncated,
+      })
+      const vector = embeddings?.[0]?.embedding
+      if (!Array.isArray(vector) || vector.length !== NODE_EMBEDDING_DIM) {
+        logger.warn(
+          `[workspaceNodeIndexer] unexpected embedding shape scope=${opts.scope} node=${opts.nodeId} dim=${vector?.length}`
+        )
+        continue
+      }
+
+      await afterRef.update({
+        embedding: FieldValue.vector(vector),
+        embedHash: hash,
+        embedAt: FieldValue.serverTimestamp(),
+      })
+      logger.debug(
+        `[workspaceNodeIndexer] result=success scope=${opts.scope} team=${opts.teamId} workspace=${opts.workspaceId} node=${opts.nodeId} bytes=${truncated.length} dim=${vector.length}`
+      )
+    }
+  }
+)
+
+// ===========================================================================
 // Tool — searchWorkspaceNodes
 // ===========================================================================
 
@@ -167,6 +288,37 @@ const searchOutputSchema = z.object({
 })
 
 const SNIPPET_MAX_LENGTH = 500
+
+/**
+ * Cosine-distance cutoff for "this result is plausibly relevant". Anything
+ * above is dropped before reaching the model.
+ *
+ * Why a cutoff at all: `ai.retrieve(...)` always returns the top-K closest
+ * vectors regardless of how far apart they are. For a workspace whose
+ * content has nothing to do with the query, the closest vectors are
+ * still arbitrarily far — and they'd surface to the model as "matches"
+ * which it would then dutifully cite. The cutoff is the gate that turns
+ * "top-K nearest" into "top-K that are actually near".
+ *
+ * Why 0.55 specifically: Genkit-firebase reports cosine *distance*
+ * (1 - cosineSimilarity), range [0, 2]. Empirically with Gemini-768d
+ * embeddings on workspace-scale corpora:
+ *   - < 0.35 — strong match (same topic, often same doc)
+ *   - 0.35-0.45 — related (same theme, different angle)
+ *   - 0.45-0.55 — loose connection (worth surfacing as a maybe)
+ *   - > 0.55 — unrelated; almost never useful to the user
+ *
+ * Tuned conservatively: false negatives (dropping a borderline result)
+ * are recoverable — the user can refine their query. False positives
+ * (irrelevant results presented as relevant) erode trust in the tool
+ * and waste model tokens chasing dead ends.
+ *
+ * Results with `distance === undefined` are kept on the assumption that
+ * the retriever path that doesn't populate distances isn't necessarily
+ * returning bad data — it's just less filterable. (Should be rare; the
+ * Firestore retriever consistently populates `_distance`.)
+ */
+const RELEVANCE_DISTANCE_THRESHOLD = 0.55
 
 export const searchWorkspaceNodesTool = ai.defineTool(
   {
@@ -276,10 +428,21 @@ export const searchWorkspaceNodesTool = ai.defineTool(
             typeof doc.content?.[0]?.text === "string"
               ? doc.content[0].text
               : ""
-          const snippet =
+          const trimmed =
             rawText.length > SNIPPET_MAX_LENGTH
               ? `${rawText.slice(0, SNIPPET_MAX_LENGTH)}…`
               : rawText
+          // PII scrub the snippet — workspace content may contain
+          // collaborators' emails / phones, and in shared chat
+          // sessions the snippet flows back into the LLM context and
+          // potentially out to other team members. Same regex pair
+          // the user-input middleware uses (`redactText`), kept
+          // centralized so any future tightening propagates here too.
+          // Applied only to the snippet (free-form prose), never to
+          // structured fields like `nodeId` or `distance` where the
+          // permissive phone regex would false-positive on
+          // digit-heavy identifiers.
+          const snippet = redactText(trimmed)
 
           // Omit `distance` rather than set it to undefined when the
           // retriever doesn't surface a `_distance` metadata field
@@ -311,11 +474,29 @@ export const searchWorkspaceNodesTool = ai.defineTool(
       return da - db_
     })
 
-    const limited = merged.slice(0, limit)
-    logger.debug(
-      `[searchWorkspaceNodes] result merged=${merged.length} returned=${limited.length} truncated=${merged.length > limit} distances=${limited.map((r) => r.distance?.toFixed(4) ?? "n/a").join(",")}`
+    // Relevance cutoff — drop matches the embedding model couldn't get
+    // close to the query. `ai.retrieve()` returns top-K nearest
+    // regardless of how distant, so without this filter an unrelated
+    // workspace still produces "matches" the model dutifully cites.
+    // Results without a distance keep the benefit of the doubt
+    // (retriever just didn't populate the field) — see the constant's
+    // JSDoc for why we tune conservatively.
+    const relevant = merged.filter(
+      (r) =>
+        r.distance === undefined || r.distance <= RELEVANCE_DISTANCE_THRESHOLD
     )
-    return { results: limited, truncated: merged.length > limit }
+    const droppedForRelevance = merged.length - relevant.length
+
+    const limited = relevant.slice(0, limit)
+    logger.debug(
+      `[searchWorkspaceNodes] result merged=${merged.length} relevant=${relevant.length} droppedForRelevance=${droppedForRelevance} returned=${limited.length} truncated=${relevant.length > limit} distances=${limited.map((r) => r.distance?.toFixed(4) ?? "n/a").join(",")}`
+    )
+    // `truncated` is computed against the relevance-filtered set, not
+    // the raw merged set — saying "truncated" because we dropped
+    // irrelevant matches would mislead the model into chasing them
+    // ("there's more, ask again with a narrower query!" — no, there
+    // really wasn't more relevant content).
+    return { results: limited, truncated: relevant.length > limit }
   }
 )
 
@@ -479,19 +660,6 @@ async function syncNodeEmbedding(params: {
     return
   }
 
-  const truncated =
-    content.length > MAX_EMBED_INPUT_BYTES
-      ? content.slice(0, MAX_EMBED_INPUT_BYTES)
-      : content
-  const hash = sha256Hex(truncated)
-
-  // Loop guard: if the embedding on disk was made from this exact text,
-  // nothing changed and we'd burn an API call for no reason.
-  if (after.embedHash === hash) {
-    logger.debug(`[embedNode] result=skip-hash-match node=${nodeId}`)
-    return
-  }
-
   if (!isAiModelProviderConfigured("google")) {
     logger.warn(
       `[embedNode] skipped because Google provider secret is missing team=${teamId} workspace=${workspaceId} node=${nodeId}`
@@ -499,27 +667,16 @@ async function syncNodeEmbedding(params: {
     return
   }
 
+  // Dispatch through the formal indexer. The hash-guard and the
+  // length-cap live inside the indexer handler so any other caller
+  // (bulk reindex, dev-UI invocation) gets the same protection. We
+  // pass the raw extracted text; the indexer trims and hashes.
   try {
-    const embeddings = await ai.embed({
-      embedder: NODE_EMBEDDER,
-      content: truncated,
+    await ai.index({
+      indexer: workspaceNodeIndexer,
+      documents: [Document.fromText(content)],
+      options: { scope, teamId, workspaceId, nodeId },
     })
-    const vector = embeddings?.[0]?.embedding
-    if (!Array.isArray(vector) || vector.length !== NODE_EMBEDDING_DIM) {
-      logger.warn(
-        `[embedNode] unexpected embedding shape scope=${scope} node=${nodeId} dim=${vector?.length}`
-      )
-      return
-    }
-
-    await afterRef.update({
-      embedding: FieldValue.vector(vector),
-      embedHash: hash,
-      embedAt: FieldValue.serverTimestamp(),
-    })
-    logger.debug(
-      `[embedNode] result=success scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId} bytes=${truncated.length} dim=${vector.length}`
-    )
   } catch (err) {
     logger.warn(
       `[embedNode] embed failed scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId}`,
@@ -533,6 +690,23 @@ async function syncNodeEmbedding(params: {
  * Both functions share `syncNodeEmbedding`; they differ only in the
  * document path pattern (Firestore triggers don't accept OR-paths, so
  * we register two thin wrappers).
+ *
+ * Trigger-level short-circuit:
+ *   The trigger writes `{ embedding, embedHash, embedAt }` back to the
+ *   node doc after a successful embed — and that writeback ITSELF
+ *   refires this trigger. The indexer's hash-guard catches the no-op,
+ *   but only after one extra Firestore read (the snapshot fetch inside
+ *   the indexer). We can skip that round-trip entirely by checking the
+ *   trigger event's `before`/`after` contents up here: if the content
+ *   text didn't change, nothing about the embedding needs to change,
+ *   regardless of which other field triggered the write (rename,
+ *   archive toggle, embedding writeback). Saves one Firestore read per
+ *   writeback refire — meaningful for embed-heavy workspaces where
+ *   every successful embed triggers an unnecessary follow-up read.
+ *
+ *   CREATE events (no `before` snapshot) intentionally pass through —
+ *   that's the canonical case for new content that genuinely needs
+ *   indexing.
  */
 function makeEmbedTrigger(scope: "code" | "write") {
   return onDocumentWritten(
@@ -545,7 +719,28 @@ function makeEmbedTrigger(scope: "code" | "write") {
       const teamId = event.params.teamId as string
       const workspaceId = event.params.workspaceId as string
       const nodeId = event.params.nodeId as string
+      const before = event.data?.before?.data() as
+        | NodeDocPartialShape
+        | undefined
       const after = event.data?.after?.data() as NodeDocPartialShape | undefined
+
+      // No-op skip when the write didn't change content. Covers:
+      //   • The embed writeback refire (the trigger writes
+      //     embedding/embedHash/embedAt; content is identical).
+      //   • Rename, archive/unarchive, any other metadata-only edit.
+      //   • Idempotent re-saves of the same doc.
+      //
+      // CREATE has `before === undefined`; we still dispatch so newly
+      // created content gets indexed. DELETE has `after === undefined`;
+      // `syncNodeEmbedding` short-circuits on that internally, so we
+      // let it through here too.
+      if (before && after && before.content === after.content) {
+        logger.debug(
+          `[embedNode] trigger-skip-content-unchanged scope=${scope} team=${teamId} workspace=${workspaceId} node=${nodeId}`
+        )
+        return
+      }
+
       await syncNodeEmbedding({
         after,
         afterRef: event.data?.after?.ref,

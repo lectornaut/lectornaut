@@ -2,6 +2,7 @@
 import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
+  IconBriefcase,
   IconCheck,
   IconPlus,
   IconSwitchHorizontal,
@@ -178,13 +179,21 @@ const handleCreateWorkspace = async () => {
                   {{ t("pages.welcome.onboarding.teamWorkspaceFlow.current") }}
                 </Button>
               </div>
-              <div
+              <Empty
                 v-if="memberships.length === 0"
-                class="text-muted-foreground flex items-center gap-2 border px-3 py-4 text-sm"
+                class="rounded-md border p-6"
               >
-                <IconUsers />
-                {{ t("pages.welcome.onboarding.teamWorkspaceFlow.noTeams") }}
-              </div>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconUsers />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {{
+                      t("pages.welcome.onboarding.teamWorkspaceFlow.noTeams")
+                    }}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             </div>
           </FieldContent>
         </Field>
@@ -307,14 +316,23 @@ const handleCreateWorkspace = async () => {
                   {{ t("pages.welcome.onboarding.teamWorkspaceFlow.current") }}
                 </Button>
               </div>
-              <div
+              <Empty
                 v-if="workspaces.length === 0"
-                class="text-muted-foreground border px-3 py-4 text-sm"
+                class="rounded-md border p-6"
               >
-                {{
-                  t("pages.welcome.onboarding.teamWorkspaceFlow.noWorkspaces")
-                }}
-              </div>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconBriefcase />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {{
+                      t(
+                        "pages.welcome.onboarding.teamWorkspaceFlow.noWorkspaces"
+                      )
+                    }}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             </div>
           </FieldContent>
         </Field>

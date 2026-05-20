@@ -212,12 +212,14 @@ useInfiniteScroll(
           You do not have permission to view activity history.
         </div>
 
-        <div v-else-if="loading && logs.length === 0">
-          <div class="text-muted-foreground flex items-center gap-2 text-xs">
-            <Spinner />
-            Loading activity history...
-          </div>
-        </div>
+        <Empty v-else-if="loading && logs.length === 0" class="p-6">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Spinner />
+            </EmptyMedia>
+            <EmptyTitle>Loading activity history...</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
 
         <div v-else-if="error" class="space-y-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
@@ -229,12 +231,20 @@ useInfiniteScroll(
           </Button>
         </div>
 
-        <div
+        <Empty
           v-else-if="logs.length === 0"
-          class="text-muted-foreground text-xs"
+          class="rounded-xl border border-dashed p-6"
         >
-          No history available for this item.
-        </div>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconHistory />
+            </EmptyMedia>
+            <EmptyTitle>No activity yet</EmptyTitle>
+            <EmptyDescription>
+              No history available for this item.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
 
         <template v-else>
           <Stepper

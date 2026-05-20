@@ -10,18 +10,22 @@ import { BOT_TOOL_CATALOG, type BotToolDescriptor } from "@/data/botTools"
 import {
   IconAiFill,
   IconArrowUp,
+  IconBot,
   IconFile,
   IconFolder,
   IconPlus,
   IconX,
 } from "@/data/icons"
 import { findBotModel } from "@/helpers/defaults"
+import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
-import type { IBotAgentModel } from "@/types/domain"
+import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
+import type { IBotAgentModel, ITeamAgent } from "@/types/domain"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { storeToRefs } from "pinia"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
+import Avatar from "vue-boring-avatars"
 
 const { t } = useI18n()
 
@@ -312,6 +316,121 @@ const onModelChange = (next: unknown) => {
   botChat.model.value = next as IBotAgentModel
 }
 
+// ── Active agent picker (multi-agent persona swap) ────────────────────────
+//
+// Sidebar/inline badges let the user swap the conversation's persona
+// without leaving the composer. We mirror the model+mode pattern: bind
+// to `botChat.activeAgentId` directly so the next `sendMessage` picks
+// up the change.
+//
+// Two related lists govern this UI:
+//   - `selectableAgents` (the store's filtered view) — what the user
+//     can PICK FROM. Enabled, non-archived only.
+//   - `activeAgent` (the composable's full-list lookup) — the record
+//     for the currently-bound agent, possibly disabled / archived /
+//     deleted. Powers the badge label + status sub-label even when
+//     the agent has fallen out of `selectableAgents`.
+//
+// The status sub-label ("Disabled" / "Archived" / "Deleted") comes
+// from `botChat.activeAgentStatus` and renders inline on the active
+// badge so the user sees at a glance why the chat may be dispatching
+// under a different persona than the badge name suggests.
+
+const teamAgentsStore = useTeamAgentsStore()
+const { selectableAgents: availableAgents } = storeToRefs(teamAgentsStore)
+const activeAgentId = computed<string | null>(
+  () => botChat?.activeAgentId.value ?? null
+)
+const activeAgent = computed<ITeamAgent | null>(
+  () => botChat?.activeAgent.value ?? null
+)
+const activeAgentStatus = computed<
+  "active" | "disabled" | "archived" | "deleted" | null
+>(() => botChat?.activeAgentStatus.value ?? null)
+const hasAnyAgents = computed(() => availableAgents.value.length > 0)
+
+/**
+ * Whether to render the agents picker row at all. True when the team
+ * has at least one selectable agent OR when the current chat has a
+ * non-selectable (disabled / archived / deleted) agent pinned — the
+ * row carries the status badge in that case so the user sees what's
+ * happening even when there's nothing else to pick from.
+ */
+const showAgentsRow = computed(
+  () =>
+    hasAnyAgents.value ||
+    phantomActiveAgent.value !== null ||
+    activeAgentStatus.value === "deleted"
+)
+
+/**
+ * Tooltip text for the phantom (non-selectable) active badge,
+ * tailored to the specific lifecycle state. Empty when no phantom
+ * badge is showing — the v-if on the badge keeps it from rendering
+ * at all in that case.
+ */
+const phantomActiveTooltip = computed<string>(() => {
+  switch (activeAgentStatus.value) {
+    case "disabled":
+      return t("ai.agents.disabledTooltip")
+    case "archived":
+      return t("ai.agents.archivedTooltip")
+    case "deleted":
+      return t("ai.agents.deletedTooltip")
+    default:
+      return ""
+  }
+})
+
+/**
+ * The currently-selected agent might be disabled, archived, or
+ * deleted — in which case it won't appear in `availableAgents`. We
+ * still want to render a badge for it so the user sees what they
+ * picked. This computed surfaces it as a "phantom" entry the picker
+ * appends to the visible list. Returns null when the active agent
+ * IS in `availableAgents` (no duplication needed) or when there's
+ * no active agent at all.
+ */
+const phantomActiveAgent = computed<ITeamAgent | null>(() => {
+  const agent = activeAgent.value
+  if (!agent) return null
+  if (availableAgents.value.some((a) => a.id === agent.id)) return null
+  return agent
+})
+
+/**
+ * Label suffix appended to the active badge when its status is
+ * anything other than "active". Localized via the `ai.agents.status*`
+ * key family. Empty string when no decoration is needed so the badge
+ * just shows the agent's name.
+ */
+const activeStatusLabel = computed<string>(() => {
+  switch (activeAgentStatus.value) {
+    case "disabled":
+      return t("ai.agents.statusDisabled")
+    case "archived":
+      return t("ai.agents.statusArchived")
+    case "deleted":
+      return t("ai.agents.statusDeleted")
+    default:
+      return ""
+  }
+})
+
+const onAgentSelect = (agentId: string | null): void => {
+  if (!botChat) return
+  if (isReadOnly.value) return
+  // Toggle: clicking the already-active badge clears back to default
+  // so users can deselect without hunting for a separate button.
+  if (agentId !== null && activeAgentId.value === agentId) {
+    botChat.selectAgent(null)
+    return
+  }
+  botChat.selectAgent(agentId)
+}
+const agentAvatarSeed = (agent: ITeamAgent): string =>
+  agent.avatarSeed.trim() || agent.name.trim() || agent.id
+
 const inputPlaceholder = computed(() => {
   if (isActiveArchived.value) return t("ai.placeholderArchived")
   if (isReadOnly.value) return t("ai.placeholderReadOnly")
@@ -380,6 +499,24 @@ watch(
 // hasn't been focused). The picker auto-collapses after a pick. Tool
 // dispatch on the model side is driven by natural-language intent, not by
 // any sigil syntax — that's why we insert a full sentence, not "/cmd".
+//
+// The visible catalog is filtered to match what the server will actually
+// register for the upcoming turn — mirrors `pickChatTools` in
+// `functions/src/bot.ts`, intersecting team-level and agent-level toggles
+// so a badge never inserts a prompt the model has no tool to satisfy.
+
+const agentConfigStore = useAgentConfigStore()
+const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+
+const availableTools = computed<readonly BotToolDescriptor[]>(() => {
+  const teamTools = teamAgentConfig.value.tools
+  const agentTools = activeAgent.value?.tools
+  return BOT_TOOL_CATALOG.filter((tool) => {
+    if (teamTools[tool.name] === false) return false
+    if (agentTools && agentTools[tool.name] === false) return false
+    return true
+  })
+})
 
 const toolsOpen = ref(false)
 
@@ -420,9 +557,12 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
       </Tooltip>
     </TooltipProvider>
     <CollapsibleContent>
-      <div class="flex flex-wrap items-center gap-2 px-2 pb-2">
+      <div
+        v-if="availableTools.length > 0"
+        class="flex flex-wrap items-center gap-2 px-2 pb-2"
+      >
         <TooltipProvider>
-          <Tooltip v-for="tool in BOT_TOOL_CATALOG" :key="tool.name">
+          <Tooltip v-for="tool in availableTools" :key="tool.name">
             <TooltipTrigger as-child>
               <Badge
                 :class="{ 'pointer-events-none opacity-50': isReadOnly }"
@@ -433,6 +573,107 @@ const insertToolPrompt = (tool: BotToolDescriptor) => {
               </Badge>
             </TooltipTrigger>
             <TooltipContent>{{ tool.description }}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <!--
+        Agent picker badges. Visible only when the team has at least one
+        custom agent — otherwise the whole row would just show "Default"
+        with no alternatives, which is noise. Each badge toggles the
+        active persona; clicking the already-active one clears back to
+        default. Selected state is filled (Badge default variant);
+        inactive options use the outline variant for visual quietness.
+      -->
+      <div
+        v-if="showAgentsRow"
+        class="flex flex-wrap items-center gap-2 border-t px-2 pt-2 pb-2"
+      >
+        <span class="text-muted-foreground mr-1 text-xs">
+          {{ t("ai.agents.label") }}
+        </span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Badge
+                :variant="activeAgentId === null ? 'default' : 'outline'"
+                :class="{ 'pointer-events-none opacity-50': isReadOnly }"
+                @click="onAgentSelect(null)"
+              >
+                <IconBot />
+                {{ t("ai.agents.default") }}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{{ t("ai.agents.defaultTooltip") }}</TooltipContent>
+          </Tooltip>
+          <Tooltip v-for="agent in availableAgents" :key="agent.id">
+            <TooltipTrigger as-child>
+              <Badge
+                :variant="activeAgentId === agent.id ? 'default' : 'outline'"
+                :class="{ 'pointer-events-none opacity-50': isReadOnly }"
+                @click="onAgentSelect(agent.id)"
+              >
+                <span class="size-4 shrink-0 overflow-hidden rounded-full">
+                  <Avatar
+                    variant="beam"
+                    :name="agentAvatarSeed(agent)"
+                    :colors="[
+                      'var(--color-chart-1)',
+                      'var(--color-chart-2)',
+                      'var(--color-chart-3)',
+                      'var(--color-chart-4)',
+                      'var(--color-chart-5)',
+                    ]"
+                  />
+                </span>
+                {{ agent.name }}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent v-if="agent.description">
+              {{ agent.description }}
+            </TooltipContent>
+          </Tooltip>
+          <!--
+            Phantom badge for an active agent that's NOT in the
+            selectable list — i.e. the admin disabled, archived, or
+            hard-deleted the agent after this chat was bound to it.
+            The badge renders the agent's name (if the record still
+            exists) plus a status sub-label so the user can see why
+            their chat may be dispatching under a different persona.
+            Click-deselect is intentionally NOT wired — the badge is
+            informational; the only way out is to pick a different
+            agent or the default.
+          -->
+          <Tooltip v-if="phantomActiveAgent || activeAgentStatus === 'deleted'">
+            <TooltipTrigger as-child>
+              <Badge variant="default" class="pointer-events-none opacity-80">
+                <span
+                  v-if="phantomActiveAgent"
+                  class="size-4 shrink-0 overflow-hidden rounded-full"
+                >
+                  <Avatar
+                    variant="beam"
+                    :name="agentAvatarSeed(phantomActiveAgent)"
+                    :colors="[
+                      'var(--color-chart-1)',
+                      'var(--color-chart-2)',
+                      'var(--color-chart-3)',
+                      'var(--color-chart-4)',
+                      'var(--color-chart-5)',
+                    ]"
+                  />
+                </span>
+                <IconBot v-else />
+                {{
+                  phantomActiveAgent?.name ?? t("ai.agents.deletedAgentLabel")
+                }}
+                <span class="text-xs opacity-80"
+                  >· {{ activeStatusLabel }}</span
+                >
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent v-if="phantomActiveTooltip">
+              {{ phantomActiveTooltip }}
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>

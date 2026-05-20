@@ -93,5 +93,13 @@ onMounted(async () => {
     <Changelog />
     <Shortcuts />
     <Settings />
+    <!--
+      Global custom agents management dialog. Mounted at the app
+      layout level so any surface (Settings → Tools cog, Agents
+      sidebar "New agent" button) can open it via the
+      `Dialog.CustomAgents.Open` mitt event without needing the
+      Settings dialog to be open first.
+    -->
+    <SettingsCustomAgents />
   </SidebarProvider>
 </template>

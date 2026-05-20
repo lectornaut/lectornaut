@@ -354,6 +354,26 @@ export const botAgentToolTogglesSchema = z.object({
    * route only (the inspector button keeps working).
    */
   summarizeNode: z.boolean(),
+  /**
+   * Team-wide gate for the entire custom-agents feature. When false:
+   *   - Pickers (sidebar + composer agent row) hide entirely.
+   *   - Server dispatch ignores any session-persisted `activeAgentId`
+   *     and falls back to the team default persona.
+   *   - Cross-agent transfer roster is empty (the model never sees
+   *     `transferToAgent` in its tool catalog).
+   *   - Settings page Tools-row cog button is disabled.
+   *
+   * Lives in the `tools` object because the UI surfaces it inside the
+   * Tools section of the team's agent settings — admins think of
+   * custom agents as a *category* of tooling the team can opt into
+   * or out of. Per-agent records carry this field too (the schema is
+   * shared) but it's ignored there; only the team config's value
+   * gates anything.
+   *
+   * Server normalizes missing keys to `true` on read so teams that
+   * predate this field keep the feature enabled by default.
+   */
+  customAgents: z.boolean(),
 })
 
 /**
@@ -386,6 +406,103 @@ export const botAgentConfigSchema = z.object({
   tools: botAgentToolTogglesSchema,
   titleMaxLength: z.number().int().min(20).max(200),
   previewMaxLength: z.number().int().min(50).max(500),
+})
+
+// ─── Team-scoped custom agents (multi-agent network) ────────────────────────
+
+/**
+ * One team-scoped custom agent. Stored at
+ *   teams/{teamId}/agents/{agentId}
+ *
+ * Each agent owns identity + behavior (name, description, system prompt,
+ * tool subset). Model + generation params are inherited from the team's
+ * default config (`teams/{teamId}/settings/agent`) — agents intentionally
+ * don't carry those to keep the editor focused on persona definition.
+ *
+ * When an agent is "active" in a chat session, its `systemPromptBase` +
+ * matching mode suffix REPLACE the team default (not append). The default
+ * bot still exists as a synthetic `_default` agent for fallback when
+ * `IBotSession.activeAgentId` is null or points to an archived doc.
+ *
+ * Soft-delete: `archivedAt` is set by the archive callable instead of
+ * removing the doc. Tombstoned agents are hidden from pickers but stay
+ * resolvable for sessions that reference them; the server rebuilds the
+ * agent definition from the tombstoned doc on demand. Other agents'
+ * cross-transfer references silently skip archived agents at dispatch
+ * time.
+ */
+export const teamAgentSchema = z.object({
+  id: z.string(),
+  teamId: z.string(),
+  /** Display name shown in pickers, badges, and avatars. */
+  name: z.string().min(1).max(40),
+  /** Short blurb shown in pickers and tooltips. */
+  description: z.string().max(200),
+  /**
+   * Seed for `vue-boring-avatars`. When empty, the UI falls back to
+   * `name` as the seed so the avatar is deterministic from the
+   * agent's display label without forcing admins to fill in a field.
+   */
+  avatarSeed: z.string().max(40),
+  /** Replaces the team default system prompt when this agent is active. */
+  systemPromptBase: z.string().min(1).max(4000),
+  /** Per-mode suffix, appended after `systemPromptBase`. */
+  promptSuffixes: z.object({
+    auto: z.string().max(2000),
+    agent: z.string().max(2000),
+    manual: z.string().max(2000),
+  }),
+  /**
+   * Per-tool toggles. Same shape as the team's tools (so agent + team
+   * can intersect at dispatch time — a tool is exposed iff both flags
+   * are true). Server normalizes missing keys to `true` on read so a
+   * newly-added tool starts enabled for existing agents.
+   */
+  tools: botAgentToolTogglesSchema,
+  /**
+   * Admin-level on/off switch. Independent of `archivedAt` — together
+   * they form the agent's lifecycle status:
+   *   - enabled=true,  archivedAt=null      → "active"   (selectable; runs)
+   *   - enabled=false, archivedAt=null      → "disabled" (hidden; falls back to default)
+   *   - enabled=true,  archivedAt=Timestamp → "archived" (hidden; STILL runs for existing chats)
+   *   - enabled=false, archivedAt=Timestamp → "disabled" (disabled wins for display + dispatch)
+   *   - doc absent                          → "deleted"  (hard-delete only)
+   *
+   * Disabling is an *immediate* gate — dispatch silently swaps to the
+   * default persona even when a session has the agent persisted as
+   * `activeAgentId`. Re-enabling makes the agent dispatchable again
+   * for any session that still points at it.
+   *
+   * Server normalizes missing keys to `true` on read so docs written
+   * before this field shipped continue to dispatch normally.
+   */
+  enabled: z.boolean(),
+  /**
+   * Soft-delete marker — semantically a "deprecate" signal. Set when
+   * the admin archives the agent from the settings UI; cleared by the
+   * restore action. Archived agents are filtered out of pickers but
+   * KEEP RUNNING in chats that already reference them — the badge in
+   * the composer just gains an "Archived" status to signal the
+   * deprecation. Hard delete (`deleteTeamAgent`) is the only path to
+   * fully remove the doc.
+   */
+  archivedAt: timestampSchema.nullable().optional(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+  createdByUid: z.string(),
+})
+
+/**
+ * Write variant — accepts FieldValue sentinels for timestamps and lets
+ * the server fill in id / teamId / createdByUid on create.
+ */
+export const teamAgentWriteSchema = teamAgentSchema.extend({
+  id: z.string().optional(),
+  teamId: z.string().optional(),
+  createdByUid: z.string().optional(),
+  archivedAt: z.union([timestampInputSchema, z.null()]).optional(),
+  createdAt: timestampInputSchema,
+  updatedAt: timestampInputSchema,
 })
 
 export const botSessionSchema = z.object({
@@ -454,4 +571,17 @@ export const botSessionSchema = z.object({
    * and overwrites this field accordingly).
    */
   lastModel: botAgentModelSchema.optional(),
+  /**
+   * Currently active custom agent for this session. `null` (or absent)
+   * means the team's default bot persona handles every turn. Set by the
+   * client via `sendBotMessage.activeAgentId`; persisted server-side by
+   * `FirestoreBotSessionStore.save` so re-opens restore the same agent
+   * across page reloads / device switches.
+   *
+   * Tombstone safety: if the referenced agent is later archived, the
+   * server falls back to the default at dispatch time and the doc field
+   * stays pointing at the archived id. Restoring the agent re-binds the
+   * session automatically — no migration needed.
+   */
+  activeAgentId: z.string().nullable().optional(),
 })

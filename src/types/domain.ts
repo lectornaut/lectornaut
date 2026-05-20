@@ -15,6 +15,7 @@ import type {
   botSessionVisibilitySchema,
   botToolCallSchema,
   membershipPreferencesSchema,
+  teamAgentSchema,
   teamBillingSchema,
   teamSchema,
   userPreferencesSchema,
@@ -71,3 +72,5 @@ export type IBotAgentModelToggles = z.infer<typeof botAgentModelTogglesSchema>
 export type IBotAgentDefaultMode = z.infer<typeof botAgentDefaultModeSchema>
 export type IBotAgentToolToggles = z.infer<typeof botAgentToolTogglesSchema>
 export type IBotAgentConfig = z.infer<typeof botAgentConfigSchema>
+
+export type ITeamAgent = z.infer<typeof teamAgentSchema>

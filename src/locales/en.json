@@ -71,6 +71,22 @@
     "reasoning": "Reasoning",
     "reply": "Reply",
     "messageCopied": "Copied to clipboard",
+    "agents": {
+      "label": "Agent:",
+      "default": "Default",
+      "defaultTooltip": "Use the team's default assistant for this chat.",
+      "newAgent": "New agent",
+      "settings": "Agent settings",
+      "featureDisabled": "Custom agents are disabled for this team.",
+      "emptyMember": "Ask an admin to set up custom agents.",
+      "statusDisabled": "Disabled",
+      "statusArchived": "Archived",
+      "statusDeleted": "Deleted",
+      "disabledTooltip": "This agent is disabled — your messages run under the team default.",
+      "archivedTooltip": "This agent is archived (deprecated) but still active for this chat.",
+      "deletedTooltip": "This agent has been deleted — your messages run under the team default.",
+      "deletedAgentLabel": "Deleted agent"
+    },
     "modes": {
       "auto": {
         "label": "Auto",
@@ -465,6 +481,7 @@
       "security": "Security",
       "team": "Team",
       "workspace": "Workspace",
+      "ai": "AI",
       "agents": "Agents",
       "members": "Members",
       "overview": "Overview",
@@ -484,7 +501,8 @@
       "notifications": "Choose what to receive and how often.",
       "appearance": "Theme, colors, and typography.",
       "security": "Password, MFA, and domain controls.",
-      "agents": "Tune the team AI assistant's model, prompt, and tools.",
+      "ai": "Provider keys, default model, system prompts, and generation parameters.",
+      "agents": "Tools and custom agent personas the team can pick from.",
       "members": "Members, roles, and access.",
       "overview": "Team details, visibility, and access.",
       "teams": "Create and manage teams.",
@@ -1053,8 +1071,8 @@
       "saving": "Saving...",
       "saveAll": "Save changes",
       "discard": "Discard",
-      "resetDefaults": "Reset to defaults",
-      "resetDefaultsDescription": "Restore all agent settings to their default values.",
+      "resetDefaults": "Restore defaults",
+      "resetDefaultsDescription": "Restore providers, model, generation parameters, prompts, and display limits to their default values. Tool toggles and custom agents are not affected.",
       "unsavedChanges": "You have unsaved changes.",
       "providers": {
         "label": "Providers",
@@ -1120,8 +1138,8 @@
         "manual": "Manual suffix"
       },
       "tools": {
-        "label": "Tools",
-        "description": "Disable any tool to remove it from the model's catalog.",
+        "label": "Built-in tools",
+        "description": "Disable any built-in tool to remove it from the model's catalog.",
         "getWeather": {
           "label": "Weather",
           "description": "Demo tool that returns fake weather data for a location."
@@ -1141,6 +1159,11 @@
         "summarizeNode": {
           "label": "Summarize node (chat)",
           "description": "Lets the bot generate a structured summary (overview, key points, tags) of an attached node from inside a chat turn. Same output shape as the inspector's Generate button. Read-only — available in every mode."
+        },
+        "customAgents": {
+          "label": "Custom agents",
+          "description": "Lets members pick from team-scoped agent personas (with their own system prompts + tool subsets) in chats. Turn off to hide the picker and force every chat to run under the team default.",
+          "configure": "Configure custom agents"
         }
       },
       "limits": {
@@ -1154,6 +1177,81 @@
       "previewMaxLength": {
         "label": "Preview max length",
         "description": "Characters shown in the sidebar preview."
+      },
+      "custom": {
+        "label": "Custom agents",
+        "sectionDescription": "Build team-scoped agents with their own personas and tool subsets. Members pick one to focus a chat on it, and the bot can transfer between agents mid-conversation.",
+        "dialogTitle": "Manage custom agents",
+        "editorTitleNew": "New agent",
+        "editorTitleEdit": "Edit agent: {name}",
+        "backToList": "Back to list",
+        "newAgent": "New agent",
+        "available": "Available agents",
+        "availableDescription": "Personas your team can pick from in chat. Use the row menu to edit, archive, or hard-delete.",
+        "untitledAgent": "Untitled agent",
+        "draftBadge": "Draft",
+        "archivedBadge": "Archived",
+        "disabledBadge": "Disabled",
+        "archive": "Archive",
+        "archiveConfirmTitle": "Archive this agent?",
+        "archiveConfirmBody": "Archiving \"{name}\" hides it from pickers but keeps existing chat sessions that reference it working. You can restore it later.",
+        "restore": "Restore",
+        "create": "Create",
+        "edit": "Edit",
+        "actions": "Agent actions",
+        "deleteForever": "Delete forever",
+        "deleteConfirmTitle": "Delete this agent forever?",
+        "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will fall back to the team default and show a \"Deleted\" badge. This cannot be undone.",
+        "enabledTooltip": "Agent is enabled. Click to disable — chats will fall back to the team default.",
+        "disabledTooltip": "Agent is disabled. Click to re-enable.",
+        "empty": "No custom agents yet.",
+        "emptyHint": "Create one to give your team a focused persona.",
+        "activeSection": "Active ({count})",
+        "archivedSection": "Archived ({count})",
+        "disabledSection": "Disabled ({count})",
+        "createSuccess": "Agent created.",
+        "createError": "Failed to create agent.",
+        "updateSuccess": "Agent updated.",
+        "updateError": "Failed to update agent.",
+        "archiveSuccess": "Agent archived.",
+        "archiveError": "Failed to archive agent.",
+        "restoreSuccess": "Agent restored.",
+        "restoreError": "Failed to restore agent.",
+        "enableSuccess": "Agent enabled.",
+        "disableSuccess": "Agent disabled.",
+        "setEnabledError": "Failed to update agent status.",
+        "deleteSuccess": "Agent deleted.",
+        "deleteError": "Failed to delete agent.",
+        "name": {
+          "label": "Name",
+          "description": "Shown in pickers, badges, and the sidebar avatar label.",
+          "placeholder": "e.g. Researcher"
+        },
+        "description": {
+          "label": "Description",
+          "description": "Short blurb explaining what this agent specializes in.",
+          "placeholder": "Helps the team know when to pick this agent."
+        },
+        "avatarSeed": {
+          "label": "Avatar seed",
+          "description": "Optional. Used to generate the avatar pattern; defaults to the agent's name when blank.",
+          "placeholder": "Leave blank to use the name"
+        },
+        "systemPromptBase": {
+          "label": "System prompt",
+          "description": "Replaces the team default prompt when this agent is active. Set the persona, tone, and constraints here.",
+          "placeholder": "You are a focused assistant for..."
+        },
+        "promptSuffixes": {
+          "label": "Mode-specific suffixes",
+          "description": "Appended after the agent's system prompt depending on the current chat mode."
+        },
+        "tools": {
+          "label": "Tools",
+          "description": "Pick which tools this agent can call. Tools disabled at the team level can't be enabled here.",
+          "disabledAtTeam": "Disabled at team level",
+          "disabledAtTeamTooltip": "Enable this tool in the team's tool settings above before assigning it to an agent."
+        }
       }
     },
     "overview": {
@@ -2481,6 +2579,7 @@
       "uploading": "Uploading...",
       "loadingAttachments": "Loading attachments...",
       "retry": "Retry",
+      "emptyTitle": "No attachments",
       "emptyReadOnly": "No attachments are available for this node.",
       "emptyWritable": "No attachments yet. Upload files to keep node-specific assets here.",
       "syncing": "Syncing",

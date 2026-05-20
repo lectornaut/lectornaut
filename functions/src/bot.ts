@@ -29,35 +29,66 @@
  */
 
 import { onCallGenkit } from "firebase-functions/https"
-import {
-  HttpsError,
-  onCall,
-  type CallableRequest,
-} from "firebase-functions/v2/https"
+import { HttpsError, type CallableRequest } from "firebase-functions/v2/https"
 import { z, type SessionData, type SessionStore } from "genkit/beta"
+import {
+  buildAgentSystemPrompt,
+  normalizeActiveAgentIdForStorage,
+  resolveActiveAgent,
+} from "./agents.js"
+import {
+  BOT_AGENT_MODELS,
+  loadTeamAgentConfig,
+  MODE_CONFIG,
+  PREVIEW_MAX_LENGTH,
+  resolveEffectiveModel,
+  TITLE_MAX_LENGTH,
+  type BotAgentConfig,
+  type BotAgentModel,
+  type ChatToolName,
+} from "./botAgentConfig.js"
+import {
+  askQuestionTool,
+  BOT_CHAT_MODES,
+  getWeatherTool,
+  INTERRUPT_TOOL_NAMES,
+  rollDiceTool,
+  transferToAgentTool,
+  type BotActionContext,
+  type BotChatMode,
+} from "./botBuiltinTools.js"
+import {
+  CONTEXT_NODE_MAX,
+  loadAndBuildContextBlock,
+  NodeRefSchema,
+  type NodeRef,
+} from "./botContext.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import { admin, db } from "./firebase.js"
 import {
   ai,
-  assertAiModelProviderConfigured,
   isAiModelProviderConfigured,
   resolveModel,
 } from "./genkitClient.js"
-import { CALLABLE_OPTS, GENKIT_OPTS } from "./runtimeConfig.js"
+import { aiMiddlewares } from "./genkitMiddleware.js"
+import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import { listTeamAgents, type TeamAgentDoc } from "./teamAgents.js"
 import type { IMembershipRole } from "./types.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
 // it from `CallableRequest["auth"]` to avoid reaching into internal paths.
 type AuthData = NonNullable<CallableRequest["auth"]>
 
-type SessionVisibility = "private" | "shared" | "public"
+export type SessionVisibility = "private" | "shared" | "public"
 const ADMIN_ROLES: ReadonlyArray<IMembershipRole> = ["owner", "admin"]
 
 const MAIN_THREAD = "main"
-const TITLE_MAX_LENGTH = 80
-const PREVIEW_MAX_LENGTH = 200
+// TITLE_MAX_LENGTH and PREVIEW_MAX_LENGTH are imported from
+// `./botAgentConfig.js` — they double as default truncation knobs for
+// the SessionStore AND as the field-level defaults in
+// `DEFAULT_BOT_AGENT_CONFIG`. Single source of truth lives there.
 
 type ChatRole = "user" | "agent"
 
@@ -74,7 +105,7 @@ type MessageSegment =
   | { kind: "text"; text: string }
   | { kind: "tool"; tool: ToolCall }
 
-interface ChatMessage {
+export interface ChatMessage {
   role: ChatRole
   content: string
   segments?: MessageSegment[]
@@ -137,7 +168,7 @@ interface MessageLike {
  * so a single user prompt that triggers two tool calls renders as one
  * bubble, not two. A new user message closes the open agent.
  */
-function extractMessagesFromSessionData(
+export function extractMessagesFromSessionData(
   data: SessionData | undefined
 ): ChatMessage[] {
   if (!data?.threads) return []
@@ -297,73 +328,132 @@ function derivePreview(
 }
 
 /**
+ * Constructor options for `FirestoreBotSessionStore`. Named fields
+ * replaced a previous 9-positional-arg constructor — that was bug-prone
+ * (swapping `senderUid` and `turnActiveAgentId` silently broke both)
+ * and unwieldy when only a handful of the args were turn-specific.
+ *
+ * Splitting `core` (teamId/workspaceId/ownerUid — fixed per
+ * construction) from `turn` (everything else — re-computed per turn)
+ * makes both call sites read like the data flow they describe.
+ */
+interface FirestoreBotSessionStoreOptions {
+  /** Team + workspace + chat-owner identity. Fixed per construction. */
+  readonly teamId: string
+  readonly workspaceId: string
+  readonly ownerUid: string
+
+  /**
+   * Per-workspace truncation knobs. The store doesn't read the agent
+   * config doc itself — the calling flow loads it once per turn and
+   * passes the relevant lengths in. Keeps the Genkit save callback
+   * (which fires on every turn, sometimes mid-flight) free of extra
+   * Firestore reads.
+   */
+  readonly titleMaxLength?: number
+  readonly previewMaxLength?: number
+
+  /**
+   * Composite `${ownerUid}:${scope}:${nodeId}` index key for the
+   * caller's node-pinned chat lookup. Written once on session
+   * creation; never rewritten on subsequent saves. The pin's
+   * scope/nodeId live as a normal entry inside `contextNodes` — this
+   * field exists only to power `findBotSessionByPinnedNode`'s
+   * single-equality Firestore query.
+   */
+  readonly pinnedNodeKey?: string
+
+  /**
+   * The full chip set the user has attached on the current turn.
+   * Re-written on every save so detaches and reorders propagate
+   * immediately. Includes the pinned node, if any — there is no
+   * separate `pinnedNode` field on the doc. Empty array is a
+   * meaningful state ("no chips") distinct from `undefined` on
+   * docs that haven't been re-saved since this field was introduced.
+   */
+  readonly contextNodes?: NodeRef[]
+
+  /**
+   * Mode for the turn that triggered this save. Persisted as a
+   * denormalized `lastMode` field so the history sidebar can filter
+   * sessions by mode without parsing the SessionData blob. The most
+   * recent turn wins — earlier turns' modes are not retained.
+   */
+  readonly turnMode?: BotChatMode
+
+  /**
+   * Effective model for the turn that triggered this save — the value
+   * after the calling flow clamped a client-supplied override against
+   * the team's current provider/model allowlist. Persisted as a
+   * denormalized `lastModel` field so the client can rehydrate the
+   * composer's model picker when it re-opens this chat (giving the
+   * conversation a per-chat continuity that mode deliberately lacks).
+   * Most recent turn wins — earlier turns' models are not retained.
+   */
+  readonly turnModel?: BotAgentModel
+
+  /**
+   * Firebase uid of the human who triggered this turn (the caller of
+   * `sendBotMessage` / `respondToBotInterrupt`). `save()` uses it to
+   * stamp the new user-role message with its real author so the
+   * client can render per-sender avatars in shared chats — where
+   * multiple admins may post turns into the same session and the
+   * `ownerUid` heuristic falls apart.
+   *
+   * Optional because the interrupt-response path doesn't produce a
+   * new user message; in that case nothing needs tagging.
+   */
+  readonly senderUid?: string
+
+  /**
+   * Effective active agent for this turn (after the calling flow's
+   * `resolveActiveAgent` step). Persisted as `activeAgentId` on the
+   * doc — drives the "sticky agent" behavior across turns and lets
+   * the client rehydrate the composer's agent badge on session
+   * re-open. `null` (or undefined) is the default-persona case and
+   * results in `activeAgentId: null` being written, which is
+   * deliberately distinct from the field being absent (legacy docs).
+   */
+  readonly turnActiveAgentId?: string | null
+}
+
+/**
  * Firestore-backed `SessionStore` scoped to one (teamId, workspaceId) pair.
  * Genkit calls `get(sessionId)` and `save(sessionId, data)` — we round-trip
  * the entire session blob as JSON, and on each save we additionally derive
  * sidebar metadata (title, preview, messageCount).
+ *
+ * Construction takes a single options object (`FirestoreBotSessionStoreOptions`)
+ * to keep call sites readable — the prior 9-positional-arg shape was
+ * easy to mis-order silently. All fields except `teamId`/`workspaceId`/`ownerUid`
+ * are turn-specific and re-supplied on every per-turn instantiation.
  */
 class FirestoreBotSessionStore implements SessionStore {
-  constructor(
-    private readonly teamId: string,
-    private readonly workspaceId: string,
-    private readonly ownerUid: string,
-    /**
-     * Per-workspace truncation knobs. The store doesn't read the agent
-     * config doc itself — the calling flow loads it once per turn and
-     * passes the relevant lengths in. Keeps the Genkit save callback
-     * (which fires on every turn, sometimes mid-flight) free of extra
-     * Firestore reads.
-     */
-    private readonly titleMaxLength: number = TITLE_MAX_LENGTH,
-    private readonly previewMaxLength: number = PREVIEW_MAX_LENGTH,
-    /**
-     * Composite `${ownerUid}:${scope}:${nodeId}` index key for the
-     * caller's node-pinned chat lookup. Written once on session
-     * creation; never rewritten on subsequent saves. The pin's
-     * scope/nodeId live as a normal entry inside `contextNodes` — this
-     * field exists only to power `findBotSessionByPinnedNode`'s
-     * single-equality Firestore query.
-     */
-    private readonly pinnedNodeKey?: string,
-    /**
-     * The full chip set the user has attached on the current turn.
-     * Re-written on every save so detaches and reorders propagate
-     * immediately. Includes the pinned node, if any — there is no
-     * separate `pinnedNode` field on the doc. Empty array is a
-     * meaningful state ("no chips") distinct from `undefined` on
-     * docs that haven't been re-saved since this field was introduced.
-     */
-    private readonly contextNodes: NodeRef[] = [],
-    /**
-     * Mode for the turn that triggered this save. Persisted as a
-     * denormalized `lastMode` field so the history sidebar can filter
-     * sessions by mode without parsing the SessionData blob. The most
-     * recent turn wins — earlier turns' modes are not retained.
-     */
-    private readonly turnMode?: BotChatMode,
-    /**
-     * Effective model for the turn that triggered this save — the value
-     * after the calling flow clamped a client-supplied override against
-     * the team's current provider/model allowlist. Persisted as a
-     * denormalized `lastModel` field so the client can rehydrate the
-     * composer's model picker when it re-opens this chat (giving the
-     * conversation a per-chat continuity that mode deliberately lacks).
-     * Most recent turn wins — earlier turns' models are not retained.
-     */
-    private readonly turnModel?: BotAgentModel,
-    /**
-     * Firebase uid of the human who triggered this turn (the caller of
-     * `sendBotMessage` / `respondToBotInterrupt`). `save()` uses it to
-     * stamp the new user-role message with its real author so the
-     * client can render per-sender avatars in shared chats — where
-     * multiple admins may post turns into the same session and the
-     * `ownerUid` heuristic falls apart.
-     *
-     * Optional because the interrupt-response path doesn't produce a
-     * new user message; in that case nothing needs tagging.
-     */
-    private readonly senderUid?: string
-  ) {}
+  private readonly teamId: string
+  private readonly workspaceId: string
+  private readonly ownerUid: string
+  private readonly titleMaxLength: number
+  private readonly previewMaxLength: number
+  private readonly pinnedNodeKey?: string
+  private readonly contextNodes: NodeRef[]
+  private readonly turnMode?: BotChatMode
+  private readonly turnModel?: BotAgentModel
+  private readonly senderUid?: string
+  private readonly turnActiveAgentId?: string | null
+
+  constructor(options: FirestoreBotSessionStoreOptions) {
+    this.teamId = options.teamId
+    this.workspaceId = options.workspaceId
+    this.ownerUid = options.ownerUid
+    this.titleMaxLength = options.titleMaxLength ?? TITLE_MAX_LENGTH
+    this.previewMaxLength = options.previewMaxLength ?? PREVIEW_MAX_LENGTH
+    this.pinnedNodeKey = options.pinnedNodeKey
+    this.contextNodes = options.contextNodes ?? []
+    this.turnMode = options.turnMode
+    this.turnModel = options.turnModel
+    this.senderUid = options.senderUid
+    this.turnActiveAgentId = options.turnActiveAgentId
+  }
 
   private docRef(sessionId: string) {
     return db.doc(
@@ -474,6 +564,17 @@ class FirestoreBotSessionStore implements SessionStore {
     // fallback model that actually ran, not the rejected request.
     if (this.turnModel) update.lastModel = this.turnModel
 
+    // Effective active agent for this turn. Written on every save
+    // (including the explicit `null` case) so flipping back to the
+    // default persona clears a previously-stuck agent id rather than
+    // leaving stale data on the doc. `undefined` would have left the
+    // field at its prior value via `set+merge`, which would silently
+    // pin a session to an agent the user just deselected — surprising
+    // and hard to debug.
+    if (this.turnActiveAgentId !== undefined) {
+      update.activeAgentId = this.turnActiveAgentId
+    }
+
     // Title, createdAt, the null archivedAt sentinel, and pinnedNodeKey
     // are all one-shot writes — set on creation, never updated by
     // subsequent sends. (Rename is its own callable; the pin's
@@ -493,1064 +594,37 @@ class FirestoreBotSessionStore implements SessionStore {
 }
 
 // ===========================================================================
-// Action context — the per-turn shape passed to `chat({ context })` so the
-// model and tool handlers see the caller's mode and capabilities.
-// ===========================================================================
-//
-// Modes mirror the dropdown in `AiChatComposer.vue`. Each mode flips three
-// knobs:
-//   1. SYSTEM PROMPT — different paragraph appended to a shared base, so
-//      the model's behavior shifts (proactive vs cautious vs read-only).
-//   2. TOOL EXPOSURE — `manual` registers no tools, guaranteeing the model
-//      cannot invoke them no matter what the user asks.
-//   3. CONTEXT.MODE — handed to tools via Genkit's action-context channel
-//      so any tool can branch on mode for deterministic security.
-//
-// The mode→config mapping is the single source of truth; the i18n labels
-// and side-panel descriptions on the client mirror these names.
-
-const BOT_CHAT_MODES = ["auto", "agent", "manual"] as const
-type BotChatMode = (typeof BOT_CHAT_MODES)[number]
-
-interface BotChatModeConfig {
-  /** Appended to SYSTEM_PROMPT_BASE — steers the model's behavior. */
-  promptSuffix: string
-  /**
-   * Whether action tools (`getWeather`, `rollDice`) are exposed. Interrupt
-   * tools (`askQuestion`) are always available — clarifying questions
-   * have no side effects, so they're allowed in every mode (including
-   * `manual`, where they keep the conversation collaborative).
-   */
-  actionToolsEnabled: boolean
-}
-
-const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
-  auto: {
-    promptSuffix:
-      "Default mode: answer concisely. Call a tool when it directly " +
-      "advances the user's request, otherwise just reply with text. If " +
-      "the request is ambiguous, prefer asking the user a clarifying " +
-      "question via `askQuestion` over guessing.",
-    actionToolsEnabled: true,
-  },
-  agent: {
-    promptSuffix:
-      "Agent mode: be proactive. Prefer calling tools to gather concrete " +
-      "data over guessing, and chain multiple tool calls when a question " +
-      "needs them. Briefly narrate what you're doing and why. When you " +
-      "need a decision from the user before continuing, ask via " +
-      "`askQuestion` — don't pick on their behalf.",
-    actionToolsEnabled: true,
-  },
-  manual: {
-    promptSuffix:
-      "Manual mode: action tools are disabled. You are a read-only " +
-      "conversational partner — explain, suggest, and discuss, but never " +
-      "claim to take actions on the user's behalf. You may still ask " +
-      "clarifying questions via `askQuestion` when it would help the " +
-      "discussion.",
-    actionToolsEnabled: false,
-  },
-}
-
-/**
- * Action context shape — what flows into Genkit's `chat({ context })` and
- * shows up as the second argument of every tool handler. Includes:
- *
- *   - `auth`     — verified Firebase identity (already gated at the
- *                  callable boundary; tools use it for uid-scoped reads).
- *   - `mode`     — current chat mode, for capability gating inside tools.
- *   - `teamId` / `workspaceId` — the workspace the chat is bound to. Used
- *                  by workspace-aware tools like `searchWorkspaceNodes`
- *                  to scope retrieval (the model can't override these).
- *   - `googleProviderEnabled` — whether Google-backed tools such as
- *                  workspace semantic search are allowed for this team.
- *
- * Add fields here when introducing context-aware features.
- */
-interface BotActionContext {
-  auth?: { uid: string }
-  mode: BotChatMode
-  teamId: string
-  workspaceId: string
-  googleProviderEnabled: boolean
-}
-
-// ===========================================================================
-// Tools — exposed to the model via Genkit's tool-calling protocol.
-// ===========================================================================
-//
-// Each tool's input/output is Zod-validated, which doubles as the schema
-// the model sees: tighter constraints (enums, min/max) get baked into the
-// model's tool catalog and steer it toward valid calls. Handlers run
-// server-side inside the Genkit chat loop — the model receives only the
-// `outputSchema` shape, never the implementation.
-//
-// These two are deliberately demo-grade (mirroring the public Genkit
-// example at https://examples.genkit.dev/tool-calling). They prove out the
-// streaming + UI plumbing end-to-end and serve as the template for real
-// workspace-aware tools (e.g. "search this team's nodes", "open node X").
-
-const WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy", "snowy"] as const
-
-const getWeatherTool = ai.defineTool(
-  {
-    name: "getWeather",
-    description:
-      "Get the current weather for a location. Returns a temperature in " +
-      "Fahrenheit, a high-level condition, and (in agent mode) an extra " +
-      "advisory string.",
-    inputSchema: z.object({
-      location: z
-        .string()
-        .min(1)
-        .describe("City or place name, e.g. 'Tokyo' or 'San Francisco'."),
-    }),
-    outputSchema: z.object({
-      temperature: z.number(),
-      condition: z.enum(WEATHER_CONDITIONS),
-      advisory: z.string().optional(),
-    }),
-  },
-  // The second handler arg carries the action context passed via
-  // `chat({ context })`. Reading `context.mode` lets the tool tailor its
-  // output deterministically — the model can't talk it out of this
-  // (whatever the user types, the tool runs the same code path).
-  async (_input, { context }) => {
-    const mode = (context as BotActionContext | undefined)?.mode ?? "auto"
-    const condition =
-      WEATHER_CONDITIONS[Math.floor(Math.random() * WEATHER_CONDITIONS.length)]
-    const temperature = 50 + Math.floor(Math.random() * 30)
-    return {
-      temperature,
-      condition,
-      // Agent mode wants thorough output; auto/manual stay terse.
-      advisory:
-        mode === "agent"
-          ? `Feels ${condition}. Pack a layer if heading out.`
-          : undefined,
-    }
-  }
-)
-
-const rollDiceTool = ai.defineTool(
-  {
-    name: "rollDice",
-    description: "Roll a six-sided die. Returns an integer from 1 to 6.",
-    inputSchema: z.object({}),
-    outputSchema: z.number().int().min(1).max(6),
-  },
-  async () => Math.floor(Math.random() * 6) + 1
-)
-
-// ===========================================================================
-// Interrupts — Human-in-the-Loop
-// ===========================================================================
-//
-// `defineInterrupt` is Genkit's HITL primitive: instead of running a
-// handler, calling the tool *pauses* the chat and surfaces the request
-// back to the application. The user supplies the response via
-// `chat.sendStream({ resume: { respond: [askQuestion.respond(part, ans)] } })`,
-// at which point the model's generation continues with the answer
-// folded into context.
-//
-// The interrupt tool's `outputSchema` describes what the *user* sends
-// back (what the model will see as the tool's "result"), not what a
-// handler returns — there is no handler.
-
-const askQuestionInputSchema = z.object({
-  question: z
-    .string()
-    .min(1)
-    .describe("The clarifying question to put to the user."),
-  choices: z
-    .array(z.string().min(1))
-    .min(1)
-    .describe("Concrete options the user can pick. Two to five short answers."),
-  allowOther: z
-    .boolean()
-    .optional()
-    .describe(
-      "When true, the user may type a free-form answer instead of " +
-        "picking one of `choices`."
-    ),
-})
-
-const askQuestionOutputSchema = z.object({
-  answer: z
-    .string()
-    .min(1)
-    .describe(
-      "The user's answer — either one of `choices` or, if `allowOther` " +
-        "was true, a free-form string."
-    ),
-})
-
-const askQuestionTool = ai.defineInterrupt({
-  name: "askQuestion",
-  description:
-    "Ask the user a clarifying question with a small set of choices. " +
-    "Use this when you need a decision from the user to proceed and " +
-    "guessing would be worse than asking. The chat pauses until the " +
-    "user picks; you'll see their answer as the tool's output and can " +
-    "continue from there.",
-  inputSchema: askQuestionInputSchema,
-  outputSchema: askQuestionOutputSchema,
-})
-
-/**
- * Names of interrupt tools — used by the streaming + persistence layer
- * to flag tool segments that the client should render as interactive
- * forms instead of "Running…" spinners. Hardcoded (rather than derived
- * from the tool actions) because the model wire-name is the canonical
- * identifier and we don't want to reach into Genkit's internal action
- * shape. Add new interrupt tool names here as they're defined.
- */
-const INTERRUPT_TOOL_NAMES = new Set<string>(["askQuestion"])
-
-// ===========================================================================
-// Team agent configuration
-// ===========================================================================
-//
-// Each team has one agent config doc at
-//   teams/{teamId}/settings/agent
-//
-// All workspaces in the team share that config — the bot is a team-level
-// concern, not a per-workspace one. The doc is read on every chat turn
-// (one extra Firestore read per send — negligible against model latency)
-// and used to drive:
-//   - provider availability (Google / Anthropic / OpenAI)
-//   - the model passed to `session.chat({ model })`
-//   - the system prompt (base + per-mode suffix)
-//   - generation knobs (temperature, topP, topK, maxOutputTokens)
-//   - tool exposure (each side-effecting tool can be flipped off)
-//   - title/preview truncation lengths used by the SessionStore on save
-//
-// Missing or partially-set docs fall back to `DEFAULT_BOT_AGENT_CONFIG`
-// field-by-field, so teams without a config doc keep working without a
-// migration. Only owners + admins can write the doc; every team member
-// can read it.
-
-const BOT_MODEL_PROVIDERS = ["google", "anthropic", "openai"] as const
-
-type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
-
-/**
- * Allowlist of model wire-names spanning all three providers (Google,
- * Anthropic, OpenAI). Picked manually so a typo in the settings UI can't
- * route a chat to a non-existent or private model; the Zod enum on the
- * update path enforces the same set.
- *
- * Prefix conventions are also load-bearing — `resolveModel(name)` in
- * `genkitClient.ts` dispatches by prefix (`gemini-*`, `claude-*`,
- * `gpt-*`/`o1-*`/`o3-*`). Adding a model here that doesn't match one of
- * those prefixes will throw at chat time. To add a new family, extend
- * `resolveModel` first, then this list.
- */
-const BOT_AGENT_MODELS = [
-  // Google Gemini
-  "gemini-3-flash-preview",
-  "gemini-2.5-pro",
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-  // Anthropic Claude
-  "claude-opus-4-5",
-  "claude-sonnet-4-5",
-  "claude-haiku-4-5",
-  // OpenAI
-  "gpt-4o",
-  "gpt-4o-mini",
-  "gpt-4-turbo",
-] as const
-
-type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
-const DEFAULT_BOT_AGENT_MODEL: BotAgentModel = BOT_AGENT_MODELS[0]
-
-const BOT_MODEL_PROVIDER_BY_MODEL: Record<BotAgentModel, BotModelProvider> = {
-  "gemini-3-flash-preview": "google",
-  "gemini-2.5-pro": "google",
-  "gemini-2.5-flash": "google",
-  "gemini-2.5-flash-lite": "google",
-  "gemini-2.0-flash": "google",
-  "gemini-2.0-flash-lite": "google",
-  "claude-opus-4-5": "anthropic",
-  "claude-sonnet-4-5": "anthropic",
-  "claude-haiku-4-5": "anthropic",
-  "gpt-4o": "openai",
-  "gpt-4o-mini": "openai",
-  "gpt-4-turbo": "openai",
-}
-
-const DEFAULT_BOT_AGENT_PROVIDERS: Record<BotModelProvider, boolean> = {
-  google: true,
-  anthropic: true,
-  openai: true,
-}
-
-type BotAgentModelToggles = Record<BotAgentModel, boolean>
-
-/**
- * Per-model availability toggles. Layered on top of `providers`: a model
- * is *available* iff its provider is enabled AND its toggle is true.
- * Lets admins narrow what users can pick (e.g. only Gemini Pro, no
- * Flash variants) without flipping an entire provider off.
- *
- * Default is everything-true so existing teams keep their picker intact
- * after this field is introduced; the normalizer fills in the same
- * defaults for any model id missing from a partially-saved doc, so a
- * new model id added to `BOT_AGENT_MODELS` after this writes a doc
- * still defaults to enabled on the next read.
- */
-const DEFAULT_BOT_AGENT_MODEL_TOGGLES: BotAgentModelToggles =
-  BOT_AGENT_MODELS.reduce((acc, model) => {
-    acc[model] = true
-    return acc
-  }, {} as BotAgentModelToggles)
-
-interface BotAgentToolToggles {
-  getWeather: boolean
-  rollDice: boolean
-  /**
-   * Interrupt tool. Defaults to true; turning it off forces the model to
-   * commit to a guess instead of asking — useful when the workspace
-   * wants strictly non-interactive replies (e.g. background jobs).
-   */
-  askQuestion: boolean
-  /**
-   * Semantic search over workspace nodes (RAG). Read-only so it's
-   * exposed in every mode, including `manual`. Disable to keep chats
-   * grounded only in the user's explicitly-attached context.
-   */
-  searchWorkspaceNodes: boolean
-  /**
-   * Structured-output summarization of a workspace node. Read-only so
-   * it's exposed in every mode. Mirrors the inspector's "Generate
-   * summary" button — disable to remove the chat-driven route only.
-   */
-  summarizeNode: boolean
-}
-
-interface BotAgentConfig {
-  /** Provider availability policy for this team. */
-  providers: Record<BotModelProvider, boolean>
-  /**
-   * Per-model availability toggles. Combined with `providers` (AND): a
-   * model only shows up in the picker when its provider AND its
-   * per-model toggle are both true.
-   */
-  models: BotAgentModelToggles
-  model: BotAgentModel
-  /** [0, 2]; lower = more deterministic. */
-  temperature: number
-  /** [0, 1]; nucleus sampling cutoff. */
-  topP: number
-  /** [1, 100]; top-K sampling cutoff. */
-  topK: number
-  /** Hard cap on the model's reply length, in tokens. */
-  maxOutputTokens: number
-  /** Pre-selected mode for new chats; the composer can override per-turn. */
-  defaultMode: BotChatMode
-  /** Workspace-level system prompt; mode-specific suffix appended at runtime. */
-  systemPromptBase: string
-  /** One suffix per chat mode — appended after `systemPromptBase`. */
-  promptSuffixes: Record<BotChatMode, string>
-  /** Per-tool feature flags. Disabled tools are simply not registered. */
-  tools: BotAgentToolToggles
-  /** Truncation length for the auto-derived chat title (set on creation). */
-  titleMaxLength: number
-  /** Truncation length for the sidebar preview (re-derived every save). */
-  previewMaxLength: number
-}
-
-const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
-  providers: { ...DEFAULT_BOT_AGENT_PROVIDERS },
-  models: { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES },
-  model: DEFAULT_BOT_AGENT_MODEL,
-  temperature: 0.7,
-  topP: 0.95,
-  topK: 40,
-  maxOutputTokens: 2048,
-  defaultMode: "auto",
-  systemPromptBase:
-    "You are a helpful assistant for the user's team workspace.",
-  promptSuffixes: {
-    auto: MODE_CONFIG.auto.promptSuffix,
-    agent: MODE_CONFIG.agent.promptSuffix,
-    manual: MODE_CONFIG.manual.promptSuffix,
-  },
-  tools: {
-    getWeather: true,
-    rollDice: true,
-    askQuestion: true,
-    searchWorkspaceNodes: true,
-    summarizeNode: true,
-  },
-  titleMaxLength: TITLE_MAX_LENGTH,
-  previewMaxLength: PREVIEW_MAX_LENGTH,
-}
-
-const cloneDefaultBotAgentConfig = (): BotAgentConfig => ({
-  ...DEFAULT_BOT_AGENT_CONFIG,
-  providers: { ...DEFAULT_BOT_AGENT_CONFIG.providers },
-  models: { ...DEFAULT_BOT_AGENT_CONFIG.models },
-  promptSuffixes: { ...DEFAULT_BOT_AGENT_CONFIG.promptSuffixes },
-  tools: { ...DEFAULT_BOT_AGENT_CONFIG.tools },
-})
-
-/**
- * Bounds enforced both client-side (slider min/max) and server-side
- * (zod refines). Centralizing here keeps the two sides honest — change
- * a bound and both error messages move together.
- */
-const BOT_AGENT_BOUNDS = {
-  temperature: { min: 0, max: 2 },
-  topP: { min: 0, max: 1 },
-  topK: { min: 1, max: 100 },
-  maxOutputTokens: { min: 256, max: 65536 },
-  systemPromptBase: { max: 4000 },
-  promptSuffix: { max: 2000 },
-  titleMaxLength: { min: 20, max: 200 },
-  previewMaxLength: { min: 50, max: 500 },
-} as const
-
-const botAgentConfigUpdateSchema = z.object({
-  providers: z
-    .object({
-      google: z.boolean(),
-      anthropic: z.boolean(),
-      openai: z.boolean(),
-    })
-    .partial()
-    .optional(),
-  // Partial record so the client can patch a single toggle. Each key is
-  // validated against the model allowlist by the enum; the merge in
-  // `updateTeamAgentConfig` layers the patch onto the saved record so
-  // omitted models keep their prior state.
-  models: z.record(z.enum(BOT_AGENT_MODELS), z.boolean()).optional(),
-  model: z.enum(BOT_AGENT_MODELS).optional(),
-  temperature: z
-    .number()
-    .min(BOT_AGENT_BOUNDS.temperature.min)
-    .max(BOT_AGENT_BOUNDS.temperature.max)
-    .optional(),
-  topP: z
-    .number()
-    .min(BOT_AGENT_BOUNDS.topP.min)
-    .max(BOT_AGENT_BOUNDS.topP.max)
-    .optional(),
-  topK: z
-    .number()
-    .int()
-    .min(BOT_AGENT_BOUNDS.topK.min)
-    .max(BOT_AGENT_BOUNDS.topK.max)
-    .optional(),
-  maxOutputTokens: z
-    .number()
-    .int()
-    .min(BOT_AGENT_BOUNDS.maxOutputTokens.min)
-    .max(BOT_AGENT_BOUNDS.maxOutputTokens.max)
-    .optional(),
-  defaultMode: z.enum(BOT_CHAT_MODES).optional(),
-  systemPromptBase: z
-    .string()
-    .max(BOT_AGENT_BOUNDS.systemPromptBase.max)
-    .optional(),
-  promptSuffixes: z
-    .object({
-      auto: z.string().max(BOT_AGENT_BOUNDS.promptSuffix.max),
-      agent: z.string().max(BOT_AGENT_BOUNDS.promptSuffix.max),
-      manual: z.string().max(BOT_AGENT_BOUNDS.promptSuffix.max),
-    })
-    .partial()
-    .optional(),
-  tools: z
-    .object({
-      getWeather: z.boolean(),
-      rollDice: z.boolean(),
-      askQuestion: z.boolean(),
-      searchWorkspaceNodes: z.boolean(),
-      summarizeNode: z.boolean(),
-    })
-    .partial()
-    .optional(),
-  titleMaxLength: z
-    .number()
-    .int()
-    .min(BOT_AGENT_BOUNDS.titleMaxLength.min)
-    .max(BOT_AGENT_BOUNDS.titleMaxLength.max)
-    .optional(),
-  previewMaxLength: z
-    .number()
-    .int()
-    .min(BOT_AGENT_BOUNDS.previewMaxLength.min)
-    .max(BOT_AGENT_BOUNDS.previewMaxLength.max)
-    .optional(),
-})
-
-type BotAgentConfigUpdate = z.infer<typeof botAgentConfigUpdateSchema>
-
-const agentConfigDocPath = (teamId: string) => `teams/${teamId}/settings/agent`
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function hasEnabledProvider(
-  providers: Record<BotModelProvider, boolean>
-): boolean {
-  return BOT_MODEL_PROVIDERS.some((provider) => providers[provider])
-}
-
-function normalizeProviderToggles(
-  raw: unknown
-): Record<BotModelProvider, boolean> {
-  const rawProviders = isRecord(raw) ? raw : {}
-  const providers: Record<BotModelProvider, boolean> = {
-    ...DEFAULT_BOT_AGENT_PROVIDERS,
-  }
-
-  for (const provider of BOT_MODEL_PROVIDERS) {
-    if (typeof rawProviders[provider] === "boolean") {
-      providers[provider] = rawProviders[provider]
-    }
-  }
-
-  return hasEnabledProvider(providers)
-    ? providers
-    : { ...DEFAULT_BOT_AGENT_PROVIDERS }
-}
-
-function firstModelForEnabledProviders(
-  providers: Record<BotModelProvider, boolean>
-): BotAgentModel {
-  return (
-    BOT_AGENT_MODELS.find(
-      (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]]
-    ) ?? DEFAULT_BOT_AGENT_CONFIG.model
-  )
-}
-
-/**
- * Pick the first model that's available under BOTH the provider toggles
- * and the per-model toggles. Falls back to the first model whose
- * provider is enabled (ignoring the per-model toggle) so an
- * over-restrictive `models` map can never strand the team with no
- * resolvable model — chat would otherwise fail at dispatch time.
- */
-function firstAvailableModel(
-  providers: Record<BotModelProvider, boolean>,
-  models: BotAgentModelToggles
-): BotAgentModel {
-  return (
-    BOT_AGENT_MODELS.find(
-      (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]] && models[model]
-    ) ?? firstModelForEnabledProviders(providers)
-  )
-}
-
-function hasEnabledModel(
-  providers: Record<BotModelProvider, boolean>,
-  models: BotAgentModelToggles
-): boolean {
-  return BOT_AGENT_MODELS.some(
-    (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]] && models[model]
-  )
-}
-
-/**
- * Clamp a per-turn model override against the team's current
- * provider/model allowlist. Returns:
- *   - `requested` when it's a known wire-name AND both its provider
- *     and per-model toggles are on under `agentConfig`
- *   - `agentConfig.model` otherwise (no override, unknown id, or one
- *     the team policy no longer allows)
- *
- * The Zod enum on `SendBotMessageInput.model` already rejects garbage
- * wire-names at the boundary, so the `BOT_AGENT_MODELS` membership
- * check here is defense-in-depth — keeps the function honest if it's
- * ever called from an internal path that bypassed the input schema.
- *
- * Authoritative server clamp: clients are free to ship any allowed
- * model id, but stale clients that hold onto a now-disabled id cannot
- * escape policy by sending it on the wire. The flow persists the
- * *effective* (post-clamp) model as `lastModel` so the next client
- * load rehydrates with whatever actually ran.
- */
-function resolveEffectiveModel(
-  requested: BotAgentModel | undefined,
-  agentConfig: BotAgentConfig
-): BotAgentModel {
-  if (!requested) return agentConfig.model
-  if (!(BOT_AGENT_MODELS as readonly string[]).includes(requested)) {
-    return agentConfig.model
-  }
-  const providerEnabled =
-    agentConfig.providers[BOT_MODEL_PROVIDER_BY_MODEL[requested]]
-  const modelEnabled = agentConfig.models[requested]
-  if (providerEnabled && modelEnabled) return requested
-  return agentConfig.model
-}
-
-/**
- * Normalize the raw `models` map from Firestore. Missing keys default
- * to `true` — newly-introduced models in the allowlist start
- * enabled for teams that saved their config before the model existed.
- * If the user managed to disable every model, restore the all-true
- * default; the resolver further ensures at least one model is
- * actually pickable under the active providers.
- */
-function normalizeModelToggles(raw: unknown): BotAgentModelToggles {
-  const rawModels = isRecord(raw) ? raw : {}
-  const models: BotAgentModelToggles = { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES }
-
-  for (const model of BOT_AGENT_MODELS) {
-    if (typeof rawModels[model] === "boolean") {
-      models[model] = rawModels[model] as boolean
-    }
-  }
-
-  if (!BOT_AGENT_MODELS.some((model) => models[model])) {
-    return { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES }
-  }
-  return models
-}
-
-function assertEnabledProvidersConfigured(
-  providers: Record<BotModelProvider, boolean>
-): void {
-  for (const provider of BOT_MODEL_PROVIDERS) {
-    if (providers[provider]) {
-      assertAiModelProviderConfigured(provider)
-    }
-  }
-}
-
-/**
- * Merge a partial doc payload onto `DEFAULT_BOT_AGENT_CONFIG` so the
- * caller always sees a fully-populated config — even for workspaces
- * that have only ever set one field (e.g. just `model`). Unknown keys
- * on the doc are dropped here rather than re-validated; the update
- * callable is the gate that enforces shape.
- */
-function applyAgentConfigOverrides(
-  raw: Record<string, unknown> | undefined
-): BotAgentConfig {
-  if (!raw) return cloneDefaultBotAgentConfig()
-
-  const providers = normalizeProviderToggles(raw.providers)
-  const models = normalizeModelToggles(raw.models)
-  const configuredModel =
-    typeof raw.model === "string" &&
-    (BOT_AGENT_MODELS as readonly string[]).includes(raw.model)
-      ? (raw.model as BotAgentModel)
-      : DEFAULT_BOT_AGENT_CONFIG.model
-  const isConfiguredModelAvailable =
-    providers[BOT_MODEL_PROVIDER_BY_MODEL[configuredModel]] &&
-    models[configuredModel]
-  const model = isConfiguredModelAvailable
-    ? configuredModel
-    : firstAvailableModel(providers, models)
-
-  const numberOrDefault = (
-    value: unknown,
-    fallback: number,
-    min: number,
-    max: number
-  ): number => {
-    if (typeof value !== "number" || !Number.isFinite(value)) return fallback
-    return Math.min(Math.max(value, min), max)
-  }
-
-  const intOrDefault = (
-    value: unknown,
-    fallback: number,
-    min: number,
-    max: number
-  ): number => {
-    if (typeof value !== "number" || !Number.isFinite(value)) return fallback
-    return Math.min(Math.max(Math.round(value), min), max)
-  }
-
-  const stringOrDefault = (
-    value: unknown,
-    fallback: string,
-    max: number
-  ): string => {
-    if (typeof value !== "string") return fallback
-    return value.slice(0, max)
-  }
-
-  const rawSuffixes = (raw.promptSuffixes ?? {}) as Record<string, unknown>
-  const promptSuffixes: Record<BotChatMode, string> = {
-    auto: stringOrDefault(
-      rawSuffixes.auto,
-      DEFAULT_BOT_AGENT_CONFIG.promptSuffixes.auto,
-      BOT_AGENT_BOUNDS.promptSuffix.max
-    ),
-    agent: stringOrDefault(
-      rawSuffixes.agent,
-      DEFAULT_BOT_AGENT_CONFIG.promptSuffixes.agent,
-      BOT_AGENT_BOUNDS.promptSuffix.max
-    ),
-    manual: stringOrDefault(
-      rawSuffixes.manual,
-      DEFAULT_BOT_AGENT_CONFIG.promptSuffixes.manual,
-      BOT_AGENT_BOUNDS.promptSuffix.max
-    ),
-  }
-
-  const rawTools = (raw.tools ?? {}) as Record<string, unknown>
-  const tools: BotAgentToolToggles = {
-    getWeather:
-      typeof rawTools.getWeather === "boolean"
-        ? rawTools.getWeather
-        : DEFAULT_BOT_AGENT_CONFIG.tools.getWeather,
-    rollDice:
-      typeof rawTools.rollDice === "boolean"
-        ? rawTools.rollDice
-        : DEFAULT_BOT_AGENT_CONFIG.tools.rollDice,
-    askQuestion:
-      typeof rawTools.askQuestion === "boolean"
-        ? rawTools.askQuestion
-        : DEFAULT_BOT_AGENT_CONFIG.tools.askQuestion,
-    searchWorkspaceNodes:
-      typeof rawTools.searchWorkspaceNodes === "boolean"
-        ? rawTools.searchWorkspaceNodes
-        : DEFAULT_BOT_AGENT_CONFIG.tools.searchWorkspaceNodes,
-    summarizeNode:
-      typeof rawTools.summarizeNode === "boolean"
-        ? rawTools.summarizeNode
-        : DEFAULT_BOT_AGENT_CONFIG.tools.summarizeNode,
-  }
-
-  const defaultMode =
-    typeof raw.defaultMode === "string" &&
-    (BOT_CHAT_MODES as readonly string[]).includes(raw.defaultMode)
-      ? (raw.defaultMode as BotChatMode)
-      : DEFAULT_BOT_AGENT_CONFIG.defaultMode
-
-  return {
-    providers,
-    models,
-    model,
-    temperature: numberOrDefault(
-      raw.temperature,
-      DEFAULT_BOT_AGENT_CONFIG.temperature,
-      BOT_AGENT_BOUNDS.temperature.min,
-      BOT_AGENT_BOUNDS.temperature.max
-    ),
-    topP: numberOrDefault(
-      raw.topP,
-      DEFAULT_BOT_AGENT_CONFIG.topP,
-      BOT_AGENT_BOUNDS.topP.min,
-      BOT_AGENT_BOUNDS.topP.max
-    ),
-    topK: intOrDefault(
-      raw.topK,
-      DEFAULT_BOT_AGENT_CONFIG.topK,
-      BOT_AGENT_BOUNDS.topK.min,
-      BOT_AGENT_BOUNDS.topK.max
-    ),
-    maxOutputTokens: intOrDefault(
-      raw.maxOutputTokens,
-      DEFAULT_BOT_AGENT_CONFIG.maxOutputTokens,
-      BOT_AGENT_BOUNDS.maxOutputTokens.min,
-      BOT_AGENT_BOUNDS.maxOutputTokens.max
-    ),
-    defaultMode,
-    systemPromptBase: stringOrDefault(
-      raw.systemPromptBase,
-      DEFAULT_BOT_AGENT_CONFIG.systemPromptBase,
-      BOT_AGENT_BOUNDS.systemPromptBase.max
-    ),
-    promptSuffixes,
-    tools,
-    titleMaxLength: intOrDefault(
-      raw.titleMaxLength,
-      DEFAULT_BOT_AGENT_CONFIG.titleMaxLength,
-      BOT_AGENT_BOUNDS.titleMaxLength.min,
-      BOT_AGENT_BOUNDS.titleMaxLength.max
-    ),
-    previewMaxLength: intOrDefault(
-      raw.previewMaxLength,
-      DEFAULT_BOT_AGENT_CONFIG.previewMaxLength,
-      BOT_AGENT_BOUNDS.previewMaxLength.min,
-      BOT_AGENT_BOUNDS.previewMaxLength.max
-    ),
-  }
-}
-
-/**
- * Load the effective agent config for a team. Exported so sibling
- * sub-flows (e.g. `botSummarize.ts`) can use the team's chosen model +
- * generation knobs without duplicating the Firestore read + merge
- * logic.
- */
-export async function loadTeamAgentConfig(
-  teamId: string
-): Promise<BotAgentConfig> {
-  const snap = await db.doc(agentConfigDocPath(teamId)).get()
-  if (!snap.exists) return cloneDefaultBotAgentConfig()
-  return applyAgentConfigOverrides(snap.data())
-}
-
-/** Build the system prompt from the loaded config + the active mode. */
-function buildSystemPromptFromConfig(
-  config: BotAgentConfig,
-  mode: BotChatMode
-): string {
-  return `${config.systemPromptBase}\n\n${config.promptSuffixes[mode]}`
-}
-
-// ===========================================================================
-// Node-context loading — fetch attached workspace nodes and their
-// attachments, then format them as a markdown block to append to the
-// per-turn system prompt.
+// Per-turn mode configuration — `MODE_CONFIG` is imported from
+// `./botAgentConfig.js` because it carries the default prompt suffixes
+// for `DEFAULT_BOT_AGENT_CONFIG.promptSuffixes`. The chat orchestration
+// layer here reads `MODE_CONFIG[mode].actionToolsEnabled` inside
+// `pickChatTools` to gate side-effecting tools.
 // ===========================================================================
 
-interface NodeContextAttachment {
-  name: string
-  mimeType: string | null
-  size: number | null
-  content?: string
-  contentTruncated?: boolean
-}
+// ===========================================================================
+// Built-in tools live in `botBuiltinTools.ts` (getWeather, rollDice,
+// transferToAgent, askQuestion) — imported up top. This file orchestrates
+// which tools to register per turn via `pickChatTools`; the tool
+// definitions themselves stay out of this orchestration layer so the
+// chat flow can read top-to-bottom without 200 lines of demo machinery.
+// ===========================================================================
 
-interface NodeContextEntry {
-  scope: "code" | "write"
-  nodeId: string
-  name: string
-  type: "folder" | "file"
-  content?: string
-  contentTruncated?: boolean
-  attachments: NodeContextAttachment[]
-}
+// ===========================================================================
+// Team agent configuration lives in `./botAgentConfig.js` — the
+// `BotAgentConfig` shape, defaults, normalization, `loadTeamAgentConfig`,
+// and the `getTeamAgentConfig`/`updateTeamAgentConfig` callables. This
+// file imports just the types and helpers it needs for chat
+// orchestration; the standalone CRUD surface stays in its own module.
+// ===========================================================================
 
-function isTextLikeMime(mime: string | null | undefined): boolean {
-  if (!mime) return false
-  return TEXT_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix))
-}
-
-/**
- * Resolve one `{scope, nodeId}` ref into a self-contained context entry:
- * the node's metadata + content + attachment list (with text-like
- * attachment bodies inlined under `MAX_ATTACHMENT_INLINE_BYTES`).
- *
- * Returns `null` when the node doesn't exist or is archived — callers
- * filter nulls instead of failing the whole turn, so a stale attachment
- * chip in the UI doesn't block the user's send.
- */
-async function fetchNodeContext(
-  teamId: string,
-  workspaceId: string,
-  ref: NodeRef
-): Promise<NodeContextEntry | null> {
-  const nodeSnap = await db
-    .doc(`teams/${teamId}/workspaces/${workspaceId}/${ref.scope}/${ref.nodeId}`)
-    .get()
-  if (!nodeSnap.exists) return null
-  const data = nodeSnap.data() ?? {}
-  if (data.isArchived === true) return null
-
-  const type =
-    data.type === "folder" || data.type === "file"
-      ? (data.type as "folder" | "file")
-      : "file"
-  const name = typeof data.name === "string" ? data.name : ref.nodeId
-
-  const rawContent = typeof data.content === "string" ? data.content : ""
-  let content: string | undefined
-  let contentTruncated = false
-  if (rawContent.length > 0) {
-    if (rawContent.length > MAX_NODE_CONTENT_BYTES) {
-      content = rawContent.slice(0, MAX_NODE_CONTENT_BYTES)
-      contentTruncated = true
-    } else {
-      content = rawContent
-    }
-  }
-
-  // Attachments live in a subcollection alongside the node doc. We pull
-  // metadata for every attachment and inline content for the small
-  // text-like ones — binaries (images, PDFs, archives) get name + mime +
-  // size only, which is enough for the model to acknowledge them.
-  const attachmentsSnap = await db
-    .collection(
-      `teams/${teamId}/workspaces/${workspaceId}/${ref.scope}/${ref.nodeId}/attachments`
-    )
-    .get()
-
-  const attachments: NodeContextAttachment[] = []
-  for (const attSnap of attachmentsSnap.docs) {
-    const att = attSnap.data() ?? {}
-    const mimeType = typeof att.mimeType === "string" ? att.mimeType : null
-    const size = typeof att.size === "number" ? att.size : null
-    const storagePath =
-      typeof att.storagePath === "string" ? att.storagePath : null
-    const displayName =
-      typeof att.displayName === "string" && att.displayName
-        ? att.displayName
-        : "attachment"
-
-    let attContent: string | undefined
-    let attTruncated = false
-    if (
-      storagePath &&
-      isTextLikeMime(mimeType) &&
-      (size === null || size <= MAX_ATTACHMENT_INLINE_BYTES)
-    ) {
-      try {
-        const [buffer] = await admin
-          .storage()
-          .bucket()
-          .file(storagePath)
-          .download()
-        const text = buffer.toString("utf8")
-        if (text.length > MAX_ATTACHMENT_INLINE_BYTES) {
-          attContent = text.slice(0, MAX_ATTACHMENT_INLINE_BYTES)
-          attTruncated = true
-        } else {
-          attContent = text
-        }
-      } catch {
-        // Storage read failed — fall through with metadata only so the
-        // model still knows the attachment exists.
-      }
-    }
-
-    attachments.push({
-      name: displayName,
-      mimeType,
-      size,
-      ...(attContent !== undefined ? { content: attContent } : {}),
-      ...(attTruncated ? { contentTruncated: true } : {}),
-    })
-  }
-
-  return {
-    scope: ref.scope,
-    nodeId: ref.nodeId,
-    name,
-    type,
-    ...(content !== undefined ? { content } : {}),
-    ...(contentTruncated ? { contentTruncated: true } : {}),
-    attachments,
-  }
-}
-
-function formatBytes(bytes: number | null): string {
-  if (bytes === null) return "unknown size"
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
-
-/**
- * Pick a code-fence length that the content can't escape. CommonMark
- * requires the closing fence to have at least as many backticks as the
- * opening, so by scanning for the longest backtick run inside `content`
- * and using one more, we guarantee no malicious file can prematurely
- * close the fence and inject text at the system-prompt level.
- *
- * Without this, a node whose body contained ``` would terminate the
- * fence and the model would see whatever followed as bare system-prompt
- * text — a high-trust position the user shouldn't be able to reach
- * through file content.
- */
-function pickCodeFence(content: string): string {
-  let longestRun = 0
-  let currentRun = 0
-  for (let i = 0; i < content.length; i += 1) {
-    if (content.charCodeAt(i) === 0x60 /* ` */) {
-      currentRun += 1
-      if (currentRun > longestRun) longestRun = currentRun
-    } else {
-      currentRun = 0
-    }
-  }
-  return "`".repeat(Math.max(3, longestRun + 1))
-}
-
-/**
- * Render a set of node-context entries as a markdown block appended to
- * the per-turn system prompt. Returns "" when no entries — the caller
- * uses the empty string to skip the join and keep the system prompt
- * byte-identical to the no-context path.
- */
-function buildContextPromptBlock(entries: NodeContextEntry[]): string {
-  if (entries.length === 0) return ""
-
-  const lines: string[] = [
-    "# Attached workspace context",
-    "",
-    "The user attached the following workspace items as context for this " +
-      "turn. Treat them as ground truth when relevant. Quote sparingly; " +
-      "summarize when paraphrasing is clearer.",
-    "",
-  ]
-
-  for (const entry of entries) {
-    const scopeLabel = entry.scope === "code" ? "Code" : "Write"
-    lines.push(`## ${scopeLabel} ${entry.type}: ${entry.name}`)
-    // Surface scope + nodeId so tools that take a node ref
-    // (e.g. `summarizeNode`) can be invoked against an attached node.
-    // The model uses these IDs to call the tool; the user just sees the
-    // friendly heading above. Kept on a single subtle line so it doesn't
-    // crowd the rendered prompt for the model.
-    lines.push(`_node ref: scope=\`${entry.scope}\`, id=\`${entry.nodeId}\`_`)
-    if (entry.type === "folder") {
-      lines.push("_(folder — no inline content)_")
-    } else if (entry.content) {
-      const fence = pickCodeFence(entry.content)
-      lines.push(fence, entry.content, fence)
-      if (entry.contentTruncated) lines.push("_(content truncated)_")
-    } else {
-      lines.push("_(empty file)_")
-    }
-
-    if (entry.attachments.length > 0) {
-      lines.push("", "### Attachments")
-      for (const att of entry.attachments) {
-        lines.push(
-          `- **${att.name}** — ${att.mimeType ?? "unknown type"}, ${formatBytes(att.size)}`
-        )
-        if (att.content) {
-          // Fence is sized against the raw content so even an attachment
-          // body packed with backticks can't close the block prematurely.
-          // Indentation here is purely cosmetic (nests under the bullet)
-          // and doesn't factor into the fence-escape safety.
-          const fence = pickCodeFence(att.content)
-          const indented = att.content.replace(/\n/g, "\n  ")
-          lines.push(`  ${fence}`, `  ${indented}`, `  ${fence}`)
-          if (att.contentTruncated) lines.push("  _(content truncated)_")
-        }
-      }
-    }
-    lines.push("")
-  }
-
-  return lines.join("\n")
-}
-
-/**
- * Fetch context entries for every requested ref. Sequential to keep
- * memory + concurrent Storage requests bounded — with `CONTEXT_NODE_MAX = 10`
- * the wall-clock cost is still dwarfed by model latency.
- */
-async function loadContextEntries(
-  teamId: string,
-  workspaceId: string,
-  refs: readonly NodeRef[]
-): Promise<NodeContextEntry[]> {
-  const entries: NodeContextEntry[] = []
-  for (const ref of refs) {
-    const entry = await fetchNodeContext(teamId, workspaceId, ref)
-    if (entry) entries.push(entry)
-  }
-  return entries
-}
+// ===========================================================================
+// Node-context loading lives in `./botContext.ts` — `loadAndBuildContextBlock`
+// is the only entry point the chat flow uses. The supporting machinery
+// (NodeRef schema, Firestore + Storage reads, markdown formatting,
+// code-fence escape) all moved with it. Keep this file focused on
+// orchestration: WHICH refs to load and WHERE the resulting block lands
+// in the system prompt.
+// ===========================================================================
 
 /**
  * Deterministic Firestore-queryable key for a (user, node) pin. Written
@@ -1558,7 +632,7 @@ async function loadContextEntries(
  * indexed lookup. The pin's `scope`/`nodeId` are not stored as their
  * own field — they live as a normal entry inside `contextNodes`.
  */
-function pinnedNodeKey(
+export function pinnedNodeKey(
   ownerUid: string,
   scope: "code" | "write",
   nodeId: string
@@ -1576,19 +650,152 @@ function pinnedNodeKey(
  *     still Google-gated because the current retriever uses Gemini
  *     embeddings under the hood.
  */
-function pickChatTools(config: BotAgentConfig, mode: BotChatMode) {
+function pickChatTools(
+  config: BotAgentConfig,
+  mode: BotChatMode,
+  agent: TeamAgentDoc | null = null,
+  transferTargetCount: number = 0
+) {
   const modeAllowsActionTools = MODE_CONFIG[mode].actionToolsEnabled
   const googleBackedSearchAvailable =
     config.providers.google && isAiModelProviderConfigured("google")
+  // Agent-level intersection: a tool fires only when the team has it on
+  // AND the active agent (if any) has it on. `!== false` treats missing
+  // keys as enabled — keeps a newly-added tool key available to
+  // existing agents without a migration. When `agent` is null this is
+  // always `true`, preserving the default-persona behavior exactly.
+  //
+  // Parameter is narrowed to `ChatToolName` (the per-agent-relevant
+  // subset) so we can never accidentally call `agentAllows("customAgents")`
+  // — that flag is team-only and has no per-agent counterpart.
+  const agentAllows = (name: ChatToolName): boolean =>
+    !agent || agent.tools[name] !== false
   const tools = []
-  if (modeAllowsActionTools && config.tools.getWeather)
+  if (
+    modeAllowsActionTools &&
+    config.tools.getWeather &&
+    agentAllows("getWeather")
+  )
     tools.push(getWeatherTool)
-  if (modeAllowsActionTools && config.tools.rollDice) tools.push(rollDiceTool)
-  if (config.tools.askQuestion) tools.push(askQuestionTool)
-  if (config.tools.searchWorkspaceNodes && googleBackedSearchAvailable)
+  if (modeAllowsActionTools && config.tools.rollDice && agentAllows("rollDice"))
+    tools.push(rollDiceTool)
+  if (config.tools.askQuestion && agentAllows("askQuestion"))
+    tools.push(askQuestionTool)
+  if (
+    config.tools.searchWorkspaceNodes &&
+    googleBackedSearchAvailable &&
+    agentAllows("searchWorkspaceNodes")
+  )
     tools.push(searchWorkspaceNodesTool)
-  if (config.tools.summarizeNode) tools.push(summarizeNodeTool)
+  if (config.tools.summarizeNode && agentAllows("summarizeNode"))
+    tools.push(summarizeNodeTool)
+  // `transferToAgent` is only exposed when at least one OTHER agent
+  // (or the team default, when an agent is currently active) is
+  // reachable. Listing the tool with no available targets would
+  // tempt the model into calls it can't actually satisfy. Mode and
+  // agent-tool toggles deliberately don't gate this — transfer is a
+  // meta-action, not a domain action like `getWeather`, and even
+  // `manual` mode benefits from the ability to hand off to a more
+  // capable persona.
+  if (transferTargetCount > 0) tools.push(transferToAgentTool)
   return tools
+}
+
+// ===========================================================================
+// Transfer helpers — shared by both `sendBotMessageFlow` and
+// `respondToBotInterruptFlow`.
+// ===========================================================================
+
+/**
+ * Build the "you can transfer to…" roster for the current turn. Each
+ * entry is `{ id, name, description }` — passed to
+ * `buildAgentSystemPrompt` (to enumerate targets in the system prompt)
+ * and projected to ids only for `actionContext.availableTransferAgentIds`
+ * (the runtime allowlist enforced inside the tool handler).
+ *
+ *   - When a custom agent is active: roster = every OTHER active
+ *     custom agent + a synthetic team-default entry with `id: ""`.
+ *     The default is included so the model can hand back to the
+ *     generic persona without needing to know any other custom id.
+ *
+ *   - When no agent is active (default persona): roster = every
+ *     active custom agent. The synthetic default is excluded — you
+ *     can't transfer to where you already are.
+ *
+ *   - Always empty when `customAgents` is empty AND no agent is
+ *     active (nothing to transfer to). The caller checks
+ *     `length === 0` and skips the directive + the tool entirely.
+ */
+function buildTransferRoster(
+  activeAgent: TeamAgentDoc | null,
+  customAgents: ReadonlyArray<TeamAgentDoc>
+): { id: string; name: string; description: string }[] {
+  const roster: { id: string; name: string; description: string }[] = []
+  for (const candidate of customAgents) {
+    // Transfer targets must be SELECTABLE — enabled and non-archived.
+    // Disabled agents are gated out by `resolveActiveAgent` anyway,
+    // so transferring to one would just bounce back to default; not
+    // useful to advertise as a target. Archived agents still
+    // dispatch for chats that ALREADY reference them, but the whole
+    // point of archive-as-deprecate is to discourage new selections —
+    // so we don't advertise them as transfer targets either.
+    if (candidate.enabled === false) continue
+    if (candidate.archivedAt) continue
+    if (activeAgent && candidate.id === activeAgent.id) continue
+    roster.push({
+      id: candidate.id,
+      name: candidate.name,
+      description: candidate.description,
+    })
+  }
+  if (activeAgent) {
+    // Synthetic "back to default" target — id is the empty string so
+    // `normalizeActiveAgentIdForStorage` translates it to `null` on
+    // the doc write below. Hardcoded English label/description here
+    // because the directive lives in the system prompt (server-side,
+    // not user-facing i18n).
+    roster.push({
+      id: "",
+      name: "Default Assistant",
+      description: "The team's default persona — broad-purpose helper.",
+    })
+  }
+  return roster
+}
+
+/**
+ * After-turn write that commits the model's `transferToAgent` request
+ * (if any) to the session doc. The store's in-turn `save()` already
+ * wrote the PRE-turn agent id; this merge updates the doc to whatever
+ * the model handed off to so the next user message routes correctly.
+ *
+ * No-op when the model didn't call `transferToAgent`. A single
+ * Firestore write in the rare transfer-happened case — added latency
+ * is negligible against the model turn that just preceded it.
+ *
+ * The empty-string sentinel is translated to `null` here (the doc
+ * field's "team default" representation) via
+ * `normalizeActiveAgentIdForStorage`, keeping all sentinel handling
+ * centralized in `agents.ts`.
+ */
+async function commitTransferIfRequested(
+  teamId: string,
+  workspaceId: string,
+  sessionId: string,
+  actionContext: BotActionContext
+): Promise<void> {
+  const requested = actionContext.requestedTransferAgentId
+  if (requested === undefined) return
+  const nextAgentId = normalizeActiveAgentIdForStorage(requested)
+  await db
+    .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
+    .set(
+      {
+        activeAgentId: nextAgentId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    )
 }
 
 // ===========================================================================
@@ -1636,7 +843,7 @@ export async function getMembershipRole(
   return snap.data()?.role as IMembershipRole
 }
 
-function isAdminRole(role: IMembershipRole | null | undefined): boolean {
+export function isAdminRole(role: IMembershipRole | null | undefined): boolean {
   return !!role && ADMIN_ROLES.includes(role)
 }
 
@@ -1645,10 +852,19 @@ interface BotSessionDocSummary {
   visibility: SessionVisibility
   archived: boolean
   data?: SessionData
+  /**
+   * Persisted active custom-agent id from the previous turn. Used by
+   * the dispatcher to "stick" the agent across turns even when the
+   * client doesn't re-send `activeAgentId` (resumes, interrupt
+   * responses, etc.). Null when the session uses the team default
+   * persona — which is also the legacy state for sessions saved
+   * before this feature shipped.
+   */
+  activeAgentId: string | null
 }
 
 /** Load a session doc and normalize visibility (absent ⇒ "private"). */
-async function readSessionDoc(
+export async function readSessionDoc(
   teamId: string,
   workspaceId: string,
   sessionId: string
@@ -1663,11 +879,23 @@ async function readSessionDoc(
     rawVisibility === "shared" || rawVisibility === "public"
       ? rawVisibility
       : "private"
+  // `activeAgentId` is read as-stored — including ids that point to
+  // since-archived agents. The dispatcher (`resolveActiveAgent`) does
+  // the tombstone check at turn time and silently falls back to the
+  // default when the id no longer resolves to an active agent. Keeping
+  // the doc field unchanged means restoring an archived agent
+  // automatically re-binds every session that referenced it.
+  const rawActiveAgentId = data.activeAgentId
+  const activeAgentId =
+    typeof rawActiveAgentId === "string" && rawActiveAgentId.length > 0
+      ? rawActiveAgentId
+      : null
   return {
     ownerUid: data.ownerUid as string,
     visibility,
     archived: !!data.archivedAt,
     data: data.data as SessionData | undefined,
+    activeAgentId,
   }
 }
 
@@ -1688,26 +916,11 @@ async function readSessionDoc(
 //     this node" later via `findBotSessionByPinnedNode`. Ignored when
 //     resuming an existing session.
 //
-// `CONTEXT_NODE_MAX` caps prompt size; without it a misbehaving client
-// could attach hundreds of files per turn and blow past the model's
-// context window (and our token budget).
-
-const CONTEXT_NODE_MAX = 10
-const MAX_NODE_CONTENT_BYTES = 100_000
-const MAX_ATTACHMENT_INLINE_BYTES = 50_000
-const TEXT_MIME_PREFIXES = [
-  "text/",
-  "application/json",
-  "application/xml",
-  "application/javascript",
-  "application/typescript",
-]
-
-const NodeRefSchema = z.object({
-  scope: z.enum(["code", "write"]),
-  nodeId: z.string().min(1),
-})
-type NodeRef = z.infer<typeof NodeRefSchema>
+// `CONTEXT_NODE_MAX` (imported from `./botContext.js`) caps prompt size;
+// without it a misbehaving client could attach hundreds of files per turn
+// and blow past the model's context window (and our token budget). The
+// `NodeRef` schema + per-node loading machinery also live in
+// `./botContext.js` — see that module for fetching + markdown assembly.
 
 const SendBotMessageInput = z.object({
   teamId: z.string().min(1),
@@ -1732,6 +945,20 @@ const SendBotMessageInput = z.object({
    * unknown wire-names are rejected before they reach the clamp.
    */
   model: z.enum(BOT_AGENT_MODELS).optional(),
+  /**
+   * Custom agent the user has selected for this turn. `null`/absent
+   * means "use the team default persona". The server resolves the
+   * effective agent at dispatch time via `resolveActiveAgent`:
+   *   1. If the id is set and still points to an active (non-archived)
+   *      agent, that agent's persona handles the turn AND the new id
+   *      is persisted on the session doc.
+   *   2. If the id is missing/stale and the session has a persisted
+   *      `activeAgentId` from a prior turn, that one sticks.
+   *   3. Otherwise the team default handles the turn.
+   * Empty string is treated identically to null — keeps the wire
+   * format forgiving for clients that round-trip JSON.
+   */
+  activeAgentId: z.string().nullable().optional(),
   /**
    * Workspace nodes the user attached to this turn. Fetched server-side
    * and injected into the system prompt as ground-truth context. Capped
@@ -1854,7 +1081,93 @@ function isToolIterationsExceededError(err: unknown): boolean {
   return msg.includes("maximum tool call iterations")
 }
 
+/**
+ * Per-turn hard deadline. The provider call (Gemini / Claude / OpenAI)
+ * can hang indefinitely on a bad day — flaky network, provider
+ * incident, model that gets stuck mid-thought. Without a deadline the
+ * Cloud Function consumes its whole `timeoutSeconds` (typically 540s)
+ * before returning anything to the client, who sees a generic
+ * INTERNAL error long after the user moved on.
+ *
+ * 90s is generous for normal turns (most complete inside ~10s) and
+ * tight enough to fail fast on hung providers. Teams paying for
+ * top-tier models occasionally hit ~60s legitimately during heavy
+ * tool chains, so we leave headroom.
+ *
+ * Note: this cancels OUR awaiting of the response, not the model
+ * call itself. Genkit doesn't yet expose an abort signal we can
+ * plumb into the underlying provider client, so the model keeps
+ * computing in the background until either it finishes (and we
+ * ignore the result) or the Cloud Function instance recycles. The
+ * user-visible behavior is the same — a graceful fallback chunk
+ * instead of a 540s hang.
+ */
+const TURN_DEADLINE_MS = 90_000
+
+/**
+ * Thrown from the timeout race below so the outer catch can distinguish
+ * "deadline elapsed" from genuine model / network errors and convert
+ * it into a user-visible fallback chunk. Identity-based detection
+ * (`instanceof`) is more robust than string matching.
+ */
+class TurnTimeoutError extends Error {
+  constructor() {
+    super(`Turn exceeded deadline of ${TURN_DEADLINE_MS}ms.`)
+    this.name = "TurnTimeoutError"
+  }
+}
+
 async function streamChatToClient(
+  result: ChatStreamResult,
+  sendChunk: (chunk: SendBotMessageStreamPayload) => void,
+  options: { preSentToolResults?: Iterable<string> } = {}
+): Promise<Awaited<ChatStreamResult["response"]>> {
+  // Race the actual stream consumer against a wall-clock deadline.
+  // Whoever finishes first decides the outcome. The timer is always
+  // cleared in `finally` so a fast-finishing turn doesn't leave a
+  // pending callback to fire later (a cheap leak per turn that would
+  // accumulate over a Cloud Functions instance's lifetime).
+  //
+  // On timeout we send the user a graceful fallback chunk and return
+  // a stub response — the model call itself may still be in flight
+  // (no abort signal hook into Genkit yet), but the user has their
+  // answer and the function can return cleanly. The wasted compute
+  // is the price of not hanging the whole Cloud Function.
+  let timer: NodeJS.Timeout | undefined
+  try {
+    return await Promise.race([
+      streamChatToClientInner(result, sendChunk, options),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new TurnTimeoutError()),
+          TURN_DEADLINE_MS
+        )
+      }),
+    ])
+  } catch (err) {
+    if (err instanceof TurnTimeoutError) {
+      const fallback =
+        "The model is taking longer than usual to reply. Please try sending your message again — provider hiccups usually clear within a minute."
+      sendChunk({ chunk: fallback })
+      // Stub return — same pattern as the tool-iterations fallback
+      // below. The client's streaming side already saw the fallback
+      // chunk; the unary echo just mirrors it.
+      return { text: fallback, messages: [] } as unknown as Awaited<
+        ChatStreamResult["response"]
+      >
+    }
+    throw err
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+/**
+ * The actual stream consumer — extracted from `streamChatToClient` so
+ * the outer wrapper can race it against `TURN_DEADLINE_MS` without
+ * tangling the timeout machinery with the for-await loop.
+ */
+async function streamChatToClientInner(
   result: ChatStreamResult,
   sendChunk: (chunk: SendBotMessageStreamPayload) => void,
   options: { preSentToolResults?: Iterable<string> } = {}
@@ -1983,6 +1296,269 @@ async function streamChatToClient(
   return final
 }
 
+/**
+ * Shape returned by `prepareChatTurn`. Carries everything both flows
+ * need to actually drive a chat turn — the configured Genkit `Chat`
+ * object (not yet streamed), the action context the model + tools
+ * will see, and the existing session doc (when one was loaded) so the
+ * resume flow can locate its pending interrupt.
+ */
+interface PreparedChatTurn {
+  /** Genkit `Chat` ready for `sendStream(...)`. Caller invokes streaming. */
+  chat: ReturnType<Awaited<ReturnType<typeof ai.loadSession>>["chat"]>
+  /** Genkit `Session` — `.id` is the canonical session id for this turn. */
+  session: Awaited<ReturnType<typeof ai.loadSession>>
+  /** Per-turn action context; tools read it via their handler's 2nd arg. */
+  actionContext: BotActionContext
+  /** The session doc loaded for this turn (null on fresh-session creation). */
+  existingSession: BotSessionDocSummary | null
+  /** Post-clamp model wire-name used for `chat.model` + persistence. */
+  effectiveModel: BotAgentModel
+}
+
+/**
+ * Shared per-turn setup for both `sendBotMessageFlow` and
+ * `respondToBotInterruptFlow`. Extracted because the two flows
+ * previously duplicated ~140 lines of identical logic — every change
+ * to the chat-construction sequence had to be applied twice and
+ * forgetting one half was a silent bug.
+ *
+ * What this owns:
+ *   - Edit-permission gate (loads session doc, checks role / owner /
+ *     archive flag).
+ *   - Agent config + custom agents load (with the `customAgents`
+ *     feature-flag short-circuit that skips the agents collection
+ *     read when the team has the feature disabled).
+ *   - Active agent resolution (composer override → session-persisted
+ *     → default persona).
+ *   - SessionStore construction with all the per-turn metadata.
+ *   - Session creation OR load.
+ *   - Context block build (parallel node + attachment fetch).
+ *   - Transfer roster + action context + tool selection + system
+ *     prompt assembly.
+ *   - `session.chat(...)` construction with model/config/middleware.
+ *
+ * What the CALLER owns (small enough to keep flow-specific):
+ *   - The actual `chat.sendStream(...)` invocation (message string
+ *     for sends, `{ resume: { respond } }` for interrupt responses).
+ *   - Pre/post-stream chunk emission (e.g. the resume flow emits a
+ *     toolResult chunk before streaming, then pre-marks its ref).
+ *   - Calling `commitTransferIfRequested` after streaming completes.
+ *
+ * The `archivedSessionMessage` parameter is the one user-visible
+ * difference between flows — "before sending new messages" vs.
+ * "before continuing" — so it stays a caller-supplied string.
+ * `requireExistingSession` toggles between the two session-id
+ * regimes (send allows null = create new; interrupt response
+ * requires an existing session).
+ */
+async function prepareChatTurn(opts: {
+  auth: AuthData
+  teamId: string
+  workspaceId: string
+  sessionId: string | null
+  mode: BotChatMode
+  contextNodes: NodeRef[]
+  activeAgentId: string | null | undefined
+  model: BotAgentModel | undefined
+  pinnedNode?: NodeRef
+  requireExistingSession: boolean
+  archivedSessionMessage: string
+}): Promise<PreparedChatTurn> {
+  const {
+    auth,
+    teamId,
+    workspaceId,
+    sessionId,
+    mode,
+    contextNodes,
+    activeAgentId,
+    pinnedNode,
+    requireExistingSession,
+    archivedSessionMessage,
+  } = opts
+
+  const role = await getMembershipRole(teamId, auth.uid)
+
+  // Edit-permission gate. The owner always has edit; for shared sessions,
+  // team admins also have edit. Archived sessions reject regardless of
+  // role — archiving is a soft "read-only" flag.
+  let existingSession: BotSessionDocSummary | null = null
+  if (sessionId) {
+    existingSession = await readSessionDoc(teamId, workspaceId, sessionId)
+    if (!existingSession) {
+      throw new HttpsError("not-found", "Session not found.")
+    }
+    if (existingSession.archived) {
+      throw new HttpsError("failed-precondition", archivedSessionMessage)
+    }
+    const isOwner = existingSession.ownerUid === auth.uid
+    const canEdit =
+      isOwner || (existingSession.visibility === "shared" && isAdminRole(role))
+    if (!canEdit) {
+      throw new HttpsError(
+        "permission-denied",
+        "You don't have permission to send messages in this chat."
+      )
+    }
+  } else if (requireExistingSession) {
+    // Interrupt-response flow can't operate without a session — the
+    // pending interrupt lives inside the SessionData blob.
+    throw new HttpsError("invalid-argument", "sessionId is required.")
+  }
+
+  // Load the team's agent config — drives model, prompt, tools, generation
+  // knobs, and the SessionStore's title/preview lengths. One Firestore
+  // read per turn (negligible against model latency); we intentionally
+  // don't cache because admin settings changes should apply on the next
+  // send, not after a deploy.
+  const agentConfig = await loadTeamAgentConfig(teamId)
+
+  // Resolve active custom agent. Lookup precedence: input override →
+  // session-persisted → null (team default). Team-wide `customAgents`
+  // gate short-circuits the agents collection read when the feature is
+  // disabled — `resolveActiveAgent` then returns null even for sessions
+  // with a pinned `activeAgentId`, so dispatch silently uses default.
+  const customAgents = agentConfig.tools.customAgents
+    ? await listTeamAgents(teamId)
+    : []
+  const activeAgent = resolveActiveAgent({
+    requestedId: activeAgentId,
+    sessionPersistedId: existingSession?.activeAgentId ?? null,
+    availableAgents: customAgents,
+  })
+
+  // What gets persisted on the doc this turn. Three cases:
+  //   - undefined: client didn't send the field → leave the doc's
+  //     prior value untouched (store skips the write). Critical for
+  //     the "stale activeAgentId pointing at an archived agent" case:
+  //     we silently dispatch the default persona this turn but keep
+  //     the id on the doc so a future restore re-binds.
+  //   - null: client explicitly cleared the agent → write null.
+  //   - real id: write the resolved agent's id (or null when the id
+  //     failed the active-agent lookup, e.g. archived between reads).
+  const persistedActiveAgentId: string | null | undefined =
+    activeAgentId === undefined
+      ? undefined
+      : activeAgent
+        ? activeAgent.id
+        : normalizeActiveAgentIdForStorage(activeAgentId)
+
+  // Per-turn model: respect the client's pick when still allowed under
+  // current toggles; otherwise fall back to the team's configured
+  // default. The *effective* (post-clamp) value flows into both
+  // `session.chat({ model })` and the SessionStore so the dispatched
+  // model and the persisted `lastModel` field can't diverge.
+  const effectiveModel = resolveEffectiveModel(opts.model, agentConfig)
+
+  // Pinned-node key only flows in when creating a new session — the
+  // store writes it once on `isNew` and never again, so dropping it on
+  // resumed sessions keeps the invariant "pinnedNodeKey → exactly one
+  // new session" crisp.
+  const newSessionPinnedNodeKey =
+    !sessionId && pinnedNode
+      ? pinnedNodeKey(auth.uid, pinnedNode.scope, pinnedNode.nodeId)
+      : undefined
+
+  const store = new FirestoreBotSessionStore({
+    teamId,
+    workspaceId,
+    ownerUid: auth.uid,
+    titleMaxLength: agentConfig.titleMaxLength,
+    previewMaxLength: agentConfig.previewMaxLength,
+    pinnedNodeKey: newSessionPinnedNodeKey,
+    contextNodes,
+    turnMode: mode,
+    turnModel: effectiveModel,
+    senderUid: auth.uid,
+    turnActiveAgentId: persistedActiveAgentId,
+  })
+
+  const session = sessionId
+    ? await ai.loadSession(sessionId, { store })
+    : ai.createSession({ store })
+
+  // Resolve attached workspace nodes into a context block. Missing /
+  // archived nodes are silently skipped so a stale chip doesn't fail
+  // the turn. Capped upstream at `CONTEXT_NODE_MAX = 10`.
+  // `loadAndBuildContextBlock` parallelizes the per-node Firestore +
+  // Storage fetches.
+  const contextBlock = await loadAndBuildContextBlock(
+    teamId,
+    workspaceId,
+    contextNodes
+  )
+
+  // Transfer roster — other agents the active one can hand off to.
+  // When a custom agent is active we include the team default
+  // (`id: ""`) so the model has a way back to the generic assistant.
+  // When no agent is active, only custom agents are eligible targets.
+  const transferRoster = buildTransferRoster(activeAgent, customAgents)
+
+  // Action context fed into `chat({ context })`. `availableTransferAgentIds`
+  // is the runtime allowlist enforced by `transferToAgent`'s handler;
+  // `requestedTransferAgentId` starts undefined and the handler writes
+  // it on a successful transfer call.
+  const actionContext: BotActionContext = {
+    auth: { uid: auth.uid },
+    mode,
+    teamId,
+    workspaceId,
+    googleProviderEnabled:
+      agentConfig.providers.google && isAiModelProviderConfigured("google"),
+    availableTransferAgentIds:
+      transferRoster.length > 0 ? transferRoster.map((r) => r.id) : undefined,
+  }
+
+  // Tool catalog — `manual` mode strips action tools; per-team toggles
+  // strip individual tools; the active agent layers ON TOP (a tool
+  // fires only when both team AND agent allow it). `transferToAgent`
+  // joins the catalog only when at least one other agent is reachable.
+  const chatTools = pickChatTools(
+    agentConfig,
+    mode,
+    activeAgent,
+    transferRoster.length
+  )
+
+  // System prompt is mode-aware, context-augmented, AND agent-aware.
+  // When a custom agent is active, its `systemPromptBase + suffix`
+  // REPLACES (not appends to) the team's default — keeps each persona
+  // auditable end-to-end. When transfer targets exist, a directive
+  // enumerating them is appended so the model knows which `agentId`
+  // strings `transferToAgent` will accept.
+  const baseSystem = buildAgentSystemPrompt({
+    agent: activeAgent,
+    teamBaseSystem: agentConfig.systemPromptBase,
+    teamModeSuffix: agentConfig.promptSuffixes[mode],
+    mode,
+    otherAgents: transferRoster,
+  })
+  const systemPrompt = contextBlock
+    ? `${baseSystem}\n\n${contextBlock}`
+    : baseSystem
+
+  const chat = session.chat({
+    model: resolveModel(effectiveModel),
+    system: systemPrompt,
+    tools: chatTools,
+    context: actionContext,
+    config: {
+      temperature: agentConfig.temperature,
+      topP: agentConfig.topP,
+      topK: agentConfig.topK,
+      maxOutputTokens: agentConfig.maxOutputTokens,
+    },
+    // Middleware stack applied to every turn: logging captures token
+    // usage; the budget gate trips before a runaway context window
+    // reaches the provider; the redactor scrubs PII out of user parts
+    // only (tool outputs and system prompt pass through unchanged).
+    use: aiMiddlewares(),
+  })
+
+  return { chat, session, actionContext, existingSession, effectiveModel }
+}
+
 const sendBotMessageFlow = ai.defineFlow(
   {
     name: "sendBotMessage",
@@ -2002,147 +1578,19 @@ const sendBotMessageFlow = ai.defineFlow(
       throw new HttpsError("invalid-argument", "message cannot be empty.")
     }
 
-    const { teamId, workspaceId, sessionId, mode } = input
-    const role = await getMembershipRole(teamId, auth.uid)
-
-    // For existing sessions, enforce edit permission. The owner always has
-    // edit; for shared sessions, team admins also have edit. Archived
-    // sessions reject sends regardless of role — archiving is a soft
-    // "read-only" flag the user (or an admin) sets. New sessions (no
-    // sessionId yet) default to private and the caller is the owner-to-be.
-    if (sessionId) {
-      const existing = await readSessionDoc(teamId, workspaceId, sessionId)
-      if (!existing) {
-        throw new HttpsError("not-found", "Session not found.")
-      }
-      if (existing.archived) {
-        throw new HttpsError(
-          "failed-precondition",
-          "This chat is archived. Restore it before sending new messages."
-        )
-      }
-      const isOwner = existing.ownerUid === auth.uid
-      const canEdit =
-        isOwner || (existing.visibility === "shared" && isAdminRole(role))
-      if (!canEdit) {
-        throw new HttpsError(
-          "permission-denied",
-          "You don't have permission to send messages in this chat."
-        )
-      }
-    }
-
-    // Load the team's agent config — drives model, prompt, tools,
-    // generation knobs, and the SessionStore's title/preview lengths.
-    // One Firestore read per turn (negligible against model latency); we
-    // intentionally don't cache because admins changing settings should
-    // see their changes apply on the next send, not after a deploy.
-    const agentConfig = await loadTeamAgentConfig(teamId)
-
-    // Resolve the effective session id. Resumed chats reuse their
-    // existing id; fresh sends create a new session. A `pinnedNode`
-    // on a fresh send creates ANOTHER pinned chat for the same
-    // (user, node) pair — multiple pins per node are intentional so
-    // a "new chat" button in the node inspector can spin up a fresh
-    // conversation while preserving the prior one in history.
-    const effectiveSessionId: string | null = sessionId ?? null
-
-    // The pinned-node key flows into the store only when we're about
-    // to create a brand-new session. The store writes it when `isNew`
-    // and never again — dropping it on resumed sessions keeps the
-    // invariant "pinnedNodeKey → exactly one new session" crisp.
-    const newSessionPinnedNodeKey =
-      !effectiveSessionId && input.pinnedNode
-        ? pinnedNodeKey(
-            auth.uid,
-            input.pinnedNode.scope,
-            input.pinnedNode.nodeId
-          )
-        : undefined
-
-    // Per-turn model: respect the client's pick when it's still allowed
-    // under the team's current toggles; otherwise fall back to the
-    // team's configured default. The *effective* value (post-clamp)
-    // flows into both `session.chat({ model })` and the SessionStore so
-    // the dispatched model and the persisted `lastModel` field can't
-    // diverge — important for the client's "rehydrate picker on
-    // session re-open" behavior.
-    const effectiveModel = resolveEffectiveModel(input.model, agentConfig)
-
-    const store = new FirestoreBotSessionStore(
-      teamId,
-      workspaceId,
-      auth.uid,
-      agentConfig.titleMaxLength,
-      agentConfig.previewMaxLength,
-      newSessionPinnedNodeKey,
-      input.contextNodes,
-      mode,
-      effectiveModel,
-      auth.uid
-    )
-
-    const session = effectiveSessionId
-      ? await ai.loadSession(effectiveSessionId, { store })
-      : ai.createSession({ store })
-
-    // Resolve attached workspace nodes into a context block for the
-    // system prompt. Missing/archived nodes are silently skipped so a
-    // stale chip in the client UI doesn't surface as a hard error mid-
-    // conversation. With `CONTEXT_NODE_MAX = 10` this is bounded.
-    const contextEntries = await loadContextEntries(
-      teamId,
-      workspaceId,
-      input.contextNodes
-    )
-    const contextBlock = buildContextPromptBlock(contextEntries)
-
-    // Build the action context for this turn. `auth` mirrors the existing
-    // verified Firebase identity; `mode` is the per-turn capability gate
-    // chosen in the composer dropdown; `teamId`/`workspaceId` scope any
-    // workspace-aware tool (e.g. `searchWorkspaceNodes`) to the calling
-    // user's workspace — the model controls only the query, not the
-    // collection. Tools get the full object via their second handler arg.
-    const actionContext: BotActionContext = {
-      auth: { uid: auth.uid },
-      mode,
-      teamId,
-      workspaceId,
-      googleProviderEnabled:
-        agentConfig.providers.google && isAiModelProviderConfigured("google"),
-    }
-
-    // `manual` strips action tools so even a jailbroken prompt can't get
-    // the model to invoke side-effectful tools — the model literally has
-    // no actions registered for the call. Interrupt tools (just clarifying
-    // questions) stay available because they're conversational, not
-    // actions. Per-workspace tool toggles further strip individual tools.
-    const chatTools = pickChatTools(agentConfig, mode)
-
-    // System prompt is mode-aware AND context-augmented. We set it on
-    // every turn (including resumed sessions) so a user who flips modes
-    // or removes attached nodes mid-conversation immediately gets the
-    // new behavior. Genkit replaces the system segment when one is
-    // provided to chat() — earlier turns aren't rewritten on disk, but
-    // the active turn picks it up. Model + gen config are also
-    // workspace-scoped overrides; admins can swap models without
-    // touching the source.
-    const baseSystem = buildSystemPromptFromConfig(agentConfig, mode)
-    const systemPrompt = contextBlock
-      ? `${baseSystem}\n\n${contextBlock}`
-      : baseSystem
-
-    const chat = session.chat({
-      model: resolveModel(effectiveModel),
-      system: systemPrompt,
-      tools: chatTools,
-      context: actionContext,
-      config: {
-        temperature: agentConfig.temperature,
-        topP: agentConfig.topP,
-        topK: agentConfig.topK,
-        maxOutputTokens: agentConfig.maxOutputTokens,
-      },
+    const { chat, session, actionContext } = await prepareChatTurn({
+      auth,
+      teamId: input.teamId,
+      workspaceId: input.workspaceId,
+      sessionId: input.sessionId ?? null,
+      mode: input.mode,
+      contextNodes: input.contextNodes,
+      activeAgentId: input.activeAgentId,
+      model: input.model,
+      pinnedNode: input.pinnedNode,
+      requireExistingSession: false,
+      archivedSessionMessage:
+        "This chat is archived. Restore it before sending new messages.",
     })
 
     // Emit the session id before we touch the model. For brand-new sessions
@@ -2153,6 +1601,19 @@ const sendBotMessageFlow = ai.defineFlow(
     const final = await streamChatToClient(
       chat.sendStream(message) as ChatStreamResult,
       sendChunk
+    )
+
+    // Post-turn: commit any cross-agent transfer the model requested
+    // via `transferToAgent`. The in-turn `store.save()` already wrote
+    // the pre-turn agent id; this follow-up merge updates the doc to
+    // the new owner so the next user message routes correctly. Skipped
+    // on partial turns (errors above this point throw before reaching
+    // here, leaving the doc on the pre-turn agent — the safer fallback).
+    await commitTransferIfRequested(
+      input.teamId,
+      input.workspaceId,
+      session.id,
+      actionContext
     )
 
     return {
@@ -2234,6 +1695,14 @@ const RespondToBotInterruptInput = z.object({
    * returned from a clarifying question.
    */
   contextNodes: z.array(NodeRefSchema).max(CONTEXT_NODE_MAX).default([]),
+  /**
+   * Carries the composer's currently-selected agent through the resume
+   * path. When omitted the dispatcher falls back to the session's
+   * persisted `activeAgentId` (the usual case — interrupts almost
+   * always resolve under the same persona that asked the question).
+   * Same shape + semantics as `SendBotMessageInput.activeAgentId`.
+   */
+  activeAgentId: z.string().nullable().optional(),
 })
 
 const RespondToBotInterruptOutput = z.object({
@@ -2309,58 +1778,28 @@ const respondToBotInterruptFlow = ai.defineFlow(
       throw new HttpsError("unauthenticated", "Sign-in required.")
     }
 
-    const { teamId, workspaceId, sessionId, ref, name, response, mode } = input
-    const role = await getMembershipRole(teamId, auth.uid)
+    const { ref, name, response } = input
 
-    // Edit-permission gate — same shape as `sendBotMessage`. A non-owner
-    // shouldn't be able to push the chat forward, only the owner / shared
-    // admins. Archived sessions reject the resume entirely.
-    const existing = await readSessionDoc(teamId, workspaceId, sessionId)
-    if (!existing) {
-      throw new HttpsError("not-found", "Session not found.")
-    }
-    if (existing.archived) {
-      throw new HttpsError(
-        "failed-precondition",
-        "This chat is archived. Restore it before continuing."
-      )
-    }
-    const isOwner = existing.ownerUid === auth.uid
-    const canEdit =
-      isOwner || (existing.visibility === "shared" && isAdminRole(role))
-    if (!canEdit) {
-      throw new HttpsError(
-        "permission-denied",
-        "You don't have permission to send messages in this chat."
-      )
-    }
+    const { chat, session, actionContext, existingSession } =
+      await prepareChatTurn({
+        auth,
+        teamId: input.teamId,
+        workspaceId: input.workspaceId,
+        sessionId: input.sessionId,
+        mode: input.mode,
+        contextNodes: input.contextNodes,
+        activeAgentId: input.activeAgentId,
+        model: input.model,
+        // No `pinnedNode` — interrupts always run on an existing session.
+        requireExistingSession: true,
+        archivedSessionMessage:
+          "This chat is archived. Restore it before continuing.",
+      })
 
-    const agentConfig = await loadTeamAgentConfig(teamId)
-    // Same allowlist clamp as `sendBotMessageFlow` — the user can flip
-    // the model picker mid-question and have their answer-turn run on
-    // the new model.
-    const effectiveModel = resolveEffectiveModel(input.model, agentConfig)
-    const store = new FirestoreBotSessionStore(
-      teamId,
-      workspaceId,
-      auth.uid,
-      agentConfig.titleMaxLength,
-      agentConfig.previewMaxLength,
-      // No pinnedNodeKey — interrupts always run on an existing
-      // session, and the pin's index is set on creation only.
-      // contextNodes flow through so the persisted chip list reflects
-      // what the user sees in the composer right now.
-      undefined,
-      input.contextNodes,
-      mode,
-      effectiveModel,
-      // Interrupt response doesn't append a new user-role message
-      // (it resolves a pending tool inside the same agent turn), so
-      // the tagging loop in save() will no-op. Pass `auth.uid` anyway
-      // for symmetry — costs nothing and keeps the call sites uniform.
-      auth.uid
-    )
-    const session = await ai.loadSession(sessionId, { store })
+    // `requireExistingSession: true` guarantees `existingSession` is
+    // non-null below — the helper would have thrown otherwise. The
+    // `existing.data` blob is where pending interrupts live.
+    const existing = existingSession!
 
     // Find the interrupt part the user is responding to. We prefer
     // `ref` (Genkit's stable per-call id) and fall back to "most recent
@@ -2414,45 +1853,6 @@ const respondToBotInterruptFlow = ai.defineFlow(
       )
     }
 
-    const actionContext: BotActionContext = {
-      auth: { uid: auth.uid },
-      mode,
-      teamId,
-      workspaceId,
-      googleProviderEnabled:
-        agentConfig.providers.google && isAiModelProviderConfigured("google"),
-    }
-    const chatTools = pickChatTools(agentConfig, mode)
-
-    // Carry node context through the resume so the model still sees
-    // attached files when it picks up after the interrupt.
-    const contextEntries = await loadContextEntries(
-      teamId,
-      workspaceId,
-      input.contextNodes
-    )
-    const contextBlock = buildContextPromptBlock(contextEntries)
-    const baseSystem = buildSystemPromptFromConfig(agentConfig, mode)
-    const systemPrompt = contextBlock
-      ? `${baseSystem}\n\n${contextBlock}`
-      : baseSystem
-
-    // Resume: no new prompt, just the resolved interrupt fed back in.
-    // Genkit appends the toolResponse to the message history and lets
-    // the model continue.
-    const chat = session.chat({
-      model: resolveModel(effectiveModel),
-      system: systemPrompt,
-      tools: chatTools,
-      context: actionContext,
-      config: {
-        temperature: agentConfig.temperature,
-        topP: agentConfig.topP,
-        topK: agentConfig.topK,
-        maxOutputTokens: agentConfig.maxOutputTokens,
-      },
-    })
-
     sendChunk({ sessionId: session.id })
 
     // First chunk to the client: flip the just-answered interrupt's
@@ -2484,6 +1884,16 @@ const respondToBotInterruptFlow = ai.defineFlow(
       { preSentToolResults: preSent }
     )
 
+    // Post-turn cross-agent transfer commit, mirroring the same step
+    // in `sendBotMessageFlow`. Skipped silently when the model didn't
+    // call `transferToAgent`.
+    await commitTransferIfRequested(
+      input.teamId,
+      input.workspaceId,
+      session.id,
+      actionContext
+    )
+
     return {
       sessionId: session.id,
       reply: final.text,
@@ -2502,521 +1912,9 @@ export const respondToBotInterrupt = onCallGenkit(
 )
 
 // ===========================================================================
-// Read & metadata callables (loadBotSession, visibility, rename, archive,
-// delete) — plain `onCall`, gated by `requireVerifiedAuth` + role checks.
+// Session metadata callables (load, find-by-pinned-node, visibility,
+// rename, archive, delete) live in `./botSessionCrud.js`. They share
+// auth helpers + `readSessionDoc` + `pinnedNodeKey` with this file —
+// kept there because they're a clean "session-doc-CRUD" surface separate
+// from the chat-flow orchestration in this file.
 // ===========================================================================
-
-interface LoadBotSessionRequest {
-  teamId: string
-  workspaceId: string
-  sessionId: string
-}
-
-interface LoadBotSessionResponse {
-  sessionId: string
-  /** Includes `segments` for agent messages with tool calls. */
-  messages: ChatMessage[]
-}
-
-/**
- * Resume an existing session: fetches the persisted `SessionData` blob and
- * returns its main-thread messages so the client can render the prior
- * conversation. Allowed when the caller is the owner OR the session's
- * visibility is "shared" and the caller is a team member.
- */
-export const loadBotSession = onCall<LoadBotSessionRequest>(
-  {
-    ...CALLABLE_OPTS,
-    enforceAppCheck: true,
-  },
-  async (request): Promise<LoadBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-
-    const { teamId, workspaceId, sessionId } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
-
-    await getMembershipRole(teamId, auth.uid)
-
-    const existing = await readSessionDoc(teamId, workspaceId, sessionId)
-    if (!existing) {
-      throw new HttpsError("not-found", "Session not found.")
-    }
-
-    const isOwner = existing.ownerUid === auth.uid
-    const isShared = existing.visibility === "shared"
-    if (!isOwner && !isShared) {
-      throw new HttpsError(
-        "permission-denied",
-        "You don't have access to this chat."
-      )
-    }
-
-    const messages = extractMessagesFromSessionData(existing.data)
-    return { sessionId, messages }
-  }
-)
-
-// ===========================================================================
-// findBotSessionByPinnedNode — resolve the caller's chat that's pinned to
-// a specific workspace node, if any.
-// ===========================================================================
-//
-// The NodeInspectorSidebar's Bot tab calls this on open so each node has a
-// stable, resumable chat per user. We key on `pinnedNodeKey` (a single
-// composite string of `${ownerUid}:${scope}:${nodeId}`) so the query is a
-// single equality clause — no composite index needed. Returns null when no
-// session exists yet; the next `sendBotMessage` will create one with the
-// matching `pinnedNode`.
-
-interface FindBotSessionByPinnedNodeRequest {
-  teamId: string
-  workspaceId: string
-  scope: "code" | "write"
-  nodeId: string
-}
-
-interface FindBotSessionByPinnedNodeResponse {
-  sessionId: string | null
-}
-
-export const findBotSessionByPinnedNode =
-  onCall<FindBotSessionByPinnedNodeRequest>(
-    {
-      ...CALLABLE_OPTS,
-      enforceAppCheck: true,
-    },
-    async (request): Promise<FindBotSessionByPinnedNodeResponse> => {
-      const auth = requireVerifiedAuth(request.auth)
-      const { teamId, workspaceId, scope, nodeId } = request.data ?? {}
-
-      if (typeof teamId !== "string" || !teamId) {
-        throw new HttpsError("invalid-argument", "teamId is required.")
-      }
-      if (typeof workspaceId !== "string" || !workspaceId) {
-        throw new HttpsError("invalid-argument", "workspaceId is required.")
-      }
-      if (scope !== "code" && scope !== "write") {
-        throw new HttpsError(
-          "invalid-argument",
-          'scope must be "code" or "write".'
-        )
-      }
-      if (typeof nodeId !== "string" || !nodeId) {
-        throw new HttpsError("invalid-argument", "nodeId is required.")
-      }
-
-      // Membership gate — non-members shouldn't even know whether the
-      // session exists. We don't widen access for shared sessions here:
-      // the Bot tab is a per-user "ask about this node" view; collab
-      // chats live on the bot page's history sidebar.
-      await getMembershipRole(teamId, auth.uid)
-
-      // Multiple pinned chats can exist for the same (user, node) pair
-      // — each "new chat" click in the inspector creates another. We
-      // resume the most recently active one by default; the history
-      // list in the inspector shows the rest.
-      const snap = await db
-        .collection(`teams/${teamId}/workspaces/${workspaceId}/botSessions`)
-        .where("pinnedNodeKey", "==", pinnedNodeKey(auth.uid, scope, nodeId))
-        .orderBy("updatedAt", "desc")
-        .limit(1)
-        .get()
-
-      if (snap.empty) return { sessionId: null }
-      return { sessionId: snap.docs[0].id }
-    }
-  )
-
-interface UpdateBotSessionVisibilityRequest {
-  teamId: string
-  workspaceId: string
-  sessionId: string
-  visibility: SessionVisibility
-}
-
-interface UpdateBotSessionVisibilityResponse {
-  sessionId: string
-  visibility: SessionVisibility
-}
-
-/**
- * Change a session's visibility. Only the session owner or a team admin
- * can change it. The "public" mode is rejected here — its read path is
- * not yet implemented and we don't want orphaned-public sessions accruing.
- */
-export const updateBotSessionVisibility =
-  onCall<UpdateBotSessionVisibilityRequest>(
-    {
-      ...CALLABLE_OPTS,
-      enforceAppCheck: true,
-    },
-    async (request): Promise<UpdateBotSessionVisibilityResponse> => {
-      const auth = requireVerifiedAuth(request.auth)
-
-      const { teamId, workspaceId, sessionId, visibility } = request.data ?? {}
-
-      if (typeof teamId !== "string" || !teamId) {
-        throw new HttpsError("invalid-argument", "teamId is required.")
-      }
-      if (typeof workspaceId !== "string" || !workspaceId) {
-        throw new HttpsError("invalid-argument", "workspaceId is required.")
-      }
-      if (typeof sessionId !== "string" || !sessionId) {
-        throw new HttpsError("invalid-argument", "sessionId is required.")
-      }
-      if (visibility !== "private" && visibility !== "shared") {
-        throw new HttpsError(
-          "invalid-argument",
-          'visibility must be "private" or "shared".'
-        )
-      }
-
-      const role = await getMembershipRole(teamId, auth.uid)
-      const existing = await readSessionDoc(teamId, workspaceId, sessionId)
-      if (!existing) {
-        throw new HttpsError("not-found", "Session not found.")
-      }
-
-      const isOwner = existing.ownerUid === auth.uid
-      const canChange = isOwner || isAdminRole(role)
-      if (!canChange) {
-        throw new HttpsError(
-          "permission-denied",
-          "Only the owner or a team admin can change visibility."
-        )
-      }
-
-      await db
-        .doc(
-          `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`
-        )
-        .set(
-          {
-            visibility,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        )
-
-      return { sessionId, visibility }
-    }
-  )
-
-// ===========================================================================
-// CRUD: rename, archive, delete
-// ===========================================================================
-
-const TITLE_LIMIT = 120
-
-interface SessionMutationBase {
-  teamId: string
-  workspaceId: string
-  sessionId: string
-}
-
-/** Owner OR team admin can mutate (rename / archive / delete). */
-async function assertCanMutate(
-  teamId: string,
-  workspaceId: string,
-  sessionId: string,
-  uid: string
-): Promise<void> {
-  const role = await getMembershipRole(teamId, uid)
-  const existing = await readSessionDoc(teamId, workspaceId, sessionId)
-  if (!existing) {
-    throw new HttpsError("not-found", "Session not found.")
-  }
-  const isOwner = existing.ownerUid === uid
-  if (!isOwner && !isAdminRole(role)) {
-    throw new HttpsError(
-      "permission-denied",
-      "Only the owner or a team admin can modify this chat."
-    )
-  }
-}
-
-interface RenameBotSessionRequest extends SessionMutationBase {
-  title: string
-}
-interface RenameBotSessionResponse {
-  sessionId: string
-  title: string
-}
-
-export const renameBotSession = onCall<RenameBotSessionRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
-  async (request): Promise<RenameBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId, workspaceId, sessionId, title } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
-    if (typeof title !== "string" || !title.trim()) {
-      throw new HttpsError("invalid-argument", "title is required.")
-    }
-    const trimmed = title.trim().slice(0, TITLE_LIMIT)
-
-    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
-
-    await db
-      .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
-      .set(
-        {
-          title: trimmed,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      )
-
-    return { sessionId, title: trimmed }
-  }
-)
-
-interface ArchiveBotSessionRequest extends SessionMutationBase {
-  archived: boolean
-}
-interface ArchiveBotSessionResponse {
-  sessionId: string
-  archived: boolean
-}
-
-export const archiveBotSession = onCall<ArchiveBotSessionRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
-  async (request): Promise<ArchiveBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId, workspaceId, sessionId, archived } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
-    if (typeof archived !== "boolean") {
-      throw new HttpsError("invalid-argument", "archived must be a boolean.")
-    }
-
-    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
-
-    await db
-      .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
-      .set(
-        {
-          archivedAt: archived
-            ? admin.firestore.FieldValue.serverTimestamp()
-            : null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      )
-
-    return { sessionId, archived }
-  }
-)
-
-type DeleteBotSessionRequest = SessionMutationBase
-interface DeleteBotSessionResponse {
-  sessionId: string
-  deleted: true
-}
-
-export const deleteBotSession = onCall<DeleteBotSessionRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
-  async (request): Promise<DeleteBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId, workspaceId, sessionId } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
-
-    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
-
-    // Single document; no subcollections to traverse.
-    await db
-      .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
-      .delete()
-
-    return { sessionId, deleted: true }
-  }
-)
-
-// ===========================================================================
-// Team agent config — read & update callables.
-// ===========================================================================
-//
-// Read is open to any team member (the config drives chat behavior they
-// experience). Write is restricted to owners + admins, so a regular
-// member can't change the model or strip safety-relevant prompt text.
-//
-// Both callables return the FULL effective config — partially-set docs
-// get filled with defaults server-side via `applyAgentConfigOverrides`,
-// so the client never has to worry about which fields are present.
-
-interface GetTeamAgentConfigRequest {
-  teamId: string
-}
-
-interface GetTeamAgentConfigResponse {
-  config: BotAgentConfig
-  /** True when the team has an explicit doc (vs relying on defaults). */
-  hasOverrides: boolean
-}
-
-export const getTeamAgentConfig = onCall<GetTeamAgentConfigRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
-  async (request): Promise<GetTeamAgentConfigResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-
-    // Membership gate — non-members shouldn't even know whether the
-    // doc exists. `getMembershipRole` throws if not a member.
-    await getMembershipRole(teamId, auth.uid)
-
-    const snap = await db.doc(agentConfigDocPath(teamId)).get()
-    const config = applyAgentConfigOverrides(snap.data())
-
-    return { config, hasOverrides: snap.exists }
-  }
-)
-
-interface UpdateTeamAgentConfigRequest {
-  teamId: string
-  /** Partial — only sent fields are updated, the rest fall through to defaults. */
-  updates: BotAgentConfigUpdate
-}
-
-interface UpdateTeamAgentConfigResponse {
-  config: BotAgentConfig
-}
-
-export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
-  {
-    ...CALLABLE_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
-    enforceAppCheck: true,
-  },
-  async (request): Promise<UpdateTeamAgentConfigResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId, updates } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-
-    // Owner/admin gate — mirrors the existing `teams/{teamId}/settings`
-    // read rule (admin-only) and the broader convention that team-level
-    // settings are managed by team admins.
-    const role = await getMembershipRole(teamId, auth.uid)
-    if (!isAdminRole(role)) {
-      throw new HttpsError(
-        "permission-denied",
-        "Only team owners and admins can change agent settings."
-      )
-    }
-
-    // Validate the partial payload. Zod errors flow back to the
-    // client as `invalid-argument` so the form can highlight which
-    // field broke.
-    const parsed = botAgentConfigUpdateSchema.safeParse(updates ?? {})
-    if (!parsed.success) {
-      throw new HttpsError(
-        "invalid-argument",
-        `Invalid agent config: ${parsed.error.message}`
-      )
-    }
-
-    const ref = db.doc(agentConfigDocPath(teamId))
-    const existingSnap = await ref.get()
-    const currentConfig = applyAgentConfigOverrides(existingSnap.data())
-    const nextProviders = {
-      ...currentConfig.providers,
-      ...(parsed.data.providers ?? {}),
-    }
-    const nextModels: BotAgentModelToggles = {
-      ...currentConfig.models,
-      ...(parsed.data.models ?? {}),
-    }
-
-    if (!hasEnabledProvider(nextProviders)) {
-      throw new HttpsError(
-        "invalid-argument",
-        "At least one AI provider must stay enabled."
-      )
-    }
-    if (!hasEnabledModel(nextProviders, nextModels)) {
-      throw new HttpsError(
-        "invalid-argument",
-        "At least one model must stay available."
-      )
-    }
-    assertEnabledProvidersConfigured(nextProviders)
-
-    let nextModel = parsed.data.model ?? currentConfig.model
-    const isNextModelAvailable =
-      nextProviders[BOT_MODEL_PROVIDER_BY_MODEL[nextModel]] &&
-      nextModels[nextModel]
-    if (!isNextModelAvailable) {
-      if (parsed.data.model) {
-        throw new HttpsError(
-          "invalid-argument",
-          "Selected model is unavailable — provider disabled or model toggled off."
-        )
-      }
-      nextModel = firstAvailableModel(nextProviders, nextModels)
-    }
-
-    const updatesToWrite: Record<string, unknown> = { ...parsed.data }
-    if (parsed.data.providers || parsed.data.models) {
-      updatesToWrite.providers = nextProviders
-      updatesToWrite.models = nextModels
-      updatesToWrite.model = nextModel
-    } else if (parsed.data.model) {
-      updatesToWrite.model = nextModel
-    }
-
-    await ref.set(
-      {
-        ...updatesToWrite,
-        teamId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedBy: auth.uid,
-      },
-      { merge: true }
-    )
-
-    // Re-read so the response reflects the fully-merged effective
-    // config (caller's optimistic state can be replaced wholesale).
-    const snap = await ref.get()
-    return { config: applyAgentConfigOverrides(snap.data()) }
-  }
-)

@@ -570,12 +570,14 @@ onBeforeUnmount(() => {
           <div v-if="rootLoading" class="text-muted-foreground p-2 text-xs">
             {{ t("states.loading") }}
           </div>
-          <div
-            v-else-if="rootChildren.length === 0"
-            class="text-muted-foreground p-2 text-xs"
-          >
-            {{ t("fileTree.empty") }}
-          </div>
+          <Empty v-else-if="rootChildren.length === 0" class="p-4">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconFolderPlus />
+              </EmptyMedia>
+              <EmptyTitle>{{ t("fileTree.empty") }}</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
           <div v-if="rootPagination.hasMore" class="p-2">
             <Button
               variant="ghost"

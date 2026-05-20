@@ -26,11 +26,96 @@
  */
 
 import type { UpdateTeamAgentConfigPatch } from "@/composables/useFunctions"
+import {
+  defaultBotModelProviderToggles,
+  defaultBotModelToggles,
+} from "@/helpers/defaults"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useMembershipStore } from "@/stores/membershipStore"
+import type { IBotAgentConfig } from "@/types/domain"
 import { storeToRefs } from "pinia"
 import { computed } from "vue"
 import { toast } from "vue-sonner"
+
+/**
+ * Every top-level `IBotAgentConfig` key *except* `tools`. The Agents
+ * settings tab owns `tools`; the AI settings tab owns everything else.
+ * Centralizing the split here keeps `SettingsAi` and `SettingsAgents`
+ * from drifting when a new field is added — adding it to the AI side
+ * is now a one-touch edit (this list) instead of a three-touch edit
+ * (dirty-comparison subset + save-patch payload + reset fallthrough).
+ *
+ * `satisfies` keeps the array literal narrow (the tuple types each key
+ * exactly) AND enforces the type — any key here that isn't on
+ * `IBotAgentConfig` is a compile error.
+ */
+export const AI_CONFIG_KEYS = [
+  "providers",
+  "models",
+  "model",
+  "temperature",
+  "topP",
+  "topK",
+  "maxOutputTokens",
+  "defaultMode",
+  "systemPromptBase",
+  "promptSuffixes",
+  "titleMaxLength",
+  "previewMaxLength",
+] as const satisfies readonly Exclude<keyof IBotAgentConfig, "tools">[]
+
+export type AiConfigKey = (typeof AI_CONFIG_KEYS)[number]
+
+/**
+ * Pick just the AI subset of a config — used for dirty comparison on
+ * the AI tab (so a `tools` save from the Agents tab doesn't appear
+ * dirty here) AND for the AI tab's save payload (so a save here
+ * doesn't clobber an in-flight tools edit on the Agents tab).
+ *
+ * Returns a *shallow* copy. That's enough for `JSON.stringify` dirty
+ * checks; the nested objects on the AI subset (`providers`, `models`,
+ * `promptSuffixes`) are stable references when nothing changed, and
+ * the watcher in the consumer re-clones via `cloneAgentConfig` when
+ * the upstream config truly mutates.
+ */
+export function pickAiAgentConfig(
+  source: IBotAgentConfig
+): Pick<IBotAgentConfig, AiConfigKey> {
+  const out = {} as Pick<IBotAgentConfig, AiConfigKey>
+  for (const key of AI_CONFIG_KEYS) {
+    ;(out as Record<string, unknown>)[key] = source[key]
+  }
+  return out
+}
+
+/**
+ * Shape-stable clone of an agent config used for the settings drafts.
+ * Two non-trivial bits:
+ *
+ *   1. Layers `defaultBotModelProviderToggles` / `defaultBotModelToggles`
+ *      under the source values so a brand-new provider/model id (the
+ *      catalog has shipped a new entry the team hasn't saved yet) has
+ *      a sane default on the form before any save round-trips.
+ *
+ *   2. Spreads the nested objects (`providers`, `models`,
+ *      `promptSuffixes`, `tools`) so mutations to the draft don't
+ *      leak back into the upstream store via shared references.
+ */
+export function cloneAgentConfig(source: IBotAgentConfig): IBotAgentConfig {
+  return {
+    ...source,
+    providers: {
+      ...defaultBotModelProviderToggles,
+      ...source.providers,
+    },
+    models: {
+      ...defaultBotModelToggles,
+      ...source.models,
+    },
+    promptSuffixes: { ...source.promptSuffixes },
+    tools: { ...source.tools },
+  }
+}
 
 interface UseAgentConfigI18n {
   permissionRequired: string

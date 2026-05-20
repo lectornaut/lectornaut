@@ -1,0 +1,367 @@
+/**
+ * Built-in chat tools (and the types they depend on).
+ *
+ * Four tools live here:
+ *
+ *   1. `getWeatherTool` — DEMO tool, returns a fixed stub so the model
+ *      surfaces the synthetic nature instead of treating the numbers
+ *      as a real forecast. Kept around to exercise the streaming +
+ *      tool-card UI end-to-end.
+ *
+ *   2. `rollDiceTool` — honest random die roll. Its contract IS
+ *      randomness, so `Math.random()` here isn't fabrication.
+ *
+ *   3. `transferToAgentTool` — cross-agent handoff. Writes the model's
+ *      requested target into the shared action context; bot.ts's
+ *      post-turn step commits it to the session doc.
+ *
+ *   4. `askQuestionTool` — Human-in-the-Loop interrupt. Pauses the
+ *      chat until the user picks an answer; the application then
+ *      resumes via `respondToBotInterrupt`.
+ *
+ * Extracted from `bot.ts` so that file can focus on chat-flow
+ * orchestration. The two types that move with the tools
+ * (`BotChatMode`, `BotActionContext`) live here because they're the
+ * contract tools depend on — keeping them in this module gives an
+ * acyclic import graph: `bot.ts` → `botBuiltinTools.ts`, never the
+ * other way.
+ *
+ * Workspace-aware tools (`searchWorkspaceNodes`, `summarizeNode`)
+ * intentionally stay in their own files (`botRag.ts`,
+ * `botSummarize.ts`) — they carry retrieval / structured-output
+ * machinery that earns a dedicated home.
+ */
+
+import { HttpsError } from "firebase-functions/v2/https"
+import { z } from "genkit/beta"
+
+import { ai } from "./genkitClient.js"
+
+// ===========================================================================
+// Modes + action context — the contract tools share with the chat flow
+// ===========================================================================
+
+export const BOT_CHAT_MODES = ["auto", "agent", "manual"] as const
+export type BotChatMode = (typeof BOT_CHAT_MODES)[number]
+
+/**
+ * Action context shape — what flows into Genkit's `chat({ context })` and
+ * shows up as the second argument of every tool handler. Includes:
+ *
+ *   - `auth`     — verified Firebase identity (already gated at the
+ *                  callable boundary; tools use it for uid-scoped reads).
+ *   - `mode`     — current chat mode, for capability gating inside tools.
+ *   - `teamId` / `workspaceId` — the workspace the chat is bound to. Used
+ *                  by workspace-aware tools like `searchWorkspaceNodes`
+ *                  to scope retrieval (the model can't override these).
+ *   - `googleProviderEnabled` — whether Google-backed tools such as
+ *                  workspace semantic search are allowed for this team.
+ *
+ * Add fields here when introducing context-aware features.
+ */
+export interface BotActionContext {
+  auth?: { uid: string }
+  mode: BotChatMode
+  teamId: string
+  workspaceId: string
+  googleProviderEnabled: boolean
+  /**
+   * Custom-agent ids the model is allowed to transfer the conversation
+   * to via `transferToAgent`. Excludes the currently-active agent (and
+   * the synthetic `_default`, which is represented by the empty
+   * string `""` so the model has a way to ask for the team default
+   * persona). Populated by the dispatcher when at least one OTHER
+   * active agent exists; absent/empty means "no transfer targets" and
+   * `transferToAgent` isn't exposed to the model that turn.
+   */
+  availableTransferAgentIds?: string[]
+  /**
+   * OUTPUT field — written by `transferToAgentTool`'s handler when the
+   * model decides to hand off. The dispatcher reads this after
+   * `streamChatToClient` completes and, if set, persists the new
+   * agent id on the session doc with a follow-up write. Multiple
+   * transfer calls in one turn: last wins (handler overwrites).
+   *
+   * `""` is a deliberate signalling value meaning "transfer back to
+   * the team default persona" — distinguishable from `undefined` (no
+   * transfer requested) so the dispatcher can clear an existing agent
+   * binding instead of leaving it stuck.
+   */
+  requestedTransferAgentId?: string
+}
+
+// ===========================================================================
+// getWeather + rollDice — demo tools (template for real tools)
+// ===========================================================================
+//
+// Each tool's input/output is Zod-validated, which doubles as the schema
+// the model sees: tighter constraints (enums, min/max) get baked into the
+// model's tool catalog and steer it toward valid calls. Handlers run
+// server-side inside the Genkit chat loop — the model receives only the
+// `outputSchema` shape, never the implementation.
+//
+// These two are deliberately demo-grade (mirroring the public Genkit
+// example at https://examples.genkit.dev/tool-calling). They prove out the
+// streaming + UI plumbing end-to-end and serve as the template for real
+// workspace-aware tools (e.g. "search this team's nodes", "open node X").
+
+const WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy", "snowy"] as const
+
+/**
+ * DEMO TOOL — does not call any real weather API. Returns a fixed,
+ * deterministic stub plus a `_demo` flag so the model surfaces the
+ * synthetic nature in its reply rather than presenting fabricated
+ * temperatures as fact.
+ *
+ * The original (pre-honesty) implementation returned `Math.random()`
+ * temperatures and conditions on a tool labelled "Get the current
+ * weather", which the model treated as authoritative — a
+ * misinformation hazard surfaced through an official-looking tool
+ * card. The fix is twofold: (a) tell the model in the description
+ * that this is a stub, and (b) tag the payload so the model has to
+ * narrate the limitation rather than dress it up as a real fact.
+ *
+ * `rollDice` below is a separate case — a die roll's whole contract
+ * IS randomness, so a `Math.random()`-backed implementation is honest
+ * by design and needs no demo tag.
+ */
+export const getWeatherTool = ai.defineTool(
+  {
+    name: "getWeather",
+    description:
+      "DEMO ONLY — returns a placeholder weather reading, not a real " +
+      "forecast. The chat ships this tool to exercise the streaming + " +
+      "tool-card UI; production users should not rely on the numbers. " +
+      "When you call this, explicitly tell the user the value is a demo " +
+      "placeholder rather than a live measurement. Outputs carry a " +
+      "`_demo: true` flag confirming the synthetic nature.",
+    inputSchema: z.object({
+      location: z
+        .string()
+        .min(1)
+        .describe("City or place name, e.g. 'Tokyo' or 'San Francisco'."),
+    }),
+    outputSchema: z.object({
+      temperature: z.number(),
+      condition: z.enum(WEATHER_CONDITIONS),
+      /** Always `true` — marks the payload as demo, not a real reading. */
+      _demo: z.literal(true),
+      /** Always present — short note the model should surface verbatim. */
+      _disclaimer: z.string(),
+      advisory: z.string().optional(),
+    }),
+  },
+  // The second handler arg carries the action context passed via
+  // `chat({ context })`. Reading `context.mode` lets the tool tailor its
+  // output deterministically — the model can't talk it out of this
+  // (whatever the user types, the tool runs the same code path).
+  async (_input, { context }) => {
+    const mode = (context as BotActionContext | undefined)?.mode ?? "auto"
+    // Fixed values — no Math.random(). Identical output across calls so
+    // there's no plausible "model hallucinated" branch to mistake the
+    // demo data for. The numbers themselves are unremarkable on purpose.
+    const temperature = 72
+    const condition: (typeof WEATHER_CONDITIONS)[number] = "sunny"
+    return {
+      temperature,
+      condition,
+      _demo: true as const,
+      _disclaimer:
+        "This is a placeholder reading from the demo `getWeather` tool — " +
+        "not a real weather measurement.",
+      // Agent mode wants thorough output; auto/manual stay terse.
+      advisory:
+        mode === "agent"
+          ? "Pack a layer if heading out — but again, this is demo data."
+          : undefined,
+    }
+  }
+)
+
+export const rollDiceTool = ai.defineTool(
+  {
+    name: "rollDice",
+    description: "Roll a six-sided die. Returns an integer from 1 to 6.",
+    inputSchema: z.object({}),
+    outputSchema: z.number().int().min(1).max(6),
+  },
+  async () => Math.floor(Math.random() * 6) + 1
+)
+
+// ===========================================================================
+// transferToAgent — cross-agent handoff (multi-agent network glue)
+// ===========================================================================
+//
+// Lets a custom agent hand the conversation off to another team agent
+// (or back to the team default). The transfer takes effect on the
+// NEXT user turn — Genkit's native prompt-as-tool pattern would let
+// the new agent reply within the same turn, but that requires a fully
+// connected prompt graph with cyclic refs the beta SDK doesn't cleanly
+// support. Signalling via the shared action context sidesteps the
+// cycle: the dispatcher reads `context.requestedTransferAgentId`
+// after the turn finishes and writes the new id on the session doc.
+//
+// The handler validates against `context.availableTransferAgentIds`
+// so the model can't transfer to an agent that doesn't exist (or to
+// itself). Validation errors throw — Genkit surfaces the message to
+// the model as a tool error, and it can choose a different target or
+// just keep going.
+//
+// `""` as a `agentId` means "team default persona" — separate from
+// `undefined` so the model has a concrete way to ask for the default
+// even when it doesn't know any custom agent's id. The dispatcher
+// translates this to a `null` activeAgentId on the doc.
+
+export const transferToAgentTool = ai.defineTool(
+  {
+    name: "transferToAgent",
+    description:
+      "Hand off the conversation to a different team agent. Call this " +
+      "when the user's request is better suited to another agent " +
+      "available on the team. Use the agent's id from the list given " +
+      "in your system prompt (or the empty string '' to transfer back " +
+      "to the team's default assistant). The handoff takes effect on " +
+      "the user's next message — your reply this turn should briefly " +
+      "explain the transfer so the user understands the persona switch.",
+    inputSchema: z.object({
+      agentId: z
+        .string()
+        .describe(
+          "Id of the agent to transfer to, or '' for the team default. " +
+            "Must be one of the ids listed in the system prompt."
+        ),
+      reason: z
+        .string()
+        .min(1)
+        .describe(
+          "Short explanation of why this transfer helps — surfaced to " +
+            "the user as part of your reply."
+        ),
+    }),
+    outputSchema: z.string(),
+  },
+  async (input, { context }) => {
+    const ctx = context as BotActionContext | undefined
+    const allowed = ctx?.availableTransferAgentIds ?? []
+    if (!allowed.includes(input.agentId)) {
+      // Throw so Genkit surfaces an error part to the model; it can
+      // then pick a valid id from the system prompt or abandon the
+      // transfer. The list is in the error message so the model has
+      // the information it needs to retry without guessing.
+      throw new HttpsError(
+        "invalid-argument",
+        `Unknown transfer target "${input.agentId}". Available ids: ` +
+          (allowed.length === 0
+            ? "(no other agents available)"
+            : allowed
+                .map((id) => (id === "" ? "'' (team default)" : `"${id}"`))
+                .join(", "))
+      )
+    }
+    if (ctx) {
+      // Last-call-wins: a model that makes two transfer calls in one
+      // turn ends up on whichever target the second call named.
+      ctx.requestedTransferAgentId = input.agentId
+    }
+    // Returned string flows back to the model as the tool's output;
+    // the model typically narrates it ("Transferring you to X
+    // because…") so the user sees a smooth handoff in the chat.
+    const label =
+      input.agentId === "" ? "the team's default assistant" : input.agentId
+    return (
+      `Handoff requested to ${label}. The user's next message will be ` +
+      `handled by them. Briefly explain the transfer in your reply.`
+    )
+  }
+)
+
+// ===========================================================================
+// Interrupts — Human-in-the-Loop
+// ===========================================================================
+//
+// `defineInterrupt` is Genkit's HITL primitive: instead of running a
+// handler, calling the tool *pauses* the chat and surfaces the request
+// back to the application. The user supplies the response via
+// `chat.sendStream({ resume: { respond: [askQuestion.respond(part, ans)] } })`,
+// at which point the model's generation continues with the answer
+// folded into context.
+//
+// The interrupt tool's `outputSchema` describes what the *user* sends
+// back (what the model will see as the tool's "result"), not what a
+// handler returns — there is no handler.
+
+/**
+ * Mutable set populated by `defineInterruptTool` on each registration.
+ * Exported as a `ReadonlySet` so consumers can iterate but can't
+ * accidentally mutate it from outside this module.
+ *
+ * Previously this was hardcoded `new Set<string>(["askQuestion"])` and
+ * had to be updated by hand alongside every new `ai.defineInterrupt`
+ * call — a footgun: forgetting to update meant the chat loop wouldn't
+ * recognize the new interrupt and the client would render it as a
+ * spinner forever. The auto-derived set ties registration and lookup
+ * together so the two can't drift.
+ */
+const _interruptToolNames = new Set<string>()
+export const INTERRUPT_TOOL_NAMES: ReadonlySet<string> = _interruptToolNames
+
+/**
+ * Wrapper around `ai.defineInterrupt` that records the tool's name in
+ * `INTERRUPT_TOOL_NAMES` as a side effect of registration. Use this
+ * for every new interrupt tool instead of calling `ai.defineInterrupt`
+ * directly — the chat loop's pending-interrupt detection
+ * (`findPendingInterruptParts` in bot.ts, `INTERRUPT_TOOL_NAMES.has`
+ * checks in the streaming + persistence layer) depends on every
+ * interrupt name being in the set.
+ *
+ * Generics are inferred from `spec.inputSchema` and `spec.outputSchema`
+ * so the returned interrupt action keeps its full typed
+ * `respond(part, value)` signature — a thin wrapper instead of a
+ * typing landmine.
+ */
+function defineInterruptTool<I extends z.ZodTypeAny, O extends z.ZodTypeAny>(
+  spec: Parameters<typeof ai.defineInterrupt<I, O>>[0]
+) {
+  _interruptToolNames.add(spec.name)
+  return ai.defineInterrupt(spec)
+}
+
+const askQuestionInputSchema = z.object({
+  question: z
+    .string()
+    .min(1)
+    .describe("The clarifying question to put to the user."),
+  choices: z
+    .array(z.string().min(1))
+    .min(1)
+    .describe("Concrete options the user can pick. Two to five short answers."),
+  allowOther: z
+    .boolean()
+    .optional()
+    .describe(
+      "When true, the user may type a free-form answer instead of " +
+        "picking one of `choices`."
+    ),
+})
+
+const askQuestionOutputSchema = z.object({
+  answer: z
+    .string()
+    .min(1)
+    .describe(
+      "The user's answer — either one of `choices` or, if `allowOther` " +
+        "was true, a free-form string."
+    ),
+})
+
+export const askQuestionTool = defineInterruptTool({
+  name: "askQuestion",
+  description:
+    "Ask the user a clarifying question with a small set of choices. " +
+    "Use this when you need a decision from the user to proceed and " +
+    "guessing would be worse than asking. The chat pauses until the " +
+    "user picks; you'll see their answer as the tool's output and can " +
+    "continue from there.",
+  inputSchema: askQuestionInputSchema,
+  outputSchema: askQuestionOutputSchema,
+})

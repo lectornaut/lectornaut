@@ -288,6 +288,16 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Team-scoped custom agents (multi-agent network). Read is open to
+      // any team member because every member needs the catalog to render
+      // pickers and sidebar avatars; writes are callable-only and gated
+      // server-side by `isAdminRole` so non-admins can't create, edit, or
+      // archive agents directly even if they bypass the UI.
+      match /agents/{agentId} {
+        allow read: if isTeamMember(teamId);
+        allow write: if false;
+      }
+
       match /memberships/{userId} {
         allow read: if isTeamMember(teamId) || isOwnMembershipDoc();
         // Create is handled by Cloud Functions (invite/accept flow)

@@ -285,13 +285,14 @@ if (!supportsScrollAnchoring) {
 
 <template>
   <OverlayScrollbarsWrapper @scroll-ready="onScrollReady">
-    <div
-      v-if="messages.length === 0 && !isSending"
-      class="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-8 text-center text-sm"
-    >
-      <IconAiFill class="size-8 opacity-60" />
-      <p>{{ t("ai.chatEmpty") }}</p>
-    </div>
+    <Empty v-if="messages.length === 0 && !isSending" class="h-full">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <IconAiFill />
+        </EmptyMedia>
+        <EmptyTitle>{{ t("ai.chatEmpty") }}</EmptyTitle>
+      </EmptyHeader>
+    </Empty>
     <div
       v-else
       ref="contentEl"
@@ -318,7 +319,7 @@ if (!supportsScrollAnchoring) {
             />
             <div
               :class="[
-                'markdown-bubble flex w-max flex-col px-2 py-1 text-sm whitespace-pre-wrap',
+                'markdown-bubble flex w-max flex-col gap-2 p-2 text-sm whitespace-pre-wrap',
                 {
                   'bg-secondary text-secondary-foreground rounded-lg rounded-bl-xs':
                     message.role === 'user',

@@ -1,308 +1,162 @@
 <script lang="ts" setup>
-import { useAgentConfig } from "@/composables/useAgentConfig"
-import { IconRotateCcw, IconSettings } from "@/data/icons"
-import {
-  botAgentBounds,
-  botChatModes,
-  botModelProviders,
-  botModels,
-  defaultBotModelProviderToggles,
-  defaultBotModelToggles,
-  defaultBotAgentConfig,
-} from "@/helpers/defaults"
-import type {
-  IBotAgentConfig,
-  IBotAgentModel,
-  IBotModelProvider,
-} from "@/types/domain"
+import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
+import { useTeamAgents } from "@/composables/useTeamAgents"
+import { IconBot, IconChevronDown, IconCirclePlus } from "@/data/icons"
+import { emitter } from "@/modules/mitt"
+import type { IBotAgentConfig, ITeamAgent } from "@/types/domain"
+
+/**
+ * SettingsAgents — two sibling sections:
+ *
+ *   1. **Built-in tools** — feature flags for the bot's first-party
+ *      tool surface (getWeather, rollDice, askQuestion,
+ *      searchWorkspaceNodes, summarizeNode). Saved as the `tools`
+ *      subset of `agentConfig`.
+ *
+ *   2. **Custom agents** — team-wide feature gate toggle + an inline
+ *      list of the team's agents (active + collapsible Disabled +
+ *      collapsible Archived). Per-agent edit, archive/restore,
+ *      enable/disable, and hard-delete actions sit on each row. A
+ *      "New agent" button opens the (now editor-only)
+ *      `SettingsCustomAgents` dialog in create mode; row edit opens
+ *      the same dialog with that agent loaded.
+ *
+ * High-level AI config (providers, model, generation params, system
+ * prompts, display limits, restore-defaults) lives in the sibling
+ * `SettingsAi` page. Both pages back the same Pinia-backed
+ * `useAgentConfig` store; this page sends ONLY the `tools` field on
+ * save so a parallel edit on the AI tab can't be clobbered. The
+ * dirty-aware watcher preserves in-flight tool edits across saves
+ * triggered by the AI tab.
+ */
 
 const { t } = useI18n()
 
-const cloneConfig = (source: IBotAgentConfig): IBotAgentConfig => ({
-  ...source,
-  providers: {
-    ...defaultBotModelProviderToggles,
-    ...source.providers,
-  },
-  // Per-model toggles: layer `source.models` on top of `defaultBotModelToggles`
-  // so a model the server hasn't seen yet (catalog drift) still has a
-  // sane default on the form before any save round-trips.
-  models: {
-    ...defaultBotModelToggles,
-    ...source.models,
-  },
-  promptSuffixes: { ...source.promptSuffixes },
-  tools: { ...source.tools },
-})
+// ── Tool toggles (built-in tools + customAgents gate) ───────────────────────
 
-// i18n strings handed to the composable as a getter so it can toast
-// without reaching into useI18n itself (the composable stays UI-
-// framework agnostic). Passed as a function (not a snapshot) so locale
-// changes flow into the composable's toasts and `cannotEditReason`
-// tooltip without the form needing to remount.
-const messagesGetter = () => ({
+// i18n strings handed to the composable as a getter so locale changes
+// flow into toasts and `cannotEditReason` tooltip without remounting.
+const configMessagesGetter = () => ({
   permissionRequired: t("settings.agents.permissionRequired"),
   saveSuccess: t("settings.agents.saveSuccess"),
   saveError: t("settings.agents.saveError"),
   loadError: t("settings.agents.loadError"),
 })
 
-const { config, isLoading, isSaving, canEdit, cannotEditReason, save } =
-  useAgentConfig(messagesGetter)
+const { config, isLoading, isSaving, canEdit, save } =
+  useAgentConfig(configMessagesGetter)
 
-// Local draft — what the form binds to. Replaced wholesale whenever
-// `config` flips (after a fetch / successful save) so the form snaps
-// back to the canonical state. Sliders/textareas mutate this draft;
-// nothing escapes to the server until the user clicks Save.
-const draft = ref<IBotAgentConfig>(cloneConfig(config.value))
+const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
 
+/**
+ * Dirty check is scoped to `tools` only — the rest of the draft is a
+ * read-through copy from the shared config, and a save on the AI tab
+ * legitimately changes those fields without meaning this page is
+ * dirty.
+ */
+const isDirty = computed(
+  () => JSON.stringify(draft.value.tools) !== JSON.stringify(config.value.tools)
+)
+
+// Dirty-aware re-clone: snap to the canonical config only when this
+// page has no unsaved changes. Lets an AI-tab save propagate here
+// without clobbering an in-flight tool toggle change.
 watch(
   config,
   (next) => {
-    draft.value = cloneConfig(next)
+    if (!isDirty.value) draft.value = cloneAgentConfig(next)
   },
   { deep: true }
 )
 
-const isDirty = computed(
-  () => JSON.stringify(draft.value) !== JSON.stringify(config.value)
-)
-
-// A model is *enabled* when its per-model toggle is on. Missing keys are
-// treated as `true` so a brand-new model id (catalog ahead of saved doc)
-// starts available without requiring an explicit save.
-const isModelEnabled = (modelId: IBotAgentModel): boolean =>
-  draft.value.models[modelId] !== false
-
-// A model is *available* when both its provider AND its per-model
-// toggle are on — the picker only ever surfaces models matching both.
-const availableModels = computed(() =>
-  botModels.filter(
-    (model) => draft.value.providers[model.provider] && isModelEnabled(model.id)
-  )
-)
-
-// The model/mode `<SelectItem>`s render a rich two-line layout (name +
-// description). Without overriding the `<SelectValue>` slot, reka-ui
-// clones that same multi-line content into the trigger and the field
-// grows two rows tall. These computeds let the trigger render *just*
-// the name (the first line) while the dropdown keeps its richer layout.
-const selectedModel = computed(
-  () => botModels.find((model) => model.id === draft.value.model) ?? null
-)
-const selectedMode = computed(
-  () => botChatModes.find((mode) => mode.id === draft.value.defaultMode) ?? null
-)
-
-// Group the flat model catalog by enabled provider for the picker.
-// Iterating `botModelProviders` first preserves the canonical display
-// order (Google → Anthropic → OpenAI) regardless of how `botModels` is
-// sorted. Per-provider lists also respect the per-model toggles so a
-// fully-disabled provider (zero enabled models) drops out of the picker
-// even when its provider switch is on.
-const modelsByProvider = computed(() =>
-  botModelProviders
-    .map((provider) => ({
-      ...provider,
-      models: draft.value.providers[provider.id]
-        ? botModels.filter(
-            (model) =>
-              model.provider === provider.id && isModelEnabled(model.id)
-          )
-        : [],
-    }))
-    .filter((group) => group.models.length > 0)
-)
-
-const enabledProviderCount = computed(
-  () =>
-    botModelProviders.filter((provider) => draft.value.providers[provider.id])
-      .length
-)
-
-const getProviderModelCount = (providerId: IBotModelProvider) =>
-  botModels.filter((model) => model.provider === providerId).length
-
-// Per-provider catalog used to populate each provider's "Configure
-// models" dropdown. Independent of the provider's switch state so the
-// menu still lists every model — the disabled state of individual
-// checkboxes communicates the constraints instead.
-const getProviderModels = (providerId: IBotModelProvider) =>
-  botModels.filter((model) => model.provider === providerId)
-
-// Count of enabled models within a provider — drives the "X of Y
-// enabled" caption shown under the provider's label.
-const getProviderEnabledModelCount = (providerId: IBotModelProvider) =>
-  getProviderModels(providerId).filter((model) => isModelEnabled(model.id))
-    .length
-
-// Lookup map: model id → its provider id. Used by the per-model guard
-// to answer "is this model *currently* contributing to the available
-// pool?" in O(1) instead of re-scanning `botModels`.
-const modelProviderById = computed<Record<IBotAgentModel, IBotModelProvider>>(
-  () =>
-    botModels.reduce(
-      (acc, model) => {
-        acc[model.id] = model.provider
-        return acc
-      },
-      {} as Record<IBotAgentModel, IBotModelProvider>
-    )
-)
-
-// Count of *available* models — those where BOTH the provider toggle
-// and the per-model toggle are on. Mirrors the server's
-// `hasEnabledModel(providers, models)` check exactly; both guards below
-// gate on this same count so the form can never reach a state the
-// server would reject on save.
-const availableModelCount = computed(() => availableModels.value.length)
-
-// Provider toggle is "last-enabled" when disabling it would break the
-// `at least one (provider on AND model on) pair` invariant — either
-// because it's the only on provider OR because every other on provider
-// has zero on models, so its slice is the only source of available
-// models in the form.
-const isLastEnabledProvider = (providerId: IBotModelProvider): boolean => {
-  if (!draft.value.providers[providerId]) return false
-  if (enabledProviderCount.value <= 1) return true
-  const survivors = botModels.filter(
-    (model) =>
-      model.provider !== providerId &&
-      draft.value.providers[model.provider] &&
-      isModelEnabled(model.id)
-  )
-  return survivors.length === 0
-}
-
-// Per-model guard. Locked when this model is the only thing keeping
-// the available pool non-empty. A model whose provider is currently
-// off doesn't count toward the pool, so unchecking it is always allowed
-// — re-enabling its provider would re-surface other choices anyway.
-const isLastEnabledModel = (modelId: IBotAgentModel): boolean => {
-  if (!isModelEnabled(modelId)) return false
-  const providerId = modelProviderById.value[modelId]
-  if (!providerId || !draft.value.providers[providerId]) return false
-  return availableModelCount.value <= 1
-}
-
-const ensureSelectedModelIsAvailable = () => {
-  if (availableModels.value.some((model) => model.id === draft.value.model)) {
-    return
-  }
-  draft.value.model =
-    availableModels.value[0]?.id ?? defaultBotAgentConfig.model
-}
-
-const setProviderEnabled = (
-  providerId: IBotModelProvider,
-  enabled: boolean
-) => {
-  if (!enabled && isLastEnabledProvider(providerId)) return
-
-  draft.value.providers[providerId] = enabled
-  ensureSelectedModelIsAvailable()
-}
-
-const setModelEnabled = (modelId: IBotAgentModel, enabled: boolean) => {
-  // Disallow unchecking the model if doing so would leave the
-  // available pool (provider on AND model on) empty. The server
-  // enforces the same invariant via `hasEnabledModel`; failing the
-  // toggle on the client avoids a doomed round-trip.
-  if (!enabled && isLastEnabledModel(modelId)) return
-
-  draft.value.models[modelId] = enabled
-  ensureSelectedModelIsAvailable()
-}
-
-// Picks the right tooltip message for a locked provider Switch. The
-// generic "last provider" copy is misleading when the actual reason is
-// "every other provider has its models toggled off"; this surfaces the
-// model-level constraint instead. The active reason is determined by
-// counts, not by *which* provider is hovered — so this is a getter,
-// not a per-provider function.
-const providerDisableReason = computed<string>(() => {
-  if (!canEdit.value) return cannotEditReason.value ?? ""
-  if (enabledProviderCount.value <= 1) {
-    return t("settings.agents.providers.minimumRequired")
-  }
-  return t("settings.agents.providers.modelsMinimum")
-})
-
-watch(
-  () => draft.value.providers,
-  () => {
-    ensureSelectedModelIsAvailable()
-  },
-  { deep: true }
-)
-
-watch(
-  () => draft.value.models,
-  () => {
-    ensureSelectedModelIsAvailable()
-  },
-  { deep: true }
-)
-
-// Slider bindings — reka-ui's Slider expects an array model even for
-// single-thumb usage. These computed wrappers translate between the
-// scalar field on the draft and the [n] array the slider needs.
-const sliderModel = (key: keyof IBotAgentConfig) =>
-  computed<number[]>({
-    get: () => [draft.value[key] as number],
-    set: (value) => {
-      ;(draft.value as Record<string, unknown>)[key] = value[0]
-    },
-  })
-
-const temperatureModel = sliderModel("temperature")
-const topPModel = sliderModel("topP")
-const topKModel = sliderModel("topK")
-const maxOutputTokensModel = sliderModel("maxOutputTokens")
-const titleMaxLengthModel = sliderModel("titleMaxLength")
-const previewMaxLengthModel = sliderModel("previewMaxLength")
-
+/**
+ * Save the tools subset only — providers, model, prompts, etc. live
+ * in `SettingsAi` and are deliberately omitted here so a save on
+ * this page can't clobber an in-flight edit on the AI tab.
+ */
 const handleSave = async () => {
-  // Server accepts a partial patch but we just send everything from
-  // the draft — simpler, the server merges idempotently. The full
-  // payload is small (<2 KB) so there's no real cost.
   await save({
-    model: draft.value.model,
-    providers: { ...draft.value.providers },
-    models: { ...draft.value.models },
-    temperature: draft.value.temperature,
-    topP: draft.value.topP,
-    topK: draft.value.topK,
-    maxOutputTokens: draft.value.maxOutputTokens,
-    defaultMode: draft.value.defaultMode,
-    systemPromptBase: draft.value.systemPromptBase,
-    promptSuffixes: { ...draft.value.promptSuffixes },
     tools: { ...draft.value.tools },
-    titleMaxLength: draft.value.titleMaxLength,
-    previewMaxLength: draft.value.previewMaxLength,
   })
 }
 
 const handleDiscard = () => {
-  draft.value = cloneConfig(config.value)
+  draft.value = cloneAgentConfig(config.value)
 }
 
-const handleResetDefaults = () => {
-  // Replace draft with bundled defaults — user still has to click
-  // Save to commit, so this is a non-destructive preview.
-  draft.value = cloneConfig(defaultBotAgentConfig)
+// ── Custom agents (inline list) ─────────────────────────────────────────────
+
+const agentsMessagesGetter = () => ({
+  permissionRequired: t("settings.agents.permissionRequired"),
+  createSuccess: t("settings.agents.custom.createSuccess"),
+  createError: t("settings.agents.custom.createError"),
+  updateSuccess: t("settings.agents.custom.updateSuccess"),
+  updateError: t("settings.agents.custom.updateError"),
+  archiveSuccess: t("settings.agents.custom.archiveSuccess"),
+  archiveError: t("settings.agents.custom.archiveError"),
+  restoreSuccess: t("settings.agents.custom.restoreSuccess"),
+  restoreError: t("settings.agents.custom.restoreError"),
+  enableSuccess: t("settings.agents.custom.enableSuccess"),
+  disableSuccess: t("settings.agents.custom.disableSuccess"),
+  setEnabledError: t("settings.agents.custom.setEnabledError"),
+  deleteSuccess: t("settings.agents.custom.deleteSuccess"),
+  deleteError: t("settings.agents.custom.deleteError"),
+})
+
+const {
+  selectableAgents,
+  disabledAgents,
+  archivedAgents,
+  isLoading: isLoadingAgents,
+  isSaving: isSavingAgents,
+  canManage,
+  cannotManageReason,
+  archive,
+  restore,
+  setEnabled,
+  remove,
+} = useTeamAgents(agentsMessagesGetter)
+
+// Active section starts open — it's the primary content. Disabled
+// and Archived sections start collapsed; they're admin-discoverability
+// extras carried over from the previous dialog list.
+const activeSectionOpen = ref(true)
+const disabledSectionOpen = ref(false)
+const archivedSectionOpen = ref(false)
+
+/**
+ * Open the editor-only dialog for a fresh agent. The dialog is mounted
+ * globally in `app.vue` and listens for this mitt event.
+ */
+const openNewAgentDialog = (): void => {
+  emitter.emit("Dialog.CustomAgents.Open", "new")
 }
 
-const formatTemperature = (value: number) => value.toFixed(2)
-const formatTopP = (value: number) => value.toFixed(2)
+/**
+ * Open the editor dialog for an existing agent. Payload-shape contract
+ * with the dialog: `{ agentId }` selects edit mode.
+ */
+const openEditAgentDialog = (agent: ITeamAgent): void => {
+  emitter.emit("Dialog.CustomAgents.Open", { agentId: agent.id })
+}
 
-// Keep the per-provider model dropdown open while the user toggles
-// multiple checkboxes. `DropdownMenuCheckboxItem` auto-closes the
-// menu on select; preventing the default `select` event keeps it open
-// so admins can adjust several models in a row without re-opening
-// the trigger between each click.
-const keepMenuOpen = (event: Event) => {
-  event.preventDefault()
+const handleToggleAgentEnabled = async (
+  agent: ITeamAgent,
+  enabled: boolean
+): Promise<void> => {
+  await setEnabled(agent.id, enabled)
+}
+
+const handleArchiveAgent = async (agent: ITeamAgent): Promise<void> => {
+  await archive(agent.id)
+}
+
+const handleRestoreAgent = async (agent: ITeamAgent): Promise<void> => {
+  await restore(agent.id)
+}
+
+const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
+  await remove(agent.id)
 }
 </script>
 
@@ -313,468 +167,264 @@ const keepMenuOpen = (event: Event) => {
         <Spinner />
       </div>
       <FieldGroup v-else>
-        <!-- Providers -->
+        <!-- ── Custom agents ──────────────────────────────────────────── -->
         <FieldSet>
+          <!--
+            Pure section header — no control. Matches the header
+            pattern used by every other FieldSet in this page and the
+            sibling AI page (Providers, Generation parameters, …).
+            The team-wide feature gate lives in its own Field below
+            so the header isn't doing double duty.
+          -->
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel>
-                {{ t("settings.agents.providers.label") }}
+                {{ t("settings.agents.custom.label") }}
               </FieldLabel>
               <FieldDescription>
-                {{ t("settings.agents.providers.description") }}
+                {{ t("settings.agents.custom.sectionDescription") }}
               </FieldDescription>
             </FieldContent>
           </Field>
 
-          <TooltipProvider>
-            <Field
-              v-for="provider in botModelProviders"
-              :key="provider.id"
-              orientation="horizontal"
-            >
-              <FieldContent>
-                <FieldLabel :for="`agent-provider-${provider.id}`">
-                  {{ provider.name }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{
-                    t(`settings.agents.providers.${provider.id}.description`, {
-                      count: getProviderModelCount(provider.id),
-                    })
-                  }}
-                  ·
-                  {{
-                    t("settings.agents.providers.modelsEnabledCount", {
-                      enabled: getProviderEnabledModelCount(provider.id),
-                      total: getProviderModelCount(provider.id),
-                    })
-                  }}
-                </FieldDescription>
-              </FieldContent>
-
-              <Tooltip>
-                <DropdownMenu>
-                  <TooltipTrigger as-child>
-                    <DropdownMenuTrigger as-child>
-                      <InputGroupButton
-                        variant="ghost"
-                        size="icon-xs"
-                        :disabled="!canEdit || !draft.providers[provider.id]"
-                      >
-                        <IconSettings />
-                      </InputGroupButton>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ t("settings.agents.providers.configureModels") }}
-                  </TooltipContent>
-                  <DropdownMenuContent align="end" class="w-72">
-                    <DropdownMenuLabel>
-                      {{ t("settings.agents.providers.modelsLabel") }} ·
-                      {{ provider.name }}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      v-for="model in getProviderModels(provider.id)"
-                      :key="model.id"
-                      :model-value="isModelEnabled(model.id)"
-                      :disabled="
-                        !canEdit ||
-                        (isModelEnabled(model.id) &&
-                          isLastEnabledModel(model.id))
-                      "
-                      @update:model-value="
-                        (value) => setModelEnabled(model.id, Boolean(value))
-                      "
-                      @select="keepMenuOpen"
-                    >
-                      <div class="flex flex-col items-start gap-0.5">
-                        <span class="flex items-center gap-2">
-                          {{ model.name }}
-                          <Badge
-                            v-if="model.badge"
-                            variant="secondary"
-                            class="text-xs"
-                          >
-                            {{ model.badge }}
-                          </Badge>
-                        </span>
-                        <span class="text-muted-foreground text-xs">
-                          {{ model.description }}
-                        </span>
-                      </div>
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <span class="inline-block">
-                    <Switch
-                      :id="`agent-provider-${provider.id}`"
-                      :model-value="draft.providers[provider.id]"
-                      :disabled="!canEdit || isLastEnabledProvider(provider.id)"
-                      @update:model-value="
-                        (value) =>
-                          setProviderEnabled(provider.id, Boolean(value))
-                      "
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent
-                  v-if="!canEdit || isLastEnabledProvider(provider.id)"
-                >
-                  {{ providerDisableReason }}
-                </TooltipContent>
-              </Tooltip>
-            </Field>
-          </TooltipProvider>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- Model -->
-        <FieldSet>
+          <!--
+            Team-wide feature gate. When off, the sidebar's Agents
+            section collapses to a single "feature disabled" hint and
+            the per-agent sheets stop rendering. The list below stays
+            visible to admins so they can manage agents even while the
+            feature is gated team-wide — turning it back on then
+            instantly surfaces them in the sidebar.
+          -->
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel for="agent-model">
-                {{ t("settings.agents.model.label") }}
+              <FieldLabel for="agent-tool-custom-agents">
+                {{ t("settings.agents.tools.customAgents.label") }}
               </FieldLabel>
               <FieldDescription>
-                {{ t("settings.agents.model.description") }}
+                {{ t("settings.agents.tools.customAgents.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-tool-custom-agents"
+              v-model="draft.tools.customAgents"
+              :disabled="!canEdit"
+            />
+          </Field>
+
+          <!--
+            "New agent" CTA row. Gated on admin rights AND on the
+            team-wide feature toggle being on — matches the sidebar
+            "New agent" entry's gating so an admin can't create an
+            agent that wouldn't appear anywhere yet.
+          -->
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.agents.custom.available") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.custom.availableDescription") }}
               </FieldDescription>
             </FieldContent>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <div class="w-72">
-                    <Select
-                      id="agent-model"
-                      v-model="draft.model"
-                      :disabled="!canEdit"
+                  <span class="inline-block">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      :disabled="!canManage || !draft.tools.customAgents"
+                      @click="openNewAgentDialog"
                     >
-                      <SelectTrigger class="w-full">
-                        <SelectValue
-                          :placeholder="t('settings.agents.model.placeholder')"
-                        >
-                          <span
-                            v-if="selectedModel"
-                            class="flex items-center gap-2"
-                          >
-                            {{ selectedModel.name }}
-                            <Badge
-                              v-if="selectedModel.badge"
-                              variant="secondary"
-                              class="text-xs"
-                            >
-                              {{ selectedModel.badge }}
-                            </Badge>
-                          </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <template
-                          v-for="(group, groupIndex) in modelsByProvider"
-                          :key="group.id"
-                        >
-                          <SelectGroup v-if="group.models.length > 0">
-                            <SelectLabel>{{ group.name }}</SelectLabel>
-                            <SelectItem
-                              v-for="model in group.models"
-                              :key="model.id"
-                              :value="model.id"
-                            >
-                              <div class="flex flex-col items-start gap-0.5">
-                                <span class="flex items-center gap-2">
-                                  {{ model.name }}
-                                  <Badge
-                                    v-if="model.badge"
-                                    variant="secondary"
-                                    class="text-xs"
-                                  >
-                                    {{ model.badge }}
-                                  </Badge>
-                                </span>
-                                <span class="text-muted-foreground text-xs">
-                                  {{ model.description }}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          </SelectGroup>
-                          <SelectSeparator
-                            v-if="
-                              group.models.length > 0 &&
-                              groupIndex < modelsByProvider.length - 1
-                            "
-                          />
-                        </template>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <IconCirclePlus />
+                      {{ t("settings.agents.custom.newAgent") }}
+                    </Button>
+                  </span>
                 </TooltipTrigger>
-                <TooltipContent v-if="!canEdit">
-                  {{ cannotEditReason }}
+                <TooltipContent v-if="!canManage && cannotManageReason">
+                  {{ cannotManageReason }}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Field>
 
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-default-mode">
-                {{ t("settings.agents.defaultMode.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.defaultMode.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="w-72">
-              <Select
-                id="agent-default-mode"
-                v-model="draft.defaultMode"
-                :disabled="!canEdit"
-              >
-                <SelectTrigger class="w-full">
-                  <SelectValue>
-                    <span v-if="selectedMode">{{ selectedMode.name }}</span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem
-                      v-for="mode in botChatModes"
-                      :key="mode.id"
-                      :value="mode.id"
-                    >
-                      <div class="flex flex-col items-start gap-0.5">
-                        <span>{{ mode.name }}</span>
-                        <span class="text-muted-foreground text-xs">
-                          {{ mode.description }}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+          <!--
+            Inline list (loading / empty state / active / Disabled +
+            Archived collapsibles). Kept in its own gap-2 column so
+            row spacing stays tight regardless of FieldSet's default
+            child spacing.
+          -->
+          <div class="flex flex-col gap-2">
+            <div v-if="isLoadingAgents" class="flex justify-center py-8">
+              <Spinner />
             </div>
-          </Field>
+
+            <template v-else>
+              <!--
+                Empty-state — only when no agents exist in any bucket.
+                If only the active bucket is empty we still want the
+                collapsible Disabled/Archived sections to surface the
+                stored entries, so this hint stays out of the way.
+              -->
+              <Empty
+                v-if="
+                  selectableAgents.length === 0 &&
+                  disabledAgents.length === 0 &&
+                  archivedAgents.length === 0
+                "
+                class="border border-dashed"
+              >
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconBot />
+                  </EmptyMedia>
+                  <EmptyTitle>{{
+                    t("settings.agents.custom.empty")
+                  }}</EmptyTitle>
+                  <EmptyDescription v-if="canManage">
+                    {{ t("settings.agents.custom.emptyHint") }}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+
+              <!-- Active (selectable) agents -->
+              <Collapsible
+                v-if="selectableAgents.length > 0"
+                v-model:open="activeSectionOpen"
+              >
+                <CollapsibleTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="w-full justify-between"
+                  >
+                    <span class="flex items-center gap-2">
+                      {{
+                        t("settings.agents.custom.activeSection", {
+                          count: selectableAgents.length,
+                        })
+                      }}
+                    </span>
+                    <IconChevronDown
+                      class="size-4 transition-transform"
+                      :class="{ 'rotate-180': activeSectionOpen }"
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ItemGroup class="gap-2 pt-2">
+                    <SettingsCustomAgentRow
+                      v-for="agent in selectableAgents"
+                      :key="agent.id"
+                      :agent="agent"
+                      :can-manage="canManage"
+                      :is-saving="isSavingAgents"
+                      @edit="openEditAgentDialog(agent)"
+                      @toggle-enabled="
+                        (value) => handleToggleAgentEnabled(agent, value)
+                      "
+                      @archive="handleArchiveAgent(agent)"
+                      @restore="handleRestoreAgent(agent)"
+                      @remove="handleRemoveAgent(agent)"
+                    />
+                  </ItemGroup>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <!-- Disabled agents -->
+              <Collapsible
+                v-if="disabledAgents.length > 0"
+                v-model:open="disabledSectionOpen"
+              >
+                <CollapsibleTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="w-full justify-between"
+                  >
+                    <span class="flex items-center gap-2">
+                      {{
+                        t("settings.agents.custom.disabledSection", {
+                          count: disabledAgents.length,
+                        })
+                      }}
+                    </span>
+                    <IconChevronDown
+                      class="size-4 transition-transform"
+                      :class="{ 'rotate-180': disabledSectionOpen }"
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ItemGroup class="gap-2 pt-2">
+                    <SettingsCustomAgentRow
+                      v-for="agent in disabledAgents"
+                      :key="agent.id"
+                      :agent="agent"
+                      :can-manage="canManage"
+                      :is-saving="isSavingAgents"
+                      @edit="openEditAgentDialog(agent)"
+                      @toggle-enabled="
+                        (value) => handleToggleAgentEnabled(agent, value)
+                      "
+                      @archive="handleArchiveAgent(agent)"
+                      @restore="handleRestoreAgent(agent)"
+                      @remove="handleRemoveAgent(agent)"
+                    />
+                  </ItemGroup>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <!-- Archived agents -->
+              <Collapsible
+                v-if="archivedAgents.length > 0"
+                v-model:open="archivedSectionOpen"
+              >
+                <CollapsibleTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="w-full justify-between"
+                  >
+                    <span class="flex items-center gap-2">
+                      {{
+                        t("settings.agents.custom.archivedSection", {
+                          count: archivedAgents.length,
+                        })
+                      }}
+                    </span>
+                    <IconChevronDown
+                      class="size-4 transition-transform"
+                      :class="{ 'rotate-180': archivedSectionOpen }"
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ItemGroup class="gap-2 pt-2">
+                    <SettingsCustomAgentRow
+                      v-for="agent in archivedAgents"
+                      :key="agent.id"
+                      :agent="agent"
+                      :can-manage="canManage"
+                      :is-saving="isSavingAgents"
+                      @edit="openEditAgentDialog(agent)"
+                      @toggle-enabled="
+                        (value) => handleToggleAgentEnabled(agent, value)
+                      "
+                      @archive="handleArchiveAgent(agent)"
+                      @restore="handleRestoreAgent(agent)"
+                      @remove="handleRemoveAgent(agent)"
+                    />
+                  </ItemGroup>
+                </CollapsibleContent>
+              </Collapsible>
+            </template>
+          </div>
         </FieldSet>
 
         <FieldSeparator />
 
-        <!-- Generation parameters -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.generation.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.generation.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-temperature">
-                {{ t("settings.agents.temperature.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.temperature.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-temperature"
-                v-model="temperatureModel"
-                :min="botAgentBounds.temperature.min"
-                :max="botAgentBounds.temperature.max"
-                :step="botAgentBounds.temperature.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-12 text-right text-sm tabular-nums"
-              >
-                {{ formatTemperature(draft.temperature) }}
-              </span>
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-top-p">
-                {{ t("settings.agents.topP.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.topP.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-top-p"
-                v-model="topPModel"
-                :min="botAgentBounds.topP.min"
-                :max="botAgentBounds.topP.max"
-                :step="botAgentBounds.topP.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-12 text-right text-sm tabular-nums"
-              >
-                {{ formatTopP(draft.topP) }}
-              </span>
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-top-k">
-                {{ t("settings.agents.topK.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.topK.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-top-k"
-                v-model="topKModel"
-                :min="botAgentBounds.topK.min"
-                :max="botAgentBounds.topK.max"
-                :step="botAgentBounds.topK.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-12 text-right text-sm tabular-nums"
-              >
-                {{ draft.topK }}
-              </span>
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-max-tokens">
-                {{ t("settings.agents.maxOutputTokens.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.maxOutputTokens.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-max-tokens"
-                v-model="maxOutputTokensModel"
-                :min="botAgentBounds.maxOutputTokens.min"
-                :max="botAgentBounds.maxOutputTokens.max"
-                :step="botAgentBounds.maxOutputTokens.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-16 text-right text-sm tabular-nums"
-              >
-                {{ draft.maxOutputTokens }}
-              </span>
-            </div>
-          </Field>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- System prompt -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.systemPrompt.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.systemPrompt.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-system-prompt-base">
-                {{ t("settings.agents.systemPromptBase.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.systemPromptBase.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Textarea
-              id="agent-system-prompt-base"
-              v-model="draft.systemPromptBase"
-              :placeholder="t('settings.agents.systemPromptBase.placeholder')"
-              :maxlength="botAgentBounds.systemPromptBase.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.promptSuffixes.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.promptSuffixes.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-auto">
-                {{ t("settings.agents.promptSuffixes.auto") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-auto"
-              v-model="draft.promptSuffixes.auto"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-agent">
-                {{ t("settings.agents.promptSuffixes.agent") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-agent"
-              v-model="draft.promptSuffixes.agent"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-manual">
-                {{ t("settings.agents.promptSuffixes.manual") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-manual"
-              v-model="draft.promptSuffixes.manual"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- Tools -->
+        <!-- ── Built-in tools ─────────────────────────────────────────── -->
         <FieldSet>
           <Field orientation="horizontal">
             <FieldContent>
@@ -867,107 +517,6 @@ const keepMenuOpen = (event: Event) => {
               v-model="draft.tools.summarizeNode"
               :disabled="!canEdit"
             />
-          </Field>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- Display limits -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.limits.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.limits.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-title-max">
-                {{ t("settings.agents.titleMaxLength.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.titleMaxLength.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-title-max"
-                v-model="titleMaxLengthModel"
-                :min="botAgentBounds.titleMaxLength.min"
-                :max="botAgentBounds.titleMaxLength.max"
-                :step="botAgentBounds.titleMaxLength.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-12 text-right text-sm tabular-nums"
-              >
-                {{ draft.titleMaxLength }}
-              </span>
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-preview-max">
-                {{ t("settings.agents.previewMaxLength.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.previewMaxLength.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-preview-max"
-                v-model="previewMaxLengthModel"
-                :min="botAgentBounds.previewMaxLength.min"
-                :max="botAgentBounds.previewMaxLength.max"
-                :step="botAgentBounds.previewMaxLength.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-12 text-right text-sm tabular-nums"
-              >
-                {{ draft.previewMaxLength }}
-              </span>
-            </div>
-          </Field>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- Reset to defaults -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.resetDefaults") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.resetDefaultsDescription") }}
-              </FieldDescription>
-            </FieldContent>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="outline"
-                    :disabled="!canEdit || isSaving"
-                    @click="handleResetDefaults"
-                  >
-                    <IconRotateCcw />
-                    {{ t("settings.agents.resetDefaults") }}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent v-if="!canEdit">
-                  {{ cannotEditReason }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </Field>
         </FieldSet>
       </FieldGroup>

@@ -21,6 +21,7 @@ import {
   IconFileText,
   IconFileVideo,
   IconFileWord,
+  IconLink2,
   IconPencil,
   IconRefreshCcw,
   IconTrash2,
@@ -590,13 +591,16 @@ watch(selectedCreateFiles, async (files) => {
           </div>
         </div>
 
-        <div
-          v-if="loading && attachments.length === 0"
-          class="text-muted-foreground flex items-center gap-2 text-xs"
-        >
-          <Spinner />
-          {{ t("components.nodeAttachments.loadingAttachments") }}
-        </div>
+        <Empty v-if="loading && attachments.length === 0" class="p-6">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Spinner />
+            </EmptyMedia>
+            <EmptyTitle>
+              {{ t("components.nodeAttachments.loadingAttachments") }}
+            </EmptyTitle>
+          </EmptyHeader>
+        </Empty>
 
         <div v-else-if="error" class="space-y-2 rounded-xl border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
@@ -615,16 +619,26 @@ watch(selectedCreateFiles, async (files) => {
           </Button>
         </div>
 
-        <div
+        <Empty
           v-else-if="attachments.length === 0"
-          class="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-xs"
+          class="rounded-xl border border-dashed p-6"
         >
-          {{
-            isReadOnly
-              ? t("components.nodeAttachments.emptyReadOnly")
-              : t("components.nodeAttachments.emptyWritable")
-          }}
-        </div>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconLink2 />
+            </EmptyMedia>
+            <EmptyTitle>
+              {{ t("components.nodeAttachments.emptyTitle") }}
+            </EmptyTitle>
+            <EmptyDescription>
+              {{
+                isReadOnly
+                  ? t("components.nodeAttachments.emptyReadOnly")
+                  : t("components.nodeAttachments.emptyWritable")
+              }}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
 
         <div v-else class="space-y-2">
           <article
@@ -695,7 +709,7 @@ watch(selectedCreateFiles, async (files) => {
                   </div>
                 </div>
 
-                <div class="flex flex-wrap gap-1.5">
+                <div class="flex flex-wrap gap-2">
                   <Badge
                     v-if="isAttachmentPending(attachment.id)"
                     variant="secondary"

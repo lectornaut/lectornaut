@@ -286,7 +286,7 @@ const onArchiveToggle = (session: IBotSession) => {
                             @click="onSelectSession(item.id)"
                           >
                             <span class="flex min-w-0 grow flex-col">
-                              <span class="flex items-center gap-1.5">
+                              <span class="flex items-center gap-2">
                                 <span class="truncate text-sm">
                                   {{ item.title || t("ai.newChat") }}
                                 </span>
@@ -409,7 +409,7 @@ const onArchiveToggle = (session: IBotSession) => {
                         @click="onSelectSession(item.id)"
                       >
                         <span class="flex min-w-0 grow flex-col">
-                          <span class="flex items-center gap-1.5">
+                          <span class="flex items-center gap-2">
                             <span class="truncate text-sm">
                               {{ item.title || t("ai.untitledSession") }}
                             </span>

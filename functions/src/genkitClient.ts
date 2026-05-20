@@ -17,6 +17,8 @@ import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
 import { googleAI } from "@genkit-ai/google-genai"
 import { HttpsError } from "firebase-functions/v2/https"
 import { genkit } from "genkit/beta"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 
 enableFirebaseTelemetry()
 
@@ -73,7 +75,30 @@ const googleKey = readSecret("google")
 const anthropicKey = readSecret("anthropic")
 const openaiKey = readSecret("openai")
 
+/**
+ * Dotprompt directory — resolved at module-load time relative to this
+ * file's location. esbuild bundles `genkitClient.ts` into
+ * `functions-deploy/index.js`, and `build.mjs` copies `.prompt`
+ * files alongside it under `functions-deploy/prompts/`, so the
+ * absolute path is `<bundle-dir>/prompts/`.
+ *
+ * Using an absolute path (rather than the default relative `prompts`)
+ * is defensive: Cloud Run / Functions don't guarantee the process
+ * `cwd` matches the bundle directory.
+ *
+ * Prompts under this directory are only those that are NOT user-
+ * editable — internal engineering surfaces like the node summarizer.
+ * User-configurable prompts (chat system prompts, per-mode suffixes)
+ * live in Firestore under `teams/{teamId}/settings/agent` and are
+ * fetched/composed at request time.
+ */
+const PROMPT_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "prompts"
+)
+
 export const ai = genkit({
+  promptDir: PROMPT_DIR,
   plugins: [
     ...(googleKey ? [googleAI({ apiKey: googleKey })] : []),
     ...(anthropicKey ? [anthropic({ apiKey: anthropicKey })] : []),

@@ -430,11 +430,16 @@ const isEditing = (shortcut: Shortcut): boolean =>
                 </Item>
               </AccordionContent>
             </AccordionItem>
-            <div v-if="filteredShortcuts.length === 0">
-              <p class="text-muted-foreground p-4 text-center">
-                {{ t("components.global.shortcuts.noShortcuts") }}
-              </p>
-            </div>
+            <Empty v-if="filteredShortcuts.length === 0" class="p-6">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconKeyboard />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {{ t("components.global.shortcuts.noShortcuts") }}
+                </EmptyTitle>
+              </EmptyHeader>
+            </Empty>
           </Accordion>
         </div>
       </OverlayScrollbarsWrapper>

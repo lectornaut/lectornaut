@@ -61,6 +61,27 @@ async function copyMjmlTemplates() {
   return files.length
 }
 
+// Dotprompt files are loaded by Genkit at runtime from `promptDir`, which
+// `genkitClient.ts` points at the deploy directory's `prompts/`. We copy
+// the `functions/prompts/` tree there so the bundled image is self-
+// contained — same shape as the .mjml copy above.
+async function copyPromptFiles() {
+  const PROMPTS_SRC = path.join(__dirname, "prompts")
+  let files = []
+  try {
+    files = await findFiles(PROMPTS_SRC, (name) => name.endsWith(".prompt"))
+  } catch (err) {
+    if (err.code === "ENOENT") return 0
+    throw err
+  }
+  for (const src of files) {
+    const dest = path.join(OUT_DIR, "prompts", path.relative(PROMPTS_SRC, src))
+    await mkdir(path.dirname(dest), { recursive: true })
+    await cp(src, dest)
+  }
+  return files.length
+}
+
 const esbuildOptions = {
   entryPoints: [path.join(SRC_DIR, "index.ts")],
   outfile: path.join(OUT_DIR, "index.js"),
@@ -88,6 +109,9 @@ await writeDeployPackageJson()
 
 const mjmlCount = await copyMjmlTemplates()
 console.log(`→ Copied ${mjmlCount} .mjml templates`)
+
+const promptCount = await copyPromptFiles()
+console.log(`→ Copied ${promptCount} .prompt files`)
 
 // Symlink node_modules so Firebase CLI's local "analyze functions" step can
 // resolve external deps (firebase-functions etc.) when it imports the bundle.

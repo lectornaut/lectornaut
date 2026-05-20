@@ -6,6 +6,7 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconArrowUpDown,
+  IconBriefcase,
   IconCheck,
   IconMoreHorizontal,
   IconPencil,
@@ -396,11 +397,17 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                     </TableCell>
                   </TableRow>
                   <TableRow v-if="workspaces.length === 0">
-                    <TableCell
-                      colspan="4"
-                      class="text-muted-foreground h-24 text-center"
-                    >
-                      {{ t("settings.workspacesList.noWorkspaces") }}
+                    <TableCell colspan="4">
+                      <Empty>
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <IconBriefcase />
+                          </EmptyMedia>
+                          <EmptyTitle>
+                            {{ t("settings.workspacesList.noWorkspaces") }}
+                          </EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
                     </TableCell>
                   </TableRow>
                 </TableBody>

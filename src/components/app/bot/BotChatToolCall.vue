@@ -401,7 +401,7 @@ const hasCustomDoneRenderer = computed(() => {
 </script>
 
 <template>
-  <Collapsible v-model:open="open">
+  <Collapsible v-model:open="open" class="grid gap-2">
     <CollapsibleTrigger
       class="flex w-full items-center gap-2 rounded-md border p-2 text-left text-xs transition-colors"
       :class="
@@ -437,7 +437,7 @@ const hasCustomDoneRenderer = computed(() => {
         :class="{ 'rotate-180': open }"
       />
     </CollapsibleTrigger>
-    <CollapsibleContent class="m-4">
+    <CollapsibleContent>
       <!-- ============================================================== -->
       <!-- Pending interrupt: question + choices form. -->
       <!-- ============================================================== -->
@@ -448,7 +448,7 @@ const hasCustomDoneRenderer = computed(() => {
         <p class="text-foreground text-sm font-medium">
           {{ askQuestionInput.question }}
         </p>
-        <div class="flex flex-wrap gap-1.5">
+        <div class="flex flex-wrap gap-2">
           <Button
             v-for="choice in askQuestionInput.choices"
             :key="choice"
@@ -464,7 +464,7 @@ const hasCustomDoneRenderer = computed(() => {
         </div>
         <div
           v-if="askQuestionInput.allowOther"
-          class="border-primary/20 mt-2 flex items-center gap-1.5 border-t pt-2"
+          class="border-primary/20 mt-2 flex items-center gap-2 border-t pt-2"
         >
           <Input
             v-model="customAnswer"
@@ -505,7 +505,7 @@ const hasCustomDoneRenderer = computed(() => {
         <p class="text-foreground text-sm font-medium">
           {{ askQuestionInput.question }}
         </p>
-        <p class="text-primary flex items-center gap-1.5">
+        <p class="text-primary flex items-center gap-2">
           <IconCheck />
           <span class="font-medium">{{ interruptAnswer }}</span>
         </p>
@@ -520,7 +520,7 @@ const hasCustomDoneRenderer = computed(() => {
         v-else-if="isRunning"
         class="border-border bg-background/40 rounded-md border p-2 text-xs"
       >
-        <p class="text-muted-foreground flex items-center gap-1.5 italic">
+        <p class="text-muted-foreground flex items-center gap-2 italic">
           <IconLoader2 class="animate-spin" />
           {{ t("ai.toolCall.waitingForReturn") }}
         </p>
@@ -531,11 +531,11 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- ============================================================== -->
       <div
         v-else-if="tool.name === 'getWeather' && weatherOutput"
-        class="border-border bg-background/40 flex flex-col gap-2 rounded-md border p-3 text-xs"
+        class="border-border bg-background/40 flex flex-col gap-2 rounded border p-2 text-xs"
       >
         <div
           v-if="weatherInput"
-          class="text-muted-foreground flex items-center gap-1.5"
+          class="text-muted-foreground flex items-center gap-2"
         >
           <IconMapPin />
           <span>{{ weatherInput.location }}</span>
@@ -582,11 +582,11 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- ============================================================== -->
       <div
         v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput"
-        class="border-border bg-background/40 flex flex-col gap-2 rounded-md border p-3 text-xs"
+        class="border-border bg-background/40 flex flex-col gap-2 rounded border p-2 text-xs"
       >
         <div
           v-if="searchInput"
-          class="text-muted-foreground flex flex-wrap items-center gap-1.5"
+          class="text-muted-foreground flex flex-wrap items-center gap-2"
         >
           <IconSearch />
           <span class="text-foreground italic">"{{ searchInput.query }}"</span>
@@ -602,19 +602,24 @@ const hasCustomDoneRenderer = computed(() => {
             </template>
           </span>
         </div>
-        <div
+        <Empty
           v-if="searchOutput.results.length === 0"
-          class="text-muted-foreground italic"
+          class="rounded border border-dashed p-4"
         >
-          {{ t("ai.toolCall.search.empty") }}
-        </div>
-        <ul v-else class="flex flex-col gap-1.5">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconSearch />
+            </EmptyMedia>
+            <EmptyTitle>{{ t("ai.toolCall.search.empty") }}</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+        <ul v-else class="flex flex-col gap-2">
           <li
             v-for="result in searchOutput.results"
             :key="`${result.scope}:${result.nodeId}`"
             class="border-border bg-card flex flex-col gap-1 rounded border p-2"
           >
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-2">
               <Component
                 :is="result.type === 'folder' ? IconFolder : IconFileText"
                 class="text-muted-foreground shrink-0"
@@ -653,7 +658,7 @@ const hasCustomDoneRenderer = computed(() => {
         v-else-if="tool.name === 'summarizeNode' && summarizeOutput"
         class="border-border bg-background/40 flex flex-col gap-3 rounded-md border p-3 text-xs"
       >
-        <header class="flex items-center gap-1.5">
+        <header class="flex items-center gap-2">
           <IconSparkles class="text-muted-foreground" />
           <span class="text-muted-foreground text-xs font-medium uppercase">
             {{ t("ai.toolCall.summarize.heading") }}

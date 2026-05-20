@@ -15,12 +15,16 @@
  * Both routes funnel through `runSummarize`, which:
  *
  *   - Loads the node from Firestore.
- *   - Builds the prompt from the node's name + content.
- *   - Calls `ai.generate({ output: { schema } })` so the model returns a
- *     strictly-shaped JSON object (`{ summary, keyPoints[], suggestedTags[] }`).
- *   - Genkit normalizes the provider-specific structured-output mechanism
- *     (Gemini response schema / Claude tool-use / OpenAI JSON mode) under
- *     the hood, so the call site stays provider-agnostic.
+ *   - Renders the `summarize-node.prompt` dotprompt (frontmatter +
+ *     handlebars body in `functions/prompts/`) with the node's
+ *     `{ name, isFolder, hasContent, content }`. The prompt body lives
+ *     out-of-code because it's an engineering surface — *not* user-
+ *     editable like the chat system prompts in Firestore — and benefits
+ *     from being version-controlled separately from the dispatch logic.
+ *   - The prompt declares `output: { schema: SummarizeNodeOutput }`, so
+ *     Genkit converts the Zod shape to the provider's JSON-output
+ *     mechanism (Gemini response schema / Claude tool-use / OpenAI JSON
+ *     mode), then parses + validates so `.output` is fully typed.
  *
  * The team's `agentConfig.model` chooses which provider does the work
  * regardless of which surface kicked it off.
@@ -28,13 +32,11 @@
 
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-import {
-  getMembershipRole,
-  loadTeamAgentConfig,
-  requireVerifiedAuth,
-} from "./bot.js"
+import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
+import { loadTeamAgentConfig } from "./botAgentConfig.js"
 import { db } from "./firebase.js"
 import { ai, resolveModel } from "./genkitClient.js"
+import { aiMiddlewares, redactText } from "./genkitMiddleware.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
 import { extractPlainText } from "./tiptapText.js"
@@ -63,8 +65,14 @@ type SummarizeNodeInput = z.infer<typeof SummarizeNodeInputSchema>
  * failures when the model produces a slightly-over-budget reply; the
  * caller then has to retry or downgrade to free text. Looser bounds
  * keep the structured path reliable.
+ *
+ * Registered with `ai.defineSchema(...)` so the `.prompt` file at
+ * `functions/prompts/summarize-node.prompt` can reference it by name
+ * in its frontmatter (`output: { schema: SummarizeNodeOutput }`).
+ * The Zod body stays here — code is the source of truth — and the
+ * prompt body lives in the dotprompt file.
  */
-const SummarizeNodeOutputSchema = z.object({
+const summarizeNodeOutputZod = z.object({
   summary: z
     .string()
     .min(1)
@@ -90,8 +98,53 @@ const SummarizeNodeOutputSchema = z.object({
         "'sprint-planning'). Prefer specific tags over generic ones."
     ),
 })
+ai.defineSchema("SummarizeNodeOutput", summarizeNodeOutputZod)
 
-type SummarizeNodeOutput = z.infer<typeof SummarizeNodeOutputSchema>
+type SummarizeNodeOutput = z.infer<typeof summarizeNodeOutputZod>
+
+/**
+ * Input shape rendered into the dotprompt template. The handlebars
+ * body branches on `isFolder` / `hasContent`, so we surface those as
+ * explicit booleans rather than asking the template to infer them
+ * from string presence — cleaner separation between data shape and
+ * presentation.
+ */
+const summarizeNodePromptInputZod = z.object({
+  name: z.string(),
+  isFolder: z.boolean(),
+  hasContent: z.boolean(),
+  content: z.string().optional(),
+})
+ai.defineSchema("SummarizeNodePromptInput", summarizeNodePromptInputZod)
+
+/**
+ * Lazy handle to the dotprompt. `ai.prompt(name)` reads the
+ * `.prompt` file from `promptDir` (configured in `genkitClient.ts`).
+ * Wrapped in a function so the lookup happens after Genkit's prompt
+ * directory walker has run — at module-import time it may not yet
+ * have completed.
+ *
+ * The generics on `ai.prompt<>` give the returned `ExecutablePrompt`
+ * its narrow `(input, opts) => Promise<...>` signature; we capture
+ * the inferred return type so the cache slot doesn't widen back to
+ * the defaults.
+ */
+type SummarizeNodePrompt = ReturnType<
+  typeof ai.prompt<
+    typeof summarizeNodePromptInputZod,
+    typeof summarizeNodeOutputZod
+  >
+>
+let _summarizeNodePrompt: SummarizeNodePrompt | undefined
+function getSummarizeNodePrompt(): SummarizeNodePrompt {
+  if (!_summarizeNodePrompt) {
+    _summarizeNodePrompt = ai.prompt<
+      typeof summarizeNodePromptInputZod,
+      typeof summarizeNodeOutputZod
+    >("summarize-node")
+  }
+  return _summarizeNodePrompt
+}
 
 /**
  * Wire-name of the model included in tool/callable responses for UI
@@ -146,46 +199,32 @@ async function loadNodeForSummary(
 }
 
 /**
- * Build the user prompt fed to `ai.generate`. The schema-derived JSON
- * format hint is added by Genkit automatically; we just need to give
- * the model the *content* to summarize plus a tiny bit of context
- * (name + type) so a file named "Auth design.md" gets summarized as a
- * design doc rather than as anonymous prose.
+ * Render the `NodeForSummary` into the dotprompt's input shape. The
+ * three branches (folder / empty file / content-bearing file) are
+ * expressed in the template via `{{#if isFolder}}` and
+ * `{{#if hasContent}}`; this function just supplies the booleans
+ * plus the trimmed content.
  */
-function buildSummarizePrompt(node: NodeForSummary): string {
+function buildSummarizePromptInput(
+  node: NodeForSummary
+): z.infer<typeof summarizeNodePromptInputZod> {
   if (node.type === "folder") {
-    return [
-      `Summarize the likely purpose of this workspace folder based on its name. `,
-      `The folder has no inline content of its own.`,
-      ``,
-      `Folder name: ${node.name}`,
-    ].join("\n")
+    return { name: node.name, isFolder: true, hasContent: false }
   }
-
-  if (!node.content.trim()) {
-    return [
-      `Summarize this workspace file. The file currently has no content — `,
-      `infer its likely purpose from the name and return a minimal `,
-      `summary plus an empty keyPoints array.`,
-      ``,
-      `File name: ${node.name}`,
-    ].join("\n")
+  const trimmedContent = node.content.trim()
+  if (!trimmedContent) {
+    return { name: node.name, isFolder: false, hasContent: false }
   }
-
-  const trimmed =
+  const truncated =
     node.content.length > MAX_CONTENT_INPUT_BYTES
       ? `${node.content.slice(0, MAX_CONTENT_INPUT_BYTES)}\n\n[...content truncated...]`
       : node.content
-
-  return [
-    `Summarize the following workspace file.`,
-    ``,
-    `File name: ${node.name}`,
-    `Content:`,
-    `"""`,
-    trimmed,
-    `"""`,
-  ].join("\n")
+  return {
+    name: node.name,
+    isFolder: false,
+    hasContent: true,
+    content: truncated,
+  }
 }
 
 /**
@@ -214,26 +253,28 @@ async function runSummarize(
 
   const agentConfig = await loadTeamAgentConfig(input.teamId)
   const model = resolveModel(agentConfig.model)
+  const promptInput = buildSummarizePromptInput(node)
 
-  const response = await ai.generate({
+  // Dotprompt invocation: the `.prompt` file owns the messages and the
+  // base config (temperature 0.3); per-call we override the model
+  // (team-selected), the topP / maxOutputTokens (also team config),
+  // and attach our middleware stack so logging / budget / redaction
+  // apply to this call too.
+  const response = await getSummarizeNodePrompt()(promptInput, {
     model,
-    prompt: buildSummarizePrompt(node),
-    // The schema is the structured-output contract — Genkit converts
-    // it to the provider's JSON-output mechanism, then parses + Zod-
-    // validates the response so `.output` is fully typed.
-    output: { schema: SummarizeNodeOutputSchema },
-    // Lower temperature for summaries — we want the model to stick
-    // closely to the document, not riff on it. Override the team's
-    // chat temperature (tuned for conversation) without mutating the
-    // saved config.
     config: {
+      // Clamp at 0.3 even if the team's `agentConfig.temperature` is
+      // higher — chat temperature is tuned for conversation, summaries
+      // should hug the source. The frontmatter's `0.3` is the upper
+      // bound; we'd lower further if the team lowered theirs.
       temperature: Math.min(agentConfig.temperature, 0.3),
       topP: agentConfig.topP,
       maxOutputTokens: agentConfig.maxOutputTokens,
     },
+    use: aiMiddlewares(),
   })
 
-  const output = response.output
+  const output = response.output as SummarizeNodeOutput | null | undefined
   if (!output) {
     // Schema validation failed — model produced something Genkit
     // couldn't reconcile against the Zod shape. Rare but worth
@@ -395,7 +436,21 @@ export const summarizeNodeTool = ai.defineTool(
         scope: input.scope,
         nodeId: input.nodeId,
       })
-      return { ...result, error: undefined }
+      // PII scrub the model's prose output. The summary + keyPoints
+      // are free-form text generated FROM the node's content, which
+      // may itself have contained emails/phones the model decided to
+      // quote or paraphrase. Same redaction the user-input middleware
+      // applies, kept centralized via `redactText`. `suggestedTags`
+      // are kebab-case identifiers (a model that drifts off-spec
+      // could still embed an email, but those would also fail the
+      // schema's `.max(40)` per-tag bound), and `model` is a
+      // wire-name we control — neither benefits from redaction.
+      return {
+        ...result,
+        summary: redactText(result.summary),
+        keyPoints: result.keyPoints.map((point) => redactText(point)),
+        error: undefined,
+      }
     } catch (err) {
       // `runSummarize` throws `HttpsError`s with helpful codes; convert
       // them into a populated `error` field so the model gets a clear

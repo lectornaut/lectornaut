@@ -153,7 +153,7 @@ const nodeStatusLabel = computed(() =>
   <div class="flex size-full min-h-0 flex-1 flex-col">
     <Card size="sm" class="m-2 shadow-none">
       <CardHeader>
-        <CardTitle class="flex items-center gap-1.5">
+        <CardTitle class="flex items-center gap-2">
           <IconSparkles class="text-muted-foreground size-4" />
           {{ t("inspector.summary.title") }}
         </CardTitle>
@@ -178,7 +178,7 @@ const nodeStatusLabel = computed(() =>
           </Button>
           <div
             v-else-if="isSummarizing"
-            class="text-muted-foreground flex items-center gap-1.5 text-xs"
+            class="text-muted-foreground flex items-center gap-2 text-xs"
           >
             <Spinner />
             {{ t("inspector.summary.loading") }}

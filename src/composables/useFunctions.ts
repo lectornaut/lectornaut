@@ -11,7 +11,9 @@ import type {
   BillingPlanKey,
   IBotAgentConfig,
   IBotAgentModel,
+  IBotAgentToolToggles,
   IBotSessionVisibility,
+  ITeamAgent,
   ITeamBilling,
 } from "@/types/domain"
 import type { IMembershipRole } from "@/types/membership"
@@ -546,6 +548,22 @@ export interface SendBotMessageRequest {
    * the node inspector's Bot tab. Ignored on resumed sessions.
    */
   pinnedNode?: BotChatNodeRef
+  /**
+   * Custom agent the composer / sidebar has currently selected for
+   * this turn. `null` (or omitted) means "use the team default
+   * persona". Server semantics:
+   *   - real id → that agent's persona handles the turn AND the new
+   *     id is persisted on the session doc (sticks across sends).
+   *   - null    → explicitly clear; the doc's `activeAgentId` is
+   *     reset to null and subsequent turns use the team default.
+   *   - omitted → leave the doc untouched and fall back to the
+   *     session's prior `activeAgentId` if any. Use this from
+   *     legacy clients that don't know about agents.
+   * The server falls back to the default if the id points to a
+   * since-archived agent — the field on the doc stays unchanged so
+   * restoring the agent re-binds the session automatically.
+   */
+  activeAgentId?: string | null
 }
 
 export interface SendBotMessageResponse {
@@ -646,6 +664,14 @@ export interface RespondToBotInterruptRequest {
    * as `SendBotMessageRequest.contextNodes`.
    */
   contextNodes?: BotChatNodeRef[]
+  /**
+   * Custom agent the composer has currently selected. Same semantics
+   * as `SendBotMessageRequest.activeAgentId` — usually omitted on the
+   * interrupt-response path so the session's persisted agent sticks,
+   * but the client can override (e.g. user switched agents in the
+   * composer between asking and answering).
+   */
+  activeAgentId?: string | null
 }
 
 export interface RespondToBotInterruptResponse {
@@ -765,6 +791,116 @@ export interface UpdateTeamAgentConfigRequest {
 
 export interface UpdateTeamAgentConfigResponse {
   config: IBotAgentConfig
+}
+
+// =============================================================================
+// Team Custom Agents Request/Response Types
+// =============================================================================
+
+/**
+ * Creation payload for `createTeamAgent`. `name` and `systemPromptBase`
+ * are required because the agent can't function without them. Everything
+ * else defaults server-side (empty strings for text, all-true for tools).
+ *
+ * Tools is partial — the server fills missing keys with `true`, so an
+ * older client that doesn't know about a newly-added tool still creates
+ * an agent that has access to it.
+ */
+export interface CreateTeamAgentDraft {
+  name: string
+  description?: string
+  avatarSeed?: string
+  systemPromptBase: string
+  promptSuffixes?: Partial<ITeamAgent["promptSuffixes"]>
+  tools?: Partial<IBotAgentToolToggles>
+}
+
+export interface CreateTeamAgentRequest {
+  teamId: string
+  draft: CreateTeamAgentDraft
+}
+
+export interface CreateTeamAgentResponse {
+  agent: ITeamAgent
+}
+
+/**
+ * Update payload — every field optional. Only sent fields are written;
+ * nested `promptSuffixes` and `tools` patches are merged server-side
+ * onto the saved record so omitted keys keep their prior values.
+ *
+ * `enabled` rides along here for symmetry, but the dedicated
+ * `setTeamAgentEnabled` callable is preferred for the row's
+ * Switch — narrower surface, cleaner audit trail, no risk of
+ * clobbering an in-flight inline edit on another field.
+ */
+export type UpdateTeamAgentPatch = Partial<CreateTeamAgentDraft> & {
+  enabled?: boolean
+}
+
+export interface UpdateTeamAgentRequest {
+  teamId: string
+  agentId: string
+  patch: UpdateTeamAgentPatch
+}
+
+export interface UpdateTeamAgentResponse {
+  agent: ITeamAgent
+}
+
+export interface ArchiveTeamAgentRequest {
+  teamId: string
+  agentId: string
+}
+
+export interface ArchiveTeamAgentResponse {
+  agent: ITeamAgent
+}
+
+export interface RestoreTeamAgentRequest {
+  teamId: string
+  agentId: string
+}
+
+export interface RestoreTeamAgentResponse {
+  agent: ITeamAgent
+}
+
+/**
+ * Set the agent's `enabled` toggle. Mirrors the team provider toggle
+ * pattern — a dedicated callable rather than piggybacking on
+ * `updateTeamAgent` so the audit trail reads cleanly ("admin disabled
+ * X" vs "admin updated X with {enabled:false}") and the click can't
+ * race with a concurrent inline edit on another field.
+ */
+export interface SetTeamAgentEnabledRequest {
+  teamId: string
+  agentId: string
+  enabled: boolean
+}
+
+export interface SetTeamAgentEnabledResponse {
+  agent: ITeamAgent
+}
+
+/**
+ * Hard-delete an agent (irreversible). The doc is removed from
+ * Firestore; existing chats that referenced the agent fall back to
+ * the team default at dispatch time and the client renders a "Deleted"
+ * badge for the now-missing record. No server-side confirmation gate
+ * beyond the admin role check — the client owns the AlertDialog.
+ *
+ * Idempotent: calling on an already-deleted id returns success
+ * without error (the end state matches what the caller asked for).
+ */
+export interface DeleteTeamAgentRequest {
+  teamId: string
+  agentId: string
+}
+
+export interface DeleteTeamAgentResponse {
+  agentId: string
+  deleted: true
 }
 
 // =============================================================================
@@ -1417,6 +1553,74 @@ export const updateTeamAgentConfig = createTypedCallable<
 >("updateTeamAgentConfig")
 
 // =============================================================================
+// Team Custom Agents Functions
+// =============================================================================
+
+/**
+ * Create a new team-scoped custom agent. Owner / admin only — non-admins
+ * receive `permission-denied`. Server caps active (non-archived) agents
+ * at 50; over the cap the call fails with `failed-precondition`.
+ */
+export const createTeamAgent = createTypedCallable<
+  CreateTeamAgentRequest,
+  CreateTeamAgentResponse
+>("createTeamAgent")
+
+/**
+ * Update an existing team agent. Owner / admin only. Nested objects
+ * (promptSuffixes, tools) are deep-merged server-side; omitted keys
+ * retain their previous values.
+ */
+export const updateTeamAgent = createTypedCallable<
+  UpdateTeamAgentRequest,
+  UpdateTeamAgentResponse
+>("updateTeamAgent")
+
+/**
+ * Soft-delete an agent. Sets `archivedAt` to the server timestamp. The
+ * doc stays readable for sessions that reference it; pickers and
+ * cross-agent transfer references skip archived agents. Reversible via
+ * `restoreTeamAgent`.
+ */
+export const archiveTeamAgent = createTypedCallable<
+  ArchiveTeamAgentRequest,
+  ArchiveTeamAgentResponse
+>("archiveTeamAgent")
+
+/**
+ * Restore an archived agent. Clears `archivedAt` back to null. Re-counts
+ * against the active cap, so restoring requires headroom (archive
+ * another first if at the cap).
+ */
+export const restoreTeamAgent = createTypedCallable<
+  RestoreTeamAgentRequest,
+  RestoreTeamAgentResponse
+>("restoreTeamAgent")
+
+/**
+ * Flip an agent's `enabled` toggle. Disabled agents are filtered out
+ * of pickers AND gated out of dispatch — even when a session has the
+ * agent persisted as its `activeAgentId`, the server falls back to
+ * the team default until re-enabled. Owner / admin only.
+ */
+export const setTeamAgentEnabled = createTypedCallable<
+  SetTeamAgentEnabledRequest,
+  SetTeamAgentEnabledResponse
+>("setTeamAgentEnabled")
+
+/**
+ * Hard-delete an agent (irreversible). The Firestore doc is removed;
+ * the team's selectable agent count drops by one immediately. Owner /
+ * admin only. Existing chats referencing the deleted agent continue
+ * to function under the team default persona — the badge renders
+ * "Deleted" so the user sees what happened.
+ */
+export const deleteTeamAgent = createTypedCallable<
+  DeleteTeamAgentRequest,
+  DeleteTeamAgentResponse
+>("deleteTeamAgent")
+
+// =============================================================================
 // Node Summarize Request/Response Types — structured output demo.
 // =============================================================================
 
@@ -1571,6 +1775,14 @@ export function useFunctions() {
     // Team agent config operations
     getTeamAgentConfig,
     updateTeamAgentConfig,
+
+    // Team custom agent CRUD
+    createTeamAgent,
+    updateTeamAgent,
+    archiveTeamAgent,
+    restoreTeamAgent,
+    setTeamAgentEnabled,
+    deleteTeamAgent,
 
     // Structured-output sub-flows
     summarizeNode,

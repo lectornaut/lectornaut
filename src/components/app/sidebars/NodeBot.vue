@@ -174,24 +174,25 @@ const onNewNodeChat = () => {
                 </InputGroup>
               </div>
               <OverlayScrollbarsWrapper>
-                <div v-if="nodeSessions.length === 0" class="p-6 text-center">
-                  <p class="text-muted-foreground text-xs">
-                    {{
-                      filter.isActive.value
-                        ? t("ai.filterNoResults")
-                        : t("ai.botHistoryEmpty")
-                    }}
-                  </p>
-                  <Button
-                    v-if="filter.isActive.value"
-                    variant="ghost"
-                    size="sm"
-                    class="mt-2"
-                    @click="filter.reset()"
-                  >
-                    {{ t("ai.filterReset") }}
-                  </Button>
-                </div>
+                <Empty v-if="nodeSessions.length === 0" class="p-6">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <IconHistory />
+                    </EmptyMedia>
+                    <EmptyTitle>
+                      {{
+                        filter.isActive.value
+                          ? t("ai.filterNoResults")
+                          : t("ai.botHistoryEmpty")
+                      }}
+                    </EmptyTitle>
+                  </EmptyHeader>
+                  <EmptyContent v-if="filter.isActive.value">
+                    <Button variant="ghost" size="sm" @click="filter.reset()">
+                      {{ t("ai.filterReset") }}
+                    </Button>
+                  </EmptyContent>
+                </Empty>
                 <div v-else class="flex flex-col p-2">
                   <DropdownMenuCheckboxItem
                     v-for="item in nodeSessions"

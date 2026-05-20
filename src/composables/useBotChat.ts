@@ -41,11 +41,13 @@ import {
 } from "@/helpers/defaults"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
+import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import type {
   IBotAgentModel,
   IBotModelProvider,
   IBotSession,
   IBotSessionVisibility,
+  ITeamAgent,
 } from "@/types/domain"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import {
@@ -224,6 +226,37 @@ export interface BotChatContext {
   availableModelsByProvider: Ref<
     { id: IBotModelProvider; name: string; models: BotModelEntry[] }[]
   >
+  /**
+   * Id of the custom agent currently driving this chat, or `null` for
+   * the team default persona. Mutates on `selectAgent()`; the next
+   * `sendMessage` forwards it to the server, which persists it on the
+   * session doc so reloads stick to the same agent. New chats seed
+   * from `null` (default); existing chats rehydrate from the doc's
+   * `activeAgentId` field on `selectSession`.
+   */
+  activeAgentId: Ref<string | null>
+  /**
+   * The resolved active-agent record, or `null` when none is active
+   * or the agent's doc has been hard-deleted. Returns the record
+   * even when the agent is disabled or archived so the composer
+   * badge can render the agent's name + avatar regardless — the
+   * `activeAgentStatus` ref below provides the lifecycle detail.
+   */
+  activeAgent: Ref<ITeamAgent | null>
+  /**
+   * Lifecycle status of the currently-selected agent:
+   *   `null` (none selected) | "active" | "disabled" | "archived" | "deleted".
+   * The composer reads this to render the right status badge. The
+   * server is the source of truth for dispatch — this is purely a
+   * display affordance derived from the snapshot.
+   */
+  activeAgentStatus: Ref<"active" | "disabled" | "archived" | "deleted" | null>
+  /**
+   * Pick a custom agent (or pass `null` to clear back to the team
+   * default). Mutation only — the server is told on the next send.
+   * Composer badges and sidebar avatar clicks both route through here.
+   */
+  selectAgent: (agentId: string | null) => void
   mySessions: Ref<IBotSession[]>
   archivedMySessions: Ref<IBotSession[]>
   sharedSessions: Ref<IBotSession[]>
@@ -516,6 +549,76 @@ export function useBotChat(): BotChatContext {
     }
   })
 
+  // ── Active custom agent (multi-agent persona swap) ───────────────────
+  //
+  // `activeAgentId` is the in-memory pick the composer / sidebar mutates;
+  // the next `sendMessage` ships it to the server, which persists it on
+  // the session doc as the canonical `activeAgentId`. New chats start
+  // with `null` (team default); existing chats rehydrate from the doc
+  // on `selectSession`. The server's `resolveActiveAgent` decides what
+  // actually dispatches — including silently falling back to the
+  // default when the id points to a since-archived agent.
+  //
+  // We expose `activeAgent` as a computed lookup against the live agents
+  // store so the badge in the composer always reflects the current
+  // record (name + avatar seed). When the resolved agent is missing or
+  // archived, this is `null` — the UI treats that identically to "no
+  // agent selected" so a stale id never paints a broken badge.
+  const teamAgentsStore = useTeamAgentsStore()
+  const { agents: allTeamAgents } = storeToRefs(teamAgentsStore)
+  const activeAgentId = ref<string | null>(null)
+
+  /**
+   * Resolved record for the currently-selected agent — looks in the
+   * FULL list, not just selectable, so the composer badge can still
+   * render the agent's name + avatar even when it's disabled or
+   * archived. `null` only when no agent is selected OR the id points
+   * to a hard-deleted doc (the record is genuinely gone).
+   *
+   * The `activeAgentStatus` ref below carries the lifecycle detail
+   * the badge needs to label what the user is looking at.
+   */
+  const activeAgent = computed<ITeamAgent | null>(() => {
+    const id = activeAgentId.value
+    if (!id) return null
+    return allTeamAgents.value.find((agent) => agent.id === id) ?? null
+  })
+
+  /**
+   * Lifecycle status of the currently-selected agent. Drives the
+   * badge sub-label in the composer:
+   *   - `null`     — no agent selected (default persona).
+   *   - "active"   — selected agent is enabled + non-archived.
+   *                  Render plain (no status sub-label).
+   *   - "disabled" — admin disabled the agent. Dispatch falls back
+   *                  to default; badge gains "(Disabled)".
+   *   - "archived" — agent is deprecated. Dispatch STILL uses it
+   *                  (existing chats keep running); badge gains
+   *                  "(Archived)" to signal the deprecation.
+   *   - "deleted"  — agent doc is gone (hard-deleted). Dispatch
+   *                  falls back to default; badge shows "(Deleted)"
+   *                  without an agent name (the record is missing).
+   *
+   * Disabled wins over archived when both apply — the stronger gate
+   * is the one the user needs to see.
+   */
+  const activeAgentStatus = computed<
+    "active" | "disabled" | "archived" | "deleted" | null
+  >(() => {
+    const id = activeAgentId.value
+    if (!id) return null
+    const match = allTeamAgents.value.find((agent) => agent.id === id)
+    if (!match) return "deleted"
+    if (match.enabled === false) return "disabled"
+    if (match.archivedAt) return "archived"
+    return "active"
+  })
+
+  const selectAgent = (agentId: string | null): void => {
+    // Normalize empty strings to null so consumers don't have to.
+    activeAgentId.value = agentId && agentId.length > 0 ? agentId : null
+  }
+
   // Cancellation handle for the in-flight `sendBotMessage.stream(...)`.
   // Aborted whenever the user switches to a different session, starts a
   // new chat, or the composable's scope is disposed (page unmount). This
@@ -647,6 +750,41 @@ export function useBotChat(): BotChatContext {
     }
   })
 
+  // Snapshot-driven active-agent resync.
+  //
+  // The server may flip `activeAgentId` on the session doc *during* a
+  // turn — specifically when the model calls `transferToAgent` to
+  // hand off to a different persona. Without this watcher, the
+  // composer badge would keep showing the pre-transfer agent until
+  // the user reloaded the chat, and the next `sendMessage` would
+  // forward the stale id (the server would clamp back to the
+  // session-persisted value, so behavior would be correct, but the
+  // UI affordance would lag).
+  //
+  // We watch `activeSession.value?.activeAgentId` directly — it
+  // re-evaluates whenever the doc snapshot updates (vuefire's
+  // reactivity). The guard `next !== activeAgentId.value` prevents
+  // re-firing on the local-mutation path: `selectAgent()` writes
+  // `activeAgentId.value`, the next `sendMessage` writes the doc,
+  // the snapshot lands with the same value, and we skip the no-op
+  // assignment. Real transfers (where the doc's value diverges from
+  // the local ref) flow through cleanly.
+  //
+  // Also handles cross-tab/device updates: another tab changes the
+  // agent → doc updates → this tab's badge follows.
+  watch(
+    () => activeSession.value?.activeAgentId ?? null,
+    (next) => {
+      // Only sync while a session is bound — otherwise this would
+      // clobber the new-chat default-null state with an unrelated
+      // session's persisted agent during the brief window between
+      // `selectSession` clearing and the next snapshot landing.
+      if (!sessionId.value) return
+      if (next === activeAgentId.value) return
+      activeAgentId.value = next
+    }
+  )
+
   const activeVisibility = computed<IBotSessionVisibility>(
     () => activeSession.value?.visibility ?? "private"
   )
@@ -711,6 +849,12 @@ export function useBotChat(): BotChatContext {
     // default model. Continuity (rehydrating to the last-used model) is
     // an existing-chat concept and handled by `selectSession`.
     model.value = teamDefaultModel.value
+    // Active custom agent resets too — a brand-new chat shouldn't
+    // inherit the persona from whatever the user was just talking to.
+    // Sidebar-launched chats (which DO want an agent preselected)
+    // call `selectAgent(id)` right after this resets, so the order
+    // (reset then re-select) is the safe path.
+    activeAgentId.value = null
   }
 
   /**
@@ -1004,6 +1148,12 @@ export function useBotChat(): BotChatContext {
           model: model.value,
           contextNodes,
           ...(pinnedNode ? { pinnedNode } : {}),
+          // Always send `activeAgentId` (even when null) so the server
+          // knows the user's intent for this turn. Omitting the field
+          // is reserved for "use whatever the session already had" —
+          // useful for legacy clients but never something this client
+          // wants, since the picker always has a defined state.
+          activeAgentId: activeAgentId.value,
         },
         { signal: controller.signal }
       )
@@ -1121,6 +1271,10 @@ export function useBotChat(): BotChatContext {
           mode: mode.value,
           model: model.value,
           contextNodes,
+          // Forward the current agent selection so a user who flipped
+          // agents mid-interrupt has the resume turn dispatched under
+          // the new persona instead of the one that asked the question.
+          activeAgentId: activeAgentId.value,
         },
         { signal: controller.signal }
       )
@@ -1209,6 +1363,14 @@ export function useBotChat(): BotChatContext {
         persistedModel && isModelAvailable(persistedModel)
           ? persistedModel
           : teamDefaultModel.value
+      // Same rehydration story for the active agent: pick up the
+      // session's persisted id so the badge matches what the server
+      // will dispatch with. The agent record may have been archived
+      // since (admins manage agents independently of sessions); the
+      // computed `activeAgent` returns null in that case so the badge
+      // silently reverts to default. The server keeps the doc field
+      // unchanged so restoring the agent re-binds this session.
+      activeAgentId.value = matched?.activeAgentId ?? null
       pendingPinnedNode.value = null
     } catch (error) {
       console.error("[useBotChat] loadBotSession failed:", error)
@@ -1365,6 +1527,10 @@ export function useBotChat(): BotChatContext {
     activeModeOption,
     model,
     availableModelsByProvider,
+    activeAgentId,
+    activeAgent,
+    activeAgentStatus,
+    selectAgent,
     mySessions,
     archivedMySessions,
     sharedSessions,

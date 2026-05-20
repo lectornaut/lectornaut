@@ -1,0 +1,30 @@
+---
+input:
+  schema: SummarizeNodePromptInput
+output:
+  schema: SummarizeNodeOutput
+config:
+  temperature: 0.3
+---
+{{#if isFolder}}
+Summarize the likely purpose of this workspace folder based on its name.
+The folder has no inline content of its own.
+
+Folder name: {{name}}
+{{else}}
+{{#if hasContent}}
+Summarize the following workspace file.
+
+File name: {{name}}
+Content:
+"""
+{{content}}
+"""
+{{else}}
+Summarize this workspace file. The file currently has no content —
+infer its likely purpose from the name and return a minimal summary
+plus an empty keyPoints array.
+
+File name: {{name}}
+{{/if}}
+{{/if}}
