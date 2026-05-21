@@ -342,3 +342,21 @@ export function createSharedBotSessionsQuery(
     orderBy("updatedAt", "desc")
   )
 }
+
+/**
+ * Create a query for every bot session in a workspace, regardless of
+ * owner or visibility. Backs the admin-only Sessions tab in Settings —
+ * Firestore rules only return rows for team owners/admins, so a member
+ * subscribing to this query receives an empty snapshot. Keep ordering
+ * aligned with the other two queries (most-recently updated first) so
+ * UI sort defaults are consistent.
+ */
+export function createWorkspaceBotSessionsQuery(
+  teamId: string,
+  workspaceId: string
+) {
+  return query(
+    getBotSessionsCollection(teamId, workspaceId),
+    orderBy("updatedAt", "desc")
+  )
+}

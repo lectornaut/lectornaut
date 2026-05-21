@@ -28,8 +28,16 @@ export function useCurrentTeamRole(teamId: Ref<string | null>) {
     })
   )
 
+  const canManageBotSessions = computed(() =>
+    can(currentUser.value, Capabilities.MANAGE_BOT_SESSIONS, {
+      scope: "team",
+      teamRole: currentRole.value,
+    })
+  )
+
   return {
     currentRole,
     canViewLogs,
+    canManageBotSessions,
   }
 }

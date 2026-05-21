@@ -481,12 +481,16 @@
       "general": "General",
       "preferences": "Preferences",
       "account": "Account",
+      "privacy": "Privacy",
       "notifications": "Notifications",
       "appearance": "Appearance",
       "security": "Security",
       "team": "Team",
       "workspace": "Workspace",
+      "workspaceGroup": "Workspace",
+      "aiGroup": "AI",
       "ai": "AI",
+      "models": "Models",
       "tools": "Tools",
       "agents": "Agents",
       "members": "Members",
@@ -494,6 +498,9 @@
       "teams": "Teams",
       "workspaces": "Workspaces",
       "runs": "Runs",
+      "sessions": "Sessions",
+      "data": "Data",
+      "storage": "Storage",
       "knowledge": "Knowledge",
       "integrations": "Integrations",
       "logs": "Logs",
@@ -504,10 +511,12 @@
     "descriptions": {
       "preferences": "Language, theme, font, and display.",
       "account": "Profile, sign-in, and account details.",
+      "privacy": "Personal data controls — wipe or archive every chat you own in this workspace.",
       "notifications": "Choose what to receive and how often.",
       "appearance": "Theme, colors, and typography.",
       "security": "Password, MFA, and domain controls.",
       "ai": "Provider keys, default model, system prompts, and generation parameters.",
+      "models": "Provider keys, default model, system prompts, and generation parameters.",
       "tools": "Built-in tools and admin-authored custom tools the bot can call.",
       "agents": "Built-in presets and custom agent personas the team can pick from.",
       "members": "Members, roles, and access.",
@@ -516,6 +525,9 @@
       "workspaces": "Create and switch workspaces.",
       "invite": "Invite people to this team.",
       "runs": "Run history and current status.",
+      "sessions": "Admin view of every bot chat session in the team's selected workspace. Filter, audit, and bulk-manage across all members.",
+      "data": "Team-wide chat data controls — archive or permanently delete every member's bot chats in this workspace.",
+      "storage": "Bulk-wipe workspace files — delete every code or write document at once.",
       "knowledge": "Add and organize workspace knowledge.",
       "integrations": "Connect tools and services.",
       "logs": "Activity and system history.",
@@ -985,6 +997,125 @@
       "filterActor": "Actor",
       "refresh": "Refresh"
     },
+    "sessions": {
+      "sessionsLabel": "Workspace chat sessions",
+      "sessionsDescription": "Every bot chat created by any member in the selected workspace. Rename, archive, restore, and permanently delete in bulk — server-side rules grant this view to team owners and admins only.",
+      "noPermissionTitle": "No permission",
+      "noPermissionDescription": "Only team owners and admins can manage workspace bot sessions.",
+      "columnTitle": "Title",
+      "columnPreview": "Preview",
+      "columnOwner": "Owner",
+      "columnVisibility": "Visibility",
+      "columnMode": "Mode",
+      "columnAttachment": "Attachment",
+      "columnMessages": "Messages",
+      "columnUpdated": "Last activity",
+      "columnCreated": "Created",
+      "columnStatus": "Status",
+      "filterVisibility": "Visibility",
+      "filterMode": "Mode",
+      "filterStatus": "Status",
+      "filterOwner": "Owner",
+      "filterAttachment": "Attachment",
+      "attachmentYes": "Attached to item",
+      "attachmentNo": "Standalone",
+      "ownerUnknown": "Unknown member",
+      "statusActive": "Active",
+      "statusArchived": "Archived",
+      "selectedCount": "{count} selected | {count} selected",
+      "bulkArchive": "Archive selected",
+      "bulkRestore": "Restore selected",
+      "bulkDelete": "Delete selected",
+      "bulkClear": "Clear selection",
+      "bulkDeleteTitle": "Delete selected chats?",
+      "bulkDeleteConfirm": "All selected chats — across every member — will be permanently deleted, including every message. This action cannot be undone.",
+      "emptyTitle": "No bot sessions yet",
+      "emptyDescription": "Once a member starts a chat from the bot page, it will appear here."
+    },
+    "privacy": {
+      "label": "Your chats",
+      "description": "Bulk actions on bot sessions you personally own in the current workspace. Doesn't affect chats other members started.",
+      "ownedCount": "No chats owned yet | {count} chat owned | {count} chats owned",
+      "archiveAll": {
+        "label": "Archive all my chats",
+        "description": "Move every active chat you own out of the sidebar. They stay readable in the Archived group; you can restore them anytime.",
+        "action": "Archive all",
+        "confirmTitle": "Archive every chat you own?",
+        "confirmBody": "{count} active chat will be archived. | {count} active chat will be archived. | {count} active chats will be archived.",
+        "noActive": "You don't have any active chats to archive."
+      },
+      "deleteAll": {
+        "label": "Delete all my chats",
+        "description": "Permanently remove every chat you own — active and archived — along with all their messages. This cannot be undone.",
+        "action": "Delete all",
+        "confirmTitle": "Permanently delete every chat you own?",
+        "confirmBody": "{count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chats will be permanently deleted, including every message. This action cannot be undone.",
+        "noChats": "You don't have any chats to delete."
+      }
+    },
+    "data": {
+      "label": "Workspace chat data",
+      "description": "Team-wide bulk actions on every bot chat in this workspace. Admin-only.",
+      "totalCount": "No chats in this workspace yet | {count} chat across the workspace | {count} chats across the workspace",
+      "noPermissionTitle": "No permission",
+      "noPermissionDescription": "Only team owners and admins can manage workspace chat data.",
+      "archiveAll": {
+        "label": "Archive all team chats",
+        "description": "Move every active chat — across all members — into their owners' Archived groups. Owners can restore individually.",
+        "action": "Archive all",
+        "confirmTitle": "Archive every chat in this workspace?",
+        "confirmBody": "{count} active chat will be archived for every member of this workspace. | {count} active chat will be archived for every member of this workspace. | {count} active chats will be archived for every member of this workspace.",
+        "noActive": "No active chats to archive."
+      },
+      "deleteAll": {
+        "label": "Delete all team chats",
+        "description": "Permanently remove every chat in this workspace — active and archived — across every member. This cannot be undone.",
+        "action": "Delete all",
+        "confirmTitle": "Permanently delete every chat in this workspace?",
+        "confirmBody": "{count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chats will be permanently deleted across every member, including every message. This action cannot be undone.",
+        "noChats": "No chats to delete."
+      }
+    },
+    "storage": {
+      "label": "Workspace files",
+      "description": "Delete cascades to every descendant; archive marks the top-level node only and can be restored later.",
+      "noPermissionTitle": "No permission",
+      "noPermissionDescription": "Only team owners and admins can manage workspace storage.",
+      "rootCount": "No top-level items | {count} top-level item | {count} top-level items",
+      "activeRootCount": "No active top-level items | {count} active top-level item | {count} active top-level items",
+      "archiveCodes": {
+        "label": "Archive all code documents",
+        "description": "Mark every active top-level file and folder under the Code workspace as archived. Children stay where they are and individual items can be restored later.",
+        "action": "Archive all code",
+        "confirmTitle": "Archive every active Code document?",
+        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view.",
+        "noItems": "No active code documents to archive."
+      },
+      "deleteCodes": {
+        "label": "Delete all code documents",
+        "description": "Permanently remove every file and folder under the Code workspace. Cascade delete reaches every descendant.",
+        "action": "Delete all code",
+        "confirmTitle": "Delete every Code document?",
+        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone.",
+        "noItems": "No code documents to delete."
+      },
+      "archiveWrites": {
+        "label": "Archive all write documents",
+        "description": "Mark every active top-level file and folder under the Write workspace as archived. Children stay where they are and individual items can be restored later.",
+        "action": "Archive all writes",
+        "confirmTitle": "Archive every active Write document?",
+        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view.",
+        "noItems": "No active write documents to archive."
+      },
+      "deleteWrites": {
+        "label": "Delete all write documents",
+        "description": "Permanently remove every file and folder under the Write workspace. Cascade delete reaches every descendant.",
+        "action": "Delete all writes",
+        "confirmTitle": "Delete every Write document?",
+        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone.",
+        "noItems": "No write documents to delete."
+      }
+    },
     "security": {
       "enterprise": {
         "title": "Enterprise Security",
@@ -1268,7 +1399,7 @@
       },
       "builtInAgents": {
         "label": "Built-in agents",
-        "sectionDescription": "Ship-with-the-app personas your team can pick alongside custom agents. Disable any preset to remove it from members' pickers and the cross-agent transfer roster.",
+        "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases.",
         "_researcher": {
           "label": "Researcher",
           "description": "Pulls grounded answers from the workspace. Cites sources from the team's notes and files."

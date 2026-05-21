@@ -360,10 +360,18 @@ service cloud.firestore {
         // owner-only here (the shared predicate requires the explicit
         // string match).
         match /botSessions/{sessionId} {
+          // Three read paths:
+          //   - owner: read your own sessions, any visibility.
+          //   - team member: read sessions explicitly shared with the team.
+          //   - team admin/owner: read every session in the workspace, used
+          //     by the admin-only Sessions tab in Settings.
+          // Writes always happen via Cloud Functions (sendBotMessage,
+          // archiveBotSession, deleteBotSession, …).
           allow read: if isTeamMember(teamId)
             && (
               resource.data.ownerUid == request.auth.uid
               || resource.data.visibility == "shared"
+              || isTeamAdmin(teamId)
             );
           allow write: if false;
         }

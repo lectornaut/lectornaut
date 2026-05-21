@@ -33,6 +33,12 @@ emitter.on("Dialog.Settings.Open", (event) => {
   openSettings.value = true
 })
 
+// Pair to "Dialog.Settings.Open" — lets any settings sub-page close the
+// dialog as it navigates away (e.g. SettingsSessions opening a chat).
+emitter.on("Dialog.Settings.Close", () => {
+  openSettings.value = false
+})
+
 const activeTabConfig = computed(() => {
   for (const nav of defaultSettingsTabs) {
     const link = nav.links.find((link) => link.id === activeTab.value)
@@ -131,12 +137,17 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 <SettingsAccount />
               </OverlayScrollbarsWrapper>
             </TabsContent>
+            <TabsContent :class="tabContentClass" value="privacy">
+              <OverlayScrollbarsWrapper>
+                <SettingsPrivacy />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
             <TabsContent :class="tabContentClass" value="appearance">
               <OverlayScrollbarsWrapper>
                 <SettingsAppearance />
               </OverlayScrollbarsWrapper>
             </TabsContent>
-            <TabsContent :class="tabContentClass" value="ai">
+            <TabsContent :class="tabContentClass" value="models">
               <OverlayScrollbarsWrapper>
                 <SettingsAi />
               </OverlayScrollbarsWrapper>
@@ -149,6 +160,21 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
             <TabsContent :class="tabContentClass" value="agents">
               <OverlayScrollbarsWrapper>
                 <SettingsAgents />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
+            <TabsContent :class="tabContentClass" value="sessions">
+              <OverlayScrollbarsWrapper>
+                <SettingsSessions />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
+            <TabsContent :class="tabContentClass" value="storage">
+              <OverlayScrollbarsWrapper>
+                <SettingsStorage />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
+            <TabsContent :class="tabContentClass" value="data">
+              <OverlayScrollbarsWrapper>
+                <SettingsData />
               </OverlayScrollbarsWrapper>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="notifications">

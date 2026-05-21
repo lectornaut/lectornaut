@@ -82,6 +82,13 @@ export const Capabilities = {
   READ_TEAM: "read_team",
   MANAGE_BILLING: "manage_billing",
   READ_AUDIT_LOGS: "read_audit_logs",
+  /**
+   * Read and manage every bot chat session in the team's workspaces,
+   * regardless of ownership or visibility. Owner/admin-only — gives
+   * access to the Sessions tab in Settings (rename / archive / delete
+   * across the whole workspace).
+   */
+  MANAGE_BOT_SESSIONS: "manage_bot_sessions",
 
   // Security Scope
   MANAGE_SECURITY: "manage_security",
@@ -111,6 +118,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.REMOVE_MEMBER,
     Capabilities.READ_TEAM,
     Capabilities.READ_AUDIT_LOGS,
+    Capabilities.MANAGE_BOT_SESSIONS,
     Capabilities.MANAGE_BILLING,
     Capabilities.MANAGE_SECURITY,
     Capabilities.CREATE_WORKSPACE,
@@ -126,6 +134,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.REMOVE_MEMBER,
     Capabilities.READ_TEAM,
     Capabilities.READ_AUDIT_LOGS,
+    Capabilities.MANAGE_BOT_SESSIONS,
     Capabilities.MANAGE_BILLING,
     Capabilities.MANAGE_SECURITY,
     Capabilities.CREATE_WORKSPACE,
