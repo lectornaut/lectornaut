@@ -79,7 +79,6 @@
       "default": "Default",
       "defaultTooltip": "Use the team's default assistant for this chat.",
       "newAgent": "New agent",
-      "settings": "Agent settings",
       "featureDisabled": "Custom agents are disabled for this team.",
       "emptyMember": "Ask an admin to set up custom agents.",
       "statusDisabled": "Disabled",
@@ -1675,7 +1674,12 @@
       "profile": "Profile"
     },
     "showMore": "Show more options",
-    "show": "Show"
+    "groups": {
+      "navigation": "Navigation",
+      "agents": "Agents"
+    },
+    "agentsSidebar": "Show in sidebar",
+    "agentsEmpty": "No agents available"
   },
   "tabs": {
     "newTab": "New tab",

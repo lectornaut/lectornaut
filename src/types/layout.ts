@@ -24,6 +24,7 @@ export interface NavigationUiState {
   leftPanelCollapsed: boolean
   rightPanelCollapsed: boolean
   bottomPanelCollapsed: boolean
+  agentsSidebarVisible: boolean
 }
 
 export interface LayoutTabsDoc {
@@ -36,4 +37,11 @@ export interface LayoutNavigationDoc {
   visibleItems?: Record<string, boolean>
   order?: string[]
   ui?: Partial<NavigationUiState>
+  // Per-user, per-agent sidebar visibility. Keyed by agent id (built-in
+  // ids like `_researcher` or custom Firestore doc ids). Opt-out: a
+  // missing key means visible, so newly-added agents appear by default.
+  // Only explicitly-toggled agents are stored; `true` is written (not the
+  // key deleted) when re-showing so it overrides a remote `false` under
+  // Firestore's merge semantics.
+  agentVisibility?: Record<string, boolean>
 }

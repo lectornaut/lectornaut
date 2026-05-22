@@ -3,12 +3,15 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { IconChevronRight, IconGift, IconX } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
+import { useLayoutStore } from "@/stores/layoutStore"
 import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
 const { setOpen, isMobile, setOpenMobile } = useSidebar()
 const authStore = useAuthStore()
 const { onboarding } = storeToRefs(authStore)
+const layoutStore = useLayoutStore()
+const { agentsSidebarVisible } = storeToRefs(layoutStore)
 
 const isFullscreen = useIsFullscreen()
 
@@ -68,8 +71,10 @@ function closeSidebarOnMobile() {
           </SidebarMenu>
         </SidebarFooter>
         <SidebarFooter>
-          <Agents />
-          <Separator />
+          <template v-if="agentsSidebarVisible">
+            <Agents />
+            <Separator />
+          </template>
           <Support />
           <SettingsMenu />
           <CreateMenu />

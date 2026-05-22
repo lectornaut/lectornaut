@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconCirclePlus, IconSettings } from "@/data/icons"
+import { isBuiltInAgentId } from "@/data/builtInAgents"
+import { IconCirclePlus } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
+import { useLayoutStore } from "@/stores/layoutStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { storeToRefs } from "pinia"
@@ -16,13 +18,24 @@ const isFullscreen = useIsFullscreen()
 // followed by selectable custom agents. The team-wide `customAgents`
 // toggle short-circuits both inner lists to empty, so when the feature
 // is disabled team-wide this list goes empty automatically and the
-// per-agent sheets stop rendering. Admins can still re-enable from
-// the SettingsAgents page (the Settings icon below is always visible
-// for that reason). The local binding stays `activeAgents` to keep
-// the template diff minimal — semantics now include built-ins.
+// per-agent sheets stop rendering. Admins re-enable it from the
+// AI → Agents settings page. The local binding stays `activeAgents`
+// to keep the template diff minimal — semantics now include built-ins.
 const teamAgentsStore = useTeamAgentsStore()
 const { pickerAgents: activeAgents, customAgentsEnabled } =
   storeToRefs(teamAgentsStore)
+
+// Per-user visibility filter, set from the Edit → Agents submenu.
+// `isAgentVisible` reads the layout store's reactive map, so this
+// computed re-runs when the user toggles an agent. Only the rendered
+// sheets are filtered — the empty-state hints below stay keyed on
+// `activeAgents` (team availability), so hiding every agent yourself
+// doesn't trip the "no agents available" message.
+const layoutStore = useLayoutStore()
+const { isAgentVisible } = layoutStore
+const visibleAgents = computed(() =>
+  activeAgents.value.filter((agent) => isAgentVisible(agent.id))
+)
 
 const membershipStore = useMembershipStore()
 const { isOwner, isAdmin } = storeToRefs(membershipStore)
@@ -38,18 +51,6 @@ const avatarSeed = (agent: { avatarSeed: string; name: string; id: string }) =>
   agent.avatarSeed.trim() || agent.name.trim() || agent.id
 
 /**
- * Open the SettingsAgents page on the agents tab. Used for the
- * always-visible Settings icon — admins need a reliable way to reach
- * the Tools-section toggle to re-enable the feature when it's been
- * gated team-wide. Falls back gracefully for non-admin viewers (the
- * Settings dialog itself is open to all roles, the agents tab is
- * just read-only for them).
- */
-const openAgentsSettings = (): void => {
-  emitter.emit("Dialog.Settings.Open", "agents")
-}
-
-/**
  * Open the custom agents management dialog directly in "editor"
  * mode (new agent). Avoids the two-hop "open Settings → Tools cog"
  * flow — clicking "New agent" in the sidebar takes the admin
@@ -63,23 +64,6 @@ const openNewAgentDialog = (): void => {
 
 <template>
   <SidebarMenu id="tour-team-members">
-    <!--
-      Settings icon — ALWAYS visible regardless of the team-wide
-      customAgents toggle state. When admins flip the feature off,
-      this is the entry point back to the Tools section where they
-      can flip it on again. Members see it too; the Settings page is
-      readable by all roles even if write controls are gated.
-    -->
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        :tooltip="t('ai.agents.settings')"
-        @click="openAgentsSettings"
-      >
-        <IconSettings />
-        {{ t("ai.agents.settings") }}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-
     <!--
       "New agent" entry — visible only when:
         - The team-wide customAgents toggle is on (otherwise the
@@ -102,9 +86,8 @@ const openNewAgentDialog = (): void => {
 
     <!--
       Empty-state hints. When customAgents is globally disabled,
-      everyone (admins and members) sees a different message
-      explaining why the list is empty even if agents exist —
-      pointing them to the Settings icon above.
+      everyone (admins and members) sees a message explaining why
+      the list is empty even if agents exist.
     -->
     <SidebarMenuItem v-if="!customAgentsEnabled">
       <SidebarMenuButton :tooltip="t('ai.agents.featureDisabled')" disabled>
@@ -125,7 +108,7 @@ const openNewAgentDialog = (): void => {
       seeded from `avatarSeed || name` so it stays deterministic as
       long as the admin doesn't relabel the agent.
     -->
-    <Sheet v-for="agent in activeAgents" :key="agent.id">
+    <Sheet v-for="agent in visibleAgents" :key="agent.id">
       <SheetTrigger as-child>
         <SidebarMenuItem>
           <SidebarMenuButton :tooltip="agent.name">
@@ -141,6 +124,14 @@ const openNewAgentDialog = (): void => {
               ]"
             />
             {{ agent.name }}
+            <!-- "Custom" tag for admin-authored agents (built-ins use `_`-prefixed ids); mirrors AiChatComposer's agent picker. -->
+            <Badge
+              v-if="!isBuiltInAgentId(agent.id)"
+              variant="secondary"
+              class="text-xs"
+            >
+              {{ t("ai.agents.customBadge") }}
+            </Badge>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SheetTrigger>

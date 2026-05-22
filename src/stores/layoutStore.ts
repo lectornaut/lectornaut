@@ -94,6 +94,22 @@ export const useLayoutStore = defineStore("layout", () => {
     "layout.panel.bottom.collapsed",
     false
   )
+  // Personal toggle for the Agents sidebar section (MainSidebar footer).
+  // Lives in the UI-prefs lane alongside the panel collapse flags: instant
+  // localStorage write + mirrored to Firestore `navigation.ui` for cross-device
+  // sync. Defaults visible so existing users keep seeing the section.
+  const agentsSidebarVisible = useStorage<boolean>(
+    "layout.sidebar.agents.visible",
+    true
+  )
+  // Per-agent visibility within the Agents section. Map of agent id →
+  // shown. Opt-out (missing key = visible) so new agents appear without a
+  // migration. Shares the UI-prefs lane: instant localStorage + mirrored
+  // to the user's `navigation.agentVisibility` field for cross-device sync.
+  const agentVisibility = useStorage<Record<string, boolean>>(
+    "layout.sidebar.agents.visibility",
+    {}
+  )
 
   const tabs = ref<Tab[]>([])
   const activeTabId = ref("")
@@ -131,6 +147,7 @@ export const useLayoutStore = defineStore("layout", () => {
     leftPanelCollapsed: leftPanelCollapsed.value,
     rightPanelCollapsed: rightPanelCollapsed.value,
     bottomPanelCollapsed: bottomPanelCollapsed.value,
+    agentsSidebarVisible: agentsSidebarVisible.value,
   })
 
   const isNavigationUiSnapshotInSync = (ui: Partial<NavigationUiState>) =>
@@ -141,7 +158,46 @@ export const useLayoutStore = defineStore("layout", () => {
     typeof ui.rightPanelCollapsed === "boolean" &&
     ui.rightPanelCollapsed === rightPanelCollapsed.value &&
     typeof ui.bottomPanelCollapsed === "boolean" &&
-    ui.bottomPanelCollapsed === bottomPanelCollapsed.value
+    ui.bottomPanelCollapsed === bottomPanelCollapsed.value &&
+    typeof ui.agentsSidebarVisible === "boolean" &&
+    ui.agentsSidebarVisible === agentsSidebarVisible.value
+
+  // Opt-out lookup: only an explicit `false` hides an agent. Reads
+  // `agentVisibility.value`, so callers inside a computed/template render
+  // (e.g. `Agents.vue`'s `visibleAgents`, the menu checkboxes) stay
+  // reactive to changes without extra wiring.
+  const isAgentVisible = (agentId: string): boolean =>
+    agentVisibility.value[agentId] !== false
+
+  // True once every locally-set key is reflected in the snapshot. Used to
+  // clear the dirty flag after our own write round-trips. Deliberately a
+  // subset check (local ⊆ saved): the snapshot may carry extra keys for
+  // agents toggled on another device and later deleted — ignoring them
+  // keeps a stale key from wedging the prefs permanently dirty.
+  const isAgentVisibilityPersisted = (
+    saved: Record<string, boolean>
+  ): boolean => {
+    const local = agentVisibility.value
+    for (const id of Object.keys(local)) {
+      if (saved[id] !== local[id]) return false
+    }
+    return true
+  }
+
+  // True when `candidate` holds exactly the same keys/values as the local
+  // map — guards the snapshot-apply assignment so an identical merge
+  // doesn't churn reactivity.
+  const agentVisibilityEquals = (
+    candidate: Record<string, boolean>
+  ): boolean => {
+    const local = agentVisibility.value
+    if (Object.keys(local).length !== Object.keys(candidate).length)
+      return false
+    for (const id of Object.keys(candidate)) {
+      if (local[id] !== candidate[id]) return false
+    }
+    return true
+  }
 
   // ============================================================================
   // Firestore Refs
@@ -251,12 +307,16 @@ export const useLayoutStore = defineStore("layout", () => {
   )
 
   // Mark UI prefs as dirty immediately when changed locally.
+  // `agentVisibility` is reassigned wholesale on every toggle (immutable
+  // update), so top-level ref reactivity catches it without `deep`.
   watch(
     [
       sidebarOpen,
       leftPanelCollapsed,
       rightPanelCollapsed,
       bottomPanelCollapsed,
+      agentsSidebarVisible,
+      agentVisibility,
     ],
     () => {
       if (isApplyingNavigationUiSnapshot.value) return
@@ -284,36 +344,75 @@ export const useLayoutStore = defineStore("layout", () => {
       }
 
       const ui = isRecord(navigationDoc.ui) ? navigationDoc.ui : null
-      if (ui && navigationUiDirty.value && isNavigationUiSnapshotInSync(ui)) {
+      const savedAgentVisibility = isRecord(navigationDoc.agentVisibility)
+        ? (navigationDoc.agentVisibility as Record<string, boolean>)
+        : null
+
+      // Clear the dirty flag once our own write round-trips. Every field
+      // present in the snapshot (ui and/or agentVisibility) must match
+      // local; an absent field is not gating, so an older doc that predates
+      // either feature won't keep the prefs stuck dirty.
+      if (
+        navigationUiDirty.value &&
+        (ui || savedAgentVisibility) &&
+        (!ui || isNavigationUiSnapshotInSync(ui)) &&
+        (!savedAgentVisibility ||
+          isAgentVisibilityPersisted(savedAgentVisibility))
+      ) {
         navigationUiDirty.value = false
       }
 
-      if (ui && !pendingNavigationUi.value && !navigationUiDirty.value) {
+      if (
+        (ui || savedAgentVisibility) &&
+        !pendingNavigationUi.value &&
+        !navigationUiDirty.value
+      ) {
         isApplyingNavigationUiSnapshot.value = true
         try {
-          if (
-            typeof ui.sidebarOpen === "boolean" &&
-            ui.sidebarOpen !== sidebarOpen.value
-          ) {
-            sidebarOpen.value = ui.sidebarOpen
+          if (ui) {
+            if (
+              typeof ui.sidebarOpen === "boolean" &&
+              ui.sidebarOpen !== sidebarOpen.value
+            ) {
+              sidebarOpen.value = ui.sidebarOpen
+            }
+            if (
+              typeof ui.leftPanelCollapsed === "boolean" &&
+              ui.leftPanelCollapsed !== leftPanelCollapsed.value
+            ) {
+              leftPanelCollapsed.value = ui.leftPanelCollapsed
+            }
+            if (
+              typeof ui.rightPanelCollapsed === "boolean" &&
+              ui.rightPanelCollapsed !== rightPanelCollapsed.value
+            ) {
+              rightPanelCollapsed.value = ui.rightPanelCollapsed
+            }
+            if (
+              typeof ui.bottomPanelCollapsed === "boolean" &&
+              ui.bottomPanelCollapsed !== bottomPanelCollapsed.value
+            ) {
+              bottomPanelCollapsed.value = ui.bottomPanelCollapsed
+            }
+            if (
+              typeof ui.agentsSidebarVisible === "boolean" &&
+              ui.agentsSidebarVisible !== agentsSidebarVisible.value
+            ) {
+              agentsSidebarVisible.value = ui.agentsSidebarVisible
+            }
           }
-          if (
-            typeof ui.leftPanelCollapsed === "boolean" &&
-            ui.leftPanelCollapsed !== leftPanelCollapsed.value
-          ) {
-            leftPanelCollapsed.value = ui.leftPanelCollapsed
-          }
-          if (
-            typeof ui.rightPanelCollapsed === "boolean" &&
-            ui.rightPanelCollapsed !== rightPanelCollapsed.value
-          ) {
-            rightPanelCollapsed.value = ui.rightPanelCollapsed
-          }
-          if (
-            typeof ui.bottomPanelCollapsed === "boolean" &&
-            ui.bottomPanelCollapsed !== bottomPanelCollapsed.value
-          ) {
-            bottomPanelCollapsed.value = ui.bottomPanelCollapsed
+          if (savedAgentVisibility) {
+            // Merge remote keys over local rather than replace, so a key
+            // just set on this device isn't dropped by an older snapshot.
+            // Guarded by isApplyingNavigationUiSnapshot so it can't re-mark
+            // the prefs dirty.
+            const merged = {
+              ...agentVisibility.value,
+              ...savedAgentVisibility,
+            }
+            if (!agentVisibilityEquals(merged)) {
+              agentVisibility.value = merged
+            }
           }
         } finally {
           isApplyingNavigationUiSnapshot.value = false
@@ -429,6 +528,7 @@ export const useLayoutStore = defineStore("layout", () => {
       navigationDocRef.value,
       {
         ui: getNavigationUiState(),
+        agentVisibility: agentVisibility.value,
       },
       "layout.navigation.ui.persist"
     )
@@ -533,6 +633,8 @@ export const useLayoutStore = defineStore("layout", () => {
       leftPanelCollapsed,
       rightPanelCollapsed,
       bottomPanelCollapsed,
+      agentsSidebarVisible,
+      agentVisibility,
     ],
     () => {
       if (!navigationUiDirty.value) return
@@ -1054,6 +1156,17 @@ export const useLayoutStore = defineStore("layout", () => {
   }
 
   /**
+   * Toggle a single agent's visibility in the Agents sidebar section.
+   * Writes an explicit boolean (never deletes the key) so re-showing an
+   * agent overrides any remote `false` under Firestore's merge semantics.
+   * Persistence rides the debounced UI-prefs watcher — no direct write.
+   */
+  function setAgentVisible(agentId: string, visible: boolean): void {
+    if (isAgentVisible(agentId) === visible) return
+    agentVisibility.value = { ...agentVisibility.value, [agentId]: visible }
+  }
+
+  /**
    * Reset navigation items to defaults with optimistic update
    */
   async function resetNavItems(): Promise<void> {
@@ -1079,6 +1192,8 @@ export const useLayoutStore = defineStore("layout", () => {
     leftPanelCollapsed,
     rightPanelCollapsed,
     bottomPanelCollapsed,
+    agentsSidebarVisible,
+    agentVisibility,
     isLoading,
     isHydrated,
 
@@ -1104,6 +1219,8 @@ export const useLayoutStore = defineStore("layout", () => {
     toggleNavItem,
     setNavItems,
     resetNavItems,
+    isAgentVisible,
+    setAgentVisible,
     addToHistory,
     clearRecentlyClosed,
     reopenLastClosed,
