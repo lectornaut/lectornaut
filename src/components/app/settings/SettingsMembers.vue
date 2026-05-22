@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
+import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
   IconArrowDown,
@@ -14,6 +16,8 @@ import type { IMembershipRole } from "@/types/membership"
 import { useCurrentUser } from "vuefire"
 
 const { t } = useI18n()
+
+const { canViewTeamSettings } = useCanViewTeamSettings()
 const user = useCurrentUser()
 
 // Use team actions composable - all logic is now self-contained
@@ -101,7 +105,7 @@ const formatCreatedAt = (
 </script>
 
 <template>
-  <div class="p-6">
+  <div v-if="canViewTeamSettings" class="p-6">
     <FieldGroup>
       <FieldSet>
         <Field orientation="horizontal">
@@ -371,8 +375,6 @@ const formatCreatedAt = (
                                           {{ t("actions.cancel") }}
                                         </AlertDialogCancel>
                                         <AlertDialogAction
-                                          variant="destructive"
-                                          class="text-current"
                                           :disabled="
                                             teamLoading.member.isLoading(
                                               member.userId
@@ -431,6 +433,7 @@ const formatCreatedAt = (
       </FieldSet>
     </FieldGroup>
   </div>
+  <SettingsRestricted v-else />
 
   <!-- Team Invite Dialog -->
   <TeamDialog

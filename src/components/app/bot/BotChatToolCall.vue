@@ -58,6 +58,7 @@ import {
   IconSearch,
   IconSparkles,
   IconSun,
+  IconTriangleAlert,
   IconWrench,
 } from "@/data/icons"
 import { computed, inject, ref, watch } from "vue"
@@ -486,14 +487,13 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- ============================================================== -->
       <!-- Pending interrupt with malformed payload — polite escape hatch. -->
       <!-- ============================================================== -->
-      <div
-        v-else-if="isInterrupt"
-        class="border-border bg-background/40 rounded-md border p-2 text-xs"
-      >
-        <p class="text-muted-foreground italic">
-          {{ t("ai.toolCall.malformedInterrupt") }}
-        </p>
-      </div>
+      <Item v-else-if="isInterrupt" variant="muted" size="xs">
+        <ItemContent>
+          <ItemDescription class="line-clamp-none italic">
+            {{ t("ai.toolCall.malformedInterrupt") }}
+          </ItemDescription>
+        </ItemContent>
+      </Item>
 
       <!-- ============================================================== -->
       <!-- Resolved interrupt: question with the chosen answer highlighted. -->
@@ -516,77 +516,79 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- progress; the body stays minimal so the layout doesn't jump -->
       <!-- when the result arrives. -->
       <!-- ============================================================== -->
-      <div
-        v-else-if="isRunning"
-        class="border-border bg-background/40 rounded-md border p-2 text-xs"
-      >
-        <p class="text-muted-foreground flex items-center gap-2 italic">
+      <Item v-else-if="isRunning" variant="muted" size="xs">
+        <ItemMedia variant="icon">
           <IconLoader2 class="animate-spin" />
-          {{ t("ai.toolCall.waitingForReturn") }}
-        </p>
-      </div>
+        </ItemMedia>
+        <ItemContent>
+          <ItemDescription class="line-clamp-none italic">
+            {{ t("ai.toolCall.waitingForReturn") }}
+          </ItemDescription>
+        </ItemContent>
+      </Item>
 
       <!-- ============================================================== -->
       <!-- getWeather: location chip + big temperature + condition icon. -->
       <!-- ============================================================== -->
-      <div
+      <Item
         v-else-if="tool.name === 'getWeather' && weatherOutput"
-        class="border-border bg-background/40 flex flex-col gap-2 rounded border p-2 text-xs"
+        variant="outline"
+        size="xs"
       >
-        <div
-          v-if="weatherInput"
-          class="text-muted-foreground flex items-center gap-2"
-        >
-          <IconMapPin />
-          <span>{{ weatherInput.location }}</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <Component :is="weatherIcon" class="text-primary size-8 shrink-0" />
-          <div class="flex flex-col">
-            <span class="text-foreground text-xl leading-none font-semibold">
-              {{ weatherOutput.temperature }}°F
-            </span>
-            <span class="text-muted-foreground text-xs capitalize">
-              {{ weatherOutput.condition }}
-            </span>
-          </div>
-        </div>
-        <p
+        <ItemHeader v-if="weatherInput" class="text-muted-foreground">
+          <span class="flex items-center gap-2">
+            <IconMapPin />
+            {{ weatherInput.location }}
+          </span>
+        </ItemHeader>
+        <ItemMedia variant="icon" class="self-center">
+          <Component :is="weatherIcon" class="text-primary size-8" />
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle class="text-xl leading-none font-semibold">
+            {{ weatherOutput.temperature }}°F
+          </ItemTitle>
+          <ItemDescription class="capitalize">
+            {{ weatherOutput.condition }}
+          </ItemDescription>
+        </ItemContent>
+        <ItemFooter
           v-if="weatherOutput.advisory"
           class="text-foreground border-t pt-2 leading-relaxed"
         >
           {{ weatherOutput.advisory }}
-        </p>
-      </div>
+        </ItemFooter>
+      </Item>
 
       <!-- ============================================================== -->
       <!-- rollDice: dice icon + big number. -->
       <!-- ============================================================== -->
-      <div
+      <Item
         v-else-if="tool.name === 'rollDice' && diceOutput !== null"
-        class="border-border bg-background/40 flex items-center gap-3 rounded-md border p-3 text-xs"
+        variant="outline"
+        size="xs"
       >
-        <IconDices class="text-primary size-8 shrink-0" />
-        <div class="flex flex-col">
-          <span class="text-foreground text-xl leading-none font-semibold">
+        <ItemMedia variant="icon" class="self-center">
+          <IconDices class="text-primary size-8" />
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle class="text-xl leading-none font-semibold">
             {{ diceOutput }}
-          </span>
-          <span class="text-muted-foreground text-xs">
-            {{ t("ai.toolCall.dice.rolled") }}
-          </span>
-        </div>
-      </div>
+          </ItemTitle>
+          <ItemDescription>{{ t("ai.toolCall.dice.rolled") }}</ItemDescription>
+        </ItemContent>
+      </Item>
 
       <!-- ============================================================== -->
       <!-- searchWorkspaceNodes: query chip + per-result rows. -->
       <!-- ============================================================== -->
       <div
         v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput"
-        class="border-border bg-background/40 flex flex-col gap-2 rounded border p-2 text-xs"
+        class="flex flex-col gap-2"
       >
         <div
           v-if="searchInput"
-          class="text-muted-foreground flex flex-wrap items-center gap-2"
+          class="text-muted-foreground flex flex-wrap items-center gap-2 text-xs"
         >
           <IconSearch />
           <span class="text-foreground italic">"{{ searchInput.query }}"</span>
@@ -613,103 +615,112 @@ const hasCustomDoneRenderer = computed(() => {
             <EmptyTitle>{{ t("ai.toolCall.search.empty") }}</EmptyTitle>
           </EmptyHeader>
         </Empty>
-        <ul v-else class="flex flex-col gap-2">
-          <li
+        <ItemGroup v-else>
+          <Item
             v-for="result in searchOutput.results"
             :key="`${result.scope}:${result.nodeId}`"
-            class="border-border bg-card flex flex-col gap-1 rounded border p-2"
+            variant="outline"
+            size="xs"
           >
-            <div class="flex items-center gap-2">
+            <ItemMedia variant="icon">
               <Component
                 :is="result.type === 'folder' ? IconFolder : IconFileText"
-                class="text-muted-foreground shrink-0"
+                class="text-muted-foreground"
               />
-              <span class="text-foreground font-medium break-all">
-                {{ result.name }}
-              </span>
-              <Badge variant="secondary" class="ml-auto text-xs">
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
+              <ItemDescription v-if="result.snippet">
+                {{ result.snippet }}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <Badge variant="secondary" class="text-xs">
                 {{ searchScopeLabel(result.scope) }}
               </Badge>
-            </div>
-            <p
-              v-if="result.snippet"
-              class="text-muted-foreground line-clamp-2 leading-snug"
-            >
-              {{ result.snippet }}
-            </p>
-          </li>
-        </ul>
+            </ItemActions>
+          </Item>
+        </ItemGroup>
       </div>
 
       <!-- ============================================================== -->
       <!-- summarizeNode: error variant OR structured summary card. -->
       <!-- ============================================================== -->
-      <div
+      <Alert
         v-else-if="
           tool.name === 'summarizeNode' &&
           summarizeOutput &&
           summarizeOutput.error
         "
-        class="border-destructive/40 bg-destructive/5 rounded-md border p-3 text-xs"
+        variant="destructive"
       >
-        <p class="text-destructive">{{ summarizeOutput.error }}</p>
-      </div>
-      <div
+        <IconTriangleAlert />
+        <AlertTitle>{{ t("ai.toolCall.summarize.errorTitle") }}</AlertTitle>
+        <AlertDescription>{{ summarizeOutput.error }}</AlertDescription>
+      </Alert>
+      <Card
         v-else-if="tool.name === 'summarizeNode' && summarizeOutput"
-        class="border-border bg-background/40 flex flex-col gap-3 rounded-md border p-3 text-xs"
+        size="sm"
       >
-        <header class="flex items-center gap-2">
-          <IconSparkles class="text-muted-foreground" />
-          <span class="text-muted-foreground text-xs font-medium uppercase">
+        <CardHeader>
+          <CardTitle
+            class="text-muted-foreground flex items-center gap-2 text-xs font-medium uppercase"
+          >
+            <IconSparkles />
             {{ t("ai.toolCall.summarize.heading") }}
-          </span>
-        </header>
-        <p class="text-foreground leading-relaxed">
-          {{ summarizeOutput.summary }}
-        </p>
-        <div
-          v-if="summarizeOutput.keyPoints.length > 0"
-          class="flex flex-col gap-1"
-        >
-          <span class="text-muted-foreground text-xs font-medium uppercase">
-            {{ t("ai.toolCall.summarize.keyPoints") }}
-          </span>
-          <ul class="text-foreground list-inside list-disc space-y-1">
-            <li
-              v-for="(point, idx) in summarizeOutput.keyPoints"
-              :key="idx"
-              class="leading-relaxed"
-            >
-              {{ point }}
-            </li>
-          </ul>
-        </div>
-        <div
-          v-if="summarizeOutput.suggestedTags.length > 0"
-          class="flex flex-col gap-1"
-        >
-          <span class="text-muted-foreground text-xs font-medium uppercase">
-            {{ t("ai.toolCall.summarize.tags") }}
-          </span>
-          <div class="flex flex-wrap gap-1">
-            <Badge
-              v-for="tag in summarizeOutput.suggestedTags"
-              :key="tag"
-              variant="secondary"
-              class="text-xs"
-            >
-              {{ tag }}
-            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-3">
+          <p class="text-foreground leading-relaxed">
+            {{ summarizeOutput.summary }}
+          </p>
+          <div
+            v-if="summarizeOutput.keyPoints.length > 0"
+            class="flex flex-col gap-1"
+          >
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("ai.toolCall.summarize.keyPoints") }}
+            </span>
+            <ul class="text-foreground list-inside list-disc space-y-1">
+              <li
+                v-for="(point, idx) in summarizeOutput.keyPoints"
+                :key="idx"
+                class="leading-relaxed"
+              >
+                {{ point }}
+              </li>
+            </ul>
           </div>
-        </div>
-        <p v-if="summarizeOutput.model" class="text-muted-foreground text-xs">
+          <div
+            v-if="summarizeOutput.suggestedTags.length > 0"
+            class="flex flex-col gap-1"
+          >
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("ai.toolCall.summarize.tags") }}
+            </span>
+            <div class="flex flex-wrap gap-1">
+              <Badge
+                v-for="tag in summarizeOutput.suggestedTags"
+                :key="tag"
+                variant="secondary"
+                class="text-xs"
+              >
+                {{ tag }}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter
+          v-if="summarizeOutput.model"
+          class="text-muted-foreground text-xs"
+        >
           {{
             t("ai.toolCall.summarize.modelFooter", {
               model: summarizeOutput.model,
             })
           }}
-        </p>
-      </div>
+        </CardFooter>
+      </Card>
 
       <!-- ============================================================== -->
       <!-- Fallback: unknown tool name OR narrower failed — show JSON so -->

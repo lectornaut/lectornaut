@@ -65,7 +65,7 @@ const LIGHT_ACCENT_SHADES = {
 } as const
 const DARK_ACCENT_SHADES = {
   primary: 700,
-  destructive: 800,
+  destructive: 600,
   ring: 600,
   charts: [700, 500, 300, 200, 100],
 } as const

@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
+import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
@@ -19,6 +21,8 @@ import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types/domain"
 
 const { t } = useI18n()
+
+const { canViewTeamSettings } = useCanViewTeamSettings()
 
 // Use workspace actions composable - all logic is now self-contained
 const {
@@ -123,7 +127,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
 </script>
 
 <template>
-  <div class="p-6">
+  <div v-if="canViewTeamSettings" class="p-6">
     <FieldGroup>
       <FieldSet>
         <Field orientation="horizontal">
@@ -418,6 +422,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
       </FieldSet>
     </FieldGroup>
   </div>
+  <SettingsRestricted v-else />
 
   <!-- Delete Workspace Dialog -->
   <AlertDialog v-model:open="deleteWorkspaceDialog.isOpen.value">
@@ -439,8 +444,6 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
       <AlertDialogFooter>
         <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
         <AlertDialogAction
-          variant="destructive"
-          class="text-current"
           :disabled="
             deleteWorkspaceDialog.item.value &&
             workspaceLoading.isLoading(

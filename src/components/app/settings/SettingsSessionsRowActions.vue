@@ -62,10 +62,7 @@ const archived = computed(() => !!props.session.archivedAt)
         {{ archived ? t("ai.restore") : t("ai.archive") }}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem
-        class="text-destructive"
-        @click="emit('delete', session)"
-      >
+      <DropdownMenuItem @click="emit('delete', session)">
         <IconTrash2 />
         {{ t("actions.delete") }}
       </DropdownMenuItem>

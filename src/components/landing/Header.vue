@@ -277,7 +277,7 @@ const { t } = useI18n()
             </RouterLink>
           </Button>
           <EnterTrigger v-else>
-            <Button variant="destructive" class="text-current" as-child>
+            <Button variant="destructive" as-child>
               <RouterLink to="/enter">
                 {{ t("landing.header.getStarted") }}
               </RouterLink>

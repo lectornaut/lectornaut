@@ -1757,7 +1757,7 @@ const getDeviceIcon = (deviceType: string) => {
             </FieldContent>
             <div class="flex items-center gap-2">
               <template v-if="session.isCurrent">
-                <Badge variant="destructive" class="text-current">
+                <Badge variant="destructive">
                   <IconCircleDot class="-ml-1" />
                   {{ t("settings.account.devices.thisDevice") }}
                 </Badge>
@@ -1850,7 +1850,7 @@ const getDeviceIcon = (deviceType: string) => {
             </FieldContent>
             <AlertDialog>
               <AlertDialogTrigger as-child>
-                <Button variant="destructive" class="text-current">
+                <Button variant="destructive">
                   <Spinner v-if="deletingAccount" />
                   {{ t("settings.account.deleteAccount.title") }}
                 </Button>
@@ -1878,8 +1878,6 @@ const getDeviceIcon = (deviceType: string) => {
                   </AlertDialogCancel>
                   <AlertDialogAction
                     :disabled="deletingAccount || !isDeleteAccountInputValid"
-                    variant="destructive"
-                    class="text-current"
                     @click="deleteAccount"
                   >
                     <Spinner v-if="deletingAccount" />
@@ -1892,21 +1890,11 @@ const getDeviceIcon = (deviceType: string) => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <!-- Footer with Save/Cancel -->
-    <DialogFooter
+    <SettingsUnsavedBar
       v-if="hasPendingChanges"
-      class="bg-background/90 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-lg border p-2 shadow-lg backdrop-blur-lg"
-    >
-      <p class="text-muted-foreground mr-auto ml-2 text-xs">
-        {{ t("settings.unsavedChanges") }}
-      </p>
-      <Button variant="secondary" :disabled="isSaving" @click="discardChanges">
-        {{ t("common.discard") }}
-      </Button>
-      <Button :disabled="isSaving" @click="saveChanges">
-        <Spinner v-if="isSaving" />
-        {{ t("common.save") }}
-      </Button>
-    </DialogFooter>
+      :saving="isSaving"
+      @discard="discardChanges"
+      @save="saveChanges"
+    />
   </div>
 </template>

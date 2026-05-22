@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
+import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
@@ -21,6 +23,8 @@ import type { ITeam } from "@/types/domain"
 import type { IMembership } from "@/types/membership"
 
 const { t } = useI18n()
+
+const { canViewTeamSettings } = useCanViewTeamSettings()
 
 // Use team actions composable - all logic is now self-contained
 const {
@@ -129,7 +133,7 @@ const formatCreatedAt = (
 </script>
 
 <template>
-  <div class="p-6">
+  <div v-if="canViewTeamSettings" class="p-6">
     <FieldGroup>
       <FieldSet>
         <Field orientation="horizontal">
@@ -457,6 +461,7 @@ const formatCreatedAt = (
       </FieldSet>
     </FieldGroup>
   </div>
+  <SettingsRestricted v-else />
 
   <!-- Exit Team Dialog -->
   <AlertDialog v-model:open="exitTeamDialog.isOpen.value">
@@ -478,8 +483,6 @@ const formatCreatedAt = (
       <AlertDialogFooter>
         <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
         <AlertDialogAction
-          variant="destructive"
-          class="text-current"
           :disabled="
             exitTeamDialog.item.value &&
             teamLoading.team.isLoading(`exit-${exitTeamDialog.item.value.id}`)
@@ -518,8 +521,6 @@ const formatCreatedAt = (
       <AlertDialogFooter>
         <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
         <AlertDialogAction
-          variant="destructive"
-          class="text-current"
           :disabled="
             deleteTeamDialog.item.value &&
             teamLoading.team.isLoading(

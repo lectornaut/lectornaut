@@ -155,7 +155,7 @@ const onToggleEnabled = (value: boolean | string): void => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                class="text-destructive focus:text-destructive"
+                variant="destructive"
                 @select="deleteConfirmOpen = true"
               >
                 <IconTrash />
@@ -205,11 +205,7 @@ const onToggleEnabled = (value: boolean | string): void => {
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ t("common.cancel") }}</AlertDialogCancel>
-        <AlertDialogAction
-          variant="destructive"
-          class="text-current"
-          @click="handleDeleteConfirmed"
-        >
+        <AlertDialogAction @click="handleDeleteConfirmed">
           {{ t("settings.agents.customTools.deleteForever") }}
         </AlertDialogAction>
       </AlertDialogFooter>

@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
+import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
 import { useTeamAgents } from "@/composables/useTeamAgents"
 import { BUILT_IN_AGENTS } from "@/data/builtInAgents"
@@ -44,6 +46,8 @@ import type { IBotAgentConfig, ITeamAgent } from "@/types/domain"
  */
 
 const { t } = useI18n()
+
+const { canViewTeamSettings } = useCanViewTeamSettings()
 
 // ── Top-level dirty / save handling ─────────────────────────────────────────
 
@@ -212,7 +216,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
 </script>
 
 <template>
-  <div class="flex grow flex-col justify-between">
+  <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
     <div class="p-6">
       <div v-if="isLoading" class="flex justify-center py-8">
         <Spinner />
@@ -515,20 +519,12 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <DialogFooter
+    <SettingsUnsavedBar
       v-if="!isLoading && isDirty && canEdit"
-      class="bg-background/90 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-lg border p-2 shadow-lg backdrop-blur-lg"
-    >
-      <p class="text-muted-foreground mr-auto ml-2 text-xs">
-        {{ t("settings.unsavedChanges") }}
-      </p>
-      <Button variant="secondary" :disabled="isSaving" @click="handleDiscard">
-        {{ t("common.discard") }}
-      </Button>
-      <Button :disabled="isSaving" @click="handleSave">
-        <Spinner v-if="isSaving" />
-        {{ t("common.save") }}
-      </Button>
-    </DialogFooter>
+      :saving="isSaving"
+      @discard="handleDiscard"
+      @save="handleSave"
+    />
   </div>
+  <SettingsRestricted v-else />
 </template>

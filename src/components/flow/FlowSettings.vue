@@ -421,7 +421,7 @@ const teams = [
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button variant="destructive" class="text-current">
+            <Button variant="destructive">
               {{ t("components.flow.settings.danger.delete") }}
             </Button>
           </CardFooter>

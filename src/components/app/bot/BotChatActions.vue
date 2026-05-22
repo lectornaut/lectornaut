@@ -410,12 +410,7 @@ const submitDelete = async () => {
         <AlertDialogCancel :disabled="isMutating">
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
-        <AlertDialogAction
-          variant="destructive"
-          class="text-current"
-          :disabled="isMutating"
-          @click.prevent="submitDelete"
-        >
+        <AlertDialogAction :disabled="isMutating" @click.prevent="submitDelete">
           <Spinner v-if="isMutating" />
           {{ t("actions.delete") }}
         </AlertDialogAction>

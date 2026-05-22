@@ -848,25 +848,21 @@ watch(selectedCreateFiles, async (files) => {
         <AlertDialogCancel @click="closeDeleteDialog()">
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
-        <AlertDialogAction as-child>
-          <Button
-            variant="destructive"
-            class="text-current"
-            :disabled="
-              deletingId === attachmentToDelete?.id ||
-              (attachmentToDelete
-                ? isAttachmentPending(attachmentToDelete.id)
-                : false)
-            "
-            @click="
-              confirmDelete(async (attachment) => {
-                await handleDeleteConfirm(attachment)
-              })
-            "
-          >
-            <Spinner v-if="deletingId === attachmentToDelete?.id" />
-            {{ t("actions.delete") }}
-          </Button>
+        <AlertDialogAction
+          :disabled="
+            deletingId === attachmentToDelete?.id ||
+            (attachmentToDelete
+              ? isAttachmentPending(attachmentToDelete.id)
+              : false)
+          "
+          @click="
+            confirmDelete(async (attachment) => {
+              await handleDeleteConfirm(attachment)
+            })
+          "
+        >
+          <Spinner v-if="deletingId === attachmentToDelete?.id" />
+          {{ t("actions.delete") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

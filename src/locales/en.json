@@ -182,7 +182,8 @@
         "heading": "Structured summary",
         "keyPoints": "Key points",
         "tags": "Tags",
-        "modelFooter": "Generated with {model}"
+        "modelFooter": "Generated with {model}",
+        "errorTitle": "Couldn't summarize"
       }
     }
   },
@@ -487,8 +488,6 @@
       "security": "Security",
       "team": "Team",
       "workspace": "Workspace",
-      "workspaceGroup": "Workspace",
-      "aiGroup": "AI",
       "ai": "AI",
       "models": "Models",
       "tools": "Tools",
@@ -534,6 +533,10 @@
       "general": "Organization-wide settings and defaults.",
       "billing": "Plans, invoices, and billing status.",
       "plans": "Compare plans and update subscription."
+    },
+    "viewRestricted": {
+      "title": "Restricted",
+      "description": "You don't have access to this section. Ask a team owner or admin to update your role."
     },
     "account": {
       "messages": {
@@ -1117,6 +1120,8 @@
       }
     },
     "security": {
+      "noPermissionTitle": "No permission",
+      "noPermissionDescription": "Only team owners and admins can manage security settings.",
       "enterprise": {
         "title": "Enterprise Security",
         "description": "SSO and advanced login method controls are available on the Enterprise plan. Upgrade to configure SAML, OIDC, and per-team authentication policies.",

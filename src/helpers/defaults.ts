@@ -1248,30 +1248,6 @@ export const defaultSettingsTabs = [
     ],
   },
   {
-    title: "settings.titles.aiGroup",
-    id: "ai",
-    links: [
-      {
-        name: "settings.titles.models",
-        icon: IconSparkles,
-        id: "models",
-        description: "settings.descriptions.models",
-      },
-      {
-        name: "settings.titles.tools",
-        icon: IconWrench,
-        id: "tools",
-        description: "settings.descriptions.tools",
-      },
-      {
-        name: "settings.titles.agents",
-        icon: IconBot,
-        id: "agents",
-        description: "settings.descriptions.agents",
-      },
-    ],
-  },
-  {
     title: "settings.titles.team",
     id: "team",
     links: [
@@ -1326,7 +1302,7 @@ export const defaultSettingsTabs = [
     ],
   },
   {
-    title: "settings.titles.workspaceGroup",
+    title: "settings.titles.workspace",
     id: "workspace",
     links: [
       {
@@ -1344,13 +1320,37 @@ export const defaultSettingsTabs = [
     ],
   },
   {
+    title: "settings.titles.ai",
+    id: "ai",
+    links: [
+      {
+        name: "settings.titles.models",
+        icon: IconSparkles,
+        id: "models",
+        description: "settings.descriptions.models",
+      },
+      {
+        name: "settings.titles.tools",
+        icon: IconWrench,
+        id: "tools",
+        description: "settings.descriptions.tools",
+      },
+      {
+        name: "settings.titles.agents",
+        icon: IconBot,
+        id: "agents",
+        description: "settings.descriptions.agents",
+      },
+    ],
+  },
+  {
     title: "settings.titles.administration",
     id: "administration",
     links: [
       {
         name: "settings.titles.general",
         icon: IconBolt,
-        id: "general",
+        id: "organization",
         description: "settings.descriptions.general",
       },
       {

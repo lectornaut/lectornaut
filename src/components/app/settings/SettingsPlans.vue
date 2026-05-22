@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
+import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import {
   changeSubscriptionPlan as changeSubscriptionPlanFn,
   createCheckoutSession as createCheckoutSessionFn,
@@ -28,6 +30,8 @@ import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
+
+const { canViewTeamSettings } = useCanViewTeamSettings()
 const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
 const billingStore = useBillingStore()
 void billingStore.ensureCatalogLoaded()
@@ -330,7 +334,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
 </script>
 
 <template>
-  <div class="flex grow flex-col justify-between">
+  <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
     <div class="p-6">
       <FieldGroup>
         <FieldSet>
@@ -364,7 +368,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
             </div>
             <RadioGroup
               :model-value="selectedPlanId"
-              class="grid grid-cols-4 gap-2"
+              class="grid grid-cols-2 gap-2"
               :disabled="!canManageBilling"
               @update:model-value="
                 (val) => val && (selectedPlanId = val as BillingPlanKey)
@@ -378,11 +382,6 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                 <Field class="grow">
                   <FieldContent>
                     <FieldTitle>
-                      <RadioGroupItem
-                        :id="plan.id"
-                        :value="plan.id"
-                        class="sr-only"
-                      />
                       {{ t(plan.titleKey) }}
                     </FieldTitle>
                     <FieldDescription>
@@ -390,19 +389,24 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                     </FieldDescription>
                   </FieldContent>
                   <ul
-                    class="marker:text-accent flex h-full list-inside list-disc flex-col space-y-2 text-xs"
+                    class="marker:text-accent flex h-full list-inside list-disc flex-col space-y-2"
                   >
                     <li v-for="highlight in plan.highlights" :key="highlight">
                       {{ highlight }}
                     </li>
                   </ul>
-                  <FieldDescription>
+                  <RadioGroupItem
+                    :id="plan.id"
+                    :value="plan.id"
+                    class="sr-only"
+                  />
+                  <FieldDescription class="text-xs">
                     {{
                       t("settings.plans.perSeatMonthly", {
                         price: getPlanPricePerMonthLabel(plan.id, billingCycle),
                       })
                     }}
-                    <br />
+                    &middot;
                     {{
                       t("settings.plans.totalForSeats", {
                         total: getPlanTotalLabel(plan.id, billingCycle),
@@ -410,8 +414,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                       })
                     }}
                     <template v-if="billingCycle">
-                      <br />
-                      Billed {{ billingCycle }}
+                      &middot; Billed {{ billingCycle }}
                     </template>
                   </FieldDescription>
                 </Field>
@@ -420,7 +423,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
             <Collapsible>
               <div class="grid gap-3">
                 <CollapsibleTrigger as-child>
-                  <div class="group bg-secondary relativepy-4">
+                  <div class="group bg-secondary relative rounded-sm p-4">
                     <Badge
                       variant="secondary"
                       class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -432,7 +435,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                     </Badge>
                   </div>
                 </CollapsibleTrigger>
-                <CollapsibleContent class="border p-1.5">
+                <CollapsibleContent>
                   <div class="overflow-clip rounded-xl border">
                     <Table class="bg-secondary overflow-clip">
                       <TableHeader class="bg-secondary">
@@ -447,7 +450,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                             :key="plan.id"
                             class="w-1/5 p-2"
                             :class="{
-                              'bg-background after:border-primary relative z-10 after:absolute after:inset-0 after:z-10 after:border-x after:border-t':
+                              'bg-background after:border-primary relative z-10 rounded-t-xl after:absolute after:inset-0 after:z-10 after:rounded-t-xl after:border-x after:border-t':
                                 selectedPlanId === plan.id,
                             }"
                           >
@@ -540,7 +543,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                             v-for="plan in settingsPlans"
                             :key="plan.id"
                             :class="{
-                              'bg-background after:border-primary after: relative z-10 p-2 after:absolute after:inset-0 after:z-10 after:border-x after:border-b':
+                              'bg-background after:border-primary relative z-10 rounded-b-xl p-2 after:absolute after:inset-0 after:z-10 after:rounded-b-xl after:border-x after:border-b':
                                 selectedPlanId === plan.id,
                             }"
                           >
@@ -606,24 +609,14 @@ const getButtonLabel = (planId: BillingPlanKey) => {
       </FieldGroup>
     </div>
 
-    <DialogFooter
+    <SettingsUnsavedBar
       v-if="canManageBilling && hasPendingChanges"
-      class="bg-background/90 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-lg border p-2 shadow-lg backdrop-blur-lg"
-    >
-      <p class="text-muted-foreground mr-auto ml-2 text-xs">
-        {{ t("settings.unsavedChanges") }}
-      </p>
-      <Button variant="secondary" :disabled="isSaving" @click="discardChanges">
-        {{ t("common.discard") }}
-      </Button>
-      <Button
-        :disabled="!canSave || isSaving"
-        class="relative"
-        @click="saveChanges"
-      >
-        <Spinner v-if="isSaving" />
-        {{ saveButtonLabel }}
-      </Button>
-    </DialogFooter>
+      :saving="isSaving"
+      :save-disabled="!canSave"
+      :save-label="saveButtonLabel"
+      @discard="discardChanges"
+      @save="saveChanges"
+    />
   </div>
+  <SettingsRestricted v-else />
 </template>

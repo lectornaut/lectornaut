@@ -80,6 +80,13 @@ export const Capabilities = {
   UPDATE_MEMBER_ROLE: "update_member_role",
   REMOVE_MEMBER: "remove_member",
   READ_TEAM: "read_team",
+  /**
+   * View the team's settings sections (AI config, members, workspaces,
+   * teams, plans, overview). Granted to full members (owner/admin/member)
+   * but NOT guests. Governs *visibility* only — admin/owner-only mutations
+   * within those pages remain gated by their own specific capabilities.
+   */
+  VIEW_TEAM_SETTINGS: "view_team_settings",
   MANAGE_BILLING: "manage_billing",
   READ_AUDIT_LOGS: "read_audit_logs",
   /**
@@ -99,6 +106,16 @@ export const Capabilities = {
   DELETE_WORKSPACE: "delete_workspace",
   READ_WORKSPACE: "read_workspace",
   MANAGE_WORKSPACE_CONTENT: "manage_workspace_content",
+  /**
+   * Bulk-purge workspace documents — archive or permanently delete every
+   * code / write document at once from the Storage settings tab.
+   *
+   * Deliberately distinct from MANAGE_WORKSPACE_CONTENT: that capability is
+   * granted to members for everyday create/edit/delete of individual
+   * documents, whereas mass destruction across the whole workspace is an
+   * owner/admin-only operation.
+   */
+  MANAGE_WORKSPACE_STORAGE: "manage_workspace_storage",
 } as const
 
 export type Capability = (typeof Capabilities)[keyof typeof Capabilities]
@@ -117,6 +134,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.UPDATE_MEMBER_ROLE,
     Capabilities.REMOVE_MEMBER,
     Capabilities.READ_TEAM,
+    Capabilities.VIEW_TEAM_SETTINGS,
     Capabilities.READ_AUDIT_LOGS,
     Capabilities.MANAGE_BOT_SESSIONS,
     Capabilities.MANAGE_BILLING,
@@ -126,6 +144,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
     Capabilities.MANAGE_WORKSPACE_CONTENT,
+    Capabilities.MANAGE_WORKSPACE_STORAGE,
   ]),
   admin: new Set([
     Capabilities.EDIT_TEAM,
@@ -133,6 +152,7 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.UPDATE_MEMBER_ROLE,
     Capabilities.REMOVE_MEMBER,
     Capabilities.READ_TEAM,
+    Capabilities.VIEW_TEAM_SETTINGS,
     Capabilities.READ_AUDIT_LOGS,
     Capabilities.MANAGE_BOT_SESSIONS,
     Capabilities.MANAGE_BILLING,
@@ -142,9 +162,11 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
     Capabilities.DELETE_WORKSPACE,
     Capabilities.READ_WORKSPACE,
     Capabilities.MANAGE_WORKSPACE_CONTENT,
+    Capabilities.MANAGE_WORKSPACE_STORAGE,
   ]),
   member: new Set([
     Capabilities.READ_TEAM,
+    Capabilities.VIEW_TEAM_SETTINGS,
     Capabilities.READ_WORKSPACE,
     Capabilities.MANAGE_WORKSPACE_CONTENT,
   ]),

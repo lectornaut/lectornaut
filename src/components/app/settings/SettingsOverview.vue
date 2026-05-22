@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
+import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
@@ -8,6 +10,8 @@ import { getInitials } from "@/helpers/utilities"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
+
+const { canViewTeamSettings } = useCanViewTeamSettings()
 
 const {
   currentTeam,
@@ -259,7 +263,7 @@ const discardChanges = () => {
 </script>
 
 <template>
-  <div class="flex grow flex-col justify-between">
+  <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
     <div class="p-6">
       <FieldGroup>
         <FieldSet>
@@ -523,23 +527,13 @@ const discardChanges = () => {
       </FieldGroup>
     </div>
 
-    <DialogFooter
+    <SettingsUnsavedBar
       v-if="hasPendingChanges"
-      class="bg-background/90 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-lg border p-2 shadow-lg backdrop-blur-lg"
-    >
-      <p class="text-muted-foreground mr-auto ml-2 text-xs">
-        {{ t("settings.unsavedChanges") }}
-      </p>
-      <Button variant="secondary" :disabled="isSaving" @click="discardChanges">
-        {{ t("common.discard") }}
-      </Button>
-      <Button
-        :disabled="!canSave || isSaving || isUpdatingOverview"
-        @click="saveChanges"
-      >
-        <Spinner v-if="isSaving || isUpdatingOverview" />
-        {{ t("common.save") }}
-      </Button>
-    </DialogFooter>
+      :saving="isSaving || isUpdatingOverview"
+      :save-disabled="!canSave"
+      @discard="discardChanges"
+      @save="saveChanges"
+    />
   </div>
+  <SettingsRestricted v-else />
 </template>

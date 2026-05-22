@@ -684,15 +684,11 @@ onBeforeUnmount(() => {
         <AlertDialogCancel @click="dialogs.archive.open = false">
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
-        <AlertDialogAction as-child>
-          <Button
-            variant="destructive"
-            class="text-current"
-            :disabled="isArchiving"
-            @click="handleArchiveConfirm"
-          >
-            {{ isArchiving ? t("states.archiving") : t("fileTree.archive") }}
-          </Button>
+        <AlertDialogAction
+          :disabled="isArchiving"
+          @click="handleArchiveConfirm"
+        >
+          {{ isArchiving ? t("states.archiving") : t("fileTree.archive") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -717,15 +713,8 @@ onBeforeUnmount(() => {
         <AlertDialogCancel @click="dialogs.delete.open = false">
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
-        <AlertDialogAction as-child>
-          <Button
-            variant="destructive"
-            class="text-current"
-            :disabled="isDeleting"
-            @click="handleDeleteConfirm"
-          >
-            {{ isDeleting ? t("states.deleting") : t("actions.delete") }}
-          </Button>
+        <AlertDialogAction :disabled="isDeleting" @click="handleDeleteConfirm">
+          {{ isDeleting ? t("states.deleting") : t("actions.delete") }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

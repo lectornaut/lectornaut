@@ -15,12 +15,14 @@ import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
-// Admin gate — `canManageBotSessions` was added for the Sessions admin
-// view and applies the same owner/admin role check the Storage page
-// needs. Reusing it keeps capability sprawl down; if storage gains a
-// distinct policy later, we can split into a dedicated capability.
+// Admin gate — Storage uses its own `MANAGE_WORKSPACE_STORAGE`
+// capability (owner/admin only). It's deliberately separate from
+// `MANAGE_WORKSPACE_CONTENT` (which members hold for everyday document
+// editing): bulk-wiping every code/write document at once is a
+// destructive, admin-tier action that ordinary members must not perform.
 const { currentTeamId, currentWorkspaceId } = storeToRefs(useAuthStore())
-const { canManageBotSessions: canManage } = useCurrentTeamRole(currentTeamId)
+const { canManageWorkspaceStorage: canManage } =
+  useCurrentTeamRole(currentTeamId)
 
 const { listChildren, deleteNode, archiveNode } = useNodes()
 
@@ -333,8 +335,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
               </FieldDescription>
             </FieldContent>
             <Button
-              variant="outline"
-              class="text-destructive"
+              variant="destructive"
               :disabled="isDisabled || writeRootCount === 0"
               @click="openDeleteDialog('write')"
             >
@@ -390,8 +391,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
               </FieldDescription>
             </FieldContent>
             <Button
-              variant="outline"
-              class="text-destructive"
+              variant="destructive"
               :disabled="isDisabled || codeRootCount === 0"
               @click="openDeleteDialog('code')"
             >
@@ -480,8 +480,6 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
             {{ t("actions.cancel") }}
           </AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
-            class="text-current"
             :disabled="bulkBusy || codeRootCount === 0"
             @click.prevent="submitDeleteCodes"
           >
@@ -511,8 +509,6 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
             {{ t("actions.cancel") }}
           </AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
-            class="text-current"
             :disabled="bulkBusy || writeRootCount === 0"
             @click.prevent="submitDeleteWrites"
           >

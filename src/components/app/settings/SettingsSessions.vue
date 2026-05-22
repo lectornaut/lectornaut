@@ -675,8 +675,7 @@ const submitDelete = async () => {
                 {{ t("settings.sessions.bulkRestore") }}
               </Button>
               <Button
-                variant="outline"
-                class="text-destructive"
+                variant="destructive"
                 :disabled="bulkBusy || isMutating"
                 @click="openBulkDelete"
               >
@@ -722,7 +721,7 @@ const submitDelete = async () => {
                 :data="sessions"
                 :columns="columns"
                 :column-pinning="{ left: ['select'], right: ['actions'] }"
-                class="overflow-clip border"
+                class="overflow-clip rounded-xl border"
               />
             </FieldContent>
           </Field>
@@ -782,8 +781,6 @@ const submitDelete = async () => {
             {{ t("actions.cancel") }}
           </AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
-            class="text-current"
             :disabled="isMutating"
             @click.prevent="submitDelete"
           >
@@ -818,8 +815,6 @@ const submitDelete = async () => {
             {{ t("actions.cancel") }}
           </AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
-            class="text-current"
             :disabled="bulkBusy || selectionCount === 0"
             @click.prevent="submitBulkDelete"
           >

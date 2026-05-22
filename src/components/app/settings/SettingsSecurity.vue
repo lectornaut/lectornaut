@@ -1,8 +1,10 @@
 <script lang="ts" setup>
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
+import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import { useSsoConfig } from "@/composables/useSsoConfig"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
+  IconAlertTriangle,
   IconCheck,
   IconCircleAlert,
   IconGlobe,
@@ -22,6 +24,13 @@ const emit = defineEmits<{
 const { currentTeam } = useTeamActions()
 
 const teamId = computed(() => currentTeam.value?.id ?? null)
+
+// Role gate — Security is owner/admin-only via the dedicated
+// MANAGE_SECURITY capability. Checked before the enterprise-plan gate so
+// non-admins see a "no permission" state rather than an upgrade upsell
+// they couldn't action.
+const { canManageSecurity } = useCurrentTeamRole(teamId)
+
 const isEnterprise = computed(
   () => currentTeam.value?.billing?.planKey === "enterprise"
 )
@@ -259,7 +268,28 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 <template>
   <div class="flex grow flex-col justify-between">
     <div class="p-6">
-      <FieldGroup v-if="!isEnterprise">
+      <FieldGroup v-if="!canManageSecurity">
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <Empty class="border border-dashed">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconAlertTriangle />
+                  </EmptyMedia>
+                  <EmptyTitle>{{
+                    t("settings.security.noPermissionTitle")
+                  }}</EmptyTitle>
+                  <EmptyDescription>
+                    {{ t("settings.security.noPermissionDescription") }}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </FieldContent>
+          </Field>
+        </FieldSet>
+      </FieldGroup>
+      <FieldGroup v-else-if="!isEnterprise">
         <FieldSet>
           <Field orientation="horizontal">
             <FieldContent>
@@ -907,8 +937,6 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
         <AlertDialogFooter>
           <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
-            class="text-current"
             :disabled="deleting"
             @click.prevent="handleDeleteSso"
           >
