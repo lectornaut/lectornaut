@@ -44,7 +44,6 @@ import {
 import {
   BOT_AGENT_MODELS,
   loadTeamAgentConfig,
-  MODE_CONFIG,
   PREVIEW_MAX_LENGTH,
   resolveEffectiveModel,
   TITLE_MAX_LENGTH,
@@ -605,14 +604,6 @@ class FirestoreBotSessionStore implements SessionStore {
 }
 
 // ===========================================================================
-// Per-turn mode configuration — `MODE_CONFIG` is imported from
-// `./botAgentConfig.js` because it carries the default prompt suffixes
-// for `DEFAULT_BOT_AGENT_CONFIG.promptSuffixes`. The chat orchestration
-// layer here reads `MODE_CONFIG[mode].actionToolsEnabled` inside
-// `pickChatTools` to gate side-effecting tools.
-// ===========================================================================
-
-// ===========================================================================
 // Built-in tools live in `botBuiltinTools.ts` (getWeather, rollDice,
 // transferToAgent, askQuestion) — imported up top. This file orchestrates
 // which tools to register per turn via `pickChatTools`; the tool
@@ -652,29 +643,26 @@ export function pinnedNodeKey(
 }
 
 /**
- * Pick which tools to register with the chat for a given (config, mode).
- *   - Mode strips action tools in `manual` (existing behavior).
- *   - Workspace-level toggles strip individual tools regardless of mode.
+ * Pick which tools to register with the chat for a given config.
+ *   - Tools are available in EVERY mode (auto / agent / manual). Mode
+ *     affects prompt style only, not which tools the model can call.
+ *   - Workspace-level toggles strip individual tools.
  *   - Interrupt tools (askQuestion) are gateable too — opt-in disable.
- *   - Read-only tools (searchWorkspaceNodes) are exposed in every mode
- *     including `manual` since they only retrieve, never act. It is
- *     still Google-gated because the current retriever uses Gemini
- *     embeddings under the hood.
+ *   - Per-agent toggles intersect with team toggles (both must allow).
+ *   - `browseInternet` / `searchWorkspaceNodes` run on the server's
+ *     Gemini key, independent of the team's chat-provider policy.
  */
 function pickChatTools(
   config: BotAgentConfig,
-  mode: BotChatMode,
   agent: TeamAgentDoc | null = null,
   transferTargetCount: number = 0
 ) {
-  const modeAllowsActionTools = MODE_CONFIG[mode].actionToolsEnabled
-  // Server has a Gemini key. `browseInternet` needs only this (its own
-  // capability axis) — it grounds via Gemini regardless of the team's
-  // chat-provider policy. `searchWorkspaceNodes` additionally requires
-  // the team to have Google enabled as a chat provider.
+  // `browseInternet` and `searchWorkspaceNodes` both run on the server's
+  // Gemini key — web-search grounding and workspace embeddings
+  // respectively. Neither is tied to the team's `providers.google`
+  // chat-provider toggle: a team chatting on Claude/GPT still gets both,
+  // as long as the server has the Gemini secret configured.
   const googleSecretConfigured = isAiModelProviderConfigured("google")
-  const googleBackedSearchAvailable =
-    config.providers.google && googleSecretConfigured
   // Agent-level intersection: a tool fires only when the team has it on
   // AND the active agent (if any) has it on. `!== false` treats missing
   // keys as enabled — keeps a newly-added tool key available to
@@ -694,14 +682,9 @@ function pickChatTools(
   // come back as a wider ZodObject; `ToolArgument` is the supertype
   // that lets the heterogeneous mix coexist without per-push casts.
   const tools: ToolArgument[] = []
-  if (
-    modeAllowsActionTools &&
-    config.tools.getWeather &&
-    agentAllows("getWeather")
-  )
+  if (config.tools.getWeather && agentAllows("getWeather"))
     tools.push(getWeatherTool)
-  if (modeAllowsActionTools && config.tools.rollDice && agentAllows("rollDice"))
-    tools.push(rollDiceTool)
+  if (config.tools.rollDice && agentAllows("rollDice")) tools.push(rollDiceTool)
   // Read-only retrieval — exposed in every mode (incl. `manual`), like
   // searchWorkspaceNodes. Gated on the server Gemini key, NOT
   // `config.providers.google`: web search is its own capability axis, so
@@ -716,7 +699,7 @@ function pickChatTools(
     tools.push(askQuestionTool)
   if (
     config.tools.searchWorkspaceNodes &&
-    googleBackedSearchAvailable &&
+    googleSecretConfigured &&
     agentAllows("searchWorkspaceNodes")
   )
     tools.push(searchWorkspaceNodesTool)
@@ -1634,8 +1617,6 @@ async function prepareChatTurn(opts: {
     mode,
     teamId,
     workspaceId,
-    googleProviderEnabled:
-      agentConfig.providers.google && isAiModelProviderConfigured("google"),
     availableTransferAgentIds:
       transferRoster.length > 0 ? transferRoster.map((r) => r.id) : undefined,
     effectiveModel,
@@ -1650,7 +1631,6 @@ async function prepareChatTurn(opts: {
   // without a deploy).
   const chatTools = pickChatTools(
     agentConfig,
-    mode,
     activeAgent,
     transferRoster.length
   )

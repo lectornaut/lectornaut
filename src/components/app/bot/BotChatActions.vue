@@ -234,51 +234,6 @@ const submitDelete = async () => {
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>{{ t("ai.sidebar.manageChat") }}</SidebarGroupLabel>
-        <SidebarGroupContent class="grid gap-2 p-2">
-          <p v-if="!sessionId" class="text-muted-foreground text-xs">
-            {{ t("ai.sidebar.noSessionActions") }}
-          </p>
-          <template v-else>
-            <Button
-              variant="secondary"
-              class="justify-start"
-              :disabled="!canManage || isMutating"
-              @click="openRename"
-            >
-              <IconPencil />
-              {{ t("actions.rename") }}
-            </Button>
-            <Button
-              variant="secondary"
-              class="justify-start"
-              :disabled="!canManage || isMutating"
-              @click="onArchiveToggle"
-            >
-              <Component :is="isActiveArchived ? IconRotateCcw : IconArchive" />
-              {{
-                isActiveArchived
-                  ? t("ai.sidebar.restoreFromArchive")
-                  : t("ai.archive")
-              }}
-            </Button>
-            <Button
-              variant="destructive"
-              class="justify-start text-current"
-              :disabled="!canManage || isMutating"
-              @click="openDelete"
-            >
-              <IconTrash2 />
-              {{ t("ai.sidebar.deleteChat") }}
-            </Button>
-            <p v-if="!canManage" class="text-muted-foreground text-xs">
-              {{ t("ai.sidebar.cannotManage") }}
-            </p>
-          </template>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
         <SidebarGroupLabel class="flex items-center gap-2">
           <IconLock v-if="activeVisibility === 'private'" />
           <IconUsers v-else-if="activeVisibility === 'shared'" />
@@ -328,6 +283,51 @@ const submitDelete = async () => {
           >
             {{ t("ai.sidebar.cannotChangeVisibility") }}
           </p>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel>{{ t("ai.sidebar.manageChat") }}</SidebarGroupLabel>
+        <SidebarGroupContent class="grid gap-2 p-2">
+          <p v-if="!sessionId" class="text-muted-foreground text-xs">
+            {{ t("ai.sidebar.noSessionActions") }}
+          </p>
+          <template v-else>
+            <Button
+              variant="secondary"
+              class="justify-start"
+              :disabled="!canManage || isMutating"
+              @click="openRename"
+            >
+              <IconPencil />
+              {{ t("actions.rename") }}
+            </Button>
+            <Button
+              variant="secondary"
+              class="justify-start"
+              :disabled="!canManage || isMutating"
+              @click="onArchiveToggle"
+            >
+              <Component :is="isActiveArchived ? IconRotateCcw : IconArchive" />
+              {{
+                isActiveArchived
+                  ? t("ai.sidebar.restoreFromArchive")
+                  : t("ai.archive")
+              }}
+            </Button>
+            <Button
+              variant="destructive"
+              class="justify-start text-current"
+              :disabled="!canManage || isMutating"
+              @click="openDelete"
+            >
+              <IconTrash2 />
+              {{ t("ai.sidebar.deleteChat") }}
+            </Button>
+            <p v-if="!canManage" class="text-muted-foreground text-xs">
+              {{ t("ai.sidebar.cannotManage") }}
+            </p>
+          </template>
         </SidebarGroupContent>
       </SidebarGroup>
     </OverlayScrollbarsWrapper>

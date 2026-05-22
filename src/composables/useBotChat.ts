@@ -71,17 +71,18 @@ export const BOT_CHAT_MAX_ATTACHED_NODES = 10
 
 /**
  * Static catalog of action-context modes the user can switch between.
- * Mirrors the server-side `MODE_CONFIG` in `functions/src/bot.ts` — keep
- * the names in sync. The descriptions here drive the UI affordances
- * (composer dropdown labels and the side-panel explainer); the server
- * owns the actual prompt-suffix and tool-list behavior.
+ * Mirrors the server-side `MODE_CONFIG` in
+ * `functions/src/botAgentConfig.ts` — keep the names in sync. The
+ * descriptions here drive the UI affordances (composer dropdown labels
+ * and the side-panel explainer); the server owns the actual prompt-suffix
+ * behavior. Every tool is available in every mode, so modes differ only
+ * in how proactively the assistant replies.
  */
 export interface BotChatModeOption {
   value: BotChatMode
   label: string
   shortDescription: string
   longDescription: string
-  toolsEnabled: boolean
 }
 
 export const BOT_CHAT_MODE_OPTIONS: readonly BotChatModeOption[] = [
@@ -91,7 +92,6 @@ export const BOT_CHAT_MODE_OPTIONS: readonly BotChatModeOption[] = [
     shortDescription: "Balanced default",
     longDescription:
       "Concise replies. Calls tools only when they directly help.",
-    toolsEnabled: true,
   },
   {
     value: "agent",
@@ -99,15 +99,13 @@ export const BOT_CHAT_MODE_OPTIONS: readonly BotChatModeOption[] = [
     shortDescription: "Proactive, tool-heavy",
     longDescription:
       "Calls tools eagerly to gather data and chains them when useful. Replies tend to be longer and narrate what's happening.",
-    toolsEnabled: true,
   },
   {
     value: "manual",
     label: "Manual",
-    shortDescription: "Read-only conversation",
+    shortDescription: "Conversational, user-led",
     longDescription:
-      "Tools are disabled — the assistant can explain and suggest, but won't take actions on your behalf. Useful when you only want feedback.",
-    toolsEnabled: false,
+      "Discussion-first: the assistant explains and suggests, and uses tools only when you explicitly ask. Useful when you mostly want feedback.",
   },
 ] as const
 

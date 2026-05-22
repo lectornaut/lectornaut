@@ -499,9 +499,10 @@ export interface GetPublicTeamMembersResponse {
 /**
  * Action-context mode for a chat turn. Mirrors the server enum; the
  * authoritative list lives in `functions/src/bot.ts` (`BOT_CHAT_MODES`).
- *   - `auto`   — balanced default; tools enabled; concise replies
- *   - `agent`  — proactive; tools encouraged; thorough chain-of-thought
- *   - `manual` — read-only conversation; tools stripped server-side
+ *   - `auto`   — balanced default; concise replies
+ *   - `agent`  — proactive; thorough, narrated chain-of-thought
+ *   - `manual` — discussion-first; uses tools only when explicitly asked
+ * All tools are available in every mode; modes differ only in reply style.
  */
 export type BotChatMode = "auto" | "agent" | "manual"
 

@@ -28,11 +28,12 @@
  * Embeddings are produced server-side via two Firestore triggers
  * (one per scope — `code`, `write`) that fire on document write and
  * dispatch through the indexer. The trigger handles the upstream
- * concerns (folder skip, provider-toggle, empty-content clearing);
- * the indexer handles the embed + persist + hash-guard. Because this
- * retrieval path is Gemini-embedding-backed, both the chat tool and
- * the embed-on-write triggers respect the team's Google provider
- * toggle.
+ * concerns (folder skip, empty-content clearing); the indexer handles
+ * the embed + persist + hash-guard. This retrieval path is
+ * Gemini-embedding-backed, so both the chat tool and the embed-on-write
+ * triggers require the server's Gemini key — but NOT the team's Google
+ * chat-provider toggle (embeddings run on server infrastructure,
+ * independent of which chat model the team selected).
  *
  * Vector index for the `embedding` field must exist in Firestore before
  * `findNearest()` will accept queries — see `firestore.indexes.json`.
@@ -242,7 +243,6 @@ export const workspaceNodeIndexer = ai.defineIndexer(
 interface RagToolContext {
   teamId?: string
   workspaceId?: string
-  googleProviderEnabled?: boolean
 }
 
 const SEARCH_SCOPES = ["code", "write", "both"] as const
@@ -362,10 +362,17 @@ export const searchWorkspaceNodesTool = ai.defineTool(
     // severity (or filter with `--severity DEBUG`) to surface them when
     // diagnosing a "no results" regression.
     logger.debug(
-      `[searchWorkspaceNodes] enter query=${JSON.stringify(input.query)} scope=${scope} limit=${limit} team=${teamId ?? "n/a"} workspace=${workspaceId ?? "n/a"} googleEnabled=${ctx.googleProviderEnabled !== false}`
+      `[searchWorkspaceNodes] enter query=${JSON.stringify(input.query)} scope=${scope} limit=${limit} team=${teamId ?? "n/a"} workspace=${workspaceId ?? "n/a"} geminiKey=${isAiModelProviderConfigured("google")}`
     )
-    if (ctx.googleProviderEnabled === false) {
-      logger.debug("[searchWorkspaceNodes] skipped because Google is disabled")
+    // Workspace search embeds the query via the server's Gemini key; with
+    // no key configured there's nothing to embed against, so return empty
+    // rather than throw. NOT gated on the team's `providers.google`
+    // chat-provider toggle — embeddings are server infra (cf.
+    // `browseInternet`), independent of the team's chosen chat model.
+    if (!isAiModelProviderConfigured("google")) {
+      logger.debug(
+        "[searchWorkspaceNodes] skipped because the server Gemini key is not configured"
+      )
       return { results: [], truncated: false }
     }
 
@@ -526,32 +533,6 @@ interface NodeDocPartialShape {
   embedHash?: unknown
 }
 
-const agentConfigDocPath = (teamId: string) => `teams/${teamId}/settings/agent`
-
-async function isGoogleProviderEnabledForTeam(
-  teamId: string
-): Promise<boolean> {
-  try {
-    const snap = await db.doc(agentConfigDocPath(teamId)).get()
-    const providers = snap.data()?.providers
-    if (
-      typeof providers !== "object" ||
-      providers === null ||
-      Array.isArray(providers)
-    ) {
-      return true
-    }
-
-    const google = (providers as Record<string, unknown>).google
-    return typeof google === "boolean" ? google : true
-  } catch (err) {
-    logger.warn(`[embedNode] provider config lookup failed team=${teamId}`, {
-      err: String(err),
-    })
-    return true
-  }
-}
-
 async function clearNodeEmbedding(params: {
   afterRef: FirebaseFirestore.DocumentReference
   scope: "code" | "write"
@@ -612,24 +593,6 @@ async function syncNodeEmbedding(params: {
     logger.debug(
       `[embedNode] result=skip-folder node=${nodeId} type=${String(after.type)}`
     )
-    return
-  }
-
-  const googleProviderEnabled = await isGoogleProviderEnabledForTeam(teamId)
-  if (!googleProviderEnabled) {
-    logger.debug(
-      `[embedNode] result=skip-google-disabled team=${teamId} node=${nodeId}`
-    )
-    if (after.embedHash || after.embedding) {
-      await clearNodeEmbedding({
-        afterRef,
-        scope,
-        teamId,
-        workspaceId,
-        nodeId,
-        reason: "google-provider-disabled",
-      })
-    }
     return
   }
 

@@ -63,8 +63,6 @@ export type BotChatMode = (typeof BOT_CHAT_MODES)[number]
  *   - `teamId` / `workspaceId` — the workspace the chat is bound to. Used
  *                  by workspace-aware tools like `searchWorkspaceNodes`
  *                  to scope retrieval (the model can't override these).
- *   - `googleProviderEnabled` — whether Google-backed tools such as
- *                  workspace semantic search are allowed for this team.
  *
  * Add fields here when introducing context-aware features.
  */
@@ -73,7 +71,6 @@ export interface BotActionContext {
   mode: BotChatMode
   teamId: string
   workspaceId: string
-  googleProviderEnabled: boolean
   /**
    * Custom-agent ids the model is allowed to transfer the conversation
    * to via `transferToAgent`. Excludes the currently-active agent (and

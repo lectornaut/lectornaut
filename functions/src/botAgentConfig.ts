@@ -58,21 +58,14 @@ export const PREVIEW_MAX_LENGTH = 200
 interface BotChatModeConfig {
   /** Appended to SYSTEM_PROMPT_BASE — steers the model's behavior. */
   promptSuffix: string
-  /**
-   * Whether action tools (`getWeather`, `rollDice`) are exposed. Interrupt
-   * tools (`askQuestion`) are always available — clarifying questions
-   * have no side effects, so they're allowed in every mode (including
-   * `manual`, where they keep the conversation collaborative).
-   */
-  actionToolsEnabled: boolean
 }
 
 /**
- * Per-mode behavior toggles + default prompt suffixes. `actionToolsEnabled`
- * gates whether the chat flow registers side-effecting tools at all.
- * The `promptSuffix` fields are also the defaults that
+ * Per-mode default prompt suffixes. These are also the defaults that
  * `DEFAULT_BOT_AGENT_CONFIG.promptSuffixes` falls back to, so teams
- * inherit reasonable copy out of the box.
+ * inherit reasonable copy out of the box. Modes differ only in prompt
+ * style — every tool is available in every mode (tool access is no
+ * longer mode-gated; see `pickChatTools`).
  */
 export const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
   auto: {
@@ -81,7 +74,6 @@ export const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
       "advances the user's request, otherwise just reply with text. If " +
       "the request is ambiguous, prefer asking the user a clarifying " +
       "question via `askQuestion` over guessing.",
-    actionToolsEnabled: true,
   },
   agent: {
     promptSuffix:
@@ -90,16 +82,14 @@ export const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
       "needs them. Briefly narrate what you're doing and why. When you " +
       "need a decision from the user before continuing, ask via " +
       "`askQuestion` — don't pick on their behalf.",
-    actionToolsEnabled: true,
   },
   manual: {
     promptSuffix:
-      "Manual mode: action tools are disabled. You are a read-only " +
-      "conversational partner — explain, suggest, and discuss, but never " +
-      "claim to take actions on the user's behalf. You may still ask " +
-      "clarifying questions via `askQuestion` when it would help the " +
-      "discussion.",
-    actionToolsEnabled: false,
+      "Manual mode: stay conversational and let the user lead. Prefer " +
+      "explaining, suggesting, and discussing; reach for a tool only when " +
+      "the user explicitly asks rather than acting on your own initiative. " +
+      "Ask clarifying questions via `askQuestion` whenever it would help " +
+      "the discussion.",
   },
 }
 

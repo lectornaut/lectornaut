@@ -142,7 +142,7 @@ const openNewAgentDialog = (): void => {
       >
         <SheetHeader>
           <SheetTitle class="flex items-center gap-2">
-            <span class="size-6 shrink-0 overflow-hidden rounded-full">
+            <span class="size-5 shrink-0 overflow-hidden rounded-full">
               <Avatar
                 variant="beam"
                 :name="avatarSeed(agent)"

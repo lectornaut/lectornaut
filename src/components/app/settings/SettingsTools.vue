@@ -69,18 +69,6 @@ const { config, isLoading, isSaving, canEdit, save } =
 const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
 
 /**
- * Whether the team has the Google provider enabled. `searchWorkspaceNodes`
- * relies on Gemini embeddings, so its toggle is disabled (with a hint)
- * when Google is off — the tool literally can't run without it, and a
- * switch that reads "on" but never registers the tool is the "broken
- * feature" we want to avoid. Read from the saved config because providers
- * are edited on the AI settings page, not here.
- */
-const googleProviderEnabled = computed(
-  () => config.value.providers.google !== false
-)
-
-/**
  * Dirty check is scoped to the `tools.*` keys this page owns. The
  * sibling Agents page's `tools.customAgents` change must NOT show up
  * as dirty here, so we compare only the page's own slice.
@@ -283,19 +271,12 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
                 {{
                   t("settings.agents.tools.searchWorkspaceNodes.description")
                 }}
-                <span v-if="!googleProviderEnabled" class="text-destructive">
-                  {{
-                    t(
-                      "settings.agents.tools.searchWorkspaceNodes.requiresGoogle"
-                    )
-                  }}
-                </span>
               </FieldDescription>
             </FieldContent>
             <Switch
               id="agent-tool-search-nodes"
               v-model="draft.tools.searchWorkspaceNodes"
-              :disabled="!canEdit || !googleProviderEnabled"
+              :disabled="!canEdit"
             />
           </Field>
 

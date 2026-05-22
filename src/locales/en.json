@@ -108,7 +108,6 @@
       "modeDescription": "Mode steers how the assistant approaches each turn — what tools it can reach, how proactive it is, and how it phrases replies.",
       "availableTools": "Available tools",
       "toolsEnabledHint": "The assistant can call these on its own when relevant. Try one of the example prompts below.",
-      "toolsDisabled": "Tools are disabled in {mode} mode. Switch to {auto} or {agent} to re-enable them.",
       "noTools": "No tools enabled for this agent.",
       "humanInTheLoop": "Human-in-the-Loop",
       "humanInTheLoopHint": "The assistant can pause and ask you a clarifying question instead of guessing. These interrupts are available in every mode — including {manual}.",
@@ -1292,33 +1291,32 @@
         },
         "browseInternet": {
           "label": "Browse the internet",
-          "description": "Lets the bot search the live web for current or external facts when it doesn't know the answer or the user asks it to look something up. Works on any chat model — it grounds via Google Search (Gemini) under the hood, so it needs the server's Gemini key and runs even for teams chatting on Claude or GPT. Read-only — available in every mode."
+          "description": "Searches the web for recent information."
         },
         "askQuestion": {
           "label": "Ask user (clarify)",
-          "description": "Lets the bot pause and ask a clarifying question with choices."
+          "description": "Pauses the chat to ask a clarifying question with choices."
         },
         "searchWorkspaceNodes": {
           "label": "Search workspace",
-          "description": "Semantic search over the team's workspace nodes so the bot can pull in relevant files the user hasn't attached. Read-only — available in every mode.",
-          "requiresGoogle": "Requires the Google provider — workspace search uses Gemini embeddings. Enable Google under AI settings to turn this on."
+          "description": "Searches the team's workspace for relevant content."
         },
         "summarizeNode": {
           "label": "Summarize node (chat)",
-          "description": "Lets the bot generate a structured summary (overview, key points, tags) of an attached node from inside a chat turn. Same output shape as the inspector's Generate button. Read-only — available in every mode."
+          "description": "Generates a structured summary (overview, key points, tags) from the chat message menu."
         },
         "summarizeNodeInspector": {
           "label": "Summarize node (inspector)",
-          "description": "Lets members generate a structured summary (overview, key points, tags) from the node inspector's Generate button. Separate from the chat tool above; turn off to remove the summary card from the inspector. Works on any chat model."
+          "description": "Generates a structured summary (overview, key points, tags) from any node via the workspace inspector."
         },
         "customAgents": {
           "label": "Custom agents",
-          "description": "Lets members pick from team-scoped agent personas (with their own system prompts + tool subsets) in chats. Turn off to hide the picker and force every chat to run under the team default.",
+          "description": "Lets members pick team-scoped agent personas in chats; off forces the team default.",
           "configure": "Configure custom agents"
         },
         "customTools": {
           "label": "Custom tools",
-          "description": "Lets admins ship their own model-callable tools — HTTP webhooks, prompt templates, canned workspace searches. Turn off to remove every admin-authored tool from the model's catalog."
+          "description": "Lets admins ship custom model-callable tools (webhooks, prompt templates, canned searches)."
         }
       },
       "limits": {

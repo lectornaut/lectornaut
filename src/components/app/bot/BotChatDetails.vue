@@ -134,26 +134,18 @@ const messageCount = computed(() => {
 //
 // Mirrors the server's `pickChatTools` dispatch logic (see
 // `functions/src/bot.ts`) so the panel shows exactly what the next
-// turn will have access to — not a stale static list. Three inputs
+// turn will have access to — not a stale static list. Two inputs
 // converge into the visible set:
 //
 //   1. The team's tool toggles (`teamAgentConfig.tools`) — admin gate.
 //   2. The active agent's per-tool overrides (`activeAgent.tools`) —
 //      persona gate. `null` activeAgent (default persona) skips this
 //      filter entirely, matching the server.
-//   3. The active mode — `manual` mode hides action tools at dispatch
-//      (HITL interrupts stay available because they have no side
-//      effects).
 //
-// Filters 1+2 apply to BOTH built-in and custom tools. Filter 3 only
-// affects the action-tools section; the interrupts section ignores it
-// and renders enabled tools at full opacity.
+// Both filters apply to BOTH built-in and custom tools. Tools are
+// available in every mode, so mode no longer narrows this set.
 const activeAgent = computed<ITeamAgent | null>(
   () => botChat?.activeAgent.value ?? null
-)
-const activeModeOption = computed(() => botChat?.activeModeOption.value)
-const toolsAreEnabled = computed(
-  () => activeModeOption.value?.toolsEnabled ?? true
 )
 
 const agentConfigStore = useAgentConfigStore()
@@ -226,11 +218,8 @@ const customEntry = (tool: ITeamCustomTool): AvailableToolEntry => {
 
 /**
  * Action tools (everything except interrupts). Filters the catalog
- * + custom tools against the team×agent intersection. Mode dimming
- * is purely a template concern (opacity only) — the dispatch-level
- * gate happens server-side; the panel still surfaces what *would*
- * be available if the user flipped back to a tool-enabled mode, so
- * they know what they're losing in `manual`.
+ * + custom tools against the team×agent intersection — the same set
+ * the next turn will have access to, in any mode.
  */
 const availableActionTools = computed<AvailableToolEntry[]>(() => {
   const teamTools = teamAgentConfig.value.tools
@@ -429,25 +418,9 @@ const detailRows = computed<DetailRow[]>(() => {
           {{ t("ai.sidebar.availableTools") }}
         </SidebarGroupLabel>
         <SidebarGroupContent class="space-y-2 p-2">
-          <p v-if="toolsAreEnabled" class="text-muted-foreground text-xs">
+          <p class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.toolsEnabledHint") }}
           </p>
-          <i18n-t
-            v-else
-            keypath="ai.sidebar.toolsDisabled"
-            tag="p"
-            class="text-muted-foreground text-xs"
-          >
-            <template #mode>
-              <strong>{{ t(`ai.modes.${activeMode}.label`) }}</strong>
-            </template>
-            <template #auto>
-              <strong>{{ t("ai.modes.auto.label") }}</strong>
-            </template>
-            <template #agent>
-              <strong>{{ t("ai.modes.agent.label") }}</strong>
-            </template>
-          </i18n-t>
           <Empty
             v-if="availableActionTools.length === 0"
             class="rounded border border-dashed p-4"
@@ -463,8 +436,7 @@ const detailRows = computed<DetailRow[]>(() => {
             <li
               v-for="tool in availableActionTools"
               :key="tool.key"
-              class="border-border/60 bg-background/40 rounded-md border p-2 transition-opacity"
-              :class="{ 'opacity-50': !toolsAreEnabled }"
+              class="border-border/60 bg-background/40 rounded-md border p-2"
             >
               <div class="flex items-center gap-2">
                 <Component :is="tool.icon" />

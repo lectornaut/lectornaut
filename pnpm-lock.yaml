@@ -309,8 +309,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0(vue@3.5.34(typescript@6.0.3))
       markstream-vue:
-        specifier: 1.0.0
-        version: 1.0.0(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.15(shiki@4.0.2)(vue@3.5.34(typescript@6.0.3)))(vue-i18n@11.4.4(vue@3.5.34(typescript@6.0.3)))(vue@3.5.34(typescript@6.0.3))
+        specifier: 1.0.1-beta.1
+        version: 1.0.1-beta.1(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.15(shiki@4.0.2)(vue@3.5.34(typescript@6.0.3)))(vue-i18n@11.4.4(vue@3.5.34(typescript@6.0.3)))(vue@3.5.34(typescript@6.0.3))
       mermaid:
         specifier: ^11.15.0
         version: 11.15.0
@@ -14744,10 +14744,10 @@ packages:
         integrity: sha512-V39W0rPgJ5Yj/XEl11LaKQxX9dYOI34RL729Zoi9oyy/Y6z6H+PJOsBFktu7gU9ZZxCsevWMb/Re2LgSKbWfRg==,
       }
 
-  markstream-vue@1.0.0:
+  markstream-vue@1.0.1-beta.1:
     resolution:
       {
-        integrity: sha512-ptuX/0dw++C1LDE6j+Ae5wEW0AmWAlYOIFgcKI6HEetIM2f1vfaZZQuzjmvQvy6NIy74ytg+srWy8XcqiGPt3A==,
+        integrity: sha512-45br3sbOQirIg0tmPMWRmdWk/vLE5aJtVx7cvLaa3e+klyYpILzQ7c4eOMq2EZkQTVewJhZHUVc2FTj+ujUJPg==,
       }
     hasBin: true
     peerDependencies:
@@ -14756,7 +14756,7 @@ packages:
       katex: ">=0.16.22"
       mermaid: ">=11"
       stream-markdown: ">=0.0.15"
-      stream-monaco: ">=0.0.40"
+      stream-monaco: ">=0.0.41"
       vue: ">=3.0.0"
       vue-i18n: ">=9"
     peerDependenciesMeta:
@@ -30270,7 +30270,7 @@ snapshots:
 
   markstream-core@1.0.0: {}
 
-  markstream-vue@1.0.0(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.15(shiki@4.0.2)(vue@3.5.34(typescript@6.0.3)))(vue-i18n@11.4.4(vue@3.5.34(typescript@6.0.3)))(vue@3.5.34(typescript@6.0.3)):
+  markstream-vue@1.0.1-beta.1(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.15(shiki@4.0.2)(vue@3.5.34(typescript@6.0.3)))(vue-i18n@11.4.4(vue@3.5.34(typescript@6.0.3)))(vue@3.5.34(typescript@6.0.3)):
     dependencies:
       "@chenglou/pretext": 0.0.5
       "@floating-ui/dom": 1.7.6
