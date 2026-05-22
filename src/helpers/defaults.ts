@@ -24,7 +24,6 @@ import {
   IconLifeBuoy,
   IconLock,
   IconLogs,
-  IconMapPin,
   IconMdiFormatTextVariant,
   IconMessageCircle,
   IconMessageCircleMore,
@@ -586,20 +585,6 @@ export const defaultMenu = [
       grid: "",
     },
     shortcut: "⌘C",
-  },
-  {
-    title: "Maps",
-    action: "Explore and annotate maps",
-    description: "Visualize ideas and concepts in a structured way.",
-    url: "/maps",
-    id: "maps",
-    icon: IconMapPin,
-    style: {
-      text: "text-yellow-700/90 dark:text-yellow-300/90",
-      bg: "bg-yellow-50 dark:bg-yellow-950/40",
-      grid: "",
-    },
-    shortcut: "⌘M",
   },
   {
     title: "Teams",

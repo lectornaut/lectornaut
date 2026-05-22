@@ -150,13 +150,6 @@ declare module "vue-router/auto-routes" {
       Record<never, never>,
       never
     >
-    "/maps": RouteRecordInfo<
-      "/maps",
-      "/maps",
-      Record<never, never>,
-      Record<never, never>,
-      never
-    >
     "/new": RouteRecordInfo<
       "/new",
       "/new",
@@ -310,10 +303,6 @@ declare module "vue-router/auto-routes" {
     }
     "src/pages/invitations.vue": {
       routes: "/invitations"
-      views: never
-    }
-    "src/pages/maps.vue": {
-      routes: "/maps"
       views: never
     }
     "src/pages/new.vue": {

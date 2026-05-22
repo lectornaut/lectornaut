@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import { generateTeamAgentConfig } from "@/composables/useFunctions"
 import { useTeamAgents } from "@/composables/useTeamAgents"
 import { BOT_TOOL_CATALOG } from "@/data/botTools"
+import { IconAlertTriangle, IconSparkles } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
+import { useAuthStore } from "@/stores/authStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
 import type {
   IBotAgentConfig,
@@ -347,6 +350,83 @@ const prepareDraftForSave = (): AgentDraft => {
   }
 }
 
+// ── AI generation (Prompt tab) ──────────────────────────────────────────────
+//
+// The "Prompt" tab lets an admin describe the agent in plain English and
+// have the model draft the whole configuration. Generation writes straight
+// into `draft` — the single source of truth the Configure tab edits, the
+// preview renders, and Save persists — so there's no parallel state to
+// reconcile. `isDirty` flips true the moment the generated name lands, so
+// Save lights up and the editingAgent watcher won't clobber the result.
+
+const authStore = useAuthStore()
+const { currentTeamId } = storeToRefs(authStore)
+
+/** Prompt textarea cap. The server independently caps at 4000. */
+const AI_PROMPT_MAX = 2000
+
+/** Default to the Prompt tab; reset on every open (see handleOpenEvent). */
+const activeTab = ref("prompt")
+const aiPrompt = ref("")
+const isGenerating = ref(false)
+const generateError = ref<string | null>(null)
+/** Wire-name of the model that produced the current draft (UI receipt). */
+const generatedModel = ref<string | null>(null)
+/** True once a generation has populated the draft this session. */
+const hasGenerated = ref(false)
+
+/**
+ * Show the preview pane when there's something worth previewing: always in
+ * edit mode (the draft already mirrors a saved agent) and, in create mode,
+ * once the first generation lands. Otherwise the empty state guides the
+ * admin to write a prompt.
+ */
+const showPreview = computed(() => !isNew.value || hasGenerated.value)
+
+/** Built-in tools enabled on the current draft — drives the preview chips. */
+const enabledToolLabels = computed<string[]>(() =>
+  toolRows.value
+    .filter((row) => draft.value.tools[row.name])
+    .map((row) => row.label)
+)
+
+const canGenerate = computed<boolean>(() => {
+  if (!canManage.value || isGenerating.value || isSaving.value) return false
+  if (!currentTeamId.value) return false
+  return aiPrompt.value.trim().length > 0
+})
+
+const handleGenerate = async (): Promise<void> => {
+  const prompt = aiPrompt.value.trim()
+  const teamId = currentTeamId.value
+  if (!prompt || !teamId || !canGenerate.value) return
+  isGenerating.value = true
+  generateError.value = null
+  try {
+    const { data } = await generateTeamAgentConfig({ teamId, prompt })
+    // Merge into the single source of truth. Preserve the per-custom-tool
+    // overrides plus the non-dispatchable `customAgents` / `customTools`
+    // keys the model doesn't generate; override the text fields and the
+    // five built-in tool toggles from the AI's draft.
+    draft.value = {
+      ...draft.value,
+      name: data.name,
+      description: data.description,
+      avatarSeed: data.avatarSeed,
+      systemPromptBase: data.systemPromptBase,
+      promptSuffixes: { ...data.promptSuffixes },
+      tools: { ...draft.value.tools, ...data.tools },
+    }
+    generatedModel.value = data.model
+    hasGenerated.value = true
+  } catch (error) {
+    console.error("[SettingsCustomAgents] failed to generate config:", error)
+    generateError.value = t("settings.agents.custom.ai.generateError")
+  } finally {
+    isGenerating.value = false
+  }
+}
+
 // ── External event channel ──────────────────────────────────────────────────
 
 type OpenPayload = { agentId?: string } | "new" | undefined
@@ -374,6 +454,14 @@ const handleOpenEvent = (event: unknown): void => {
   }
   editingAgentId.value = agentId
   draft.value = cloneDraft(editingAgent.value)
+  // Reset AI-mode state so a reopened dialog never shows a stale prompt,
+  // preview receipt, or error from a previous session.
+  activeTab.value = "prompt"
+  aiPrompt.value = ""
+  isGenerating.value = false
+  generateError.value = null
+  generatedModel.value = null
+  hasGenerated.value = false
   open.value = true
 }
 
@@ -403,7 +491,7 @@ const handleEditorSave = async (): Promise<void> => {
 <template>
   <Dialog v-model:open="open">
     <DialogContent
-      class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth"
+      class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden overscroll-none"
     >
       <DialogHeader>
         <DialogTitle class="flex items-center gap-2">
@@ -420,62 +508,235 @@ const handleEditorSave = async (): Promise<void> => {
         </DialogDescription>
       </DialogHeader>
 
-      <OverlayScrollbarsWrapper class="-mx-6 w-[-webkit-fill-available]">
-        <FieldGroup class="p-6">
-          <!-- ── Identity ──────────────────────────────────────────────── -->
-          <FieldSet>
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel :for="`agent-name-${editingAgent?.id ?? 'new'}`">
-                  {{ t("settings.agents.custom.name.label") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.agents.custom.name.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <Input
-                :id="`agent-name-${editingAgent?.id ?? 'new'}`"
-                v-model="draft.name"
-                :placeholder="t('settings.agents.custom.name.placeholder')"
-                :maxlength="40"
-                :disabled="!canManage"
-              />
-            </Field>
+      <Tabs v-model="activeTab" class="min-h-0">
+        <TabsList class="self-start">
+          <TabsTrigger value="prompt">
+            <IconSparkles />
+            {{ t("settings.agents.custom.ai.tabPrompt") }}
+          </TabsTrigger>
+          <TabsTrigger value="configure">
+            {{ t("settings.agents.custom.ai.tabConfigure") }}
+          </TabsTrigger>
+        </TabsList>
 
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel
-                  :for="`agent-description-${editingAgent?.id ?? 'new'}`"
+        <!-- ── Prompt tab — split view: input (left) + live preview (right) ── -->
+        <TabsContent value="prompt" class="min-h-0">
+          <div
+            class="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+          >
+            <!-- Left: prompt input. "Prompt only has the textarea + Generate". -->
+            <div class="flex min-h-0 flex-col gap-3">
+              <div class="flex flex-col gap-1">
+                <Label
+                  :for="`agent-ai-prompt-${editingAgent?.id ?? 'new'}`"
+                  class="text-sm font-medium"
                 >
-                  {{ t("settings.agents.custom.description.label") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.agents.custom.description.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <Input
-                :id="`agent-description-${editingAgent?.id ?? 'new'}`"
-                v-model="draft.description"
-                :placeholder="
-                  t('settings.agents.custom.description.placeholder')
-                "
-                :maxlength="200"
-                :disabled="!canManage"
+                  {{ t("settings.agents.custom.ai.promptLabel") }}
+                </Label>
+                <p class="text-muted-foreground text-xs">
+                  {{ t("settings.agents.custom.ai.promptDescription") }}
+                </p>
+              </div>
+              <Textarea
+                :id="`agent-ai-prompt-${editingAgent?.id ?? 'new'}`"
+                v-model="aiPrompt"
+                :placeholder="t('settings.agents.custom.ai.promptPlaceholder')"
+                :maxlength="AI_PROMPT_MAX"
+                :disabled="!canManage || isGenerating"
+                class="min-h-40 flex-1 resize-none"
               />
-            </Field>
-
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel
-                  :for="`agent-avatar-seed-${editingAgent?.id ?? 'new'}`"
+              <p
+                v-if="generateError"
+                class="text-destructive flex items-center gap-1.5 text-xs"
+              >
+                <IconAlertTriangle class="size-3.5 shrink-0" />
+                {{ generateError }}
+              </p>
+              <div class="flex items-center gap-2">
+                <Button :disabled="!canGenerate" @click="handleGenerate">
+                  <Spinner v-if="isGenerating" />
+                  <IconSparkles v-else />
+                  {{
+                    isGenerating
+                      ? t("settings.agents.custom.ai.generating")
+                      : hasGenerated
+                        ? t("settings.agents.custom.ai.regenerate")
+                        : t("settings.agents.custom.ai.generate")
+                  }}
+                </Button>
+                <span
+                  v-if="generatedModel && !isGenerating"
+                  class="text-muted-foreground truncate text-xs"
                 >
-                  {{ t("settings.agents.custom.avatarSeed.label") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.agents.custom.avatarSeed.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <!--
+                  {{
+                    t("settings.agents.custom.ai.generatedBy", {
+                      model: generatedModel,
+                    })
+                  }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Right: read-only "anticipated configuration" rendered from draft. -->
+            <div
+              class="bg-muted/30 flex h-full min-h-0 flex-col overflow-hidden rounded-lg border"
+            >
+              <div class="shrink-0 border-b px-4 py-2.5">
+                <span class="text-sm font-medium">
+                  {{ t("settings.agents.custom.ai.previewTitle") }}
+                </span>
+              </div>
+              <div
+                v-if="!showPreview"
+                class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center"
+              >
+                <IconSparkles class="text-muted-foreground size-7" />
+                <p class="text-sm font-medium">
+                  {{ t("settings.agents.custom.ai.previewEmptyTitle") }}
+                </p>
+                <p class="text-muted-foreground max-w-xs text-xs">
+                  {{ t("settings.agents.custom.ai.previewEmptyHint") }}
+                </p>
+              </div>
+              <OverlayScrollbarsWrapper v-else class="min-h-0 flex-1">
+                <div class="flex flex-col gap-4 p-4">
+                  <!-- Identity (avatar + name + description) -->
+                  <div class="flex items-center gap-3">
+                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
+                      <Avatar
+                        variant="beam"
+                        :name="effectiveAvatarSeed"
+                        :colors="[
+                          'var(--color-chart-1)',
+                          'var(--color-chart-2)',
+                          'var(--color-chart-3)',
+                          'var(--color-chart-4)',
+                          'var(--color-chart-5)',
+                        ]"
+                      />
+                    </div>
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium">
+                        {{
+                          draft.name ||
+                          t("settings.agents.custom.untitledAgent")
+                        }}
+                      </p>
+                      <p class="text-muted-foreground truncate text-xs">
+                        {{
+                          draft.description ||
+                          t("settings.agents.custom.ai.previewNoDescription")
+                        }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- System prompt -->
+                  <div class="flex flex-col gap-1.5">
+                    <span
+                      class="text-muted-foreground text-xs font-medium tracking-wide uppercase"
+                    >
+                      {{ t("settings.agents.custom.ai.previewSystemPrompt") }}
+                    </span>
+                    <p
+                      class="bg-background text-foreground/90 max-h-48 overflow-auto rounded-md border p-2.5 text-xs whitespace-pre-wrap"
+                    >
+                      {{ draft.systemPromptBase }}
+                    </p>
+                  </div>
+
+                  <!-- Enabled tools -->
+                  <div class="flex flex-col gap-1.5">
+                    <span
+                      class="text-muted-foreground text-xs font-medium tracking-wide uppercase"
+                    >
+                      {{ t("settings.agents.custom.ai.previewTools") }}
+                    </span>
+                    <div
+                      v-if="enabledToolLabels.length > 0"
+                      class="flex flex-wrap gap-1.5"
+                    >
+                      <Badge
+                        v-for="label in enabledToolLabels"
+                        :key="label"
+                        variant="secondary"
+                        class="font-normal"
+                      >
+                        {{ label }}
+                      </Badge>
+                    </div>
+                    <p v-else class="text-muted-foreground text-xs italic">
+                      {{ t("settings.agents.custom.ai.previewNoTools") }}
+                    </p>
+                  </div>
+                </div>
+              </OverlayScrollbarsWrapper>
+            </div>
+          </div>
+        </TabsContent>
+
+        <!-- ── Configure tab — full manual form (unchanged) ───────────── -->
+        <TabsContent value="configure" class="min-h-0">
+          <OverlayScrollbarsWrapper
+            class="-mx-6 h-full w-[-webkit-fill-available]"
+          >
+            <FieldGroup class="p-6">
+              <!-- ── Identity ──────────────────────────────────────────────── -->
+              <FieldSet>
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-name-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.custom.name.label") }}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {{ t("settings.agents.custom.name.description") }}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Input
+                    :id="`agent-name-${editingAgent?.id ?? 'new'}`"
+                    v-model="draft.name"
+                    :placeholder="t('settings.agents.custom.name.placeholder')"
+                    :maxlength="40"
+                    :disabled="!canManage"
+                  />
+                </Field>
+
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-description-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.custom.description.label") }}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {{ t("settings.agents.custom.description.description") }}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Input
+                    :id="`agent-description-${editingAgent?.id ?? 'new'}`"
+                    v-model="draft.description"
+                    :placeholder="
+                      t('settings.agents.custom.description.placeholder')
+                    "
+                    :maxlength="200"
+                    :disabled="!canManage"
+                  />
+                </Field>
+
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-avatar-seed-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.custom.avatarSeed.label") }}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {{ t("settings.agents.custom.avatarSeed.description") }}
+                    </FieldDescription>
+                  </FieldContent>
+                  <!--
                 Live avatar preview reuses the boring-avatars component
                 + chart-N palette from `SettingsCustomAgentRow`, so the
                 preview matches the row 1:1 (no surprise on save). The
@@ -483,182 +744,189 @@ const handleEditorSave = async (): Promise<void> => {
                 `effectiveAvatarSeed` computed; boring-avatars is cheap
                 enough (pure-SVG portrait) that this is fine.
               -->
-              <div class="flex items-center gap-3">
-                <div class="size-10 shrink-0 overflow-hidden rounded-full">
-                  <Avatar
-                    variant="beam"
-                    :name="effectiveAvatarSeed"
-                    :colors="[
-                      'var(--color-chart-1)',
-                      'var(--color-chart-2)',
-                      'var(--color-chart-3)',
-                      'var(--color-chart-4)',
-                      'var(--color-chart-5)',
-                    ]"
-                  />
-                </div>
-                <Input
-                  :id="`agent-avatar-seed-${editingAgent?.id ?? 'new'}`"
-                  v-model="draft.avatarSeed"
-                  :placeholder="
-                    t('settings.agents.custom.avatarSeed.placeholder')
-                  "
-                  :maxlength="40"
-                  :disabled="!canManage"
-                  class="flex-1"
-                />
-              </div>
-            </Field>
-          </FieldSet>
-
-          <FieldSeparator />
-
-          <!-- ── System prompt + mode-specific suffixes ───────────────── -->
-          <FieldSet>
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel
-                  :for="`agent-system-prompt-${editingAgent?.id ?? 'new'}`"
-                >
-                  {{ t("settings.agents.custom.systemPromptBase.label") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.agents.custom.systemPromptBase.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <Textarea
-                :id="`agent-system-prompt-${editingAgent?.id ?? 'new'}`"
-                v-model="draft.systemPromptBase"
-                :placeholder="
-                  t('settings.agents.custom.systemPromptBase.placeholder')
-                "
-                :maxlength="4000"
-                :disabled="!canManage"
-                rows="4"
-              />
-            </Field>
-
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel>
-                  {{ t("settings.agents.custom.promptSuffixes.label") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.agents.custom.promptSuffixes.description") }}
-                </FieldDescription>
-              </FieldContent>
-            </Field>
-
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel
-                  :for="`agent-suffix-auto-${editingAgent?.id ?? 'new'}`"
-                >
-                  {{ t("settings.agents.promptSuffixes.auto") }}
-                </FieldLabel>
-              </FieldContent>
-              <Textarea
-                :id="`agent-suffix-auto-${editingAgent?.id ?? 'new'}`"
-                v-model="draft.promptSuffixes.auto"
-                :maxlength="2000"
-                :disabled="!canManage"
-                rows="2"
-              />
-            </Field>
-
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel
-                  :for="`agent-suffix-agent-${editingAgent?.id ?? 'new'}`"
-                >
-                  {{ t("settings.agents.promptSuffixes.agent") }}
-                </FieldLabel>
-              </FieldContent>
-              <Textarea
-                :id="`agent-suffix-agent-${editingAgent?.id ?? 'new'}`"
-                v-model="draft.promptSuffixes.agent"
-                :maxlength="2000"
-                :disabled="!canManage"
-                rows="2"
-              />
-            </Field>
-
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel
-                  :for="`agent-suffix-manual-${editingAgent?.id ?? 'new'}`"
-                >
-                  {{ t("settings.agents.promptSuffixes.manual") }}
-                </FieldLabel>
-              </FieldContent>
-              <Textarea
-                :id="`agent-suffix-manual-${editingAgent?.id ?? 'new'}`"
-                v-model="draft.promptSuffixes.manual"
-                :maxlength="2000"
-                :disabled="!canManage"
-                rows="2"
-              />
-            </Field>
-          </FieldSet>
-
-          <FieldSeparator />
-
-          <!-- ── Tools ────────────────────────────────────────────────── -->
-          <FieldSet>
-            <Field orientation="vertical">
-              <FieldContent>
-                <FieldLabel>
-                  {{ t("settings.agents.custom.tools.label") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.agents.custom.tools.description") }}
-                </FieldDescription>
-              </FieldContent>
-            </Field>
-
-            <TooltipProvider>
-              <Field
-                v-for="row in toolRows"
-                :key="row.name"
-                orientation="horizontal"
-              >
-                <FieldContent>
-                  <FieldLabel
-                    :for="`agent-tool-${row.name}-${editingAgent?.id ?? 'new'}`"
-                    class="flex items-center gap-2"
-                  >
-                    {{ row.label }}
-                    <Badge v-if="!row.enabledAtTeam" variant="outline">
-                      {{ t("settings.agents.custom.tools.disabledAtTeam") }}
-                    </Badge>
-                  </FieldLabel>
-                  <FieldDescription>
-                    {{ row.description }}
-                  </FieldDescription>
-                </FieldContent>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <span class="inline-block">
-                      <Switch
-                        :id="`agent-tool-${row.name}-${editingAgent?.id ?? 'new'}`"
-                        :model-value="draft.tools[row.name]"
-                        :disabled="!canManage || !row.enabledAtTeam"
-                        @update:model-value="
-                          (value) => setToolEnabled(row.name, Boolean(value))
-                        "
+                  <div class="flex items-center gap-3">
+                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
+                      <Avatar
+                        variant="beam"
+                        :name="effectiveAvatarSeed"
+                        :colors="[
+                          'var(--color-chart-1)',
+                          'var(--color-chart-2)',
+                          'var(--color-chart-3)',
+                          'var(--color-chart-4)',
+                          'var(--color-chart-5)',
+                        ]"
                       />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent v-if="!row.enabledAtTeam">
-                    {{
-                      t("settings.agents.custom.tools.disabledAtTeamTooltip")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-              </Field>
-            </TooltipProvider>
+                    </div>
+                    <Input
+                      :id="`agent-avatar-seed-${editingAgent?.id ?? 'new'}`"
+                      v-model="draft.avatarSeed"
+                      :placeholder="
+                        t('settings.agents.custom.avatarSeed.placeholder')
+                      "
+                      :maxlength="40"
+                      :disabled="!canManage"
+                      class="flex-1"
+                    />
+                  </div>
+                </Field>
+              </FieldSet>
 
-            <!--
+              <FieldSeparator />
+
+              <!-- ── System prompt + mode-specific suffixes ───────────────── -->
+              <FieldSet>
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-system-prompt-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.custom.systemPromptBase.label") }}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {{
+                        t("settings.agents.custom.systemPromptBase.description")
+                      }}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Textarea
+                    :id="`agent-system-prompt-${editingAgent?.id ?? 'new'}`"
+                    v-model="draft.systemPromptBase"
+                    :placeholder="
+                      t('settings.agents.custom.systemPromptBase.placeholder')
+                    "
+                    :maxlength="4000"
+                    :disabled="!canManage"
+                    rows="4"
+                  />
+                </Field>
+
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel>
+                      {{ t("settings.agents.custom.promptSuffixes.label") }}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {{
+                        t("settings.agents.custom.promptSuffixes.description")
+                      }}
+                    </FieldDescription>
+                  </FieldContent>
+                </Field>
+
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-suffix-auto-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.promptSuffixes.auto") }}
+                    </FieldLabel>
+                  </FieldContent>
+                  <Textarea
+                    :id="`agent-suffix-auto-${editingAgent?.id ?? 'new'}`"
+                    v-model="draft.promptSuffixes.auto"
+                    :maxlength="2000"
+                    :disabled="!canManage"
+                    rows="2"
+                  />
+                </Field>
+
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-suffix-agent-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.promptSuffixes.agent") }}
+                    </FieldLabel>
+                  </FieldContent>
+                  <Textarea
+                    :id="`agent-suffix-agent-${editingAgent?.id ?? 'new'}`"
+                    v-model="draft.promptSuffixes.agent"
+                    :maxlength="2000"
+                    :disabled="!canManage"
+                    rows="2"
+                  />
+                </Field>
+
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-suffix-manual-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.promptSuffixes.manual") }}
+                    </FieldLabel>
+                  </FieldContent>
+                  <Textarea
+                    :id="`agent-suffix-manual-${editingAgent?.id ?? 'new'}`"
+                    v-model="draft.promptSuffixes.manual"
+                    :maxlength="2000"
+                    :disabled="!canManage"
+                    rows="2"
+                  />
+                </Field>
+              </FieldSet>
+
+              <FieldSeparator />
+
+              <!-- ── Tools ────────────────────────────────────────────────── -->
+              <FieldSet>
+                <Field orientation="vertical">
+                  <FieldContent>
+                    <FieldLabel>
+                      {{ t("settings.agents.custom.tools.label") }}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {{ t("settings.agents.custom.tools.description") }}
+                    </FieldDescription>
+                  </FieldContent>
+                </Field>
+
+                <TooltipProvider>
+                  <Field
+                    v-for="row in toolRows"
+                    :key="row.name"
+                    orientation="horizontal"
+                  >
+                    <FieldContent>
+                      <FieldLabel
+                        :for="`agent-tool-${row.name}-${editingAgent?.id ?? 'new'}`"
+                        class="flex items-center gap-2"
+                      >
+                        {{ row.label }}
+                        <Badge v-if="!row.enabledAtTeam" variant="outline">
+                          {{ t("settings.agents.custom.tools.disabledAtTeam") }}
+                        </Badge>
+                      </FieldLabel>
+                      <FieldDescription>
+                        {{ row.description }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <span class="inline-block">
+                          <Switch
+                            :id="`agent-tool-${row.name}-${editingAgent?.id ?? 'new'}`"
+                            :model-value="draft.tools[row.name]"
+                            :disabled="!canManage || !row.enabledAtTeam"
+                            @update:model-value="
+                              (value) =>
+                                setToolEnabled(row.name, Boolean(value))
+                            "
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent v-if="!row.enabledAtTeam">
+                        {{
+                          t(
+                            "settings.agents.custom.tools.disabledAtTeamTooltip"
+                          )
+                        }}
+                      </TooltipContent>
+                    </Tooltip>
+                  </Field>
+                </TooltipProvider>
+
+                <!--
               ── Custom tools sub-section ──
               Only renders when the team has at least one non-archived
               custom tool; the entire group falls out of the editor
@@ -671,82 +939,93 @@ const handleEditorSave = async (): Promise<void> => {
               preconfigure overrides for tools they've toggled off but
               not yet archived.
             -->
-            <template v-if="customToolsForAgent.length > 0">
-              <Field orientation="vertical">
-                <FieldContent>
-                  <FieldLabel class="flex items-center gap-2">
-                    {{ t("settings.agents.custom.customToolsHeader") }}
-                    <Badge v-if="!customToolsFeatureOn" variant="outline">
-                      {{ t("settings.agents.custom.tools.disabledAtTeam") }}
-                    </Badge>
-                  </FieldLabel>
-                  <FieldDescription>
-                    {{ t("settings.agents.custom.customToolsHeaderDesc") }}
-                  </FieldDescription>
-                </FieldContent>
-              </Field>
+                <template v-if="customToolsForAgent.length > 0">
+                  <Field orientation="vertical">
+                    <FieldContent>
+                      <FieldLabel class="flex items-center gap-2">
+                        {{ t("settings.agents.custom.customToolsHeader") }}
+                        <Badge v-if="!customToolsFeatureOn" variant="outline">
+                          {{ t("settings.agents.custom.tools.disabledAtTeam") }}
+                        </Badge>
+                      </FieldLabel>
+                      <FieldDescription>
+                        {{ t("settings.agents.custom.customToolsHeaderDesc") }}
+                      </FieldDescription>
+                    </FieldContent>
+                  </Field>
 
-              <TooltipProvider>
-                <Field
-                  v-for="tool in customToolsForAgent"
-                  :key="tool.id"
-                  orientation="horizontal"
-                >
-                  <FieldContent>
-                    <FieldLabel
-                      :for="`agent-custom-tool-${tool.id}-${editingAgent?.id ?? 'new'}`"
-                      class="flex items-center gap-2"
+                  <TooltipProvider>
+                    <Field
+                      v-for="tool in customToolsForAgent"
+                      :key="tool.id"
+                      orientation="horizontal"
                     >
-                      <!--
+                      <FieldContent>
+                        <FieldLabel
+                          :for="`agent-custom-tool-${tool.id}-${editingAgent?.id ?? 'new'}`"
+                          class="flex items-center gap-2"
+                        >
+                          <!--
                         Use displayName when admins set it; otherwise
                         the wire-name (the model-facing string).
                         Matches the row in the team-level Custom tools
                         list so admins recognize the same identity
                         across surfaces.
                       -->
-                      <span class="font-mono text-sm">
-                        {{ tool.displayName || tool.name }}
-                      </span>
-                      <Badge v-if="tool.enabled === false" variant="outline">
-                        {{ t("settings.agents.custom.tools.disabledAtTeam") }}
-                      </Badge>
-                    </FieldLabel>
-                    <FieldDescription v-if="tool.description">
-                      {{ tool.description }}
-                    </FieldDescription>
-                  </FieldContent>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <span class="inline-block">
-                        <Switch
-                          :id="`agent-custom-tool-${tool.id}-${editingAgent?.id ?? 'new'}`"
-                          :model-value="isCustomToolEnabledForAgent(tool.id)"
-                          :disabled="
-                            !canManage ||
-                            !customToolsFeatureOn ||
-                            tool.enabled === false
-                          "
-                          @update:model-value="
-                            (value) =>
-                              setCustomToolEnabled(tool.id, Boolean(value))
-                          "
-                        />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      v-if="!customToolsFeatureOn || tool.enabled === false"
-                    >
-                      {{
-                        t("settings.agents.custom.tools.disabledAtTeamTooltip")
-                      }}
-                    </TooltipContent>
-                  </Tooltip>
-                </Field>
-              </TooltipProvider>
-            </template>
-          </FieldSet>
-        </FieldGroup>
-      </OverlayScrollbarsWrapper>
+                          <span class="font-mono text-sm">
+                            {{ tool.displayName || tool.name }}
+                          </span>
+                          <Badge
+                            v-if="tool.enabled === false"
+                            variant="outline"
+                          >
+                            {{
+                              t("settings.agents.custom.tools.disabledAtTeam")
+                            }}
+                          </Badge>
+                        </FieldLabel>
+                        <FieldDescription v-if="tool.description">
+                          {{ tool.description }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <span class="inline-block">
+                            <Switch
+                              :id="`agent-custom-tool-${tool.id}-${editingAgent?.id ?? 'new'}`"
+                              :model-value="
+                                isCustomToolEnabledForAgent(tool.id)
+                              "
+                              :disabled="
+                                !canManage ||
+                                !customToolsFeatureOn ||
+                                tool.enabled === false
+                              "
+                              @update:model-value="
+                                (value) =>
+                                  setCustomToolEnabled(tool.id, Boolean(value))
+                              "
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          v-if="!customToolsFeatureOn || tool.enabled === false"
+                        >
+                          {{
+                            t(
+                              "settings.agents.custom.tools.disabledAtTeamTooltip"
+                            )
+                          }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </Field>
+                  </TooltipProvider>
+                </template>
+              </FieldSet>
+            </FieldGroup>
+          </OverlayScrollbarsWrapper>
+        </TabsContent>
+      </Tabs>
 
       <DialogFooter>
         <DialogClose as-child>

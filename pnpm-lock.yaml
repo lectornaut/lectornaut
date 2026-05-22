@@ -56,9 +56,6 @@ importers:
       "@fontsource-variable/geist-mono":
         specifier: ^5.2.8
         version: 5.2.8
-      "@geoql/v-maplibre":
-        specifier: ^1.9.0
-        version: 1.9.0(vue@3.5.34(typescript@6.0.3))
       "@internationalized/date":
         specifier: ^3.12.1
         version: 3.12.1
@@ -311,9 +308,6 @@ importers:
       lucide-vue-next:
         specifier: ^1.0.0
         version: 1.0.0(vue@3.5.34(typescript@6.0.3))
-      maplibre-gl:
-        specifier: ^5.24.0
-        version: 5.24.0
       markstream-vue:
         specifier: 1.0.0
         version: 1.0.0(katex@0.16.47)(mermaid@11.15.0)(stream-markdown@0.0.15(shiki@4.0.2)(vue@3.5.34(typescript@6.0.3)))(vue-i18n@11.4.4(vue@3.5.34(typescript@6.0.3)))(vue@3.5.34(typescript@6.0.3))
@@ -3031,63 +3025,6 @@ packages:
     peerDependencies:
       genkit: ^1.35.0
 
-  "@geoql/v-maplibre@1.9.0":
-    resolution:
-      {
-        integrity: sha512-7yg30xdp/+PjXq5QeNjdhMgCR+V5gU6aidqekqLiG6O2YAFGtsPtS6FhPvBq3gwCxwHO54bvZEg80ZU/hLT1qg==,
-      }
-    peerDependencies:
-      "@deck.gl/aggregation-layers": ^9.3.0
-      "@deck.gl/core": ^9.3.0
-      "@deck.gl/geo-layers": ^9.3.0
-      "@deck.gl/layers": ^9.3.0
-      "@deck.gl/mapbox": ^9.3.0
-      "@deck.gl/mesh-layers": ^9.3.0
-      "@developmentseed/deck.gl-geotiff": ^0.6.0
-      "@developmentseed/deck.gl-raster": ^0.6.0
-      "@developmentseed/deck.gl-zarr": ^0.6.0
-      "@developmentseed/geotiff": ^0.6.0
-      "@developmentseed/proj": ^0.6.0
-      "@geoql/maplibre-gl-starfield": ^0.1.0
-      maplibre-gl-lidar: ^0.13.0
-      maplibre-gl-wind: ^0.2.0
-      three: ">=0.176.0"
-      vue: ^3.5.0
-      zarrita: ^0.7.0
-    peerDependenciesMeta:
-      "@deck.gl/aggregation-layers":
-        optional: true
-      "@deck.gl/core":
-        optional: true
-      "@deck.gl/geo-layers":
-        optional: true
-      "@deck.gl/layers":
-        optional: true
-      "@deck.gl/mapbox":
-        optional: true
-      "@deck.gl/mesh-layers":
-        optional: true
-      "@developmentseed/deck.gl-geotiff":
-        optional: true
-      "@developmentseed/deck.gl-raster":
-        optional: true
-      "@developmentseed/deck.gl-zarr":
-        optional: true
-      "@developmentseed/geotiff":
-        optional: true
-      "@developmentseed/proj":
-        optional: true
-      "@geoql/maplibre-gl-starfield":
-        optional: true
-      maplibre-gl-lidar:
-        optional: true
-      maplibre-gl-wind:
-        optional: true
-      three:
-        optional: true
-      zarrita:
-        optional: true
-
   "@google-cloud/cloud-sql-connector@1.10.0":
     resolution:
       {
@@ -4253,12 +4190,6 @@ packages:
         integrity: sha512-6j56HdLTwWGO0fJPlrZtdU/B13q8Uwmo18Ck2GnGgN9PCFyKTZ3UbXeEdRFh18i9XQ92eH2VdtpJHpBD3aripQ==,
       }
 
-  "@mapbox/point-geometry@1.1.0":
-    resolution:
-      {
-        integrity: sha512-YGcBz1cg4ATXDCM/71L9xveh4dynfGmcLDqufR+nQQy3fKwsAZsWd/x4621/6uJaeB9mwOHE6hPeDgXz9uViUQ==,
-      }
-
   "@mapbox/tiny-sdf@2.1.0":
     resolution:
       {
@@ -4277,49 +4208,12 @@ packages:
         integrity: sha512-MCEddb8u44/xfQ3oD+Srl/tNcQoqTw3goGk2oLsrFxOTc3dUp+kAnby3PvAeeBYSMSjSPD1nd1AJA6W49WnoUw==,
       }
 
-  "@mapbox/vector-tile@2.0.4":
-    resolution:
-      {
-        integrity: sha512-AkOLcbgGTdXScosBWwmmD7cDlvOjkg/DetGva26pIRiZPdeJYjYKarIlb4uxVzi6bwHO6EWH82eZ5Nuv4T5DUg==,
-      }
-
   "@mapbox/whoots-js@3.1.0":
     resolution:
       {
         integrity: sha512-Es6WcD0nO5l+2BOQS4uLfNPYQaNDfbot3X1XUoloz+x0mPDS3eeORZJl06HXjwBG1fOGwCRnzK88LMdxKRrd6Q==,
       }
     engines: { node: ">=6.0.0" }
-
-  "@maplibre/geojson-vt@5.0.4":
-    resolution:
-      {
-        integrity: sha512-KGg9sma45S+stfH9vPCJk1J0lSDLWZgCT9Y8u8qWZJyjFlP8MNP1WGTxIMYJZjDvVT3PDn05kN1C95Sut1HpgQ==,
-      }
-
-  "@maplibre/geojson-vt@6.1.0":
-    resolution:
-      {
-        integrity: sha512-2eIY4gZxeKIVOZVNkAMb+5NgXhgsMQpOveTQAvnp53LYqHGJZDidk7Ew0Tged9PThidpbS+NFTh0g4zivhPDzQ==,
-      }
-
-  "@maplibre/maplibre-gl-style-spec@24.8.1":
-    resolution:
-      {
-        integrity: sha512-zxa92qF96ZNojLxeAjnaRpjVCy+swoUNJvDhtpC90k7u5F0TMr4GmvNqMKvYrMoPB8d7gRSXbMG1hBbmgESIsw==,
-      }
-    hasBin: true
-
-  "@maplibre/mlt@1.1.9":
-    resolution:
-      {
-        integrity: sha512-g/tD8EYJB97udq33ipuJ9a4Q7fcbZnTEnUrgnEc/tLMmEL+zaCbR+X5fkDBO2dgpaAMsLH179qE3UXg2N0Nc/g==,
-      }
-
-  "@maplibre/vt-pbf@4.3.0":
-    resolution:
-      {
-        integrity: sha512-jIvp8F5hQCcreqOOpEt42TJMUlsrEcpf/kI1T2v85YrQRV6PPXUcEXUg5karKtH6oh47XJZ4kHu56pUkOuqA7w==,
-      }
 
   "@marijn/find-cluster-break@1.0.2":
     resolution:
@@ -7920,12 +7814,6 @@ packages:
         integrity: sha512-XMSqQEr7YDuNtFwSgaHHOjsbi0ZGL62V9Js4CW45RBuRYlNWSW/KDqN+RFFE7HdHcGhJPtN0klKvw06r9Kg7rg==,
       }
 
-  "@types/supercluster@7.1.3":
-    resolution:
-      {
-        integrity: sha512-Z0pOY34GDFl3Q6hUFYf3HkTwKEE02e7QgtJppBt+beEAxnyOpJua+voGFvxINBHa06GwLFFym7gRPY2SiKIfIA==,
-      }
-
   "@types/tedious@4.0.14":
     resolution:
       {
@@ -11146,12 +11034,6 @@ packages:
         integrity: sha512-/pjZsA1b4RPHbeWZQn66SWS8nZZWLQQ23oE3Eam7aroEFGEvwKAsJfZ9ytiEMycfzXWpca4FA9QIOehf7PocBQ==,
       }
 
-  earcut@3.0.2:
-    resolution:
-      {
-        integrity: sha512-X7hshQbLyMJ/3RPhyObLARM2sNxxmRALLKx1+NVFFnQ9gKzmCrxm9+uLIAdBcvc8FNLpctqlQ2V6AE92Ol9UDQ==,
-      }
-
   eastasianwidth@0.2.0:
     resolution:
       {
@@ -11944,12 +11826,6 @@ packages:
         integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==,
       }
     engines: { node: ^12.20 || >= 14.13 }
-
-  fflate@0.8.3:
-    resolution:
-      {
-        integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==,
-      }
 
   file-entry-cache@11.1.3:
     resolution:
@@ -14108,12 +13984,6 @@ packages:
         integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==,
       }
 
-  json-stringify-pretty-compact@4.0.0:
-    resolution:
-      {
-        integrity: sha512-3CNZ2DnrpByG9Nqj6Xo8vqbjT4F6N+tb4Gb28ESAZjYZ5yqvmc56J+/kuIwkaAMOyblTQhUW7PxMkUb8Q36N3Q==,
-      }
-
   json5@2.2.3:
     resolution:
       {
@@ -14195,12 +14065,6 @@ packages:
     resolution:
       {
         integrity: sha512-hRkd6/XW4HTsA9vjVpY9tuXJYLSlelnkTmVFu4M9/7MIYQtFcHpbugAU7UbOfjOiVSVYl2fqgBuJ32JUmRo5Ew==,
-      }
-
-  kdbush@4.0.2:
-    resolution:
-      {
-        integrity: sha512-WbCVYJ27Sz8zi9Q7Q0xHC+05iwkm3Znipc2XTlrnJbsHMYktW4hPhXUE8Ys1engBrvffoSCqbil1JQAa7clRpA==,
       }
 
   keyv@4.5.4:
@@ -14792,13 +14656,6 @@ packages:
       {
         integrity: sha512-csNFylzntPmHWidczfgCZpvbTSmhaWvLRj9e1ezUDBEPizGgshgm3ea1T5TCNEEBq0roauu7BPuRZjA3wO4KqA==,
       }
-
-  maplibre-gl@5.24.0:
-    resolution:
-      {
-        integrity: sha512-ALyFxgtd5R+65UqZ/++lOqwWcC0SNho9c27fYSyLmG7AfnAul2o46F05aDJGPbFU57wos9dgcIySHs0Xe6ia3A==,
-      }
-    engines: { node: ">=16.14.0", npm: ">=8.1.0" }
 
   markdown-it-container@4.0.0:
     resolution:
@@ -16202,13 +16059,6 @@ packages:
       }
     hasBin: true
 
-  pbf@4.0.1:
-    resolution:
-      {
-        integrity: sha512-SuLdBvS42z33m8ejRbInMapQe8n0D3vN/Xd5fmWM3tufNgRQFBpaW2YVJxQZV4iPNqb0vEFvssMEo5w9c6BTIA==,
-      }
-    hasBin: true
-
   perfect-debounce@1.0.0:
     resolution:
       {
@@ -16367,12 +16217,6 @@ packages:
     resolution:
       {
         integrity: sha512-y+ichcgc2LrADuhLNAx8DFjVfgz91pRxfZdI3UDhxHvcVEZsenLO+7XaU5vOp0u/7V/wZ+plyuQxtrDlZJ+yeg==,
-      }
-
-  pmtiles@4.4.1:
-    resolution:
-      {
-        integrity: sha512-5oTeQc/yX/ft1evbpIlnoCZugQuug/iYIAj/ZTqIqzdGek4uZEho99En890EE6NOSI3JTI3IG8R7r8+SltphxA==,
       }
 
   pngjs@5.0.0:
@@ -16805,12 +16649,6 @@ packages:
         integrity: sha512-choctRBIV9EMT9WGAZHn3V7t0Z2pMQyl0EZE6pFc/6ml3ssw7Dlf/oAOvFwjm1HVsqfQN8GfeFyJ+d8tRzqueQ==,
       }
 
-  potpack@2.1.0:
-    resolution:
-      {
-        integrity: sha512-pcaShQc1Shq0y+E7GqJqvZj8DTthWV1KeHGdi0Z6IAin2Oi3JnLCOfwnCo84qc+HAp52wT9nK9H7FAJp5a44GQ==,
-      }
-
   prelude-ls@1.2.1:
     resolution:
       {
@@ -17206,12 +17044,6 @@ packages:
     resolution:
       {
         integrity: sha512-RKJ22hX8mHe3Y6wH/N3wCM6BWtjaxIyyUIkpHOvfFnxdI4yD4tBXEBKSbriGujF6jnSVkJrffuo6vxACiSSxIw==,
-      }
-
-  quickselect@3.0.0:
-    resolution:
-      {
-        integrity: sha512-XdjUArbK4Bm5fLLvlm5KpTFOiOThgfWWI4axAZDWg4E/0mKdZyI9tNEfds27qCi1ze/vwTR16kvmmGhRra3c2g==,
       }
 
   radix3@1.1.2:
@@ -18754,12 +18586,6 @@ packages:
         integrity: sha512-EulshI3pGUM66o6ZdH3ReiFcvHpM3vAigyK+vcxdjpJyEbIIrtbmBdY23mGgnI24uXiGFvrGq9Gkum/8U7vJWg==,
       }
 
-  supercluster@8.0.1:
-    resolution:
-      {
-        integrity: sha512-IiOea5kJ9iqzD2t7QJq/cREyLHTtSmUT6gQsweojg9WH2sYJqZK9SswTu6jrscO6D1G5v5vYZ9ru/eq85lXeZQ==,
-      }
-
   superjson@2.2.6:
     resolution:
       {
@@ -19027,12 +18853,6 @@ packages:
     resolution:
       {
         integrity: sha512-ppJZNDuKGgxzkHihX8v9v9G5f+18gzaTfrukGrq6ueg0lmH4nqVnA2IPG0AEH3jKEk2GRJCUhDoqpoiw3PHLBA==,
-      }
-
-  tinyqueue@3.0.0:
-    resolution:
-      {
-        integrity: sha512-gRa9gwYU3ECmQYv3lslts5hxuIa90veaEcxDYuu3QGOIAEM2mOZkVHp48ANJuu1CURtRdHKUBY5Lm1tHV+sD4g==,
       }
 
   tinyrainbow@3.1.0:
@@ -22587,12 +22407,6 @@ snapshots:
       - encoding
       - supports-color
 
-  "@geoql/v-maplibre@1.9.0(vue@3.5.34(typescript@6.0.3))":
-    dependencies:
-      maplibre-gl: 5.24.0
-      pmtiles: 4.4.1
-      vue: 3.5.34(typescript@6.0.3)
-
   "@google-cloud/cloud-sql-connector@1.10.0":
     dependencies:
       "@googleapis/sqladmin": 35.2.0
@@ -23499,8 +23313,6 @@ snapshots:
 
   "@mapbox/point-geometry@0.1.0": {}
 
-  "@mapbox/point-geometry@1.1.0": {}
-
   "@mapbox/tiny-sdf@2.1.0": {}
 
   "@mapbox/unitbezier@0.0.1": {}
@@ -23509,43 +23321,7 @@ snapshots:
     dependencies:
       "@mapbox/point-geometry": 0.1.0
 
-  "@mapbox/vector-tile@2.0.4":
-    dependencies:
-      "@mapbox/point-geometry": 1.1.0
-      "@types/geojson": 7946.0.16
-      pbf: 4.0.1
-
   "@mapbox/whoots-js@3.1.0": {}
-
-  "@maplibre/geojson-vt@5.0.4": {}
-
-  "@maplibre/geojson-vt@6.1.0":
-    dependencies:
-      kdbush: 4.0.2
-
-  "@maplibre/maplibre-gl-style-spec@24.8.1":
-    dependencies:
-      "@mapbox/jsonlint-lines-primitives": 2.0.2
-      "@mapbox/unitbezier": 0.0.1
-      json-stringify-pretty-compact: 4.0.0
-      minimist: 1.2.8
-      quickselect: 3.0.0
-      rw: 1.3.3
-      tinyqueue: 3.0.0
-
-  "@maplibre/mlt@1.1.9":
-    dependencies:
-      "@mapbox/point-geometry": 1.1.0
-
-  "@maplibre/vt-pbf@4.3.0":
-    dependencies:
-      "@mapbox/point-geometry": 1.1.0
-      "@mapbox/vector-tile": 2.0.4
-      "@maplibre/geojson-vt": 5.0.4
-      "@types/geojson": 7946.0.16
-      "@types/supercluster": 7.1.3
-      pbf: 4.0.1
-      supercluster: 8.0.1
 
   "@marijn/find-cluster-break@1.0.2": {}
 
@@ -25697,10 +25473,6 @@ snapshots:
     dependencies:
       "@types/geojson": 7946.0.16
 
-  "@types/supercluster@7.1.3":
-    dependencies:
-      "@types/geojson": 7946.0.16
-
   "@types/tedious@4.0.14":
     dependencies:
       "@types/node": 25.9.1
@@ -27832,8 +27604,6 @@ snapshots:
 
   earcut@2.2.4: {}
 
-  earcut@3.0.2: {}
-
   eastasianwidth@0.2.0: {}
 
   ecdsa-sig-formatter@1.0.11:
@@ -28451,8 +28221,6 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
-
-  fflate@0.8.3: {}
 
   file-entry-cache@11.1.3:
     dependencies:
@@ -30049,8 +29817,6 @@ snapshots:
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
-  json-stringify-pretty-compact@4.0.0: {}
-
   json5@2.2.3: {}
 
   jsonc-eslint-parser@2.4.2:
@@ -30122,8 +29888,6 @@ snapshots:
       commander: 8.3.0
 
   kdbush@3.0.0: {}
-
-  kdbush@4.0.2: {}
 
   keyv@4.5.4:
     dependencies:
@@ -30453,28 +30217,6 @@ snapshots:
       supercluster: 7.1.5
       tinyqueue: 2.0.3
       vt-pbf: 3.1.3
-
-  maplibre-gl@5.24.0:
-    dependencies:
-      "@mapbox/jsonlint-lines-primitives": 2.0.2
-      "@mapbox/point-geometry": 1.1.0
-      "@mapbox/tiny-sdf": 2.1.0
-      "@mapbox/unitbezier": 0.0.1
-      "@mapbox/vector-tile": 2.0.4
-      "@mapbox/whoots-js": 3.1.0
-      "@maplibre/geojson-vt": 6.1.0
-      "@maplibre/maplibre-gl-style-spec": 24.8.1
-      "@maplibre/mlt": 1.1.9
-      "@maplibre/vt-pbf": 4.3.0
-      "@types/geojson": 7946.0.16
-      earcut: 3.0.2
-      gl-matrix: 3.4.4
-      kdbush: 4.0.2
-      murmurhash-js: 1.0.0
-      pbf: 4.0.1
-      potpack: 2.1.0
-      quickselect: 3.0.0
-      tinyqueue: 3.0.0
 
   markdown-it-container@4.0.0: {}
 
@@ -31669,10 +31411,6 @@ snapshots:
       ieee754: 1.2.1
       resolve-protobuf-schema: 2.1.0
 
-  pbf@4.0.1:
-    dependencies:
-      resolve-protobuf-schema: 2.1.0
-
   perfect-debounce@1.0.0: {}
 
   perfect-debounce@2.1.0: {}
@@ -31756,10 +31494,6 @@ snapshots:
       confbox: 0.2.4
       exsolve: 1.0.8
       pathe: 2.0.3
-
-  pmtiles@4.4.1:
-    dependencies:
-      fflate: 0.8.3
 
   pngjs@5.0.0: {}
 
@@ -32028,8 +31762,6 @@ snapshots:
 
   potpack@1.0.2: {}
 
-  potpack@2.1.0: {}
-
   prelude-ls@1.2.1: {}
 
   prettier-linter-helpers@1.0.1:
@@ -32265,8 +31997,6 @@ snapshots:
   queue-microtask@1.2.3: {}
 
   quickselect@2.0.0: {}
-
-  quickselect@3.0.0: {}
 
   radix3@1.1.2: {}
 
@@ -33400,10 +33130,6 @@ snapshots:
     dependencies:
       kdbush: 3.0.0
 
-  supercluster@8.0.1:
-    dependencies:
-      kdbush: 4.0.2
-
   superjson@2.2.6:
     dependencies:
       copy-anything: 4.0.5
@@ -33604,8 +33330,6 @@ snapshots:
       picomatch: 4.0.4
 
   tinyqueue@2.0.3: {}
-
-  tinyqueue@3.0.0: {}
 
   tinyrainbow@3.1.0: {}
 

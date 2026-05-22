@@ -1792,6 +1792,76 @@ export const summarizeNode = createTypedCallable<
 >("summarizeNode")
 
 // =============================================================================
+// AI Config Generation Request/Response Types — "Prompt" tab in the custom
+// agent / custom tool editors. Mirror the structured output of
+// functions/src/configGenerators.ts — keep both in sync.
+// =============================================================================
+
+export interface GenerateConfigRequest {
+  teamId: string
+  /** Plain-English description of the agent/tool the admin wants. */
+  prompt: string
+}
+
+/**
+ * Structured agent config produced by `generateTeamAgentConfig`. Shapes the
+ * editor draft directly — every string is clamped server-side to its domain
+ * bound so the generated draft is always saveable. `model` is the wire-name
+ * of the model that produced it (surfaced in the UI for transparency).
+ */
+export interface GeneratedTeamAgentConfig {
+  name: string
+  description: string
+  avatarSeed: string
+  systemPromptBase: string
+  promptSuffixes: { auto: string; agent: string; manual: string }
+  tools: {
+    getWeather: boolean
+    rollDice: boolean
+    askQuestion: boolean
+    searchWorkspaceNodes: boolean
+    summarizeNode: boolean
+  }
+  model: string
+}
+
+/**
+ * Structured custom-tool config produced by `generateTeamCustomToolConfig`.
+ * `name` is coerced server-side to a valid identifier; `action` is a fully
+ * normalized discriminated union ready to drop into the editor draft.
+ */
+export interface GeneratedTeamCustomToolConfig {
+  name: string
+  displayName: string
+  description: string
+  avatarSeed: string
+  inputSchema: ITeamCustomTool["inputSchema"]
+  outputSchema: ITeamCustomTool["outputSchema"]
+  action: ICustomToolAction
+  model: string
+}
+
+/**
+ * Generate a custom-agent configuration from a natural-language prompt.
+ * Owner/admin only; uses the team's configured model. Returns a draft the
+ * editor merges in — admins review and tweak before saving.
+ */
+export const generateTeamAgentConfig = createTypedCallable<
+  GenerateConfigRequest,
+  GeneratedTeamAgentConfig
+>("generateTeamAgentConfig")
+
+/**
+ * Generate a custom-tool configuration from a natural-language prompt.
+ * Owner/admin only. Same model + draft semantics as
+ * {@link generateTeamAgentConfig}.
+ */
+export const generateTeamCustomToolConfig = createTypedCallable<
+  GenerateConfigRequest,
+  GeneratedTeamCustomToolConfig
+>("generateTeamCustomToolConfig")
+
+// =============================================================================
 // Composable Hook
 // =============================================================================
 
@@ -1930,5 +2000,9 @@ export function useFunctions() {
 
     // Structured-output sub-flows
     summarizeNode,
+
+    // AI config generation ("Prompt" tab)
+    generateTeamAgentConfig,
+    generateTeamCustomToolConfig,
   }
 }

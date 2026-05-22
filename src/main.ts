@@ -12,10 +12,8 @@ import { initUpdater } from "@/modules/updater"
 import { setSchemaViolationSink } from "@/schemas"
 import "@/styles/index.css"
 import { initSync } from "@/utils/firebase/firebase-sync-engine"
-import "@geoql/v-maplibre/dist/v-maplibre.css"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
-import "maplibre-gl/dist/maplibre-gl.css"
 import {
   enableKatex,
   enableMermaid,
