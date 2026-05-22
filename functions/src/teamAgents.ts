@@ -81,6 +81,7 @@ const AGENT_BOUNDS = {
 interface TeamAgentToolToggles {
   getWeather: boolean
   rollDice: boolean
+  browseInternet: boolean
   askQuestion: boolean
   searchWorkspaceNodes: boolean
   summarizeNode: boolean
@@ -134,6 +135,7 @@ interface TeamAgentDoc {
 const DEFAULT_TOOL_TOGGLES: TeamAgentToolToggles = {
   getWeather: true,
   rollDice: true,
+  browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
@@ -356,6 +358,10 @@ function normalizeAgentDoc(
         typeof toolsRaw.rollDice === "boolean"
           ? (toolsRaw.rollDice as boolean)
           : DEFAULT_TOOL_TOGGLES.rollDice,
+      browseInternet:
+        typeof toolsRaw.browseInternet === "boolean"
+          ? (toolsRaw.browseInternet as boolean)
+          : DEFAULT_TOOL_TOGGLES.browseInternet,
       askQuestion:
         typeof toolsRaw.askQuestion === "boolean"
           ? (toolsRaw.askQuestion as boolean)
@@ -408,6 +414,7 @@ const toolTogglesPatchSchema = z
   .object({
     getWeather: z.boolean(),
     rollDice: z.boolean(),
+    browseInternet: z.boolean(),
     askQuestion: z.boolean(),
     searchWorkspaceNodes: z.boolean(),
     summarizeNode: z.boolean(),

@@ -67,6 +67,7 @@ const DEFAULT_PROMPT_SUFFIXES: ITeamAgent["promptSuffixes"] = {
 const DEFAULT_TOOL_TOGGLES: ITeamAgent["tools"] = {
   getWeather: true,
   rollDice: true,
+  browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
@@ -80,6 +81,9 @@ const DEFAULT_TOOL_TOGGLES: ITeamAgent["tools"] = {
   // by the team-level `customTools` flag and (in the future) per-tool
   // assignments to agents.
   customTools: true,
+  // Team feature gate (inspector summary button) — carried for type
+  // alignment only; never consumed per-agent.
+  summarizeNodeInspector: true,
 }
 
 /**
@@ -134,6 +138,10 @@ function snapshotToAgent(
         typeof toolsRaw.rollDice === "boolean"
           ? (toolsRaw.rollDice as boolean)
           : DEFAULT_TOOL_TOGGLES.rollDice,
+      browseInternet:
+        typeof toolsRaw.browseInternet === "boolean"
+          ? (toolsRaw.browseInternet as boolean)
+          : DEFAULT_TOOL_TOGGLES.browseInternet,
       askQuestion:
         typeof toolsRaw.askQuestion === "boolean"
           ? (toolsRaw.askQuestion as boolean)
@@ -157,6 +165,11 @@ function snapshotToAgent(
         typeof toolsRaw.customTools === "boolean"
           ? (toolsRaw.customTools as boolean)
           : DEFAULT_TOOL_TOGGLES.customTools,
+      // Team feature gate — shape alignment only; per-agent value unused.
+      summarizeNodeInspector:
+        typeof toolsRaw.summarizeNodeInspector === "boolean"
+          ? (toolsRaw.summarizeNodeInspector as boolean)
+          : DEFAULT_TOOL_TOGGLES.summarizeNodeInspector,
     },
     // Per-custom-tool overrides for this agent. Reads only boolean
     // values (mirrors the server-side normalizer) so a malformed

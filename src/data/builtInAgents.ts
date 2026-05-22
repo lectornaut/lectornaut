@@ -62,6 +62,7 @@ export interface IBuiltInAgentDefinition {
 const ALL_TOOLS_ENABLED: ITeamAgent["tools"] = {
   getWeather: true,
   rollDice: true,
+  browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
@@ -70,6 +71,9 @@ const ALL_TOOLS_ENABLED: ITeamAgent["tools"] = {
   // `teamAgentsStore.DEFAULT_TOOL_TOGGLES`.
   customAgents: true,
   customTools: true,
+  // Team feature gate (inspector summary button) — carried for type
+  // alignment only; never consumed per-agent.
+  summarizeNodeInspector: true,
 }
 
 /**

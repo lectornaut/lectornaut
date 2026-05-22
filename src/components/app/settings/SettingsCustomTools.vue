@@ -1053,7 +1053,7 @@ const handleEditorSave = async (): Promise<void> => {
                         )
                     "
                   >
-                    <SelectTrigger class="w-full">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1356,7 +1356,7 @@ const handleEditorSave = async (): Promise<void> => {
                         }
                       "
                     >
-                      <SelectTrigger class="w-full">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

@@ -200,6 +200,7 @@ const DEFAULT_BOT_AGENT_MODEL_TOGGLES: BotAgentModelToggles =
 export const CHAT_TOOL_NAMES = [
   "getWeather",
   "rollDice",
+  "browseInternet",
   "askQuestion",
   "searchWorkspaceNodes",
   "summarizeNode",
@@ -226,6 +227,18 @@ export interface BotAgentToolToggles extends Record<ChatToolName, boolean> {
    * tools as a category."
    */
   customTools: boolean
+  /**
+   * Team-wide gate for the node inspector's "Generate summary" button
+   * (the `summarizeNode` *callable*, not the chat tool). A feature flag
+   * rather than a `ChatToolName`: it gates a UI surface, not a
+   * model-callable tool, so it lives here alongside `customTools` and
+   * is NOT in `CHAT_TOOL_NAMES`. Enforced server-side in the callable
+   * and reflected in the inspector UI. Distinct from the `summarizeNode`
+   * ChatToolName, which gates the chat tool; the two surfaces toggle
+   * independently. Provider-agnostic — summaries run on the team's
+   * chosen model, so this is never coupled to the Google provider.
+   */
+  summarizeNodeInspector: boolean
 }
 
 // ===========================================================================
@@ -304,9 +317,11 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   tools: {
     getWeather: true,
     rollDice: true,
+    browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
+    summarizeNodeInspector: true,
     customAgents: true,
     customTools: true,
   },
@@ -399,9 +414,11 @@ const botAgentConfigUpdateSchema = z.object({
     .object({
       getWeather: z.boolean(),
       rollDice: z.boolean(),
+      browseInternet: z.boolean(),
       askQuestion: z.boolean(),
       searchWorkspaceNodes: z.boolean(),
       summarizeNode: z.boolean(),
+      summarizeNodeInspector: z.boolean(),
       customAgents: z.boolean(),
       customTools: z.boolean(),
     })
@@ -616,6 +633,9 @@ const botAgentConfigDocSchema = z
       .object({
         getWeather: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.tools.getWeather),
         rollDice: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.tools.rollDice),
+        browseInternet: cappedToolToggle(
+          DEFAULT_BOT_AGENT_CONFIG.tools.browseInternet
+        ),
         askQuestion: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.askQuestion
         ),
@@ -624,6 +644,9 @@ const botAgentConfigDocSchema = z
         ),
         summarizeNode: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.summarizeNode
+        ),
+        summarizeNodeInspector: cappedToolToggle(
+          DEFAULT_BOT_AGENT_CONFIG.tools.summarizeNodeInspector
         ),
         customAgents: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.customAgents

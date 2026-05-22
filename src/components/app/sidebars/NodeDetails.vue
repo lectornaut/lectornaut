@@ -10,6 +10,7 @@ import {
   IconSparkles,
   IconUserRound,
 } from "@/data/icons"
+import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import {
@@ -37,6 +38,18 @@ const membershipStore = useMembershipStore()
 
 const { currentUser, userProfile } = storeToRefs(authStore)
 const { teamMembers } = storeToRefs(membershipStore)
+
+// Team feature gate for the inspector's summary surface. The server's
+// `summarizeNode` callable is the authoritative gate (it rejects when
+// disabled); this hides the card to match so members don't see a button
+// that would just error. Missing key normalizes to enabled. `config`
+// initializes to bundled defaults and is loaded team-scoped elsewhere
+// (chat composable / settings), so this reads the real value once loaded
+// and fails open to enabled before then.
+const { config: agentConfig } = storeToRefs(useAgentConfigStore())
+const summaryFeatureEnabled = computed(
+  () => agentConfig.value.tools.summarizeNodeInspector !== false
+)
 
 // ── AI summary (structured output) ─────────────────────────────────────
 //
@@ -151,7 +164,7 @@ const nodeStatusLabel = computed(() =>
 
 <template>
   <div class="flex size-full min-h-0 flex-1 flex-col">
-    <Card size="sm" class="m-2 shadow-none">
+    <Card v-if="summaryFeatureEnabled" size="sm" class="m-2 shadow-none">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <IconSparkles class="text-muted-foreground size-4" />

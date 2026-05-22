@@ -32,6 +32,7 @@ import type { TeamAgentDoc } from "./teamAgents.js"
 interface TeamAgentToolToggles {
   getWeather: boolean
   rollDice: boolean
+  browseInternet: boolean
   askQuestion: boolean
   searchWorkspaceNodes: boolean
   summarizeNode: boolean
@@ -56,6 +57,7 @@ export interface BuiltInAgentDefinition {
 const ALL_TOOLS_ENABLED: TeamAgentToolToggles = {
   getWeather: true,
   rollDice: true,
+  browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,

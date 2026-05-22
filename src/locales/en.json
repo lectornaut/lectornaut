@@ -1290,17 +1290,26 @@
           "label": "Roll dice",
           "description": "Demo tool that rolls a six-sided die."
         },
+        "browseInternet": {
+          "label": "Browse the internet",
+          "description": "Lets the bot search the live web for current or external facts when it doesn't know the answer or the user asks it to look something up. Works on any chat model — it grounds via Google Search (Gemini) under the hood, so it needs the server's Gemini key and runs even for teams chatting on Claude or GPT. Read-only — available in every mode."
+        },
         "askQuestion": {
           "label": "Ask user (clarify)",
           "description": "Lets the bot pause and ask a clarifying question with choices."
         },
         "searchWorkspaceNodes": {
           "label": "Search workspace",
-          "description": "Semantic search over the team's workspace nodes so the bot can pull in relevant files the user hasn't attached. Read-only — available in every mode."
+          "description": "Semantic search over the team's workspace nodes so the bot can pull in relevant files the user hasn't attached. Read-only — available in every mode.",
+          "requiresGoogle": "Requires the Google provider — workspace search uses Gemini embeddings. Enable Google under AI settings to turn this on."
         },
         "summarizeNode": {
           "label": "Summarize node (chat)",
           "description": "Lets the bot generate a structured summary (overview, key points, tags) of an attached node from inside a chat turn. Same output shape as the inspector's Generate button. Read-only — available in every mode."
+        },
+        "summarizeNodeInspector": {
+          "label": "Summarize node (inspector)",
+          "description": "Lets members generate a structured summary (overview, key points, tags) from the node inspector's Generate button. Separate from the chat tool above; turn off to remove the summary card from the inspector. Works on any chat model."
         },
         "customAgents": {
           "label": "Custom agents",

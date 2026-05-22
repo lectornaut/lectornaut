@@ -46,9 +46,11 @@ const { canViewTeamSettings } = useCanViewTeamSettings()
 const TOOLS_PAGE_FIELDS = [
   "getWeather",
   "rollDice",
+  "browseInternet",
   "askQuestion",
   "searchWorkspaceNodes",
   "summarizeNode",
+  "summarizeNodeInspector",
   "customTools",
 ] as const satisfies readonly (keyof IBotAgentConfig["tools"])[]
 
@@ -65,6 +67,18 @@ const { config, isLoading, isSaving, canEdit, save } =
   useAgentConfig(configMessagesGetter)
 
 const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
+
+/**
+ * Whether the team has the Google provider enabled. `searchWorkspaceNodes`
+ * relies on Gemini embeddings, so its toggle is disabled (with a hint)
+ * when Google is off — the tool literally can't run without it, and a
+ * switch that reads "on" but never registers the tool is the "broken
+ * feature" we want to avoid. Read from the saved config because providers
+ * are edited on the AI settings page, not here.
+ */
+const googleProviderEnabled = computed(
+  () => config.value.providers.google !== false
+)
 
 /**
  * Dirty check is scoped to the `tools.*` keys this page owns. The
@@ -230,6 +244,22 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
 
           <Field orientation="horizontal">
             <FieldContent>
+              <FieldLabel for="agent-tool-browse-internet">
+                {{ t("settings.agents.tools.browseInternet.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.tools.browseInternet.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-tool-browse-internet"
+              v-model="draft.tools.browseInternet"
+              :disabled="!canEdit"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
               <FieldLabel for="agent-tool-ask">
                 {{ t("settings.agents.tools.askQuestion.label") }}
               </FieldLabel>
@@ -253,12 +283,19 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
                 {{
                   t("settings.agents.tools.searchWorkspaceNodes.description")
                 }}
+                <span v-if="!googleProviderEnabled" class="text-destructive">
+                  {{
+                    t(
+                      "settings.agents.tools.searchWorkspaceNodes.requiresGoogle"
+                    )
+                  }}
+                </span>
               </FieldDescription>
             </FieldContent>
             <Switch
               id="agent-tool-search-nodes"
               v-model="draft.tools.searchWorkspaceNodes"
-              :disabled="!canEdit"
+              :disabled="!canEdit || !googleProviderEnabled"
             />
           </Field>
 
@@ -274,6 +311,24 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             <Switch
               id="agent-tool-summarize-node"
               v-model="draft.tools.summarizeNode"
+              :disabled="!canEdit"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-tool-summarize-node-inspector">
+                {{ t("settings.agents.tools.summarizeNodeInspector.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{
+                  t("settings.agents.tools.summarizeNodeInspector.description")
+                }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-tool-summarize-node-inspector"
+              v-model="draft.tools.summarizeNodeInspector"
               :disabled="!canEdit"
             />
           </Field>

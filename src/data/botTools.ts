@@ -5,11 +5,13 @@
  * + interrupt tools), `functions/src/botRag.ts` (semantic search),
  * and `functions/src/botSummarize.ts` (structured summarization).
  *
- * `BotToolName` excludes `customAgents` AND `customTools` deliberately
- * — those keys on `IBotAgentToolToggles` are *feature gates* (whole
- * custom-agents UI; whole custom-tools UI) rather than model-callable
- * tools. Including either in this catalog would surface a meaningless
- * entry in the composer's slash menu and in per-agent tool subset UIs.
+ * `BotToolName` excludes `customAgents`, `customTools`, AND
+ * `summarizeNodeInspector` deliberately — those keys on
+ * `IBotAgentToolToggles` are *feature gates* (whole custom-agents UI;
+ * whole custom-tools UI; the node inspector's Generate-summary button)
+ * rather than model-callable tools. Including any in this catalog would
+ * surface a meaningless entry in the composer's slash menu and in
+ * per-agent tool subset UIs.
  *
  * Type-level exhaustiveness: `CATALOG_BY_NAME` is typed as
  * `Record<BotToolName, BotToolDescriptor>`, so adding a new tool to
@@ -36,6 +38,7 @@ import {
   IconCloudRain,
   IconDices,
   IconFileText,
+  IconGlobe,
   IconHelpCircle,
   IconSearch,
 } from "@/data/icons"
@@ -44,7 +47,7 @@ import type { Component } from "vue"
 
 export type BotToolName = Exclude<
   keyof IBotAgentToolToggles,
-  "customAgents" | "customTools"
+  "customAgents" | "customTools" | "summarizeNodeInspector"
 >
 
 export interface BotToolDescriptor {
@@ -80,6 +83,15 @@ const CATALOG_BY_NAME: Record<BotToolName, BotToolDescriptor> = {
     description: "Roll a six-sided die.",
     icon: IconDices,
     example: "Roll a die for me.",
+  },
+  browseInternet: {
+    name: "browseInternet",
+    label: "Browse the internet",
+    description: "Search the live web for current or external facts.",
+    icon: IconGlobe,
+    // Sentence prefix the user completes with what to look up — nudges
+    // the model to call the tool without Discord-style `/` syntax.
+    example: "Search the web for ",
   },
   askQuestion: {
     name: "askQuestion",

@@ -225,6 +225,11 @@ const generatedAgentZod = z.object({
     .object({
       getWeather: z.boolean().describe("Current weather lookups."),
       rollDice: z.boolean().describe("Random dice rolls."),
+      browseInternet: z
+        .boolean()
+        .describe(
+          "Live web search via Google Search for current/external facts."
+        ),
       askQuestion: z
         .boolean()
         .describe("Ask the user a clarifying question mid-turn."),
@@ -238,8 +243,10 @@ const generatedAgentZod = z.object({
     .describe(
       "Which built-in tools this agent should be able to call. Enable only " +
         "the ones relevant to its purpose. For most knowledge-work agents, " +
-        "enable searchWorkspaceNodes and summarizeNode; enable getWeather " +
-        "or rollDice only when clearly relevant to the described purpose."
+        "enable searchWorkspaceNodes and summarizeNode; enable browseInternet " +
+        "for agents that need current or external information; enable " +
+        "getWeather or rollDice only when clearly relevant to the described " +
+        "purpose."
     ),
 })
 
@@ -261,6 +268,7 @@ interface GeneratedAgentConfig {
   tools: {
     getWeather: boolean
     rollDice: boolean
+    browseInternet: boolean
     askQuestion: boolean
     searchWorkspaceNodes: boolean
     summarizeNode: boolean
@@ -327,6 +335,7 @@ export const generateTeamAgentConfig = onCall<GenerateConfigRequest>(
       tools: {
         getWeather: output.tools?.getWeather !== false,
         rollDice: output.tools?.rollDice !== false,
+        browseInternet: output.tools?.browseInternet !== false,
         askQuestion: output.tools?.askQuestion !== false,
         searchWorkspaceNodes: output.tools?.searchWorkspaceNodes !== false,
         summarizeNode: output.tools?.summarizeNode !== false,

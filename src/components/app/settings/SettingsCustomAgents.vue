@@ -178,6 +178,7 @@ const DEFAULT_DRAFT: AgentDraft = {
   tools: {
     getWeather: true,
     rollDice: true,
+    browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
@@ -185,6 +186,7 @@ const DEFAULT_DRAFT: AgentDraft = {
     // ignored at the per-agent dispatch layer (see ITeamAgent JSDoc).
     customAgents: true,
     customTools: true,
+    summarizeNodeInspector: true,
   },
   customTools: {},
 }
@@ -268,36 +270,26 @@ interface ToolRow {
 }
 
 /**
- * `BOT_TOOL_CATALOG` covers the composer-facing tools (getWeather,
- * rollDice, askQuestion). The two workspace tools (`searchWorkspaceNodes`,
- * `summarizeNode`) aren't in the catalog because the catalog drives the
- * composer's slash menu — agents need the full tool surface, so we
- * append them inline. `customAgents` is deliberately NOT exposed here —
- * it's a team-level feature gate, not a per-agent capability.
+ * One row per model-callable tool. `BOT_TOOL_CATALOG` is the exhaustive
+ * source of those tools — its `Record<BotToolName, …>` backing forces an
+ * entry for every tool, so this list can't silently drop (or, as before,
+ * double-count) one — and we map it for the canonical set and display
+ * order. Labels/descriptions resolve through the `settings.agents.tools.*`
+ * i18n keys so this per-agent editor reads identically to the team-level
+ * toggles in `SettingsTools.vue`; the catalog's own English `label` /
+ * `example` stay reserved for the composer slash menu, which has no i18n
+ * layer. `customAgents` / `customTools` are absent by construction —
+ * `BotToolName` excludes them as team-level feature gates, not per-agent
+ * capabilities.
  */
-const toolRows = computed<ToolRow[]>(() => {
-  const composerTools: ToolRow[] = BOT_TOOL_CATALOG.map((tool) => ({
+const toolRows = computed<ToolRow[]>(() =>
+  BOT_TOOL_CATALOG.map((tool) => ({
     name: tool.name,
-    label: tool.label,
-    description: tool.description,
+    label: t(`settings.agents.tools.${tool.name}.label`),
+    description: t(`settings.agents.tools.${tool.name}.description`),
     enabledAtTeam: teamTools.value[tool.name] !== false,
   }))
-  const workspaceTools: ToolRow[] = [
-    {
-      name: "searchWorkspaceNodes",
-      label: t("settings.agents.tools.searchWorkspaceNodes.label"),
-      description: t("settings.agents.tools.searchWorkspaceNodes.description"),
-      enabledAtTeam: teamTools.value.searchWorkspaceNodes !== false,
-    },
-    {
-      name: "summarizeNode",
-      label: t("settings.agents.tools.summarizeNode.label"),
-      description: t("settings.agents.tools.summarizeNode.description"),
-      enabledAtTeam: teamTools.value.summarizeNode !== false,
-    },
-  ]
-  return [...composerTools, ...workspaceTools]
-})
+)
 
 const setToolEnabled = (name: ToolRow["name"], value: boolean): void => {
   draft.value.tools[name] = value

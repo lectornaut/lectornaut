@@ -422,9 +422,11 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
   tools: {
     getWeather: true,
     rollDice: true,
+    browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
+    summarizeNodeInspector: true,
     customAgents: true,
     customTools: true,
   },

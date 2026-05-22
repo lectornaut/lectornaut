@@ -33,7 +33,7 @@
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
 import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
-import { loadTeamAgentConfig } from "./botAgentConfig.js"
+import { loadTeamAgentConfig, type BotAgentConfig } from "./botAgentConfig.js"
 import { db } from "./firebase.js"
 import { ai, resolveModel } from "./genkitClient.js"
 import { aiMiddlewares, redactText } from "./genkitMiddleware.js"
@@ -239,7 +239,12 @@ function buildSummarizePromptInput(
  * turn — the model sees an error message and can apologize / retry.
  */
 async function runSummarize(
-  input: SummarizeNodeInput
+  input: SummarizeNodeInput,
+  // Optional preloaded config — the callable already loads it to enforce
+  // the inspector feature gate, so it passes the same object through to
+  // avoid a second Firestore read. The chat-tool path omits it and we
+  // load lazily here.
+  preloadedConfig?: BotAgentConfig
 ): Promise<SummarizeNodeResult> {
   const node = await loadNodeForSummary(input)
   if (!node) {
@@ -251,7 +256,8 @@ async function runSummarize(
     throw new HttpsError("failed-precondition", "Node is archived.")
   }
 
-  const agentConfig = await loadTeamAgentConfig(input.teamId)
+  const agentConfig =
+    preloadedConfig ?? (await loadTeamAgentConfig(input.teamId))
   const model = resolveModel(agentConfig.model)
   const promptInput = buildSummarizePromptInput(node)
 
@@ -321,7 +327,21 @@ export const summarizeNode = onCall<SummarizeNodeInput>(
     // the node exists. `getMembershipRole` throws permission-denied.
     await getMembershipRole(input.teamId, auth.uid)
 
-    return runSummarize(input)
+    // Feature gate — admins can disable the inspector's summary surface
+    // independently of the chat `summarizeNode` tool. Authoritative
+    // enforcement lives here (the inspector hides the button to match,
+    // but the server is the real gate). Missing key normalizes to
+    // enabled, so teams predating this flag keep the feature.
+    const agentConfig = await loadTeamAgentConfig(input.teamId)
+    if (agentConfig.tools.summarizeNodeInspector === false) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Node summaries are disabled for this team."
+      )
+    }
+
+    // Pass the already-loaded config so `runSummarize` doesn't re-read it.
+    return runSummarize(input, agentConfig)
   }
 )
 

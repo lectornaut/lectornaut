@@ -337,6 +337,14 @@ export const botAgentToolTogglesSchema = z.object({
   getWeather: z.boolean(),
   rollDice: z.boolean(),
   /**
+   * Live web search via Gemini's Google Search grounding. Its own
+   * capability axis: the tool's handler always grounds through Gemini,
+   * so it works regardless of the team's selected chat model — it only
+   * needs the server-side Gemini key (surfaced in the UI as using
+   * Google under the hood). Read-only, so it's exposed in every mode.
+   */
+  browseInternet: z.boolean(),
+  /**
    * Interrupt tool. When false, the bot can't pause to ask the user a
    * clarifying question — useful for non-interactive workflows.
    */
@@ -384,6 +392,18 @@ export const botAgentToolTogglesSchema = z.object({
    * of admin-authored tools as a category."
    */
   customTools: z.boolean(),
+  /**
+   * Team-wide gate for the node inspector's "Generate summary" button
+   * (the `summarizeNode` callable). A feature flag, not a model-callable
+   * tool — sibling of `customTools`, surfaced in the Tools settings
+   * section and excluded from the composer tool catalog (`BotToolName`).
+   * Distinct from the `summarizeNode` toggle, which gates the chat tool;
+   * the two surfaces toggle independently. Provider-agnostic — summaries
+   * run on the team's chosen model, so it's never coupled to Google.
+   * Carried on per-agent docs for type alignment but ignored there (only
+   * the team config's value gates anything).
+   */
+  summarizeNodeInspector: z.boolean(),
 })
 
 /**

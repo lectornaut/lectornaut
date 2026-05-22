@@ -55,6 +55,7 @@ import {
 import {
   askQuestionTool,
   BOT_CHAT_MODES,
+  browseInternetTool,
   getWeatherTool,
   INTERRUPT_TOOL_NAMES,
   rollDiceTool,
@@ -667,8 +668,13 @@ function pickChatTools(
   transferTargetCount: number = 0
 ) {
   const modeAllowsActionTools = MODE_CONFIG[mode].actionToolsEnabled
+  // Server has a Gemini key. `browseInternet` needs only this (its own
+  // capability axis) — it grounds via Gemini regardless of the team's
+  // chat-provider policy. `searchWorkspaceNodes` additionally requires
+  // the team to have Google enabled as a chat provider.
+  const googleSecretConfigured = isAiModelProviderConfigured("google")
   const googleBackedSearchAvailable =
-    config.providers.google && isAiModelProviderConfigured("google")
+    config.providers.google && googleSecretConfigured
   // Agent-level intersection: a tool fires only when the team has it on
   // AND the active agent (if any) has it on. `!== false` treats missing
   // keys as enabled — keeps a newly-added tool key available to
@@ -696,6 +702,16 @@ function pickChatTools(
     tools.push(getWeatherTool)
   if (modeAllowsActionTools && config.tools.rollDice && agentAllows("rollDice"))
     tools.push(rollDiceTool)
+  // Read-only retrieval — exposed in every mode (incl. `manual`), like
+  // searchWorkspaceNodes. Gated on the server Gemini key, NOT
+  // `config.providers.google`: web search is its own capability axis, so
+  // a team that chats on Claude/GPT can still enable it.
+  if (
+    config.tools.browseInternet &&
+    googleSecretConfigured &&
+    agentAllows("browseInternet")
+  )
+    tools.push(browseInternetTool)
   if (config.tools.askQuestion && agentAllows("askQuestion"))
     tools.push(askQuestionTool)
   if (
