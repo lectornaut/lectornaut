@@ -177,11 +177,15 @@
         "empty": "No matching nodes."
       },
       "summarize": {
-        "heading": "Structured summary",
+        "heading": "Summary",
         "keyPoints": "Key points",
         "tags": "Tags",
         "modelFooter": "Generated with {model}",
         "errorTitle": "Couldn't summarize"
+      },
+      "browse": {
+        "heading": "Web search",
+        "sources": "Sources"
       }
     }
   },

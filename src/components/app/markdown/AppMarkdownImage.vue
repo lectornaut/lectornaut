@@ -11,9 +11,16 @@
  */
 import { ImageNode, type ImageNodeProps } from "markstream-vue"
 
-defineProps<ImageNodeProps>()
+const props = defineProps<ImageNodeProps>()
 </script>
 
 <template>
-  <ImageNode :node="node" :lazy="true" :use-placeholder="true" />
+  <!--
+    Forward every prop markstream passes a custom renderer (node, isDark,
+    loading, customId, …) via v-bind, then layer our app-wide defaults on
+    top. Explicit attributes win over the v-bind object, so lazy +
+    placeholder always apply while theme/loading state still reach the
+    inner ImageNode.
+  -->
+  <ImageNode v-bind="props" :lazy="true" :use-placeholder="true" />
 </template>

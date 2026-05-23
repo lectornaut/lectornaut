@@ -17,14 +17,20 @@ const props = defineProps<{
   }
 }>()
 
-const slug = computed(() =>
-  props.node.text
+const slug = computed(() => {
+  const base = props.node.text
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/^-+|-+$/g, "")
-)
+  // A heading that's entirely emoji/punctuation (e.g. `## 🎉`) slugifies
+  // to "" — an empty id is a dead permalink target, so fall back to a
+  // stable label. (Duplicate-text headings are intentionally NOT
+  // auto-suffixed: a render-scoped counter would yield unstable ids
+  // across re-renders/navigation, which is worse than a rare collision.)
+  return base || "section"
+})
 
 const tag = computed(() => `h${props.node.level}`)
 </script>
@@ -42,7 +48,7 @@ const tag = computed(() => `h${props.node.level}`)
   </component>
 </template>
 
-<style>
+<style scoped>
 .markdown-heading-anchor-link {
   margin-left: 0.4em;
   opacity: 0;

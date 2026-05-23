@@ -52,6 +52,7 @@ import IconLucideBookOpen from "~icons/lucide/book-open"
 import IconLucideBookmark from "~icons/lucide/bookmark"
 import IconLucideBookmarkCheck from "~icons/lucide/bookmark-check"
 import IconLucideBot from "~icons/lucide/bot"
+import IconLucideBotMessageSquare from "~icons/lucide/bot-message-square"
 import IconLucideBox from "~icons/lucide/box"
 import IconLucideBraces from "~icons/lucide/braces"
 import IconLucideBriefcase from "~icons/lucide/briefcase"
@@ -338,6 +339,7 @@ export {
   IconLucideBookmarkCheck as IconBookmarkCheck,
   IconLucideBookOpen as IconBookOpen,
   IconLucideBot as IconBot,
+  IconLucideBotMessageSquare as IconBotMessageSquare,
   IconLucideBox as IconBox,
   IconLucideBraces as IconBraces,
   IconTablerBrandWalmart as IconBrandWalmart,

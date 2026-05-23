@@ -46,20 +46,18 @@ import {
   type BotChatToolCall,
 } from "@/composables/useBotChat"
 import {
+  IconBot,
+  IconBotMessageSquare,
   IconCheck,
-  IconChevronDown,
+  IconChevronRight,
+  IconCircleHelp,
   IconCloudRain,
   IconDices,
   IconFileText,
   IconFolder,
-  IconLoader2,
-  IconMapPin,
-  IconMessageCircle,
   IconSearch,
-  IconSparkles,
   IconSun,
   IconTriangleAlert,
-  IconWrench,
 } from "@/data/icons"
 import { computed, inject, ref, watch } from "vue"
 
@@ -86,11 +84,16 @@ const isDone = computed(
   () => !isInterrupt.value && props.tool.output !== undefined
 )
 
-// Auto-expand while running OR awaiting input (the form is the whole
-// point of the card in those states), then collapse the moment we have
-// an answer so finished cards stop crowding the message column. The
-// user can override either way by clicking the trigger.
-const open = ref(true)
+// Initial state is derived from the tool's current phase, NOT hardcoded
+// open: cards restored from history after a refresh already have `output`
+// set, and the watcher below only fires on a live pending→done
+// *transition* (Vue's `watch` isn't immediate), so a hardcoded `true`
+// would leave every finished card expanded. Open while running OR
+// awaiting input (the spinner/form is the point of the card then);
+// collapsed once an answer/result exists. The watcher then collapses the
+// card the moment a result arrives during a live session. The user can
+// override either way by clicking the trigger.
+const open = ref(props.tool.output === undefined)
 watch(
   () => props.tool.output === undefined,
   (pending) => {
@@ -334,6 +337,51 @@ const summarizeOutput = computed<SummarizeOutput | null>(() => {
   return { summary, keyPoints, suggestedTags, model }
 })
 
+// browseInternet — input: { query }, output: { ok, answer, sources[], retrievedAt }
+//
+// Live web search. We render the query and the synthesized `answer` as
+// markdown (the answer is model-written prose, often with lists/links) plus
+// the grounding sources as external links. `ok` / `retrievedAt` aren't
+// surfaced — when the search fails, `answer` is itself a plain-language
+// explanation, so the markdown body already carries that story.
+interface BrowseInternetSource {
+  title: string
+  url: string
+}
+interface BrowseInternetOutput {
+  answer: string
+  sources: BrowseInternetSource[]
+}
+
+const browseInternetInput = computed<string | null>(() => {
+  if (props.tool.name !== "browseInternet") return null
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  return typeof obj.query === "string" && obj.query ? obj.query : null
+})
+
+const browseInternetOutput = computed<BrowseInternetOutput | null>(() => {
+  if (props.tool.name !== "browseInternet") return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  const answer = typeof obj.answer === "string" ? obj.answer : ""
+  if (!answer) return null
+  const sources: BrowseInternetSource[] = []
+  if (Array.isArray(obj.sources)) {
+    for (const entry of obj.sources as unknown[]) {
+      if (!entry || typeof entry !== "object") continue
+      const e = entry as Record<string, unknown>
+      const url = typeof e.url === "string" ? e.url : ""
+      if (!url) continue
+      const title = typeof e.title === "string" && e.title ? e.title : url
+      sources.push({ title, url })
+    }
+  }
+  return { answer, sources }
+})
+
 // ── Per-tool helpers ───────────────────────────────────────────────────────
 
 const weatherIcon = computed(() => {
@@ -377,6 +425,65 @@ const inputText = computed(() => {
 
 const outputText = computed(() => formatJson(props.tool.output))
 
+// Wrap formatted payload text in a fenced ```json block so the fallback
+// renders through `AppMarkdown` (Shiki) and inherits the same
+// theme-aware highlighting + copy button as every other code block in
+// the chat surface — no separate highlighter needed.
+//
+// The fence is sized one backtick longer than the longest backtick run
+// in the body: pretty-printed JSON can legitimately contain ``` (those
+// aren't escaped by JSON.stringify), and a fixed 3-backtick fence would
+// let such a payload terminate the block early and leak into markdown.
+const toJsonFence = (text: string): string => {
+  const longestBacktickRun =
+    text.match(/`+/g)?.reduce((max, run) => Math.max(max, run.length), 0) ?? 0
+  const fence = "`".repeat(Math.max(3, longestBacktickRun + 1))
+  return `${fence}json\n${text}\n${fence}`
+}
+
+// ── Markdown-preview promotion for the generic fallback ────────────────────
+//
+// Tools without a dedicated renderer still usually carry one
+// human-meaningful text field — a `query` on the way in, a synthesized
+// `answer` on the way out. Rendering that field as real markdown (prose,
+// lists, links) reads far better than burying it in a JSON dump. We probe a
+// small set of common field names in priority order; the first non-empty
+// string wins and is shown as a markdown preview. When nothing matches we
+// fall back to the fenced JSON block, so unfamiliar payloads still render
+// something complete. (`browseInternet` has its own dedicated card above and
+// never reaches here unless its payload is malformed.)
+const INPUT_TEXT_KEYS = ["query", "prompt", "question"] as const
+const OUTPUT_TEXT_KEYS = ["answer", "result", "response", "summary"] as const
+
+const pickTextField = (
+  raw: unknown,
+  keys: readonly string[]
+): string | null => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null
+  const obj = raw as Record<string, unknown>
+  for (const key of keys) {
+    const value = obj[key]
+    if (typeof value === "string" && value.trim()) return value
+  }
+  return null
+}
+
+const inputPrimaryText = computed(() =>
+  pickTextField(props.tool.input, INPUT_TEXT_KEYS)
+)
+const outputPrimaryText = computed(() =>
+  pickTextField(props.tool.output, OUTPUT_TEXT_KEYS)
+)
+
+const inputMarkdown = computed(() => {
+  if (inputPrimaryText.value) return inputPrimaryText.value
+  return inputText.value ? toJsonFence(inputText.value) : ""
+})
+const outputMarkdown = computed(() => {
+  if (outputPrimaryText.value) return outputPrimaryText.value
+  return toJsonFence(outputText.value)
+})
+
 /**
  * Whether the current `tool.name` has a dedicated done-state renderer
  * AND that renderer's narrower successfully parsed the payload. When
@@ -395,6 +502,8 @@ const hasCustomDoneRenderer = computed(() => {
       return searchOutput.value !== null
     case "summarizeNode":
       return summarizeOutput.value !== null
+    case "browseInternet":
+      return browseInternetOutput.value !== null
     default:
       return false
   }
@@ -403,70 +512,67 @@ const hasCustomDoneRenderer = computed(() => {
 
 <template>
   <Collapsible v-model:open="open" class="grid gap-2">
-    <CollapsibleTrigger
-      class="flex w-full items-center gap-2 rounded-md border p-2 text-left text-xs transition-colors"
-      :class="
-        isInterrupt
-          ? 'border-primary/40 bg-primary/5 hover:bg-primary/10'
-          : 'border-border bg-background/60 hover:bg-background'
-      "
-    >
-      <Component
-        :is="isInterrupt ? IconMessageCircle : IconWrench"
-        :class="isInterrupt ? 'text-primary' : 'text-muted-foreground'"
-      />
-      <span class="text-foreground truncate font-medium">{{ tool.name }}</span>
-      <span
-        class="text-muted-foreground ml-auto flex shrink-0 items-center gap-1"
-      >
-        <template v-if="isInterrupt">
-          <span class="text-primary font-medium">
-            {{ t("ai.toolCall.needsInput") }}
-          </span>
-        </template>
-        <template v-else-if="isRunning">
-          <IconLoader2 class="animate-spin" />
-          <span>{{ t("ai.toolCall.running") }}</span>
-        </template>
-        <template v-else>
-          <IconCheck />
-          <span>{{ t("ai.toolCall.done") }}</span>
-        </template>
-      </span>
-      <IconChevronDown
-        class="text-muted-foreground shrink-0 transition-transform"
-        :class="{ 'rotate-180': open }"
-      />
+    <CollapsibleTrigger as-child>
+      <Item variant="muted" size="xs">
+        <ItemMedia variant="icon">
+          <TooltipProvider>
+            <Tooltip v-if="isInterrupt">
+              <TooltipTrigger as-child>
+                <IconCircleHelp />
+              </TooltipTrigger>
+              <TooltipContent>{{ t("ai.toolCall.needsInput") }}</TooltipContent>
+            </Tooltip>
+            <Tooltip v-else-if="isRunning">
+              <TooltipTrigger as-child>
+                <Spinner />
+              </TooltipTrigger>
+              <TooltipContent>{{ t("ai.toolCall.running") }}</TooltipContent>
+            </Tooltip>
+            <Tooltip v-else>
+              <TooltipTrigger as-child>
+                <IconCheck />
+              </TooltipTrigger>
+              <TooltipContent>{{ t("ai.toolCall.done") }}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>
+            {{ tool.name }}
+            <IconChevronRight
+              class="text-muted-foreground transition-transform will-change-transform"
+              :class="{ 'rotate-90': open }"
+            />
+          </ItemTitle>
+        </ItemContent>
+        <ItemActions>
+          <Component :is="isInterrupt ? IconBotMessageSquare : IconBot" />
+        </ItemActions>
+      </Item>
     </CollapsibleTrigger>
     <CollapsibleContent>
       <!-- ============================================================== -->
       <!-- Pending interrupt: question + choices form. -->
       <!-- ============================================================== -->
-      <div
-        v-if="isInterrupt && askQuestionInput"
-        class="border-primary/30 bg-primary/5 space-y-2 rounded-md border p-2 text-xs"
-      >
-        <p class="text-foreground text-sm font-medium">
-          {{ askQuestionInput.question }}
-        </p>
-        <div class="flex flex-wrap gap-2">
-          <Button
-            v-for="choice in askQuestionInput.choices"
-            :key="choice"
-            variant="outline"
-            size="sm"
-            :disabled="isSubmitting"
-            class="h-auto py-1 text-xs"
-            @click="submitAnswer(choice)"
-          >
-            <Spinner v-if="submittingChoice === choice" />
-            {{ choice }}
-          </Button>
-        </div>
-        <div
-          v-if="askQuestionInput.allowOther"
-          class="border-primary/20 mt-2 flex items-center gap-2 border-t pt-2"
-        >
+      <Card v-if="isInterrupt && askQuestionInput" size="sm">
+        <CardHeader>
+          <CardTitle>{{ askQuestionInput.question }}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              v-for="choice in askQuestionInput.choices"
+              :key="choice"
+              variant="outline"
+              :disabled="isSubmitting"
+              @click="submitAnswer(choice)"
+            >
+              <Spinner v-if="submittingChoice === choice" />
+              {{ choice }}
+            </Button>
+          </div>
+        </CardContent>
+        <CardFooter v-if="askQuestionInput.allowOther" class="gap-2">
           <Input
             v-model="customAnswer"
             :placeholder="t('ai.toolCall.customAnswer')"
@@ -474,22 +580,21 @@ const hasCustomDoneRenderer = computed(() => {
             @keydown="onCustomKeydown"
           />
           <Button
-            size="sm"
             :disabled="!customAnswer.trim() || isSubmitting"
             @click="submitCustom"
           >
             <Spinner v-if="submittingChoice === customAnswer.trim()" />
             {{ t("ai.toolCall.send") }}
           </Button>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
 
       <!-- ============================================================== -->
       <!-- Pending interrupt with malformed payload — polite escape hatch. -->
       <!-- ============================================================== -->
       <Item v-else-if="isInterrupt" variant="muted" size="xs">
         <ItemContent>
-          <ItemDescription class="line-clamp-none italic">
+          <ItemDescription class="line-clamp-none">
             {{ t("ai.toolCall.malformedInterrupt") }}
           </ItemDescription>
         </ItemContent>
@@ -498,18 +603,19 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- ============================================================== -->
       <!-- Resolved interrupt: question with the chosen answer highlighted. -->
       <!-- ============================================================== -->
-      <div
+      <Item
         v-else-if="isResolvedInterrupt && askQuestionInput && interruptAnswer"
-        class="border-primary/30 bg-primary/5 space-y-1.5 rounded-md border p-3 text-xs"
+        variant="outline"
+        size="xs"
       >
-        <p class="text-foreground text-sm font-medium">
-          {{ askQuestionInput.question }}
-        </p>
-        <p class="text-primary flex items-center gap-2">
+        <ItemMedia variant="icon">
           <IconCheck />
-          <span class="font-medium">{{ interruptAnswer }}</span>
-        </p>
-      </div>
+        </ItemMedia>
+        <ItemContent>
+          <ItemDescription>{{ askQuestionInput.question }}</ItemDescription>
+          <ItemTitle>{{ interruptAnswer }}</ItemTitle>
+        </ItemContent>
+      </Item>
 
       <!-- ============================================================== -->
       <!-- Running: brief waiting note. The header's spinner indicates -->
@@ -518,10 +624,10 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- ============================================================== -->
       <Item v-else-if="isRunning" variant="muted" size="xs">
         <ItemMedia variant="icon">
-          <IconLoader2 class="animate-spin" />
+          <Spinner />
         </ItemMedia>
         <ItemContent>
-          <ItemDescription class="line-clamp-none italic">
+          <ItemDescription class="line-clamp-none">
             {{ t("ai.toolCall.waitingForReturn") }}
           </ItemDescription>
         </ItemContent>
@@ -535,27 +641,19 @@ const hasCustomDoneRenderer = computed(() => {
         variant="outline"
         size="xs"
       >
-        <ItemHeader v-if="weatherInput" class="text-muted-foreground">
-          <span class="flex items-center gap-2">
-            <IconMapPin />
-            {{ weatherInput.location }}
-          </span>
+        <ItemHeader v-if="weatherInput">
+          {{ weatherInput.location }}
         </ItemHeader>
-        <ItemMedia variant="icon" class="self-center">
-          <Component :is="weatherIcon" class="text-primary size-8" />
+        <ItemMedia variant="icon">
+          <Component :is="weatherIcon" />
         </ItemMedia>
         <ItemContent>
-          <ItemTitle class="text-xl leading-none font-semibold">
-            {{ weatherOutput.temperature }}°F
-          </ItemTitle>
-          <ItemDescription class="capitalize">
+          <ItemTitle> {{ weatherOutput.temperature }}°F </ItemTitle>
+          <ItemDescription>
             {{ weatherOutput.condition }}
           </ItemDescription>
         </ItemContent>
-        <ItemFooter
-          v-if="weatherOutput.advisory"
-          class="text-foreground border-t pt-2 leading-relaxed"
-        >
+        <ItemFooter v-if="weatherOutput.advisory">
           {{ weatherOutput.advisory }}
         </ItemFooter>
       </Item>
@@ -568,11 +666,11 @@ const hasCustomDoneRenderer = computed(() => {
         variant="outline"
         size="xs"
       >
-        <ItemMedia variant="icon" class="self-center">
-          <IconDices class="text-primary size-8" />
+        <ItemMedia variant="icon">
+          <IconDices />
         </ItemMedia>
         <ItemContent>
-          <ItemTitle class="text-xl leading-none font-semibold">
+          <ItemTitle>
             {{ diceOutput }}
           </ItemTitle>
           <ItemDescription>{{ t("ai.toolCall.dice.rolled") }}</ItemDescription>
@@ -584,30 +682,29 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- ============================================================== -->
       <div
         v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput"
-        class="flex flex-col gap-2"
+        class="flex flex-col"
       >
-        <div
-          v-if="searchInput"
-          class="text-muted-foreground flex flex-wrap items-center gap-2 text-xs"
-        >
-          <IconSearch />
-          <span class="text-foreground italic">"{{ searchInput.query }}"</span>
-          <span class="text-muted-foreground">·</span>
-          <span>
-            {{
-              t("ai.toolCall.search.resultCount", {
-                count: searchOutput.results.length,
-              })
-            }}
-            <template v-if="searchOutput.truncated">
-              {{ t("ai.toolCall.search.truncated") }}
-            </template>
-          </span>
-        </div>
-        <Empty
-          v-if="searchOutput.results.length === 0"
-          class="rounded border border-dashed p-4"
-        >
+        <Item v-if="searchInput" size="xs">
+          <ItemMedia variant="icon">
+            <IconSearch class="text-muted-foreground" />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>"{{ searchInput.query }}"</ItemTitle>
+          </ItemContent>
+          <ItemActions>
+            <ItemDescription>
+              {{
+                t("ai.toolCall.search.resultCount", {
+                  count: searchOutput.results.length,
+                })
+              }}
+              <template v-if="searchOutput.truncated">
+                {{ t("ai.toolCall.search.truncated") }}
+              </template>
+            </ItemDescription>
+          </ItemActions>
+        </Item>
+        <Empty v-if="searchOutput.results.length === 0" class="border p-6">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <IconSearch />
@@ -635,7 +732,7 @@ const hasCustomDoneRenderer = computed(() => {
               </ItemDescription>
             </ItemContent>
             <ItemActions>
-              <Badge variant="secondary" class="text-xs">
+              <Badge variant="secondary">
                 {{ searchScopeLabel(result.scope) }}
               </Badge>
             </ItemActions>
@@ -658,42 +755,36 @@ const hasCustomDoneRenderer = computed(() => {
         <AlertTitle>{{ t("ai.toolCall.summarize.errorTitle") }}</AlertTitle>
         <AlertDescription>{{ summarizeOutput.error }}</AlertDescription>
       </Alert>
+
       <Card
         v-else-if="tool.name === 'summarizeNode' && summarizeOutput"
         size="sm"
       >
         <CardHeader>
-          <CardTitle
-            class="text-muted-foreground flex items-center gap-2 text-xs font-medium uppercase"
-          >
-            <IconSparkles />
+          <CardTitle>
             {{ t("ai.toolCall.summarize.heading") }}
           </CardTitle>
         </CardHeader>
-        <CardContent class="flex flex-col gap-3">
-          <p class="text-foreground leading-relaxed">
+        <CardContent class="flex flex-col gap-2">
+          <p class="text-foreground">
             {{ summarizeOutput.summary }}
           </p>
           <div
             v-if="summarizeOutput.keyPoints.length > 0"
-            class="flex flex-col gap-1"
+            class="flex flex-col gap-2"
           >
             <span class="text-muted-foreground text-xs font-medium uppercase">
               {{ t("ai.toolCall.summarize.keyPoints") }}
             </span>
             <ul class="text-foreground list-inside list-disc space-y-1">
-              <li
-                v-for="(point, idx) in summarizeOutput.keyPoints"
-                :key="idx"
-                class="leading-relaxed"
-              >
+              <li v-for="(point, idx) in summarizeOutput.keyPoints" :key="idx">
                 {{ point }}
               </li>
             </ul>
           </div>
           <div
             v-if="summarizeOutput.suggestedTags.length > 0"
-            class="flex flex-col gap-1"
+            class="flex flex-col gap-2"
           >
             <span class="text-muted-foreground text-xs font-medium uppercase">
               {{ t("ai.toolCall.summarize.tags") }}
@@ -703,7 +794,6 @@ const hasCustomDoneRenderer = computed(() => {
                 v-for="tag in summarizeOutput.suggestedTags"
                 :key="tag"
                 variant="secondary"
-                class="text-xs"
               >
                 {{ tag }}
               </Badge>
@@ -723,32 +813,67 @@ const hasCustomDoneRenderer = computed(() => {
       </Card>
 
       <!-- ============================================================== -->
-      <!-- Fallback: unknown tool name OR narrower failed — show JSON so -->
-      <!-- the message column at least carries something meaningful. -->
+      <!-- browseInternet: query header + grounded answer (markdown) + -->
+      <!-- the source links the answer was grounded on. -->
       <!-- ============================================================== -->
-      <div
-        v-else-if="!hasCustomDoneRenderer"
-        class="border-border bg-background/40 space-y-2 rounded-md border p-2 text-xs"
+      <Card
+        v-else-if="tool.name === 'browseInternet' && browseInternetOutput"
+        size="sm"
       >
-        <div v-if="inputText">
-          <p
-            class="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase"
+        <CardHeader>
+          <CardTitle>
+            {{ t("ai.toolCall.browse.heading") }}
+          </CardTitle>
+          <CardDescription v-if="browseInternetInput">
+            {{ browseInternetInput }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-2">
+          <AppMarkdown surface="chat" :content="browseInternetOutput.answer" />
+          <div
+            v-if="browseInternetOutput.sources.length > 0"
+            class="flex flex-col"
           >
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("ai.toolCall.browse.sources") }}
+            </span>
+            <ul>
+              <li
+                v-for="source in browseInternetOutput.sources"
+                :key="source.url"
+              >
+                <a
+                  :href="source.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="break-all hover:underline"
+                >
+                  {{ source.title }}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- ============================================================== -->
+      <!-- Fallback: unknown tool name OR narrower failed. Show a markdown -->
+      <!-- preview of a recognized text field (query / answer / …) when -->
+      <!-- present, else a JSON dump, so the message column at least -->
+      <!-- carries something meaningful. -->
+      <!-- ============================================================== -->
+      <div v-else-if="!hasCustomDoneRenderer" class="flex flex-col">
+        <div v-if="inputMarkdown" class="flex flex-col">
+          <span class="text-muted-foreground text-xs font-medium uppercase">
             {{ t("ai.toolCall.input") }}
-          </p>
-          <pre
-            class="bg-muted text-foreground overflow-x-auto rounded px-2 py-1.5 font-mono text-xs leading-snug whitespace-pre-wrap"
-          ><code>{{ inputText }}</code></pre>
+          </span>
+          <AppMarkdown surface="chat" :content="inputMarkdown" />
         </div>
-        <div>
-          <p
-            class="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase"
-          >
+        <div class="flex flex-col">
+          <span class="text-muted-foreground text-xs font-medium uppercase">
             {{ t("ai.toolCall.output") }}
-          </p>
-          <pre
-            class="bg-muted text-foreground overflow-x-auto rounded px-2 py-1.5 font-mono text-xs leading-snug whitespace-pre-wrap"
-          ><code>{{ outputText }}</code></pre>
+          </span>
+          <AppMarkdown surface="chat" :content="outputMarkdown" />
         </div>
       </div>
     </CollapsibleContent>

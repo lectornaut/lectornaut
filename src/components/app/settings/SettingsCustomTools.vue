@@ -485,7 +485,12 @@ const handleEditorSave = async (): Promise<void> => {
           <div
             class="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
           >
-            <!-- Left: prompt input. "Prompt only has the textarea + Generate". -->
+            <!--
+              Left: prompt input styled as an InputGroup — a single
+              bordered group whose block-end footer carries the Generate
+              action and the model receipt, so the textarea reads as one
+              composer rather than a field stacked above a loose button.
+            -->
             <div class="flex min-h-0 flex-col gap-3">
               <div class="flex flex-col gap-1">
                 <Label
@@ -498,16 +503,47 @@ const handleEditorSave = async (): Promise<void> => {
                   {{ t("settings.agents.customTools.ai.promptDescription") }}
                 </p>
               </div>
-              <Textarea
-                :id="`tool-ai-prompt-${editingTool?.id ?? 'new'}`"
-                v-model="aiPrompt"
-                :placeholder="
-                  t('settings.agents.customTools.ai.promptPlaceholder')
-                "
-                :maxlength="AI_PROMPT_MAX"
-                :disabled="!canManage || isGenerating"
-                class="min-h-40 flex-1 resize-none"
-              />
+              <InputGroup class="min-h-0 flex-1">
+                <InputGroupTextarea
+                  :id="`tool-ai-prompt-${editingTool?.id ?? 'new'}`"
+                  v-model="aiPrompt"
+                  :placeholder="
+                    t('settings.agents.customTools.ai.promptPlaceholder')
+                  "
+                  :maxlength="AI_PROMPT_MAX"
+                  :disabled="!canManage || isGenerating"
+                  class="min-h-40"
+                />
+                <InputGroupAddon align="block-end" class="border-t">
+                  <InputGroupText
+                    v-if="generatedModel && !isGenerating"
+                    class="min-w-0 truncate text-xs"
+                  >
+                    {{
+                      t("settings.agents.customTools.ai.generatedBy", {
+                        model: generatedModel,
+                      })
+                    }}
+                  </InputGroupText>
+                  <InputGroupButton
+                    variant="default"
+                    size="sm"
+                    class="ml-auto"
+                    :disabled="!canGenerate"
+                    @click="handleGenerate"
+                  >
+                    <Spinner v-if="isGenerating" />
+                    <IconSparkles v-else />
+                    {{
+                      isGenerating
+                        ? t("settings.agents.customTools.ai.generating")
+                        : hasGenerated
+                          ? t("settings.agents.customTools.ai.regenerate")
+                          : t("settings.agents.customTools.ai.generate")
+                    }}
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
               <p
                 v-if="generateError"
                 class="text-destructive flex items-center gap-1.5 text-xs"
@@ -515,29 +551,6 @@ const handleEditorSave = async (): Promise<void> => {
                 <IconAlertTriangle class="size-3.5 shrink-0" />
                 {{ generateError }}
               </p>
-              <div class="flex items-center gap-2">
-                <Button :disabled="!canGenerate" @click="handleGenerate">
-                  <Spinner v-if="isGenerating" />
-                  <IconSparkles v-else />
-                  {{
-                    isGenerating
-                      ? t("settings.agents.customTools.ai.generating")
-                      : hasGenerated
-                        ? t("settings.agents.customTools.ai.regenerate")
-                        : t("settings.agents.customTools.ai.generate")
-                  }}
-                </Button>
-                <span
-                  v-if="generatedModel && !isGenerating"
-                  class="text-muted-foreground truncate text-xs"
-                >
-                  {{
-                    t("settings.agents.customTools.ai.generatedBy", {
-                      model: generatedModel,
-                    })
-                  }}
-                </span>
-              </div>
             </div>
 
             <!-- Right: read-only "anticipated configuration" rendered from draft. -->

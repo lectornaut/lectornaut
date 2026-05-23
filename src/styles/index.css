@@ -7,8 +7,12 @@
 @import "tw-animate-css";
 @import "@/styles/theme.css";
 @import "shadcn-vue/tailwind.css";
+@import "markstream-vue/index.css" layer(components);
+@import "katex/dist/katex.min.css";
+
 @plugin "@tailwindcss/typography";
 @plugin "@tailwindcss/forms";
+
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
 @view-transition {
@@ -289,6 +293,140 @@
     @apply overscroll-none;
     @apply scroll-smooth;
   }
+}
+
+/*
+  markstream-vue surface overrides
+  - Moved here from AppMarkdown.vue's \3c style> block. These rules style
+    markstream's LIBRARY-rendered DOM (the `.markstream-vue` subtree),
+    not AppMarkdown's own template — so a Vue `scoped` block can't reach
+    them (the `[data-v-*]` hash never lands on library nodes, and never
+    on markstream's tooltip, which teleports to <body>). Global CSS is
+    the correct home.
+  - `[data-custom-id]` is the scoping boundary: only AppMarkdown emits
+    these surfaces ("chat" / "changelog-sheet" / "changelog-page"), so
+    the rules stay isolated to its output. Kept UNLAYERED (like the
+    driver.js overrides below) so they reliably win over markstream's
+    base CSS, which is imported into `layer(components)` at the top of
+    this file.
+*/
+
+/* ── Spacing scale — shared by all three surfaces ──────────────────────
+   markstream gives each block a SYMMETRIC margin (`margin: var(…) 0`), and
+   adjacent margins collapse — so every `--ms-flow-*-y` below is literally
+   the gap between two neighbouring blocks (never the sum of both). All
+   values are `em` so the rhythm scales with each surface's text size.
+
+   Headings break that symmetry on purpose: the top margin (a section
+   break) is set ABOVE the 1em block gap and scales h1→h6, while the bottom
+   margin is small so a heading binds to the content it introduces. */
+.markstream-vue[data-custom-id="chat"],
+.markstream-vue[data-custom-id="changelog-sheet"],
+.markstream-vue[data-custom-id="changelog-page"] {
+  --ms-text-body: 1em;
+  --ms-leading-body: 1.5;
+
+  /* Block-to-block gaps. 1.5em base so a paragraph break reads as clearly
+   * separate — comfortably more than the line leading (line-height − 1em).
+   * Code & tables sit above that base so the margin-collapse can't mask
+   * them; `hr-y` is a hard break. `list-item-y` is the TIGHT gap *within*
+   * a list. Indents are horizontal and left at the library's feel. */
+  --ms-flow-paragraph-y: 0;
+  --ms-flow-list-y: 1em;
+  --ms-flow-list-item-y: 1em;
+  --ms-flow-list-indent: 1.5em;
+  --ms-flow-blockquote-y: 1em;
+  --ms-flow-blockquote-indent: 1em;
+  --ms-flow-codeblock-y: 1em;
+  --ms-flow-table-y: 1em;
+  --ms-flow-hr-y: 1em;
+
+  /* Headings: top margin kept ABOVE the 1.5em block gap (section break,
+   * scales down by level) so headings still dominate now that paragraphs
+   * are roomier; bottom margin small (binds to following content). */
+  --ms-flow-heading-1-mt: 2em;
+  --ms-flow-heading-1-mb: 0.4em;
+  --ms-flow-heading-2-mt: 1.8em;
+  --ms-flow-heading-2-mb: 0.4em;
+  --ms-flow-heading-3-mt: 1.6em;
+  --ms-flow-heading-3-mb: 0.4em;
+  --ms-flow-heading-4-mt: 1.5em;
+  --ms-flow-heading-4-mb: 0.35em;
+  --ms-flow-heading-5-mt: 1.4em;
+  --ms-flow-heading-5-mb: 0.3em;
+  --ms-flow-heading-6-mt: 1.3em;
+  --ms-flow-heading-6-mb: 0.3em;
+
+  /* Weight + leading are shared; only heading SIZES differ per surface. */
+  --ms-weight-h1: 700;
+  --ms-weight-h2: 650;
+  --ms-weight-h3: 600;
+  --ms-weight-h4: 600;
+  --ms-leading-h1: 1.25;
+  --ms-leading-h2: 1.3;
+  --ms-leading-h3: 1.4;
+}
+
+/* ── Heading sizes: compact for narrow chat / sheet bubbles ────────────
+   h4–h6 stay at body size and lean on weight so they never read smaller
+   than the prose beneath them. */
+.markstream-vue[data-custom-id="chat"],
+.markstream-vue[data-custom-id="changelog-sheet"] {
+  --ms-text-h1: 1.5em;
+  --ms-text-h2: 1.3em;
+  --ms-text-h3: 1.15em;
+  --ms-text-h4: 1.05em;
+  --ms-text-h5: 1em;
+  --ms-text-h6: 1em;
+}
+
+/* ── Heading sizes: larger for the changelog landing page ──────────── */
+.markstream-vue[data-custom-id="changelog-page"] {
+  --ms-text-h1: 1.85em;
+  --ms-text-h2: 1.5em;
+  --ms-text-h3: 1.3em;
+  --ms-text-h4: 1.1em;
+  --ms-text-h5: 1em;
+  --ms-text-h6: 1em;
+}
+
+/* NO universal first/last-child reset here — on purpose.
+   markstream wraps EVERY block in its own per-node element, so a
+   `*:first-child` / `*:last-child` (or `:first-of-type`) rule matches every
+   block — each is the lone child of its wrapper — and zeroes its margins.
+   That silently flattens the entire `--ms-flow-*` scale (the "spacing has
+   no effect" bug). The flow variables above already target each block type
+   precisely (`.paragraph-node`, `.code-block-container`, lists, etc.), and
+   markstream trims list-item paragraphs itself, so nothing universal is
+   needed. If the surface's outer edge ever needs trimming, anchor on the
+   node wrapper (e.g. `[data-node-index="0"]`) — never a universal `*`. */
+
+/* ── Typography polish (chat + sheet, where bubbles are narrow) ───── */
+.markstream-vue[data-custom-id="chat"] .paragraph-node,
+.markstream-vue[data-custom-id="changelog-sheet"] .paragraph-node {
+  text-wrap: pretty;
+}
+
+.markstream-vue[data-custom-id="chat"] .heading-node,
+.markstream-vue[data-custom-id="changelog-sheet"] .heading-node {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+/* Inline code at 0.875em — at small bubble sizes the library default
+ * 0.8125em rendered noticeably smaller than surrounding prose. */
+.markstream-vue[data-custom-id="chat"] .inline-code,
+.markstream-vue[data-custom-id="changelog-sheet"] .inline-code {
+  font-size: 0.875em;
+}
+
+/* List items render their own paragraph wrapper which picks up the
+ * global paragraph margin and doubles spacing inside tight lists. */
+.markstream-vue[data-custom-id="chat"] .list-item .paragraph-node,
+.markstream-vue[data-custom-id="changelog-sheet"] .list-item .paragraph-node,
+.markstream-vue[data-custom-id="changelog-page"] .list-item .paragraph-node {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 /* Driver.js popover theme

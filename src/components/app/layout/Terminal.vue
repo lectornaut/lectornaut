@@ -100,7 +100,7 @@ onBeforeUnmount(() => {
   <div ref="terminalEl" class="size-full pl-2" />
 </template>
 
-<style lang="scss">
+<style scoped>
 :root {
   --xt-bg: var(--color-background);
   --xt-fg: var(--color-foreground);

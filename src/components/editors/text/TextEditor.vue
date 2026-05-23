@@ -1390,7 +1390,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   />
 </template>
 
-<style lang="scss">
+<style scoped>
 .tiptap {
   min-height: 100%;
   font-synthesis: style;

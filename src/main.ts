@@ -59,10 +59,11 @@ initSync()
 enableKatex()
 enableMermaid()
 
-// Warm the Shiki highlighter (via `stream-markdown`) off the critical
-// path so the first fenced code block in a chat bubble or changelog
-// entry doesn't pay the cold-start parse cost. No-op when no code-block
-// runtime peer is installed.
+// Warm the code-block runtime off the critical path so the first fenced
+// code block in a chat bubble or changelog entry doesn't pay the
+// cold-start cost. With `stream-monaco` installed this dynamically
+// imports Monaco and registers its workers (falling back to the Shiki
+// runtime via `stream-markdown` if Monaco is unavailable).
 preloadCodeBlockRuntime()
 
 // Order matters: authReady must resolve before router.isReady() so the

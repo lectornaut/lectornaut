@@ -296,7 +296,7 @@ if (!supportsScrollAnchoring) {
     <div
       v-else
       ref="contentEl"
-      class="messages-list mt-auto grid grid-cols-1 gap-2 p-2"
+      class="messages-list mt-auto grid grid-cols-1 p-2"
     >
       <ContextMenu
         v-for="{ message, blocks } in renderedMessages"
@@ -319,13 +319,13 @@ if (!supportsScrollAnchoring) {
             />
             <div
               :class="[
-                'markdown-bubble flex w-max flex-col gap-2 p-2 text-sm whitespace-pre-wrap',
+                'markdown-bubble flex flex-col gap-2 text-sm',
                 {
-                  'bg-secondary text-secondary-foreground rounded-lg rounded-bl-xs':
+                  'bg-destructive/25 max-w-2/3 rounded-lg rounded-bl-xs p-2':
                     message.role === 'user',
                 },
                 {
-                  'rounded-lg': message.role === 'agent',
+                  'w-full': message.role === 'agent',
                 },
               ]"
             >
