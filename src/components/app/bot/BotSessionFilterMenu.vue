@@ -87,7 +87,7 @@ const keepMenuOpen = (event: Event) => {
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>{{ t("ai.filterSessions") }}</TooltipContent>
-        <DropdownMenuContent align="end" class="w-56">
+        <DropdownMenuContent align="end" class="w-auto">
           <DropdownMenuLabel class="flex items-center justify-between gap-2">
             {{ t("ai.filterSessions") }}
             <Badge

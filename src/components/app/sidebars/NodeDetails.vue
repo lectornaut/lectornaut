@@ -163,7 +163,7 @@ const nodeStatusLabel = computed(() =>
 </script>
 
 <template>
-  <div class="flex size-full min-h-0 flex-1 flex-col">
+  <div class="flex size-full min-h-0 grow flex-col">
     <Card v-if="summaryFeatureEnabled" size="sm" class="m-2 shadow-none">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">

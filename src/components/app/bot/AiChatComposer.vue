@@ -358,6 +358,16 @@ const activeAgentStatus = computed<
 >(() => botChat?.activeAgentStatus.value ?? null)
 const hasAnyAgents = computed(() => availableAgents.value.length > 0)
 
+// Partition selectable agents for the grouped picker: built-in presets
+// vs. admin-authored custom agents. `isBuiltInAgentId` keys off the `_`
+// id prefix — the same signal the removed per-item "Custom" badge used.
+const builtInAgents = computed(() =>
+  availableAgents.value.filter((agent) => isBuiltInAgentId(agent.id))
+)
+const customAgents = computed(() =>
+  availableAgents.value.filter((agent) => !isBuiltInAgentId(agent.id))
+)
+
 /**
  * Whether to render the agents picker row at all. True when the team
  * has at least one selectable agent OR when the current chat has a
@@ -371,25 +381,6 @@ const showAgentsRow = computed(
     phantomActiveAgent.value !== null ||
     activeAgentStatus.value === "deleted"
 )
-
-/**
- * Tooltip text for the phantom (non-selectable) active badge,
- * tailored to the specific lifecycle state. Empty when no phantom
- * badge is showing — the v-if on the badge keeps it from rendering
- * at all in that case.
- */
-const phantomActiveTooltip = computed<string>(() => {
-  switch (activeAgentStatus.value) {
-    case "disabled":
-      return t("ai.agents.disabledTooltip")
-    case "archived":
-      return t("ai.agents.archivedTooltip")
-    case "deleted":
-      return t("ai.agents.deletedTooltip")
-    default:
-      return ""
-  }
-})
 
 /**
  * The currently-selected agent might be disabled, archived, or
@@ -426,19 +417,50 @@ const activeStatusLabel = computed<string>(() => {
   }
 })
 
-const onAgentSelect = (agentId: string | null): void => {
+// Sentinel value for the "Default" option. `<Select>` items need a
+// non-empty string value, and `null` (clear back to the built-in
+// persona) can't round-trip through reka-ui's string-keyed model — so we
+// map null↔sentinel at the boundary. Double-underscore can't collide
+// with real agent ids (built-ins use a single `_` prefix, e.g.
+// `_researcher`).
+const AGENT_DEFAULT_VALUE = "__default__"
+
+// Drives the Select trigger. A phantom (disabled/archived/deleted) active
+// agent keeps its id here even though it has no matching SelectItem — the
+// trigger renders it via the SelectValue slot regardless.
+const agentSelectValue = computed(
+  () => activeAgentId.value ?? AGENT_DEFAULT_VALUE
+)
+
+const onAgentChange = (next: unknown): void => {
   if (!botChat) return
   if (isReadOnly.value) return
-  // Toggle: clicking the already-active badge clears back to default
-  // so users can deselect without hunting for a separate button.
-  if (agentId !== null && activeAgentId.value === agentId) {
+  if (typeof next !== "string") return
+  if (next === AGENT_DEFAULT_VALUE) {
     botChat.selectAgent(null)
     return
   }
-  botChat.selectAgent(agentId)
+  // Allowlist guard mirroring onModeChange/onModelChange: only ids in the
+  // selectable list are pickable. Phantom agents render in the trigger
+  // but can't be re-selected — the only way out is Default or another
+  // listed agent.
+  if (!availableAgents.value.some((a) => a.id === next)) return
+  botChat.selectAgent(next)
 }
+
 const agentAvatarSeed = (agent: ITeamAgent): string =>
   agent.avatarSeed.trim() || agent.name.trim() || agent.id
+
+// Shared palette so each agent's generated `vue-boring-avatars` "beam"
+// avatar uses the app's chart tokens. Hoisted to a const because the
+// trigger and every dropdown item reference the same array.
+const agentAvatarColors = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+]
 
 const inputPlaceholder = computed(() => {
   if (isActiveArchived.value) return t("ai.placeholderArchived")
@@ -601,6 +623,16 @@ const availableTools = computed<readonly ComposerToolEntry[]>(() => {
   return entries
 })
 
+// Split the flat tool list into built-in vs. admin-authored custom for
+// the grouped dropdown. The `kind` discriminator was set when each entry
+// was pushed into `availableTools`, so this is a cheap partition.
+const builtInTools = computed(() =>
+  availableTools.value.filter((tool) => tool.kind === "builtin")
+)
+const customTools = computed(() =>
+  availableTools.value.filter((tool) => tool.kind === "custom")
+)
+
 const toolsOpen = ref(false)
 
 const insertToolPrompt = (tool: ComposerToolEntry) => {
@@ -619,228 +651,21 @@ const insertToolPrompt = (tool: ComposerToolEntry) => {
   } else {
     userInput.value = `${userInput.value}${tool.example}`
   }
-  toolsOpen.value = false
+  // The menu auto-closes on item select; `toolsOpen` syncs back via
+  // `v-model:open`, so no manual close is needed here.
+}
+
+// Keep the caret in the textarea after picking a tool. reka-ui restores
+// focus to the trigger button when the menu closes; we prevent that so
+// `insertToolPrompt`'s `el.focus()` wins and the user can keep typing
+// right where the example prompt was inserted.
+const onToolMenuCloseAutoFocus = (event: Event) => {
+  event.preventDefault()
 }
 </script>
 
 <template>
-  <Collapsible v-model:open="toolsOpen" class="bg-muted m-2 rounded">
-    <TooltipProvider>
-      <Tooltip>
-        <CollapsibleTrigger as-child>
-          <TooltipTrigger as-child>
-            <Badge variant="ghost" class="m-2">
-              <IconAiFill />
-            </Badge>
-          </TooltipTrigger>
-        </CollapsibleTrigger>
-        <TooltipContent>
-          {{ toolsOpen ? t("ai.hideTools") : t("ai.showTools") }}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-    <CollapsibleContent>
-      <div
-        v-if="availableTools.length > 0"
-        class="flex flex-wrap items-center gap-2 px-2 pb-2"
-      >
-        <TooltipProvider>
-          <Tooltip v-for="tool in availableTools" :key="tool.key">
-            <TooltipTrigger as-child>
-              <Badge
-                :class="{ 'pointer-events-none opacity-50': isReadOnly }"
-                @click="insertToolPrompt(tool)"
-              >
-                <Component :is="tool.icon" />
-                <!--
-                  Custom tools render the wire-name in a monospace
-                  span — visual cue that this is an identifier the
-                  model invokes by, separating it from built-ins
-                  whose labels are prose ("Weather", "Roll dice").
-                  Built-ins keep their plain-text label.
-                -->
-                <span v-if="tool.kind === 'custom'" class="font-mono text-xs">{{
-                  tool.label
-                }}</span>
-                <template v-else>{{ tool.label }}</template>
-                <Badge
-                  v-if="tool.kind === 'custom'"
-                  variant="secondary"
-                  class="text-xs"
-                >
-                  {{ t("ai.tools.customBadge") }}
-                </Badge>
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>{{ tool.description }}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      <!--
-        Agent picker badges. Visible only when the team has at least one
-        custom agent — otherwise the whole row would just show "Default"
-        with no alternatives, which is noise. Each badge toggles the
-        active persona; clicking the already-active one clears back to
-        default. Selected state is filled (Badge default variant);
-        inactive options use the outline variant for visual quietness.
-      -->
-      <div
-        v-if="showAgentsRow"
-        class="flex flex-wrap items-center gap-2 border-t px-2 pt-2 pb-2"
-      >
-        <span class="text-muted-foreground mr-1 text-xs">
-          {{ t("ai.agents.label") }}
-        </span>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Badge
-                :variant="activeAgentId === null ? 'default' : 'outline'"
-                :class="{ 'pointer-events-none opacity-50': isReadOnly }"
-                @click="onAgentSelect(null)"
-              >
-                <IconBot />
-                {{ t("ai.agents.default") }}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>{{ t("ai.agents.defaultTooltip") }}</TooltipContent>
-          </Tooltip>
-          <Tooltip v-for="agent in availableAgents" :key="agent.id">
-            <TooltipTrigger as-child>
-              <Badge
-                :variant="activeAgentId === agent.id ? 'default' : 'outline'"
-                :class="{ 'pointer-events-none opacity-50': isReadOnly }"
-                @click="onAgentSelect(agent.id)"
-              >
-                <span class="size-4 shrink-0 overflow-hidden rounded-full">
-                  <Avatar
-                    variant="beam"
-                    :name="agentAvatarSeed(agent)"
-                    :colors="[
-                      'var(--color-chart-1)',
-                      'var(--color-chart-2)',
-                      'var(--color-chart-3)',
-                      'var(--color-chart-4)',
-                      'var(--color-chart-5)',
-                    ]"
-                  />
-                </span>
-                {{ agent.name }}
-                <!--
-                  Mirrors the "Custom" tag on custom tools — built-ins
-                  ship with the app, custom agents are admin-authored,
-                  so the badge distinguishes the two sources at a
-                  glance. `isBuiltInAgentId` keys off the `_` prefix
-                  convention; no need to recompute server-side.
-                -->
-                <Badge
-                  v-if="!isBuiltInAgentId(agent.id)"
-                  variant="secondary"
-                  class="text-xs"
-                >
-                  {{ t("ai.agents.customBadge") }}
-                </Badge>
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent v-if="agent.description">
-              {{ agent.description }}
-            </TooltipContent>
-          </Tooltip>
-          <!--
-            Phantom badge for an active agent that's NOT in the
-            selectable list — i.e. the admin disabled, archived, or
-            hard-deleted the agent after this chat was bound to it.
-            The badge renders the agent's name (if the record still
-            exists) plus a status sub-label so the user can see why
-            their chat may be dispatching under a different persona.
-            Click-deselect is intentionally NOT wired — the badge is
-            informational; the only way out is to pick a different
-            agent or the default.
-          -->
-          <Tooltip v-if="phantomActiveAgent || activeAgentStatus === 'deleted'">
-            <TooltipTrigger as-child>
-              <Badge variant="default" class="pointer-events-none opacity-80">
-                <span
-                  v-if="phantomActiveAgent"
-                  class="size-4 shrink-0 overflow-hidden rounded-full"
-                >
-                  <Avatar
-                    variant="beam"
-                    :name="agentAvatarSeed(phantomActiveAgent)"
-                    :colors="[
-                      'var(--color-chart-1)',
-                      'var(--color-chart-2)',
-                      'var(--color-chart-3)',
-                      'var(--color-chart-4)',
-                      'var(--color-chart-5)',
-                    ]"
-                  />
-                </span>
-                <IconBot v-else />
-                {{
-                  phantomActiveAgent?.name ?? t("ai.agents.deletedAgentLabel")
-                }}
-                <span class="text-xs opacity-80"
-                  >· {{ activeStatusLabel }}</span
-                >
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent v-if="phantomActiveTooltip">
-              {{ phantomActiveTooltip }}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    </CollapsibleContent>
-    <div
-      v-if="hasAttachedNodes"
-      class="flex flex-wrap items-center gap-2 px-2 pb-2"
-    >
-      <Badge
-        v-for="node in attachedNodeDetails"
-        :key="`${node.scope}:${node.nodeId}`"
-        :variant="node.status === 'ok' ? 'secondary' : 'outline'"
-      >
-        <Component :is="node.type === 'folder' ? IconFolder : IconFile" />
-        <span v-if="node.status === 'deleted'" class="max-w-40 truncate italic">
-          {{ t("ai.attachedNodeDeleted") }}
-        </span>
-        <template v-else>
-          <span class="max-w-40 truncate">{{ node.name }}</span>
-          <span
-            v-if="node.status === 'archived'"
-            class="text-xs uppercase opacity-70"
-          >
-            {{ t("ai.attachedNodeArchived") }}
-          </span>
-          <span v-else class="text-muted-foreground text-xs uppercase">
-            {{ node.scope }}
-          </span>
-        </template>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <InputGroupButton
-                size="icon-xs"
-                class="size-3"
-                :disabled="isReadOnly || isSending"
-                @click="
-                  detachAttachedNode({
-                    scope: node.scope,
-                    nodeId: node.nodeId,
-                  })
-                "
-              >
-                <IconX />
-              </InputGroupButton>
-            </TooltipTrigger>
-            <TooltipContent>
-              {{ t("ai.detachContextNode", { name: node.name }, node.name) }}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </Badge>
-    </div>
+  <div class="m-2 grid gap-2">
     <InputGroup class="bg-background">
       <InputGroupTextarea
         ref="textareaRef"
@@ -849,6 +674,62 @@ const insertToolPrompt = (tool: ComposerToolEntry) => {
         :disabled="isSending || isReadOnly"
         @keydown="handleKeydown"
       />
+      <InputGroupAddon v-if="hasAttachedNodes" align="block-start">
+        <ItemGroup>
+          <Item
+            v-for="node in attachedNodeDetails"
+            :key="`${node.scope}:${node.nodeId}`"
+            :variant="node.status === 'ok' ? 'muted' : 'outline'"
+            size="xs"
+          >
+            <ItemMedia variant="icon">
+              <Component :is="node.type === 'folder' ? IconFolder : IconFile" />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle v-if="node.status === 'deleted'" class="italic">
+                {{ t("ai.attachedNodeDeleted") }}
+              </ItemTitle>
+              <template v-else>
+                <ItemTitle>{{ node.name }}</ItemTitle>
+                <ItemDescription
+                  v-if="node.status === 'archived'"
+                  class="uppercase"
+                >
+                  {{ t("ai.attachedNodeArchived") }}
+                </ItemDescription>
+                <ItemDescription v-else class="uppercase">
+                  {{ node.scope }}
+                </ItemDescription>
+              </template>
+            </ItemContent>
+            <ItemActions>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <InputGroupButton
+                      size="icon-xs"
+                      :disabled="isReadOnly || isSending"
+                      @click="
+                        detachAttachedNode({
+                          scope: node.scope,
+                          nodeId: node.nodeId,
+                        })
+                      "
+                    >
+                      <IconX />
+                    </InputGroupButton>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{
+                      t("ai.detachContextNode", { name: node.name }, node.name)
+                    }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </ItemActions>
+          </Item>
+        </ItemGroup>
+      </InputGroupAddon>
       <InputGroupAddon align="block-end">
         <Sheet v-model:open="attachSheetOpen">
           <TooltipProvider>
@@ -951,84 +832,194 @@ const insertToolPrompt = (tool: ComposerToolEntry) => {
             </SheetFooter>
           </SheetContent>
         </Sheet>
-        <Select :model-value="mode" @update:model-value="onModeChange">
-          <InputGroupButton variant="ghost" as-child>
-            <SelectTrigger>
-              <SelectValue :placeholder="t('ai.mode')">
-                <span class="flex items-center gap-2">
-                  {{ modeLabel(mode) }}
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-          </InputGroupButton>
+        <Separator orientation="vertical" class="my-2" />
+        <DropdownMenu v-model:open="toolsOpen">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
+                  <Button variant="ghost" size="icon-xs">
+                    <IconAiFill />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  v-if="availableTools.length > 0"
+                  class="w-auto"
+                  @close-auto-focus="onToolMenuCloseAutoFocus"
+                >
+                  <DropdownMenuGroup v-if="builtInTools.length > 0">
+                    <DropdownMenuLabel>
+                      {{ t("ai.tools.groupBuiltIn") }}
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      v-for="tool in builtInTools"
+                      :key="tool.key"
+                      :disabled="isReadOnly"
+                      @select="insertToolPrompt(tool)"
+                    >
+                      <Component :is="tool.icon" />
+                      {{ tool.label }}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <template v-if="customTools.length > 0">
+                    <DropdownMenuSeparator v-if="builtInTools.length > 0" />
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>
+                        {{ t("ai.tools.groupCustom") }}
+                      </DropdownMenuLabel>
+                      <!--
+                        Custom tools render the wire-name in a monospace
+                        span — a cue that this is an identifier the model
+                        invokes by, vs. built-ins whose labels are prose.
+                      -->
+                      <DropdownMenuItem
+                        v-for="tool in customTools"
+                        :key="tool.key"
+                        :disabled="isReadOnly"
+                        @select="insertToolPrompt(tool)"
+                      >
+                        <Component :is="tool.icon" />
+                        {{ tool.label }}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </template>
+                </DropdownMenuContent>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ toolsOpen ? t("ai.hideTools") : t("ai.showTools") }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </DropdownMenu>
+        <!-- <InputGroupText class="ml-auto"> 52% used </InputGroupText> -->
+        <Select
+          v-if="showAgentsRow"
+          :model-value="agentSelectValue"
+          :disabled="isReadOnly"
+          @update:model-value="onAgentChange"
+        >
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <InputGroupButton variant="ghost" class="ml-auto" as-child>
+                  <SelectTrigger>
+                    <SelectValue :placeholder="t('ai.agents.label')">
+                      <InputGroupText>
+                        <!-- Default persona: no avatar, just the bot glyph. -->
+                        <template v-if="activeAgentId === null">
+                          <IconBot />
+                          {{ t("ai.agents.default") }}
+                        </template>
+                        <!-- Active agent we still have a record for (selectable
+                         or phantom): avatar + name + optional status suffix. -->
+                        <template v-else-if="activeAgent">
+                          <span
+                            class="size-4 shrink-0 overflow-hidden rounded-full"
+                          >
+                            <Avatar
+                              variant="beam"
+                              :name="agentAvatarSeed(activeAgent)"
+                              :colors="agentAvatarColors"
+                            />
+                          </span>
+                          {{ activeAgent.name }}
+                          <span
+                            v-if="activeStatusLabel"
+                            class="text-muted-foreground text-xs"
+                          >
+                            · {{ activeStatusLabel }}
+                          </span>
+                        </template>
+                        <!-- Hard-deleted agent: no record left, fall back to a
+                         generic label + the "Deleted" suffix. -->
+                        <template v-else>
+                          <IconBot />
+                          {{ t("ai.agents.deletedAgentLabel") }}
+                          <span
+                            v-if="activeStatusLabel"
+                            class="text-muted-foreground text-xs"
+                          >
+                            · {{ activeStatusLabel }}
+                          </span>
+                        </template>
+                      </InputGroupText>
+                    </SelectValue>
+                  </SelectTrigger>
+                </InputGroupButton>
+              </TooltipTrigger>
+              <TooltipContent>{{ t("ai.agents.tooltip") }}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <SelectContent>
             <SelectGroup>
+              <SelectLabel>{{ t("ai.agents.groupBuiltIn") }}</SelectLabel>
+              <SelectItem :value="AGENT_DEFAULT_VALUE">
+                <Item size="xs" class="border-0 p-0">
+                  <ItemMedia variant="icon">
+                    <IconBot />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{{ t("ai.agents.default") }}</ItemTitle>
+                    <ItemDescription>
+                      {{ t("ai.agents.defaultTooltip") }}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+              </SelectItem>
               <SelectItem
-                v-for="option in modeOptions"
-                :key="option.value"
-                :value="option.value"
+                v-for="agent in builtInAgents"
+                :key="agent.id"
+                :value="agent.id"
               >
-                <div class="flex flex-col gap-0.5">
-                  <span class="flex items-center gap-2 text-sm font-medium">
-                    {{ modeLabel(option.value) }}
-                  </span>
-                  <span class="text-muted-foreground text-xs">
-                    {{ option.shortDescription }}
-                  </span>
-                </div>
+                <Item size="xs" class="border-0 p-0">
+                  <ItemMedia variant="icon">
+                    <span class="size-4 shrink-0 overflow-hidden rounded-full">
+                      <Avatar
+                        variant="beam"
+                        :name="agentAvatarSeed(agent)"
+                        :colors="agentAvatarColors"
+                      />
+                    </span>
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{{ agent.name }}</ItemTitle>
+                    <ItemDescription v-if="agent.description">
+                      {{ agent.description }}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
               </SelectItem>
             </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Select :model-value="model" @update:model-value="onModelChange">
-          <InputGroupButton variant="ghost" class="ml-auto" as-child>
-            <SelectTrigger>
-              <SelectValue :placeholder="t('ai.model')">
-                <span class="flex items-center gap-2">
-                  {{ activeModel.name }}
-                  <Badge
-                    v-if="activeModel.badge"
-                    variant="secondary"
-                    class="text-xs"
-                  >
-                    {{ activeModel.badge }}
-                  </Badge>
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-          </InputGroupButton>
-          <SelectContent>
-            <template
-              v-for="(group, groupIndex) in availableModelsByProvider"
-              :key="group.id"
-            >
+            <template v-if="customAgents.length > 0">
+              <SelectSeparator />
               <SelectGroup>
-                <SelectLabel>{{ group.name }}</SelectLabel>
+                <SelectLabel>{{ t("ai.agents.groupCustom") }}</SelectLabel>
                 <SelectItem
-                  v-for="entry in group.models"
-                  :key="entry.id"
-                  :value="entry.id"
+                  v-for="agent in customAgents"
+                  :key="agent.id"
+                  :value="agent.id"
                 >
-                  <div class="flex flex-col gap-0.5">
-                    <span class="flex items-center gap-2 text-sm font-medium">
-                      {{ entry.name }}
-                      <Badge
-                        v-if="entry.badge"
-                        variant="secondary"
-                        class="text-xs"
+                  <Item size="xs" class="border-0 p-0">
+                    <ItemMedia variant="icon">
+                      <span
+                        class="size-4 shrink-0 overflow-hidden rounded-full"
                       >
-                        {{ entry.badge }}
-                      </Badge>
-                    </span>
-                    <span class="text-muted-foreground text-xs">
-                      {{ entry.description }}
-                    </span>
-                  </div>
+                        <Avatar
+                          variant="beam"
+                          :name="agentAvatarSeed(agent)"
+                          :colors="agentAvatarColors"
+                        />
+                      </span>
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle>{{ agent.name }}</ItemTitle>
+                      <ItemDescription v-if="agent.description">
+                        {{ agent.description }}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
                 </SelectItem>
               </SelectGroup>
-              <SelectSeparator
-                v-if="groupIndex < availableModelsByProvider.length - 1"
-              />
             </template>
           </SelectContent>
         </Select>
@@ -1050,5 +1041,119 @@ const insertToolPrompt = (tool: ComposerToolEntry) => {
         </TooltipProvider>
       </InputGroupAddon>
     </InputGroup>
-  </Collapsible>
+    <!--
+      Agent picker. Visible only when the team has a selectable agent OR
+      the chat is pinned to a non-selectable (disabled / archived /
+      deleted) one — otherwise the dropdown would offer nothing but
+      "Default", which is noise. The trigger reflects the active persona
+      (including a phantom one, with a status suffix); the dropdown lists
+      Default + every selectable agent. Picking "Default" clears back to
+      the built-in persona.
+    -->
+    <div class="flex flex-wrap items-center gap-2">
+      <Select
+        :model-value="mode"
+        :disabled="isReadOnly"
+        @update:model-value="onModeChange"
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <InputGroupButton variant="ghost" as-child>
+                <SelectTrigger>
+                  <SelectValue :placeholder="t('ai.mode')">
+                    <InputGroupText class="text-xs">
+                      {{ modeLabel(mode) }}
+                    </InputGroupText>
+                  </SelectValue>
+                </SelectTrigger>
+              </InputGroupButton>
+            </TooltipTrigger>
+            <TooltipContent>{{ t("ai.modeTooltip") }}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem
+              v-for="option in modeOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              <div class="flex flex-col gap-0.5">
+                <span class="flex items-center gap-2 text-sm font-medium">
+                  {{ modeLabel(option.value) }}
+                </span>
+                <span class="text-muted-foreground text-xs">
+                  {{ option.shortDescription }}
+                </span>
+              </div>
+            </SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      <Select
+        :model-value="model"
+        :disabled="isReadOnly"
+        @update:model-value="onModelChange"
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <InputGroupButton variant="ghost" class="ml-auto" as-child>
+                <SelectTrigger>
+                  <SelectValue :placeholder="t('ai.model')">
+                    <InputGroupText class="text-xs">
+                      {{ activeModel.name }}
+                      <Badge
+                        v-if="activeModel.badge"
+                        variant="secondary"
+                        class="text-xs"
+                      >
+                        {{ activeModel.badge }}
+                      </Badge>
+                    </InputGroupText>
+                  </SelectValue>
+                </SelectTrigger>
+              </InputGroupButton>
+            </TooltipTrigger>
+            <TooltipContent>{{ t("ai.modelTooltip") }}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <SelectContent>
+          <template
+            v-for="(group, groupIndex) in availableModelsByProvider"
+            :key="group.id"
+          >
+            <SelectGroup>
+              <SelectLabel>{{ group.name }}</SelectLabel>
+              <SelectItem
+                v-for="entry in group.models"
+                :key="entry.id"
+                :value="entry.id"
+              >
+                <div class="flex flex-col gap-0.5">
+                  <span class="flex items-center gap-2 text-sm font-medium">
+                    {{ entry.name }}
+                    <Badge
+                      v-if="entry.badge"
+                      variant="secondary"
+                      class="text-xs"
+                    >
+                      {{ entry.badge }}
+                    </Badge>
+                  </span>
+                  <span class="text-muted-foreground text-xs">
+                    {{ entry.description }}
+                  </span>
+                </div>
+              </SelectItem>
+            </SelectGroup>
+            <SelectSeparator
+              v-if="groupIndex < availableModelsByProvider.length - 1"
+            />
+          </template>
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
 </template>

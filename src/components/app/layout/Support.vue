@@ -223,7 +223,7 @@ const startOnboarding = () => {
               {{ $t("components.support.help") }}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent class="w-50">
+          <DropdownMenuContent class="w-auto">
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconMessageCircle />
@@ -260,7 +260,7 @@ const startOnboarding = () => {
                     {{ $t("components.support.more") }}
                   </DropdownMenuSubTrigger>
                 </DropdownMenuItem>
-                <DropdownMenuSubContent class="w-50">
+                <DropdownMenuSubContent class="w-auto">
                   <DropdownMenuGroup>
                     <DropdownMenuItem>
                       {{ $t("components.support.status") }} <IconArrowUpRight />

@@ -26,7 +26,7 @@ const columns = computed(() =>
         {{ t("components.dataTable.sort") }}
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent class="w-50">
+    <DropdownMenuContent class="w-auto">
       <DropdownMenuLabel>{{
         t("components.dataTable.sortByLabel")
       }}</DropdownMenuLabel>
@@ -38,7 +38,7 @@ const columns = computed(() =>
               {{ column.id }}
             </DropdownMenuSubTrigger>
           </DropdownMenuItem>
-          <DropdownMenuSubContent class="w-50">
+          <DropdownMenuSubContent class="w-auto">
             <DropdownMenuLabel>{{
               t("components.dataTable.sortOrder")
             }}</DropdownMenuLabel>

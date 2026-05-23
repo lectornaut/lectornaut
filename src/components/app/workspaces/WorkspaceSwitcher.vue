@@ -137,7 +137,7 @@ onUnmounted(() => {
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-50">
+        <ContextMenuContent class="w-auto">
           <ContextMenuGroup>
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'workspaces')"

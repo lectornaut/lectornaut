@@ -333,7 +333,7 @@
    * a list. Indents are horizontal and left at the library's feel. */
   --ms-flow-paragraph-y: 0;
   --ms-flow-list-y: 1em;
-  --ms-flow-list-item-y: 1em;
+  --ms-flow-list-item-y: 0.5em;
   --ms-flow-list-indent: 1.5em;
   --ms-flow-blockquote-y: 1em;
   --ms-flow-blockquote-indent: 1em;
@@ -344,18 +344,18 @@
   /* Headings: top margin kept ABOVE the 1.5em block gap (section break,
    * scales down by level) so headings still dominate now that paragraphs
    * are roomier; bottom margin small (binds to following content). */
-  --ms-flow-heading-1-mt: 2em;
-  --ms-flow-heading-1-mb: 0.4em;
-  --ms-flow-heading-2-mt: 1.8em;
-  --ms-flow-heading-2-mb: 0.4em;
-  --ms-flow-heading-3-mt: 1.6em;
-  --ms-flow-heading-3-mb: 0.4em;
-  --ms-flow-heading-4-mt: 1.5em;
-  --ms-flow-heading-4-mb: 0.35em;
-  --ms-flow-heading-5-mt: 1.4em;
-  --ms-flow-heading-5-mb: 0.3em;
-  --ms-flow-heading-6-mt: 1.3em;
-  --ms-flow-heading-6-mb: 0.3em;
+  --ms-flow-heading-1-mt: 1em;
+  --ms-flow-heading-1-mb: 1em;
+  --ms-flow-heading-2-mt: 1em;
+  --ms-flow-heading-2-mb: 1em;
+  --ms-flow-heading-3-mt: 1em;
+  --ms-flow-heading-3-mb: 1em;
+  --ms-flow-heading-4-mt: 1em;
+  --ms-flow-heading-4-mb: 1em;
+  --ms-flow-heading-5-mt: 1em;
+  --ms-flow-heading-5-mb: 1em;
+  --ms-flow-heading-6-mt: 1em;
+  --ms-flow-heading-6-mb: 1em;
 
   /* Weight + leading are shared; only heading SIZES differ per surface. */
   --ms-weight-h1: 700;
@@ -365,6 +365,7 @@
   --ms-leading-h1: 1.25;
   --ms-leading-h2: 1.3;
   --ms-leading-h3: 1.4;
+  --ms-leading-h4: 1.5;
 }
 
 /* ── Heading sizes: compact for narrow chat / sheet bubbles ────────────

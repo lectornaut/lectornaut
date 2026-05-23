@@ -634,29 +634,31 @@ const hasCustomDoneRenderer = computed(() => {
       </Item>
 
       <!-- ============================================================== -->
-      <!-- getWeather: location chip + big temperature + condition icon. -->
+      <!-- getWeather: location header + condition icon, big temperature, -->
+      <!-- condition label, and an optional advisory footer. -->
       <!-- ============================================================== -->
-      <Item
-        v-else-if="tool.name === 'getWeather' && weatherOutput"
-        variant="outline"
-        size="xs"
-      >
-        <ItemHeader v-if="weatherInput">
-          {{ weatherInput.location }}
-        </ItemHeader>
-        <ItemMedia variant="icon">
-          <Component :is="weatherIcon" />
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle> {{ weatherOutput.temperature }}°F </ItemTitle>
-          <ItemDescription>
-            {{ weatherOutput.condition }}
-          </ItemDescription>
-        </ItemContent>
-        <ItemFooter v-if="weatherOutput.advisory">
+      <Card v-else-if="tool.name === 'getWeather' && weatherOutput" size="sm">
+        <CardHeader v-if="weatherInput">
+          <CardTitle>{{ weatherInput.location }}</CardTitle>
+        </CardHeader>
+        <CardContent class="flex items-center gap-2">
+          <Component :is="weatherIcon" class="text-muted-foreground size-8" />
+          <div class="flex flex-col">
+            <span class="text-foreground text-2xl leading-none font-semibold">
+              {{ weatherOutput.temperature }}°F
+            </span>
+            <span class="text-muted-foreground">
+              {{ weatherOutput.condition }}
+            </span>
+          </div>
+        </CardContent>
+        <CardFooter
+          v-if="weatherOutput.advisory"
+          class="text-muted-foreground text-xs"
+        >
           {{ weatherOutput.advisory }}
-        </ItemFooter>
-      </Item>
+        </CardFooter>
+      </Card>
 
       <!-- ============================================================== -->
       <!-- rollDice: dice icon + big number. -->
@@ -682,9 +684,9 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- ============================================================== -->
       <div
         v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput"
-        class="flex flex-col"
+        class="flex flex-col gap-2"
       >
-        <Item v-if="searchInput" size="xs">
+        <Item v-if="searchInput" variant="outline" size="xs">
           <ItemMedia variant="icon">
             <IconSearch class="text-muted-foreground" />
           </ItemMedia>
@@ -776,7 +778,9 @@ const hasCustomDoneRenderer = computed(() => {
             <span class="text-muted-foreground text-xs font-medium uppercase">
               {{ t("ai.toolCall.summarize.keyPoints") }}
             </span>
-            <ul class="text-foreground list-inside list-disc space-y-1">
+            <ul
+              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
+            >
               <li v-for="(point, idx) in summarizeOutput.keyPoints" :key="idx">
                 {{ point }}
               </li>
@@ -832,12 +836,14 @@ const hasCustomDoneRenderer = computed(() => {
           <AppMarkdown surface="chat" :content="browseInternetOutput.answer" />
           <div
             v-if="browseInternetOutput.sources.length > 0"
-            class="flex flex-col"
+            class="flex flex-col gap-2"
           >
             <span class="text-muted-foreground text-xs font-medium uppercase">
               {{ t("ai.toolCall.browse.sources") }}
             </span>
-            <ul>
+            <ul
+              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
+            >
               <li
                 v-for="source in browseInternetOutput.sources"
                 :key="source.url"
@@ -846,7 +852,7 @@ const hasCustomDoneRenderer = computed(() => {
                   :href="source.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="break-all hover:underline"
+                  class="text-destructive break-all hover:underline"
                 >
                   {{ source.title }}
                 </a>
@@ -862,14 +868,14 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- present, else a JSON dump, so the message column at least -->
       <!-- carries something meaningful. -->
       <!-- ============================================================== -->
-      <div v-else-if="!hasCustomDoneRenderer" class="flex flex-col">
-        <div v-if="inputMarkdown" class="flex flex-col">
+      <div v-else-if="!hasCustomDoneRenderer" class="flex flex-col gap-2">
+        <div v-if="inputMarkdown" class="flex flex-col gap-2">
           <span class="text-muted-foreground text-xs font-medium uppercase">
             {{ t("ai.toolCall.input") }}
           </span>
           <AppMarkdown surface="chat" :content="inputMarkdown" />
         </div>
-        <div class="flex flex-col">
+        <div class="flex flex-col gap-2">
           <span class="text-muted-foreground text-xs font-medium uppercase">
             {{ t("ai.toolCall.output") }}
           </span>

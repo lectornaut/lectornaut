@@ -82,7 +82,7 @@ function closeSidebarOnMobile() {
         </SidebarFooter>
       </Sidebar>
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-50">
+    <ContextMenuContent class="w-auto">
       <ContextMenuItem
         @click="isMobile ? setOpenMobile(false) : setOpen(false)"
       >

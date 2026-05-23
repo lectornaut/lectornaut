@@ -260,7 +260,7 @@ const openShortcutsDemo = () => {
                   <IconChevronDown />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent class="w-50">
+              <DropdownMenuContent class="w-auto">
                 <DropdownMenuLabel>
                   {{
                     t(

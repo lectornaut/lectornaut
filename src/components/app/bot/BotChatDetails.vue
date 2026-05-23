@@ -311,7 +311,7 @@ const detailRows = computed<DetailRow[]>(() => {
 </script>
 
 <template>
-  <div class="flex size-full min-h-0 flex-1 flex-col">
+  <div class="flex size-full min-h-0 grow flex-col">
     <OverlayScrollbarsWrapper>
       <SidebarGroup>
         <SidebarGroupContent class="space-y-3 p-2">

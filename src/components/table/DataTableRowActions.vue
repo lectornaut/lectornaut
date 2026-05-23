@@ -32,7 +32,7 @@ const task = computed(() => taskSchema.parse(props.row.original))
               <IconEllipsis />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent class="w-50">
+          <DropdownMenuContent class="w-auto">
             <DropdownMenuItem>{{ t("actions.edit") }}</DropdownMenuItem>
             <DropdownMenuItem>{{ t("actions.duplicate") }}</DropdownMenuItem>
             <DropdownMenuItem>{{ t("labels.favorites") }}</DropdownMenuItem>
@@ -46,7 +46,7 @@ const task = computed(() => taskSchema.parse(props.row.original))
                   {{ t("components.dataTable.labels") }}
                 </DropdownMenuSubTrigger>
               </DropdownMenuItem>
-              <DropdownMenuSubContent class="w-50">
+              <DropdownMenuSubContent class="w-auto">
                 <DropdownMenuRadioGroup v-model="task.label">
                   <DropdownMenuRadioItem
                     v-for="label in labels"

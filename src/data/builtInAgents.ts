@@ -84,9 +84,7 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
   {
     id: "_researcher",
     name: "Researcher",
-    description:
-      "Pulls grounded answers from the workspace. Cites sources from " +
-      "the team's notes and files.",
+    description: "Grounded, cited workspace answers.",
     avatarSeed: "researcher",
     systemPromptBase:
       "You are a research assistant. Ground every claim in the team's " +
@@ -112,9 +110,7 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
   {
     id: "_writer",
     name: "Writer",
-    description:
-      "Long-form drafting persona. Structured output with clear " +
-      "headings, transitions, and a single argumentative spine.",
+    description: "Structured long-form drafts.",
     avatarSeed: "writer",
     systemPromptBase:
       "You are a long-form writing assistant. When the user asks for a " +
@@ -139,9 +135,7 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
   {
     id: "_summarizer",
     name: "Summarizer",
-    description:
-      "Terse bullet-point summaries. Pairs with `summarizeNode` for " +
-      "structured node digests.",
+    description: "Terse bullet-point summaries.",
     avatarSeed: "summarizer",
     systemPromptBase:
       "You are a summarization assistant. Your defaults are: short " +
@@ -166,9 +160,7 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
   {
     id: "_code",
     name: "Code helper",
-    description:
-      "Programming-focused persona. Reads files, suggests changes, " +
-      "and uses fenced code blocks with language tags.",
+    description: "Code edits with explained diffs.",
     avatarSeed: "code-helper",
     systemPromptBase:
       "You are a programming assistant. Default to short, direct " +

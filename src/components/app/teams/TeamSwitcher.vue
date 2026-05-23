@@ -208,7 +208,7 @@ const currentPlanLabel = computed(() => {
                       {{ t("components.teamSwitcher.menu.switchTeam") }}
                     </DropdownMenuSubTrigger>
                   </DropdownMenuItem>
-                  <DropdownMenuSubContent class="w-50">
+                  <DropdownMenuSubContent class="w-auto">
                     <DropdownMenuGroup
                       v-if="isLoading"
                       class="flex justify-center py-2"
@@ -290,7 +290,7 @@ const currentPlanLabel = computed(() => {
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-50">
+        <ContextMenuContent class="w-auto">
           <ContextMenuGroup>
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'members')"

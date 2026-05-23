@@ -282,10 +282,10 @@ const onArchiveToggle = (session: IBotSession) => {
                         <ContextMenuTrigger as-child>
                           <SidebarMenuButton
                             :is-active="item.id === activeSessionId"
-                            class="h-auto items-start gap-2 py-2 pr-8"
+                            class="h-auto items-end gap-2 py-2 pr-3.5"
                             @click="onSelectSession(item.id)"
                           >
-                            <span class="flex min-w-0 grow flex-col">
+                            <span class="flex min-w-0 grow flex-col gap-0.5">
                               <span class="flex items-center gap-2">
                                 <span class="truncate text-sm">
                                   {{ item.title || t("ai.newChat") }}

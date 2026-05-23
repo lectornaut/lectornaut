@@ -534,7 +534,7 @@ const handleEditorSave = async (): Promise<void> => {
                   {{ t("settings.agents.custom.ai.promptDescription") }}
                 </p>
               </div>
-              <InputGroup class="min-h-0 flex-1">
+              <InputGroup class="min-h-0 grow">
                 <InputGroupTextarea
                   :id="`agent-ai-prompt-${editingAgent?.id ?? 'new'}`"
                   v-model="aiPrompt"
@@ -595,7 +595,7 @@ const handleEditorSave = async (): Promise<void> => {
               </div>
               <div
                 v-if="!showPreview"
-                class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center"
+                class="flex grow flex-col items-center justify-center gap-2 p-6 text-center"
               >
                 <IconSparkles class="text-muted-foreground size-7" />
                 <p class="text-sm font-medium">
@@ -605,7 +605,7 @@ const handleEditorSave = async (): Promise<void> => {
                   {{ t("settings.agents.custom.ai.previewEmptyHint") }}
                 </p>
               </div>
-              <OverlayScrollbarsWrapper v-else class="min-h-0 flex-1">
+              <OverlayScrollbarsWrapper v-else class="min-h-0 grow">
                 <div class="flex flex-col gap-4 p-4">
                   <!-- Identity (avatar + name + description) -->
                   <div class="flex items-center gap-3">
@@ -773,7 +773,7 @@ const handleEditorSave = async (): Promise<void> => {
                       "
                       :maxlength="40"
                       :disabled="!canManage"
-                      class="flex-1"
+                      class="grow"
                     />
                   </div>
                 </Field>

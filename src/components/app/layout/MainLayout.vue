@@ -315,7 +315,7 @@ const closeTab = (id: string) => {
                   </div>
                 </ResizablePanel>
               </ContextMenuTrigger>
-              <ContextMenuContent class="w-50">
+              <ContextMenuContent class="w-auto">
                 <ContextMenuItem @click="leftPanel?.collapse()">
                   <IconX /> {{ t("tooltips.closePanel") }}
                 </ContextMenuItem>
@@ -397,7 +397,7 @@ const closeTab = (id: string) => {
                       </div>
                     </ResizablePanel>
                   </ContextMenuTrigger>
-                  <ContextMenuContent class="w-50">
+                  <ContextMenuContent class="w-auto">
                     <ContextMenuItem @click="router.go(0)">
                       <IconRefreshCcw /> {{ t("actions.refresh") }}
                     </ContextMenuItem>
@@ -630,7 +630,7 @@ const closeTab = (id: string) => {
                       </Tabs>
                     </ResizablePanel>
                   </ContextMenuTrigger>
-                  <ContextMenuContent class="w-50">
+                  <ContextMenuContent class="w-auto">
                     <ContextMenuItem
                       @click="
                         topPanel?.isCollapsed
@@ -721,7 +721,7 @@ const closeTab = (id: string) => {
                   </div>
                 </ResizablePanel>
               </ContextMenuTrigger>
-              <ContextMenuContent class="w-50">
+              <ContextMenuContent class="w-auto">
                 <ContextMenuItem @click="rightPanel?.collapse()">
                   <IconX /> {{ t("layouts.app.panel.close") }}
                 </ContextMenuItem>
@@ -838,7 +838,7 @@ const closeTab = (id: string) => {
                     </div>
                   </Draggable>
                 </ContextMenuTrigger>
-                <ContextMenuContent class="w-50">
+                <ContextMenuContent class="w-auto">
                   <ContextMenuItem
                     @click="isPoppedOutMinimized = !isPoppedOutMinimized"
                   >

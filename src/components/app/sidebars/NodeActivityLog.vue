@@ -205,7 +205,7 @@ useInfiniteScroll(
 </script>
 
 <template>
-  <div class="flex size-full min-h-0 flex-1 flex-col">
+  <div class="flex size-full min-h-0 grow flex-col">
     <OverlayScrollbarsWrapper ref="scrollableContainer">
       <div class="space-y-3 p-2">
         <div v-if="!canViewLogs" class="text-muted-foreground text-xs">

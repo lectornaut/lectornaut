@@ -79,7 +79,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="bg-sidebar shadow-muted-foreground/5 mx-2 flex flex-1 items-center gap-2 overflow-clip rounded-b-xl border-x border-b p-2 shadow-xs"
+    class="bg-sidebar shadow-muted-foreground/5 mx-2 flex grow items-center gap-2 overflow-clip rounded-b-xl border-x border-b p-2 shadow-xs"
   >
     <div class="flex items-center gap-2">
       <TooltipProvider>
@@ -129,7 +129,7 @@ onMounted(() => {
           </BreadcrumbList>
         </Breadcrumb>
       </ContextMenuTrigger>
-      <ContextMenuContent class="w-50">
+      <ContextMenuContent class="w-auto">
         <ContextMenuItem @click="router.go(0)">
           <IconRefreshCcw /> Refresh
         </ContextMenuItem>

@@ -4,6 +4,8 @@
     "placeholder": "Ask, search, or chat...",
     "mode": "Mode",
     "model": "Model",
+    "modeTooltip": "Select mode",
+    "modelTooltip": "Select model",
     "auto": "Auto",
     "agent": "Agent",
     "manual": "Manual",
@@ -67,7 +69,9 @@
     "showTools": "Show tools",
     "hideTools": "Hide tools",
     "tools": {
-      "customBadge": "Custom"
+      "customBadge": "Custom",
+      "groupBuiltIn": "Tools",
+      "groupCustom": "Custom"
     },
     "chatEmpty": "Ask anything to get started.",
     "thinking": "Thinking...",
@@ -76,6 +80,9 @@
     "messageCopied": "Copied to clipboard",
     "agents": {
       "label": "Agent:",
+      "tooltip": "Select agent",
+      "groupBuiltIn": "Agents",
+      "groupCustom": "Custom",
       "default": "Default",
       "defaultTooltip": "Use the team's default assistant for this chat.",
       "newAgent": "New agent",
@@ -1436,19 +1443,19 @@
         "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases.",
         "_researcher": {
           "label": "Researcher",
-          "description": "Pulls grounded answers from the workspace. Cites sources from the team's notes and files."
+          "description": "Grounded, cited workspace answers."
         },
         "_writer": {
           "label": "Writer",
-          "description": "Long-form drafting persona. Structured output with clear headings, transitions, and a single argumentative spine."
+          "description": "Structured long-form drafts."
         },
         "_summarizer": {
           "label": "Summarizer",
-          "description": "Terse bullet-point summaries. Pairs with the summarize-node tool for structured node digests."
+          "description": "Terse bullet-point summaries."
         },
         "_code": {
           "label": "Code helper",
-          "description": "Programming-focused persona. Reads files, suggests changes, and uses fenced code blocks with language tags."
+          "description": "Code edits with explained diffs."
         }
       },
       "customTools": {
