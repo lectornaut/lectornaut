@@ -167,7 +167,7 @@ const nodeStatusLabel = computed(() =>
     <Card v-if="summaryFeatureEnabled" size="sm" class="m-2 shadow-none">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
-          <IconSparkles class="text-muted-foreground size-4" />
+          <IconSparkles class="text-muted-foreground" />
           {{ t("inspector.summary.title") }}
         </CardTitle>
         <CardAction>

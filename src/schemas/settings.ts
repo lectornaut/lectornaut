@@ -58,6 +58,26 @@ const sizeIdSchema = z.enum(["xs", "sm", "base", "lg", "xl"])
 
 const languageIdSchema = z.enum(["en-US", "ja-JP"])
 
+const editorThemeIdSchema = z.enum([
+  "default",
+  "ayu",
+  "catppuccin",
+  "everforest",
+  "github",
+  "gruvbox",
+  "kanagawa",
+  "material",
+  "min",
+  "night-owl",
+  "one",
+  "rose-pine",
+  "slack",
+  "solarized",
+  "vitesse",
+])
+
+const editorFontSizeIdSchema = z.enum(["xs", "sm", "base", "lg", "xl"])
+
 export const settingsThemeDocSchema = z.object({
   mode: themeModeSchema.optional(),
   base: baseIdSchema.optional(),
@@ -67,6 +87,8 @@ export const settingsThemeDocSchema = z.object({
   font: fontIdSchema.optional(),
   size: sizeIdSchema.optional(),
   language: languageIdSchema.optional(),
+  editorTheme: editorThemeIdSchema.optional(),
+  editorFontSize: editorFontSizeIdSchema.optional(),
 })
 
 /**

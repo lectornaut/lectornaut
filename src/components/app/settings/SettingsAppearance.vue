@@ -2,6 +2,8 @@
 import type {
   AccentId,
   BaseId,
+  EditorFontSizeId,
+  EditorThemeId,
   FontId,
   LanguageId,
   SizeId,
@@ -11,6 +13,8 @@ import {
   bases,
   defaultCustomAccentColor,
   defaultCustomBaseColor,
+  editorFontSizes,
+  editorThemes,
   fonts,
   languages,
   sizes,
@@ -30,6 +34,20 @@ const selectedTheme = computed({
   get: () => themeSettings.value.mode,
   set: (value: ThemeMode) => {
     themeSettings.value.mode = value
+  },
+})
+
+const selectedEditorTheme = computed({
+  get: () => themeSettings.value.editorTheme,
+  set: (value: EditorThemeId) => {
+    themeSettings.value.editorTheme = value
+  },
+})
+
+const selectedEditorFontSize = computed({
+  get: () => themeSettings.value.editorFontSize,
+  set: (value: EditorFontSizeId) => {
+    themeSettings.value.editorFontSize = value
   },
 })
 
@@ -370,6 +388,64 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   <span :class="scale.style">
                     {{ scale.name }}
                   </span>
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="editor-theme">{{
+              t("settings.preferences.editorTheme.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.editorTheme.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select id="editor-theme" v-model="selectedEditorTheme">
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="t('settings.preferences.editorTheme.placeholder')"
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="theme in editorThemes"
+                  :key="theme.id"
+                  :value="theme.id"
+                >
+                  {{ theme.name }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="editor-font-size">{{
+              t("settings.preferences.editorFontSize.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.editorFontSize.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select id="editor-font-size" v-model="selectedEditorFontSize">
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="
+                  t('settings.preferences.editorFontSize.placeholder')
+                "
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="fontSize in editorFontSizes"
+                  :key="fontSize.id"
+                  :value="fontSize.id"
+                >
+                  {{ fontSize.name }}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>

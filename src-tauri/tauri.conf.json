@@ -20,7 +20,6 @@
         "minHeight": 480,
         "minWidth": 320,
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
         "zoomHotkeysEnabled": true,
         "transparent": true,
         "dragDropEnabled": false,

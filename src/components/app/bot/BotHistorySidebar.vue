@@ -60,6 +60,26 @@ const isLoadingSessions = computed(
 )
 const isMutating = computed(() => botChat?.isMutatingSession.value ?? false)
 
+// ── Compact search ───────────────────────────────────────────────────────────
+
+// The search field collapses to a single icon button to keep the header
+// compact. Clicking the button expands the input and focuses it; on blur
+// it collapses again — but only when empty, so an active query stays
+// visible and clearable instead of disappearing behind the icon.
+const searchExpanded = ref(false)
+
+const expandSearch = () => {
+  searchExpanded.value = true
+  // The input mounts via v-if, so focus on the next tick. We focus by id
+  // rather than a template ref: InputGroupInput wraps Input, and neither
+  // exposes the underlying <input> to a parent ref.
+  nextTick(() => document.getElementById("bot-history-search")?.focus())
+}
+
+const onSearchBlur = () => {
+  if (!filter.state.search.trim()) searchExpanded.value = false
+}
+
 const formatRelative = (date: Date | null): string => {
   if (!date) return ""
   const now = new Date()
@@ -204,28 +224,54 @@ const onArchiveToggle = (session: IBotSession) => {
   <Sidebar collapsible="none" class="w-full">
     <SidebarHeader>
       <div class="flex items-center justify-between gap-2">
-        <Button variant="outline" @click="onNewChat">
+        <Button variant="outline" class="grow justify-start" @click="onNewChat">
           <IconPlus />
           {{ $t("ai.newChat") }}
         </Button>
-        <InputGroup>
-          <InputGroupAddon>
+        <!-- Compact mode: the search field collapses to a single icon -->
+        <!-- button (`w-auto`) and only expands to a full input on click. -->
+        <!-- DOM order matches visual/tab order; the trailing addon keeps a -->
+        <!-- stable key so the filter menu instance survives the toggle. -->
+        <InputGroup :class="searchExpanded ? undefined : 'w-auto'">
+          <!-- Collapsed: tooltipped button standing in for the search field. -->
+          <InputGroupAddon v-if="!searchExpanded" key="search-compact">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton size="icon-xs" @click="expandSearch">
+                    <IconSearch />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>{{ $t("ai.search") }}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </InputGroupAddon>
+
+          <!-- Expanded: the real field. `@blur` collapses it back, but -->
+          <!-- only when empty (see `onSearchBlur`). -->
+          <InputGroupAddon v-if="searchExpanded" key="search-icon">
             <IconSearch />
           </InputGroupAddon>
           <InputGroupInput
+            v-if="searchExpanded"
+            id="bot-history-search"
+            key="search-input"
             v-model="filter.state.search"
             :placeholder="$t('ai.searchChats')"
+            @blur="onSearchBlur"
           />
-          <!-- Clear-search + filter menu live in a single trailing addon. -->
-          <!-- The clear button conditionally renders (only when there's a -->
-          <!-- search query); the filter menu is always available so the -->
-          <!-- user can change filters even with no search text. -->
-          <InputGroupAddon align="inline-end">
-            <TooltipProvider v-if="filter.state.search">
+
+          <!-- Always present: the clear button only shows while expanded -->
+          <!-- with a query; `@mousedown.prevent` keeps focus on the input -->
+          <!-- so clearing doesn't trigger the blur-collapse. The filter -->
+          <!-- menu stays reachable in both states. -->
+          <InputGroupAddon key="search-trailing" align="inline-end">
+            <TooltipProvider v-if="searchExpanded && filter.state.search">
               <Tooltip>
                 <TooltipTrigger as-child>
                   <InputGroupButton
                     size="icon-xs"
+                    @mousedown.prevent
                     @click="filter.state.search = ''"
                   >
                     <IconX />

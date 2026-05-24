@@ -173,6 +173,104 @@ export type SizeId = (typeof sizes)[number]["id"]
 
 export const defaultSize: SizeId = "base"
 
+// Editor (code-block) themes for markstream's Monaco/Shiki runtime.
+//
+// Each entry is a Shiki family that ships BOTH a light and a dark variant.
+// Dark/light is a separate setting (`mode`), so AppMarkdown passes both
+// `light`/`dark` variant names and markstream switches between them by the
+// resolved mode — we never branch on mode here. Families that only ship a
+// dark theme (Dracula, Nord, Monokai, Tokyo Night, Vesper, Synthwave '84, …)
+// are intentionally excluded: with a light app theme they'd have nothing to
+// fall back to. Variant names must exist in shiki@3 (stream-monaco's pinned
+// runtime); see `@shikijs/themes`. `id`s mirror `editorThemeIdSchema` in
+// `src/schemas/settings.ts` — keep them in sync.
+export const editorThemes = [
+  { id: "default", name: "Default", light: "light-plus", dark: "dark-plus" },
+  { id: "ayu", name: "Ayu", light: "ayu-light", dark: "ayu-dark" },
+  {
+    id: "catppuccin",
+    name: "Catppuccin",
+    light: "catppuccin-latte",
+    dark: "catppuccin-mocha",
+  },
+  {
+    id: "everforest",
+    name: "Everforest",
+    light: "everforest-light",
+    dark: "everforest-dark",
+  },
+  { id: "github", name: "GitHub", light: "github-light", dark: "github-dark" },
+  {
+    id: "gruvbox",
+    name: "Gruvbox",
+    light: "gruvbox-light-medium",
+    dark: "gruvbox-dark-medium",
+  },
+  {
+    id: "kanagawa",
+    name: "Kanagawa",
+    light: "kanagawa-lotus",
+    dark: "kanagawa-wave",
+  },
+  {
+    id: "material",
+    name: "Material",
+    light: "material-theme-lighter",
+    dark: "material-theme",
+  },
+  { id: "min", name: "Min", light: "min-light", dark: "min-dark" },
+  {
+    id: "night-owl",
+    name: "Night Owl",
+    light: "night-owl-light",
+    dark: "night-owl",
+  },
+  { id: "one", name: "One", light: "one-light", dark: "one-dark-pro" },
+  {
+    id: "rose-pine",
+    name: "Rosé Pine",
+    light: "rose-pine-dawn",
+    dark: "rose-pine",
+  },
+  { id: "slack", name: "Slack", light: "slack-ochin", dark: "slack-dark" },
+  {
+    id: "solarized",
+    name: "Solarized",
+    light: "solarized-light",
+    dark: "solarized-dark",
+  },
+  {
+    id: "vitesse",
+    name: "Vitesse",
+    light: "vitesse-light",
+    dark: "vitesse-dark",
+  },
+] as const
+
+export type EditorThemeId = (typeof editorThemes)[number]["id"]
+
+export const defaultEditorTheme: EditorThemeId = "default"
+
+// Editor (code-block) font sizes for markstream's Monaco runtime.
+//
+// Mirrors the global `sizes` t-shirt scale, but each entry carries an
+// explicit px `size`: Monaco's `fontSize` option is a NUMBER, not a CSS
+// class (the global `size` maps to `text-*` utilities instead). The stored
+// setting is the `id`; AppMarkdown resolves it to `size` before handing it
+// to Monaco. `id`s mirror `editorFontSizeIdSchema` in
+// `src/schemas/settings.ts` — keep them in sync.
+export const editorFontSizes = [
+  { id: "xs", name: "Extra small", size: 11 },
+  { id: "sm", name: "Small", size: 12 },
+  { id: "base", name: "Normal", size: 13 },
+  { id: "lg", name: "Large", size: 15 },
+  { id: "xl", name: "Extra large", size: 17 },
+] as const
+
+export type EditorFontSizeId = (typeof editorFontSizes)[number]["id"]
+
+export const defaultEditorFontSize: EditorFontSizeId = "base"
+
 // ────────────────────────────────────────────────────────────────────────────
 // Bot agent (workspace AI client) — model catalog + per-workspace defaults.
 // ────────────────────────────────────────────────────────────────────────────

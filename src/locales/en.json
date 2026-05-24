@@ -29,6 +29,7 @@
     "newChatHint": "Start a fresh chat with this item attached",
     "searchChats": "Search chats",
     "searchClear": "Clear search",
+    "search": "Search",
     "filterSessions": "Filter",
     "filterReset": "Reset",
     "filterOnlyShared": "Shared with me",
@@ -167,12 +168,24 @@
       "needsInput": "Needs your input",
       "running": "Running…",
       "done": "Done",
+      "answered": "Answered",
+      "failed": "Failed",
       "customAnswer": "Or type your own answer…",
       "send": "Send",
       "malformedInterrupt": "The assistant tried to ask a question but didn't include valid choices. Send another message to continue.",
-      "input": "Input",
-      "output": "Output",
       "waitingForReturn": "Waiting for tool to return…",
+      "labels": {
+        "request": "Request",
+        "response": "Response",
+        "question": "Question",
+        "answer": "Answer",
+        "location": "Location",
+        "forecast": "Forecast",
+        "result": "Result",
+        "search": "Search",
+        "results": "Results",
+        "summary": "Summary"
+      },
       "dice": {
         "rolled": "Rolled"
       },
@@ -184,14 +197,12 @@
         "empty": "No matching nodes."
       },
       "summarize": {
-        "heading": "Summary",
         "keyPoints": "Key points",
         "tags": "Tags",
         "modelFooter": "Generated with {model}",
         "errorTitle": "Couldn't summarize"
       },
       "browse": {
-        "heading": "Web search",
         "sources": "Sources"
       }
     }
@@ -747,6 +758,16 @@
         "label": "Theme",
         "description": "Choose the light, dark, or system theme.",
         "placeholder": "Select a theme"
+      },
+      "editorTheme": {
+        "label": "Editor theme",
+        "description": "Syntax highlighting theme for code blocks.",
+        "placeholder": "Select an editor theme"
+      },
+      "editorFontSize": {
+        "label": "Editor font size",
+        "description": "Font size for code blocks.",
+        "placeholder": "Select an editor font size"
       },
       "accent": {
         "label": "Accent",

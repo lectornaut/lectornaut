@@ -326,6 +326,13 @@
   --ms-text-body: 1em;
   --ms-leading-body: 1.5;
 
+  /* Route markstream's monospace (inline `code`) onto the app's mono
+   * stack so it matches the Monaco code blocks, which are pointed at the
+   * same `--font-mono` via `codeBlockMonacoOptions` in AppMarkdown.vue.
+   * markstream's own default is a platform stack (ui-monospace, …). */
+  --ms-font-mono: var(--font-mono);
+  --ms-font-weight-code: 500;
+
   /* Block-to-block gaps. 1.5em base so a paragraph break reads as clearly
    * separate — comfortably more than the line leading (line-height − 1em).
    * Code & tables sit above that base so the margin-collapse can't mask

@@ -53,8 +53,16 @@ const messageAvatarSeed = (message: BotChatMessage): string =>
 // where they belong — inline cards in the bubble.
 const { copy: copyToClipboard } = useClipboard({ legacy: true })
 
+// The model's reasoning is folded into `<thinking>…</thinking>` blocks
+// inside `content` (rendered as a collapsible disclosure). Copying or
+// quoting a message should carry the answer, not the chain-of-thought —
+// strip those blocks (including a half-open block while streaming).
+const THINKING_BLOCK_RE = /<thinking\b[^>]*>[\s\S]*?(?:<\/thinking\s*>\s*|$)/gi
+const stripThinking = (text: string): string =>
+  text.replace(THINKING_BLOCK_RE, "").trim()
+
 const handleCopyMessage = async (message: BotChatMessage) => {
-  const text = message.content
+  const text = stripThinking(message.content)
   if (!text) return
   await copyToClipboard(text)
   toast.success(t("ai.messageCopied"))
@@ -73,7 +81,7 @@ const blockquote = (text: string): string =>
 
 const handleReplyMessage = (message: BotChatMessage) => {
   if (!botChat) return
-  const text = message.content
+  const text = stripThinking(message.content)
   if (!text) return
   botChat.pendingComposerDraft.value = blockquote(text)
 }

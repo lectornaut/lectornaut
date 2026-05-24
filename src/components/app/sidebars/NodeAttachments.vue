@@ -652,7 +652,7 @@ watch(selectedCreateFiles, async (files) => {
               >
                 <Component
                   :is="resolveAttachmentIcon(attachment)"
-                  class="text-muted-foreground size-4"
+                  class="text-muted-foreground"
                 />
               </div>
 

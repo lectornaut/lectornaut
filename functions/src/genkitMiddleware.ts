@@ -15,8 +15,9 @@
  * array bottom-up):
  *
  *   1. `loggingMiddleware` — structured `[ai:middleware]` log on every
- *      call, capturing wire-name, duration, token usage, and error
- *      status. Complements `withInstrumentation` (which sits at the
+ *      call, capturing correlationId, duration, message shape, and error
+ *      status (NOT token usage — `enableFirebaseTelemetry()` owns those
+ *      metrics). Complements `withInstrumentation` (which sits at the
  *      Cloud Function boundary, one layer further out).
  *
  *   2. `tokenBudgetMiddleware` — pre-call ceiling on serialized input
@@ -122,9 +123,17 @@ function summarizeMessages(req: {
 }
 
 /**
- * Logging middleware — structured per-call telemetry. Token usage
- * comes from the model response under `usage.{input,output,total}Tokens`,
- * provider-normalized by Genkit.
+ * Logging middleware — a structured `[ai:middleware]` line per model call
+ * for ad-hoc debugging in Cloud Logging (correlationId, pass/fail, the
+ * request's message shape, and on failure the error message).
+ *
+ * Deliberately does NOT log token usage: `enableFirebaseTelemetry()`
+ * (wired up in `genkitClient.ts`) already emits authoritative
+ * input/output/thinking token + latency metrics to Cloud Monitoring,
+ * dimensioned by model and feature. Re-logging the same numbers here would
+ * just be a second, lower-fidelity copy — so this layer sticks to the
+ * qualitative context telemetry metrics don't carry (which call, what
+ * shape, did it fail) and leaves usage/latency METRICS to telemetry.
  */
 export const loggingMiddleware: ModelMiddleware = async (req, next) => {
   const correlationId = generateId()
@@ -133,15 +142,11 @@ export const loggingMiddleware: ModelMiddleware = async (req, next) => {
 
   try {
     const resp = await next(req)
-    const usage = (resp as { usage?: Record<string, unknown> }).usage ?? {}
     logger.info("[ai:middleware]", {
       correlationId,
       ok: true,
       durationMs: Date.now() - startTime,
       ...summary,
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      totalTokens: usage.totalTokens,
     })
     return resp
   } catch (err) {

@@ -29,6 +29,7 @@
  */
 
 import { onCallGenkit } from "firebase-functions/https"
+import * as logger from "firebase-functions/logger"
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https"
 import {
   z,
@@ -74,6 +75,7 @@ import { listBuiltInAgents } from "./builtInAgents.js"
 import { admin, db } from "./firebase.js"
 import {
   ai,
+  getModelProvider,
   isAiModelProviderConfigured,
   resolveModel,
 } from "./genkitClient.js"
@@ -86,6 +88,7 @@ import {
   listTeamCustomTools,
 } from "./teamCustomTools.js"
 import type { IMembershipRole } from "./types.js"
+import { generateId } from "./utilities.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
 // it from `CallableRequest["auth"]` to avoid reaching into internal paths.
@@ -144,6 +147,12 @@ interface ToolResponseLike {
 
 interface PartLike {
   text?: string
+  /**
+   * Model chain-of-thought, emitted as its own part by Gemini when
+   * `thinkingConfig.includeThoughts` is on. We fold runs of these into
+   * `<thinking>…</thinking>` so the chat renderer shows them collapsibly.
+   */
+  reasoning?: string
   toolRequest?: ToolRequestLike
   toolResponse?: ToolResponseLike
   /**
@@ -160,6 +169,71 @@ interface PartLike {
 interface MessageLike {
   role?: string
   content?: PartLike[] | string
+}
+
+const THINKING_BLOCK_RE = /<thinking\b[^>]*>[\s\S]*?(?:<\/thinking\s*>\s*|$)/gi
+
+function escapeThinkingMarkdown(text: string): string {
+  return text.replace(/</g, "&lt;")
+}
+
+function stripThinkingBlocks(text: string): string {
+  return text.replace(THINKING_BLOCK_RE, "").trim()
+}
+
+/**
+ * Folds a model turn's `reasoning` parts into a single
+ * `<thinking>…</thinking>` block so the chat surface's `BotThinkingBlock`
+ * custom-tag renderer turns them into a collapsible disclosure. Gemini
+ * (with `thinkingConfig.includeThoughts`) emits reasoning as its own
+ * `{ reasoning }` parts, interleaved before the answer; this tracks the
+ * open/close state so a contiguous run becomes one tag. `emit` is the
+ * per-sink writer: a stream `chunk` payload (server→client) while live
+ * streaming, or `appendText` into the persisted bubble during
+ * reconstruction.
+ */
+function createThinkingFolder(emit: (text: string) => void) {
+  let open = false
+  return {
+    /** Feed a `reasoning` part; opens the tag on the first non-empty run. */
+    reasoning(text: string): void {
+      if (!text) return
+      if (!open) {
+        emit("<thinking>")
+        open = true
+      }
+      // Keep streamed model text from closing or nesting the wrapper tag.
+      emit(escapeThinkingMarkdown(text))
+    },
+    /** Close the tag if open — call before any non-reasoning part and at end. */
+    close(): void {
+      if (!open) return
+      emit("</thinking>\n\n")
+      open = false
+    },
+  }
+}
+
+/**
+ * Thinking budget (tokens) requested from Anthropic when extended thinking
+ * is enabled. Must be ≥ 1024 (Anthropic's minimum). Gemini manages its own
+ * budget dynamically, so this is Anthropic-only. We add it on top of the
+ * agent's `maxOutputTokens` so the answer keeps its full allotment.
+ */
+const ANTHROPIC_THINKING_BUDGET_TOKENS = 2048
+
+/**
+ * Whether a model wire-name exposes chain-of-thought we can surface as
+ * `<thinking>` blocks. Gemini gained it in 2.5 (2.0-flash/-lite have none);
+ * Claude exposes it on 3.7 and the 4.x line. OpenAI's offered `gpt-4*`
+ * aren't reasoning models, so they return nothing to fold — and if a
+ * compatible endpoint ever emits `reasoning_content`, the shared fold picks
+ * it up regardless of this gate.
+ */
+function modelSupportsThinking(name: string): boolean {
+  if (/^gemini-(2\.5|3)/.test(name)) return true
+  if (/^claude-(3-7|(opus|sonnet|haiku)-4)/.test(name)) return true
+  return false
 }
 
 /**
@@ -252,7 +326,17 @@ export function extractMessagesFromSessionData(
     if (!Array.isArray(content)) continue
 
     const agent = ensureAgent()
+    const thinking = createThinkingFolder((text) => appendText(agent, text))
     for (const part of content) {
+      // Gemini reasoning parts (thinkingConfig.includeThoughts) arrive
+      // before the answer — fold a contiguous run into one <thinking>
+      // block the chat surface renders as a collapsible disclosure.
+      if (typeof part?.reasoning === "string" && part.reasoning) {
+        thinking.reasoning(part.reasoning)
+        continue
+      }
+      // Any non-reasoning part ends the reasoning run.
+      thinking.close()
       if (typeof part?.text === "string" && part.text) {
         appendText(agent, part.text)
         continue
@@ -306,6 +390,9 @@ export function extractMessagesFromSessionData(
         }
       }
     }
+    // A turn that ended on reasoning (no trailing answer text) still
+    // needs the tag closed so the disclosure renders.
+    thinking.close()
   }
   closeAgent()
   return messages
@@ -329,7 +416,7 @@ function derivePreview(
   maxLength: number = PREVIEW_MAX_LENGTH
 ): string {
   const last = messages[messages.length - 1]
-  const source = last?.content?.trim() ?? ""
+  const source = stripThinkingBlocks(last?.content ?? "")
   if (!source) return ""
   const collapsed = source.replace(/\s+/g, " ")
   return collapsed.length > maxLength
@@ -501,8 +588,12 @@ class FirestoreBotSessionStore implements SessionStore {
     // appended by `sendBotMessage` (one per successful turn); they're
     // never inserted in the middle of the thread or removed.
     if (this.senderUid) {
-      const priorMessages =
-        (snap.data()?.messages as ChatMessage[] | undefined) ?? []
+      const priorDoc = snap.data()
+      const priorMessages = Array.isArray(priorDoc?.messages)
+        ? (priorDoc.messages as ChatMessage[])
+        : extractMessagesFromSessionData(
+            priorDoc?.data as SessionData | undefined
+          )
       const priorUserAuthors: (string | undefined)[] = []
       for (const m of priorMessages) {
         if (m?.role === "user") priorUserAuthors.push(m.authorUid)
@@ -510,8 +601,12 @@ class FirestoreBotSessionStore implements SessionStore {
       let userIndex = 0
       for (const m of messages) {
         if (m.role !== "user") continue
-        const carried = priorUserAuthors[userIndex]
-        m.authorUid = carried ?? this.senderUid
+        if (userIndex < priorUserAuthors.length) {
+          const carried = priorUserAuthors[userIndex]
+          if (carried) m.authorUid = carried
+        } else {
+          m.authorUid = this.senderUid
+        }
         userIndex++
       }
     }
@@ -815,6 +910,105 @@ async function commitTransferIfRequested(
 }
 
 // ===========================================================================
+// Per-session turn lock — serializes concurrent turns on one session
+// ===========================================================================
+
+/**
+ * Lease duration for a per-session turn lock. Must cover the worst-case
+ * turn so the lock can't expire mid-turn and let a second writer in: a turn
+ * is bounded by `TURN_DEADLINE_MS` (90s) and the Cloud Function by
+ * `GENKIT_OPTS.timeoutSeconds` (120s). We lease for the function timeout —
+ * if the instance is hard-killed mid-turn (so the caller's `finally` never
+ * runs), the lock self-expires after this window and the chat is usable
+ * again instead of being wedged forever.
+ */
+const SESSION_LOCK_LEASE_MS = 120_000
+
+/** Releases a previously-acquired session turn lock. Idempotent + safe to
+ *  call unconditionally — the no-op variant is returned for new sessions. */
+type ReleaseLock = () => Promise<void>
+const NOOP_RELEASE: ReleaseLock = async () => {}
+
+/**
+ * Acquire an exclusive per-session turn lock so two concurrent turns on the
+ * same session can't both read the thread, append, and save — Genkit's
+ * `SessionStore` is last-write-wins with no version guard, so without this a
+ * simultaneous send (common in shared chats where several admins post into
+ * one session) silently drops one side's message + reply.
+ *
+ * Stored as a dedicated lease doc (NOT a field on the session doc) so it
+ * neither churns the client's real-time session listeners nor has to ride
+ * through the client read schema. Clients can't touch it — writes are
+ * Cloud-Functions-only and the collection falls under Firestore's
+ * default-deny rule.
+ *
+ * Transactional + lease-based: acquisition fails fast with an `aborted`
+ * HttpsError when an unexpired lock is held (the second sender is told to
+ * wait rather than losing their turn), and the lease bounds how long a
+ * crashed instance can wedge the chat. The returned release only clears the
+ * lock when our token still owns it, so a turn that overran its lease can't
+ * delete a later turn's freshly-acquired lock.
+ *
+ * MUST be acquired before the thread is read (`ai.loadSession` inside
+ * `prepareChatTurn`): acquiring after the read would leave a window where
+ * another turn completes between our read and our acquire, handing us a
+ * stale base we'd then clobber on save.
+ */
+async function acquireSessionTurnLock(
+  teamId: string,
+  workspaceId: string,
+  sessionId: string
+): Promise<ReleaseLock> {
+  const ref = db.doc(
+    `teams/${teamId}/workspaces/${workspaceId}/botSessionLocks/${sessionId}`
+  )
+  const token = generateId()
+  const now = Date.now()
+  const expiresAt = admin.firestore.Timestamp.fromMillis(
+    now + SESSION_LOCK_LEASE_MS
+  )
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    const existingExpiry = snap.exists
+      ? (snap.get("expiresAt") as admin.firestore.Timestamp | undefined)
+      : undefined
+    if (existingExpiry && existingExpiry.toMillis() > now) {
+      throw new HttpsError(
+        "aborted",
+        "This chat is already processing a message. Wait for the current " +
+          "reply to finish, then try again."
+      )
+    }
+    tx.set(ref, {
+      token,
+      expiresAt,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+  })
+
+  return async () => {
+    try {
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref)
+        // Only the owner clears the lock — if our lease already expired and
+        // a later turn re-acquired, its token differs and we leave it be.
+        if (snap.exists && snap.get("token") === token) {
+          tx.delete(ref)
+        }
+      })
+    } catch (err) {
+      // Release failure is non-fatal: the lease guarantees the lock clears
+      // on its own. Log so a persistent failure is visible.
+      logger.warn(
+        `[botSessionLock] release failed team=${teamId} workspace=${workspaceId} session=${sessionId}`,
+        { err: String(err) }
+      )
+    }
+  }
+}
+
+// ===========================================================================
 // Auth helpers
 // ===========================================================================
 
@@ -1069,16 +1263,23 @@ interface ChatStreamResult {
  * `refKey()` so the dedup aligns for the rare case where Genkit emits
  * a ref-less tool part. In practice every modern provider supplies
  * stable refs and the fallback is just belt-and-suspenders.
+ * The counts are returned too so live-stream fallback keys can continue
+ * from the pre-turn sequence instead of colliding with a historical
+ * ref-less tool event that happened to share the same name.
  */
 function collectPriorTurnToolRefs(data: SessionData | undefined): {
   calls: string[]
   results: string[]
+  callCount: number
+  resultCount: number
 } {
   const calls: string[] = []
   const results: string[] = []
-  if (!data?.threads) return { calls, results }
+  if (!data?.threads) return { calls, results, callCount: 0, resultCount: 0 }
   const thread = data.threads[MAIN_THREAD]
-  if (!Array.isArray(thread)) return { calls, results }
+  if (!Array.isArray(thread)) {
+    return { calls, results, callCount: 0, resultCount: 0 }
+  }
   let callSeq = 0
   let resultSeq = 0
   for (const raw of thread as MessageLike[]) {
@@ -1099,7 +1300,7 @@ function collectPriorTurnToolRefs(data: SessionData | undefined): {
       }
     }
   }
-  return { calls, results }
+  return { calls, results, callCount: callSeq, resultCount: resultSeq }
 }
 
 /**
@@ -1128,6 +1329,10 @@ function collectPriorTurnToolRefs(data: SessionData | undefined): {
  *   - Both fields are populated from the pre-turn session thread (see
  *     `collectPriorTurnToolRefs`) so the sweep doesn't resurface
  *     historical tool round-trips into the new turn's agent bubble.
+ *   - `preExistingTool*Count` seeds the no-ref fallback sequence for
+ *     live chunks. Without the offset, a ref-less current-turn call like
+ *     `getWeather#0` could collide with an older ref-less `getWeather#0`
+ *     that was intentionally pre-marked as already sent.
  *
  * Returns the resolved final response so the caller can use
  * `final.text` for the unary reply.
@@ -1158,24 +1363,37 @@ function isToolIterationsExceededError(err: unknown): boolean {
  * Per-turn hard deadline. The provider call (Gemini / Claude / OpenAI)
  * can hang indefinitely on a bad day — flaky network, provider
  * incident, model that gets stuck mid-thought. Without a deadline the
- * Cloud Function consumes its whole `timeoutSeconds` (typically 540s)
- * before returning anything to the client, who sees a generic
+ * Cloud Function consumes its whole `timeoutSeconds` (`GENKIT_OPTS` =
+ * 120s) before returning anything to the client, who sees a generic
  * INTERNAL error long after the user moved on.
  *
  * 90s is generous for normal turns (most complete inside ~10s) and
  * tight enough to fail fast on hung providers. Teams paying for
  * top-tier models occasionally hit ~60s legitimately during heavy
- * tool chains, so we leave headroom.
+ * tool chains, so we leave headroom. MUST stay below
+ * `GENKIT_OPTS.timeoutSeconds` so this deadline (and its graceful
+ * fallback) wins the race against the Cloud Functions hard-kill.
  *
- * Note: this cancels OUR awaiting of the response, not the model
- * call itself. Genkit doesn't yet expose an abort signal we can
- * plumb into the underlying provider client, so the model keeps
- * computing in the background until either it finishes (and we
- * ignore the result) or the Cloud Function instance recycles. The
- * user-visible behavior is the same — a graceful fallback chunk
- * instead of a 540s hang.
+ * On expiry we abort the provider call via the turn's `AbortController`
+ * (Genkit forwards the signal into the model SDK's fetch — verified for
+ * the Anthropic/Google runners), so the model actually STOPS computing
+ * rather than finishing in the background and wasting tokens/quota. The
+ * user gets a graceful fallback chunk instead of a 120s hang.
  */
 const TURN_DEADLINE_MS = 90_000
+
+/**
+ * Tool-call iteration budget for a single chat turn (Genkit's `maxTurns`).
+ * Genkit defaults to 5; we raise it because this bot's agents legitimately
+ * chain tools — e.g. `searchWorkspaceNodes` to locate a node, then
+ * `summarizeNode` on the match, plus the occasional `browseInternet` /
+ * `askQuestion` / `transferToAgent` — and 5 is easy to exhaust, tripping
+ * the "maximum tool call iterations" abort (handled gracefully below, but
+ * a premature give-up the user feels as "it stopped halfway"). 8 covers
+ * realistic chains while still bounding runaway tool loops (and the
+ * per-turn token budget + wall-clock deadline remain the hard backstops).
+ */
+const TOOL_MAX_TURNS = 8
 
 /**
  * Thrown from the timeout race below so the outer catch can distinguish
@@ -1196,6 +1414,16 @@ async function streamChatToClient(
   options: {
     preSentToolCalls?: Iterable<string>
     preSentToolResults?: Iterable<string>
+    preExistingToolCallCount?: number
+    preExistingToolResultCount?: number
+    /**
+     * The turn's AbortController, whose `signal` was passed into
+     * `chat.sendStream(...)`. On deadline expiry we `.abort()` it so the
+     * underlying provider request is actually cancelled (Genkit forwards
+     * the signal to the model SDK's fetch) instead of finishing in the
+     * background. Optional so non-deadline-sensitive callers can omit it.
+     */
+    abortController?: AbortController
   } = {}
 ): Promise<Awaited<ChatStreamResult["response"]>> {
   // Race the actual stream consumer against a wall-clock deadline.
@@ -1207,17 +1435,28 @@ async function streamChatToClient(
   // On timeout we send the user a graceful fallback chunk and return
   // a stub response — the model call itself may still be in flight
   // (no abort signal hook into Genkit yet), but the user has their
-  // answer and the function can return cleanly. The wasted compute
-  // is the price of not hanging the whole Cloud Function.
+  // answer and the function can return cleanly. Late chunks from the
+  // still-draining stream are ignored by the guarded sender below. The
+  // wasted compute is the price of not hanging the whole Cloud Function.
   let timer: NodeJS.Timeout | undefined
+  let timedOut = false
+  const guardedSendChunk = (chunk: SendBotMessageStreamPayload) => {
+    if (!timedOut) sendChunk(chunk)
+  }
   try {
     return await Promise.race([
-      streamChatToClientInner(result, sendChunk, options),
+      streamChatToClientInner(result, guardedSendChunk, options),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new TurnTimeoutError()),
-          TURN_DEADLINE_MS
-        )
+        timer = setTimeout(() => {
+          timedOut = true
+          // Cancel the in-flight provider call so it stops burning tokens
+          // the instant we give up on it. Genkit relays this signal down to
+          // the model SDK's fetch; the now-rejecting inner stream is a
+          // settled loser of the race, so its rejection is already handled
+          // and won't surface as an unhandledRejection.
+          options.abortController?.abort()
+          reject(new TurnTimeoutError())
+        }, TURN_DEADLINE_MS)
       }),
     ])
   } catch (err) {
@@ -1249,6 +1488,8 @@ async function streamChatToClientInner(
   options: {
     preSentToolCalls?: Iterable<string>
     preSentToolResults?: Iterable<string>
+    preExistingToolCallCount?: number
+    preExistingToolResultCount?: number
   } = {}
 ): Promise<Awaited<ChatStreamResult["response"]>> {
   const sentToolCalls = new Set<string>(options.preSentToolCalls ?? [])
@@ -1259,14 +1500,24 @@ async function streamChatToClientInner(
     seq: number
   ): string => `${kind}:${part.ref ?? `${part.name}#${seq}`}`
 
-  let liveCallSeq = 0
-  let liveResultSeq = 0
+  let liveCallSeq = options.preExistingToolCallCount ?? 0
+  let liveResultSeq = options.preExistingToolResultCount ?? 0
+  const thinking = createThinkingFolder((text) => sendChunk({ chunk: text }))
   for await (const chunk of result.stream) {
     // Iterate parts directly — `chunk.text` collapses text parts and
     // hides tool requests/responses. Only the parts walk gives us
     // structured access to the tool round-trip.
     const parts = chunk.content ?? []
     for (const part of parts) {
+      // Gemini reasoning deltas (thinkingConfig.includeThoughts) stream
+      // before the answer — fold a contiguous run into one <thinking>
+      // block the chat surface renders as a collapsible disclosure.
+      if (typeof part.reasoning === "string" && part.reasoning) {
+        thinking.reasoning(part.reasoning)
+        continue
+      }
+      // Any non-reasoning part ends the reasoning run.
+      thinking.close()
       if (typeof part.text === "string" && part.text) {
         sendChunk({ chunk: part.text })
         continue
@@ -1307,6 +1558,9 @@ async function streamChatToClientInner(
       }
     }
   }
+
+  // Close a reasoning run the model didn't follow with any answer text.
+  thinking.close()
 
   // `result.response` rejects with a `GenkitError` whose `status` is
   // `ABORTED` when the model exhausts its tool-call budget without
@@ -1457,14 +1711,30 @@ async function prepareChatTurn(opts: {
     archivedSessionMessage,
   } = opts
 
-  const role = await getMembershipRole(teamId, auth.uid)
+  // Per-turn setup opens with three independent Firestore reads — the
+  // caller's membership role, the existing session doc (when resuming),
+  // and the team agent config. None depends on the others, so we issue
+  // them concurrently and collapse three sequential round-trips into one.
+  // The permission gate below runs on the resolved values, preserving the
+  // original error precedence (membership → existence → archived →
+  // edit-rights): if `getMembershipRole` rejects, `Promise.all` rejects
+  // with that same error first.
+  const [role, loadedSession, agentConfig] = await Promise.all([
+    getMembershipRole(teamId, auth.uid),
+    sessionId
+      ? readSessionDoc(teamId, workspaceId, sessionId)
+      : Promise.resolve(null),
+    // Agent config drives model, prompt, tools, generation knobs, and the
+    // SessionStore's title/preview lengths. Not cached — admin settings
+    // changes should apply on the next send, not after a deploy.
+    loadTeamAgentConfig(teamId),
+  ])
 
   // Edit-permission gate. The owner always has edit; for shared sessions,
   // team admins also have edit. Archived sessions reject regardless of
   // role — archiving is a soft "read-only" flag.
-  let existingSession: BotSessionDocSummary | null = null
+  const existingSession: BotSessionDocSummary | null = loadedSession
   if (sessionId) {
-    existingSession = await readSessionDoc(teamId, workspaceId, sessionId)
     if (!existingSession) {
       throw new HttpsError("not-found", "Session not found.")
     }
@@ -1485,13 +1755,6 @@ async function prepareChatTurn(opts: {
     // pending interrupt lives inside the SessionData blob.
     throw new HttpsError("invalid-argument", "sessionId is required.")
   }
-
-  // Load the team's agent config — drives model, prompt, tools, generation
-  // knobs, and the SessionStore's title/preview lengths. One Firestore
-  // read per turn (negligible against model latency); we intentionally
-  // don't cache because admin settings changes should apply on the next
-  // send, not after a deploy.
-  const agentConfig = await loadTeamAgentConfig(teamId)
 
   // Resolve active agent. Lookup precedence: input override →
   // session-persisted → null (team default). Two independently-gated
@@ -1525,6 +1788,11 @@ async function prepareChatTurn(opts: {
     sessionPersistedId: existingSession?.activeAgentId ?? null,
     availableAgents,
   })
+  // Preserve the original session owner on shared-chat admin writes.
+  // `auth.uid` is the actor for this turn; it is only the owner for new
+  // sessions. Rewriting `ownerUid` on every save would silently transfer
+  // shared chats to whichever admin replied most recently.
+  const sessionOwnerUid = existingSession?.ownerUid ?? auth.uid
 
   // What gets persisted on the doc this turn. Three cases:
   //   - undefined: client didn't send the field → leave the doc's
@@ -1555,13 +1823,13 @@ async function prepareChatTurn(opts: {
   // new session" crisp.
   const newSessionPinnedNodeKey =
     !sessionId && pinnedNode
-      ? pinnedNodeKey(auth.uid, pinnedNode.scope, pinnedNode.nodeId)
+      ? pinnedNodeKey(sessionOwnerUid, pinnedNode.scope, pinnedNode.nodeId)
       : undefined
 
   const store = new FirestoreBotSessionStore({
     teamId,
     workspaceId,
-    ownerUid: auth.uid,
+    ownerUid: sessionOwnerUid,
     titleMaxLength: agentConfig.titleMaxLength,
     previewMaxLength: agentConfig.previewMaxLength,
     pinnedNodeKey: newSessionPinnedNodeKey,
@@ -1572,20 +1840,28 @@ async function prepareChatTurn(opts: {
     turnActiveAgentId: persistedActiveAgentId,
   })
 
-  const session = sessionId
-    ? await ai.loadSession(sessionId, { store })
-    : ai.createSession({ store })
-
-  // Resolve attached workspace nodes into a context block. Missing /
-  // archived nodes are silently skipped so a stale chip doesn't fail
-  // the turn. Capped upstream at `CONTEXT_NODE_MAX = 10`.
-  // `loadAndBuildContextBlock` parallelizes the per-node Firestore +
-  // Storage fetches.
-  const contextBlock = await loadAndBuildContextBlock(
-    teamId,
-    workspaceId,
-    contextNodes
-  )
+  // Three independent reads remain — the session blob (Genkit's store
+  // round-trip), the attached-node context block, and the team's custom
+  // tools. None depends on the others, so fan them out together rather
+  // than awaiting in series.
+  //   - `loadAndBuildContextBlock` resolves attached workspace nodes into
+  //     a prompt block, itself parallelizing the per-node Firestore +
+  //     Storage fetches; missing / archived nodes are silently skipped so
+  //     a stale chip doesn't fail the turn (capped upstream at
+  //     `CONTEXT_NODE_MAX`).
+  //   - Custom tools are admin-authored Genkit tools gated by the
+  //     team-wide `customTools` flag; the factory rebuilds each one per
+  //     turn so admin schema changes propagate without a deploy. Empty
+  //     when the feature is off OR the team has none.
+  const [session, contextBlock, customTools] = await Promise.all([
+    sessionId
+      ? ai.loadSession(sessionId, { store })
+      : Promise.resolve(ai.createSession({ store })),
+    loadAndBuildContextBlock(teamId, workspaceId, contextNodes),
+    agentConfig.tools.customTools
+      ? listTeamCustomTools(teamId)
+      : Promise.resolve([] as Awaited<ReturnType<typeof listTeamCustomTools>>),
+  ])
 
   // Transfer roster — other agents the active one can hand off to.
   // When a custom agent is active we include the team default
@@ -1593,15 +1869,6 @@ async function prepareChatTurn(opts: {
   // When no agent is active, only custom agents are eligible targets.
   const transferRoster = buildTransferRoster(activeAgent, availableAgents)
 
-  // Custom tools — admin-authored Genkit tools. Gated by the team-wide
-  // `customTools` feature flag. The list returned is every enabled +
-  // non-archived doc; the tool factory rebuilds each one as a Genkit
-  // tool every turn so admin schema changes propagate without a
-  // deploy. Empty list when the feature is off OR the team has no
-  // custom tools.
-  const customTools = agentConfig.tools.customTools
-    ? await listTeamCustomTools(teamId)
-    : []
   const dispatchableCustomTools = customTools.filter(
     (tool) => tool.enabled && !tool.archivedAt
   )
@@ -1622,9 +1889,9 @@ async function prepareChatTurn(opts: {
     effectiveModel,
   }
 
-  // Tool catalog — `manual` mode strips action tools; per-team toggles
-  // strip individual tools; the active agent layers ON TOP (a tool
-  // fires only when both team AND agent allow it). `transferToAgent`
+  // Tool catalog — mode steers prompt style only; per-team toggles strip
+  // individual tools; the active agent layers ON TOP (a tool fires only
+  // when both team AND agent allow it). `transferToAgent`
   // joins the catalog only when at least one other agent is reachable.
   // Custom tools are appended after the built-ins; each one rebuilds
   // its Genkit registration per-turn (admin schema changes apply
@@ -1663,21 +1930,52 @@ async function prepareChatTurn(opts: {
     ? `${baseSystem}\n\n${contextBlock}`
     : baseSystem
 
+  // Per-provider "thinking" enablement. The stream + reconstruction fold
+  // any resulting `reasoning` parts into <thinking> blocks uniformly
+  // (createThinkingFolder), so this only controls how each provider is
+  // asked to emit reasoning in the first place:
+  //   - Gemini (2.5+/3): `thinkingConfig.includeThoughts`.
+  //   - Claude (3.7/4+): the beta API surface + a `thinking` budget.
+  //     Anthropic rejects temperature/top_p/top_k alongside thinking and
+  //     requires max_tokens > budget, so we drop the sampling knobs and add
+  //     the budget on top of the agent's answer allotment.
+  //   - OpenAI gpt-4*: not reasoning models, nothing to enable;
+  //     `reasoning_content` from a compatible endpoint is still folded.
+  const provider = getModelProvider(effectiveModel)
+  const sampling = {
+    temperature: agentConfig.temperature,
+    topP: agentConfig.topP,
+    topK: agentConfig.topK,
+    maxOutputTokens: agentConfig.maxOutputTokens,
+  }
+  let turnConfig: Record<string, unknown> = sampling
+  if (modelSupportsThinking(effectiveModel)) {
+    if (provider === "google") {
+      turnConfig = { ...sampling, thinkingConfig: { includeThoughts: true } }
+    } else if (provider === "anthropic") {
+      turnConfig = {
+        maxOutputTokens:
+          agentConfig.maxOutputTokens + ANTHROPIC_THINKING_BUDGET_TOKENS,
+        apiVersion: "beta",
+        thinking: {
+          enabled: true,
+          budgetTokens: ANTHROPIC_THINKING_BUDGET_TOKENS,
+        },
+      }
+    }
+  }
+
   const chat = session.chat({
     model: resolveModel(effectiveModel),
     system: systemPrompt,
     tools: chatTools,
     context: actionContext,
-    config: {
-      temperature: agentConfig.temperature,
-      topP: agentConfig.topP,
-      topK: agentConfig.topK,
-      maxOutputTokens: agentConfig.maxOutputTokens,
-    },
-    // Middleware stack applied to every turn: logging captures token
-    // usage; the budget gate trips before a runaway context window
-    // reaches the provider; the redactor scrubs PII out of user parts
-    // only (tool outputs and system prompt pass through unchanged).
+    config: turnConfig,
+    // Middleware stack applied to every turn: logging emits a structured
+    // debug line (token/latency metrics come from Firebase telemetry, not
+    // here); the budget gate trips before a runaway context window reaches
+    // the provider; the redactor scrubs PII out of user parts only (tool
+    // outputs and system prompt pass through unchanged).
     use: aiMiddlewares(),
   })
 
@@ -1703,58 +2001,91 @@ const sendBotMessageFlow = ai.defineFlow(
       throw new HttpsError("invalid-argument", "message cannot be empty.")
     }
 
-    const { chat, session, actionContext, existingSession } =
-      await prepareChatTurn({
-        auth,
-        teamId: input.teamId,
-        workspaceId: input.workspaceId,
-        sessionId: input.sessionId ?? null,
-        mode: input.mode,
-        contextNodes: input.contextNodes,
-        activeAgentId: input.activeAgentId,
-        model: input.model,
-        pinnedNode: input.pinnedNode,
-        requireExistingSession: false,
-        archivedSessionMessage:
-          "This chat is archived. Restore it before sending new messages.",
-      })
+    // Serialize turns per existing session so two concurrent sends (common
+    // in shared chats where several admins post into one session) can't both
+    // load the same thread and clobber each other on save — Genkit's
+    // SessionStore is last-write-wins with no version guard. Acquired BEFORE
+    // prepareChatTurn (whose loadSession reads the thread) so the base we
+    // build on is current; new sessions (no sessionId) have a fresh id
+    // nothing else knows yet, so they can't contend and skip the lock.
+    // Released in the finally below — including on a permission/not-found
+    // throw from prepareChatTurn — so a rejected turn never wedges the chat.
+    const releaseLock = input.sessionId
+      ? await acquireSessionTurnLock(
+          input.teamId,
+          input.workspaceId,
+          input.sessionId
+        )
+      : NOOP_RELEASE
+    try {
+      const { chat, session, actionContext, existingSession } =
+        await prepareChatTurn({
+          auth,
+          teamId: input.teamId,
+          workspaceId: input.workspaceId,
+          sessionId: input.sessionId ?? null,
+          mode: input.mode,
+          contextNodes: input.contextNodes,
+          activeAgentId: input.activeAgentId,
+          model: input.model,
+          pinnedNode: input.pinnedNode,
+          requireExistingSession: false,
+          archivedSessionMessage:
+            "This chat is archived. Restore it before sending new messages.",
+        })
 
-    // Emit the session id before we touch the model. For brand-new sessions
-    // this lets the client update the URL immediately; for resumed sessions
-    // it's a redundant confirmation but harmless.
-    sendChunk({ sessionId: session.id })
+      // Emit the session id before we touch the model. For brand-new sessions
+      // this lets the client update the URL immediately; for resumed sessions
+      // it's a redundant confirmation but harmless.
+      sendChunk({ sessionId: session.id })
 
-    // Pre-mark every historical tool-call/result ref so the post-stream
-    // sweep doesn't re-emit them into the new turn's agent bubble. See
-    // `collectPriorTurnToolRefs` for the why — empty arrays for a brand-
-    // new session (no existingSession), so this is a no-op on first turns.
-    const priorRefs = collectPriorTurnToolRefs(existingSession?.data)
+      // Pre-mark every historical tool-call/result ref so the post-stream
+      // sweep doesn't re-emit them into the new turn's agent bubble. See
+      // `collectPriorTurnToolRefs` for the why — empty arrays for a brand-
+      // new session (no existingSession), so this is a no-op on first turns.
+      const priorRefs = collectPriorTurnToolRefs(existingSession?.data)
 
-    const final = await streamChatToClient(
-      chat.sendStream(message) as ChatStreamResult,
-      sendChunk,
-      {
-        preSentToolCalls: priorRefs.calls,
-        preSentToolResults: priorRefs.results,
+      // Per-turn AbortController: its signal rides into `sendStream` and the
+      // deadline race (`streamChatToClient`) aborts it on expiry, so a hung
+      // provider call is genuinely cancelled rather than left to finish in the
+      // background. `maxTurns` raises Genkit's default tool-iteration budget
+      // for this bot's legitimately tool-chaining agents.
+      const turnAbort = new AbortController()
+      const final = await streamChatToClient(
+        chat.sendStream({
+          prompt: message,
+          abortSignal: turnAbort.signal,
+          maxTurns: TOOL_MAX_TURNS,
+        }) as ChatStreamResult,
+        sendChunk,
+        {
+          abortController: turnAbort,
+          preSentToolCalls: priorRefs.calls,
+          preSentToolResults: priorRefs.results,
+          preExistingToolCallCount: priorRefs.callCount,
+          preExistingToolResultCount: priorRefs.resultCount,
+        }
+      )
+
+      // Post-turn: commit any cross-agent transfer the model requested
+      // via `transferToAgent`. The in-turn `store.save()` already wrote
+      // the pre-turn agent id; this follow-up merge updates the doc to
+      // the new owner so the next user message routes correctly. Skipped
+      // on partial turns (errors above this point throw before reaching
+      // here, leaving the doc on the pre-turn agent — the safer fallback).
+      await commitTransferIfRequested(
+        input.teamId,
+        input.workspaceId,
+        session.id,
+        actionContext
+      )
+
+      return {
+        sessionId: session.id,
+        reply: final.text,
       }
-    )
-
-    // Post-turn: commit any cross-agent transfer the model requested
-    // via `transferToAgent`. The in-turn `store.save()` already wrote
-    // the pre-turn agent id; this follow-up merge updates the doc to
-    // the new owner so the next user message routes correctly. Skipped
-    // on partial turns (errors above this point throw before reaching
-    // here, leaving the doc on the pre-turn agent — the safer fallback).
-    await commitTransferIfRequested(
-      input.teamId,
-      input.workspaceId,
-      session.id,
-      actionContext
-    )
-
-    return {
-      sessionId: session.id,
-      reply: final.text,
+    } finally {
+      await releaseLock()
     }
   }
 )
@@ -1857,10 +2188,12 @@ interface ToolRequestPartLike {
  * application has not yet responded to.
  *
  * "Pending" means: a model-message `toolRequest` with `metadata.interrupt`
- * (or a name in our interrupt-tool catalog) for which no subsequent
- * `toolResponse` part with the same `ref` exists in the thread. We scan
- * the entire thread (not just the last message) for safety; in practice
- * pending interrupts only ever live on the latest model message.
+ * (or a name in our interrupt-tool catalog) for which no later
+ * `toolResponse` resolves it. Prefer `ref` when present; for older/ref-less
+ * sessions, pair by tool name in thread order so answered legacy
+ * interrupts don't stay pending forever. We scan the entire thread (not
+ * just the last message) for safety; in practice pending interrupts only
+ * ever live on the latest model message.
  */
 function findPendingInterruptParts(
   data: SessionData | undefined
@@ -1869,31 +2202,37 @@ function findPendingInterruptParts(
   const thread = data.threads[MAIN_THREAD]
   if (!Array.isArray(thread)) return []
 
-  const respondedRefs = new Set<string>()
-  // Pre-pass: collect every ref that has a toolResponse — those are
-  // resolved and shouldn't be re-emitted.
-  for (const raw of thread as MessageLike[]) {
-    const content = raw?.content
-    if (!Array.isArray(content)) continue
-    for (const part of content as PartLike[]) {
-      if (part.toolResponse?.ref) respondedRefs.add(part.toolResponse.ref)
-    }
+  const pending: ToolRequestPartLike[] = []
+  const removePending = (
+    predicate: (part: ToolRequestPartLike) => boolean
+  ): void => {
+    const index = pending.findIndex(predicate)
+    if (index >= 0) pending.splice(index, 1)
   }
 
-  const pending: ToolRequestPartLike[] = []
   for (const raw of thread as MessageLike[]) {
-    if (raw?.role !== "model") continue
     const content = raw.content
     if (!Array.isArray(content)) continue
     for (const part of content as PartLike[]) {
+      if (part.toolResponse?.name) {
+        const responseRef = part.toolResponse.ref
+        const responseName = part.toolResponse.name
+        if (responseRef) {
+          removePending((p) => p.toolRequest.ref === responseRef)
+        } else {
+          removePending(
+            (p) => !p.toolRequest.ref && p.toolRequest.name === responseName
+          )
+        }
+        continue
+      }
+
+      if (raw?.role !== "model") continue
       if (!part.toolRequest?.name) continue
       const isInterrupt =
         !!part.metadata?.interrupt ||
         INTERRUPT_TOOL_NAMES.has(part.toolRequest.name)
       if (!isInterrupt) continue
-      if (part.toolRequest.ref && respondedRefs.has(part.toolRequest.ref)) {
-        continue
-      }
       // Cast — we just verified `toolRequest` exists.
       pending.push(part as ToolRequestPartLike)
     }
@@ -1916,131 +2255,156 @@ const respondToBotInterruptFlow = ai.defineFlow(
 
     const { ref, name, response } = input
 
-    const { chat, session, actionContext, existingSession } =
-      await prepareChatTurn({
-        auth,
-        teamId: input.teamId,
-        workspaceId: input.workspaceId,
-        sessionId: input.sessionId,
-        mode: input.mode,
-        contextNodes: input.contextNodes,
-        activeAgentId: input.activeAgentId,
-        model: input.model,
-        // No `pinnedNode` — interrupts always run on an existing session.
-        requireExistingSession: true,
-        archivedSessionMessage:
-          "This chat is archived. Restore it before continuing.",
-      })
-
-    // `requireExistingSession: true` guarantees `existingSession` is
-    // non-null below — the helper would have thrown otherwise. The
-    // `existing.data` blob is where pending interrupts live.
-    const existing = existingSession!
-
-    // Find the interrupt part the user is responding to. We prefer
-    // `ref` (Genkit's stable per-call id) and fall back to "most recent
-    // pending of the same name" — handles older sessions or models that
-    // don't emit refs.
-    const pending = findPendingInterruptParts(existing.data)
-    if (pending.length === 0) {
-      throw new HttpsError(
-        "failed-precondition",
-        "There is no pending question to answer in this chat."
-      )
-    }
-    const interruptPart =
-      (ref &&
-        pending.find(
-          (p) => p.toolRequest.ref === ref && p.toolRequest.name === name
-        )) ||
-      [...pending].reverse().find((p) => p.toolRequest.name === name)
-    if (!interruptPart) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Could not find the pending question this answer was for. " +
-          "It may have been answered already."
-      )
-    }
-
-    if (interruptPart.toolRequest.name !== "askQuestion") {
-      // Future-proofing: if we add more interrupt tools, the dispatch
-      // table belongs here. For now there's only one.
-      throw new HttpsError(
-        "failed-precondition",
-        `Unsupported interrupt tool: ${interruptPart.toolRequest.name}`
-      )
-    }
-
-    // Validate + construct the tool response. `askQuestion.respond` checks
-    // the answer against `askQuestionOutputSchema` and throws on mismatch
-    // — that surfaces as a 400 to the client.
-    let respondPart
-    try {
-      respondPart = askQuestionTool.respond(
-        // The respond() helper expects a ToolRequestPart. Our pending
-        // collector returns the part shape Genkit emits.
-        interruptPart as Parameters<typeof askQuestionTool.respond>[0],
-        response as Parameters<typeof askQuestionTool.respond>[1]
-      )
-    } catch (error) {
-      throw new HttpsError(
-        "invalid-argument",
-        `Invalid answer for ${name}: ${(error as Error).message}`
-      )
-    }
-
-    sendChunk({ sessionId: session.id })
-
-    // First chunk to the client: flip the just-answered interrupt's
-    // tool segment from "form" to "done" with the user's answer as the
-    // output. Doing this preemptively (before the model's continuation
-    // streams) keeps the UI responsive — the user sees their submission
-    // land instantly, then the model's reply types in below.
-    sendChunk({
-      toolResult: {
-        ref: interruptPart.toolRequest.ref,
-        name: interruptPart.toolRequest.name,
-        output: response,
-      },
-    })
-
-    // Pre-mark every historical tool-call/result ref (same reasoning as
-    // in `sendBotMessageFlow`: `final.messages` covers the full thread,
-    // and without seeding we'd resurface prior turns' tool cards). Then
-    // also pre-mark the just-answered interrupt's *toolResult* ref so
-    // the sweep doesn't double-emit it — we already emitted it via the
-    // pre-stream `sendChunk` above to make the form vanish instantly.
-    // The interrupt's *toolCall* ref is naturally covered by the prior
-    // sweep skip (it lives in the pre-turn thread).
-    const priorRefs = collectPriorTurnToolRefs(existing.data)
-    const preSentResults = interruptPart.toolRequest.ref
-      ? [...priorRefs.results, `result:${interruptPart.toolRequest.ref}`]
-      : priorRefs.results
-
-    const final = await streamChatToClient(
-      chat.sendStream({
-        resume: { respond: [respondPart] },
-      }) as ChatStreamResult,
-      sendChunk,
-      {
-        preSentToolCalls: priorRefs.calls,
-        preSentToolResults: preSentResults,
-      }
-    )
-
-    // Post-turn cross-agent transfer commit, mirroring the same step
-    // in `sendBotMessageFlow`. Skipped silently when the model didn't
-    // call `transferToAgent`.
-    await commitTransferIfRequested(
+    // Serialize against concurrent turns on this session (another interrupt
+    // response, or a plain send) so the resumed thread can't be clobbered —
+    // same rationale as `sendBotMessageFlow`. Interrupts always run on an
+    // existing session, so the lock is unconditional. Acquired before
+    // prepareChatTurn's loadSession; released in the finally below.
+    const releaseLock = await acquireSessionTurnLock(
       input.teamId,
       input.workspaceId,
-      session.id,
-      actionContext
+      input.sessionId
     )
+    try {
+      const { chat, session, actionContext, existingSession } =
+        await prepareChatTurn({
+          auth,
+          teamId: input.teamId,
+          workspaceId: input.workspaceId,
+          sessionId: input.sessionId,
+          mode: input.mode,
+          contextNodes: input.contextNodes,
+          activeAgentId: input.activeAgentId,
+          model: input.model,
+          // No `pinnedNode` — interrupts always run on an existing session.
+          requireExistingSession: true,
+          archivedSessionMessage:
+            "This chat is archived. Restore it before continuing.",
+        })
 
-    return {
-      sessionId: session.id,
-      reply: final.text,
+      // `requireExistingSession: true` guarantees `existingSession` is
+      // non-null below — the helper would have thrown otherwise. The
+      // `existing.data` blob is where pending interrupts live.
+      const existing = existingSession!
+
+      // Find the interrupt part the user is responding to. We prefer
+      // `ref` (Genkit's stable per-call id) and fall back to "most recent
+      // pending of the same name" — handles older sessions or models that
+      // don't emit refs.
+      const pending = findPendingInterruptParts(existing.data)
+      if (pending.length === 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "There is no pending question to answer in this chat."
+        )
+      }
+      const interruptPart =
+        (ref &&
+          pending.find(
+            (p) => p.toolRequest.ref === ref && p.toolRequest.name === name
+          )) ||
+        [...pending].reverse().find((p) => p.toolRequest.name === name)
+      if (!interruptPart) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Could not find the pending question this answer was for. " +
+            "It may have been answered already."
+        )
+      }
+
+      const interruptName = interruptPart.toolRequest.name ?? name
+      if (interruptName !== "askQuestion") {
+        // Future-proofing: if we add more interrupt tools, the dispatch
+        // table belongs here. For now there's only one.
+        throw new HttpsError(
+          "failed-precondition",
+          `Unsupported interrupt tool: ${interruptName}`
+        )
+      }
+
+      // Validate + construct the tool response. `askQuestion.respond` checks
+      // the answer against `askQuestionOutputSchema` and throws on mismatch
+      // — that surfaces as a 400 to the client.
+      let respondPart
+      try {
+        respondPart = askQuestionTool.respond(
+          // The respond() helper expects a ToolRequestPart. Our pending
+          // collector returns the part shape Genkit emits.
+          interruptPart as Parameters<typeof askQuestionTool.respond>[0],
+          response as Parameters<typeof askQuestionTool.respond>[1]
+        )
+      } catch (error) {
+        throw new HttpsError(
+          "invalid-argument",
+          `Invalid answer for ${name}: ${(error as Error).message}`
+        )
+      }
+
+      sendChunk({ sessionId: session.id })
+
+      // First chunk to the client: flip the just-answered interrupt's
+      // tool segment from "form" to "done" with the user's answer as the
+      // output. Doing this preemptively (before the model's continuation
+      // streams) keeps the UI responsive — the user sees their submission
+      // land instantly, then the model's reply types in below.
+      sendChunk({
+        toolResult: {
+          ref: interruptPart.toolRequest.ref,
+          name: interruptName,
+          output: response,
+        },
+      })
+
+      // Pre-mark every historical tool-call/result ref (same reasoning as
+      // in `sendBotMessageFlow`: `final.messages` covers the full thread,
+      // and without seeding we'd resurface prior turns' tool cards). Then
+      // also pre-mark the just-answered interrupt's *toolResult* ref so
+      // the sweep doesn't double-emit it — we already emitted it via the
+      // pre-stream `sendChunk` above to make the form vanish instantly.
+      // The interrupt's *toolCall* ref is naturally covered by the prior
+      // sweep skip (it lives in the pre-turn thread).
+      const priorRefs = collectPriorTurnToolRefs(existing.data)
+      const answeredResultKey = interruptPart.toolRequest.ref
+        ? `result:${interruptPart.toolRequest.ref}`
+        : `result:${interruptName}#${priorRefs.resultCount}`
+      const preSentResults = [...priorRefs.results, answeredResultKey]
+
+      // Same per-turn abort + tool-budget treatment as `sendBotMessageFlow`:
+      // the resumed turn can chain tools and hang on the provider just like a
+      // fresh send, so it gets its own AbortController + `maxTurns`.
+      const turnAbort = new AbortController()
+      const final = await streamChatToClient(
+        chat.sendStream({
+          resume: { respond: [respondPart] },
+          abortSignal: turnAbort.signal,
+          maxTurns: TOOL_MAX_TURNS,
+        }) as ChatStreamResult,
+        sendChunk,
+        {
+          abortController: turnAbort,
+          preSentToolCalls: priorRefs.calls,
+          preSentToolResults: preSentResults,
+          preExistingToolCallCount: priorRefs.callCount,
+          preExistingToolResultCount: priorRefs.resultCount,
+        }
+      )
+
+      // Post-turn cross-agent transfer commit, mirroring the same step
+      // in `sendBotMessageFlow`. Skipped silently when the model didn't
+      // call `transferToAgent`.
+      await commitTransferIfRequested(
+        input.teamId,
+        input.workspaceId,
+        session.id,
+        actionContext
+      )
+
+      return {
+        sessionId: session.id,
+        reply: final.text,
+      }
+    } finally {
+      await releaseLock()
     }
   }
 )

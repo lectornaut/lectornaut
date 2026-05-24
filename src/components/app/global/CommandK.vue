@@ -40,7 +40,7 @@ const filteredShortcuts = computed(() =>
                 v-for="shortcut in category.shortcuts"
                 :key="shortcut.event"
                 :value="shortcut.event + shortcut.parameters + shortcut.tags"
-                class="py-2"
+                class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground py-2"
                 @select="
                   () => {
                     emitter.emit(shortcut.event, shortcut.parameters)
@@ -66,7 +66,10 @@ const filteredShortcuts = computed(() =>
                     </template>
                   </BreadcrumbList>
                 </Breadcrumb>
-                <CommandShortcut v-if="shortcut.keys">
+                <CommandShortcut
+                  v-if="shortcut.keys"
+                  class="group-data-highlighted/command-item:text-foreground"
+                >
                   <KbdGroup
                     v-for="keys in shortcut.keys"
                     :key="keys.toString()"

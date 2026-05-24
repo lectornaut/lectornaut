@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 /**
  * BotChatToolCall — renders one tool invocation segment from an agent
- * message. The card shell (collapsible header with state badge) is
- * uniform across every tool; the body switches between per-tool
- * presentations based on `tool.name`, with a JSON fallback for tools
- * we don't have a dedicated view for.
+ * message. The collapsible header carries two signals: a leading
+ * lifecycle-status badge (pending / running / answered / done / failed —
+ * see `status` + `statusBadge`) and a trailing tool-identity glyph (a
+ * built-in's catalog icon, or a generic asterisk for custom/other tools).
+ * The body switches between per-tool presentations based on `tool.name`, with
+ * a JSON fallback for tools we don't have a dedicated view for.
  *
  * Five state branches:
  *
@@ -13,10 +15,12 @@
  *      `askQuestion` interrupt. Renders the question and choice
  *      buttons; clicking one calls `respondToInterrupt` to resume.
  *
- *   2. Resolved interrupt (`isInterrupt && output` set):
- *      The user answered an `askQuestion`. Renders the question with
- *      the chosen answer highlighted, instead of dumping the JSON
- *      input/output through the generic done view.
+ *   2. Resolved interrupt (askQuestion with `output` set):
+ *      The user answered an `askQuestion`. Detected by tool NAME +
+ *      presence of output — NOT the `isInterrupt` flag, which the
+ *      server drops the instant an answer lands. Renders the question
+ *      with the chosen answer highlighted, instead of dumping it
+ *      through the generic fallback view.
  *
  *   3. Running (`output === undefined`, no interrupt):
  *      A normal tool is executing on the server. Shows a spinner +
@@ -24,12 +28,18 @@
  *      brief — execution is fast.
  *
  *   4. Done with a dedicated renderer (`output` set, `tool.name`
- *      matches one of our known tools): renders a tool-specific card
- *      (weather, dice, search results, summary, …).
+ *      matches one of our known tools): renders a tool-specific
+ *      `Card` (weather, dice, search results, summary, …). Every
+ *      done-state branch shares ONE anatomy — an optional
+ *      `CardHeader` echoing the call's input/query (shown only when
+ *      the tool took one; the trigger already names the tool), a
+ *      `CardContent` body, and an optional `CardFooter` for
+ *      metadata — so the cards read uniformly regardless of tool.
  *
  *   5. Done with no dedicated renderer (`output` set, unknown
- *      `tool.name`): falls back to a generic JSON dump of input /
- *      output so brand-new tools added to the server still render
+ *      `tool.name`): falls back to a `Card` wrapping a generic
+ *      preview (a recognized text field as markdown, else a JSON
+ *      dump) so brand-new tools added to the server still render
  *      something reasonable before the UI catches up.
  *
  * The card body is collapsible so a chat with several tool calls
@@ -45,8 +55,9 @@ import {
   BotChatContextKey,
   type BotChatToolCall,
 } from "@/composables/useBotChat"
+import { botToolIcon, botToolLabel } from "@/data/botTools"
 import {
-  IconBot,
+  IconAsterisk,
   IconBotMessageSquare,
   IconCheck,
   IconChevronRight,
@@ -59,7 +70,9 @@ import {
   IconSun,
   IconTriangleAlert,
 } from "@/data/icons"
-import { computed, inject, ref, watch } from "vue"
+import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
+import { storeToRefs } from "pinia"
+import { computed, inject, ref, watch, type Component } from "vue"
 
 const props = defineProps<{
   tool: BotChatToolCall
@@ -73,6 +86,39 @@ const props = defineProps<{
 
 const botChat = inject(BotChatContextKey)
 const { t } = useI18n()
+
+// Resolve the wire name (`tool.name`) to the human-friendly display name
+// admins see in Settings → Custom Tools, applied uniformly to built-in
+// and custom tools:
+//   1. Built-in tool → its catalog label (the slash-menu display name).
+//   2. Custom tool   → the admin-authored `displayName`, falling back to
+//      the wire name when blank (mirrors the editor's `displayName || name`).
+//   3. Unrecognized (e.g. `transferToAgent`, or a custom tool since
+//      hard-deleted) → the raw wire name.
+// Reads the FULL `tools` list (not `selectableTools`) so a card rendered
+// from history still resolves a label after its tool was disabled/archived.
+const customToolsStore = useTeamCustomToolsStore()
+const { tools: customTools } = storeToRefs(customToolsStore)
+
+const displayName = computed<string>(() => {
+  const builtIn = botToolLabel(props.tool.name)
+  if (builtIn) return builtIn
+  const custom = customTools.value.find(
+    (entry) => entry.name === props.tool.name
+  )
+  if (custom) return custom.displayName || custom.name
+  return props.tool.name
+})
+
+// ── Header trailing slot: tool identity ────────────────────────────────────
+//
+// The leading badge carries lifecycle status (below); the trailing slot
+// carries WHICH tool this is. Built-ins show their specific catalog icon
+// (cloud, dice, search…); every other tool — custom, `transferToAgent`, a
+// hard-deleted tool — shares one generic asterisk glyph (no per-tool avatar).
+const trailingIcon = computed<Component>(
+  () => botToolIcon(props.tool.name) ?? IconAsterisk
+)
 
 const isInterrupt = computed(
   () => props.tool.isInterrupt === true && props.tool.output === undefined
@@ -133,13 +179,33 @@ const askQuestionInput = computed<AskQuestionInput | null>(() => {
   }
 })
 
+// A resolved askQuestion — the user answered and the tool produced output.
+// Detected by tool NAME + presence of `output`, NOT by `isInterrupt`: the
+// server's history denormalizer (and our own `fillToolResult`) DELETE the
+// flag the instant an answer lands, so a persisted/reloaded answered
+// question never carries it. Keying the check on `isInterrupt === true`
+// left this branch permanently dead and dropped every answered question
+// into the generic fallback. `isInterrupt` stays meaningful only for the
+// PENDING state, which `isInterrupt` / `isRunning` above still use.
 const isResolvedInterrupt = computed(
-  () => props.tool.isInterrupt === true && props.tool.output !== undefined
+  () => props.tool.name === "askQuestion" && props.tool.output !== undefined
 )
+
+// Just the question string from the askQuestion input. The resolved view
+// (unlike the pending form) doesn't render choices, so we read `question`
+// directly rather than through `askQuestionInput` — that keeps an answered
+// Q&A rendering even when the choices are missing or malformed.
+const questionText = computed<string>(() => {
+  if (props.tool.name !== "askQuestion") return ""
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return ""
+  const question = (raw as Record<string, unknown>).question
+  return typeof question === "string" ? question : ""
+})
 
 // Narrow `tool.output` to the `{ answer: string }` shape produced by
 // `respondToInterrupt`. Anything else returns null and we fall through
-// to the generic JSON view.
+// to the generic fallback view.
 const interruptAnswer = computed<string | null>(() => {
   if (!isResolvedInterrupt.value) return null
   const raw = props.tool.output
@@ -484,6 +550,54 @@ const outputMarkdown = computed(() => {
   return toJsonFence(outputText.value)
 })
 
+// ── Humanized fallback section labels ──────────────────────────────────────
+//
+// The generic fallback labels its two sections by what they MEAN to the
+// reader, not by the wire roles "Input"/"Output": an askQuestion shows a
+// "Question" and an "Answer"; a search shows a "Search" and "Results".
+// Tools with a dedicated renderer only reach the fallback on a malformed
+// payload, but friendly labels keep even that degraded view readable.
+// Custom and unrecognized tools (anything not in the map) fall back to a
+// general "Request" / "Response". Keyed by `string` rather than a tool
+// union because the fallback handles names that arrive straight off the
+// wire (custom tools, `transferToAgent`, future server tools).
+const FALLBACK_LABEL_KEYS: Record<string, { input: string; output: string }> = {
+  askQuestion: {
+    input: "ai.toolCall.labels.question",
+    output: "ai.toolCall.labels.answer",
+  },
+  getWeather: {
+    input: "ai.toolCall.labels.location",
+    output: "ai.toolCall.labels.forecast",
+  },
+  rollDice: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.result",
+  },
+  searchWorkspaceNodes: {
+    input: "ai.toolCall.labels.search",
+    output: "ai.toolCall.labels.results",
+  },
+  summarizeNode: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.summary",
+  },
+  browseInternet: {
+    input: "ai.toolCall.labels.search",
+    output: "ai.toolCall.labels.answer",
+  },
+}
+
+const inputLabel = computed(() =>
+  t(FALLBACK_LABEL_KEYS[props.tool.name]?.input ?? "ai.toolCall.labels.request")
+)
+const outputLabel = computed(() =>
+  t(
+    FALLBACK_LABEL_KEYS[props.tool.name]?.output ??
+      "ai.toolCall.labels.response"
+  )
+)
+
 /**
  * Whether the current `tool.name` has a dedicated done-state renderer
  * AND that renderer's narrower successfully parsed the payload. When
@@ -508,6 +622,65 @@ const hasCustomDoneRenderer = computed(() => {
       return false
   }
 })
+
+// ── Header leading slot: lifecycle status badge ────────────────────────────
+//
+// One discriminant for the card's whole lifecycle, replacing the old
+// implicit "v-else == done". The two output-absent states (pending /
+// running) come first; the rest are "output present" outcomes split into
+// error → answered-question → plain done. Driving the badge off this single
+// value (rather than three booleans) keeps the icon, tooltip, and styling in
+// one place and makes the partition exhaustive — adding a `ToolStatus`
+// member is a compile error in `statusBadge` until it's mapped.
+type ToolStatus = "pending" | "running" | "resolved" | "done" | "error"
+
+const isErrorResult = computed<boolean>(() => {
+  // summarizeNode surfaces a structured error (its own destructive card).
+  if (summarizeOutput.value?.error) return true
+  // Tools with a dedicated card render their own success/failure story, so
+  // we don't second-guess them — only probe the generic fallback path.
+  if (hasCustomDoneRenderer.value) return false
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return false
+  const obj = raw as Record<string, unknown>
+  // Best-effort: an explicit `ok: false` or a non-empty `error` string —
+  // the common conventions for httpWebhook / custom-tool failures.
+  // Conservative on purpose: better to miss an odd error shape than to
+  // paint a successful call as "Failed".
+  if (obj.ok === false) return true
+  return typeof obj.error === "string" && obj.error.trim().length > 0
+})
+
+const status = computed<ToolStatus>(() => {
+  if (isInterrupt.value) return "pending"
+  if (isRunning.value) return "running"
+  if (isErrorResult.value) return "error"
+  if (isResolvedInterrupt.value) return "resolved"
+  return "done"
+})
+
+// Icon + tooltip (+ optional color) per status, as an exhaustive record:
+// TypeScript flags a missing key the moment a `ToolStatus` is added, and a
+// single lookup keeps ESLint's return-in-computed rule satisfied (a `switch`
+// without a `default` trips it even when every case returns). `running` maps
+// to a null icon because the spinner is a standalone component the template
+// renders via `v-if`, not a lucide glyph.
+const STATUS_BADGES: Record<
+  ToolStatus,
+  { icon: Component | null; tooltipKey: string; class?: string }
+> = {
+  pending: { icon: IconCircleHelp, tooltipKey: "ai.toolCall.needsInput" },
+  running: { icon: null, tooltipKey: "ai.toolCall.running" },
+  resolved: { icon: IconBotMessageSquare, tooltipKey: "ai.toolCall.answered" },
+  error: {
+    icon: IconTriangleAlert,
+    tooltipKey: "ai.toolCall.failed",
+    class: "text-destructive",
+  },
+  done: { icon: IconCheck, tooltipKey: "ai.toolCall.done" },
+}
+
+const statusBadge = computed(() => STATUS_BADGES[status.value])
 </script>
 
 <template>
@@ -516,29 +689,22 @@ const hasCustomDoneRenderer = computed(() => {
       <Item variant="muted" size="xs">
         <ItemMedia variant="icon">
           <TooltipProvider>
-            <Tooltip v-if="isInterrupt">
+            <Tooltip>
               <TooltipTrigger as-child>
-                <IconCircleHelp />
+                <Spinner v-if="status === 'running'" />
+                <Component
+                  :is="statusBadge.icon"
+                  v-else
+                  :class="statusBadge.class"
+                />
               </TooltipTrigger>
-              <TooltipContent>{{ t("ai.toolCall.needsInput") }}</TooltipContent>
-            </Tooltip>
-            <Tooltip v-else-if="isRunning">
-              <TooltipTrigger as-child>
-                <Spinner />
-              </TooltipTrigger>
-              <TooltipContent>{{ t("ai.toolCall.running") }}</TooltipContent>
-            </Tooltip>
-            <Tooltip v-else>
-              <TooltipTrigger as-child>
-                <IconCheck />
-              </TooltipTrigger>
-              <TooltipContent>{{ t("ai.toolCall.done") }}</TooltipContent>
+              <TooltipContent>{{ t(statusBadge.tooltipKey) }}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </ItemMedia>
         <ItemContent>
           <ItemTitle>
-            {{ tool.name }}
+            {{ displayName }}
             <IconChevronRight
               class="text-muted-foreground transition-transform will-change-transform"
               :class="{ 'rotate-90': open }"
@@ -546,7 +712,7 @@ const hasCustomDoneRenderer = computed(() => {
           </ItemTitle>
         </ItemContent>
         <ItemActions>
-          <Component :is="isInterrupt ? IconBotMessageSquare : IconBot" />
+          <Component :is="trailingIcon" />
         </ItemActions>
       </Item>
     </CollapsibleTrigger>
@@ -601,21 +767,22 @@ const hasCustomDoneRenderer = computed(() => {
       </Item>
 
       <!-- ============================================================== -->
-      <!-- Resolved interrupt: question with the chosen answer highlighted. -->
+      <!-- Resolved interrupt: question (header) + the chosen answer. A -->
+      <!-- completed result, so it shares the done-state Card anatomy -->
+      <!-- rather than staying a transient-state Item. -->
       <!-- ============================================================== -->
-      <Item
-        v-else-if="isResolvedInterrupt && askQuestionInput && interruptAnswer"
-        variant="outline"
-        size="xs"
+      <Card
+        v-else-if="isResolvedInterrupt && questionText && interruptAnswer"
+        size="sm"
       >
-        <ItemMedia variant="icon">
-          <IconCheck />
-        </ItemMedia>
-        <ItemContent>
-          <ItemDescription>{{ askQuestionInput.question }}</ItemDescription>
-          <ItemTitle>{{ interruptAnswer }}</ItemTitle>
-        </ItemContent>
-      </Item>
+        <CardHeader>
+          <CardTitle>{{ questionText }}</CardTitle>
+        </CardHeader>
+        <CardContent class="flex items-center gap-2">
+          <IconCheck class="text-muted-foreground" />
+          <span class="text-foreground">{{ interruptAnswer }}</span>
+        </CardContent>
+      </Card>
 
       <!-- ============================================================== -->
       <!-- Running: brief waiting note. The header's spinner indicates -->
@@ -661,112 +828,109 @@ const hasCustomDoneRenderer = computed(() => {
       </Card>
 
       <!-- ============================================================== -->
-      <!-- rollDice: dice icon + big number. -->
+      <!-- rollDice: dice icon + big number. No input, so no header — -->
+      <!-- the content mirrors the getWeather card's icon + value layout. -->
       <!-- ============================================================== -->
-      <Item
+      <Card
         v-else-if="tool.name === 'rollDice' && diceOutput !== null"
-        variant="outline"
-        size="xs"
+        size="sm"
       >
-        <ItemMedia variant="icon">
-          <IconDices />
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle>
-            {{ diceOutput }}
-          </ItemTitle>
-          <ItemDescription>{{ t("ai.toolCall.dice.rolled") }}</ItemDescription>
-        </ItemContent>
-      </Item>
+        <CardContent class="flex items-center gap-2">
+          <IconDices class="text-muted-foreground size-8" />
+          <div class="flex flex-col">
+            <span class="text-foreground text-2xl leading-none font-semibold">
+              {{ diceOutput }}
+            </span>
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.dice.rolled") }}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       <!-- ============================================================== -->
-      <!-- searchWorkspaceNodes: query chip + per-result rows. -->
+      <!-- searchWorkspaceNodes: query (header) + result count, then the -->
+      <!-- per-result rows in the body (or an empty state). -->
       <!-- ============================================================== -->
-      <div
+      <Card
         v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput"
-        class="flex flex-col gap-2"
+        size="sm"
       >
-        <Item v-if="searchInput" variant="outline" size="xs">
-          <ItemMedia variant="icon">
-            <IconSearch class="text-muted-foreground" />
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle>"{{ searchInput.query }}"</ItemTitle>
-          </ItemContent>
-          <ItemActions>
-            <ItemDescription>
-              {{
-                t("ai.toolCall.search.resultCount", {
-                  count: searchOutput.results.length,
-                })
-              }}
-              <template v-if="searchOutput.truncated">
-                {{ t("ai.toolCall.search.truncated") }}
-              </template>
-            </ItemDescription>
-          </ItemActions>
-        </Item>
-        <Empty v-if="searchOutput.results.length === 0" class="border p-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <IconSearch />
-            </EmptyMedia>
-            <EmptyTitle>{{ t("ai.toolCall.search.empty") }}</EmptyTitle>
-          </EmptyHeader>
-        </Empty>
-        <ItemGroup v-else>
-          <Item
-            v-for="result in searchOutput.results"
-            :key="`${result.scope}:${result.nodeId}`"
-            variant="outline"
-            size="xs"
-          >
-            <ItemMedia variant="icon">
-              <Component
-                :is="result.type === 'folder' ? IconFolder : IconFileText"
-                class="text-muted-foreground"
-              />
-            </ItemMedia>
-            <ItemContent>
-              <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
-              <ItemDescription v-if="result.snippet">
-                {{ result.snippet }}
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions>
-              <Badge variant="secondary">
-                {{ searchScopeLabel(result.scope) }}
-              </Badge>
-            </ItemActions>
-          </Item>
-        </ItemGroup>
-      </div>
+        <CardHeader v-if="searchInput">
+          <CardTitle>"{{ searchInput.query }}"</CardTitle>
+          <CardDescription>
+            {{
+              t("ai.toolCall.search.resultCount", {
+                count: searchOutput.results.length,
+              })
+            }}
+            <template v-if="searchOutput.truncated">
+              {{ t("ai.toolCall.search.truncated") }}
+            </template>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Empty v-if="searchOutput.results.length === 0" class="border p-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconSearch />
+              </EmptyMedia>
+              <EmptyTitle>{{ t("ai.toolCall.search.empty") }}</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+          <ItemGroup v-else>
+            <Item
+              v-for="result in searchOutput.results"
+              :key="`${result.scope}:${result.nodeId}`"
+              variant="outline"
+              size="xs"
+            >
+              <ItemMedia variant="icon">
+                <Component
+                  :is="result.type === 'folder' ? IconFolder : IconFileText"
+                  class="text-muted-foreground"
+                />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
+                <ItemDescription v-if="result.snippet">
+                  {{ result.snippet }}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant="secondary">
+                  {{ searchScopeLabel(result.scope) }}
+                </Badge>
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+        </CardContent>
+      </Card>
 
       <!-- ============================================================== -->
       <!-- summarizeNode: error variant OR structured summary card. -->
       <!-- ============================================================== -->
-      <Alert
+      <Card
         v-else-if="
           tool.name === 'summarizeNode' &&
           summarizeOutput &&
           summarizeOutput.error
         "
-        variant="destructive"
+        size="sm"
       >
-        <IconTriangleAlert />
-        <AlertTitle>{{ t("ai.toolCall.summarize.errorTitle") }}</AlertTitle>
-        <AlertDescription>{{ summarizeOutput.error }}</AlertDescription>
-      </Alert>
+        <CardHeader>
+          <CardTitle>{{ t("ai.toolCall.summarize.errorTitle") }}</CardTitle>
+        </CardHeader>
+        <CardContent class="text-destructive flex items-center gap-2">
+          <IconTriangleAlert />
+          <span>{{ summarizeOutput.error }}</span>
+        </CardContent>
+      </Card>
 
       <Card
         v-else-if="tool.name === 'summarizeNode' && summarizeOutput"
         size="sm"
       >
-        <CardHeader>
-          <CardTitle>
-            {{ t("ai.toolCall.summarize.heading") }}
-          </CardTitle>
-        </CardHeader>
         <CardContent class="flex flex-col gap-2">
           <p class="text-foreground">
             {{ summarizeOutput.summary }}
@@ -824,13 +988,8 @@ const hasCustomDoneRenderer = computed(() => {
         v-else-if="tool.name === 'browseInternet' && browseInternetOutput"
         size="sm"
       >
-        <CardHeader>
-          <CardTitle>
-            {{ t("ai.toolCall.browse.heading") }}
-          </CardTitle>
-          <CardDescription v-if="browseInternetInput">
-            {{ browseInternetInput }}
-          </CardDescription>
+        <CardHeader v-if="browseInternetInput">
+          <CardTitle>{{ browseInternetInput }}</CardTitle>
         </CardHeader>
         <CardContent class="flex flex-col gap-2">
           <AppMarkdown surface="chat" :content="browseInternetOutput.answer" />
@@ -852,7 +1011,7 @@ const hasCustomDoneRenderer = computed(() => {
                   :href="source.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-destructive break-all hover:underline"
+                  class="text-destructive hover:text-destructive break-all hover:underline"
                 >
                   {{ source.title }}
                 </a>
@@ -868,20 +1027,33 @@ const hasCustomDoneRenderer = computed(() => {
       <!-- present, else a JSON dump, so the message column at least -->
       <!-- carries something meaningful. -->
       <!-- ============================================================== -->
-      <div v-else-if="!hasCustomDoneRenderer" class="flex flex-col gap-2">
-        <div v-if="inputMarkdown" class="flex flex-col gap-2">
-          <span class="text-muted-foreground text-xs font-medium uppercase">
-            {{ t("ai.toolCall.input") }}
-          </span>
-          <AppMarkdown surface="chat" :content="inputMarkdown" />
-        </div>
-        <div class="flex flex-col gap-2">
-          <span class="text-muted-foreground text-xs font-medium uppercase">
-            {{ t("ai.toolCall.output") }}
-          </span>
-          <AppMarkdown surface="chat" :content="outputMarkdown" />
-        </div>
-      </div>
+      <Card v-else-if="!hasCustomDoneRenderer" size="sm">
+        <CardContent class="flex flex-col gap-2">
+          <div v-if="inputMarkdown" class="flex flex-col gap-2">
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ inputLabel }}
+            </span>
+            <AppMarkdown surface="chat" :content="inputMarkdown" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ outputLabel }}
+            </span>
+            <AppMarkdown surface="chat" :content="outputMarkdown" />
+          </div>
+        </CardContent>
+      </Card>
     </CollapsibleContent>
   </Collapsible>
 </template>
+
+<style scoped>
+/* Flatten in-chat cards: the chat surface is painted with the card color
+   (body bg in `@/styles/index.css`), so the default shadow/ring add no
+   contrast — and the shadow is invisible in dark mode (near-black card on
+   near-black page). Shadow + ring are both composed into `box-shadow`, so
+   one reset clears both. */
+:deep([data-slot="card"]) {
+  box-shadow: none;
+}
+</style>

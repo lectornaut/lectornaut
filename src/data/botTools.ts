@@ -124,3 +124,26 @@ const CATALOG_BY_NAME: Record<BotToolName, BotToolDescriptor> = {
 
 export const BOT_TOOL_CATALOG: readonly BotToolDescriptor[] =
   Object.values(CATALOG_BY_NAME)
+
+/**
+ * Resolve a built-in tool's wire name to its human-friendly label
+ * (e.g. `"getWeather"` → `"Weather"`) — the same string the slash menu
+ * shows. Returns `undefined` for names not in the catalog so callers can
+ * fall back to a custom tool's `displayName` or the raw wire name.
+ *
+ * Typed to accept any `string` (not just `BotToolName`) because callers
+ * resolve names coming off the chat stream, which include custom-tool
+ * names and tools deliberately omitted from this catalog (e.g.
+ * `transferToAgent`).
+ */
+export const botToolLabel = (name: string): string | undefined =>
+  CATALOG_BY_NAME[name as BotToolName]?.label
+
+/**
+ * Resolve a built-in tool's wire name to its catalog icon component
+ * (e.g. `"getWeather"` → `IconCloudRain`). Returns `undefined` for names
+ * not in the catalog — callers fall back to a custom tool's avatar or a
+ * generic glyph. Same lenient `string` signature as `botToolLabel`.
+ */
+export const botToolIcon = (name: string): Component | undefined =>
+  CATALOG_BY_NAME[name as BotToolName]?.icon

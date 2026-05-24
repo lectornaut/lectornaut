@@ -18,7 +18,16 @@
  *   • final=true (chat history + every other surface) → fade on for a
  *     polished entry, no pacing, no cursor.
  */
-import { state as resolvedTheme } from "@/modules/theme"
+import {
+  defaultEditorFontSize,
+  editorFontSizes,
+  editorThemes,
+} from "@/helpers/defaults"
+import {
+  editorFontSize,
+  editorTheme,
+  state as resolvedTheme,
+} from "@/modules/theme"
 import MarkdownRender from "markstream-vue"
 // Registers every markstream custom-component override exactly once
 // (ES-module singleton) — see the module for why this isn't inline here.
@@ -50,13 +59,28 @@ const customHtmlTags = computed(() =>
 )
 
 // Virtualization caps how many nodes render live. The streaming chat tail
-// (final=false) uses 0 — disabled — so freshly streamed text is never
-// hidden behind a measurement pass. Finalized chat history (and every
-// other surface) fall back to the library default, so a single very long
-// message (e.g. a huge code/JSON dump) windows instead of mounting every
-// node at once.
+// (final=false) uses 0 — incremental/typewriter mode — so freshly streamed
+// text is never hidden behind a windowing measurement pass. Every other
+// case falls back to the library default (320) so a single very long doc
+// (e.g. a huge code/JSON dump) windows instead of mounting every node at
+// once. Finalized chat history passes the default too, but the deferral
+// switch below turns the windowing path off for chat regardless, so the
+// cap is effectively inert there.
 const maxLiveNodes = computed(() =>
   props.surface === "chat" && !props.final ? 0 : undefined
+)
+
+// Viewport-based node deferral (library default ON) unmounts nodes that
+// aren't near the viewport and re-runs that pass on every container resize
+// (internal ResizeObserver). Fine for static prose — but the chat surface
+// renders interactive `<thinking>` disclosures (BotThinkingBlock). When one
+// expands, the container grows, the observer re-runs the windowing pass, and
+// a SIBLING disclosure gets judged off-viewport and culled — it visibly
+// disappears. Turning deferral off for chat keeps every node mounted, so
+// expanding one block can never hide another. Other surfaces keep the
+// default: their content is static, so deferral is a pure scrollback win.
+const deferNodesUntilVisible = computed(() =>
+  props.surface === "chat" ? false : undefined
 )
 
 // HTML policy by content provenance: LLM output is `safe` (blocks
@@ -86,6 +110,31 @@ const mermaidProps = computed(() => {
   }
 })
 
+// Editor (code-block) syntax theme. The user picks a Shiki family in
+// Appearance settings (persisted in user scope); we resolve it to its
+// light + dark variant and hand BOTH to markstream, which switches between
+// them via `:is-dark` — the same mechanism every surface already uses for
+// the theme pair. An unknown/legacy id (e.g. a removed family synced from
+// another device) falls back to the first entry ("Default" =
+// light-plus/dark-plus), preserving the pre-setting behaviour.
+const codeBlockThemes = computed(
+  () =>
+    editorThemes.find((theme) => theme.id === editorTheme.value) ??
+    editorThemes[0]
+)
+
+// Preload EVERY selectable variant into markstream's Monaco/Shiki runtime
+// (a cached singleton highlighter — one-time cost, not per block). The
+// library only reliably swaps between *preregistered* themes; without this
+// list, changing the editor-theme setting asks Monaco to apply a theme it
+// never loaded, so the block silently keeps the previous one. Listing all
+// variants guarantees the active light/dark pair is already registered when
+// markstream calls setTheme on a switch.
+const codeBlockThemeNames = editorThemes.flatMap((theme) => [
+  theme.light,
+  theme.dark,
+])
+
 // Code blocks get a header strip with a copy button — same on every
 // surface. The library handles the DOM; we just turn it on.
 const codeBlockProps = { showHeader: true, showCopyButton: true } as const
@@ -96,7 +145,32 @@ const codeBlockProps = { showHeader: true, showCopyButton: true } as const
 // highlighted output. MAX_HEIGHT caps tall payloads (e.g. long tool-call
 // JSON) so one block can't dominate a chat bubble — Monaco scrolls
 // internally past the cap.
-const codeBlockMonacoOptions = { readOnly: true, MAX_HEIGHT: 320 } as const
+//
+// fontFamily routes Monaco onto the app's mono stack (`--font-mono`)
+// instead of its built-in platform monospace, so code blocks match the
+// rest of the app's monospace (inline code, terminal, CodeMirror). The
+// CSS `var()` resolves at computed-value time, so Monaco's glyph-width
+// measurement and line rendering both pick up the real font.
+//
+// fontSize comes from the user's Appearance setting (`editorFontSize`),
+// resolved from its id to the preset's px value (Monaco wants a number).
+// Because it's reactive, the whole options object is a `computed` —
+// markstream diffs `monacoOptions` and re-applies it to the live editor
+// when the setting changes, so code resizes without a remount.
+const codeBlockFontSize = computed(() => {
+  const preset =
+    editorFontSizes.find((entry) => entry.id === editorFontSize.value) ??
+    editorFontSizes.find((entry) => entry.id === defaultEditorFontSize)
+  return preset?.size ?? 13
+})
+
+const codeBlockMonacoOptions = computed(() => ({
+  readOnly: true,
+  MAX_HEIGHT: 320,
+  fontFamily: "var(--font-mono)",
+  fontWeight: "500",
+  fontSize: codeBlockFontSize.value,
+}))
 
 // Smooth-streaming pacing: only meaningful when streaming. Floor/ceiling
 // keep the visible cadence within the band the human eye reads
@@ -126,8 +200,9 @@ const isDev = import.meta.env.DEV
     :final="final"
     :is-dark="isDark"
     :html-policy="htmlPolicy"
-    code-block-light-theme="light-plus"
-    code-block-dark-theme="dark-plus"
+    :code-block-light-theme="codeBlockThemes.light"
+    :code-block-dark-theme="codeBlockThemes.dark"
+    :themes="codeBlockThemeNames"
     :code-block-props="codeBlockProps"
     :code-block-monaco-options="codeBlockMonacoOptions"
     :mermaid-props="mermaidProps"
@@ -137,6 +212,7 @@ const isDev = import.meta.env.DEV
     :fade="!streaming"
     :typewriter="streaming"
     :max-live-nodes="maxLiveNodes"
+    :defer-nodes-until-visible="deferNodesUntilVisible"
     :show-tooltips="showTooltips"
     :debug-performance="isDev"
   />

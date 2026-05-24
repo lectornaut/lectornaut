@@ -3,6 +3,8 @@ import { isTauri } from "@/composables/usePlatform"
 import type {
   AccentId,
   BaseId,
+  EditorFontSizeId,
+  EditorThemeId,
   FontId,
   LanguageId,
   SizeId,
@@ -12,6 +14,8 @@ import {
   defaultBase,
   defaultCustomAccentColor,
   defaultCustomBaseColor,
+  defaultEditorFontSize,
+  defaultEditorTheme,
   defaultFileDropOverlayShortcutKeys,
   defaultFont,
   defaultLanguage,
@@ -77,6 +81,14 @@ export const useSettingsStore = defineStore("settings", () => {
   const font = useStorage<FontId>("font", defaultFont)
   const size = useStorage<SizeId>("size", defaultSize)
   const language = useStorage<LanguageId>("language", defaultLanguage)
+  const editorTheme = useStorage<EditorThemeId>(
+    "editorTheme",
+    defaultEditorTheme
+  )
+  const editorFontSize = useStorage<EditorFontSizeId>(
+    "editorFontSize",
+    defaultEditorFontSize
+  )
 
   const themeSettings = reactive({
     mode,
@@ -87,6 +99,8 @@ export const useSettingsStore = defineStore("settings", () => {
     font,
     size,
     language,
+    editorTheme,
+    editorFontSize,
   })
 
   const pendingTheme = shallowRef(false)
@@ -158,6 +172,20 @@ export const useSettingsStore = defineStore("settings", () => {
         themeDoc.language !== language.value
       ) {
         language.value = themeDoc.language
+      }
+      if (
+        "editorTheme" in themeDoc &&
+        themeDoc.editorTheme &&
+        themeDoc.editorTheme !== editorTheme.value
+      ) {
+        editorTheme.value = themeDoc.editorTheme
+      }
+      if (
+        "editorFontSize" in themeDoc &&
+        themeDoc.editorFontSize &&
+        themeDoc.editorFontSize !== editorFontSize.value
+      ) {
+        editorFontSize.value = themeDoc.editorFontSize
       }
     },
     { immediate: true }
@@ -239,6 +267,8 @@ export const useSettingsStore = defineStore("settings", () => {
         font: font.value,
         size: size.value,
         language: language.value,
+        editorTheme: editorTheme.value,
+        editorFontSize: editorFontSize.value,
       },
       "settings.themes.persist"
     )
@@ -289,6 +319,8 @@ export const useSettingsStore = defineStore("settings", () => {
       font,
       size,
       language,
+      editorTheme,
+      editorFontSize,
     ],
     () => {
       void persistThemeWithSync()

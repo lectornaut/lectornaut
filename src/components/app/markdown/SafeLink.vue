@@ -51,7 +51,12 @@ const title = computed(() => props.node.title || props.node.href)
 </script>
 
 <template>
-  <RouterLink v-if="linkMode === 'router'" :to="href" :title="title">
+  <RouterLink
+    v-if="linkMode === 'router'"
+    :to="href"
+    :title="title"
+    class="text-destructive hover:text-destructive! break-all hover:underline"
+  >
     <slot>{{ node.text }}</slot>
   </RouterLink>
   <a
@@ -60,10 +65,16 @@ const title = computed(() => props.node.title || props.node.href)
     :title="title"
     target="_blank"
     rel="noopener noreferrer"
+    class="text-destructive hover:text-destructive! break-all hover:underline"
   >
     <slot>{{ node.text }}</slot>
   </a>
-  <a v-else :href="href" :title="title">
+  <a
+    v-else
+    :href="href"
+    :title="title"
+    class="text-destructive hover:text-destructive! break-all hover:underline"
+  >
     <slot>{{ node.text }}</slot>
   </a>
 </template>

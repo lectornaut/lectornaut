@@ -103,11 +103,20 @@ export const EMAIL_FROM =
 
 /**
  * AI generation workloads are CPU/memory heavier than regular CRUD callables.
+ *
+ * `timeoutSeconds` MUST stay comfortably above `bot.ts`'s `TURN_DEADLINE_MS`
+ * (the in-app per-turn wall-clock). The flow races the provider call against
+ * that deadline and, on expiry, aborts the provider call and streams a
+ * graceful fallback chunk before returning. If the Cloud Functions timeout
+ * fired first, the instance would be hard-killed mid-stream and the client
+ * would see an opaque INTERNAL instead — so the function timeout has to give
+ * the deadline room to land. 120s = 90s deadline + 30s headroom for the
+ * fallback write + unary return. Keep these two in sync if either changes.
  */
 export const GENKIT_OPTS = {
   region: REGION,
   memory: "512MiB" as const,
-  timeoutSeconds: 60,
+  timeoutSeconds: 120,
   maxInstances: 5,
   concurrency: 10,
   invoker: "public" as const,

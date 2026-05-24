@@ -1,5 +1,12 @@
 import { isTauri } from "@/composables/usePlatform"
-import type { AccentId, BaseId, FontId, SizeId } from "@/helpers/defaults"
+import type {
+  AccentId,
+  BaseId,
+  EditorFontSizeId,
+  EditorThemeId,
+  FontId,
+  SizeId,
+} from "@/helpers/defaults"
 import {
   defaultCustomAccentColor,
   defaultCustomBaseColor,
@@ -245,6 +252,28 @@ export const size = computed({
   set: (value: SizeId) => {
     const settingsStore = useSettingsStore()
     settingsStore.themeSettings.size = value
+  },
+})
+
+export const editorTheme = computed({
+  get: () => {
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.editorTheme
+  },
+  set: (value: EditorThemeId) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.editorTheme = value
+  },
+})
+
+export const editorFontSize = computed({
+  get: () => {
+    const settingsStore = useSettingsStore()
+    return settingsStore.themeSettings.editorFontSize
+  },
+  set: (value: EditorFontSizeId) => {
+    const settingsStore = useSettingsStore()
+    settingsStore.themeSettings.editorFontSize = value
   },
 })
 
