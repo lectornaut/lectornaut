@@ -293,6 +293,34 @@
     @apply overscroll-none;
     @apply scroll-smooth;
   }
+
+  /*
+    Main layout resizable panels — animate expand/collapse of every
+    collapsible panel (sidebar, left, right, top, bottom). MainLayout.vue puts
+    the `.animate-layout-panels` marker on each of its three reka groups; the
+    `> [data-panel]` direct-child selector then animates that group's own
+    panels (a collapsing panel and its complementary sibling move together).
+    reka-ui's SplitterPanel sizes panels via an inline `flex-grow`, so that's
+    the property we transition. Targeting library DOM, this lives in global CSS
+    (a scoped block's [data-v-*] hash can't reliably reach reka nodes — same
+    reasoning as the markstream rules below). The marker is toggled on only
+    after the persisted layout is applied, so first paint never animates. Mid
+    pointer-drag the handle is [data-resize-handle-state="drag"]; we drop the
+    transition there so the panel tracks the cursor instead of lagging.
+  */
+  .animate-layout-panels > [data-panel] {
+    transition: flex-grow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .animate-layout-panels:has([data-resize-handle-state="drag"]) > [data-panel] {
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-layout-panels > [data-panel] {
+      transition: none;
+    }
+  }
 }
 
 /*

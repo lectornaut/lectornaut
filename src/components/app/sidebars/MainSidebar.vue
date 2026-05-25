@@ -6,6 +6,15 @@ import { useAuthStore } from "@/stores/authStore"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { storeToRefs } from "pinia"
 
+const props = withDefaults(
+  defineProps<{
+    preview?: boolean
+  }>(),
+  {
+    preview: false,
+  }
+)
+
 const { t } = useI18n()
 const { setOpen, isMobile, setOpenMobile } = useSidebar()
 const authStore = useAuthStore()
@@ -24,14 +33,14 @@ function closeSidebarOnMobile() {
   <ContextMenu>
     <ContextMenuTrigger>
       <Sidebar
-        collapsible="offcanvas"
+        :collapsible="props.preview ? 'none' : 'offcanvas'"
         variant="inset"
         class="shadow-muted-foreground/5 relative w-full p-0 transition-none!"
         data-tauri-drag-region="deep"
       >
         <div
           class="flex items-center justify-between gap-2 px-2 pt-2"
-          :class="[{ 'pl-22': isTauri && !isFullscreen }]"
+          :class="[{ 'pl-22': !props.preview && isTauri && !isFullscreen }]"
         >
           <!-- <Separator class="absolute -translate-x-full bg-red-400" /> -->
           <div class="flex items-center gap-2">

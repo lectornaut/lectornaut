@@ -40,6 +40,10 @@ const rightPanel = ref<InstanceType<typeof SplitterPanel>>()
 const topPanel = ref<InstanceType<typeof SplitterPanel>>()
 const bottomPanel = ref<InstanceType<typeof SplitterPanel>>()
 
+// Enables the flex-grow transition on every collapsible panel (see index.css).
+// Kept off until the persisted layout is applied so first paint doesn't animate.
+const animatePanels = ref(false)
+
 const syncPanelCollapsed = (
   panel: InstanceType<typeof SplitterPanel> | undefined,
   collapsed: boolean
@@ -120,6 +124,9 @@ const handlePanelBottomToggle = () => {
 onMounted(async () => {
   await nextTick()
   applyPersistedPanelState()
+  requestAnimationFrame(() => {
+    animatePanels.value = true
+  })
 
   emitter.on("Sidebar.Left.Toggle", handleSidebarLeftToggle)
   emitter.on("Sidebar.Left.Collapse", handleSidebarLeftCollapse)
@@ -218,7 +225,11 @@ const closeTab = (id: string) => {
 </script>
 
 <template>
-  <ResizablePanelGroup direction="horizontal" auto-save-id="app-main-layout">
+  <ResizablePanelGroup
+    direction="horizontal"
+    auto-save-id="app-main-layout"
+    :class="{ 'animate-layout-panels': animatePanels }"
+  >
     <ResizablePanel
       ref="sidebarPanel"
       collapsible
@@ -288,7 +299,10 @@ const closeTab = (id: string) => {
           ></div>
           <ResizablePanelGroup
             :style="{ overflow: 'clip' }"
-            class="shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-xl border shadow"
+            :class="[
+              'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-xl border shadow',
+              { 'animate-layout-panels': animatePanels },
+            ]"
             direction="horizontal"
             auto-save-id="app-horizontal-layout"
           >
@@ -369,7 +383,10 @@ const closeTab = (id: string) => {
             <ResizablePanel>
               <ResizablePanelGroup
                 :style="{ overflow: 'clip' }"
-                class="size-full min-h-0 min-w-0"
+                :class="[
+                  'size-full min-h-0 min-w-0',
+                  { 'animate-layout-panels': animatePanels },
+                ]"
                 direction="vertical"
                 auto-save-id="app-vertical-layout"
               >

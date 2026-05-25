@@ -590,7 +590,20 @@ onUnmounted(() => {
             'pl-22': (!open || isMobile) && isTauri && !isFullscreen,
           }"
         >
-          <SidebarTrigger v-if="!open || isMobile" />
+          <HoverCard v-if="!open && !isMobile">
+            <HoverCardTrigger as-child>
+              <SidebarTrigger />
+            </HoverCardTrigger>
+            <HoverCardContent
+              side="bottom"
+              align="start"
+              :side-offset="8"
+              class="h-[80svh] overflow-clip p-0"
+            >
+              <MainSidebar preview />
+            </HoverCardContent>
+          </HoverCard>
+          <SidebarTrigger v-else-if="isMobile" />
           <BackForth v-if="!open || isMobile" />
           <nav
             ref="el"

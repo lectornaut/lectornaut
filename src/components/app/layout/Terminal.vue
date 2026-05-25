@@ -24,6 +24,7 @@ term.once("load", () => {
 })
 
 const manual = `
+
   ╱|、
  (˚ˎ 。7
   |、˜〵
@@ -100,11 +101,26 @@ onBeforeUnmount(() => {
   <div ref="terminalEl" class="size-full pl-2" />
 </template>
 
-<style scoped>
+<style>
 :root {
   --xt-bg: var(--color-background);
   --xt-fg: var(--color-foreground);
-  --xt-font-size: calc(var(--size) - 4px);
+  --xt-font-size: calc(var(--size) - 3px);
   --xt-font-family: var(--font-mono);
+}
+@keyframes blink {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.xt-cursor {
+  animation: blink 0.8s linear infinite;
 }
 </style>
