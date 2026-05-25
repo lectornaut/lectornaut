@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import type { WorkspaceNode, WorkspaceNodeScope } from "@/types/nodes"
+import { subscribeAgentRelay } from "@/utils/collab/signaling"
 import {
   createYjsCollab,
   type YjsCollabSession,
@@ -61,6 +62,12 @@ export interface UseCollabPageReturn {
   collabError: Ref<string | null>
   collabReady: Ref<boolean>
   collabAwareness: Ref<import("y-protocols/awareness").Awareness | null>
+  /**
+   * New content from a server-relayed agent edit for `write` docs, to be
+   * applied by the editor via setContent. Only set on the elected applier;
+   * `code` docs apply internally to the Y.Text and never use this.
+   */
+  externalEditorContent: Ref<{ seq: number; content: string } | null>
   saveContent: () => Promise<void>
 }
 
@@ -118,6 +125,14 @@ export function useCollabPage(
   const collabError = ref<string | null>(null)
   const collabReady = ref(false)
   const collabAwareness = computed(() => collabSession.value?.awareness ?? null)
+
+  // Server-relayed agent edits. `relayUnsub` is torn down alongside the
+  // session; `externalEditorContent` carries a `write`-doc edit out to the
+  // editor (the applier only).
+  let relayUnsub: (() => void) | null = null
+  const externalEditorContent = ref<{ seq: number; content: string } | null>(
+    null
+  )
 
   const editorReadOnly = computed(() => {
     if (!selectedFile.value) return true
@@ -252,6 +267,11 @@ export function useCollabPage(
       collabSession.value = null
       options.onSessionDestroyed?.()
 
+      // Tear down the previous file's agent-relay subscription.
+      relayUnsub?.()
+      relayUnsub = null
+      externalEditorContent.value = null
+
       if (previousSession) {
         await previousSession.destroy().catch((error) => {
           console.error("[collab] Failed to destroy previous session", error)
@@ -293,6 +313,50 @@ export function useCollabPage(
         collabSession.value = session
         collabRole.value = session.role
         collabReady.value = true
+
+        // Apply server-relayed agent edits live. The first emission is the
+        // baseline (already reflected in the content we just opened), so we
+        // skip it; later edits with a higher `seq` are applied by the elected
+        // applier only — `code` straight into the Y.Text (propagates via the
+        // mesh + snapshot save), `write` handed to the editor via setContent.
+        let baselineSet = false
+        let lastRelaySeq = Number.NEGATIVE_INFINITY
+        relayUnsub = subscribeAgentRelay(
+          file.id,
+          (state) => {
+            // First emission is the baseline — the relay doc as it stood when
+            // we subscribed (possibly absent). It's already reflected in the
+            // content we opened, so record its seq and don't apply it. Setting
+            // the baseline BEFORE the null check is essential: when no relay
+            // doc exists yet, the agent's first real edit must not be mistaken
+            // for the baseline (which would silently swallow it).
+            if (!baselineSet) {
+              baselineSet = true
+              lastRelaySeq = state?.seq ?? Number.NEGATIVE_INFINITY
+              return
+            }
+            if (!state) return
+            if (state.seq <= lastRelaySeq) return
+            lastRelaySeq = state.seq
+            if (!session.isAgentApplier()) return
+
+            if (scope === "code") {
+              const ytext = session.ydoc.getText("codemirror")
+              session.ydoc.transact(() => {
+                ytext.delete(0, ytext.length)
+                if (state.content) ytext.insert(0, state.content)
+              })
+            } else {
+              externalEditorContent.value = {
+                seq: state.seq,
+                content: state.content,
+              }
+            }
+          },
+          (error) => {
+            console.error("[collab] agent relay subscription error", error)
+          }
+        )
       } catch (error) {
         if (cancelled) {
           return
@@ -362,6 +426,8 @@ export function useCollabPage(
 
   // --- Cleanup ---
   onBeforeUnmount(() => {
+    relayUnsub?.()
+    relayUnsub = null
     const session = collabSession.value
     collabSession.value = null
     if (!session) return
@@ -386,6 +452,7 @@ export function useCollabPage(
     collabError,
     collabReady,
     collabAwareness,
+    externalEditorContent,
     saveContent,
   }
 }

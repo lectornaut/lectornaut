@@ -1,12 +1,11 @@
 import { firestore } from "@/modules/firebase"
-import { getDocCached } from "@/utils/firebase/firebase-cache"
 import {
   FirestoreErrorCodes,
   hasFirebaseErrorCode,
 } from "@/utils/firebase/firebase-errors"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { useEventListener } from "@vueuse/core"
-import { doc, Timestamp } from "firebase/firestore"
+import { doc, getDoc, Timestamp } from "firebase/firestore"
 import {
   fromBase64 as base64ToBytes,
   toBase64 as bytesToBase64,
@@ -33,7 +32,12 @@ export async function loadSnapshot(
   let snapshot
 
   try {
-    snapshot = await getDocCached(snapshotRef)
+    // Server-authoritative read (NOT cache-first): the snapshot is mutated
+    // server-side by agent edits without a client listener, so a cached read
+    // would keep returning a stale/deleted snapshot on reopen — clobbering the
+    // newer `content` and reverting agent edits. `getDoc` still falls back to
+    // the cache when offline.
+    snapshot = await getDoc(snapshotRef)
   } catch (error) {
     // Older rulesets deny reads for missing snapshot docs. Treat that as a miss
     // so collaboration can still initialize while rules are being rolled out.

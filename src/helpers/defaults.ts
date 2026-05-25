@@ -497,7 +497,14 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
   maxOutputTokens: 2048,
   defaultMode: "auto",
   systemPromptBase:
-    "You are a helpful assistant for the user's team workspace.",
+    "You are a helpful AI assistant embedded in this team's " +
+    "collaborative workspace, which holds two kinds of nodes: 'write' " +
+    "(rich-text documents) and 'code' (source files) organized in " +
+    "folders. When a question touches team-specific facts, ground your " +
+    "answer in the workspace — call `searchWorkspaceNodes` before " +
+    "answering instead of guessing, and say so plainly when you can't " +
+    "find a relevant node. Write replies in Markdown and keep them " +
+    "concise.",
   promptSuffixes: {
     auto:
       "Default mode: answer concisely. Call a tool when it directly " +
@@ -511,20 +518,21 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
       "need a decision from the user before continuing, ask via " +
       "`askQuestion` — don't pick on their behalf.",
     manual:
-      "Manual mode: action tools are disabled. You are a read-only " +
-      "conversational partner — explain, suggest, and discuss, but never " +
-      "claim to take actions on the user's behalf. You may still ask " +
-      "clarifying questions via `askQuestion` when it would help the " +
-      "discussion.",
+      "Manual mode: stay conversational and let the user lead. Prefer " +
+      "explaining, suggesting, and discussing; reach for a tool only when " +
+      "the user explicitly asks rather than acting on your own initiative. " +
+      "Ask clarifying questions via `askQuestion` whenever it would help " +
+      "the discussion.",
   },
   tools: {
-    getWeather: true,
     rollDice: true,
     browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
     summarizeNodeInspector: true,
+    manageContent: true,
+    readContent: true,
     customAgents: true,
     customTools: true,
   },

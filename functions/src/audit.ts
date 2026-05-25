@@ -5,6 +5,7 @@ import {
   onCall,
 } from "firebase-functions/v2/https"
 import Stripe from "stripe"
+import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
 import {
@@ -79,6 +80,8 @@ function normalizeActor(actor: Actor): Actor {
   const normalized: Actor = { userId: actor.userId }
   if (actor.email) normalized.email = actor.email
   if (actor.role) normalized.role = actor.role
+  if (actor.agentId) normalized.agentId = actor.agentId
+  if (actor.agentName) normalized.agentName = actor.agentName
   return normalized
 }
 
@@ -2915,6 +2918,227 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
       count: userIds.length,
       logIds,
     }
+  })
+})
+
+// =============================================================================
+// Agent Membership Operations
+// =============================================================================
+//
+// Agents (team personas — custom Firestore docs OR shipped built-ins) can
+// be added to a team as members. Unlike humans, there's no email/accept
+// handshake: an admin adds the agent and the membership doc is written
+// directly. Agent memberships share the `teams/{teamId}/memberships`
+// collection, keyed by `agentId`, discriminated by `kind: "agent"`, and
+// are ALWAYS role "member" (no owner/admin escalation, no role changes).
+// The doc carries a denormalized `agent` snapshot so list views render
+// without resolving the agents collection (built-ins have no doc at all).
+
+const AGENT_MEMBER_ROLE: IMembershipRole = "member"
+
+interface AgentMemberSnapshot {
+  id: string
+  name: string
+  description: string
+  avatarSeed: string
+  isBuiltIn: boolean
+}
+
+/**
+ * Resolve the denormalized snapshot for an agent being added as a member.
+ * Built-ins come from the in-process registry (no Firestore doc); custom
+ * agents are read from `teams/{teamId}/agents/{agentId}`. Archived custom
+ * agents are rejected — they're being deprecated, so they shouldn't gain
+ * a fresh membership (mirrors the client's selectable-agents filter).
+ */
+async function resolveAgentMemberSnapshot(
+  transaction: admin.firestore.Transaction,
+  teamId: string,
+  agentId: string
+): Promise<AgentMemberSnapshot> {
+  if (isBuiltInAgentId(agentId)) {
+    const definition = BUILT_IN_AGENTS_BY_ID[agentId]
+    if (!definition) {
+      throw new HttpsError("not-found", "Built-in agent not found.")
+    }
+    return {
+      id: definition.id,
+      name: definition.name,
+      description: definition.description,
+      avatarSeed: definition.avatarSeed,
+      isBuiltIn: true,
+    }
+  }
+
+  const agentRef = db.doc(`teams/${teamId}/agents/${agentId}`)
+  const agentSnap = await transaction.get(agentRef)
+  if (!agentSnap.exists) {
+    throw new HttpsError("not-found", "Agent not found.")
+  }
+  const data = agentSnap.data() ?? {}
+  if (data.archivedAt) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Archived agents cannot be added as members. Restore it first."
+    )
+  }
+  return {
+    id: agentId,
+    name: typeof data.name === "string" ? data.name : "",
+    description: typeof data.description === "string" ? data.description : "",
+    avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
+    isBuiltIn: false,
+  }
+}
+
+/**
+ * Add an agent to a team as a member. Admin/owner only (INVITE_MEMBER).
+ * Idempotency: throws `already-exists` if the agent is already a member —
+ * the client treats that as a no-op success.
+ */
+export const addTeamAgentMember = onCall(CALLABLE_OPTS, async (request) => {
+  assertAuthenticated(request)
+
+  const teamId = assertString(request.data?.teamId, "teamId")
+  const agentId = assertString(request.data?.agentId, "agentId")
+
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  return db.runTransaction(async (transaction) => {
+    const actorRole = await requireTeamRole(transaction, teamId, actorId)
+
+    if (
+      !can(actorId, Capabilities.INVITE_MEMBER, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to add agents."
+      )
+    }
+
+    const teamRef = db.doc(`teams/${teamId}`)
+    const teamSnap = await transaction.get(teamRef)
+    if (!teamSnap.exists) {
+      throw new HttpsError("not-found", "Team no longer exists.")
+    }
+
+    const agentSnapshot = await resolveAgentMemberSnapshot(
+      transaction,
+      teamId,
+      agentId
+    )
+
+    const membershipRef = db.doc(`teams/${teamId}/memberships/${agentId}`)
+    const membershipSnap = await transaction.get(membershipRef)
+    if (membershipSnap.exists) {
+      throw new HttpsError("already-exists", "Agent is already a member.")
+    }
+
+    transaction.set(membershipRef, {
+      kind: "agent",
+      agentId,
+      teamId,
+      role: AGENT_MEMBER_ROLE,
+      agent: agentSnapshot,
+      team: teamSnap.data() ?? {},
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    const logRef = await logEvent(
+      {
+        teamId,
+        actor: { userId: actorId, email: actorEmail, role: actorRole },
+        action: "membership.agent.add",
+        resource: { type: "membership", id: agentId, parentId: teamId },
+        context: buildContext(request),
+        changes: {
+          fields: ["role"],
+          after: { role: AGENT_MEMBER_ROLE, agentName: agentSnapshot.name },
+        },
+      },
+      { transaction }
+    )
+
+    return {
+      teamId,
+      agentId,
+      role: AGENT_MEMBER_ROLE,
+      added: true,
+      logId: logRef.id,
+    }
+  })
+})
+
+/**
+ * Remove an agent membership from a team. Admin/owner only (REMOVE_MEMBER).
+ * Idempotent: a missing membership resolves as success. Only removes the
+ * membership — the underlying agent persona (custom doc / built-in) is
+ * untouched and remains available for chat.
+ */
+export const removeTeamAgentMember = onCall(CALLABLE_OPTS, async (request) => {
+  assertAuthenticated(request)
+
+  const teamId = assertString(request.data?.teamId, "teamId")
+  const agentId = assertString(request.data?.agentId, "agentId")
+
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  return db.runTransaction(async (transaction) => {
+    const actorRole = await requireTeamRole(transaction, teamId, actorId)
+
+    if (
+      !can(actorId, Capabilities.REMOVE_MEMBER, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to remove agents."
+      )
+    }
+
+    const membershipRef = db.doc(`teams/${teamId}/memberships/${agentId}`)
+    const membershipSnap = await transaction.get(membershipRef)
+    if (!membershipSnap.exists) {
+      return { teamId, agentId, removed: true }
+    }
+
+    const data = membershipSnap.data()
+    if (data?.kind !== "agent") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Target membership is not an agent."
+      )
+    }
+
+    const agentName =
+      typeof data?.agent?.name === "string" ? data.agent.name : undefined
+
+    transaction.delete(membershipRef)
+
+    const logRef = await logEvent(
+      {
+        teamId,
+        actor: { userId: actorId, email: actorEmail, role: actorRole },
+        action: "membership.agent.remove",
+        resource: { type: "membership", id: agentId, parentId: teamId },
+        context: buildContext(request),
+        changes: {
+          fields: ["role"],
+          before: { role: AGENT_MEMBER_ROLE, agentName },
+        },
+      },
+      { transaction }
+    )
+
+    return { teamId, agentId, removed: true, logId: logRef.id }
   })
 })
 

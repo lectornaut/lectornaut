@@ -21,7 +21,7 @@ import {
 import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
-import type { IMembership } from "@/types/membership"
+import { isUserMembership, type IMembership } from "@/types/membership"
 import type { Column, ColumnDef, Table as VueTable } from "@tanstack/vue-table"
 import { Timestamp } from "firebase/firestore"
 import { storeToRefs } from "pinia"
@@ -57,7 +57,10 @@ const {
 const { teamMembers } = storeToRefs(useMembershipStore())
 
 const memberByUid = computed<Map<string, IMembership>>(
-  () => new Map(teamMembers.value.map((m) => [m.userId, m]))
+  () =>
+    new Map(
+      teamMembers.value.filter(isUserMembership).map((m) => [m.userId, m])
+    )
 )
 
 const memberName = (uid: string): string => {
@@ -141,6 +144,7 @@ const attachmentOptions = computed(() => [
 // "unknown" bucket so admins can still find and clean them up.
 const ownerOptions = computed(() => {
   const opts = teamMembers.value
+    .filter(isUserMembership)
     .map((m) => ({
       label:
         m.user?.displayName ||

@@ -79,12 +79,26 @@ const AGENT_BOUNDS = {
  * this type, so the `toolsRaw.customAgents` branch was deleted).
  */
 interface TeamAgentToolToggles {
-  getWeather: boolean
   rollDice: boolean
   browseInternet: boolean
   askQuestion: boolean
   searchWorkspaceNodes: boolean
   summarizeNode: boolean
+  /**
+   * Per-agent gate for the node-WRITE tools. NOT a `ChatToolName` (the
+   * tools aren't registered via `pickChatTools`), but it IS consumed at
+   * dispatch: `bot.ts` registers `NODE_WRITE_TOOLS` only when this is on
+   * AND the team-level `manageContent` is on AND `canManageNodes` holds.
+   * Default true so existing agents keep node editing.
+   */
+  manageContent: boolean
+  /**
+   * Per-agent gate for the node-READ tool (`readNode`). Sibling of
+   * `manageContent`; dispatch registers `NODE_READ_TOOLS` only when this
+   * is on AND the team-level `readContent` is on AND `canReadNodes` (the
+   * lighter `READ_WORKSPACE` intersection) holds. Default true.
+   */
+  readContent: boolean
 }
 
 interface TeamAgentPromptSuffixes {
@@ -133,12 +147,13 @@ interface TeamAgentDoc {
 }
 
 const DEFAULT_TOOL_TOGGLES: TeamAgentToolToggles = {
-  getWeather: true,
   rollDice: true,
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  manageContent: true,
+  readContent: true,
 }
 
 const DEFAULT_PROMPT_SUFFIXES: TeamAgentPromptSuffixes = {
@@ -350,10 +365,6 @@ function normalizeAgentDoc(
           : DEFAULT_PROMPT_SUFFIXES.manual,
     },
     tools: {
-      getWeather:
-        typeof toolsRaw.getWeather === "boolean"
-          ? (toolsRaw.getWeather as boolean)
-          : DEFAULT_TOOL_TOGGLES.getWeather,
       rollDice:
         typeof toolsRaw.rollDice === "boolean"
           ? (toolsRaw.rollDice as boolean)
@@ -374,6 +385,14 @@ function normalizeAgentDoc(
         typeof toolsRaw.summarizeNode === "boolean"
           ? (toolsRaw.summarizeNode as boolean)
           : DEFAULT_TOOL_TOGGLES.summarizeNode,
+      manageContent:
+        typeof toolsRaw.manageContent === "boolean"
+          ? (toolsRaw.manageContent as boolean)
+          : DEFAULT_TOOL_TOGGLES.manageContent,
+      readContent:
+        typeof toolsRaw.readContent === "boolean"
+          ? (toolsRaw.readContent as boolean)
+          : DEFAULT_TOOL_TOGGLES.readContent,
       // `customAgents` deliberately NOT read here — it was a per-agent
       // toggle in name only. Older Firestore docs may still have it
       // set; we ignore the value rather than copying it into a field
@@ -412,12 +431,13 @@ function normalizeAgentDoc(
 
 const toolTogglesPatchSchema = z
   .object({
-    getWeather: z.boolean(),
     rollDice: z.boolean(),
     browseInternet: z.boolean(),
     askQuestion: z.boolean(),
     searchWorkspaceNodes: z.boolean(),
     summarizeNode: z.boolean(),
+    manageContent: z.boolean(),
+    readContent: z.boolean(),
   })
   .partial()
 

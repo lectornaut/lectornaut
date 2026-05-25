@@ -5,13 +5,17 @@
  * + interrupt tools), `functions/src/botRag.ts` (semantic search),
  * and `functions/src/botSummarize.ts` (structured summarization).
  *
- * `BotToolName` excludes `customAgents`, `customTools`, AND
- * `summarizeNodeInspector` deliberately — those keys on
- * `IBotAgentToolToggles` are *feature gates* (whole custom-agents UI;
- * whole custom-tools UI; the node inspector's Generate-summary button)
- * rather than model-callable tools. Including any in this catalog would
- * surface a meaningless entry in the composer's slash menu and in
- * per-agent tool subset UIs.
+ * `BotToolName` excludes `customAgents`, `customTools`,
+ * `summarizeNodeInspector`, `manageContent`, AND `readContent`
+ * deliberately — those keys on `IBotAgentToolToggles` are *feature gates*
+ * (whole custom-agents UI; whole custom-tools UI; the node inspector's
+ * Generate-summary button; the node-WRITE tool block; the node-READ tool
+ * block) rather than single model-callable tools. Including any in this
+ * catalog would surface a meaningless entry in the composer's slash menu.
+ * (`manageContent` / `readContent` still get per-agent toggles, but the
+ * agent editor appends those rows explicitly — see
+ * `SettingsCustomAgents.vue` — precisely because they're not catalog
+ * tools.)
  *
  * Type-level exhaustiveness: `CATALOG_BY_NAME` is typed as
  * `Record<BotToolName, BotToolDescriptor>`, so adding a new tool to
@@ -35,19 +39,28 @@
  */
 
 import {
-  IconCloudRain,
+  IconArchive,
+  IconArrowRight,
   IconDices,
+  IconFilePlus,
   IconFileText,
   IconGlobe,
   IconHelpCircle,
+  IconPencil,
+  IconRotateCcw,
   IconSearch,
+  IconSquarePen,
 } from "@/data/icons"
 import type { IBotAgentToolToggles } from "@/types/domain"
 import type { Component } from "vue"
 
 export type BotToolName = Exclude<
   keyof IBotAgentToolToggles,
-  "customAgents" | "customTools" | "summarizeNodeInspector"
+  | "customAgents"
+  | "customTools"
+  | "summarizeNodeInspector"
+  | "manageContent"
+  | "readContent"
 >
 
 export interface BotToolDescriptor {
@@ -70,13 +83,6 @@ export interface BotToolDescriptor {
  * object literals. Reorder these keys to reorder the picker.
  */
 const CATALOG_BY_NAME: Record<BotToolName, BotToolDescriptor> = {
-  getWeather: {
-    name: "getWeather",
-    label: "Weather",
-    description: "Look up the current weather for a location.",
-    icon: IconCloudRain,
-    example: "What's the weather in ",
-  },
   rollDice: {
     name: "rollDice",
     label: "Roll dice",
@@ -126,8 +132,31 @@ export const BOT_TOOL_CATALOG: readonly BotToolDescriptor[] =
   Object.values(CATALOG_BY_NAME)
 
 /**
+ * Display metadata for the agent node-CRUD tools (`functions/src/botNodeTools.ts`).
+ *
+ * These are intentionally OUTSIDE `CATALOG_BY_NAME` / `IBotAgentToolToggles`:
+ * they're neither per-agent toggles nor slash-menu entries — any agent that's
+ * a content-capable team member gets them automatically (gated server-side by
+ * the membership intersection, not a config switch). But their tool-call cards
+ * in `BotChatToolCall.vue` still need a friendly label + icon instead of the
+ * raw wire name + generic asterisk, so `botToolLabel` / `botToolIcon` fall back
+ * to this map. Keep the keys in sync with the tool `name`s in `botNodeTools.ts`.
+ */
+const NODE_TOOL_DISPLAY: Readonly<
+  Record<string, { label: string; icon: Component }>
+> = {
+  createNode: { label: "Create node", icon: IconFilePlus },
+  readNode: { label: "Read node", icon: IconFileText },
+  updateNodeContent: { label: "Edit content", icon: IconSquarePen },
+  renameNode: { label: "Rename node", icon: IconPencil },
+  moveNode: { label: "Move node", icon: IconArrowRight },
+  archiveNode: { label: "Archive node", icon: IconArchive },
+  unarchiveNode: { label: "Restore node", icon: IconRotateCcw },
+}
+
+/**
  * Resolve a built-in tool's wire name to its human-friendly label
- * (e.g. `"getWeather"` → `"Weather"`) — the same string the slash menu
+ * (e.g. `"rollDice"` → `"Roll dice"`) — the same string the slash menu
  * shows. Returns `undefined` for names not in the catalog so callers can
  * fall back to a custom tool's `displayName` or the raw wire name.
  *
@@ -137,13 +166,13 @@ export const BOT_TOOL_CATALOG: readonly BotToolDescriptor[] =
  * `transferToAgent`).
  */
 export const botToolLabel = (name: string): string | undefined =>
-  CATALOG_BY_NAME[name as BotToolName]?.label
+  CATALOG_BY_NAME[name as BotToolName]?.label ?? NODE_TOOL_DISPLAY[name]?.label
 
 /**
  * Resolve a built-in tool's wire name to its catalog icon component
- * (e.g. `"getWeather"` → `IconCloudRain`). Returns `undefined` for names
+ * (e.g. `"rollDice"` → `IconDices`). Returns `undefined` for names
  * not in the catalog — callers fall back to a custom tool's avatar or a
  * generic glyph. Same lenient `string` signature as `botToolLabel`.
  */
 export const botToolIcon = (name: string): Component | undefined =>
-  CATALOG_BY_NAME[name as BotToolName]?.icon
+  CATALOG_BY_NAME[name as BotToolName]?.icon ?? NODE_TOOL_DISPLAY[name]?.icon

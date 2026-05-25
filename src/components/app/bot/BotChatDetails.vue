@@ -23,6 +23,7 @@ import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
+import { isUserMembership } from "@/types/membership"
 import type {
   IBotSessionVisibility,
   ITeamAgent,
@@ -94,7 +95,10 @@ const visibilityLabel = (v: IBotSessionVisibility): string => {
 const ownerMember = computed(() => {
   const uid = activeSession.value?.ownerUid
   if (!uid) return null
-  return teamMembers.value.find((m) => m.userId === uid) ?? null
+  return (
+    teamMembers.value.filter(isUserMembership).find((m) => m.userId === uid) ??
+    null
+  )
 })
 
 const isOwnerFormer = computed(() => {
@@ -406,8 +410,8 @@ const detailRows = computed<DetailRow[]>(() => {
       <!--
         Available tools — dynamic per (team config × active agent ×
         mode). Migrated here from BotChatActions because the panel
-        previously rendered a stale hardcoded list (just getWeather +
-        rollDice) that ignored both the agent picker and the team's
+        previously rendered a stale hardcoded list that ignored both
+        the agent picker and the team's
         custom tools. The intersection mirrors `pickChatTools`
         server-side, so the visible list always matches what the next
         turn will actually have access to.

@@ -30,12 +30,13 @@ import { admin } from "./firebase.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
 
 interface TeamAgentToolToggles {
-  getWeather: boolean
   rollDice: boolean
   browseInternet: boolean
   askQuestion: boolean
   searchWorkspaceNodes: boolean
   summarizeNode: boolean
+  manageContent: boolean
+  readContent: boolean
 }
 
 interface TeamAgentPromptSuffixes {
@@ -55,12 +56,13 @@ export interface BuiltInAgentDefinition {
 }
 
 const ALL_TOOLS_ENABLED: TeamAgentToolToggles = {
-  getWeather: true,
   rollDice: true,
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  manageContent: true,
+  readContent: true,
 }
 
 /**
@@ -91,7 +93,6 @@ export const BUILT_IN_AGENTS: ReadonlyArray<BuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      getWeather: false,
       rollDice: false,
     },
   },
@@ -118,7 +119,6 @@ export const BUILT_IN_AGENTS: ReadonlyArray<BuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      getWeather: false,
       rollDice: false,
     },
   },
@@ -145,7 +145,6 @@ export const BUILT_IN_AGENTS: ReadonlyArray<BuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      getWeather: false,
       rollDice: false,
     },
   },
@@ -175,7 +174,6 @@ export const BUILT_IN_AGENTS: ReadonlyArray<BuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      getWeather: false,
       rollDice: false,
     },
   },

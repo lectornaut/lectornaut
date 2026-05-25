@@ -13,6 +13,7 @@ import {
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
+import { isAgentMembership, isUserMembership } from "@/types/membership"
 import {
   ROOT_PARENT_ID,
   type WorkspaceNode,
@@ -143,10 +144,20 @@ const formatActor = (userId: string | null | undefined) => {
     )
   }
 
-  const member = teamMembers.value.find((entry) => entry.userId === userId)
-  if (!member) return userId
+  const member = teamMembers.value
+    .filter(isUserMembership)
+    .find((entry) => entry.userId === userId)
+  if (member) {
+    return member.user?.displayName || member.user?.email || member.userId
+  }
 
-  return member.user?.displayName || member.user?.email || member.userId
+  // Agent-authored edits record the agent id in updatedBy/createdBy.
+  const agentMember = teamMembers.value
+    .filter(isAgentMembership)
+    .find((entry) => entry.agentId === userId)
+  if (agentMember) return agentMember.agent.name
+
+  return userId
 }
 
 const nodeTypeLabel = computed(() =>

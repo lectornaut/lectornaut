@@ -96,7 +96,8 @@
       "archivedTooltip": "This agent is archived (deprecated) but still active for this chat.",
       "deletedTooltip": "This agent has been deleted — your messages run under the team default.",
       "deletedAgentLabel": "Deleted agent",
-      "customBadge": "Custom"
+      "customBadge": "Custom",
+      "teamMember": "Member of this team"
     },
     "modes": {
       "auto": {
@@ -138,10 +139,6 @@
       "visibilityPublicDescription": "Anyone with the link can view. Coming soon."
     },
     "toolCatalog": {
-      "weather": {
-        "description": "Look up current weather for a location.",
-        "example": "What's the weather in Tokyo?"
-      },
       "rollDice": {
         "description": "Roll a six-sided die.",
         "example": "Roll a die for me."
@@ -179,8 +176,6 @@
         "response": "Response",
         "question": "Question",
         "answer": "Answer",
-        "location": "Location",
-        "forecast": "Forecast",
         "result": "Result",
         "search": "Search",
         "results": "Results",
@@ -1313,10 +1308,6 @@
       "tools": {
         "label": "Built-in tools",
         "description": "Disable any built-in tool to remove it from the model's catalog.",
-        "getWeather": {
-          "label": "Weather",
-          "description": "Demo tool that returns fake weather data for a location."
-        },
         "rollDice": {
           "label": "Roll dice",
           "description": "Demo tool that rolls a six-sided die."
@@ -1340,6 +1331,14 @@
         "summarizeNodeInspector": {
           "label": "Summarize node (inspector)",
           "description": "Generates a structured summary (overview, key points, tags) from any node via the workspace inspector."
+        },
+        "manageContent": {
+          "label": "Manage content",
+          "description": "Lets member-agents create, edit, rename, move, and archive workspace files and folders. Only applies to agents added as content-capable team members."
+        },
+        "readContent": {
+          "label": "Read content",
+          "description": "Lets member-agents read the full contents of a workspace file (beyond search snippets) so they can edit accurately or answer from a whole document. Read-only — no edit rights required."
         },
         "customAgents": {
           "label": "Custom agents",
@@ -1728,6 +1727,10 @@
       "exitConfirm": "Are you sure you want to leave this team? You will lose access to all team resources.",
       "removeConfirm": "Are you sure you want to remove {name} from this team?",
       "noMembers": "No members found.",
+      "agentBadge": "Agent",
+      "agentSubtitle": "AI agent",
+      "removeAgent": "Remove Agent",
+      "removeAgentConfirm": "Remove {name} from this team? It loses its membership, but the agent itself stays available.",
       "roles": {
         "owner": "Owner",
         "admin": "Admin",
@@ -2678,7 +2681,10 @@
         "pending": "Pending",
         "requiresHandle": "Add a handle to enable",
         "turnOnPublicTeam": "Turn on to make team public",
-        "publicTeamUrl": "Public at {url}"
+        "publicTeamUrl": "Public at {url}",
+        "inviteEmail": "Invite {email}",
+        "removeAgent": "Remove agent",
+        "agentRoleLocked": "Agents join as members — role can't be changed"
       },
       "labels": {
         "clickToChange": "Click to change",
@@ -2693,12 +2699,16 @@
         "invitations": "Invitations",
         "noActiveMembers": "No active members yet.",
         "publicHandle": "Public handle",
-        "publicTeam": "Public team profile"
+        "publicTeam": "Public team profile",
+        "agents": "Agents",
+        "agentBadge": "Agent",
+        "noAgentMatches": "No agents found"
       },
       "placeholders": {
         "teamName": "Acme Inc.",
         "email": "user{'@'}example.com",
-        "publicHandle": "acme"
+        "publicHandle": "acme",
+        "inviteOrAgent": "Email address or search agents…"
       },
       "roles": {
         "owner": "Owner",
@@ -2732,7 +2742,9 @@
         "inviteFailed": "Couldn't send invitations",
         "invitePartial": "Sent {succeeded} invitation(s), {failed} failed",
         "inviteResent": "Invitation resent",
-        "resendFailed": "Couldn't resend invitation"
+        "resendFailed": "Couldn't resend invitation",
+        "agentsAdded": "Added {count} agent | Added {count} agents",
+        "agentsPartial": "{failed} agent(s) couldn't be added"
       },
       "actions": {
         "create": "Create",

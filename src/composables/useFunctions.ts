@@ -298,6 +298,31 @@ export interface RemoveMembersResponse {
   logIds: string[]
 }
 
+export interface AddTeamAgentMemberRequest {
+  teamId: string
+  agentId: string
+}
+
+export interface AddTeamAgentMemberResponse {
+  teamId: string
+  agentId: string
+  role: string
+  added: boolean
+  logId?: string
+}
+
+export interface RemoveTeamAgentMemberRequest {
+  teamId: string
+  agentId: string
+}
+
+export interface RemoveTeamAgentMemberResponse {
+  teamId: string
+  agentId: string
+  removed: boolean
+  logId?: string
+}
+
 // =============================================================================
 // Invitation Request/Response Types
 // =============================================================================
@@ -1220,6 +1245,23 @@ export const removeMembers = createTypedCallable<
   RemoveMembersResponse
 >("removeMembers")
 
+/**
+ * Add an agent (custom or built-in) to a team as a member. No invitation
+ * handshake — the membership is written directly. Always role "member".
+ */
+export const addTeamAgentMember = createTypedCallable<
+  AddTeamAgentMemberRequest,
+  AddTeamAgentMemberResponse
+>("addTeamAgentMember")
+
+/**
+ * Remove an agent membership from a team. Leaves the agent persona intact.
+ */
+export const removeTeamAgentMember = createTypedCallable<
+  RemoveTeamAgentMemberRequest,
+  RemoveTeamAgentMemberResponse
+>("removeTeamAgentMember")
+
 // =============================================================================
 // Invitation Functions
 // =============================================================================
@@ -1817,7 +1859,6 @@ export interface GeneratedTeamAgentConfig {
   systemPromptBase: string
   promptSuffixes: { auto: string; agent: string; manual: string }
   tools: {
-    getWeather: boolean
     rollDice: boolean
     askQuestion: boolean
     searchWorkspaceNodes: boolean

@@ -9,7 +9,7 @@ import {
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useMembershipStore } from "@/stores/membershipStore"
-import type { IMembership } from "@/types/membership"
+import { isUserMembership, type IMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
 import { useCurrentUser } from "vuefire"
 
@@ -102,7 +102,9 @@ watch(
     try {
       const members = await membershipStore.getMembersForTeam(nextTeamId)
       if (requestId !== memberLoadRequestId) return
-      teamMembers.value = members
+      // The public team page lists human members only; agent memberships
+      // are an internal/admin concept and don't surface on public profiles.
+      teamMembers.value = members.filter(isUserMembership)
       loadedMembersTeamId.value = nextTeamId
     } catch (error) {
       if (requestId !== memberLoadRequestId) return

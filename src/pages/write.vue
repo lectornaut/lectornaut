@@ -86,6 +86,7 @@ const {
   collabError,
   collabReady,
   collabAwareness,
+  externalEditorContent,
   saveContent,
 } = useCollabPage({
   scope: nodeScope,
@@ -137,6 +138,7 @@ useHead(() => ({
         :read-only="editorReadOnly"
         :collaboration-doc="collabDoc"
         :collaboration-awareness="collabAwareness"
+        :external-content="externalEditorContent"
       />
     </OverlayScrollbarsWrapper>
     <Empty v-else>

@@ -102,12 +102,20 @@ const props = withDefaults(
     readOnly?: boolean
     collaborationDoc?: YDoc | null
     collaborationAwareness?: Awareness | null
+    /**
+     * A server-relayed agent edit to apply to the live collaborative document
+     * (the editor's modelValue watcher is bypassed while collaborating, so
+     * external content must come through this dedicated channel). Bumping
+     * `seq` triggers a `setContent`; only the elected applier receives it.
+     */
+    externalContent?: { seq: number; content: string } | null
   }>(),
   {
     modelValue: "",
     readOnly: false,
     collaborationDoc: null,
     collaborationAwareness: null,
+    externalContent: null,
   }
 )
 
@@ -842,6 +850,30 @@ watch(
 
     currentSerializedModelValue = serializeModelValue(currentEditor.getJSON())
     updateEditorStats(currentEditor)
+  }
+)
+
+// Apply a server-relayed agent edit (write docs). The modelValue watcher
+// above is deliberately inert while collaborating ("Yjs owns the document
+// state"), so agent edits arrive through this dedicated channel and are
+// written into the shared doc via setContent — the Collaboration binding then
+// syncs them to Yjs, out to other peers, and into the snapshot.
+watch(
+  () => props.externalContent?.seq,
+  () => {
+    const currentEditor = editor.value
+    const external = props.externalContent
+    if (!currentEditor || !external || !props.collaborationDoc) {
+      return
+    }
+    try {
+      currentEditor.commands.setContent(parseModelValue(external.content), {
+        emitUpdate: true,
+      })
+      migrateMathStrings(currentEditor)
+    } catch (error) {
+      console.error("[TextEditor] Failed to apply external content:", error)
+    }
   }
 )
 

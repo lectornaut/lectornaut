@@ -29,7 +29,7 @@
  *
  *   4. Done with a dedicated renderer (`output` set, `tool.name`
  *      matches one of our known tools): renders a tool-specific
- *      `Card` (weather, dice, search results, summary, …). Every
+ *      `Card` (dice, search results, summary, …). Every
  *      done-state branch shares ONE anatomy — an optional
  *      `CardHeader` echoing the call's input/query (shown only when
  *      the tool took one; the trigger already names the tool), a
@@ -46,7 +46,7 @@
  * doesn't dominate the message column. Default state: open while
  * running / awaiting input; collapsed once complete.
  *
- * Each tool's typed accessor (`weatherInput`, `searchOutput`, …) is a
+ * Each tool's typed accessor (`diceOutput`, `searchOutput`, …) is a
  * defensive narrower — it returns `null` if the model's payload
  * doesn't match the expected shape, in which case the template falls
  * through to the generic JSON view rather than crashing.
@@ -62,12 +62,10 @@ import {
   IconCheck,
   IconChevronRight,
   IconCircleHelp,
-  IconCloudRain,
   IconDices,
   IconFileText,
   IconFolder,
   IconSearch,
-  IconSun,
   IconTriangleAlert,
 } from "@/data/icons"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
@@ -257,45 +255,6 @@ const onCustomKeydown = (event: KeyboardEvent) => {
 // rendering a half-broken card. None of these need to be perfectly
 // strict — they just need to recognize a well-formed payload.
 
-// getWeather — input: { location }, output: { temperature, condition, advisory? }
-interface WeatherInput {
-  location: string
-}
-interface WeatherOutput {
-  temperature: number
-  condition: "sunny" | "cloudy" | "rainy" | "snowy"
-  advisory?: string
-}
-
-const weatherInput = computed<WeatherInput | null>(() => {
-  if (props.tool.name !== "getWeather") return null
-  const raw = props.tool.input
-  if (!raw || typeof raw !== "object") return null
-  const obj = raw as Record<string, unknown>
-  const location = typeof obj.location === "string" ? obj.location : ""
-  return location ? { location } : null
-})
-
-const weatherOutput = computed<WeatherOutput | null>(() => {
-  if (props.tool.name !== "getWeather") return null
-  const raw = props.tool.output
-  if (!raw || typeof raw !== "object") return null
-  const obj = raw as Record<string, unknown>
-  const temperature =
-    typeof obj.temperature === "number" ? obj.temperature : null
-  const condition =
-    obj.condition === "sunny" ||
-    obj.condition === "cloudy" ||
-    obj.condition === "rainy" ||
-    obj.condition === "snowy"
-      ? obj.condition
-      : null
-  if (temperature === null || condition === null) return null
-  const advisory =
-    typeof obj.advisory === "string" && obj.advisory ? obj.advisory : undefined
-  return { temperature, condition, advisory }
-})
-
 // rollDice — input: {} (empty), output: number 1..6
 const diceOutput = computed<number | null>(() => {
   if (props.tool.name !== "rollDice") return null
@@ -450,15 +409,6 @@ const browseInternetOutput = computed<BrowseInternetOutput | null>(() => {
 
 // ── Per-tool helpers ───────────────────────────────────────────────────────
 
-const weatherIcon = computed(() => {
-  const cond = weatherOutput.value?.condition
-  if (cond === "sunny") return IconSun
-  // No dedicated cloud / snow icons in our set — `IconCloudRain` works
-  // visually for cloudy / rainy / snowy. The condition label below the
-  // icon disambiguates.
-  return IconCloudRain
-})
-
 const searchScopeLabel = (scope: "code" | "write") =>
   scope === "code"
     ? t("ai.toolCall.search.scopeCode")
@@ -566,10 +516,6 @@ const FALLBACK_LABEL_KEYS: Record<string, { input: string; output: string }> = {
     input: "ai.toolCall.labels.question",
     output: "ai.toolCall.labels.answer",
   },
-  getWeather: {
-    input: "ai.toolCall.labels.location",
-    output: "ai.toolCall.labels.forecast",
-  },
   rollDice: {
     input: "ai.toolCall.labels.request",
     output: "ai.toolCall.labels.result",
@@ -608,8 +554,6 @@ const outputLabel = computed(() =>
 const hasCustomDoneRenderer = computed(() => {
   if (!isDone.value) return false
   switch (props.tool.name) {
-    case "getWeather":
-      return weatherOutput.value !== null
     case "rollDice":
       return diceOutput.value !== null
     case "searchWorkspaceNodes":
@@ -801,35 +745,7 @@ const statusBadge = computed(() => STATUS_BADGES[status.value])
       </Item>
 
       <!-- ============================================================== -->
-      <!-- getWeather: location header + condition icon, big temperature, -->
-      <!-- condition label, and an optional advisory footer. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="tool.name === 'getWeather' && weatherOutput" size="sm">
-        <CardHeader v-if="weatherInput">
-          <CardTitle>{{ weatherInput.location }}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex items-center gap-2">
-          <Component :is="weatherIcon" class="text-muted-foreground size-8" />
-          <div class="flex flex-col">
-            <span class="text-foreground text-2xl leading-none font-semibold">
-              {{ weatherOutput.temperature }}°F
-            </span>
-            <span class="text-muted-foreground">
-              {{ weatherOutput.condition }}
-            </span>
-          </div>
-        </CardContent>
-        <CardFooter
-          v-if="weatherOutput.advisory"
-          class="text-muted-foreground text-xs"
-        >
-          {{ weatherOutput.advisory }}
-        </CardFooter>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- rollDice: dice icon + big number. No input, so no header — -->
-      <!-- the content mirrors the getWeather card's icon + value layout. -->
+      <!-- rollDice: dice icon + big number. No input, so no header. -->
       <!-- ============================================================== -->
       <Card
         v-else-if="tool.name === 'rollDice' && diceOutput !== null"

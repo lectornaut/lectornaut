@@ -12,20 +12,27 @@
  */
 
 import {
+  addTeamAgentMember as addTeamAgentMemberFn,
   assignRoleToUser as assignRoleToUserFn,
   removeMember as removeMemberFn,
   removeMembers as removeMembersFn,
+  removeTeamAgentMember as removeTeamAgentMemberFn,
   sendInvitation as sendInvitationFn,
 } from "@/composables/useFunctions"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { parseSafe } from "@/schemas/_utils"
-import { membershipSchema } from "@/schemas/membership"
+import { membershipSchema, teamMemberSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
 import type { ITeam } from "@/types/domain"
 import {
+  isAgentMembership,
   isMembershipRole,
+  isUserMembership,
+  type IAgentMembership,
   type IMembership,
+  type IMembershipAgentSnapshot,
   type IMembershipRole,
+  type ITeamMember,
 } from "@/types/membership"
 import { can, Capabilities, hasExactRole } from "@/types/permissions"
 import { getDocsCached } from "@/utils/firebase/firebase-cache"
@@ -57,11 +64,22 @@ import { computed, ref, shallowRef } from "vue"
 import { useCollection } from "vuefire"
 
 // Helper to get ownership count (used for ownerCount computed property)
-const getOwnerCount = (members: IMembership[]) =>
+const getOwnerCount = (members: ITeamMember[]) =>
   members.filter((m) => m.role === "owner").length
 
 const membershipKey = (membership: Pick<IMembership, "teamId" | "userId">) =>
   `${membership.teamId}-${membership.userId}`
+
+/**
+ * Optimistic-merge key for a team member row. Users keep the historical
+ * `${teamId}-${userId}` format byte-for-byte (so existing optimistic
+ * role/remove flows keep matching their pending keys); agents get an
+ * `agent:`-prefixed key. The two namespaces can't collide.
+ */
+const teamMemberKey = (member: ITeamMember) =>
+  isAgentMembership(member)
+    ? `${member.teamId}-agent:${member.agentId}`
+    : `${member.teamId}-${member.userId}`
 
 const isPermissionDeniedError = (error: unknown) =>
   Boolean(
@@ -106,7 +124,7 @@ export const useMembershipStore = defineStore("memberships", () => {
   const optimisticMemberships = ref<IMembership[]>([])
 
   /** Local team members that can be optimistically updated */
-  const optimisticTeamMembers = ref<IMembership[]>([])
+  const optimisticTeamMembers = ref<ITeamMember[]>([])
 
   // Pending operation tracking
   const pendingMembershipIds = shallowRef(createPendingSet())
@@ -133,9 +151,9 @@ export const useMembershipStore = defineStore("memberships", () => {
     return getTeamMembershipsCollection(teamId)
   })
 
-  // VueFire reactive collection binding for team members
-  const _vuefireTeamMembers = useCollection<IMembership>(teamMembersQueryRef)
-  const firestoreTeamMembers: ComputedRef<IMembership[]> = computed(
+  // VueFire reactive collection binding for team members (users + agents)
+  const _vuefireTeamMembers = useCollection<ITeamMember>(teamMembersQueryRef)
+  const firestoreTeamMembers: ComputedRef<ITeamMember[]> = computed(
     () => _vuefireTeamMembers.data.value ?? []
   )
 
@@ -165,7 +183,7 @@ export const useMembershipStore = defineStore("memberships", () => {
             firestoreTeamMembers.value,
             optimisticTeamMembers.value,
             pendingMembershipIds.value,
-            membershipKey
+            teamMemberKey
           )
         : [],
     set: (value) => {
@@ -195,7 +213,12 @@ export const useMembershipStore = defineStore("memberships", () => {
   )
 
   const teamMembersByUserId = computed(
-    () => new Map(teamMembers.value.map((member) => [member.userId, member]))
+    () =>
+      new Map(
+        teamMembers.value
+          .filter(isUserMembership)
+          .map((member) => [member.userId, member])
+      )
   )
 
   /** Get the current user's membership for a specific team */
@@ -282,7 +305,9 @@ export const useMembershipStore = defineStore("memberships", () => {
   ): Promise<IMembership[]> => {
     if (currentTeamId.value === teamId) {
       const userIdSet = new Set(userIds)
-      return teamMembers.value.filter((member) => userIdSet.has(member.userId))
+      return teamMembers.value
+        .filter(isUserMembership)
+        .filter((member) => userIdSet.has(member.userId))
     }
 
     const snapshots = await Promise.all(
@@ -602,7 +627,7 @@ export const useMembershipStore = defineStore("memberships", () => {
   /**
    * Rollback team members state
    */
-  function rollbackTeamMembers(previousTeamMembers: IMembership[]) {
+  function rollbackTeamMembers(previousTeamMembers: ITeamMember[]) {
     optimisticTeamMembers.value = previousTeamMembers
   }
 
@@ -679,7 +704,9 @@ export const useMembershipStore = defineStore("memberships", () => {
       () => {
         if (isCurrentTeamTarget) {
           optimisticTeamMembers.value = teamMembers.value.map((m) =>
-            m.userId === userId ? { ...m, role: newRole } : m
+            isUserMembership(m) && m.userId === userId
+              ? { ...m, role: newRole }
+              : m
           )
         }
       },
@@ -744,7 +771,7 @@ export const useMembershipStore = defineStore("memberships", () => {
       () => {
         if (isCurrentTeamTarget) {
           optimisticTeamMembers.value = teamMembers.value.filter(
-            (m) => m.userId !== userId
+            (m) => isAgentMembership(m) || m.userId !== userId
           )
         }
 
@@ -835,7 +862,7 @@ export const useMembershipStore = defineStore("memberships", () => {
           // Apply optimistic updates
           if (isCurrentTeamTarget) {
             optimisticTeamMembers.value = teamMembers.value.filter(
-              (m) => !userIdSet.has(m.userId)
+              (m) => isAgentMembership(m) || !userIdSet.has(m.userId)
             )
           }
 
@@ -872,6 +899,115 @@ export const useMembershipStore = defineStore("memberships", () => {
       {
         id: `${teamId}:${userIds.join(",")}`,
         source: "membership.removeMembers",
+      }
+    )
+  }
+
+  /**
+   * Add an agent (custom or built-in) to the team as a member. Agents are
+   * always added with the "member" role and there's no invitation
+   * handshake — the membership is written directly via Cloud Function. The
+   * optimistic row borrows the team snapshot from the actor's own
+   * membership so the list updates instantly; if that's unavailable we
+   * skip the optimistic insert and let the Firestore subscription catch up.
+   */
+  async function addAgentMember(
+    teamId: string,
+    agentId: string,
+    agentSnapshot: IMembershipAgentSnapshot
+  ): Promise<void> {
+    if (!currentUser.value) return
+
+    const actorRole = resolveActorRoleForTeam(teamId)
+    if (
+      !can(currentUser.value, Capabilities.INVITE_MEMBER, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new Error("You do not have permission to add agents")
+    }
+
+    const isCurrentTeamTarget = currentTeamId.value === teamId
+    const key = `${teamId}-agent:${agentId}`
+    const previousTeamMembers = isCurrentTeamTarget
+      ? cloneState(teamMembers.value)
+      : []
+    const teamSnapshot = membershipsByTeamId.value.get(teamId)?.team
+
+    await withOptimisticUpdate(
+      pendingMembershipIds,
+      key,
+      () => {
+        if (!isCurrentTeamTarget || !teamSnapshot) return
+        const now = Timestamp.now()
+        const optimisticMember: IAgentMembership = {
+          kind: "agent",
+          agentId,
+          teamId,
+          role: "member",
+          agent: agentSnapshot,
+          team: teamSnapshot,
+          createdAt: now,
+          updatedAt: now,
+        }
+        optimisticTeamMembers.value = [...teamMembers.value, optimisticMember]
+      },
+      () => {
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = previousTeamMembers
+        }
+      },
+      async () => {
+        await addTeamAgentMemberFn({ teamId, agentId })
+      }
+    )
+  }
+
+  /**
+   * Remove an agent membership from the team. Leaves the underlying agent
+   * persona (custom doc / built-in) intact — only the membership row goes.
+   */
+  async function removeAgentMember(
+    teamId: string,
+    agentId: string
+  ): Promise<void> {
+    if (!currentUser.value) return
+
+    const actorRole = resolveActorRoleForTeam(teamId)
+    if (
+      !can(currentUser.value, Capabilities.REMOVE_MEMBER, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new Error("You do not have permission to remove agents")
+    }
+
+    const isCurrentTeamTarget = currentTeamId.value === teamId
+    const key = `${teamId}-agent:${agentId}`
+    const previousTeamMembers = isCurrentTeamTarget
+      ? cloneState(teamMembers.value)
+      : []
+
+    await withOptimisticUpdate(
+      pendingMembershipIds,
+      key,
+      () => {
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = teamMembers.value.filter(
+            (member) =>
+              !(isAgentMembership(member) && member.agentId === agentId)
+          )
+        }
+      },
+      () => {
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = previousTeamMembers
+        }
+      },
+      async () => {
+        await removeTeamAgentMemberFn({ teamId, agentId })
       }
     )
   }
@@ -918,7 +1054,7 @@ export const useMembershipStore = defineStore("memberships", () => {
   /**
    * Get members for a specific team (without switching current team)
    */
-  async function getMembersForTeam(teamId: string): Promise<IMembership[]> {
+  async function getMembersForTeam(teamId: string): Promise<ITeamMember[]> {
     if (currentTeamId.value === teamId && !_vuefireTeamMembers.pending.value) {
       return cloneState(teamMembers.value)
     }
@@ -929,9 +1065,9 @@ export const useMembershipStore = defineStore("memberships", () => {
       )
       return membersSnapshot.docs
         .map((doc) =>
-          parseSafe(membershipSchema, doc.data(), `membership:${doc.ref.path}`)
+          parseSafe(teamMemberSchema, doc.data(), `membership:${doc.ref.path}`)
         )
-        .filter((m): m is IMembership => m !== null)
+        .filter((m): m is ITeamMember => m !== null)
     } catch (error) {
       console.error(
         `[membershipStore] Failed to fetch members for team ${teamId}:`,
@@ -995,6 +1131,8 @@ export const useMembershipStore = defineStore("memberships", () => {
     changeRole,
     removeMember,
     removeMembers,
+    addAgentMember,
+    removeAgentMember,
     createOwnerMembership,
     fetchTeamMemberCounts,
     getMembersForTeam,

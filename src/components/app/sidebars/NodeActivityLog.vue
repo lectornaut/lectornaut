@@ -15,6 +15,7 @@ import {
 } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
+import { isAgentMembership, isUserMembership } from "@/types/membership"
 import type { ILogEntry } from "@/types/logs"
 import { storeToRefs } from "pinia"
 
@@ -50,7 +51,21 @@ const { currentUser, userProfile } = storeToRefs(useAuthStore())
 const { teamMembers } = storeToRefs(useMembershipStore())
 
 const teamMembersByUserId = computed(
-  () => new Map(teamMembers.value.map((member) => [member.userId, member]))
+  () =>
+    new Map(
+      teamMembers.value
+        .filter(isUserMembership)
+        .map((member) => [member.userId, member])
+    )
+)
+
+const agentMembersById = computed(
+  () =>
+    new Map(
+      teamMembers.value
+        .filter(isAgentMembership)
+        .map((member) => [member.agentId, member])
+    )
 )
 
 const ACTION_LABELS = {
@@ -106,6 +121,20 @@ interface ResolvedActor {
 }
 
 const resolveActor = (entry: ILogEntry): ResolvedActor => {
+  // Agent member acting on a human's behalf — show the agent as the actor,
+  // with the driving user's email as the secondary line.
+  const agentId = entry.actor?.agentId
+  if (agentId) {
+    const agentName =
+      entry.actor?.agentName ||
+      agentMembersById.value.get(agentId)?.agent.name ||
+      "Agent"
+    const driverEmail = entry.actor?.userId
+      ? (teamMembersByUserId.value.get(entry.actor.userId)?.user?.email ?? null)
+      : null
+    return { name: agentName, email: driverEmail }
+  }
+
   const userId = entry.actor?.userId
   const fallbackEmail = entry.actor?.email ?? null
 

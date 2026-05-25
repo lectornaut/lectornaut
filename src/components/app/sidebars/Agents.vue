@@ -6,6 +6,7 @@ import { emitter } from "@/modules/mitt"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
+import { isAgentMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
 import { computed } from "vue"
 import Avatar from "vue-boring-avatars"
@@ -38,10 +39,22 @@ const visibleAgents = computed(() =>
 )
 
 const membershipStore = useMembershipStore()
-const { isOwner, isAdmin } = storeToRefs(membershipStore)
+const { isOwner, isAdmin, teamMembers } = storeToRefs(membershipStore)
 // Mirrors the server's `assertAdminRole` gate. UI-only — non-admins
 // who somehow trigger a management flow are rejected by the callable.
 const canManageAgents = computed(() => isOwner.value || isAdmin.value)
+
+// Agents added as members of the active team get a corner dot on their
+// row. `teamMembers` is already scoped to the current team, so we narrow
+// to the agent rows and key by agentId for an O(1) per-row lookup.
+const memberAgentIds = computed(
+  () =>
+    new Set(
+      teamMembers.value
+        .filter(isAgentMembership)
+        .map((member) => member.agentId)
+    )
+)
 
 // Avatar seed precedence: explicit `avatarSeed` if set, else fall back
 // to `name` so the avatar pattern stays deterministic from the
@@ -133,6 +146,13 @@ const openNewAgentDialog = (): void => {
               {{ t("ai.agents.customBadge") }}
             </Badge>
           </SidebarMenuButton>
+          <!-- Corner dot: this agent is a member of the active team. -->
+          <span
+            v-if="memberAgentIds.has(agent.id)"
+            class="bg-primary pointer-events-none absolute top-1 left-1 size-1.5 rounded-full"
+            role="img"
+            :aria-label="t('ai.agents.teamMember')"
+          />
         </SidebarMenuItem>
       </SheetTrigger>
       <SheetContent

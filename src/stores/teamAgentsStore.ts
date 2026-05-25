@@ -65,12 +65,17 @@ const DEFAULT_PROMPT_SUFFIXES: ITeamAgent["promptSuffixes"] = {
 }
 
 const DEFAULT_TOOL_TOGGLES: ITeamAgent["tools"] = {
-  getWeather: true,
   rollDice: true,
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  // Real per-agent toggles (unlike the three "type alignment only" gates
+  // below): dispatch reads `agent.tools.manageContent` for the node-WRITE
+  // tools and `agent.tools.readContent` for the node-READ tool. Default
+  // true so existing agents keep node editing + reading.
+  manageContent: true,
+  readContent: true,
   // Mirrors the server-side default — see the JSDoc on
   // `botAgentToolTogglesSchema.customAgents`. Present for type
   // alignment; the per-agent value is never consumed by dispatch
@@ -130,10 +135,6 @@ function snapshotToAgent(
           : DEFAULT_PROMPT_SUFFIXES.manual,
     },
     tools: {
-      getWeather:
-        typeof toolsRaw.getWeather === "boolean"
-          ? (toolsRaw.getWeather as boolean)
-          : DEFAULT_TOOL_TOGGLES.getWeather,
       rollDice:
         typeof toolsRaw.rollDice === "boolean"
           ? (toolsRaw.rollDice as boolean)
@@ -154,6 +155,17 @@ function snapshotToAgent(
         typeof toolsRaw.summarizeNode === "boolean"
           ? (toolsRaw.summarizeNode as boolean)
           : DEFAULT_TOOL_TOGGLES.summarizeNode,
+      // Real per-agent gates for the node tools — consumed at dispatch
+      // (intersected with the team toggle + membership). `manageContent`
+      // gates the write tools; `readContent` gates `readNode`.
+      manageContent:
+        typeof toolsRaw.manageContent === "boolean"
+          ? (toolsRaw.manageContent as boolean)
+          : DEFAULT_TOOL_TOGGLES.manageContent,
+      readContent:
+        typeof toolsRaw.readContent === "boolean"
+          ? (toolsRaw.readContent as boolean)
+          : DEFAULT_TOOL_TOGGLES.readContent,
       // See `DEFAULT_TOOL_TOGGLES.customAgents` — present for shape
       // alignment with the team-level toggle schema; never consumed.
       customAgents:

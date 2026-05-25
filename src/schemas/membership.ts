@@ -6,13 +6,31 @@ import { teamSchema, userProfileSchema } from "./domain"
 /**
  * Membership schemas — mirror `src/types/membership.ts`.
  *
- * A membership doc carries denormalized snapshots of the user and team it
- * links, so that list views can render without joining two collections. The
- * `Partial<…>` variant on the doc-data schema reflects the reality that
- * snapshots may be half-populated during async propagation.
+ * A membership doc carries denormalized snapshots of the principal (user
+ * or agent) and team it links, so that list views can render without
+ * joining two collections. The `Partial<…>` variants on the doc-data
+ * schema reflect the reality that snapshots may be half-populated during
+ * async propagation.
+ *
+ * Two principal kinds share the `teams/{teamId}/memberships/{id}`
+ * collection:
+ *   - "user"  — a human, keyed by `userId`, carries a `user` snapshot.
+ *               `kind` is OPTIONAL/absent on legacy docs (predates agents),
+ *               which normalize to "user".
+ *   - "agent" — a team agent acting as a member, keyed by `agentId`,
+ *               carries an `agent` snapshot. Always role "member".
+ *
+ * The read-path converter validates EVERY doc in the collection, so the
+ * doc-data schema is a permissive superset that parses both kinds without
+ * throwing (the converter throws on parse failure in dev). Strict
+ * discrimination is done at the type level via `ITeamMember` and the
+ * `isAgentMembership` runtime guard.
  */
 
 export const membershipRoleSchema = z.enum(MEMBERSHIP_ROLES)
+
+/** Which kind of principal a membership represents. */
+export const membershipKindSchema = z.enum(["user", "agent"])
 
 // ─── Membership record ───────────────────────────────────────────────────────
 
@@ -24,7 +42,7 @@ export const membershipRecordSchema = z.object({
   updatedAt: timestampSchema,
 })
 
-// ─── Denormalized user/team snapshots ────────────────────────────────────────
+// ─── Denormalized user/team/agent snapshots ──────────────────────────────────
 
 export const membershipUserSnapshotSchema = userProfileSchema.pick({
   uid: true,
@@ -47,32 +65,82 @@ export const membershipTeamSnapshotSchema = teamSchema.pick({
   updatedAt: true,
 })
 
-// ─── Full membership (record + resolved snapshots) ──────────────────────────
+/**
+ * Denormalized snapshot of the agent backing an agent membership. Agents
+ * — especially built-in presets — may have no Firestore doc of their own,
+ * so the membership carries enough display data (name, avatar seed) to
+ * render a member row without resolving the team's agents collection.
+ */
+export const membershipAgentSnapshotSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  avatarSeed: z.string().optional(),
+  /** True when the agent is a shipped built-in preset (no Firestore doc). */
+  isBuiltIn: z.boolean().optional(),
+})
 
+// ─── Full memberships (record + resolved snapshots) ──────────────────────────
+
+/**
+ * A human (user) membership. `kind` is optional so docs written before
+ * agent memberships existed still validate (they normalize to "user").
+ */
 export const membershipSchema = membershipRecordSchema.extend({
+  kind: z.literal("user").optional(),
   user: membershipUserSnapshotSchema,
   team: membershipTeamSnapshotSchema,
 })
 
+/**
+ * An agent membership — keyed by `agentId`, always role "member". Carries
+ * an `agent` snapshot instead of a `user` snapshot.
+ */
+export const agentMembershipSchema = z.object({
+  kind: z.literal("agent"),
+  agentId: z.string(),
+  teamId: z.string(),
+  role: membershipRoleSchema,
+  agent: membershipAgentSnapshotSchema,
+  team: membershipTeamSnapshotSchema,
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+})
+
+/**
+ * A single row in a team's members list — either principal kind.
+ * `agentMembershipSchema` is listed first so its required `kind: "agent"`
+ * literal is tried before the looser user schema.
+ */
+export const teamMemberSchema = z.union([
+  agentMembershipSchema,
+  membershipSchema,
+])
+
 // ─── Membership Firestore doc shape ─────────────────────────────────────────
 
 /**
- * The as-stored shape in Firestore, where snapshot fields may be partial
- * during asynchronous propagation (e.g., while server triggers refresh
- * denormalized user/team snapshots).
+ * The as-stored shape in Firestore, permissive across BOTH principal
+ * kinds. Snapshot fields may be partial during asynchronous propagation
+ * (e.g., while server triggers refresh denormalized snapshots), and the
+ * kind-specific fields (`userId`/`user` vs `agentId`/`agent`) are all
+ * optional so the shared read-path converter parses either shape without
+ * throwing.
  */
 export const membershipDocDataSchema = z.object({
-  userId: z.string(),
+  kind: membershipKindSchema.optional(),
+  userId: z.string().optional(),
+  agentId: z.string().optional(),
   teamId: z.string(),
   role: membershipRoleSchema,
-  user: membershipUserSnapshotSchema.partial(),
+  user: membershipUserSnapshotSchema.partial().optional(),
+  agent: membershipAgentSnapshotSchema.partial().optional(),
   team: membershipTeamSnapshotSchema.partial(),
   createdAt: timestampSchema.optional(),
   updatedAt: timestampSchema.optional(),
 })
 
 export const membershipDocDataWriteSchema = membershipDocDataSchema.extend({
-  userId: z.string().optional(),
   teamId: z.string().optional(),
   createdAt: timestampInputSchema.optional(),
   updatedAt: timestampInputSchema.optional(),

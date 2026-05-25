@@ -3,7 +3,7 @@ import { useLoadingState } from "@/composables/useLoadingState"
 import { defaultTeamRole } from "@/helpers/defaults"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
-import type { IMembership } from "@/types/membership"
+import { isUserMembership, type IMembership } from "@/types/membership"
 import { can, Capabilities, roleCan } from "@/types/permissions"
 import { storeToRefs } from "pinia"
 import type { Ref } from "vue"
@@ -215,7 +215,9 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       async () => {
         const teamId = effectiveTeamId.value
         if (!teamId) return
-        const targetMember = teamMembers.value.find((m) => m.userId === userId)
+        const targetMember = teamMembers.value
+          .filter(isUserMembership)
+          .find((m) => m.userId === userId)
         if (
           currentUserRole.value !== "owner" &&
           (newRole === "owner" || targetMember?.role === "owner")
@@ -244,6 +246,22 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
             ? "You have left the team"
             : "Member removed successfully",
         error: "Failed to remove member",
+      }
+    )
+
+  // Agents are removed via a dedicated path — keyed as `agent:<id>` in the
+  // shared member loading map so the row spinner resolves correctly.
+  const removeAgentMember = async (agentId: string) =>
+    memberActions.run(
+      `agent:${agentId}`,
+      async () => {
+        const teamId = effectiveTeamId.value
+        if (!teamId) return
+        await membershipStore.removeAgentMember(teamId, agentId)
+      },
+      {
+        success: "Agent removed successfully",
+        error: "Failed to remove agent",
       }
     )
 
@@ -460,6 +478,7 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     // Actions
     changeRole,
     removeMember,
+    removeAgentMember,
     switchTeam,
     clearCurrentTeam,
     exitTeam,

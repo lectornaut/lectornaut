@@ -565,7 +565,7 @@ interface ComposerToolEntry {
 /**
  * Synthesize a sentence-opener for a custom tool's slash-menu example.
  * Mirrors the built-in catalog's "user fills in the rest" pattern
- * (e.g. `"What's the weather in "`). We deliberately mention the tool
+ * (e.g. `"Search the web for "`). We deliberately mention the tool
  * by name — admins author these and want them discoverable, unlike
  * built-ins where the design intentionally hides the wire-name from
  * users. A trailing space leaves the caret in a natural position for

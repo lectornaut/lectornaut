@@ -11,6 +11,7 @@ import {
 import { isTeamBillingEntitled } from "@/helpers/billing"
 import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
+import { isUserMembership } from "@/types/membership"
 
 const { t } = useI18n()
 
@@ -35,8 +36,14 @@ const teams = computed(() =>
   }))
 )
 
+// Agents show up in the members table, but the switcher's avatar preview
+// stays human-only — it renders user photos / initials.
+const humanTeamMembers = computed(() =>
+  teamMembers.value.filter(isUserMembership)
+)
+
 const hiddenTeamMemberNames = computed(() =>
-  teamMembers.value
+  humanTeamMembers.value
     .slice(3)
     .map(
       (member) =>
@@ -100,7 +107,7 @@ const currentPlanLabel = computed(() => {
                     <div class="flex items-center gap-1">
                       <div class="flex -space-x-1">
                         <Tooltip
-                          v-for="member in teamMembers.slice(0, 3)"
+                          v-for="member in humanTeamMembers.slice(0, 3)"
                           :key="member.userId"
                         >
                           <TooltipTrigger as-child>
@@ -134,11 +141,11 @@ const currentPlanLabel = computed(() => {
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <Tooltip v-if="teamMembers.length > 3">
+                      <Tooltip v-if="humanTeamMembers.length > 3">
                         <TooltipTrigger as-child>
                           <Avatar class="ring-sidebar size-4 ring-2">
                             <AvatarFallback class="size-4">
-                              +{{ teamMembers.length - 3 }}
+                              +{{ humanTeamMembers.length - 3 }}
                             </AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>

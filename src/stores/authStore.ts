@@ -24,6 +24,7 @@ import type {
   IUserPreferences,
   IUserProfile,
 } from "@/types/domain"
+import { isUserMembership } from "@/types/membership"
 import {
   getMembershipPreferencesRef,
   getUserPreferencesRef,
@@ -534,7 +535,9 @@ export const useAuthStore = defineStore("auth", () => {
           const teamMembers = await membershipStore.getMembersForTeam(
             membership.teamId
           )
-          const owners = teamMembers.filter((m) => m.role === "owner")
+          const owners = teamMembers
+            .filter(isUserMembership)
+            .filter((m) => m.role === "owner")
 
           if (
             owners.length === 1 &&

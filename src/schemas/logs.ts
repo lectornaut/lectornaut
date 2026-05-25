@@ -52,6 +52,11 @@ export const logActorSchema = z.object({
   userId: z.string(),
   email: z.string().nullable().optional(),
   role: z.string().nullable().optional(),
+  // Present when an agent member performed the action on the user's behalf:
+  // `userId` is the human who drove the turn; `agentId`/`agentName` identify
+  // the agent that executed it.
+  agentId: z.string().nullable().optional(),
+  agentName: z.string().nullable().optional(),
 })
 
 export const logResourceSchema = z.object({

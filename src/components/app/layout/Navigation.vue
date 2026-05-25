@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import { isBuiltInAgentId } from "@/data/builtInAgents"
 import { IconGrid2X2Plus, IconRotateCcw } from "@/data/icons"
 import { defaultMenu } from "@/helpers/defaults"
 import { useLayoutStore } from "@/stores/layoutStore"
+import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
+import { isAgentMembership } from "@/types/membership"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
 
@@ -17,6 +20,20 @@ const { toggleNavItem, resetNavItems, isAgentVisible, setAgentVisible } =
 // so each agent gets its own visibility checkbox in the submenu.
 const teamAgentsStore = useTeamAgentsStore()
 const { pickerAgents } = storeToRefs(teamAgentsStore)
+
+// Agents added as members of the active team get a corner dot in the
+// submenu below. `teamMembers` is already scoped to the current team, so
+// we just narrow to the agent rows and key by agentId for an O(1) lookup.
+const membershipStore = useMembershipStore()
+const { teamMembers } = storeToRefs(membershipStore)
+const memberAgentIds = computed(
+  () =>
+    new Set(
+      teamMembers.value
+        .filter(isAgentMembership)
+        .map((member) => member.agentId)
+    )
+)
 
 const el = ref<HTMLElement>()
 
@@ -109,7 +126,21 @@ useSortable(el, activeNavItems, {
                     @update:model-value="setAgentVisible(agent.id, $event)"
                     @select.prevent
                   >
+                    <span
+                      v-if="memberAgentIds.has(agent.id)"
+                      class="bg-primary pointer-events-none absolute top-1 left-1 size-1.5 rounded-full"
+                      role="img"
+                      :aria-label="t('ai.agents.teamMember')"
+                    />
                     {{ agent.name }}
+                    <!-- "Custom" tag for admin-authored agents (built-ins use `_`-prefixed ids); mirrors the Agents sidebar. -->
+                    <Badge
+                      v-if="!isBuiltInAgentId(agent.id)"
+                      variant="secondary"
+                      class="text-xs"
+                    >
+                      {{ t("ai.agents.customBadge") }}
+                    </Badge>
                   </DropdownMenuCheckboxItem>
                 </template>
                 <DropdownMenuItem v-else disabled>

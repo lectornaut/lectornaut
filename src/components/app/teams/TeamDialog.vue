@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
+import { BUILT_IN_AGENTS, isBuiltInAgentId } from "@/data/builtInAgents"
 import {
   IconAtSign,
   IconBan,
@@ -27,13 +28,17 @@ import {
   type IInvitation,
 } from "@/stores/invitationStore"
 import { useMembershipStore } from "@/stores/membershipStore"
+import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import type { ITeam } from "@/types/domain"
 import {
+  isAgentMembership,
   isMembershipRole,
-  type IMembership,
+  isUserMembership,
+  type IMembershipAgentSnapshot,
   type IMembershipRole,
 } from "@/types/membership"
 import { Capabilities, roleCan } from "@/types/permissions"
+import BoringAvatar from "vue-boring-avatars"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
@@ -43,6 +48,29 @@ interface PendingMember {
   role: IMembershipRole
   id?: string
   originalRole?: IMembershipRole
+}
+
+/**
+ * An agent staged to be added as a member, or (in edit mode) one already on
+ * the team. Agents are always role "member" — no role field needed.
+ */
+interface PendingAgentMember {
+  agentId: string
+  name: string
+  avatarSeed: string
+  description?: string
+  isBuiltIn: boolean
+  /** True when already a team member (loaded in edit mode) vs. newly staged. */
+  existing: boolean
+}
+
+/** A selectable agent option surfaced in the invite combobox. */
+interface AgentOption {
+  id: string
+  name: string
+  description: string
+  avatarSeed: string
+  isBuiltIn: boolean
 }
 
 /** Result of a single invite attempt */
@@ -82,6 +110,7 @@ const {
 
 const membershipStore = useMembershipStore()
 const invitationStore = useInvitationStore()
+const teamAgentsStore = useTeamAgentsStore()
 const user = useCurrentUser()
 
 // State
@@ -95,6 +124,9 @@ const teamIsPublic = ref(false)
 const inviteEmail = ref("")
 const inviteRole = ref<IMembershipRole>(defaultTeamRole)
 const members = ref<PendingMember[]>([])
+const agentMembers = ref<PendingAgentMember[]>([])
+const removedAgentIds = ref<string[]>([])
+const invitePickerOpen = ref(false)
 const removedMemberIds = ref<string[]>([])
 const originalMemberRoles = ref<Record<string, IMembershipRole>>({})
 const isCheckingTeamUsername = ref(false)
@@ -198,6 +230,9 @@ const resetForm = () => {
   inviteEmail.value = ""
   inviteRole.value = defaultTeamRole
   members.value = []
+  agentMembers.value = []
+  removedAgentIds.value = []
+  invitePickerOpen.value = false
   removedMemberIds.value = []
   originalMemberRoles.value = {}
   photoFile.value = null
@@ -292,24 +327,29 @@ watch(isOpen, async (val) => {
         teamUsername.value = props.team.username ?? ""
         teamIsPublic.value = props.team.isPublic ?? false
         photoPreview.value = props.team.photoURL || null
-        // Load existing team members from membershipStore for the specific team
-        const teamMembers = await membershipStore.getMembersForTeam(
+        // Load existing team members (users + agents) for the specific team
+        const allMembers = await membershipStore.getMembersForTeam(
           props.team.id
         )
-        if (teamMembers && teamMembers.length > 0) {
-          originalMemberRoles.value = Object.fromEntries(
-            teamMembers.map((membership) => [
-              membership.userId,
-              membership.role,
-            ])
-          )
-          members.value = teamMembers.map((membership: IMembership) => ({
-            email: membership.user.email!,
-            role: membership.role,
-            id: membership.userId,
-            originalRole: membership.role,
-          }))
-        }
+        const userMembers = allMembers.filter(isUserMembership)
+        const agentMemberRecords = allMembers.filter(isAgentMembership)
+        originalMemberRoles.value = Object.fromEntries(
+          userMembers.map((membership) => [membership.userId, membership.role])
+        )
+        members.value = userMembers.map((membership) => ({
+          email: membership.user.email!,
+          role: membership.role,
+          id: membership.userId,
+          originalRole: membership.role,
+        }))
+        agentMembers.value = agentMemberRecords.map((membership) => ({
+          agentId: membership.agentId,
+          name: membership.agent.name,
+          avatarSeed: membership.agent.avatarSeed ?? "",
+          description: membership.agent.description,
+          isBuiltIn: membership.agent.isBuiltIn ?? false,
+          existing: true,
+        }))
       } finally {
         isLoading.value = false
       }
@@ -324,6 +364,132 @@ watch(isOpen, async (val) => {
 
 /** Validate email format */
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+// ── Agent invite combobox ────────────────────────────────────────────────────
+
+/** Agents available to add: built-ins (always) + the team's custom agents. */
+const availableAgents = computed<AgentOption[]>(() => {
+  if (props.mode === "create") {
+    // No team exists yet — only the shipped built-in presets can be staged.
+    return BUILT_IN_AGENTS.map((agent) => ({
+      id: agent.id,
+      name: agent.name,
+      description: agent.description,
+      avatarSeed: agent.avatarSeed,
+      isBuiltIn: true,
+    }))
+  }
+  return teamAgentsStore.pickerAgents.map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+    description: agent.description,
+    avatarSeed: agent.avatarSeed,
+    isBuiltIn: isBuiltInAgentId(agent.id),
+  }))
+})
+
+/** Agent ids already members or staged — excluded from the picker. */
+const takenAgentIds = computed(() => {
+  const ids = new Set<string>()
+  agentMembers.value.forEach((agent) => ids.add(agent.agentId))
+  // In create mode the new team has no members yet, so only staged agents
+  // count; otherwise also exclude agents already on the team.
+  if (props.mode !== "create") {
+    membershipStore.teamMembers.forEach((member) => {
+      if (isAgentMembership(member)) ids.add(member.agentId)
+    })
+  }
+  return ids
+})
+
+/** Agent options matching the search text and not already taken. */
+const filteredAgentOptions = computed<AgentOption[]>(() => {
+  const query = inviteEmail.value.trim().toLowerCase()
+  return availableAgents.value.filter((agent) => {
+    if (takenAgentIds.value.has(agent.id)) return false
+    if (!query) return true
+    return (
+      agent.name.toLowerCase().includes(query) ||
+      agent.description.toLowerCase().includes(query)
+    )
+  })
+})
+
+/** Whether the typed text is a fresh, valid email we can stage as an invite. */
+const canInviteTypedEmail = computed(() => {
+  const email = inviteEmail.value.trim()
+  if (!isValidEmail(email)) return false
+  if (members.value.some((m) => m.email === email)) return false
+  if (user.value?.email === email) return false
+  return true
+})
+
+/** Stage an agent to be added as a member (role is locked to "member"). */
+const stageAgent = (agent: AgentOption) => {
+  if (!canInviteMembers.value && props.mode !== "create") {
+    toast.error(t(getCannotInviteMembersReason.value || ""))
+    return
+  }
+  if (takenAgentIds.value.has(agent.id)) return
+  agentMembers.value.push({
+    agentId: agent.id,
+    name: agent.name,
+    avatarSeed: agent.avatarSeed,
+    description: agent.description,
+    isBuiltIn: agent.isBuiltIn,
+    existing: false,
+  })
+  inviteEmail.value = ""
+  invitePickerOpen.value = false
+}
+
+/** Remove a staged or already-existing agent member from the dialog. */
+const removeAgent = (agentId: string) => {
+  const target = agentMembers.value.find((agent) => agent.agentId === agentId)
+  if (target?.existing) removedAgentIds.value.push(agentId)
+  agentMembers.value = agentMembers.value.filter(
+    (agent) => agent.agentId !== agentId
+  )
+}
+
+const stagedAgentMembers = computed(() =>
+  agentMembers.value.filter((agent) => !agent.existing)
+)
+
+const agentAvatarSeed = (agent: { avatarSeed: string; name: string }) =>
+  agent.avatarSeed.trim() || agent.name.trim() || "Agent"
+
+/**
+ * Commit staged agent members to a team as real memberships. Returns the
+ * count of failures so the caller can surface a partial-failure toast.
+ */
+const commitAgentAdditions = async (teamId: string): Promise<number> => {
+  const toAdd = agentMembers.value.filter((agent) => !agent.existing)
+  if (toAdd.length === 0) return 0
+  const results = await Promise.allSettled(
+    toAdd.map((agent) => {
+      const snapshot: IMembershipAgentSnapshot = {
+        id: agent.agentId,
+        name: agent.name,
+        description: agent.description,
+        avatarSeed: agent.avatarSeed,
+        isBuiltIn: agent.isBuiltIn,
+      }
+      return membershipStore.addAgentMember(teamId, agent.agentId, snapshot)
+    })
+  )
+  return results.filter((result) => result.status === "rejected").length
+}
+
+/** Remove agent memberships flagged for removal during an edit. */
+const commitAgentRemovals = async (teamId: string): Promise<void> => {
+  if (removedAgentIds.value.length === 0) return
+  await Promise.allSettled(
+    removedAgentIds.value.map((agentId) =>
+      membershipStore.removeAgentMember(teamId, agentId)
+    )
+  )
+}
 
 /**
  * Invite members via invitationStore.
@@ -574,6 +740,18 @@ const handleSubmit = async () => {
           showInviteResultToast(results)
         }
       }
+
+      // Add staged agents to the new team (direct memberships, no invite)
+      if (newTeamId && agentMembers.value.length > 0) {
+        const agentFailures = await commitAgentAdditions(newTeamId)
+        if (agentFailures > 0) {
+          toast.warning(
+            t("components.teamDialog.toasts.agentsPartial", {
+              failed: agentFailures,
+            })
+          )
+        }
+      }
     } else if (props.mode === "edit" && props.team) {
       // 1. Update Team (useTeamActions handles success toast)
       let filePayload: File | null | undefined = undefined
@@ -694,6 +872,17 @@ const handleSubmit = async () => {
           showInviteResultToast(results)
         }
       }
+
+      // Agent membership changes: removals first, then additions
+      await commitAgentRemovals(props.team.id)
+      const editAgentFailures = await commitAgentAdditions(props.team.id)
+      if (editAgentFailures > 0) {
+        toast.warning(
+          t("components.teamDialog.toasts.agentsPartial", {
+            failed: editAgentFailures,
+          })
+        )
+      }
     } else if (props.mode === "invite") {
       // Invite Mode
       const targetTeam = props.team
@@ -713,6 +902,23 @@ const handleSubmit = async () => {
           members.value
         )
         showInviteResultToast(results)
+      }
+
+      // Add staged agents directly (no invitation handshake)
+      const stagedAgentCount = stagedAgentMembers.value.length
+      const inviteAgentFailures = await commitAgentAdditions(targetTeam.id)
+      if (inviteAgentFailures > 0) {
+        toast.warning(
+          t("components.teamDialog.toasts.agentsPartial", {
+            failed: inviteAgentFailures,
+          })
+        )
+      } else if (stagedAgentCount > 0) {
+        toast.success(
+          t("components.teamDialog.toasts.agentsAdded", {
+            count: stagedAgentCount,
+          })
+        )
       }
     }
 
@@ -1101,30 +1307,109 @@ const handleSubmit = async () => {
           <!-- Input Form -->
           <ButtonGroup class="grow">
             <ButtonGroup class="grow">
-              <InputGroup>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <div class="w-full">
-                        <InputGroupInput
-                          id="invite"
-                          v-model="inviteEmail"
-                          :placeholder="
-                            $t('components.teamDialog.placeholders.email')
-                          "
-                          type="email"
-                          :disabled="!canInviteMembers && mode !== 'create'"
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      v-if="!canInviteMembers && mode !== 'create'"
+              <Popover v-model:open="invitePickerOpen">
+                <PopoverAnchor as-child>
+                  <div class="w-full">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <InputGroup>
+                            <InputGroupInput
+                              id="invite"
+                              v-model="inviteEmail"
+                              :placeholder="
+                                $t(
+                                  'components.teamDialog.placeholders.inviteOrAgent'
+                                )
+                              "
+                              autocomplete="off"
+                              :disabled="!canInviteMembers && mode !== 'create'"
+                              @focus="invitePickerOpen = true"
+                              @keydown.enter.prevent="addMember"
+                            />
+                          </InputGroup>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          v-if="!canInviteMembers && mode !== 'create'"
+                        >
+                          {{ t(getCannotInviteMembersReason || "") }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </PopoverAnchor>
+                <PopoverContent
+                  align="start"
+                  class="w-(--reka-popover-trigger-width) p-1"
+                  @open-auto-focus.prevent
+                  @close-auto-focus.prevent
+                >
+                  <div class="max-h-64 overflow-y-auto">
+                    <button
+                      v-for="agent in filteredAgentOptions"
+                      :key="agent.id"
+                      type="button"
+                      class="hover:bg-accent flex w-full items-center gap-2 rounded-md p-2 text-left"
+                      @click="stageAgent(agent)"
                     >
-                      {{ t(getCannotInviteMembersReason || "") }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </InputGroup>
+                      <span
+                        class="size-6 shrink-0 overflow-hidden rounded-full"
+                      >
+                        <BoringAvatar
+                          variant="beam"
+                          :size="24"
+                          :name="agentAvatarSeed(agent)"
+                          :colors="[
+                            'var(--color-chart-1)',
+                            'var(--color-chart-2)',
+                            'var(--color-chart-3)',
+                            'var(--color-chart-4)',
+                            'var(--color-chart-5)',
+                          ]"
+                        />
+                      </span>
+                      <span class="flex min-w-0 flex-col">
+                        <span
+                          class="flex items-center gap-1.5 truncate text-sm"
+                        >
+                          {{ agent.name }}
+                          <Badge variant="secondary">
+                            {{ t("components.teamDialog.labels.agentBadge") }}
+                          </Badge>
+                        </span>
+                        <span
+                          v-if="agent.description"
+                          class="text-muted-foreground truncate text-xs"
+                        >
+                          {{ agent.description }}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      v-if="canInviteTypedEmail"
+                      type="button"
+                      class="hover:bg-accent flex w-full items-center gap-2 rounded-md p-2 text-left text-sm"
+                      @click="addMember"
+                    >
+                      <IconAtSign class="size-4 shrink-0" />
+                      {{
+                        t("components.teamDialog.tooltips.inviteEmail", {
+                          email: inviteEmail.trim(),
+                        })
+                      }}
+                    </button>
+                    <p
+                      v-if="
+                        filteredAgentOptions.length === 0 &&
+                        !canInviteTypedEmail
+                      "
+                      class="text-muted-foreground p-2 text-center text-xs"
+                    >
+                      {{ t("components.teamDialog.labels.noAgentMatches") }}
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </ButtonGroup>
             <ButtonGroup>
               <ButtonGroup>
@@ -1178,6 +1463,90 @@ const handleSubmit = async () => {
                         addMemberDisabledReason ||
                         t("components.teamDialog.tooltips.addMember")
                       }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ButtonGroup>
+            </ButtonGroup>
+          </ButtonGroup>
+        </Field>
+
+        <!-- Agent Members (added directly, role locked to member) -->
+        <Field v-if="agentMembers.length > 0" class="grid gap-2">
+          <FieldLabel class="text-secondary-foreground text-xs">
+            {{ t("components.teamDialog.labels.agents") }}
+          </FieldLabel>
+          <ButtonGroup
+            v-for="agent in agentMembers"
+            :key="agent.agentId"
+            class="grow"
+          >
+            <ButtonGroup class="grow">
+              <InputGroup>
+                <InputGroupAddon>
+                  <span class="size-5 shrink-0 overflow-hidden rounded-full">
+                    <BoringAvatar
+                      variant="beam"
+                      :size="20"
+                      :name="agentAvatarSeed(agent)"
+                      :colors="[
+                        'var(--color-chart-1)',
+                        'var(--color-chart-2)',
+                        'var(--color-chart-3)',
+                        'var(--color-chart-4)',
+                        'var(--color-chart-5)',
+                      ]"
+                    />
+                  </span>
+                </InputGroupAddon>
+                <InputGroupInput :model-value="agent.name" disabled />
+                <InputGroupAddon align="inline-end">
+                  <Badge variant="secondary">
+                    {{ t("components.teamDialog.labels.agentBadge") }}
+                  </Badge>
+                </InputGroupAddon>
+              </InputGroup>
+            </ButtonGroup>
+            <ButtonGroup>
+              <ButtonGroup>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <div>
+                        <Select model-value="member" disabled>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value="member">{{
+                                t("components.teamDialog.roles.member")
+                              }}</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("components.teamDialog.tooltips.agentRoleLocked") }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ButtonGroup>
+              <ButtonGroup>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        @click="removeAgent(agent.agentId)"
+                      >
+                        <IconTrash />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("components.teamDialog.tooltips.removeAgent") }}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

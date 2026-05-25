@@ -188,7 +188,6 @@ const DEFAULT_BOT_AGENT_MODEL_TOGGLES: BotAgentModelToggles =
  * `BotAgentToolToggles` (see below). Per-agent docs don't carry it.
  */
 export const CHAT_TOOL_NAMES = [
-  "getWeather",
   "rollDice",
   "browseInternet",
   "askQuestion",
@@ -203,6 +202,26 @@ export type ChatToolName = (typeof CHAT_TOOL_NAMES)[number]
  * feature flags.
  */
 export interface BotAgentToolToggles extends Record<ChatToolName, boolean> {
+  /**
+   * Team-wide gate for the agent node-WRITE tools (`NODE_WRITE_TOOLS` in
+   * `botNodeTools.ts`). A capability gate over a block, not a single
+   * `ChatToolName` — so it's NOT in `CHAT_TOOL_NAMES` and never reaches
+   * `pickChatTools`. Instead the dispatcher registers the write tools
+   * only when this is on AND the active agent's per-agent `manageContent`
+   * is on AND `canManageNodes` (the user×agent `MANAGE_WORKSPACE_CONTENT`
+   * intersection) holds. Off here strips the write tools — and the
+   * matching system-prompt directive — for every agent. Normalized to
+   * `true` on read so teams predating this field keep node editing.
+   */
+  manageContent: boolean
+  /**
+   * Team-wide gate for the node-READ tool (`NODE_READ_TOOLS` = `readNode`),
+   * which returns a file's full content. Sibling of `manageContent` but
+   * gated on the lighter `READ_WORKSPACE` membership (held by guests too),
+   * so an agent can read workspace content without edit rights. Same
+   * block-gate semantics; normalized to `true` on read.
+   */
+  readContent: boolean
   /**
    * Team-wide gate for the entire custom-agents feature. When false,
    * dispatch silently substitutes the team default persona even for
@@ -298,20 +317,28 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   maxOutputTokens: 4096,
   defaultMode: "auto",
   systemPromptBase:
-    "You are a helpful assistant for the user's team workspace.",
+    "You are a helpful AI assistant embedded in this team's " +
+    "collaborative workspace, which holds two kinds of nodes: 'write' " +
+    "(rich-text documents) and 'code' (source files) organized in " +
+    "folders. When a question touches team-specific facts, ground your " +
+    "answer in the workspace — call `searchWorkspaceNodes` before " +
+    "answering instead of guessing, and say so plainly when you can't " +
+    "find a relevant node. Write replies in Markdown and keep them " +
+    "concise.",
   promptSuffixes: {
     auto: MODE_CONFIG.auto.promptSuffix,
     agent: MODE_CONFIG.agent.promptSuffix,
     manual: MODE_CONFIG.manual.promptSuffix,
   },
   tools: {
-    getWeather: true,
     rollDice: true,
     browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
     summarizeNodeInspector: true,
+    manageContent: true,
+    readContent: true,
     customAgents: true,
     customTools: true,
   },
@@ -402,13 +429,14 @@ const botAgentConfigUpdateSchema = z.object({
     .optional(),
   tools: z
     .object({
-      getWeather: z.boolean(),
       rollDice: z.boolean(),
       browseInternet: z.boolean(),
       askQuestion: z.boolean(),
       searchWorkspaceNodes: z.boolean(),
       summarizeNode: z.boolean(),
       summarizeNodeInspector: z.boolean(),
+      manageContent: z.boolean(),
+      readContent: z.boolean(),
       customAgents: z.boolean(),
       customTools: z.boolean(),
     })
@@ -621,7 +649,6 @@ const botAgentConfigDocSchema = z
       .catch({ ...DEFAULT_BOT_AGENT_CONFIG.promptSuffixes }),
     tools: z
       .object({
-        getWeather: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.tools.getWeather),
         rollDice: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.tools.rollDice),
         browseInternet: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.browseInternet
@@ -637,6 +664,12 @@ const botAgentConfigDocSchema = z
         ),
         summarizeNodeInspector: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.summarizeNodeInspector
+        ),
+        manageContent: cappedToolToggle(
+          DEFAULT_BOT_AGENT_CONFIG.tools.manageContent
+        ),
+        readContent: cappedToolToggle(
+          DEFAULT_BOT_AGENT_CONFIG.tools.readContent
         ),
         customAgents: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.customAgents

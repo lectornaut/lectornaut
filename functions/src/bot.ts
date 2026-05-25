@@ -41,6 +41,7 @@ import {
   buildAgentSystemPrompt,
   normalizeActiveAgentIdForStorage,
   resolveActiveAgent,
+  WORKSPACE_SAFETY_DIRECTIVE,
 } from "./agents.js"
 import {
   BOT_AGENT_MODELS,
@@ -56,7 +57,6 @@ import {
   askQuestionTool,
   BOT_CHAT_MODES,
   browseInternetTool,
-  getWeatherTool,
   INTERRUPT_TOOL_NAMES,
   rollDiceTool,
   transferToAgentTool,
@@ -69,6 +69,7 @@ import {
   NodeRefSchema,
   type NodeRef,
 } from "./botContext.js"
+import { NODE_READ_TOOLS, NODE_WRITE_TOOLS } from "./botNodeTools.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import { listBuiltInAgents } from "./builtInAgents.js"
@@ -80,6 +81,7 @@ import {
   resolveModel,
 } from "./genkitClient.js"
 import { aiMiddlewares } from "./genkitMiddleware.js"
+import { can, Capabilities } from "./permissions.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
 import { listTeamAgents, type TeamAgentDoc } from "./teamAgents.js"
@@ -699,7 +701,7 @@ class FirestoreBotSessionStore implements SessionStore {
 }
 
 // ===========================================================================
-// Built-in tools live in `botBuiltinTools.ts` (getWeather, rollDice,
+// Built-in tools live in `botBuiltinTools.ts` (rollDice, browseInternet,
 // transferToAgent, askQuestion) — imported up top. This file orchestrates
 // which tools to register per turn via `pickChatTools`; the tool
 // definitions themselves stay out of this orchestration layer so the
@@ -777,8 +779,6 @@ function pickChatTools(
   // come back as a wider ZodObject; `ToolArgument` is the supertype
   // that lets the heterogeneous mix coexist without per-push casts.
   const tools: ToolArgument[] = []
-  if (config.tools.getWeather && agentAllows("getWeather"))
-    tools.push(getWeatherTool)
   if (config.tools.rollDice && agentAllows("rollDice")) tools.push(rollDiceTool)
   // Read-only retrieval — exposed in every mode (incl. `manual`), like
   // searchWorkspaceNodes. Gated on the server Gemini key, NOT
@@ -805,7 +805,7 @@ function pickChatTools(
   // reachable. Listing the tool with no available targets would
   // tempt the model into calls it can't actually satisfy. Mode and
   // agent-tool toggles deliberately don't gate this — transfer is a
-  // meta-action, not a domain action like `getWeather`, and even
+  // meta-action, not a domain action like `rollDice`, and even
   // `manual` mode benefits from the ability to hand off to a more
   // capable persona.
   if (transferTargetCount > 0) tools.push(transferToAgentTool)
@@ -1055,6 +1055,21 @@ export async function getMembershipRole(
 
 export function isAdminRole(role: IMembershipRole | null | undefined): boolean {
   return !!role && ADMIN_ROLES.includes(role)
+}
+
+/**
+ * Like `getMembershipRole` but returns null instead of throwing when the
+ * principal (user OR agent) isn't a team member. Used to resolve an agent's
+ * membership role for the node-tool authorization gate, where "not a
+ * member" is a normal (no write tools) outcome rather than an error.
+ */
+export async function getMembershipRoleOrNull(
+  teamId: string,
+  principalId: string
+): Promise<IMembershipRole | null> {
+  const snap = await db.doc(`teams/${teamId}/memberships/${principalId}`).get()
+  if (!snap.exists) return null
+  return (snap.data()?.role as IMembershipRole | undefined) ?? null
 }
 
 interface BotSessionDocSummary {
@@ -1331,7 +1346,7 @@ function collectPriorTurnToolRefs(data: SessionData | undefined): {
  *     historical tool round-trips into the new turn's agent bubble.
  *   - `preExistingTool*Count` seeds the no-ref fallback sequence for
  *     live chunks. Without the offset, a ref-less current-turn call like
- *     `getWeather#0` could collide with an older ref-less `getWeather#0`
+ *     `rollDice#0` could collide with an older ref-less `rollDice#0`
  *     that was intentionally pre-marked as already sent.
  *
  * Returns the resolved final response so the caller can use
@@ -1794,6 +1809,59 @@ async function prepareChatTurn(opts: {
   // shared chats to whichever admin replied most recently.
   const sessionOwnerUid = existingSession?.ownerUid ?? auth.uid
 
+  // Node-CRUD authorization for this turn: the active agent AND the driving
+  // user must EACH be a member with content-management rights before the
+  // node tools are registered (the tool handlers re-check the same gate).
+  // The agent's role is a single doc read, skipped when no agent is active.
+  const userCanManageNodes = can(
+    auth.uid,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
+    { scope: "workspace", teamRole: role }
+  )
+  const activeAgentRole = activeAgent
+    ? await getMembershipRoleOrNull(teamId, activeAgent.id)
+    : null
+  const agentCanManageNodes =
+    !!activeAgent &&
+    can(activeAgent.id, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+      scope: "workspace",
+      teamRole: activeAgentRole,
+    })
+  const canManageNodes = userCanManageNodes && agentCanManageNodes
+
+  // Read gate — the same user×agent intersection but on the lighter
+  // READ_WORKSPACE capability (held by every role, guests included), so an
+  // agent can read full file content (`readNode`) without the edit rights
+  // the write tools require. Reuses `activeAgentRole` from the write gate.
+  const userCanReadNodes = can(auth.uid, Capabilities.READ_WORKSPACE, {
+    scope: "workspace",
+    teamRole: role,
+  })
+  const agentCanReadNodes =
+    !!activeAgent &&
+    can(activeAgent.id, Capabilities.READ_WORKSPACE, {
+      scope: "workspace",
+      teamRole: activeAgentRole,
+    })
+  const canReadNodes = userCanReadNodes && agentCanReadNodes
+
+  // Feature-toggle layer ON TOP of the membership gates. `canManageNodes` /
+  // `canReadNodes` stay the pure security checks (re-verified inside the
+  // tool handlers); the `*Enabled` flags additionally require the team-wide
+  // switch (Settings → Tools) AND the active agent's own toggle — mirroring
+  // how every other built-in tool intersects team × agent. These drive tool
+  // registration AND the node system-prompt directive, so a toggled-off
+  // agent is never told it can use tools it has none of. `!== false` keeps a
+  // missing key (older config/agent docs) meaning "enabled."
+  const nodeWriteEnabled =
+    canManageNodes &&
+    agentConfig.tools.manageContent !== false &&
+    activeAgent?.tools.manageContent !== false
+  const nodeReadEnabled =
+    canReadNodes &&
+    agentConfig.tools.readContent !== false &&
+    activeAgent?.tools.readContent !== false
+
   // What gets persisted on the doc this turn. Three cases:
   //   - undefined: client didn't send the field → leave the doc's
   //     prior value untouched (store skips the write). Critical for
@@ -1887,6 +1955,11 @@ async function prepareChatTurn(opts: {
     availableTransferAgentIds:
       transferRoster.length > 0 ? transferRoster.map((r) => r.id) : undefined,
     effectiveModel,
+    canManageNodes,
+    canReadNodes,
+    ...(activeAgent
+      ? { activeAgentId: activeAgent.id, activeAgentName: activeAgent.name }
+      : {}),
   }
 
   // Tool catalog — mode steers prompt style only; per-team toggles strip
@@ -1913,6 +1986,19 @@ async function prepareChatTurn(opts: {
     chatTools.push(buildCustomToolForChat(tool))
   }
 
+  // Node tools — registered in two independently-gated groups. WRITE
+  // tools (create/edit/rename/move/archive) need `nodeWriteEnabled`
+  // (MANAGE_WORKSPACE_CONTENT × `manageContent` toggle); the READ tool
+  // (`readNode`) needs `nodeReadEnabled` (the lighter READ_WORKSPACE ×
+  // `readContent` toggle). The default persona (no agent) gets neither:
+  // an agent must be added to the team as a member first.
+  if (nodeReadEnabled) {
+    chatTools.push(...NODE_READ_TOOLS)
+  }
+  if (nodeWriteEnabled) {
+    chatTools.push(...NODE_WRITE_TOOLS)
+  }
+
   // System prompt is mode-aware, context-augmented, AND agent-aware.
   // When a custom agent is active, its `systemPromptBase + suffix`
   // REPLACES (not appends to) the team's default — keeps each persona
@@ -1925,10 +2011,20 @@ async function prepareChatTurn(opts: {
     teamModeSuffix: agentConfig.promptSuffixes[mode],
     mode,
     otherAgents: transferRoster,
+    // Pass the EFFECTIVE flags so the node-editing directive (and its
+    // readNode mention) only appears when those tools are actually
+    // registered this turn — see `nodeWriteEnabled` / `nodeReadEnabled`.
+    canManageNodes: nodeWriteEnabled,
+    canReadNodes: nodeReadEnabled,
   })
-  const systemPrompt = contextBlock
-    ? `${baseSystem}\n\n${contextBlock}`
-    : baseSystem
+  // Safety directive lands LAST — after the attached-context block — so
+  // the "untrusted content is data, not instructions" rule is the final
+  // thing the model reads, right after the untrusted text itself. Always
+  // present (web/search results are untrusted even on read-only turns);
+  // contextBlock is dropped from the join when empty.
+  const systemPrompt = [baseSystem, contextBlock, WORKSPACE_SAFETY_DIRECTIVE]
+    .filter(Boolean)
+    .join("\n\n")
 
   // Per-provider "thinking" enablement. The stream + reconstruction fold
   // any resulting `reasoning` parts into <thinking> blocks uniformly

@@ -9,10 +9,17 @@ import {
   IconLogOut,
   IconMoreHorizontal,
   IconPlus,
+  IconTrash,
   IconUsers,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import type { IMembershipRole } from "@/types/membership"
+import {
+  isAgentMembership,
+  type IAgentMembership,
+  type IMembershipRole,
+  type ITeamMember,
+} from "@/types/membership"
+import BoringAvatar from "vue-boring-avatars"
 import { useCurrentUser } from "vuefire"
 
 const { t } = useI18n()
@@ -32,7 +39,28 @@ const {
   getCannotRemoveMemberReason,
   changeRole,
   removeMember,
+  removeAgentMember,
 } = useTeamActions()
+
+// ── Member display helpers (users + agents share one table) ──────────────────
+// Agents are role-locked "member" rows: no email, a boring-avatar instead of
+// a photo, an "Agent" badge, a disabled role select, and a direct remove.
+const memberRowKey = (member: ITeamMember) =>
+  isAgentMembership(member) ? `agent:${member.agentId}` : member.userId
+
+const memberDisplayName = (member: ITeamMember): string =>
+  isAgentMembership(member)
+    ? member.agent.name
+    : member.user?.displayName || member.user?.email || ""
+
+const agentAvatarSeed = (member: IAgentMembership): string =>
+  member.agent.avatarSeed?.trim() || member.agent.name?.trim() || "Agent"
+
+const isAgentRemovalPending = (member: IAgentMembership): boolean =>
+  teamLoading.member.isLoading(`agent:${member.agentId}`)
+
+const handleRemoveAgent = (member: IAgentMembership) =>
+  removeAgentMember(member.agentId)
 
 // Team Dialog for inviting members
 const isTeamDialogOpen = ref(false)
@@ -74,8 +102,8 @@ const sortedTeamMembers = computed(() => {
 
   sorted.sort((a, b) => {
     if (memberSortKey.value === "name") {
-      const nameA = (a.user?.displayName || a.user?.email || "").toLowerCase()
-      const nameB = (b.user?.displayName || b.user?.email || "").toLowerCase()
+      const nameA = memberDisplayName(a).toLowerCase()
+      const nameB = memberDisplayName(b).toLowerCase()
       return nameA.localeCompare(nameB) * direction
     } else if (memberSortKey.value === "joined") {
       const dateA = a.createdAt?.toDate?.()?.getTime() || 0
@@ -191,11 +219,28 @@ const formatCreatedAt = (
                 <TableBody>
                   <TableRow
                     v-for="member in sortedTeamMembers"
-                    :key="member.userId"
+                    :key="memberRowKey(member)"
                   >
                     <TableCell>
                       <Item class="group p-0" size="xs">
-                        <ItemMedia>
+                        <ItemMedia
+                          v-if="isAgentMembership(member)"
+                          variant="image"
+                          class="rounded-full"
+                        >
+                          <BoringAvatar
+                            variant="beam"
+                            :name="agentAvatarSeed(member)"
+                            :colors="[
+                              'var(--color-chart-1)',
+                              'var(--color-chart-2)',
+                              'var(--color-chart-3)',
+                              'var(--color-chart-4)',
+                              'var(--color-chart-5)',
+                            ]"
+                          />
+                        </ItemMedia>
+                        <ItemMedia v-else>
                           <Avatar>
                             <AvatarImage
                               :src="member.user?.photoURL!"
@@ -208,88 +253,195 @@ const formatCreatedAt = (
                           </Avatar>
                         </ItemMedia>
                         <ItemContent class="gap-0.5 truncate">
-                          <ItemTitle class="truncate">
-                            {{ member.user?.displayName }}
+                          <ItemTitle class="flex items-center gap-1.5 truncate">
+                            {{ memberDisplayName(member) }}
+                            <Badge
+                              v-if="isAgentMembership(member)"
+                              variant="secondary"
+                            >
+                              {{ t("settings.members.agentBadge") }}
+                            </Badge>
                           </ItemTitle>
                           <ItemDescription class="truncate text-xs">
-                            {{ member.user?.email }}
+                            <template v-if="isAgentMembership(member)">
+                              {{
+                                member.agent.description ||
+                                t("settings.members.agentSubtitle")
+                              }}
+                            </template>
+                            <template v-else>
+                              {{ member.user?.email }}
+                            </template>
                           </ItemDescription>
                         </ItemContent>
                       </Item>
                     </TableCell>
                     <TableCell class="capitalize">
-                      <TooltipProvider v-if="getCannotChangeRoleReason(member)">
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <span class="inline-block">
-                              <Select :model-value="member.role" disabled>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    <SelectItem value="owner">
-                                      {{ t("settings.members.roles.owner") }}
-                                    </SelectItem>
-                                    <SelectItem value="admin">
-                                      {{ t("settings.members.roles.admin") }}
-                                    </SelectItem>
-                                    <SelectItem value="member">
-                                      {{ t("settings.members.roles.member") }}
-                                    </SelectItem>
-                                    <SelectItem value="guest">
-                                      {{ t("settings.members.roles.guest") }}
-                                    </SelectItem>
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {{ t(getCannotChangeRoleReason(member)!) }}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
                       <Select
-                        v-else
-                        :model-value="member.role"
-                        :disabled="teamLoading.role.isLoading(member.userId)"
-                        @update:model-value="
-                          (role) =>
-                            handleChangeRole(
-                              member.userId,
-                              role as IMembershipRole
-                            )
-                        "
+                        v-if="isAgentMembership(member)"
+                        model-value="member"
+                        disabled
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="owner">
-                              {{ t("settings.members.roles.owner") }}
-                            </SelectItem>
-                            <SelectItem value="admin">
-                              {{ t("settings.members.roles.admin") }}
-                            </SelectItem>
                             <SelectItem value="member">
                               {{ t("settings.members.roles.member") }}
-                            </SelectItem>
-                            <SelectItem value="guest">
-                              {{ t("settings.members.roles.guest") }}
                             </SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                      <template v-else>
+                        <TooltipProvider
+                          v-if="getCannotChangeRoleReason(member)"
+                        >
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <span class="inline-block">
+                                <Select :model-value="member.role" disabled>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
+                                      <SelectItem value="owner">
+                                        {{ t("settings.members.roles.owner") }}
+                                      </SelectItem>
+                                      <SelectItem value="admin">
+                                        {{ t("settings.members.roles.admin") }}
+                                      </SelectItem>
+                                      <SelectItem value="member">
+                                        {{ t("settings.members.roles.member") }}
+                                      </SelectItem>
+                                      <SelectItem value="guest">
+                                        {{ t("settings.members.roles.guest") }}
+                                      </SelectItem>
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{ t(getCannotChangeRoleReason(member)!) }}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Select
+                          v-else
+                          :model-value="member.role"
+                          :disabled="teamLoading.role.isLoading(member.userId)"
+                          @update:model-value="
+                            (role) =>
+                              handleChangeRole(
+                                member.userId,
+                                role as IMembershipRole
+                              )
+                          "
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value="owner">
+                                {{ t("settings.members.roles.owner") }}
+                              </SelectItem>
+                              <SelectItem value="admin">
+                                {{ t("settings.members.roles.admin") }}
+                              </SelectItem>
+                              <SelectItem value="member">
+                                {{ t("settings.members.roles.member") }}
+                              </SelectItem>
+                              <SelectItem value="guest">
+                                {{ t("settings.members.roles.guest") }}
+                              </SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </template>
                     </TableCell>
                     <TableCell>
                       {{ formatCreatedAt(member.createdAt) }}
                     </TableCell>
                     <TableCell class="flex items-center justify-end text-right">
                       <ButtonGroup>
+                        <!-- Agent rows: direct remove only (role is locked) -->
+                        <template v-if="isAgentMembership(member)">
+                          <TooltipProvider v-if="!canInviteMembers">
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <span class="inline-block">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled
+                                  >
+                                    <IconMoreHorizontal />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{ t(getCannotInviteMembersReason || "") }}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <AlertDialog v-else>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <AlertDialogTrigger as-child>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      :disabled="isAgentRemovalPending(member)"
+                                    >
+                                      <Spinner
+                                        v-if="isAgentRemovalPending(member)"
+                                      />
+                                      <IconTrash v-else />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {{ t("settings.members.removeAgent") }}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  {{ t("settings.members.removeAgent") }}
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {{
+                                    t("settings.members.removeAgentConfirm", {
+                                      name: member.agent.name,
+                                    })
+                                  }}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>
+                                  {{ t("actions.cancel") }}
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  :disabled="isAgentRemovalPending(member)"
+                                  @click="handleRemoveAgent(member)"
+                                >
+                                  <Spinner
+                                    v-if="isAgentRemovalPending(member)"
+                                  />
+                                  {{ t("settings.members.remove") }}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </template>
+                        <!-- User rows: role/remove/exit dropdown -->
                         <TooltipProvider
-                          v-if="getCannotRemoveMemberReason(member)"
+                          v-else-if="getCannotRemoveMemberReason(member)"
                         >
                           <Tooltip>
                             <TooltipTrigger as-child>

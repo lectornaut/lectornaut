@@ -223,8 +223,7 @@ const generatedAgentZod = z.object({
     .describe("Per-chat-mode suffixes appended after the system prompt."),
   tools: z
     .object({
-      getWeather: z.boolean().describe("Current weather lookups."),
-      rollDice: z.boolean().describe("Random dice rolls."),
+      rollDice: z.boolean().describe("Random dice rolls (demo)."),
       browseInternet: z
         .boolean()
         .describe(
@@ -245,19 +244,26 @@ const generatedAgentZod = z.object({
         "the ones relevant to its purpose. For most knowledge-work agents, " +
         "enable searchWorkspaceNodes and summarizeNode; enable browseInternet " +
         "for agents that need current or external information; enable " +
-        "getWeather or rollDice only when clearly relevant to the described " +
+        "rollDice only when clearly relevant to the described " +
         "purpose."
     ),
 })
 
 const AGENT_SYSTEM_INSTRUCTIONS =
   "You configure custom AI agents for Lectornaut, a team workspace whose " +
-  "members chat with an AI assistant. A team admin will describe the agent " +
-  "(persona) they want. Produce a single, complete, ready-to-use agent " +
-  "configuration that matches the requested intent. Write a strong, " +
-  "specific system prompt — this is the most important field. Keep the name " +
-  "and description concise. Only enable tools that serve the agent's stated " +
-  "purpose. Do not invent capabilities the tools don't provide."
+  "members chat with an AI assistant. The workspace stores two kinds of " +
+  "nodes — 'write' (rich-text documents) and 'code' (source files) in " +
+  "folders — and agents can ground answers in them with the " +
+  "searchWorkspaceNodes and summarizeNode tools. A team admin will " +
+  "describe the agent (persona) they want. Produce a single, complete, " +
+  "ready-to-use agent configuration that matches the requested intent. " +
+  "Write a strong, specific system prompt — this is the most important " +
+  "field; when the agent's work involves team knowledge, instruct it to " +
+  "ground answers in the workspace rather than guessing. Keep the name and " +
+  "description concise. Only enable tools that serve the agent's stated " +
+  "purpose, and do not invent capabilities the tools don't provide. " +
+  "rollDice is a demo tool — leave it off unless the admin explicitly " +
+  "asks for it."
 
 interface GeneratedAgentConfig {
   name: string
@@ -266,7 +272,6 @@ interface GeneratedAgentConfig {
   systemPromptBase: string
   promptSuffixes: { auto: string; agent: string; manual: string }
   tools: {
-    getWeather: boolean
     rollDice: boolean
     browseInternet: boolean
     askQuestion: boolean
@@ -333,7 +338,6 @@ export const generateTeamAgentConfig = onCall<GenerateConfigRequest>(
         ),
       },
       tools: {
-        getWeather: output.tools?.getWeather !== false,
         rollDice: output.tools?.rollDice !== false,
         browseInternet: output.tools?.browseInternet !== false,
         askQuestion: output.tools?.askQuestion !== false,

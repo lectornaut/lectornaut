@@ -11,7 +11,7 @@ import type { IBotAgentConfig, ITeamCustomTool } from "@/types/domain"
  * SettingsTools — two sibling sections, top-to-bottom:
  *
  *   1. **Built-in tools** — feature flags for the bot's first-party
- *      tool surface (getWeather, rollDice, askQuestion,
+ *      tool surface (rollDice, browseInternet, askQuestion,
  *      searchWorkspaceNodes, summarizeNode).
  *
  *   2. **Custom tools** — admin-authored Genkit tools. Inline list
@@ -44,13 +44,14 @@ const { canViewTeamSettings } = useCanViewTeamSettings()
 // share one source of truth — adding a new built-in tool is a
 // one-line edit here.
 const TOOLS_PAGE_FIELDS = [
-  "getWeather",
   "rollDice",
   "browseInternet",
   "askQuestion",
   "searchWorkspaceNodes",
   "summarizeNode",
   "summarizeNodeInspector",
+  "manageContent",
+  "readContent",
   "customTools",
 ] as const satisfies readonly (keyof IBotAgentConfig["tools"])[]
 
@@ -200,22 +201,6 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
 
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel for="agent-tool-weather">
-                {{ t("settings.agents.tools.getWeather.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.getWeather.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-weather"
-              v-model="draft.tools.getWeather"
-              :disabled="!canEdit"
-            />
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
               <FieldLabel for="agent-tool-dice">
                 {{ t("settings.agents.tools.rollDice.label") }}
               </FieldLabel>
@@ -310,6 +295,52 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             <Switch
               id="agent-tool-summarize-node-inspector"
               v-model="draft.tools.summarizeNodeInspector"
+              :disabled="!canEdit"
+            />
+          </Field>
+
+          <!--
+            Node-CRUD tools (create / edit / rename / move / archive
+            workspace files & folders). Team-wide gate; intersects with
+            each agent's own `manageContent` toggle AND the membership
+            check (only content-capable member-agents ever get these),
+            so off here removes them for every agent regardless.
+          -->
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-tool-manage-content">
+                {{ t("settings.agents.tools.manageContent.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.tools.manageContent.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-tool-manage-content"
+              v-model="draft.tools.manageContent"
+              :disabled="!canEdit"
+            />
+          </Field>
+
+          <!--
+            Read-only counterpart to Manage content: the `readNode` tool
+            returns a file's FULL content (not just search snippets).
+            Gated on `READ_WORKSPACE` (every role, incl. guests) rather
+            than edit rights, so an agent can read without being able to
+            write. Independent of the Manage content switch.
+          -->
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-tool-read-content">
+                {{ t("settings.agents.tools.readContent.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.tools.readContent.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-tool-read-content"
+              v-model="draft.tools.readContent"
               :disabled="!canEdit"
             />
           </Field>

@@ -1019,7 +1019,7 @@ function modelProvider(
  *
  *   - `ai.defineTool(...)` registers the tool in Genkit's GLOBAL
  *     registry by name. Intended for module-load static tools
- *     (`getWeatherTool`, `summarizeNodeTool`, etc.). Calling it more
+ *     (`rollDiceTool`, `summarizeNodeTool`, etc.). Calling it more
  *     than once with the same name within a single process either
  *     throws or leaves stale registry state — the wrong primitive
  *     when the same admin-authored name re-appears every turn.

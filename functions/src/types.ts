@@ -245,6 +245,13 @@ export interface Actor {
   userId: string
   email?: string
   role?: string
+  /**
+   * Set when an agent member performed the action on the user's behalf.
+   * `userId` then identifies the human who drove the turn; `agentId` /
+   * `agentName` identify the agent that actually executed it.
+   */
+  agentId?: string
+  agentName?: string
 }
 
 export interface Resource {

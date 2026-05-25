@@ -334,7 +334,6 @@ export const botAgentModelTogglesSchema = z.record(
  * the chat — the model never sees them in its tool catalog.
  */
 export const botAgentToolTogglesSchema = z.object({
-  getWeather: z.boolean(),
   rollDice: z.boolean(),
   /**
    * Live web search via Gemini's Google Search grounding. Its own
@@ -362,6 +361,35 @@ export const botAgentToolTogglesSchema = z.object({
    * route only (the inspector button keeps working).
    */
   summarizeNode: z.boolean(),
+  /**
+   * Gate for the agent node-WRITE tools (create / edit / rename / move /
+   * archive workspace files & folders — `NODE_WRITE_TOOLS` in
+   * `functions/src/botNodeTools.ts`). Unlike the keys above this is NOT a
+   * single model-callable tool but a switch over a block, so it's excluded
+   * from `BotToolName` / the composer slash menu (like `customTools`).
+   *
+   * Two surfaces both bind this key:
+   *   - team-wide, in Settings → Tools (`agentConfig.tools.manageContent`);
+   *   - per-agent, in the agent editor (`agent.tools.manageContent`).
+   * They intersect with each other AND with the membership gate: the write
+   * tools register only when the driving user AND the active agent are
+   * each content-capable members (`MANAGE_WORKSPACE_CONTENT`) AND both
+   * toggles allow. Off at either layer removes the write tools and the
+   * matching system-prompt directive. Server normalizes a missing key to
+   * `true`, so existing teams/agents keep node editing.
+   */
+  manageContent: z.boolean(),
+  /**
+   * Sibling read gate for the node-READ tool (`readNode` —
+   * `NODE_READ_TOOLS`), which returns a file's FULL current content
+   * (whereas `searchWorkspaceNodes` returns only snippets). Split from
+   * `manageContent` so an agent can be allowed to READ workspace content
+   * without being granted edit rights: this gates on `READ_WORKSPACE`
+   * (held by every role, including guests) rather than
+   * `MANAGE_WORKSPACE_CONTENT`. Same two surfaces + team×agent×membership
+   * intersection as `manageContent`. Normalizes missing → `true`.
+   */
+  readContent: z.boolean(),
   /**
    * Team-wide gate for the entire custom-agents feature. When false:
    *   - Pickers (sidebar + composer agent row) hide entirely.

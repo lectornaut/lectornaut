@@ -212,6 +212,14 @@ service cloud.firestore {
         allow read: if canViewRoom(contentId);
         allow write: if false;
       }
+
+      // Server-relayed agent edits for live application by connected clients.
+      // Read for anyone in the room; writes are Cloud-Function-only (the agent
+      // node tools write it via the admin SDK).
+      match /agentRelay/{docId} {
+        allow read: if canViewRoom(contentId);
+        allow write: if false;
+      }
     }
 
     match /users/{userId} {

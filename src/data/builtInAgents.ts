@@ -60,12 +60,17 @@ export interface IBuiltInAgentDefinition {
 }
 
 const ALL_TOOLS_ENABLED: ITeamAgent["tools"] = {
-  getWeather: true,
   rollDice: true,
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  // Real per-agent gates for the node tools (consumed at dispatch,
+  // intersected with the team toggle + membership) — unlike the three
+  // "type alignment only" gates below. `manageContent` → write tools;
+  // `readContent` → readNode.
+  manageContent: true,
+  readContent: true,
   // Per-agent value is ignored by dispatch (team-level toggle is canonical),
   // but the field is required on the schema. Same convention used by
   // `teamAgentsStore.DEFAULT_TOOL_TOGGLES`.
@@ -102,8 +107,7 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      // No die rolls or stub weather while researching.
-      getWeather: false,
+      // No die rolls while researching.
       rollDice: false,
     },
   },
@@ -128,7 +132,6 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      getWeather: false,
       rollDice: false,
     },
   },
@@ -153,7 +156,6 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      getWeather: false,
       rollDice: false,
     },
   },
@@ -181,7 +183,6 @@ export const BUILT_IN_AGENTS: ReadonlyArray<IBuiltInAgentDefinition> = [
     },
     tools: {
       ...ALL_TOOLS_ENABLED,
-      getWeather: false,
       rollDice: false,
     },
   },

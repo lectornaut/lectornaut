@@ -68,10 +68,13 @@ export function normalizeTeamBilling(
 }
 
 export function countBillableSeatsFromMembers(
-  members: Array<{ role?: unknown }> | null | undefined
+  members: Array<{ role?: unknown; kind?: unknown }> | null | undefined
 ): number {
   if (!members || members.length === 0) return 1
   const count = members.filter((member) => {
+    // Agent memberships never consume a paid seat — they're an internal
+    // concept, not a billable user.
+    if (member.kind === "agent") return false
     return (
       typeof member.role === "string" &&
       BILLABLE_SEAT_ROLES.has(member.role as IMembershipRole)

@@ -324,7 +324,7 @@ export const searchWorkspaceNodesTool = ai.defineTool(
   {
     name: "searchWorkspaceNodes",
     description:
-      "Semantic search over the user's workspace. Returns the most " +
+      "Semantic search over the team's workspace. Returns the most " +
       "relevant workspace nodes (files / folders) for a natural-language " +
       "query, including a short content snippet for each. Use when the " +
       "user references a node by name or by something inside it but " +

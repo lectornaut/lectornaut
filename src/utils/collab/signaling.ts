@@ -2,6 +2,7 @@ import { firestore, functions } from "@/modules/firebase"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import {
   collection,
+  doc,
   onSnapshot,
   query,
   where,
@@ -236,6 +237,61 @@ export function subscribePeers(
       })
 
       callback(peers)
+    },
+    (error) => {
+      onError?.(error as Error)
+    }
+  )
+}
+
+/**
+ * Live agent edit relayed by the server for a doc's collab room. Written to
+ * `signaling/{contentId}/agentRelay/state` (a single, server-overwritten doc)
+ * whenever an agent edits the node's content. `seq` increments per edit so a
+ * subscriber can tell a fresh edit from the baseline present when it joined.
+ * `content` is the serialized new content — Tiptap JSON for `write`, raw text
+ * for `code`.
+ */
+export interface AgentRelayState {
+  scope: WorkspaceNodeScope
+  content: string
+  by: string
+  byName: string
+  seq: number
+  updatedAt?: Timestamp
+}
+
+export function subscribeAgentRelay(
+  contentId: string,
+  callback: (state: AgentRelayState | null) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const relayRef = doc(firestore, "signaling", contentId, "agentRelay", "state")
+
+  return onSnapshot(
+    relayRef,
+    (snap) => {
+      const data = snap.exists()
+        ? (snap.data() as Partial<AgentRelayState>)
+        : null
+      if (
+        !data ||
+        typeof data.content !== "string" ||
+        typeof data.seq !== "number" ||
+        (data.scope !== "code" && data.scope !== "write")
+      ) {
+        callback(null)
+        return
+      }
+
+      callback({
+        scope: data.scope,
+        content: data.content,
+        by: typeof data.by === "string" ? data.by : "",
+        byName: typeof data.byName === "string" ? data.byName : "",
+        seq: data.seq,
+        updatedAt: data.updatedAt,
+      })
     },
     (error) => {
       onError?.(error as Error)

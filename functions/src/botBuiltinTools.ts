@@ -1,17 +1,14 @@
 /**
  * Built-in chat tools (and the types they depend on).
  *
- * Five tools live here:
+ * Four tools live here:
  *
- *   1. `getWeatherTool` — DEMO tool, returns a fixed stub so the model
- *      surfaces the synthetic nature instead of treating the numbers
- *      as a real forecast. Kept around to exercise the streaming +
- *      tool-card UI end-to-end.
+ *   1. `rollDiceTool` — honest random die roll. Its contract IS
+ *      randomness, so `Math.random()` here isn't fabrication. Doubles
+ *      as the demo tool that exercises the streaming + tool-card UI
+ *      end-to-end.
  *
- *   2. `rollDiceTool` — honest random die roll. Its contract IS
- *      randomness, so `Math.random()` here isn't fabrication.
- *
- *   3. `browseInternetTool` — live web search. Its handler runs a
+ *   2. `browseInternetTool` — live web search. Its handler runs a
  *      nested Gemini generation with Google Search grounding turned
  *      on, so it works no matter which provider drives the chat
  *      (Claude / GPT / Gemini) — the grounding sub-call is always
@@ -19,11 +16,11 @@
  *      grounded on. See its own section for why this is a tool rather
  *      than chat-level grounding.
  *
- *   4. `transferToAgentTool` — cross-agent handoff. Writes the model's
+ *   3. `transferToAgentTool` — cross-agent handoff. Writes the model's
  *      requested target into the shared action context; bot.ts's
  *      post-turn step commits it to the session doc.
  *
- *   5. `askQuestionTool` — Human-in-the-Loop interrupt. Pauses the
+ *   4. `askQuestionTool` — Human-in-the-Loop interrupt. Pauses the
  *      chat until the user picks an answer; the application then
  *      resumes via `respondToBotInterrupt`.
  *
@@ -104,95 +101,50 @@ export interface BotActionContext {
    * binding instead of leaving it stuck.
    */
   requestedTransferAgentId?: string
+  /**
+   * Whether the node-CRUD tools (`botNodeTools.ts`) may run this turn.
+   * Computed by the dispatcher as the INTERSECTION of two membership
+   * roles — the active agent's AND the driving user's — both needing
+   * `MANAGE_WORKSPACE_CONTENT`. False (or absent) means the write tools
+   * weren't even registered; the handlers re-check it as defense in
+   * depth so a stray registration can never bypass the gate.
+   */
+  canManageNodes?: boolean
+  /**
+   * Whether the node-READ tool (`readNode`) may run this turn — the same
+   * agent×user intersection but on the lighter `READ_WORKSPACE` capability
+   * (held by guests too). Lets an agent read full file content without the
+   * edit rights `canManageNodes` requires. Re-checked in the handler.
+   */
+  canReadNodes?: boolean
+  /**
+   * The acting agent's id and display name. Set whenever a custom/built-in
+   * agent (added to the team as a member) is driving the turn. Node-CRUD
+   * tools record these as the actor on every mutation — `createdBy` /
+   * `updatedBy` on the node and `actor.agentId` in the audit log — so an
+   * agent edit reads as "by <agent>", on behalf of the chatting user.
+   */
+  activeAgentId?: string
+  activeAgentName?: string
 }
 
 // ===========================================================================
-// getWeather + rollDice — demo tools (template for real tools)
+// rollDice — demo tool (template for real tools)
 // ===========================================================================
 //
-// Each tool's input/output is Zod-validated, which doubles as the schema
+// The tool's input/output is Zod-validated, which doubles as the schema
 // the model sees: tighter constraints (enums, min/max) get baked into the
-// model's tool catalog and steer it toward valid calls. Handlers run
+// model's tool catalog and steer it toward valid calls. The handler runs
 // server-side inside the Genkit chat loop — the model receives only the
 // `outputSchema` shape, never the implementation.
 //
-// These two are deliberately demo-grade (mirroring the public Genkit
-// example at https://examples.genkit.dev/tool-calling). They prove out the
-// streaming + UI plumbing end-to-end and serve as the template for real
+// It's deliberately demo-grade (mirroring the public Genkit example at
+// https://examples.genkit.dev/tool-calling). It proves out the streaming +
+// UI plumbing end-to-end and serves as the template for real
 // workspace-aware tools (e.g. "search this team's nodes", "open node X").
-
-const WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy", "snowy"] as const
-
-/**
- * DEMO TOOL — does not call any real weather API. Returns a fixed,
- * deterministic stub plus a `_demo` flag so the model surfaces the
- * synthetic nature in its reply rather than presenting fabricated
- * temperatures as fact.
- *
- * The original (pre-honesty) implementation returned `Math.random()`
- * temperatures and conditions on a tool labelled "Get the current
- * weather", which the model treated as authoritative — a
- * misinformation hazard surfaced through an official-looking tool
- * card. The fix is twofold: (a) tell the model in the description
- * that this is a stub, and (b) tag the payload so the model has to
- * narrate the limitation rather than dress it up as a real fact.
- *
- * `rollDice` below is a separate case — a die roll's whole contract
- * IS randomness, so a `Math.random()`-backed implementation is honest
- * by design and needs no demo tag.
- */
-export const getWeatherTool = ai.defineTool(
-  {
-    name: "getWeather",
-    description:
-      "DEMO ONLY — returns a placeholder weather reading, not a real " +
-      "forecast. The chat ships this tool to exercise the streaming + " +
-      "tool-card UI; production users should not rely on the numbers. " +
-      "When you call this, explicitly tell the user the value is a demo " +
-      "placeholder rather than a live measurement. Outputs carry a " +
-      "`_demo: true` flag confirming the synthetic nature.",
-    inputSchema: z.object({
-      location: z
-        .string()
-        .min(1)
-        .describe("City or place name, e.g. 'Tokyo' or 'San Francisco'."),
-    }),
-    outputSchema: z.object({
-      temperature: z.number(),
-      condition: z.enum(WEATHER_CONDITIONS),
-      /** Always `true` — marks the payload as demo, not a real reading. */
-      _demo: z.literal(true),
-      /** Always present — short note the model should surface verbatim. */
-      _disclaimer: z.string(),
-      advisory: z.string().optional(),
-    }),
-  },
-  // The second handler arg carries the action context passed via
-  // `chat({ context })`. Reading `context.mode` lets the tool tailor its
-  // output deterministically — the model can't talk it out of this
-  // (whatever the user types, the tool runs the same code path).
-  async (_input, { context }) => {
-    const mode = (context as BotActionContext | undefined)?.mode ?? "auto"
-    // Fixed values — no Math.random(). Identical output across calls so
-    // there's no plausible "model hallucinated" branch to mistake the
-    // demo data for. The numbers themselves are unremarkable on purpose.
-    const temperature = 72
-    const condition: (typeof WEATHER_CONDITIONS)[number] = "sunny"
-    return {
-      temperature,
-      condition,
-      _demo: true as const,
-      _disclaimer:
-        "This is a placeholder reading from the demo `getWeather` tool — " +
-        "not a real weather measurement.",
-      // Agent mode wants thorough output; auto/manual stay terse.
-      advisory:
-        mode === "agent"
-          ? "Pack a layer if heading out — but again, this is demo data."
-          : undefined,
-    }
-  }
-)
+//
+// A die roll's whole contract IS randomness, so a `Math.random()`-backed
+// implementation is honest by design and needs no demo/disclaimer tag.
 
 export const rollDiceTool = ai.defineTool(
   {

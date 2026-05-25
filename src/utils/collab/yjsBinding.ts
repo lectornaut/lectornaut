@@ -61,6 +61,13 @@ export interface YjsCollabSession {
   hasSnapshot: boolean
   /** Notify the snapshot manager that the document has changed */
   scheduleSave: () => void
+  /**
+   * Whether THIS client is the elected applier for server-relayed agent
+   * edits — the editor peer with the lowest peerId currently in the room.
+   * A single elected applier avoids two clients both replacing the document
+   * (which would duplicate content under Yjs's merge). Viewers never apply.
+   */
+  isAgentApplier: () => boolean
   destroy: () => Promise<void>
 }
 
@@ -119,6 +126,9 @@ export async function createYjsCollab(
   const pendingSignalDeleteIds = new Set<string>()
   let signalDeleteTimer: ReturnType<typeof setTimeout> | null = null
   const knownPeerIds = new Set<string>()
+  // Editor peerIds currently in the room (from the peers feed). Drives the
+  // agent-edit applier election below.
+  let latestEditorPeerIds: string[] = []
   const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
   const reconnectAttempts = new Map<string, number>()
 
@@ -331,6 +341,10 @@ export async function createYjsCollab(
   const unsubscribePeers = subscribePeers(
     options.contentId,
     (peers) => {
+      latestEditorPeerIds = peers
+        .filter((peer) => peer.role === "editor")
+        .map((peer) => peer.peerId)
+
       const currentPeerIds = new Set<string>()
       peers.forEach((peer) => {
         if (peer.peerId !== peerId) {
@@ -469,6 +483,19 @@ export async function createYjsCollab(
     ydoc.destroy()
   }
 
+  // Elect a single applier for server-relayed agent edits: the editor peer
+  // with the lexicographically smallest peerId. Self is always considered (we
+  // may not yet appear in the peers feed right after joining). Viewers never
+  // apply — they can't write.
+  const isAgentApplier = (): boolean => {
+    if (join.role !== "editor") return false
+    const candidates = latestEditorPeerIds.includes(peerId)
+      ? latestEditorPeerIds
+      : [...latestEditorPeerIds, peerId]
+    if (candidates.length === 0) return true
+    return candidates.reduce((min, id) => (id < min ? id : min)) === peerId
+  }
+
   return {
     role: join.role,
     peerId,
@@ -476,6 +503,7 @@ export async function createYjsCollab(
     ydoc,
     hasSnapshot,
     scheduleSave: () => snapshotManager.scheduleSave(),
+    isAgentApplier,
     destroy,
   }
 }

@@ -176,12 +176,16 @@ const DEFAULT_DRAFT: AgentDraft = {
     "answers in the context you're given.",
   promptSuffixes: { auto: "", agent: "", manual: "" },
   tools: {
-    getWeather: true,
     rollDice: true,
     browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
+    // Real per-agent toggles (consumed at dispatch): does this agent get
+    // the node WRITE tools / the readNode tool? Each intersected with its
+    // team toggle + membership.
+    manageContent: true,
+    readContent: true,
     // Carried for type alignment with the team-level toggle schema —
     // ignored at the per-agent dispatch layer (see ITeamAgent JSDoc).
     customAgents: true,
@@ -281,15 +285,35 @@ interface ToolRow {
  * layer. `customAgents` / `customTools` are absent by construction —
  * `BotToolName` excludes them as team-level feature gates, not per-agent
  * capabilities.
+ *
+ * `manageContent` (node WRITE tools) and `readContent` (the `readNode`
+ * tool) are appended AFTER the catalog rows: they're real per-agent
+ * capabilities but each gates a tool block, not a single model-callable
+ * tool, so they're deliberately kept out of `BOT_TOOL_CATALOG` / the
+ * slash menu. The standalone entries here give them the same switch +
+ * "Disabled at team" affordance as the catalog tools without leaking
+ * them into the composer.
  */
-const toolRows = computed<ToolRow[]>(() =>
-  BOT_TOOL_CATALOG.map((tool) => ({
+const toolRows = computed<ToolRow[]>(() => [
+  ...BOT_TOOL_CATALOG.map((tool) => ({
     name: tool.name,
     label: t(`settings.agents.tools.${tool.name}.label`),
     description: t(`settings.agents.tools.${tool.name}.description`),
     enabledAtTeam: teamTools.value[tool.name] !== false,
-  }))
-)
+  })),
+  {
+    name: "manageContent" as const,
+    label: t("settings.agents.tools.manageContent.label"),
+    description: t("settings.agents.tools.manageContent.description"),
+    enabledAtTeam: teamTools.value.manageContent !== false,
+  },
+  {
+    name: "readContent" as const,
+    label: t("settings.agents.tools.readContent.label"),
+    description: t("settings.agents.tools.readContent.description"),
+    enabledAtTeam: teamTools.value.readContent !== false,
+  },
+])
 
 const setToolEnabled = (name: ToolRow["name"], value: boolean): void => {
   draft.value.tools[name] = value
