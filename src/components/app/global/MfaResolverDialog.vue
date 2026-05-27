@@ -288,9 +288,11 @@ onUnmounted(() => {
             <Spinner v-if="loading" />
             {{ t("settings.account.mfa.verify") }}
           </Button>
-          <Button variant="secondary" @click="handleClose(false)">
-            {{ t("common.cancel") }}
-          </Button>
+          <DialogClose as-child>
+            <Button variant="outline">
+              {{ t("common.cancel") }}
+            </Button>
+          </DialogClose>
         </div>
         <Button
           v-if="isSms && smsSent"

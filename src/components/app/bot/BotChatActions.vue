@@ -380,9 +380,11 @@ const submitDelete = async () => {
         />
       </form>
       <DialogFooter>
-        <Button :disabled="isMutating" @click="renameDialogOpen = false">
-          {{ t("actions.cancel") }}
-        </Button>
+        <DialogClose as-child>
+          <Button variant="outline" :disabled="isMutating">
+            {{ t("actions.cancel") }}
+          </Button>
+        </DialogClose>
         <Button
           :disabled="isMutating || !renameInput.trim()"
           @click="submitRename"

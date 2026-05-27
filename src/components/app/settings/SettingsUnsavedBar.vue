@@ -30,7 +30,7 @@ const { t } = useI18n()
     <p class="text-muted-foreground mr-auto ml-2 text-xs">
       {{ t("settings.unsavedChanges") }}
     </p>
-    <Button variant="secondary" :disabled="saving" @click="$emit('discard')">
+    <Button variant="outline" :disabled="saving" @click="$emit('discard')">
       {{ t("common.discard") }}
     </Button>
     <Button :disabled="saving || saveDisabled" @click="$emit('save')">

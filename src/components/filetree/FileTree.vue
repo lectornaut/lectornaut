@@ -621,9 +621,11 @@ onBeforeUnmount(() => {
           />
         </div>
         <DialogFooter>
-          <Button @click="dialogs.create.open = false">
-            {{ t("actions.cancel") }}
-          </Button>
+          <DialogClose as-child>
+            <Button variant="outline">
+              {{ t("actions.cancel") }}
+            </Button>
+          </DialogClose>
           <Button type="submit" :disabled="isCreating || !createName.trim()">
             {{ isCreating ? t("states.creating") : t("actions.create") }}
           </Button>
@@ -654,9 +656,11 @@ onBeforeUnmount(() => {
           />
         </div>
         <DialogFooter>
-          <Button @click="dialogs.rename.open = false">
-            {{ t("actions.cancel") }}
-          </Button>
+          <DialogClose as-child>
+            <Button variant="outline">
+              {{ t("actions.cancel") }}
+            </Button>
+          </DialogClose>
           <Button type="submit" :disabled="isRenaming || !renameName.trim()">
             {{ isRenaming ? t("states.saving") : t("actions.save") }}
           </Button>

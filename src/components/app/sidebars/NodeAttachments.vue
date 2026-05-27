@@ -814,9 +814,11 @@ watch(selectedCreateFiles, async (files) => {
         </div>
 
         <DialogFooter>
-          <Button @click="closeEditDialog">
-            {{ t("actions.cancel") }}
-          </Button>
+          <DialogClose as-child>
+            <Button variant="outline">
+              {{ t("actions.cancel") }}
+            </Button>
+          </DialogClose>
           <Button type="submit" :disabled="!hasEditChanges || isSavingEdit">
             <Spinner v-if="isSavingEdit" />
             {{ t("actions.save") }}

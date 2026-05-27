@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useFileTreeSelection } from "@/composables/useFileTreeSelection"
 import {
+  IconArchive,
   IconChevronRight,
   IconCircleFilled,
   IconFile,
@@ -11,7 +12,6 @@ import {
   IconMoreHorizontal,
   IconPencil,
   IconRefreshCcw,
-  IconTrash,
   IconTrash2,
 } from "@/data/icons"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
@@ -333,7 +333,7 @@ const showEmptyState = computed(
                 v-if="!node.isArchived"
                 @click="emit('archive', node)"
               >
-                <IconTrash />
+                <IconArchive />
                 {{ t("fileTree.archive") }}
               </DropdownMenuItem>
               <DropdownMenuItem v-else @click="emit('unarchive', node)">
@@ -449,7 +449,7 @@ const showEmptyState = computed(
               v-if="!node.isArchived"
               @click="emit('archive', node)"
             >
-              <IconTrash />
+              <IconArchive />
               {{ t("fileTree.archive") }}
             </DropdownMenuItem>
             <DropdownMenuItem v-else @click="emit('unarchive', node)">

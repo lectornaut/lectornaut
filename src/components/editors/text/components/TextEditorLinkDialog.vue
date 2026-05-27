@@ -74,9 +74,9 @@ const remove = () => {
           {{ t("components.textEditor.linkDialog.remove") }}
         </Button>
         <div class="flex gap-2">
-          <Button variant="ghost" @click="closeDialog">{{
-            t("actions.cancel")
-          }}</Button>
+          <DialogClose as-child>
+            <Button variant="outline">{{ t("actions.cancel") }}</Button>
+          </DialogClose>
           <Button @click="submit">
             <IconLink />
             {{ t("components.textEditor.linkDialog.apply") }}
