@@ -118,6 +118,13 @@ export function useCollabPage(
 
   // --- Collab state ---
   const editorContent = ref("")
+  // Canonical "last reconciled with server" content, normalized. Seeded from
+  // `file.content` on open and advanced when an external content update lands
+  // (agent relay or file-doc fallback) or when a local save succeeds. Drives
+  // `isDirty` (vs. comparing directly to `selectedFile.content`, which would
+  // mis-flag the editor as dirty whenever the bot updates the doc), and
+  // doubles as the dedup key for external content writes.
+  const lastSyncedContent = ref<string>("")
   const isDirty = ref(false)
   const isSaving = ref(false)
   const collabSession = shallowRef<YjsCollabSession | null>(null)
@@ -138,6 +145,37 @@ export function useCollabPage(
     if (!selectedFile.value) return true
     return collabRole.value !== "editor"
   })
+
+  // Apply an external content update (from the agent relay or the file-doc
+  // fallback below). Gated on the elected applier so only one peer mutates Y
+  // per room — others see the change through the WebRTC mesh. Content-based
+  // dedup via `lastSyncedContent` makes the relay and fallback paths
+  // idempotent: whichever fires first applies, the other becomes a no-op.
+  const applyExternalContent = (rawContent: string): void => {
+    const activeSession = collabSession.value
+    if (!activeSession) return
+    if (!activeSession.isAgentApplier()) return
+
+    const normalized = normalizeContent(rawContent)
+    if (normalized === lastSyncedContent.value) return
+
+    if (scope === "code") {
+      const ytext = activeSession.ydoc.getText("codemirror")
+      if (ytext.toString() !== rawContent) {
+        activeSession.ydoc.transact(() => {
+          ytext.delete(0, ytext.length)
+          if (rawContent) ytext.insert(0, rawContent)
+        })
+      }
+    } else {
+      externalEditorContent.value = {
+        seq: (externalEditorContent.value?.seq ?? 0) + 1,
+        content: rawContent,
+      }
+    }
+
+    lastSyncedContent.value = normalized
+  }
 
   // --- Tab indicator ---
   const tabIndicator = computed(() => {
@@ -260,7 +298,9 @@ export function useCollabPage(
       collabError.value = null
       collabReady.value = false
       collabRole.value = null
-      editorContent.value = normalizeContent(file?.content)
+      const seedContent = normalizeContent(file?.content)
+      editorContent.value = seedContent
+      lastSyncedContent.value = seedContent
       isDirty.value = false
 
       const previousSession = collabSession.value
@@ -308,6 +348,7 @@ export function useCollabPage(
         )
         if (typeof initialContent === "string") {
           editorContent.value = initialContent
+          lastSyncedContent.value = normalizeContent(initialContent)
         }
 
         collabSession.value = session
@@ -316,9 +357,8 @@ export function useCollabPage(
 
         // Apply server-relayed agent edits live. The first emission is the
         // baseline (already reflected in the content we just opened), so we
-        // skip it; later edits with a higher `seq` are applied by the elected
-        // applier only — `code` straight into the Y.Text (propagates via the
-        // mesh + snapshot save), `write` handed to the editor via setContent.
+        // skip it; later edits with a higher `seq` route through
+        // `applyExternalContent`, which handles applier election and dedup.
         let baselineSet = false
         let lastRelaySeq = Number.NEGATIVE_INFINITY
         relayUnsub = subscribeAgentRelay(
@@ -338,20 +378,7 @@ export function useCollabPage(
             if (!state) return
             if (state.seq <= lastRelaySeq) return
             lastRelaySeq = state.seq
-            if (!session.isAgentApplier()) return
-
-            if (scope === "code") {
-              const ytext = session.ydoc.getText("codemirror")
-              session.ydoc.transact(() => {
-                ytext.delete(0, ytext.length)
-                if (state.content) ytext.insert(0, state.content)
-              })
-            } else {
-              externalEditorContent.value = {
-                seq: state.seq,
-                content: state.content,
-              }
-            }
+            applyExternalContent(state.content)
           },
           (error) => {
             console.error("[collab] agent relay subscription error", error)
@@ -372,14 +399,43 @@ export function useCollabPage(
     { immediate: true }
   )
 
+  // --- Live-update fallback ---
+  // When `file.content` updates server-side (e.g., the bot called
+  // `updateNodeContent`) and the user has no pending local edits, push the
+  // new content into the editor without waiting for the agent relay. The
+  // relay (signaling/.../agentRelay/state) is the primary path, but its
+  // listener can drop or arrive late; without this watcher the editor stays
+  // stale until a refresh re-seeds Y.Text from the (now-current) file doc.
+  // `applyExternalContent` dedups via `lastSyncedContent`, so this co-exists
+  // safely with the relay path — whichever fires first applies.
+  // Intentionally no `isDirty` gate: the dirty flag is a UI signal (drives
+  // the save button), not a load-bearing safety check — the relay path
+  // doesn't honor it either, and the content-based dedup inside
+  // `applyExternalContent` is the real double-apply guard. Concurrent-edit
+  // clobbering would need a proper CRDT-aware merge, out of scope here.
+  watch(
+    () => selectedFile.value?.content,
+    (next) => {
+      if (next == null) return
+      if (!collabSession.value || !collabReady.value) return
+      applyExternalContent(next)
+    }
+  )
+
   // --- Dirty tracking ---
+  // Compare against `lastSyncedContent` (the last canonical save point we've
+  // reconciled with), not `selectedFile.content` directly. The two diverge
+  // whenever the bot updates the file: `selectedFile.content` jumps to the
+  // new server state immediately, while `lastSyncedContent` only advances
+  // when we actually apply the change locally. Comparing to the moving server
+  // value would mis-flag a freshly-bot-edited (but un-applied) editor as
+  // "unsaved" and let a stale-overwrite save through.
   watch(editorContent, (value) => {
     if (!selectedFile.value) {
       isDirty.value = false
       return
     }
-    isDirty.value =
-      normalizeContent(value) !== normalizeContent(selectedFile.value.content)
+    isDirty.value = normalizeContent(value) !== lastSyncedContent.value
   })
 
   // --- Save ---
@@ -403,6 +459,7 @@ export function useCollabPage(
         selectedFile.value.id,
         editorContent.value
       )
+      lastSyncedContent.value = normalizeContent(editorContent.value)
       isDirty.value = false
       showSuccessToast("Saved")
     } catch (error) {

@@ -7,7 +7,7 @@ import {
   type QueryDocumentSnapshot,
   type QuerySnapshot,
 } from "firebase/firestore"
-import { ref, watch, type WatchSource } from "vue"
+import { ref, shallowRef, watch, type WatchSource } from "vue"
 
 interface UsePaginatedLogsOptions {
   pageSize: number
@@ -28,7 +28,13 @@ export function usePaginatedLogs(options: UsePaginatedLogsOptions) {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasMore = ref(true)
-  const lastDoc = ref<QueryDocumentSnapshot | null>(null)
+  // shallowRef, not ref: a plain `ref<QueryDocumentSnapshot>` wraps the
+  // snapshot in a deep reactive Proxy. When the next page's `startAfter`
+  // reads `_document.data.field(...)` to build the cursor position, every
+  // nested proto value comes back proxied — those proxies end up inside
+  // the Query target and the SDK's `addTargetData` IndexedDB put fails
+  // with `DataCloneError`, poisoning the Firestore AsyncQueue.
+  const lastDoc = shallowRef<QueryDocumentSnapshot | null>(null)
   let latestRequestId = 0
 
   const cancelPendingRequests = () => {

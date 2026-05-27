@@ -10,6 +10,7 @@ import {
   sendSignal,
   subscribeIncomingSignals,
   subscribePeers,
+  type CollabPeer,
   type CollabRole,
   type JoinCollabRoomResponse,
   type SendSignalRequest,
@@ -30,6 +31,14 @@ const REMOTE_DOC_ORIGIN = Symbol("remote-doc")
 const REMOTE_AWARENESS_ORIGIN = Symbol("remote-awareness")
 const HEARTBEAT_INTERVAL_ACTIVE_MS = 30_000 // 30s for faster stale detection
 const HEARTBEAT_INTERVAL_HIDDEN_MS = 60_000 // 60s when tab is hidden
+// Peer staleness threshold for the applier election + mesh participation.
+// Set to 3× the hidden-tab heartbeat interval so a tab that briefly drops a
+// beat (network hiccup, GC pause) doesn't immediately get evicted, while a
+// peer doc left behind by a closed browser session (no more heartbeats) is
+// disqualified within ~3 minutes. Without this filter, a stale peer doc with
+// a lexicographically smaller `peerId` than the current session permanently
+// wins every applier election, blocking the agent relay from applying live.
+const PEER_STALE_THRESHOLD_MS = 3 * HEARTBEAT_INTERVAL_HIDDEN_MS
 const SIGNAL_DELETE_DEBOUNCE_MS = 500 // Faster cleanup
 const SIGNAL_DELETE_MAX_BATCH_SIZE = 100 // Larger batches = fewer writes
 const SIGNAL_SEND_MAX_ATTEMPTS = 3
@@ -341,16 +350,58 @@ export async function createYjsCollab(
   const unsubscribePeers = subscribePeers(
     options.contentId,
     (peers) => {
-      latestEditorPeerIds = peers
-        .filter((peer) => peer.role === "editor")
-        .map((peer) => peer.peerId)
-
+      // Resolve peer state in a single pass:
+      //
+      //   1. Staleness filter — a doc whose `lastSeenAt` is older than
+      //      `PEER_STALE_THRESHOLD_MS` is a leftover from a closed
+      //      browser/tab; including it lets a ghost permanently outrank
+      //      live editors in the lex-smallest-peerId election. Self and
+      //      missing-`lastSeenAt` peers are treated as live (defensive
+      //      against the join → first-heartbeat window).
+      //
+      //   2. Applier-election dedup by `userId` — one user gets one
+      //      vote (their freshest tab). Handles the orphan case the
+      //      staleness filter alone can't: a peer doc left behind by a
+      //      session-creation race whose heartbeat is still recent.
+      //      Self uses `+Infinity` freshness so its slot can't be lost
+      //      before its own first heartbeat lands; non-self with no
+      //      timestamp uses `0` so it can't beat an established peer.
+      //
+      //   3. Mesh participation deliberately uses ALL non-self live
+      //      peers, NOT the deduped set: multiple tabs from the same
+      //      user are legitimately distinct mesh peers and need to sync
+      //      between themselves. Only the election cares about
+      //      "exactly one per user."
+      const staleBefore = Date.now() - PEER_STALE_THRESHOLD_MS
+      const electionByUser = new Map<string, CollabPeer>()
+      const electionFreshness = new Map<string, number>()
       const currentPeerIds = new Set<string>()
-      peers.forEach((peer) => {
-        if (peer.peerId !== peerId) {
+
+      for (const peer of peers) {
+        const isSelf = peer.peerId === peerId
+        const lastSeenMs = peer.lastSeenAt?.toMillis?.() ?? null
+
+        if (!isSelf && lastSeenMs !== null && lastSeenMs < staleBefore) {
+          continue
+        }
+        if (!isSelf) {
           currentPeerIds.add(peer.peerId)
         }
-      })
+
+        const freshness = isSelf ? Number.POSITIVE_INFINITY : (lastSeenMs ?? 0)
+        const existingFreshness =
+          electionFreshness.get(peer.userId) ?? Number.NEGATIVE_INFINITY
+        if (freshness > existingFreshness) {
+          electionByUser.set(peer.userId, peer)
+          electionFreshness.set(peer.userId, freshness)
+        }
+      }
+
+      const nextEditorPeerIds: string[] = []
+      for (const peer of electionByUser.values()) {
+        if (peer.role === "editor") nextEditorPeerIds.push(peer.peerId)
+      }
+      latestEditorPeerIds = nextEditorPeerIds
 
       knownPeerIds.clear()
       currentPeerIds.forEach((currentPeerId) => {
