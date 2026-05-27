@@ -89,18 +89,31 @@ export interface BotActionContext {
    */
   effectiveModel?: string
   /**
-   * OUTPUT field — written by `transferToAgentTool`'s handler when the
-   * model decides to hand off. The dispatcher reads this after
-   * `streamChatToClient` completes and, if set, persists the new
+   * OUTPUT slot — the tool handler writes `.agentId` here when the model
+   * decides to hand off. The dispatcher reads it after
+   * `streamChatToClient` completes and, if present, persists the new
    * agent id on the session doc with a follow-up write. Multiple
    * transfer calls in one turn: last wins (handler overwrites).
+   *
+   * Wrapped in a container object (rather than a flat
+   * `requestedTransferAgentId` string field) because Genkit's tool
+   * runner shallow-clones the context before passing it to handlers
+   * (see `basicTool` / `multipartTool` in
+   * `@genkit-ai/ai/lib/tool.js`: `context: { ...runOptions.context }`).
+   * A primitive top-level mutation would land on the clone and never
+   * reach the original `actionContext` the dispatcher inspects —
+   * so the transfer would silently no-op. The shallow clone preserves
+   * nested object references, so mutating
+   * `ctx.transferRequest.agentId` propagates back to the original.
+   * The dispatcher must initialize `transferRequest: {}` for the
+   * mutation surface to exist.
    *
    * `""` is a deliberate signalling value meaning "transfer back to
    * the team default persona" — distinguishable from `undefined` (no
    * transfer requested) so the dispatcher can clear an existing agent
    * binding instead of leaving it stuck.
    */
-  requestedTransferAgentId?: string
+  transferRequest?: { agentId?: string }
   /**
    * Whether the node-CRUD tools (`botNodeTools.ts`) may run this turn.
    * Computed by the dispatcher as the INTERSECTION of two membership
@@ -374,7 +387,7 @@ export const browseInternetTool = ai.defineTool(
 // the new agent reply within the same turn, but that requires a fully
 // connected prompt graph with cyclic refs the beta SDK doesn't cleanly
 // support. Signalling via the shared action context sidesteps the
-// cycle: the dispatcher reads `context.requestedTransferAgentId`
+// cycle: the dispatcher reads `context.transferRequest.agentId`
 // after the turn finishes and writes the new id on the session doc.
 //
 // The handler validates against `context.availableTransferAgentIds`
@@ -396,9 +409,11 @@ export const transferToAgentTool = ai.defineTool(
       "when the user's request is better suited to another agent " +
       "available on the team. Use the agent's id from the list given " +
       "in your system prompt (or the empty string '' to transfer back " +
-      "to the team's default assistant). The handoff takes effect on " +
-      "the user's next message — your reply this turn should briefly " +
-      "explain the transfer so the user understands the persona switch.",
+      "to the team's default assistant). The handoff happens in this " +
+      "same turn — the new agent will reply to the user's message " +
+      "immediately after this tool call. Do not produce any text " +
+      "alongside the call (a transfer preamble would just clutter the " +
+      "new agent's reply); just call the tool.",
     inputSchema: z.object({
       agentId: z
         .string()
@@ -434,10 +449,14 @@ export const transferToAgentTool = ai.defineTool(
                 .join(", "))
       )
     }
-    if (ctx) {
+    if (ctx?.transferRequest) {
       // Last-call-wins: a model that makes two transfer calls in one
       // turn ends up on whichever target the second call named.
-      ctx.requestedTransferAgentId = input.agentId
+      //
+      // We mutate the nested container (not a top-level field) because
+      // Genkit shallow-clones `context` before invoking the handler.
+      // See `BotActionContext.transferRequest` for the full rationale.
+      ctx.transferRequest.agentId = input.agentId
     }
     // Returned string flows back to the model as the tool's output;
     // the model typically narrates it ("Transferring you to X

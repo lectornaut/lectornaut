@@ -82,16 +82,17 @@ const currentPlanLabel = computed(() => {
                 size="lg"
                 :tooltip="t('components.teamSwitcher.switchTeam')"
               >
-                <!-- <Avatar>
+                <Avatar class="size-8">
                   <AvatarImage
+                    class="size-8"
                     :src="currentTeam?.photoURL!"
-                    :alt="currentTeam?.name"
+                    :alt="currentTeam?.name!"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback>
+                  <AvatarFallback class="size-8">
                     {{ getInitials(currentTeam?.name!) }}
                   </AvatarFallback>
-                </Avatar> -->
+                </Avatar>
                 <div class="flex grow flex-col">
                   <span
                     class="truncate text-base leading-tight font-semibold tracking-tight"

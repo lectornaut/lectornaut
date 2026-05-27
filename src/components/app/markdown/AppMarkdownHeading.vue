@@ -36,7 +36,7 @@ const tag = computed(() => `h${props.node.level}`)
 </script>
 
 <template>
-  <component :is="tag" :id="slug" class="markdown-heading-anchor group">
+  <Component :is="tag" :id="slug" class="markdown-heading-anchor group">
     <slot />
     <a
       :href="`#${slug}`"
@@ -45,7 +45,7 @@ const tag = computed(() => `h${props.node.level}`)
     >
       #
     </a>
-  </component>
+  </Component>
 </template>
 
 <style scoped>

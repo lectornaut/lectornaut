@@ -431,6 +431,7 @@ declare module 'vue' {
     Terminal: typeof import('./src/components/app/layout/Terminal.vue')['default']
     Textarea: typeof import('./src/components/ui/textarea/Textarea.vue')['default']
     TextEditor: typeof import('./src/components/editors/text/TextEditor.vue')['default']
+    TextEditorCodeBlock: typeof import('./src/components/editors/text/components/TextEditorCodeBlock.vue')['default']
     TextEditorColorPicker: typeof import('./src/components/editors/text/components/TextEditorColorPicker.vue')['default']
     TextEditorCommandPanel: typeof import('./src/components/editors/text/components/TextEditorCommandPanel.vue')['default']
     TextEditorImageDialog: typeof import('./src/components/editors/text/components/TextEditorImageDialog.vue')['default']

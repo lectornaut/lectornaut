@@ -173,7 +173,7 @@ export type SizeId = (typeof sizes)[number]["id"]
 
 export const defaultSize: SizeId = "base"
 
-// Editor (code-block) themes for markstream's Monaco/Shiki runtime.
+// Editor (code-block) themes for markstream's Shiki runtime.
 //
 // Each entry is a Shiki family that ships BOTH a light and a dark variant.
 // Dark/light is a separate setting (`mode`), so AppMarkdown passes both
@@ -181,7 +181,7 @@ export const defaultSize: SizeId = "base"
 // resolved mode — we never branch on mode here. Families that only ship a
 // dark theme (Dracula, Nord, Monokai, Tokyo Night, Vesper, Synthwave '84, …)
 // are intentionally excluded: with a light app theme they'd have nothing to
-// fall back to. Variant names must exist in shiki@3 (stream-monaco's pinned
+// fall back to. Variant names must exist in shiki@4 (the stream-markdown
 // runtime); see `@shikijs/themes`. `id`s mirror `editorThemeIdSchema` in
 // `src/schemas/settings.ts` — keep them in sync.
 export const editorThemes = [
@@ -251,14 +251,14 @@ export type EditorThemeId = (typeof editorThemes)[number]["id"]
 
 export const defaultEditorTheme: EditorThemeId = "default"
 
-// Editor (code-block) font sizes for markstream's Monaco runtime.
+// Editor (code-block) font sizes for the code surfaces.
 //
 // Mirrors the global `sizes` t-shirt scale, but each entry carries an
-// explicit px `size`: Monaco's `fontSize` option is a NUMBER, not a CSS
-// class (the global `size` maps to `text-*` utilities instead). The stored
-// setting is the `id`; AppMarkdown resolves it to `size` before handing it
-// to Monaco. `id`s mirror `editorFontSizeIdSchema` in
-// `src/schemas/settings.ts` — keep them in sync.
+// explicit px `size`: CodeMirror takes a px fontSize, and the markstream
+// Shiki blocks read it as the `--vscode-editor-font-size` CSS var (the global
+// `size` maps to `text-*` utilities instead). The stored setting is the `id`;
+// it's resolved to `size` before being handed to the editors. `id`s mirror
+// `editorFontSizeIdSchema` in `src/schemas/settings.ts` — keep them in sync.
 export const editorFontSizes = [
   { id: "xs", name: "Extra small", size: 11 },
   { id: "sm", name: "Small", size: 12 },
@@ -329,34 +329,6 @@ export const botModels = [
     description: "Most capable Gemini — best for complex reasoning.",
     badge: "Pro",
   },
-  {
-    id: "gemini-2.5-flash",
-    provider: "google",
-    name: "Gemini 2.5 Flash",
-    description: "Balanced speed and quality.",
-    badge: null,
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    provider: "google",
-    name: "Gemini 2.5 Flash Lite",
-    description: "Lightweight — cheapest 2.5-class option.",
-    badge: null,
-  },
-  {
-    id: "gemini-2.0-flash",
-    provider: "google",
-    name: "Gemini 2.0 Flash",
-    description: "Stable, mature workhorse.",
-    badge: null,
-  },
-  {
-    id: "gemini-2.0-flash-lite",
-    provider: "google",
-    name: "Gemini 2.0 Flash Lite",
-    description: "Lowest cost Gemini — best for simple queries.",
-    badge: null,
-  },
   // Anthropic Claude
   {
     id: "claude-opus-4-5",
@@ -372,34 +344,13 @@ export const botModels = [
     description: "Balanced Claude — strong general-purpose default.",
     badge: null,
   },
-  {
-    id: "claude-haiku-4-5",
-    provider: "anthropic",
-    name: "Claude Haiku 4.5",
-    description: "Fastest, cheapest Claude — good for quick replies.",
-    badge: null,
-  },
   // OpenAI
   {
-    id: "gpt-4o",
+    id: "gpt-5",
     provider: "openai",
-    name: "GPT-4o",
-    description: "OpenAI flagship — multimodal, broad capability.",
-    badge: null,
-  },
-  {
-    id: "gpt-4o-mini",
-    provider: "openai",
-    name: "GPT-4o mini",
-    description: "Smaller, faster, and cheaper than GPT-4o.",
-    badge: null,
-  },
-  {
-    id: "gpt-4-turbo",
-    provider: "openai",
-    name: "GPT-4 Turbo",
-    description: "Previous-gen GPT-4 — stable, well-tested.",
-    badge: null,
+    name: "GPT-5",
+    description: "OpenAI flagship — unified reasoning across speed and depth.",
+    badge: "Reasoning",
   },
 ] as const satisfies readonly {
   id: IBotAgentModel

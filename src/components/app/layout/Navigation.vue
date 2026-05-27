@@ -1,6 +1,12 @@
 <script lang="ts" setup>
 import { isBuiltInAgentId } from "@/data/builtInAgents"
-import { IconGrid2X2Plus, IconRotateCcw } from "@/data/icons"
+import {
+  IconBadgeCheck,
+  IconGrid2X2Plus,
+  IconRotateCcw,
+  IconSparkle,
+  IconSparkles,
+} from "@/data/icons"
 import { defaultMenu } from "@/helpers/defaults"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -35,6 +41,16 @@ const memberAgentIds = computed(
     )
 )
 
+// Agent-kind glyph + label. A single `sparkle` marks an admin-authored
+// custom agent; the plural `sparkles` marks a built-in preset. Keyed off
+// `isBuiltInAgentId`, which detects the `_`-prefixed built-in ids.
+const agentKindIcon = (agentId: string) =>
+  isBuiltInAgentId(agentId) ? IconSparkles : IconSparkle
+const agentKindLabel = (agentId: string) =>
+  isBuiltInAgentId(agentId)
+    ? t("ai.agents.builtInTooltip")
+    : t("ai.agents.customTooltip")
+
 const el = ref<HTMLElement>()
 
 useSortable(el, activeNavItems, {
@@ -68,7 +84,9 @@ useSortable(el, activeNavItems, {
             >
               <RouterLink :to="item.url">
                 <Component :is="item.icon" />
-                {{ t("navigation.menu." + item.id) }}
+                <span class="truncate">
+                  {{ t("navigation.menu." + item.id) }}
+                </span>
               </RouterLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -126,21 +144,37 @@ useSortable(el, activeNavItems, {
                     @update:model-value="setAgentVisible(agent.id, $event)"
                     @select.prevent
                   >
-                    <span
-                      v-if="memberAgentIds.has(agent.id)"
-                      class="bg-primary pointer-events-none absolute top-1 left-1 size-1.5 rounded-full"
-                      role="img"
-                      :aria-label="t('ai.agents.teamMember')"
-                    />
                     {{ agent.name }}
-                    <!-- "Custom" tag for admin-authored agents (built-ins use `_`-prefixed ids); mirrors the Agents sidebar. -->
-                    <Badge
-                      v-if="!isBuiltInAgentId(agent.id)"
-                      variant="secondary"
-                      class="text-xs"
-                    >
-                      {{ t("ai.agents.customBadge") }}
-                    </Badge>
+                    <!--
+                      Indicator cluster, right-aligned via DropdownMenuShortcut.
+                      The membership check (badge-check) sits to the LEFT of the
+                      agent-kind glyph (sparkle = custom, sparkles = built-in).
+                      Mirrors the Agents sidebar treatment.
+                    -->
+                    <TooltipProvider>
+                      <DropdownMenuShortcut class="flex items-center gap-1">
+                        <Tooltip v-if="memberAgentIds.has(agent.id)">
+                          <TooltipTrigger as-child>
+                            <span>
+                              <IconBadgeCheck />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {{ t("ai.agents.teamMember") }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <span>
+                              <Component :is="agentKindIcon(agent.id)" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {{ agentKindLabel(agent.id) }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </DropdownMenuShortcut>
+                    </TooltipProvider>
                   </DropdownMenuCheckboxItem>
                 </template>
                 <DropdownMenuItem v-else disabled>

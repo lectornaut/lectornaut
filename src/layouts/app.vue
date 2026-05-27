@@ -75,7 +75,7 @@ onMounted(async () => {
 <template>
   <SidebarProvider v-model:open="sidebarOpen">
     <div class="flex size-full min-h-0 min-w-0 grow flex-col overflow-clip">
-      <div class="flex min-h-0 min-w-0 grow">
+      <div class="flex min-h-0 min-w-0 grow" data-tauri-drag-region>
         <Spinner
           v-if="isTeamLoading || isWorkspaceBootstrapping"
           class="m-auto"

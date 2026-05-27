@@ -132,27 +132,100 @@ export const BOT_TOOL_CATALOG: readonly BotToolDescriptor[] =
   Object.values(CATALOG_BY_NAME)
 
 /**
- * Display metadata for the agent node-CRUD tools (`functions/src/botNodeTools.ts`).
+ * Catalog for the agent node-CRUD tools (`functions/src/botNodeTools.ts`).
  *
- * These are intentionally OUTSIDE `CATALOG_BY_NAME` / `IBotAgentToolToggles`:
- * they're neither per-agent toggles nor slash-menu entries — any agent that's
- * a content-capable team member gets them automatically (gated server-side by
- * the membership intersection, not a config switch). But their tool-call cards
- * in `BotChatToolCall.vue` still need a friendly label + icon instead of the
- * raw wire name + generic asterisk, so `botToolLabel` / `botToolIcon` fall back
- * to this map. Keep the keys in sync with the tool `name`s in `botNodeTools.ts`.
+ * Kept OUTSIDE `CATALOG_BY_NAME` / `IBotAgentToolToggles` because these aren't
+ * single-tool per-agent toggles — the server registers them as two blocks
+ * gated by a membership intersection plus the `manageContent` / `readContent`
+ * feature toggles (see `bot.ts`'s `nodeWriteEnabled` / `nodeReadEnabled`). The
+ * composer's slash menu mirrors that gating in its own group so users see —
+ * and can prompt for — the actions the active agent can actually perform.
+ *
+ * The `kind` discriminator lets the composer split READ from WRITE: a member
+ * with read-only rights sees `readNode` but none of the mutators. Each entry
+ * also carries the friendly label + icon used by `BotChatToolCall.vue`'s
+ * tool-call cards via `botToolLabel` / `botToolIcon` — same source of truth,
+ * so a label change here ripples to the inline card automatically. Keep the
+ * keys in sync with the tool `name`s in `botNodeTools.ts`.
  */
-const NODE_TOOL_DISPLAY: Readonly<
-  Record<string, { label: string; icon: Component }>
-> = {
-  createNode: { label: "Create node", icon: IconFilePlus },
-  readNode: { label: "Read node", icon: IconFileText },
-  updateNodeContent: { label: "Edit content", icon: IconSquarePen },
-  renameNode: { label: "Rename node", icon: IconPencil },
-  moveNode: { label: "Move node", icon: IconArrowRight },
-  archiveNode: { label: "Archive node", icon: IconArchive },
-  unarchiveNode: { label: "Restore node", icon: IconRotateCcw },
+export interface BotNodeToolDescriptor {
+  name: string
+  kind: "read" | "write"
+  label: string
+  description: string
+  icon: Component
+  /** Prompt text inserted when the user picks this tool from the menu. */
+  example: string
 }
+
+const NODE_TOOL_DISPLAY: Readonly<Record<string, BotNodeToolDescriptor>> = {
+  readNode: {
+    name: "readNode",
+    kind: "read",
+    label: "Read node",
+    description: "Open a workspace file or folder and pull in its content.",
+    icon: IconFileText,
+    example: "Read the workspace file ",
+  },
+  createNode: {
+    name: "createNode",
+    kind: "write",
+    label: "Create node",
+    description: "Add a new file or folder to the workspace.",
+    icon: IconFilePlus,
+    example: "Create a new workspace file called ",
+  },
+  updateNodeContent: {
+    name: "updateNodeContent",
+    kind: "write",
+    label: "Edit content",
+    description: "Rewrite the contents of a workspace file.",
+    icon: IconSquarePen,
+    example: "Edit the workspace file ",
+  },
+  renameNode: {
+    name: "renameNode",
+    kind: "write",
+    label: "Rename node",
+    description: "Change the display name of a workspace file or folder.",
+    icon: IconPencil,
+    example: "Rename the workspace node ",
+  },
+  moveNode: {
+    name: "moveNode",
+    kind: "write",
+    label: "Move node",
+    description: "Move a workspace file or folder into another folder.",
+    icon: IconArrowRight,
+    example: "Move the workspace node ",
+  },
+  archiveNode: {
+    name: "archiveNode",
+    kind: "write",
+    label: "Archive node",
+    description: "Soft-delete a workspace file or folder (recoverable).",
+    icon: IconArchive,
+    example: "Archive the workspace node ",
+  },
+  unarchiveNode: {
+    name: "unarchiveNode",
+    kind: "write",
+    label: "Restore node",
+    description: "Restore a previously archived workspace file or folder.",
+    icon: IconRotateCcw,
+    example: "Restore the archived workspace node ",
+  },
+}
+
+/**
+ * Catalog source-of-truth as an iterable array — drives the slash menu's
+ * "Content" group in `AiChatComposer.vue`. Display order in the picker
+ * follows declaration order in `NODE_TOOL_DISPLAY` (insertion order on
+ * a plain object literal is stable). The READ tool is first so a
+ * read-only agent's single visible entry sits at the top of the group.
+ */
+export const BOT_NODE_TOOL_CATALOG: readonly BotNodeToolDescriptor[] =
+  Object.values(NODE_TOOL_DISPLAY)
 
 /**
  * Resolve a built-in tool's wire name to its human-friendly label

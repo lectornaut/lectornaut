@@ -83,11 +83,12 @@ useHead(() => ({
     </Sidebar>
   </Teleport>
   <div
-    class="scroll-smoothborder m-2 flex grow flex-col overflow-auto overscroll-none"
+    class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded border"
   >
     <OverlayScrollbarsWrapper v-if="teamId && workspaceId && selectedFile">
       <CodeEditor
         v-model="editorContent"
+        :file-name="selectedNode?.name ?? ''"
         :read-only="editorReadOnly"
         :extensions="collabExtensions"
         :placeholder="

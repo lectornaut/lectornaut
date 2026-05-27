@@ -1,5 +1,20 @@
 <script lang="ts" setup>
 import {
+  buildShikiSurfaceTheme,
+  shikiConfig,
+  shikiHighlightPlugin,
+} from "@/components/editors/code/shikiHighlightPlugin"
+import {
+  activeCodeThemeName,
+  detectLanguageFromFileName,
+  ensureTheme,
+} from "@/components/editors/text/shiki"
+import {
+  CODE_FONT_FAMILY,
+  CODE_FONT_WEIGHT,
+  useCodeFontSize,
+} from "@/composables/useCodeFont"
+import {
   autocompletion,
   closeBrackets,
   closeBracketsKeymap,
@@ -11,15 +26,17 @@ import {
   historyKeymap,
   indentWithTab,
 } from "@codemirror/commands"
+import { css } from "@codemirror/lang-css"
+import { html } from "@codemirror/lang-html"
 import { javascript } from "@codemirror/lang-javascript"
+import { json } from "@codemirror/lang-json"
+import { markdown } from "@codemirror/lang-markdown"
 import {
   bracketMatching,
-  defaultHighlightStyle,
   foldGutter,
   foldKeymap,
   indentOnInput,
   indentUnit,
-  syntaxHighlighting,
 } from "@codemirror/language"
 import { lintKeymap } from "@codemirror/lint"
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
@@ -38,21 +55,16 @@ import {
   rectangularSelection,
 } from "@codemirror/view"
 
-// Supported language types (only installed packages)
-export type SupportedLanguage =
-  | "javascript"
-  | "typescript"
-  | "jsx"
-  | "tsx"
-  | "text"
-
 // Props interface for better documentation
 export interface CodeEditorProps {
   modelValue?: string
   readOnly?: boolean
   placeholder?: string
   extensions?: Extension[]
-  language?: SupportedLanguage
+  /** File name; its extension drives language detection when `language` is unset. */
+  fileName?: string
+  /** Explicit Shiki language id override. When omitted, derived from `fileName`. */
+  language?: string
   lineWrapping?: boolean
   tabSize?: number
   indentGuides?: boolean
@@ -63,7 +75,8 @@ const props = withDefaults(defineProps<CodeEditorProps>(), {
   readOnly: false,
   placeholder: "Start document",
   extensions: () => [],
-  language: "typescript",
+  fileName: "",
+  language: undefined,
   lineWrapping: false,
   tabSize: 2,
   indentGuides: false,
@@ -89,6 +102,12 @@ const extensionsCompartment = new Compartment()
 const languageCompartment = new Compartment()
 const lineWrappingCompartment = new Compartment()
 const tabSizeCompartment = new Compartment()
+const surfaceCompartment = new Compartment()
+const shikiConfigCompartment = new Compartment()
+const fontSizeCompartment = new Compartment()
+
+// Code font size (px) from the user's persisted Appearance setting
+const codeFontSize = useCodeFontSize()
 
 // Adaptive debouncing constants
 const MIN_DEBOUNCE_MS = 50
@@ -137,10 +156,20 @@ const scheduleModelEmit = (value: string) => {
   }, debounceMs)
 }
 
+/** Effective Shiki language id: explicit `language` prop wins, else detected
+ *  from the file extension via the shared registry. */
+const effectiveLanguage = computed<string>(
+  () => props.language ?? detectLanguageFromFileName(props.fileName)
+)
+
 /**
- * Get language extension based on language prop
+ * CodeMirror grammar for editing affordances only — indentation, bracket
+ * matching, code folding. Token *colors* come from the Shiki plugin (which
+ * covers every language); this just enriches editing for the handful of
+ * languages we ship a CodeMirror grammar for. Others fall back to plain-text
+ * editing behaviour while still being fully highlighted by Shiki.
  */
-const getLanguageExtension = (lang: SupportedLanguage): Extension => {
+const getCmEditingExtension = (lang: string): Extension => {
   switch (lang) {
     case "javascript":
       return javascript()
@@ -150,7 +179,14 @@ const getLanguageExtension = (lang: SupportedLanguage): Extension => {
       return javascript({ jsx: true })
     case "tsx":
       return javascript({ jsx: true, typescript: true })
-    case "text":
+    case "css":
+      return css()
+    case "html":
+      return html()
+    case "json":
+      return json()
+    case "markdown":
+      return markdown()
     default:
       return []
   }
@@ -177,15 +213,15 @@ const getIndentGuidesExtension = (): Extension => {
  * Editor theme styles - using object to avoid deep type instantiation
  */
 const themeSpec = {
-  "&": {
-    background: "var(--color-background)",
-    color: "var(--color-foreground)",
-  },
+  // NB: the editor surface (& / gutters bg + fg) is owned by the
+  // surfaceCompartment so the active Shiki theme can take it over without a
+  // shorthand-vs-longhand conflict. Everything below is chrome (app-themed).
   ".cm-scroller": {
-    fontFamily: "var(--font-mono)",
+    fontFamily: CODE_FONT_FAMILY,
   },
   ".cm-content": {
     caretColor: "var(--color-foreground)",
+    fontWeight: String(CODE_FONT_WEIGHT),
   },
   "&.cm-focused": {
     outline: "none",
@@ -197,7 +233,7 @@ const themeSpec = {
     background: "color-mix(in srgb, var(--color-primary) 24%, transparent)",
   },
   ".cm-gutters": {
-    background: "var(--color-card)",
+    // bg owned by the surfaceCompartment surface (matches the editor bg)
     color: "var(--color-muted-foreground)",
     borderRight: "1px solid var(--color-border)",
   },
@@ -445,11 +481,9 @@ const initializeEditor = () => {
         // Re-indent lines when typing specific input
         indentOnInput(),
 
-        // Highlight syntax with a default style
-        syntaxHighlighting(defaultHighlightStyle),
-
-        // Language extension (lazy loaded)
-        languageCompartment.of(getLanguageExtension(props.language)),
+        // Editing grammar (folding/indent/bracket-match) for the languages we
+        // ship a CodeMirror grammar for; colors come from the Shiki plugin.
+        languageCompartment.of(getCmEditingExtension(effectiveLanguage.value)),
 
         // Highlight matching brackets near cursor
         bracketMatching(),
@@ -508,6 +542,37 @@ const initializeEditor = () => {
 
         // Theme
         editorTheme,
+
+        // Code font size (reactive to the user's Appearance setting)
+        fontSizeCompartment.of(
+          EditorView.theme({ "&": { fontSize: `${codeFontSize.value}px` } })
+        ),
+
+        // Editor surface (bg/fg/gutter) from the active Shiki theme. Starts on
+        // app tokens as a fallback, then swaps to the Shiki theme's surface
+        // once the async highlighter loads it. Placed after `editorTheme` so
+        // its surface bg/fg wins.
+        surfaceCompartment.of(
+          EditorView.theme({
+            "&": {
+              backgroundColor: "var(--color-background)",
+              color: "var(--color-foreground)",
+            },
+          })
+        ),
+
+        // Token colors: pure-Shiki highlighting applied as decorations — the
+        // same tokenizer the Tiptap code blocks and AppMarkdown use, so colors
+        // match across all three surfaces. `shikiConfig` carries the active
+        // theme + language; the plugin loads them lazily and re-tokenizes when
+        // either changes.
+        shikiConfigCompartment.of(
+          shikiConfig.of({
+            theme: activeCodeThemeName.value,
+            language: effectiveLanguage.value,
+          })
+        ),
+        shikiHighlightPlugin,
       ],
     })
 
@@ -522,16 +587,45 @@ const initializeEditor = () => {
   }
 }
 
+/**
+ * Load the active Shiki editor theme and swap it into CodeMirror: the surface
+ * (bg/fg/gutter) via its compartment, and the theme name into `shikiConfig` so
+ * the highlight plugin re-tokenizes with it. Re-run whenever the theme or
+ * light/dark mode changes.
+ */
+const applyShikiTheme = async () => {
+  const name = activeCodeThemeName.value
+  await ensureTheme(name)
+  if (!view.value) return
+  const surface = buildShikiSurfaceTheme(name)
+  view.value.dispatch({
+    effects: [
+      ...(surface ? [surfaceCompartment.reconfigure(surface)] : []),
+      shikiConfigCompartment.reconfigure(
+        shikiConfig.of({ theme: name, language: effectiveLanguage.value })
+      ),
+    ],
+  })
+}
+
 onMounted(() => {
   initializeEditor()
+  void applyShikiTheme()
 })
 
-// Watch for modelValue changes (skip when collaborative extensions manage the doc)
+// Watch for modelValue changes (skip when collaborative extensions manage the
+// doc). Gate on `extensionsCache` (what the view actually has installed), NOT
+// `props.extensions` (what it's *about* to have): on a file switch both
+// `modelValue` and `extensions` change in the same tick, this watcher fires
+// before the extensions watcher reconfigures the compartment, so `props` would
+// already show the new (empty) extensions while the OLD yCollab is still bound
+// to the OLD Y.Text — writing the new file's content here would be echoed into
+// the previous file's Y.Text and persisted as that file's snapshot.
 watch(
   () => props.modelValue,
   (value) => {
     if (!view.value) return
-    if (props.extensions.length > 0) return
+    if (extensionsCache.length > 0) return
     try {
       const current = view.value.state.doc.toString()
       if ((value ?? "") === current) return
@@ -577,22 +671,23 @@ watch(
   }
 )
 
-// Watch for language changes
-watch(
-  () => props.language,
-  (value) => {
-    if (!view.value) return
-    try {
-      view.value.dispatch({
-        effects: languageCompartment.reconfigure(
-          getLanguageExtension(value ?? "typescript")
+// Watch for language changes (file switch or explicit override): update both
+// the editing grammar and the Shiki tokenizer's language.
+watch(effectiveLanguage, (lang) => {
+  if (!view.value) return
+  try {
+    view.value.dispatch({
+      effects: [
+        languageCompartment.reconfigure(getCmEditingExtension(lang)),
+        shikiConfigCompartment.reconfigure(
+          shikiConfig.of({ theme: activeCodeThemeName.value, language: lang })
         ),
-      })
-    } catch (error) {
-      console.error("[CodeEditor] Error updating language:", error)
-    }
+      ],
+    })
+  } catch (error) {
+    console.error("[CodeEditor] Error updating language:", error)
   }
-)
+})
 
 // Watch for lineWrapping changes
 watch(
@@ -642,7 +737,23 @@ watch(
     }
 
     try {
+      // Reconcile the doc to `modelValue` in the SAME transaction that swaps
+      // the binding. yCollab's `ySync` plugin syncs the editor from *future*
+      // Y.Text deltas only — it never reconciles the existing doc when it
+      // (re)binds, assuming the doc already matches its Y.Text. On a collab
+      // session swap (file switch) the freshly-bound plugin would otherwise
+      // keep the previous file's text, since the `modelValue` watcher is
+      // guarded off while collab extensions are present. By this flush
+      // `modelValue` already holds the new session's text, so we push it in.
+      // The plugin is constructed (not update()-ed) by this transaction, so it
+      // won't echo the reset back into the new Y.Text.
+      const current = view.value.state.doc.toString()
+      const desired = props.modelValue ?? ""
       view.value.dispatch({
+        changes:
+          current === desired
+            ? undefined
+            : { from: 0, to: current.length, insert: desired },
         effects: extensionsCompartment.reconfigure(newExtensions),
       })
       extensionsCache = newExtensions
@@ -651,6 +762,25 @@ watch(
     }
   }
 )
+
+// Re-apply the Shiki theme when the editor theme (or light/dark) changes
+watch(activeCodeThemeName, () => {
+  void applyShikiTheme()
+})
+
+// Re-apply code font size when the Appearance setting changes
+watch(codeFontSize, (size) => {
+  if (!view.value) return
+  try {
+    view.value.dispatch({
+      effects: fontSizeCompartment.reconfigure(
+        EditorView.theme({ "&": { fontSize: `${size}px` } })
+      ),
+    })
+  } catch (error) {
+    console.error("[CodeEditor] Error updating font size:", error)
+  }
+})
 
 // Cleanup on unmount
 onBeforeUnmount(() => {

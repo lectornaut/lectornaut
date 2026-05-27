@@ -210,6 +210,7 @@ const openShortcutsDemo = () => {
                         v-for="command in sampleCommands"
                         :key="command.id"
                         :value="command.label"
+                        class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
                         @select="runSampleCommand(command.label)"
                       >
                         <Component :is="command.icon" />

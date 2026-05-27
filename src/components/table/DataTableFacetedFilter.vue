@@ -56,10 +56,10 @@ const selectedValues = computed(
       </Button>
     </PopoverTrigger>
     <PopoverContent>
-      <Command>
+      <Command highlight-on-hover>
         <CommandInput
           :placeholder="title"
-          class="border-none focus:border-inherit focus:ring-0"
+          class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
         />
         <CommandList>
           <CommandEmpty>{{ t("components.dataTable.noResults") }}</CommandEmpty>
@@ -68,7 +68,7 @@ const selectedValues = computed(
               v-for="option in options"
               :key="option.value"
               :value="option"
-              class="py-2"
+              class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
               @select="
                 () => {
                   const isSelected = selectedValues.has(option.value)
@@ -104,7 +104,7 @@ const selectedValues = computed(
             <CommandGroup>
               <CommandItem
                 :value="{ label: t('components.dataTable.clearFilters') }"
-                class="justify-center"
+                class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
                 @select="column?.setFilterValue(undefined)"
               >
                 {{ t("components.dataTable.clearFilters") }}

@@ -63,10 +63,15 @@ onUnmounted(() => {
                         {{ getInitials(currentWorkspace?.name!) }}
                       </AvatarFallback>
                     </Avatar>
-                    {{ currentWorkspace?.name! }}
+                    <span class="truncate">
+                      {{ currentWorkspace?.name! }}
+                    </span>
                   </template>
                   <template v-else>
-                    {{ t("components.workspaceSwitcher.selectWorkspace") }}
+                    <IconBlocks />
+                    <span class="truncate">
+                      {{ t("components.workspaceSwitcher.selectWorkspace") }}
+                    </span>
                   </template>
                 </div>
                 <SyncIndicator />

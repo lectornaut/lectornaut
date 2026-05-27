@@ -63,7 +63,7 @@ const selectedValue = computed(() => props.items[props.selectedIndex]?.id ?? "")
             v-for="item in groupItems"
             :key="item.id"
             :value="item.id"
-            class="flex items-start py-2"
+            class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
             @mousemove="emit('hover', item.index)"
             @select="emit('select', item.index)"
           >

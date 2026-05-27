@@ -72,6 +72,7 @@
     "tools": {
       "customBadge": "Custom",
       "groupBuiltIn": "Tools",
+      "groupContent": "Content",
       "groupCustom": "Custom"
     },
     "chatEmpty": "Ask anything to get started.",
@@ -97,7 +98,9 @@
       "deletedTooltip": "This agent has been deleted — your messages run under the team default.",
       "deletedAgentLabel": "Deleted agent",
       "customBadge": "Custom",
-      "teamMember": "Member of this team"
+      "teamMember": "Member of this team",
+      "customTooltip": "Custom agent",
+      "builtInTooltip": "Built-in agent"
     },
     "modes": {
       "auto": {
@@ -3087,6 +3090,8 @@
       "tableDeleteTable": "Delete table",
       "language": "Language",
       "auto": "Auto",
+      "searchLanguage": "Search language…",
+      "noLanguages": "No languages found.",
       "alignLeftButton": "Left",
       "alignCenterButton": "Center",
       "alignRightButton": "Right",
@@ -3608,7 +3613,9 @@
       "sidebar": {
         "close": "Close sidebar",
         "expand": "Expand sidebar",
-        "minimize": "Minimize sidebar"
+        "minimize": "Minimize sidebar",
+        "pin": "Pin sidebar",
+        "unpin": "Unpin sidebar"
       },
       "empty": {
         "console": {

@@ -493,7 +493,6 @@ const onArchiveToggle = (session: IBotSession) => {
             <Collapsible default-open class="group/collapsible">
               <SidebarGroupLabel as-child>
                 <CollapsibleTrigger class="flex w-full items-center gap-2">
-                  <IconArchive />
                   {{ t("ai.archived") }}
                   <IconChevronRight
                     class="ml-auto size-3! transition-transform group-data-[state=open]/collapsible:rotate-90"
@@ -512,13 +511,25 @@ const onArchiveToggle = (session: IBotSession) => {
                         <ContextMenuTrigger as-child>
                           <SidebarMenuButton
                             :is-active="item.id === activeSessionId"
-                            class="h-auto items-start gap-2 py-2 pr-8 opacity-70"
+                            class="h-auto items-end gap-2 py-2 pr-3.5"
                             @click="onSelectSession(item.id)"
                           >
-                            <IconArchive />
-                            <span class="flex min-w-0 grow flex-col">
-                              <span class="truncate text-sm">
-                                {{ item.title || t("ai.untitledSession") }}
+                            <span class="flex min-w-0 grow flex-col gap-0.5">
+                              <span class="flex items-center gap-2">
+                                <span class="truncate text-sm">
+                                  {{ item.title || t("ai.untitledSession") }}
+                                </span>
+                                <Tooltip v-if="item.visibility !== 'private'">
+                                  <TooltipTrigger as-child>
+                                    <Component
+                                      :is="visibilityIcon(item.visibility)"
+                                      class="text-muted-foreground"
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{ visibilityLabel(item.visibility) }}
+                                  </TooltipContent>
+                                </Tooltip>
                               </span>
                               <span
                                 v-if="item.preview"
@@ -551,40 +562,42 @@ const onArchiveToggle = (session: IBotSession) => {
                         </ContextMenuContent>
                       </ContextMenu>
 
-                      <DropdownMenu>
+                      <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger as-child>
-                            <DropdownMenuTrigger as-child>
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-                                @click.stop
-                              >
-                                <IconMoreHorizontal />
-                              </Button>
-                            </DropdownMenuTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>{{
-                            t("ai.chatActions")
-                          }}</TooltipContent>
+                          <DropdownMenu>
+                            <TooltipTrigger as-child>
+                              <DropdownMenuTrigger as-child>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                                  @click.stop
+                                >
+                                  <IconMoreHorizontal />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>{{
+                              t("ai.chatActions")
+                            }}</TooltipContent>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem @click="onArchiveToggle(item)">
+                                <IconRotateCcw />
+                                {{ t("ai.restore") }}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem @click="openRename(item)">
+                                <IconPencil />
+                                {{ t("actions.rename") }}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem @click="openDelete(item)">
+                                <IconTrash2 />
+                                {{ t("actions.delete") }}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </Tooltip>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem @click="onArchiveToggle(item)">
-                            <IconRotateCcw />
-                            {{ t("ai.restore") }}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem @click="openRename(item)">
-                            <IconPencil />
-                            {{ t("actions.rename") }}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem @click="openDelete(item)">
-                            <IconTrash2 />
-                            {{ t("actions.delete") }}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      </TooltipProvider>
                     </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
@@ -617,7 +630,11 @@ const onArchiveToggle = (session: IBotSession) => {
         />
       </form>
       <DialogFooter>
-        <Button :disabled="isMutating" @click="renameDialogOpen = false">
+        <Button
+          variant="outline"
+          :disabled="isMutating"
+          @click="renameDialogOpen = false"
+        >
           {{ t("actions.cancel") }}
         </Button>
         <Button

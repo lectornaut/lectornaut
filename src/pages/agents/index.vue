@@ -257,20 +257,29 @@ const route = useRoute()
           <Command class="bg-card border">
             <CommandInput
               :placeholder="$t('pages.agents.searchPlaceholder')"
-              class="border-none focus:border-inherit focus:ring-0"
+              class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
             />
             <CommandList>
               <CommandEmpty>{{ $t("pages.agents.empty") }}</CommandEmpty>
               <CommandGroup :heading="$t('pages.agents.trending')">
-                <CommandItem value="calendar" class="py-2">
+                <CommandItem
+                  value="calendar"
+                  class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
+                >
                   <IconCalendar />
                   <span>{{ $t("pages.agents.categories.calendar") }}</span>
                 </CommandItem>
-                <CommandItem value="search" class="py-2">
+                <CommandItem
+                  value="search"
+                  class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
+                >
                   <IconSmile />
                   <span>{{ $t("pages.agents.categories.searchEmoji") }}</span>
                 </CommandItem>
-                <CommandItem value="calculator" class="py-2">
+                <CommandItem
+                  value="calculator"
+                  class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
+                >
                   <IconCalculator />
                   <span>{{ $t("pages.agents.categories.calculator") }}</span>
                 </CommandItem>

@@ -754,18 +754,34 @@ export function useBotChat(): BotChatContext {
   // Snapshot-driven active-agent resync.
   //
   // The server may flip `activeAgentId` on the session doc *during* a
-  // turn — specifically when the model calls `transferToAgent` to
-  // hand off to a different persona. Without this watcher, the
-  // composer badge would keep showing the pre-transfer agent until
-  // the user reloaded the chat, and the next `sendMessage` would
-  // forward the stale id (the server would clamp back to the
-  // session-persisted value, so behavior would be correct, but the
-  // UI affordance would lag).
+  // turn — specifically when the model calls `transferToAgent` and
+  // the dispatcher runs a second turn under the target agent, whose
+  // `SessionStore.save` writes the new `activeAgentId` to the doc.
+  // Without this watcher, the composer badge would keep showing the
+  // pre-transfer agent until the user reloaded the chat, and the
+  // next `sendMessage` would forward the stale id.
   //
-  // We watch `activeSession.value?.activeAgentId` directly — it
-  // re-evaluates whenever the doc snapshot updates (vuefire's
-  // reactivity). The guard `next !== activeAgentId.value` prevents
-  // re-firing on the local-mutation path: `selectAgent()` writes
+  // We watch the DOC-LEVEL subscription (`_vuefireActiveSessionDoc`)
+  // rather than the collection-derived `activeSession`. Both *could*
+  // work in theory, but in practice the collection path is unreliable
+  // for in-place field updates:
+  //   - `useCollection` keeps the same array `.value` across
+  //     snapshots and patches items via `splice(index, 1)` +
+  //     `splice(newIndex, 0, newData)`. The new item is a fresh
+  //     object reference, but a downstream `computed` like
+  //     `activeSession.value?.activeAgentId` that traversed the
+  //     array via `.find(...)` doesn't always re-trigger on item
+  //     replacement under the converter+Pinia stack this codebase
+  //     uses — symptom: the agent badge stays stuck on the previous
+  //     agent until a manual page reload.
+  //   - `useDocument` reassigns `.value` to a fresh object on EVERY
+  //     snapshot. A ref reassignment is the most basic reactive
+  //     write in Vue and ALWAYS schedules dependent watchers. The
+  //     messages-sync watcher above sources from the same ref for
+  //     the same reason.
+  //
+  // The guard `next !== activeAgentId.value` prevents re-firing on
+  // the local-mutation path: `selectAgent()` writes
   // `activeAgentId.value`, the next `sendMessage` writes the doc,
   // the snapshot lands with the same value, and we skip the no-op
   // assignment. Real transfers (where the doc's value diverges from
@@ -774,7 +790,7 @@ export function useBotChat(): BotChatContext {
   // Also handles cross-tab/device updates: another tab changes the
   // agent → doc updates → this tab's badge follows.
   watch(
-    () => activeSession.value?.activeAgentId ?? null,
+    () => _vuefireActiveSessionDoc.data.value?.activeAgentId ?? null,
     (next) => {
       // Only sync while a session is bound — otherwise this would
       // clobber the new-chat default-null state with an unrelated
@@ -999,6 +1015,35 @@ export function useBotChat(): BotChatContext {
       input?: unknown
       isInterrupt?: boolean
     }) => {
+      // Optimistic active-agent sync on `transferToAgent`. The
+      // toolCall chunk fires the instant the MODEL emits its
+      // toolRequest — long before the server's post-turn
+      // `SessionStore.save` writes `activeAgentId` to Firestore and
+      // the snapshot makes it back to us (the doc-level snapshot
+      // watcher's normal latency, ~100–400ms of Firestore-roundtrip).
+      // Pivoting the composer badge here cuts that latency to zero;
+      // the snapshot watcher then either confirms our guess (no-op
+      // via its equality guard) or corrects it in the rare case the
+      // server-side `availableTransferAgentIds` allowlist rejected
+      // the target and the transfer never committed.
+      //
+      // `""` is the sentinel for "transfer back to the team default
+      // persona" (matches the server's
+      // `normalizeActiveAgentIdForStorage` mapping).
+      if (
+        call.name === "transferToAgent" &&
+        call.input &&
+        typeof call.input === "object"
+      ) {
+        const rawAgentId = (call.input as { agentId?: unknown }).agentId
+        if (typeof rawAgentId === "string") {
+          const next = rawAgentId === "" ? null : rawAgentId
+          if (activeAgentId.value !== next) {
+            activeAgentId.value = next
+          }
+        }
+      }
+
       const agent = messages.value[agentIndex]
       if (agent?.role !== "agent") return
       const segments = agent.segments

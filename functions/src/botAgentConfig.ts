@@ -73,7 +73,11 @@ export const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
       "Default mode: answer concisely. Call a tool when it directly " +
       "advances the user's request, otherwise just reply with text. If " +
       "the request is ambiguous, prefer asking the user a clarifying " +
-      "question via `askQuestion` over guessing.",
+      "question via `askQuestion` over guessing. If the user asks for " +
+      "something you don't have a tool for but a teammate agent listed " +
+      "above does (e.g., creating or editing a document), call " +
+      "`transferToAgent` — never tell the user to do it themselves or " +
+      "copy-paste from chat when a teammate can do the job.",
   },
   agent: {
     promptSuffix:
@@ -81,7 +85,11 @@ export const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
       "data over guessing, and chain multiple tool calls when a question " +
       "needs them. Briefly narrate what you're doing and why. When you " +
       "need a decision from the user before continuing, ask via " +
-      "`askQuestion` — don't pick on their behalf.",
+      "`askQuestion` — don't pick on their behalf. Treat " +
+      "`transferToAgent` as part of your toolkit: when the user asks " +
+      "for an action a listed teammate can perform and you cannot, hand " +
+      "off proactively rather than declining or asking the user to do " +
+      "it themselves.",
   },
   manual: {
     promptSuffix:
@@ -121,18 +129,11 @@ const BOT_AGENT_MODEL_REGISTRY = [
   // Google Gemini
   { id: "gemini-3-flash-preview", provider: "google" },
   { id: "gemini-2.5-pro", provider: "google" },
-  { id: "gemini-2.5-flash", provider: "google" },
-  { id: "gemini-2.5-flash-lite", provider: "google" },
-  { id: "gemini-2.0-flash", provider: "google" },
-  { id: "gemini-2.0-flash-lite", provider: "google" },
   // Anthropic Claude
   { id: "claude-opus-4-5", provider: "anthropic" },
   { id: "claude-sonnet-4-5", provider: "anthropic" },
-  { id: "claude-haiku-4-5", provider: "anthropic" },
   // OpenAI
-  { id: "gpt-4o", provider: "openai" },
-  { id: "gpt-4o-mini", provider: "openai" },
-  { id: "gpt-4-turbo", provider: "openai" },
+  { id: "gpt-5", provider: "openai" },
 ] as const satisfies ReadonlyArray<{ id: string; provider: BotModelProvider }>
 
 export type BotAgentModel = (typeof BOT_AGENT_MODEL_REGISTRY)[number]["id"]

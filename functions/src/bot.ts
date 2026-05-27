@@ -875,14 +875,21 @@ function buildTransferRoster(
 }
 
 /**
- * After-turn write that commits the model's `transferToAgent` request
- * (if any) to the session doc. The store's in-turn `save()` already
- * wrote the PRE-turn agent id; this merge updates the doc to whatever
- * the model handed off to so the next user message routes correctly.
+ * Safety-net write that commits the model's `transferToAgent` request
+ * (if any) to the session doc when the in-line second turn couldn't.
  *
- * No-op when the model didn't call `transferToAgent`. A single
- * Firestore write in the rare transfer-happened case — added latency
- * is negligible against the model turn that just preceded it.
+ * The normal path is `runTransferTurnIfRequested`: it runs a second
+ * Genkit chat turn under the target agent and that turn's own
+ * `SessionStore.save` writes the new `activeAgentId` as part of the
+ * usual save. This helper is the fallback for the abnormal path —
+ * if the second turn throws before reaching its save (e.g. target
+ * agent disappeared mid-request, model deadline hit on the handoff),
+ * we still want the next user message to route to the agent the
+ * model picked, so we write it directly here.
+ *
+ * No-op when the model didn't call `transferToAgent`. Idempotent
+ * with the second-turn save — same field, same value — so calling it
+ * unconditionally after the second turn is harmless.
  *
  * The empty-string sentinel is translated to `null` here (the doc
  * field's "team default" representation) via
@@ -895,7 +902,7 @@ async function commitTransferIfRequested(
   sessionId: string,
   actionContext: BotActionContext
 ): Promise<void> {
-  const requested = actionContext.requestedTransferAgentId
+  const requested = actionContext.transferRequest?.agentId
   if (requested === undefined) return
   const nextAgentId = normalizeActiveAgentIdForStorage(requested)
   await db
@@ -907,6 +914,162 @@ async function commitTransferIfRequested(
       },
       { merge: true }
     )
+}
+
+/**
+ * If the just-completed turn requested a cross-agent handoff via
+ * `transferToAgent`, drive a SECOND chat turn under the target agent
+ * inside the same HTTP request so the user's message gets answered
+ * without a manual re-send.
+ *
+ * How the new agent sees the user's message:
+ *   - Genkit's `chat.send` for the first turn appended the user
+ *     message AND the original agent's response (with the tool call
+ *     + tool response) to the thread, then awaited `store.save`.
+ *   - Before the second turn we TRUNCATE the thread back to the
+ *     pre-turn baseline + the user's just-sent message. The new
+ *     agent then sees only what the user typed, with no residue from
+ *     the original agent's "transferring…" reply or the tool call
+ *     plumbing. This matters for two reasons:
+ *
+ *     1. **Provider compliance**: OpenAI/Anthropic chat APIs want
+ *        the thread to end on a `user` turn before they generate.
+ *        Leaving the original agent's `model`/`tool` messages at the
+ *        end causes some providers to return empty content — the
+ *        symptom is the second turn silently producing no chunks
+ *        and the user seeing only the first agent's reply, with
+ *        nothing else streaming in.
+ *
+ *     2. **Persisted-history hygiene**: the persisted thread becomes
+ *        `[…prior, user, new-agent-response]` — a clean handoff
+ *        record. A user re-opening the chat sees the new agent
+ *        answering their question directly, not a confusing trail
+ *        of intermediate "transferring you" text from a persona
+ *        that no longer drives the conversation.
+ *
+ *   - `prepareChatTurn` on the same `sessionId` calls `ai.loadSession`
+ *     AFTER the truncation, so the fresh Session it constructs picks
+ *     up the truncated thread for its `Chat`.
+ *   - We call `chat.sendStream(...)` with NO `prompt`. Generate then
+ *     runs on the (truncated) thread alone — single user message at
+ *     the tail, ready for an assistant reply.
+ *
+ * Streaming bridges naturally: both turns push through the SAME
+ * `sendChunk`, so the client's open `sendBotMessage.stream` sees
+ * tool-call chunks for the transfer, then text chunks from the new
+ * agent — all appended into the same agent message bubble. No
+ * special client-side framing required.
+ *
+ * Recursion bound: `disableTransfer: true` strips `transferToAgent`
+ * from the target agent's tool catalog and replaces the transfer
+ * directive with the "no targets" guard. One hop max — chains of
+ * handoffs would be confusing and risk exhausting `TURN_DEADLINE_MS`.
+ *
+ * Returns the post-handoff response. When no transfer was requested
+ * the first turn's response is returned unchanged, so callers can
+ * use the return value uniformly as "the response the user sees."
+ */
+async function runTransferTurnIfRequested(opts: {
+  firstFinal: Awaited<ChatStreamResult["response"]>
+  /**
+   * The Genkit session driving the first turn. Used here only to
+   * call `updateMessages` for the thread truncation — passing the
+   * already-loaded session avoids re-reading the doc just to mutate
+   * the threads field.
+   */
+  firstSession: Awaited<ReturnType<typeof ai.loadSession>>
+  /**
+   * Length of the thread BEFORE the first turn ran. For new sessions
+   * this is 0; for resumes it's the previously-saved message count.
+   * The truncation keeps `[0 .. preTurnThreadLength)` (the prior
+   * conversation) + the user message at index `preTurnThreadLength`.
+   */
+  preTurnThreadLength: number
+  firstActionContext: BotActionContext
+  auth: AuthData
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  mode: BotChatMode
+  contextNodes: NodeRef[]
+  model: BotAgentModel | undefined
+  archivedSessionMessage: string
+  sendChunk: (chunk: SendBotMessageStreamPayload) => void
+}): Promise<Awaited<ChatStreamResult["response"]>> {
+  const requested = opts.firstActionContext.transferRequest?.agentId
+  if (requested === undefined) return opts.firstFinal
+
+  // Truncate the thread back to "pre-turn + the user message". The
+  // first turn's `firstFinal.messages` is the canonical post-turn
+  // thread (Genkit's `chat.send` returns it after `updateMessages`),
+  // so we slice off everything the first agent appended at indices
+  // `preTurnThreadLength + 1` onward.
+  //
+  // Guard: if `firstFinal.messages` is missing (some error/fallback
+  // paths return a stub without messages), skip the truncation and
+  // let the second turn run on whatever the session currently holds.
+  // The new agent may produce empty output in that case but at least
+  // the agent-id commit still lands.
+  const fullThread = opts.firstFinal.messages
+  if (
+    Array.isArray(fullThread) &&
+    fullThread.length > opts.preTurnThreadLength + 1
+  ) {
+    const truncated = fullThread.slice(0, opts.preTurnThreadLength + 1)
+    // Cast — `MessageLike` (this codebase's shape) is structurally
+    // a subset of Genkit's `MessageData`. `updateMessages` accepts
+    // both Message instances and raw `MessageData` (it normalizes
+    // via `m.toJSON ? m.toJSON() : m`), so the cast is safe.
+    await opts.firstSession.updateMessages(
+      MAIN_THREAD,
+      truncated as Parameters<typeof opts.firstSession.updateMessages>[1]
+    )
+  }
+
+  const targetAgentId = normalizeActiveAgentIdForStorage(requested)
+
+  const transferPrep = await prepareChatTurn({
+    auth: opts.auth,
+    teamId: opts.teamId,
+    workspaceId: opts.workspaceId,
+    sessionId: opts.sessionId,
+    mode: opts.mode,
+    contextNodes: opts.contextNodes,
+    activeAgentId: targetAgentId,
+    model: opts.model,
+    // Pin is a one-shot at session creation; the first turn already
+    // wrote it (or we're resuming, in which case it was written ages
+    // ago). Passing it again would be a no-op at best and a doc
+    // duplicate-key check at worst — leave it undefined.
+    pinnedNode: undefined,
+    requireExistingSession: true,
+    archivedSessionMessage: opts.archivedSessionMessage,
+    disableTransfer: true,
+  })
+
+  // Fresh ref-dedupe baseline. The truncated thread no longer
+  // includes the original agent's tool refs — but `collectPriorTurnToolRefs`
+  // is still the right primitive here: it reads from the session
+  // doc's persisted state (which mirrors the post-truncation thread),
+  // so the sweep correctly skips any prior-conversation tool refs
+  // while emitting any new tool calls the second agent makes.
+  const priorRefs = collectPriorTurnToolRefs(transferPrep.existingSession?.data)
+
+  const turnAbort = new AbortController()
+  return await streamChatToClient(
+    transferPrep.chat.sendStream({
+      abortSignal: turnAbort.signal,
+      maxTurns: TOOL_MAX_TURNS,
+    }) as ChatStreamResult,
+    opts.sendChunk,
+    {
+      abortController: turnAbort,
+      preSentToolCalls: priorRefs.calls,
+      preSentToolResults: priorRefs.results,
+      preExistingToolCallCount: priorRefs.callCount,
+      preExistingToolResultCount: priorRefs.resultCount,
+    }
+  )
 }
 
 // ===========================================================================
@@ -1691,7 +1854,9 @@ interface PreparedChatTurn {
  *     for sends, `{ resume: { respond } }` for interrupt responses).
  *   - Pre/post-stream chunk emission (e.g. the resume flow emits a
  *     toolResult chunk before streaming, then pre-marks its ref).
- *   - Calling `commitTransferIfRequested` after streaming completes.
+ *   - Driving the transfer-induced second turn via
+ *     `runTransferTurnIfRequested` and the post-stream
+ *     `commitTransferIfRequested` safety-net write.
  *
  * The `archivedSessionMessage` parameter is the one user-visible
  * difference between flows — "before sending new messages" vs.
@@ -1712,6 +1877,14 @@ async function prepareChatTurn(opts: {
   pinnedNode?: NodeRef
   requireExistingSession: boolean
   archivedSessionMessage: string
+  /**
+   * When true, the prepared chat won't expose `transferToAgent` to
+   * the model and the system prompt's transfer directive is omitted.
+   * Used by the transfer-induced second turn so a handoff chain stops
+   * at one hop — recursive transfers (default → A → B → …) would be
+   * confusing for the user and prone to deadline exhaustion.
+   */
+  disableTransfer?: boolean
 }): Promise<PreparedChatTurn> {
   const {
     auth,
@@ -1724,6 +1897,7 @@ async function prepareChatTurn(opts: {
     pinnedNode,
     requireExistingSession,
     archivedSessionMessage,
+    disableTransfer,
   } = opts
 
   // Per-turn setup opens with three independent Firestore reads — the
@@ -1935,7 +2109,18 @@ async function prepareChatTurn(opts: {
   // When a custom agent is active we include the team default
   // (`id: ""`) so the model has a way back to the generic assistant.
   // When no agent is active, only custom agents are eligible targets.
-  const transferRoster = buildTransferRoster(activeAgent, availableAgents)
+  //
+  // `disableTransfer` zeroes the roster — used by the transfer-induced
+  // second turn (`runTransferTurnIfRequested`) so a handoff chain can't
+  // recurse past one hop. An empty roster naturally cascades to:
+  //   - `pickChatTools` skipping `transferToAgentTool`
+  //   - `availableTransferAgentIds` being undefined on the action context
+  //   - `buildAgentSystemPrompt` emitting the "no targets" directive,
+  //     which doubles as a guard against the model hallucinating a
+  //     transfer in prose
+  const transferRoster = disableTransfer
+    ? []
+    : buildTransferRoster(activeAgent, availableAgents)
 
   const dispatchableCustomTools = customTools.filter(
     (tool) => tool.enabled && !tool.archivedAt
@@ -1943,10 +2128,15 @@ async function prepareChatTurn(opts: {
 
   // Action context fed into `chat({ context })`. `availableTransferAgentIds`
   // is the runtime allowlist enforced by `transferToAgent`'s handler;
-  // `requestedTransferAgentId` starts undefined and the handler writes
-  // it on a successful transfer call. `effectiveModel` lets
-  // promptTemplate custom tools fall back to the chat's current model
-  // when no admin override is set.
+  // `transferRequest` is a pre-allocated container the handler writes
+  // `.agentId` into on a successful transfer call. The container MUST
+  // be allocated here (not relied on the handler to create) because
+  // Genkit shallow-clones `context` for the handler — a missing
+  // container leaves the handler with nothing to mutate and the
+  // transfer signal never reaches the dispatcher. See
+  // `BotActionContext.transferRequest` for the full rationale.
+  // `effectiveModel` lets promptTemplate custom tools fall back to the
+  // chat's current model when no admin override is set.
   const actionContext: BotActionContext = {
     auth: { uid: auth.uid },
     mode,
@@ -1954,6 +2144,7 @@ async function prepareChatTurn(opts: {
     workspaceId,
     availableTransferAgentIds:
       transferRoster.length > 0 ? transferRoster.map((r) => r.id) : undefined,
+    transferRequest: {},
     effectiveModel,
     canManageNodes,
     canReadNodes,
@@ -2130,6 +2321,15 @@ const sendBotMessageFlow = ai.defineFlow(
             "This chat is archived. Restore it before sending new messages.",
         })
 
+      // Capture the thread length BEFORE the first turn appends anything.
+      // `runTransferTurnIfRequested` needs this to slice the thread back
+      // to "prior conversation + the user's just-sent message" if a
+      // transfer fires. Reading it here (rather than inside the helper)
+      // keeps the truncation deterministic — we know exactly what the
+      // first turn was about to add.
+      const preTurnThreadLength =
+        existingSession?.data?.threads?.[MAIN_THREAD]?.length ?? 0
+
       // Emit the session id before we touch the model. For brand-new sessions
       // this lets the client update the URL immediately; for resumed sessions
       // it's a redundant confirmation but harmless.
@@ -2147,7 +2347,7 @@ const sendBotMessageFlow = ai.defineFlow(
       // background. `maxTurns` raises Genkit's default tool-iteration budget
       // for this bot's legitimately tool-chaining agents.
       const turnAbort = new AbortController()
-      const final = await streamChatToClient(
+      const firstFinal = await streamChatToClient(
         chat.sendStream({
           prompt: message,
           abortSignal: turnAbort.signal,
@@ -2163,18 +2363,44 @@ const sendBotMessageFlow = ai.defineFlow(
         }
       )
 
-      // Post-turn: commit any cross-agent transfer the model requested
-      // via `transferToAgent`. The in-turn `store.save()` already wrote
-      // the pre-turn agent id; this follow-up merge updates the doc to
-      // the new owner so the next user message routes correctly. Skipped
-      // on partial turns (errors above this point throw before reaching
-      // here, leaving the doc on the pre-turn agent — the safer fallback).
-      await commitTransferIfRequested(
-        input.teamId,
-        input.workspaceId,
-        session.id,
-        actionContext
-      )
+      // If the model called `transferToAgent`, drive a second turn
+      // under the target agent inside this same request so the user's
+      // message gets answered immediately — no resend needed. Returns
+      // the first turn's response unchanged when no transfer fired.
+      // Errors from the second turn propagate; `commitTransferIfRequested`
+      // in the finally below still lands the agent change so a retry
+      // from the user routes to the new agent on its first send.
+      let final: Awaited<ChatStreamResult["response"]>
+      try {
+        final = await runTransferTurnIfRequested({
+          firstFinal,
+          firstSession: session,
+          preTurnThreadLength,
+          firstActionContext: actionContext,
+          auth,
+          teamId: input.teamId,
+          workspaceId: input.workspaceId,
+          sessionId: session.id,
+          mode: input.mode,
+          contextNodes: input.contextNodes,
+          model: input.model,
+          archivedSessionMessage:
+            "This chat is archived. Restore it before sending new messages.",
+          sendChunk,
+        })
+      } finally {
+        // Safety-net agent-id commit. Idempotent with the second
+        // turn's in-built save when that turn ran cleanly; the
+        // load-bearing case is when the second turn threw before its
+        // save, in which case this guarantees the next user message
+        // still routes to the requested target.
+        await commitTransferIfRequested(
+          input.teamId,
+          input.workspaceId,
+          session.id,
+          actionContext
+        )
+      }
 
       return {
         sessionId: session.id,
@@ -2383,6 +2609,20 @@ const respondToBotInterruptFlow = ai.defineFlow(
       // `existing.data` blob is where pending interrupts live.
       const existing = existingSession!
 
+      // For the resume flow, "pre-turn" means the thread as it was
+      // when the interrupt fired — already persisted, ending with
+      // the `model` message that carries the pending tool request.
+      // The resume folds the user's answer in as a tool response
+      // (NOT a new user-role message — the answer rides on
+      // `respondPart`), so post-resume the thread is
+      // `[...pre-resume, <answer>, <model continuation>, …]`. Using
+      // the same `length + 1` truncation as the send flow keeps the
+      // answer at the tail and strips the continuation, which is
+      // what `runTransferTurnIfRequested` needs to feed a clean
+      // "ready for assistant reply" thread to the new agent.
+      const preTurnThreadLength =
+        existing.data?.threads?.[MAIN_THREAD]?.length ?? 0
+
       // Find the interrupt part the user is responding to. We prefer
       // `ref` (Genkit's stable per-call id) and fall back to "most recent
       // pending of the same name" — handles older sessions or models that
@@ -2469,7 +2709,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
       // the resumed turn can chain tools and hang on the provider just like a
       // fresh send, so it gets its own AbortController + `maxTurns`.
       const turnAbort = new AbortController()
-      const final = await streamChatToClient(
+      const firstFinal = await streamChatToClient(
         chat.sendStream({
           resume: { respond: [respondPart] },
           abortSignal: turnAbort.signal,
@@ -2485,15 +2725,39 @@ const respondToBotInterruptFlow = ai.defineFlow(
         }
       )
 
-      // Post-turn cross-agent transfer commit, mirroring the same step
-      // in `sendBotMessageFlow`. Skipped silently when the model didn't
-      // call `transferToAgent`.
-      await commitTransferIfRequested(
-        input.teamId,
-        input.workspaceId,
-        session.id,
-        actionContext
-      )
+      // Same transfer-induced second turn as `sendBotMessageFlow`. A
+      // resumed turn can call `transferToAgent` too — the model that
+      // continues past an interrupt is still the original agent, with
+      // the same tool catalog — so the handoff path must apply here.
+      let final: Awaited<ChatStreamResult["response"]>
+      try {
+        final = await runTransferTurnIfRequested({
+          firstFinal,
+          firstSession: session,
+          preTurnThreadLength,
+          firstActionContext: actionContext,
+          auth,
+          teamId: input.teamId,
+          workspaceId: input.workspaceId,
+          sessionId: session.id,
+          mode: input.mode,
+          contextNodes: input.contextNodes,
+          model: input.model,
+          archivedSessionMessage:
+            "This chat is archived. Restore it before continuing.",
+          sendChunk,
+        })
+      } finally {
+        // Safety-net agent-id commit; see `sendBotMessageFlow` for the
+        // rationale (covers the case where the second turn threw
+        // before its in-built save).
+        await commitTransferIfRequested(
+          input.teamId,
+          input.workspaceId,
+          session.id,
+          actionContext
+        )
+      }
 
       return {
         sessionId: session.id,

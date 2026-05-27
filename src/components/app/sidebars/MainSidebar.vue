@@ -1,7 +1,15 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconChevronRight, IconGift, IconX } from "@/data/icons"
+import {
+  IconChevronRight,
+  IconGift,
+  IconMinus,
+  IconPin,
+  IconPinOff,
+  IconPlus,
+  IconX,
+} from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { storeToRefs } from "pinia"
@@ -16,16 +24,27 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
-const { setOpen, isMobile, setOpenMobile } = useSidebar()
+const { open, isMobile, setOpenMobile, toggleSidebar } = useSidebar()
 const authStore = useAuthStore()
 const { onboarding } = storeToRefs(authStore)
 const layoutStore = useLayoutStore()
-const { agentsSidebarVisible } = storeToRefs(layoutStore)
+const { agentsSidebarVisible, sidebarPinned } = storeToRefs(layoutStore)
 
 const isFullscreen = useIsFullscreen()
 
+// In preview mode (e.g. settings preview) the sidebar must stay fully open and
+// non-collapsible; otherwise pin → icon rail, unpin → slide-out offcanvas.
+const collapsibleMode = computed<"none" | "icon" | "offcanvas">(() => {
+  if (props.preview) return "none"
+  return sidebarPinned.value ? "icon" : "offcanvas"
+})
+
 function closeSidebarOnMobile() {
   if (isMobile.value) setOpenMobile(false)
+}
+
+function togglePinned() {
+  sidebarPinned.value = !sidebarPinned.value
 }
 </script>
 
@@ -33,12 +52,14 @@ function closeSidebarOnMobile() {
   <ContextMenu>
     <ContextMenuTrigger>
       <Sidebar
-        :collapsible="props.preview ? 'none' : 'offcanvas'"
+        :collapsible="collapsibleMode"
         variant="inset"
-        class="shadow-muted-foreground/5 relative w-full p-0 transition-none!"
+        class="shadow-muted-foreground/5 relative w-full p-0 transition-none"
         data-tauri-drag-region="deep"
       >
         <div
+          v-if="open || props.preview"
+          v-motion-fade-visible
           class="flex items-center justify-between gap-2 px-2 pt-2"
           :class="[{ 'pl-22': !props.preview && isTauri && !isFullscreen }]"
         >
@@ -51,7 +72,7 @@ function closeSidebarOnMobile() {
             <BackForth />
           </div>
         </div>
-        <SidebarHeader>
+        <SidebarHeader :class="[{ 'mt-10': !open && !props.preview }]">
           <TeamSwitcher />
           <WorkspaceSwitcher />
         </SidebarHeader>
@@ -92,10 +113,37 @@ function closeSidebarOnMobile() {
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent class="w-auto">
-      <ContextMenuItem
-        @click="isMobile ? setOpenMobile(false) : setOpen(false)"
-      >
-        <IconX /> {{ t("layouts.app.sidebar.close") }}
+      <template v-if="!isMobile">
+        <ContextMenuItem @click="togglePinned">
+          <IconPinOff v-if="sidebarPinned" />
+          <IconPin v-else />
+          {{
+            sidebarPinned
+              ? t("layouts.app.sidebar.unpin")
+              : t("layouts.app.sidebar.pin")
+          }}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+      </template>
+      <!--
+        Single toggle item whose label depends on (a) which dimension is
+        being toggled — desktop `open` vs mobile `openMobile` — and (b) the
+        pin state, since closing-while-pinned just collapses to the icon
+        rail rather than sliding the sidebar offscreen. `toggleSidebar`
+        from shadcn's `useSidebar()` already routes to the right setter for
+        the platform, so all this branch picks is the wording + icon.
+      -->
+      <ContextMenuItem @click="toggleSidebar">
+        <IconPlus v-if="!isMobile && !open" />
+        <IconMinus v-else-if="!isMobile && sidebarPinned" />
+        <IconX v-else />
+        {{
+          !isMobile && !open
+            ? t("layouts.app.sidebar.expand")
+            : !isMobile && sidebarPinned
+              ? t("layouts.app.sidebar.minimize")
+              : t("layouts.app.sidebar.close")
+        }}
       </ContextMenuItem>
     </ContextMenuContent>
   </ContextMenu>

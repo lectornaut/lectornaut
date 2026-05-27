@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { isBuiltInAgentId } from "@/data/builtInAgents"
-import { IconCirclePlus } from "@/data/icons"
+import {
+  IconBadgeCheck,
+  IconCirclePlus,
+  IconSparkle,
+  IconSparkles,
+} from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -63,6 +68,16 @@ const memberAgentIds = computed(
 const avatarSeed = (agent: { avatarSeed: string; name: string; id: string }) =>
   agent.avatarSeed.trim() || agent.name.trim() || agent.id
 
+// Agent-kind glyph + label. A single `sparkle` marks an admin-authored
+// custom agent; the plural `sparkles` marks a built-in preset. Keyed off
+// `isBuiltInAgentId`, which detects the `_`-prefixed built-in ids.
+const agentKindIcon = (agentId: string) =>
+  isBuiltInAgentId(agentId) ? IconSparkles : IconSparkle
+const agentKindLabel = (agentId: string) =>
+  isBuiltInAgentId(agentId)
+    ? t("ai.agents.builtInTooltip")
+    : t("ai.agents.customTooltip")
+
 /**
  * Open the custom agents management dialog directly in "editor"
  * mode (new agent). Avoids the two-hop "open Settings → Tools cog"
@@ -93,7 +108,9 @@ const openNewAgentDialog = (): void => {
         @click="openNewAgentDialog"
       >
         <IconCirclePlus />
-        {{ t("ai.agents.newAgent") }}
+        <span class="truncate">
+          {{ t("ai.agents.newAgent") }}
+        </span>
       </SidebarMenuButton>
     </SidebarMenuItem>
 
@@ -136,23 +153,42 @@ const openNewAgentDialog = (): void => {
                 'var(--color-chart-5)',
               ]"
             />
-            {{ agent.name }}
-            <!-- "Custom" tag for admin-authored agents (built-ins use `_`-prefixed ids); mirrors AiChatComposer's agent picker. -->
-            <Badge
-              v-if="!isBuiltInAgentId(agent.id)"
-              variant="secondary"
-              class="text-xs"
-            >
-              {{ t("ai.agents.customBadge") }}
-            </Badge>
+            <span class="truncate">
+              {{ agent.name }}
+            </span>
           </SidebarMenuButton>
-          <!-- Corner dot: this agent is a member of the active team. -->
-          <span
-            v-if="memberAgentIds.has(agent.id)"
-            class="bg-primary pointer-events-none absolute top-1 left-1 size-1.5 rounded-full"
-            role="img"
-            :aria-label="t('ai.agents.teamMember')"
-          />
+          <!--
+            Right-aligned indicator cluster. The team-membership check sits
+            to the LEFT of the agent-kind glyph (sparkle = custom, sparkles
+            = built-in). SidebarMenuBadge is `pointer-events-none` so the
+            row stays clickable through it; we re-enable pointer events only
+            on the tooltip trigger spans, so hovering a glyph shows its
+            tooltip without swallowing clicks meant to open the sheet.
+          -->
+          <TooltipProvider>
+            <SidebarMenuBadge class="flex items-center gap-1">
+              <Tooltip v-if="memberAgentIds.has(agent.id)">
+                <TooltipTrigger as-child>
+                  <span>
+                    <IconBadgeCheck />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {{ t("ai.agents.teamMember") }}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <span>
+                    <Component :is="agentKindIcon(agent.id)" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {{ agentKindLabel(agent.id) }}
+                </TooltipContent>
+              </Tooltip>
+            </SidebarMenuBadge>
+          </TooltipProvider>
         </SidebarMenuItem>
       </SheetTrigger>
       <SheetContent

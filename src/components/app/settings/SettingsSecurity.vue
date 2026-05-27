@@ -358,7 +358,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                     t('settings.security.approvedDomains.placeholder')
                   "
                   type="url"
-                  class="border-none focus:border-inherit focus:ring-0"
+                  class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
                 />
                 <TooltipProvider>
                   <Tooltip>
@@ -645,7 +645,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                             t('settings.security.approvedDomains.placeholder')
                           "
                           type="url"
-                          class="border-none focus:border-inherit focus:ring-0"
+                          class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
                         />
                         <TooltipProvider>
                           <Tooltip>

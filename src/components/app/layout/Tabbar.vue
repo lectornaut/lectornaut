@@ -51,6 +51,7 @@ const {
   leftPanelCollapsed,
   rightPanelCollapsed,
   bottomPanelCollapsed,
+  sidebarPinned,
   isLoading: pending,
   isHydrated,
 } = storeToRefs(layoutStore)
@@ -585,12 +586,22 @@ onUnmounted(() => {
       >
         <div
           data-tauri-drag-region="deep"
-          class="flex min-w-0 items-center gap-2 px-2 pt-2"
+          class="flex min-w-0 items-center gap-2 px-2 pt-2 transition-all"
           :class="{
-            'pl-22': (!open || isMobile) && isTauri && !isFullscreen,
+            'pl-22':
+              isTauri &&
+              !isFullscreen &&
+              (isMobile || (!open && !sidebarPinned)),
+            'pl-12':
+              isTauri && !isFullscreen && !isMobile && !open && sidebarPinned,
           }"
         >
-          <HoverCard v-if="!open && !isMobile">
+          <HoverCard
+            v-if="!isMobile && !open && !sidebarPinned"
+            v-motion-fade-visible
+            :open-delay="500"
+            :close-delay="0"
+          >
             <HoverCardTrigger as-child>
               <SidebarTrigger />
             </HoverCardTrigger>
@@ -603,8 +614,11 @@ onUnmounted(() => {
               <MainSidebar preview />
             </HoverCardContent>
           </HoverCard>
-          <SidebarTrigger v-else-if="isMobile" />
-          <BackForth v-if="!open || isMobile" />
+          <SidebarTrigger
+            v-else-if="isMobile || (!open && sidebarPinned)"
+            v-motion-fade-visible
+          />
+          <BackForth v-if="!open || isMobile" v-motion-fade-visible />
           <nav
             ref="el"
             class="relative flex min-w-0 items-stretch justify-start gap-2"
@@ -673,13 +687,13 @@ onUnmounted(() => {
                       <ContextMenuTrigger as-child class="context-trigger">
                         <Button
                           :variant="
-                            tab.id === activeTabId ? 'secondary' : 'ghost'
+                            tab.id === activeTabId ? 'outline' : 'secondary'
                           "
                           class="group w-[-webkit-fill-available] min-w-0"
                           :class="[
                             tab.id === activeTabId
-                              ? 'text-foreground shadow-none'
-                              : 'text-secondary-foreground/50 bg-secondary/50',
+                              ? 'hover:bg-background border-transparent!'
+                              : 'bg-accent/25 text-accent-foreground/25 hover:text-accent-foreground/50 hover:bg-accent/50',
                             isPinnedTab(tab) ? 'justify-center px-0!' : 'pr-1!',
                           ]"
                           size="sm"

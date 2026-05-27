@@ -729,20 +729,19 @@ const statusBadge = computed(() => STATUS_BADGES[status.value])
       </Card>
 
       <!-- ============================================================== -->
-      <!-- Running: brief waiting note. The header's spinner indicates -->
-      <!-- progress; the body stays minimal so the layout doesn't jump -->
-      <!-- when the result arrives. -->
+      <!-- Running: brief waiting note. Shares the done-state Card -->
+      <!-- anatomy so the body's shell doesn't reflow when the result -->
+      <!-- arrives — only the inner content swaps. The trigger's -->
+      <!-- spinner carries the progress signal at the row level. -->
       <!-- ============================================================== -->
-      <Item v-else-if="isRunning" variant="muted" size="xs">
-        <ItemMedia variant="icon">
+      <Card v-else-if="isRunning" size="sm">
+        <CardContent class="flex items-center gap-2">
           <Spinner />
-        </ItemMedia>
-        <ItemContent>
-          <ItemDescription class="line-clamp-none">
+          <span class="text-muted-foreground">
             {{ t("ai.toolCall.waitingForReturn") }}
-          </ItemDescription>
-        </ItemContent>
-      </Item>
+          </span>
+        </CardContent>
+      </Card>
 
       <!-- ============================================================== -->
       <!-- rollDice: dice icon + big number. No input, so no header. -->

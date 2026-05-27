@@ -17,7 +17,7 @@ import { MotionPlugin } from "@vueuse/motion"
 import {
   enableKatex,
   enableMermaid,
-  preloadCodeBlockRuntime,
+  preloadExtendedLanguageIcons,
 } from "markstream-vue"
 import { ClickScrollPlugin, OverlayScrollbars } from "overlayscrollbars"
 import "overlayscrollbars/overlayscrollbars.scriptingenabled.css"
@@ -59,12 +59,11 @@ initSync()
 enableKatex()
 enableMermaid()
 
-// Warm the code-block runtime off the critical path so the first fenced
-// code block in a chat bubble or changelog entry doesn't pay the
-// cold-start cost. With `stream-monaco` installed this dynamically
-// imports Monaco and registers its workers (falling back to the Shiki
-// runtime via `stream-markdown` if Monaco is unavailable).
-preloadCodeBlockRuntime()
+// Warm the Shiki code-block language icons off the critical path so the
+// first fenced code block in a chat bubble or changelog entry doesn't pay
+// the cold-start cost. Code blocks render via the Shiki MarkdownCodeBlockNode
+// (see registerMarkdownOverrides); the highlighter loads grammars on demand.
+void preloadExtendedLanguageIcons()
 
 // Order matters: authReady must resolve before router.isReady() so the
 // initial navigation guard sees a settled `auth.currentUser`.

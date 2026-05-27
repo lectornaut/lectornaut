@@ -17,7 +17,6 @@ import Components from "unplugin-vue-components/vite"
 import { defineConfig } from "vite"
 import checker from "vite-plugin-checker"
 import { ViteImageOptimizer } from "vite-plugin-image-optimizer"
-import monacoEditorPlugin from "vite-plugin-monaco-editor-esm"
 import { VitePWA } from "vite-plugin-pwa"
 import Sitemap from "vite-plugin-sitemap"
 import Layouts from "vite-plugin-vue-layouts"
@@ -29,36 +28,6 @@ const host = process.env.TAURI_DEV_HOST
 const file = fileURLToPath(new URL("package.json", import.meta.url))
 const json = readFileSync(file, "utf8")
 const pkg = JSON.parse(json)
-
-/**
- * Monaco web-worker entries for `vite-plugin-monaco-editor-esm`, declared
- * WITH the `.js` extension on purpose.
- *
- * monaco-editor@0.55's package `exports` map is `{ "./*": "./*" }`, which
- * resolves subpaths verbatim and disables extension probing. The plugin
- * (v2.0.2, latest) hardcodes its built-in worker entries WITHOUT `.js`, so
- * under Vite 8 / rolldown — which strictly honor `exports` — esbuild fails
- * with "Could not resolve …/editor.worker". Passing the SAME workers here
- * with `.js` makes the plugin's `resolveMonacoPath()` match the real files
- * (it does `fs.existsSync(<cwd>/node_modules/<entry>)` and returns that
- * absolute path, which bypasses the exports map). They're wired via
- * `customWorkers` + `languageWorkers: []` so they aren't registered twice
- * (`getWorks()` appends customWorkers to the built-in list). Labels are
- * unchanged, so stream-monaco still resolves each worker by label.
- */
-const monacoWorkers = [
-  {
-    label: "editorWorkerService",
-    entry: "monaco-editor/esm/vs/editor/editor.worker.js",
-  },
-  {
-    label: "typescript",
-    entry: "monaco-editor/esm/vs/language/typescript/ts.worker.js",
-  },
-  { label: "css", entry: "monaco-editor/esm/vs/language/css/css.worker.js" },
-  { label: "html", entry: "monaco-editor/esm/vs/language/html/html.worker.js" },
-  { label: "json", entry: "monaco-editor/esm/vs/language/json/json.worker.js" },
-]
 
 // https://vitejs.dev/config/
 /**
@@ -75,19 +44,6 @@ export default defineConfig({
     }),
     VueRouter(),
     Vue(),
-    // Bundles Monaco's web workers so markstream-vue's Monaco code-block
-    // runtime (stream-monaco) can tokenize/lay out code off the main
-    // thread. Worker entries (with `.js`, and why) are declared in
-    // `monacoWorkers` above; `languageWorkers: []` avoids double-
-    // registering the plugin's broken extensionless built-ins.
-    // customDistPath keeps the emitted workers under a predictable folder
-    // for the PWA/Tauri build.
-    monacoEditorPlugin({
-      languageWorkers: [],
-      customWorkers: monacoWorkers,
-      customDistPath: (_root, buildOutDir) =>
-        resolve(buildOutDir, "monacoeditorwork"),
-    }),
     VitePWA({
       devOptions: {
         enabled: true,
@@ -129,15 +85,6 @@ export default defineConfig({
         globPatterns: [
           "**/*.{js,css,html,ico,png,svg,jpg,jpeg,gif,webp,woff,woff2,ttf,eot,otf,webmanifest,json}",
         ],
-        // Monaco's language workers are emitted UNMINIFIED by
-        // vite-plugin-monaco-editor-esm (its internal esbuild pass has no
-        // minify step), so `ts.worker..bundle.js` alone is ~13 MB — far
-        // past any sane precache budget, and workbox fails the build on
-        // the oversized asset. The workers are fetched on demand (via
-        // Monaco's getWorkerUrl shim), not needed at SW-install time, so
-        // keep them out of the precache manifest. The `script` runtime-
-        // caching rule below still serves/caches them after first use.
-        globIgnores: ["**/monacoeditorwork/**"],
         navigateFallback: "/index.html",
         runtimeCaching: [
           {
@@ -319,6 +266,24 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
+    // The @lezer packages are identity-sensitive (CodeMirror matches highlight
+    // tags / node types by reference). Importing `@lezer/highlight` directly
+    // (shikiCodeMirror.ts) must resolve the SAME instance the @codemirror
+    // packages use, or highlighting throws "tags is not iterable".
+    dedupe: ["@lezer/highlight", "@lezer/common", "@lezer/lr"],
+  },
+  // Pre-bundle the @lezer/@codemirror graph as one unit so the dev optimizer
+  // can't inline separate @lezer copies into different chunks (which breaks the
+  // reference-based tag matching above).
+  optimizeDeps: {
+    include: [
+      "@lezer/highlight",
+      "@lezer/common",
+      "@codemirror/state",
+      "@codemirror/view",
+      "@codemirror/language",
+      "@codemirror/lang-javascript",
+    ],
   },
   // prevent vite from obscuring rust errors
   clearScreen: false,

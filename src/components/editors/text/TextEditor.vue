@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { type ColorOption } from "@/components/editors/text/components/TextEditorColorPicker.vue"
+import { CodeBlockShiki } from "@/components/editors/text/extensions/codeBlockShiki"
 import { EmojiReplacer } from "@/components/editors/text/extensions/emojiReplacer"
 import { RichImage } from "@/components/editors/text/extensions/richImage"
 import {
@@ -37,7 +38,6 @@ import {
 import { accents } from "@/helpers/defaults"
 import { showErrorToast } from "@/helpers/toast"
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
 import {
   Details,
   DetailsContent,
@@ -70,27 +70,6 @@ import { Placeholder } from "@tiptap/extensions/placeholder"
 import StarterKit from "@tiptap/starter-kit"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
 import { BubbleMenu } from "@tiptap/vue-3/menus"
-import bash from "highlight.js/lib/languages/bash"
-import c from "highlight.js/lib/languages/c"
-import cpp from "highlight.js/lib/languages/cpp"
-import csharp from "highlight.js/lib/languages/csharp"
-import css from "highlight.js/lib/languages/css"
-import dockerfile from "highlight.js/lib/languages/dockerfile"
-import go from "highlight.js/lib/languages/go"
-import graphql from "highlight.js/lib/languages/graphql"
-import java from "highlight.js/lib/languages/java"
-import javascript from "highlight.js/lib/languages/javascript"
-import json from "highlight.js/lib/languages/json"
-import markdown from "highlight.js/lib/languages/markdown"
-import php from "highlight.js/lib/languages/php"
-import python from "highlight.js/lib/languages/python"
-import ruby from "highlight.js/lib/languages/ruby"
-import rust from "highlight.js/lib/languages/rust"
-import sql from "highlight.js/lib/languages/sql"
-import typescript from "highlight.js/lib/languages/typescript"
-import xml from "highlight.js/lib/languages/xml"
-import yaml from "highlight.js/lib/languages/yaml"
-import { createLowlight } from "lowlight"
 import type { Awareness } from "y-protocols/awareness"
 import type { Doc as YDoc } from "yjs"
 
@@ -146,29 +125,6 @@ const DEFAULT_HIGHLIGHT_COLOR =
   HIGHLIGHT_COLORS.find((color) => color.id === "yellow")?.value ??
   HIGHLIGHT_COLORS[0]!.value
 
-const CODE_BLOCK_LANGUAGES = [
-  "javascript",
-  "typescript",
-  "json",
-  "html",
-  "css",
-  "markdown",
-  "bash",
-  "yaml",
-  "python",
-  "go",
-  "rust",
-  "java",
-  "c",
-  "cpp",
-  "csharp",
-  "php",
-  "ruby",
-  "sql",
-  "graphql",
-  "dockerfile",
-]
-
 const TABLE_PICKER_MAX_ROWS = 8
 const TABLE_PICKER_MAX_COLS = 8
 const TABLE_PICKER_ROWS = Array.from(
@@ -179,38 +135,6 @@ const TABLE_PICKER_COLS = Array.from(
   { length: TABLE_PICKER_MAX_COLS },
   (_, index) => index + 1
 )
-
-const sharedLowlight = createLowlight()
-sharedLowlight.register({
-  bash,
-  c,
-  cpp,
-  csharp,
-  css,
-  dockerfile,
-  go,
-  graphql,
-  java,
-  javascript,
-  json,
-  markdown,
-  php,
-  python,
-  ruby,
-  rust,
-  sql,
-  typescript,
-  xml,
-  yaml,
-})
-sharedLowlight.registerAlias({
-  javascript: ["js"],
-  typescript: ["ts"],
-  xml: ["html"],
-  csharp: ["cs"],
-  bash: ["sh", "shell"],
-  markdown: ["md"],
-})
 
 const READING_WORDS_PER_MINUTE = 200
 const MODEL_EMIT_DEBOUNCE_MS = 120
@@ -639,10 +563,7 @@ const extensions = [
   TaskItem.configure({
     nested: true,
   }),
-  CodeBlockLowlight.configure({
-    lowlight: sharedLowlight,
-    defaultLanguage: "plaintext",
-  }),
+  CodeBlockShiki,
   Table.configure({
     resizable: true,
     allowTableNodeSelection: true,
@@ -947,30 +868,6 @@ const currentBlockLabel = computed(() => {
   return t("components.textEditor.blockText")
 })
 
-const currentCodeLanguage = computed(() => {
-  const activeEditor = editor.value
-  if (!activeEditor?.isActive("codeBlock")) {
-    return "auto"
-  }
-
-  const language = activeEditor.getAttributes("codeBlock").language
-  return typeof language === "string" && language.trim().length
-    ? language
-    : "auto"
-})
-
-const setCodeLanguage = (language: unknown) => {
-  const normalized = typeof language === "string" ? language : "auto"
-
-  editor.value
-    ?.chain()
-    .focus()
-    .updateAttributes("codeBlock", {
-      language: normalized === "auto" ? null : normalized,
-    })
-    .run()
-}
-
 const applyImageAttrs = (attrs: Record<string, unknown>) => {
   editor.value?.chain().focus().updateAttributes("image", attrs).run()
 }
@@ -1003,28 +900,24 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 </script>
 
 <template>
-  <div class="absolute top-0 left-0 z-20 h-full p-2">
-    <div class="sticky top-0 p-1.5">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="outline" size="icon">
-              <IconInfo />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {{
-              t("components.textEditor.stats", {
-                characters: editorStats.characters,
-                words: editorStats.words,
-                minutes: editorStats.readingMinutes,
-              })
-            }}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  </div>
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <Button variant="outline" size="icon" class="sticky top-2 left-2 z-10">
+          <IconInfo />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {{
+          t("components.textEditor.stats", {
+            characters: editorStats.characters,
+            words: editorStats.words,
+            minutes: editorStats.readingMinutes,
+          })
+        }}
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
   <div class="absolute top-0 right-0 z-20 h-full p-2">
     <aside
       class="sticky top-1/2 ml-auto flex h-max w-max -translate-y-1/2 flex-col items-end gap-2 overflow-auto p-2"
@@ -1306,31 +1199,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <div v-if="editor?.isActive('codeBlock')" class="min-w-36">
-        <Select
-          :model-value="currentCodeLanguage"
-          @update:model-value="setCodeLanguage"
-        >
-          <SelectTrigger class="h-8 w-full">
-            <SelectValue :placeholder="t('components.textEditor.language')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="auto">{{
-                t("components.textEditor.auto")
-              }}</SelectItem>
-              <SelectItem
-                v-for="language in CODE_BLOCK_LANGUAGES"
-                :key="language"
-                :value="language"
-              >
-                {{ language }}
-              </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
 
       <div
         v-if="editor?.isActive('image')"

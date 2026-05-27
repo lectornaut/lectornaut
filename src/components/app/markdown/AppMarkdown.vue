@@ -19,15 +19,12 @@
  *     polished entry, no pacing, no cursor.
  */
 import {
-  defaultEditorFontSize,
-  editorFontSizes,
-  editorThemes,
-} from "@/helpers/defaults"
-import {
-  editorFontSize,
-  editorTheme,
-  state as resolvedTheme,
-} from "@/modules/theme"
+  activeCodeThemeColors,
+  startCodeThemeColorSync,
+} from "@/components/editors/text/shiki"
+import { useCodeFontSize } from "@/composables/useCodeFont"
+import { editorThemes } from "@/helpers/defaults"
+import { editorTheme, state as resolvedTheme } from "@/modules/theme"
 import MarkdownRender from "markstream-vue"
 // Registers every markstream custom-component override exactly once
 // (ES-module singleton) — see the module for why this isn't inline here.
@@ -123,11 +120,11 @@ const codeBlockThemes = computed(
     editorThemes[0]
 )
 
-// Preload EVERY selectable variant into markstream's Monaco/Shiki runtime
+// Preload EVERY selectable variant into markstream's Shiki runtime
 // (a cached singleton highlighter — one-time cost, not per block). The
 // library only reliably swaps between *preregistered* themes; without this
-// list, changing the editor-theme setting asks Monaco to apply a theme it
-// never loaded, so the block silently keeps the previous one. Listing all
+// list, changing the editor-theme setting asks the highlighter to apply a
+// theme it never loaded, so the block silently keeps the previous one. Listing all
 // variants guarantees the active light/dark pair is already registered when
 // markstream calls setTheme on a switch.
 const codeBlockThemeNames = editorThemes.flatMap((theme) => [
@@ -139,38 +136,45 @@ const codeBlockThemeNames = editorThemes.flatMap((theme) => [
 // surface. The library handles the DOM; we just turn it on.
 const codeBlockProps = { showHeader: true, showCopyButton: true } as const
 
-// markstream renders code blocks through its Monaco runtime
-// (stream-monaco) — the same editor engine VS Code uses. Every surface
-// here is display-only, so force read-only: no editing affordance, just
-// highlighted output. MAX_HEIGHT caps tall payloads (e.g. long tool-call
-// JSON) so one block can't dominate a chat bubble — Monaco scrolls
-// internally past the cap.
+// Code blocks render through markstream's Shiki node (MarkdownCodeBlockNode,
+// wired in registerMarkdownOverrides) — driven by the same Shiki themes the
+// CodeMirror and Tiptap surfaces use, so all three match. Display-only: the
+// node emits static highlighted HTML, with no editor runtime.
 //
-// fontFamily routes Monaco onto the app's mono stack (`--font-mono`)
-// instead of its built-in platform monospace, so code blocks match the
-// rest of the app's monospace (inline code, terminal, CodeMirror). The
-// CSS `var()` resolves at computed-value time, so Monaco's glyph-width
-// measurement and line rendering both pick up the real font.
-//
-// fontSize comes from the user's Appearance setting (`editorFontSize`),
-// resolved from its id to the preset's px value (Monaco wants a number).
-// Because it's reactive, the whole options object is a `computed` —
-// markstream diffs `monacoOptions` and re-applies it to the live editor
-// when the setting changes, so code resizes without a remount.
-const codeBlockFontSize = computed(() => {
-  const preset =
-    editorFontSizes.find((entry) => entry.id === editorFontSize.value) ??
-    editorFontSizes.find((entry) => entry.id === defaultEditorFontSize)
-  return preset?.size ?? 13
-})
+// Font family + weight and the tall-payload height cap live in CSS (the
+// "markstream-vue surface overrides" block in @/styles/index.css). Font SIZE
+// is the user's reactive Appearance setting, so it rides in as the
+// `--vscode-editor-font-size` custom property markstream's code surface reads
+// (attribute fall-through lands it on the `.markstream-vue` root).
+const codeBlockFontSize = useCodeFontSize()
 
-const codeBlockMonacoOptions = computed(() => ({
-  readOnly: true,
-  MAX_HEIGHT: 320,
-  fontFamily: "var(--font-mono)",
-  fontWeight: "500",
-  fontSize: codeBlockFontSize.value,
+const codeBlockFontVars = computed(() => ({
+  "--vscode-editor-font-size": `${codeBlockFontSize.value}px`,
 }))
+
+// Match the outer `.code-block-container` to the ACTIVE Shiki theme's own
+// background/foreground. markstream paints the Shiki `<pre>` with the theme
+// background but leaves the surrounding container on the library default
+// (`--code-bg: hsl(var(--ms-muted))`); the scroll viewport between them is
+// transparent, so a macOS overscroll rubber-band exposes that muted strip
+// "beneath" the themed code. Overriding `--code-bg`/`--code-fg` on the root
+// (inline beats the library's `.markstream-vue` rule, then cascades to the
+// container) collapses container, viewport and `<pre>` to one color, so the
+// bounce is seamless. Same colors the Tiptap surface adopts in
+// TextEditorCodeBlock.vue — a "full match" across every code surface.
+//
+// The watcher that fills `activeCodeThemeColors` is started here (idempotent)
+// because its only other caller is the Tiptap code-block extension, which never
+// mounts on the chat / changelog surfaces. Colors are empty until the theme
+// loads, so the first tick falls back to the library default.
+startCodeThemeColorSync()
+const codeBlockColorVars = computed(() => {
+  const { bg, fg } = activeCodeThemeColors.value
+  return {
+    ...(bg ? { "--code-bg": bg } : {}),
+    ...(fg ? { "--code-fg": fg } : {}),
+  }
+})
 
 // Smooth-streaming pacing: only meaningful when streaming. Floor/ceiling
 // keep the visible cadence within the band the human eye reads
@@ -204,7 +208,7 @@ const isDev = import.meta.env.DEV
     :code-block-dark-theme="codeBlockThemes.dark"
     :themes="codeBlockThemeNames"
     :code-block-props="codeBlockProps"
-    :code-block-monaco-options="codeBlockMonacoOptions"
+    :style="[codeBlockFontVars, codeBlockColorVars]"
     :mermaid-props="mermaidProps"
     :custom-html-tags="customHtmlTags"
     :smooth-streaming="streaming ? 'auto' : false"

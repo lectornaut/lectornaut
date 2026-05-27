@@ -280,22 +280,32 @@ export function buildTransferDirective(
     })
     .join("\n")
   return (
-    "You can transfer the conversation to a teammate agent when a " +
+    "You can hand the conversation off to a teammate agent when a " +
     "different persona is better suited to the user's request. Call " +
     "`transferToAgent({ agentId, reason })` with one of these ids:\n\n" +
     `${roster}\n\n` +
     "Only transfer when the new persona is materially better-suited — " +
-    "don't bounce the user around for marginal improvements. Your " +
-    "current turn finishes normally; the new agent picks up on the " +
-    "user's next message.\n\n" +
+    "don't bounce the user around for marginal improvements. But DO " +
+    "transfer (instead of declining or asking the user to do it " +
+    "themselves) when the user requests an action a listed teammate " +
+    "can perform and you cannot — e.g., creating or editing a " +
+    "document when only a teammate has workspace-write tools. " +
+    "Declining or telling the user to copy-paste from chat when a " +
+    "teammate can do the job is a worse outcome than handing off.\n\n" +
+    "The handoff is IMMEDIATE: as soon as you call `transferToAgent`, " +
+    "the dispatcher invokes the new agent inside this same turn and " +
+    "streams its reply into the same response. The user does NOT need " +
+    "to resend their message — the new agent receives the conversation " +
+    "as-is and answers right after your tool call. Because of this, do " +
+    "not produce any explanatory text alongside the tool call. A " +
+    'preamble like "Let me transfer you to X…" is wasted output: it ' +
+    "lands in the same chat bubble as the new agent's reply and reads " +
+    "as noise in front of the real answer. Just call the tool.\n\n" +
     "Critical: the handoff only happens when you actually call " +
-    "`transferToAgent`. Do not tell the user you are transferring, " +
-    "routing, or handing them off unless you are calling the tool in " +
-    "the same turn. Narrating a transfer without the tool call leaves " +
-    "the user stranded on the current agent with no visible state " +
-    "change — they see the sentence, but nothing else happens. If you " +
-    "decide NOT to transfer, just answer the question; do not invent " +
-    "a handoff as a polite deflection."
+    "`transferToAgent`. Narrating a transfer in prose WITHOUT the tool " +
+    "call leaves the user stranded on the current agent with no " +
+    "visible state change. If you decide NOT to transfer, just answer " +
+    "the question; do not invent a handoff as a polite deflection."
   )
 }
 

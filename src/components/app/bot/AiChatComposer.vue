@@ -7,10 +7,11 @@ import {
   type BotChatNodeRef,
 } from "@/composables/useBotChat"
 import { isBuiltInAgentId } from "@/data/builtInAgents"
-import { BOT_TOOL_CATALOG } from "@/data/botTools"
+import { BOT_NODE_TOOL_CATALOG, BOT_TOOL_CATALOG } from "@/data/botTools"
 import {
   IconAiFill,
   IconArrowUp,
+  IconBadgeCheck,
   IconBot,
   IconFile,
   IconFolder,
@@ -22,6 +23,7 @@ import { findBotModel } from "@/helpers/defaults"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
+import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
 import type {
@@ -29,7 +31,9 @@ import type {
   ITeamAgent,
   ITeamCustomTool,
 } from "@/types/domain"
+import { isAgentMembership } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
+import { can, Capabilities } from "@/types/permissions"
 import { storeToRefs } from "pinia"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
 import type { Component } from "vue"
@@ -347,6 +351,24 @@ const onModelChange = (next: unknown) => {
 
 const teamAgentsStore = useTeamAgentsStore()
 const { pickerAgents: availableAgents } = storeToRefs(teamAgentsStore)
+
+// Agents added as members of the active team get a check-badge on their
+// row in the picker dropdown — mirrors the indicator the Agents sidebar
+// and the Navigation edit submenu render. `teamMembers` is already scoped
+// to the current team, so we narrow to the agent rows and key by agentId
+// for an O(1) per-row lookup.
+const membershipStore = useMembershipStore()
+const { teamMembers, currentUserRole } = storeToRefs(membershipStore)
+const { currentUser } = storeToRefs(authStore)
+const memberAgentIds = computed(
+  () =>
+    new Set(
+      teamMembers.value
+        .filter(isAgentMembership)
+        .map((member) => member.agentId)
+    )
+)
+
 const activeAgentId = computed<string | null>(
   () => botChat?.activeAgentId.value ?? null
 )
@@ -544,14 +566,15 @@ const { selectableTools: teamSelectableCustomTools } =
   storeToRefs(teamCustomToolsStore)
 
 /**
- * Shared display shape for the composer's tool picker. Both built-in
- * `BotToolDescriptor`s and admin-authored `ITeamCustomTool`s funnel
- * into this shape so the picker renders a single uniform list. The
- * `kind` discriminator lets the template tag custom tools with a
- * "Custom" badge without re-deriving from the source.
+ * Shared display shape for the composer's tool picker. Built-in
+ * `BotToolDescriptor`s, node-CRUD `BotNodeToolDescriptor`s, and
+ * admin-authored `ITeamCustomTool`s all funnel into this shape so the
+ * picker renders a single uniform list. The `kind` discriminator partitions
+ * the flat list into the three template groups ("Tools", "Content",
+ * "Custom") without re-deriving from the source.
  */
 interface ComposerToolEntry {
-  /** Unique render key — wire-name for built-ins, doc id for custom. */
+  /** Unique render key — wire-name for built-ins/node, doc id for custom. */
   key: string
   /** What the model invokes by — also what the user sees on the badge. */
   label: string
@@ -559,7 +582,7 @@ interface ComposerToolEntry {
   icon: Component
   /** Prompt text inserted into the textarea on pick. */
   example: string
-  kind: "builtin" | "custom"
+  kind: "builtin" | "content" | "custom"
 }
 
 /**
@@ -575,6 +598,73 @@ const buildCustomToolExample = (tool: ITeamCustomTool): string => {
   const displayLabel = tool.displayName.trim() || tool.name
   return `Use ${displayLabel} to `
 }
+
+// ── Node-tool visibility gate ────────────────────────────────────────────────
+//
+// Mirrors `bot.ts`'s `nodeWriteEnabled` / `nodeReadEnabled` (see lines
+// ~1985–2036 in `functions/src/bot.ts`). Two layers stacked:
+//
+//   1. Security — membership × capability. BOTH the active agent AND the
+//      current user must be team members with the relevant capability
+//      (`MANAGE_WORKSPACE_CONTENT` for write, `READ_WORKSPACE` for read).
+//      `null` role short-circuits `can()` to `false`, so a non-member
+//      agent / non-member user keeps the gate closed automatically.
+//   2. Feature toggle — team-wide AND per-agent `manageContent` /
+//      `readContent` switches. Missing keys default to `true` (the
+//      `!== false` check) to match the server's opt-out convention.
+//
+// Default persona (no active agent) gets nothing: the server-side
+// agent-capability check is `!!activeAgent && can(...)`. We mirror that
+// by gating the agent role on `activeAgent.value` being non-null.
+//
+// The activeAgentMembershipRole resolves on-demand from the membership
+// store, so a freshly-added agent membership flips the gate live as the
+// store updates.
+const activeAgentMembershipRole = computed(() => {
+  const agentId = activeAgentId.value
+  if (!agentId) return null
+  const row = teamMembers.value
+    .filter(isAgentMembership)
+    .find((member) => member.agentId === agentId)
+  return row?.role ?? null
+})
+
+const nodeWriteEnabled = computed(() => {
+  if (!activeAgent.value) return false
+  const userCan = can(
+    currentUser.value,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
+    {
+      scope: "workspace",
+      teamRole: currentUserRole.value,
+    }
+  )
+  const agentCan = can(
+    activeAgent.value.id,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
+    { scope: "workspace", teamRole: activeAgentMembershipRole.value }
+  )
+  if (!userCan || !agentCan) return false
+  if (teamAgentConfig.value.tools.manageContent === false) return false
+  if (activeAgent.value.tools.manageContent === false) return false
+  return true
+})
+
+const nodeReadEnabled = computed(() => {
+  if (!activeAgent.value) return false
+  const userCan = can(currentUser.value, Capabilities.READ_WORKSPACE, {
+    scope: "workspace",
+    teamRole: currentUserRole.value,
+  })
+  const agentCan = can(activeAgent.value.id, Capabilities.READ_WORKSPACE, {
+    scope: "workspace",
+    teamRole: activeAgentMembershipRole.value,
+  })
+  if (!userCan || !agentCan) return false
+  if (teamAgentConfig.value.tools.readContent === false) return false
+  if (activeAgent.value.tools.readContent === false) return false
+  return true
+})
 
 const availableTools = computed<readonly ComposerToolEntry[]>(() => {
   const teamTools = teamAgentConfig.value.tools
@@ -595,6 +685,29 @@ const availableTools = computed<readonly ComposerToolEntry[]>(() => {
       example: tool.example,
       kind: "builtin",
     })
+  }
+
+  // Node-CRUD tools — registered server-side as two independently-gated
+  // blocks (`NODE_READ_TOOLS` / `NODE_WRITE_TOOLS` in `botNodeTools.ts`).
+  // A read-only agent only sees `readNode`; an editor agent sees the
+  // whole set. When neither gate holds (e.g. default persona, non-member
+  // agent, or toggles off) the catalog contributes nothing here and the
+  // group's `v-if` in the template hides the section entirely.
+  const writeOk = nodeWriteEnabled.value
+  const readOk = nodeReadEnabled.value
+  if (writeOk || readOk) {
+    for (const tool of BOT_NODE_TOOL_CATALOG) {
+      if (tool.kind === "read" && !readOk) continue
+      if (tool.kind === "write" && !writeOk) continue
+      entries.push({
+        key: tool.name,
+        label: tool.label,
+        description: tool.description,
+        icon: tool.icon,
+        example: tool.example,
+        kind: "content",
+      })
+    }
   }
 
   // Custom tools — `selectableTools` already filters by the team-wide
@@ -623,11 +736,15 @@ const availableTools = computed<readonly ComposerToolEntry[]>(() => {
   return entries
 })
 
-// Split the flat tool list into built-in vs. admin-authored custom for
-// the grouped dropdown. The `kind` discriminator was set when each entry
-// was pushed into `availableTools`, so this is a cheap partition.
+// Split the flat tool list into built-in / node-CRUD / admin-authored
+// custom for the grouped dropdown. The `kind` discriminator was set when
+// each entry was pushed into `availableTools`, so this is a cheap
+// partition.
 const builtInTools = computed(() =>
   availableTools.value.filter((tool) => tool.kind === "builtin")
+)
+const contentTools = computed(() =>
+  availableTools.value.filter((tool) => tool.kind === "content")
 )
 const customTools = computed(() =>
   availableTools.value.filter((tool) => tool.kind === "custom")
@@ -861,8 +978,33 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                       {{ tool.label }}
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
-                  <template v-if="customTools.length > 0">
+                  <!--
+                    Node-CRUD tools — only render when the active agent is
+                    a content-capable team member (mirrors `pickChatTools`
+                    in `functions/src/bot.ts`). Read-only agents get the
+                    READ entry; full editors get the WRITE entries too.
+                  -->
+                  <template v-if="contentTools.length > 0">
                     <DropdownMenuSeparator v-if="builtInTools.length > 0" />
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>
+                        {{ t("ai.tools.groupContent") }}
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        v-for="tool in contentTools"
+                        :key="tool.key"
+                        :disabled="isReadOnly"
+                        @select="insertToolPrompt(tool)"
+                      >
+                        <Component :is="tool.icon" />
+                        {{ tool.label }}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </template>
+                  <template v-if="customTools.length > 0">
+                    <DropdownMenuSeparator
+                      v-if="builtInTools.length > 0 || contentTools.length > 0"
+                    />
                     <DropdownMenuGroup>
                       <DropdownMenuLabel>
                         {{ t("ai.tools.groupCustom") }}
@@ -987,6 +1129,20 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                       {{ agent.description }}
                     </ItemDescription>
                   </ItemContent>
+                  <ItemActions v-if="memberAgentIds.has(agent.id)">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <span>
+                            <IconBadgeCheck />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          {{ t("ai.agents.teamMember") }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </ItemActions>
                 </Item>
               </SelectItem>
             </SelectGroup>
@@ -1017,6 +1173,20 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                         {{ agent.description }}
                       </ItemDescription>
                     </ItemContent>
+                    <ItemActions v-if="memberAgentIds.has(agent.id)">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <span>
+                              <IconBadgeCheck />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {{ t("ai.agents.teamMember") }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </ItemActions>
                   </Item>
                 </SelectItem>
               </SelectGroup>

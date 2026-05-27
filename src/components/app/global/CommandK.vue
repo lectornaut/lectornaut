@@ -25,10 +25,10 @@ const filteredShortcuts = computed(() =>
       <Command highlight-on-hover class="border">
         <CommandInput
           :placeholder="t('components.global.commandK.placeholder')"
-          class="border-none bg-transparent focus:border-inherit focus:ring-0"
+          class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
         />
         <CommandList class="group min-h-80 w-full">
-          <CommandEmpty class="text-muted-foreground">
+          <CommandEmpty>
             {{ t("components.global.commandK.noResults") }}
           </CommandEmpty>
           <template
@@ -40,7 +40,7 @@ const filteredShortcuts = computed(() =>
                 v-for="shortcut in category.shortcuts"
                 :key="shortcut.event"
                 :value="shortcut.event + shortcut.parameters + shortcut.tags"
-                class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground py-2"
+                class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
                 @select="
                   () => {
                     emitter.emit(shortcut.event, shortcut.parameters)
