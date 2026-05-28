@@ -4,7 +4,16 @@ import {
   type BotChatMessage,
   type BotChatSegment,
 } from "@/composables/useBotChat"
-import { IconAiFill, IconCopy, IconReply } from "@/data/icons"
+import { useReadAloud } from "@/composables/useReadAloud"
+import {
+  IconAiFill,
+  IconCopy,
+  IconPause,
+  IconPlay,
+  IconReply,
+  IconSquare,
+  IconVolume2,
+} from "@/data/icons"
 import { toast } from "vue-sonner"
 import { useAuthStore } from "@/stores/authStore"
 import Avatar from "vue-boring-avatars"
@@ -15,7 +24,6 @@ const { t } = useI18n()
 const botChat = inject(BotChatContextKey)
 const messages = computed(() => botChat?.messages.value ?? [])
 const isSending = computed(() => botChat?.isSending.value ?? false)
-const sessionId = computed(() => botChat?.sessionId.value ?? null)
 
 // Avatar seed for a user turn. `vue-boring-avatars` is a deterministic
 // hash of the `name` string, so feeding it the *real* sender uid gives
@@ -84,6 +92,29 @@ const handleReplyMessage = (message: BotChatMessage) => {
   const text = stripThinking(message.content)
   if (!text) return
   botChat.pendingComposerDraft.value = blockquote(text)
+}
+
+// ── Read aloud (Web Speech API) ───────────────────────────────────────────
+//
+// Reads the same plain-text view as Copy/Reply — `stripThinking(content)`,
+// so the synthesizer speaks the answer, never the model's <thinking> blocks
+// or tool-call JSON. The speech state is an app-wide singleton (only one
+// message reads at a time); see `useReadAloud`. `isSpeaking`/`isPaused` are
+// per-message predicates that drive the context-menu's three states.
+const {
+  isSupported: isReadAloudSupported,
+  isSpeaking,
+  isPaused,
+  readAloud,
+  pause: pauseReadAloud,
+  resume: resumeReadAloud,
+  stop: stopReadAloud,
+} = useReadAloud()
+
+const handleReadAloud = (message: BotChatMessage) => {
+  const text = stripThinking(message.content)
+  if (!text) return
+  readAloud(message.id, text)
 }
 
 // While streaming, `useBotChat` pushes an empty agent placeholder before
@@ -217,82 +248,10 @@ const renderedMessages = computed(() =>
     return { message, blocks }
   })
 )
-
-// ── Auto-scroll to latest message ─────────────────────────────────────
-//
-// Pin-to-bottom is delegated to CSS scroll anchoring. A 1px sentinel
-// (`.scroll-anchor`) sits at the end of the message list with
-// `overflow-anchor: auto`; every other element in the list has
-// `overflow-anchor: none`. The browser's scroll-anchoring algorithm
-// then only has the sentinel to lock onto — content growing *above*
-// it shifts the sentinel down, and the browser scrolls the container
-// to keep the sentinel at the same spot relative to the viewport. Net
-// effect: while the sentinel is on screen, scroll follows new
-// content; when the user scrolls up, the sentinel leaves the
-// viewport, anchoring suspends, and their position is preserved.
-// Stickiness emerges from the rules — no `stickToBottom` to track,
-// no scroll-direction heuristics to guard against false positives.
-//
-// Safari doesn't implement scroll anchoring (`overflow-anchor` is a
-// no-op there). We feature-detect and wire up a ResizeObserver
-// fallback that mirrors the CSS semantics: re-pin only when the
-// anchor is still in view.
-const scrollEl = ref<HTMLElement | null>(null)
-const contentEl = ref<HTMLElement | null>(null)
-const anchorEl = ref<HTMLElement | null>(null)
-
-const scrollToAnchor = () => {
-  anchorEl.value?.scrollIntoView({ block: "end" })
-}
-
-const onScrollReady = (el: HTMLElement) => {
-  scrollEl.value = el
-  // CSS anchoring only takes effect once the sentinel is on screen,
-  // so we land there explicitly on first paint. Also covers direct
-  // navigations (e.g. /bot/:id) where messages were populated before
-  // the wrapper finished its deferred init.
-  nextTick(scrollToAnchor)
-}
-
-// Switching sessions: drop in at the new session's latest turn.
-watch(sessionId, () => {
-  nextTick(scrollToAnchor)
-})
-
-const supportsScrollAnchoring =
-  typeof CSS !== "undefined" && CSS.supports("overflow-anchor: auto")
-
-if (!supportsScrollAnchoring) {
-  // ── Safari fallback ─────────────────────────────────────────────────
-  // `scrollend` (Chrome 114+, Firefox 109+, Safari 18.2+) fires once
-  // when a scroll operation settles — both user wheel/touch motion
-  // and our own programmatic `scrollIntoView`. On each fire we
-  // recompute whether the user is parked within 4px of the bottom;
-  // the buffer absorbs sub-pixel font-metric / image-load shifts.
-  // ResizeObserver covers content growth: if we're pinned when
-  // content grows, re-pin via `scrollToAnchor`.
-  //
-  // Caveat: `pinned` only updates when scrolling *settles*, so a
-  // token streaming in during an in-flight scroll-up can briefly
-  // re-pin against the user before they release. The window is
-  // short (typical scroll completes in <200ms), but if it shows up
-  // in usage data, swap back to `useIntersectionObserver` on
-  // `anchorEl` — it updates state mid-scroll, at the cost of an
-  // extra observer.
-  const pinned = ref(true)
-  useEventListener(scrollEl, "scrollend", () => {
-    const s = scrollEl.value
-    if (!s) return
-    pinned.value = s.scrollHeight - s.scrollTop - s.clientHeight <= 4
-  })
-  useResizeObserver(contentEl, () => {
-    if (pinned.value) scrollToAnchor()
-  })
-}
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper @scroll-ready="onScrollReady">
+  <OverlayScrollbarsWrapper>
     <Empty v-if="messages.length === 0 && !isSending" class="h-full">
       <EmptyHeader>
         <EmptyMedia variant="icon">
@@ -301,11 +260,7 @@ if (!supportsScrollAnchoring) {
         <EmptyTitle>{{ t("ai.chatEmpty") }}</EmptyTitle>
       </EmptyHeader>
     </Empty>
-    <div
-      v-else
-      ref="contentEl"
-      class="messages-list mt-auto grid grid-cols-1 p-2"
-    >
+    <div v-else class="messages-list mt-auto grid grid-cols-1 gap-2 p-2">
       <ContextMenu
         v-for="{ message, blocks } in renderedMessages"
         :key="message.id"
@@ -368,20 +323,61 @@ if (!supportsScrollAnchoring) {
             <IconReply />
             {{ t("ai.reply") }}
           </ContextMenuItem>
+
+          <!-- Read aloud (Web Speech API). A single "Read aloud" row when
+               idle; while a read is active (playing OR paused) it splits
+               into two inline controls — a play/pause toggle + Stop. Hidden
+               entirely when the browser lacks SpeechSynthesis. -->
+          <template v-if="isReadAloudSupported">
+            <ContextMenuSeparator />
+            <div
+              v-if="isSpeaking(message.id) || isPaused(message.id)"
+              class="flex gap-1"
+            >
+              <ContextMenuItem
+                v-if="isSpeaking(message.id)"
+                class="flex-1 justify-center"
+                @select="pauseReadAloud()"
+              >
+                <IconPause />
+                {{ t("ai.readAloudPause") }}
+              </ContextMenuItem>
+              <ContextMenuItem
+                v-else
+                class="flex-1 justify-center"
+                @select="resumeReadAloud()"
+              >
+                <IconPlay />
+                {{ t("ai.readAloudResume") }}
+              </ContextMenuItem>
+              <ContextMenuItem
+                class="flex-1 justify-center"
+                @select="stopReadAloud()"
+              >
+                <IconSquare />
+                {{ t("ai.readAloudStop") }}
+              </ContextMenuItem>
+            </div>
+            <ContextMenuItem
+              v-else
+              :disabled="!message.content"
+              @select="handleReadAloud(message)"
+            >
+              <IconVolume2 />
+              {{ t("ai.readAloud") }}
+            </ContextMenuItem>
+          </template>
         </ContextMenuContent>
       </ContextMenu>
       <div
         v-if="showThinking"
-        class="text-muted-foreground flex items-center gap-2 px-6 pb-4 text-xs"
+        class="text-muted-foreground flex items-center gap-2 px-6 pb-6 text-xs"
       >
         <span
-          class="bg-muted-foreground inline-block size-1.5 animate-pulse rounded-full"
+          class="bg-muted-foreground inline-block size-2 animate-pulse rounded-full"
         />
         <span>{{ t("ai.thinking") }}</span>
       </div>
-      <!-- Scroll-anchor sentinel — see comment in <script setup>.
-           Must be the final child so the browser locks onto it. -->
-      <div ref="anchorEl" aria-hidden="true" class="scroll-anchor" />
     </div>
   </OverlayScrollbarsWrapper>
 </template>
@@ -390,7 +386,7 @@ if (!supportsScrollAnchoring) {
 /* Typography, animation, and node-level rules for the markstream
  * subtree live in `AppMarkdown.vue` and key off `[data-custom-id="chat"]`.
  * What stays here is bubble-shape stuff: width clamping, overflow,
- * containment, and the auto-scroll anchor sentinel rules. */
+ * and containment. */
 
 /* ── Width / overflow ───────────────────────────────────────────────
    `w-max` (Tailwind `width: max-content`) gives bubbles their natural
@@ -426,29 +422,6 @@ if (!supportsScrollAnchoring) {
   min-width: 0;
   overflow-wrap: anywhere;
   contain: layout style;
-}
-
-/* ── Auto-scroll via CSS scroll anchoring ──────────────────────────
-   Browsers run scroll anchoring by default — when content above the
-   viewport changes, they pick an in-view element and adjust scroll
-   so it stays visually put. We invert that for chat: disable
-   anchoring on every descendant of the message list, then re-enable
-   it only on a 1px sentinel pinned to the bottom. Now the algorithm
-   can *only* pick the sentinel — and as new content grows above it,
-   the browser scrolls to keep the sentinel on screen, effectively
-   tailing the latest message. When the user scrolls up, the sentinel
-   leaves the viewport, no anchor is available, anchoring suspends,
-   and the user's scroll position is preserved.
-
-   Safari (no `overflow-anchor` support) falls through to the JS
-   fallback wired up in <script setup>. */
-.messages-list,
-.messages-list :deep(*) {
-  overflow-anchor: none;
-}
-.scroll-anchor {
-  overflow-anchor: auto;
-  height: 1px;
 }
 
 /* ── Grid-track width binding ──────────────────────────────────────

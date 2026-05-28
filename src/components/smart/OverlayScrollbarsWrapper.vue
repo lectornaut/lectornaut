@@ -19,14 +19,6 @@ const props = withDefaults(
   }
 )
 
-// Emitted once OverlayScrollbars finishes its deferred init and the real
-// scroll viewport is in the DOM. Consumers (e.g. auto-scrolling chats)
-// use this to wire `useScroll` against the actual scrolling element
-// instead of polling `getScrollElement()`.
-const emit = defineEmits<{
-  scrollReady: [scrollEl: HTMLElement]
-}>()
-
 const overlayScrollbars =
   useTemplateRef<OverlayScrollbarsComponentRef>("overlayScrollbars")
 const overlayContent = useTemplateRef<HTMLElement>("overlayContent")
@@ -77,14 +69,21 @@ const updateScrollHints = useThrottleFn(
     if (!currentInstance) return
 
     const { scrollOffsetElement } = currentInstance.elements()
+    // `overflowAmount` is the max scroll offset (scrollHeight - clientHeight on
+    // y, scrollWidth - clientWidth on x), already measured by OverlayScrollbars
+    // during its own update pass. Reading the cached value instead of touching
+    // `scrollHeight`/`clientHeight` keeps this handler off the forced-reflow
+    // path: it fires on every `scroll` AND `updated` tick, and while streaming
+    // markdown the layout is perpetually dirty — so a geometry read here would
+    // flush layout 60+ times a second. The live offset (`scrollTop`/
+    // `scrollLeft`) stays a cheap read.
+    const { overflowAmount } = currentInstance.state()
 
     if (props.showBlockHints) {
       const scrollTop = scrollOffsetElement.scrollTop
-      const maxScrollTop =
-        scrollOffsetElement.scrollHeight - scrollOffsetElement.clientHeight
 
       const top = scrollTop > 1
-      const bottom = maxScrollTop - scrollTop > 1
+      const bottom = overflowAmount.y - scrollTop > 1
 
       if (showTopHint.value !== top) showTopHint.value = top
       if (showBottomHint.value !== bottom) showBottomHint.value = bottom
@@ -95,11 +94,9 @@ const updateScrollHints = useThrottleFn(
 
     if (props.showInlineHints) {
       const scrollLeft = scrollOffsetElement.scrollLeft
-      const maxScrollLeft =
-        scrollOffsetElement.scrollWidth - scrollOffsetElement.clientWidth
 
       const left = scrollLeft > 1
-      const right = maxScrollLeft - scrollLeft > 1
+      const right = overflowAmount.x - scrollLeft > 1
 
       if (showLeftHint.value !== left) showLeftHint.value = left
       if (showRightHint.value !== right) showRightHint.value = right
@@ -112,7 +109,6 @@ const updateScrollHints = useThrottleFn(
 )
 
 const handleInitialized = (instance: OverlayScrollbars) => {
-  emit("scrollReady", instance.elements().scrollOffsetElement)
   nextTick(() => updateScrollHints(instance))
 }
 

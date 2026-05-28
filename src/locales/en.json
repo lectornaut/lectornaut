@@ -80,6 +80,12 @@
     "reasoning": "Reasoning",
     "reply": "Reply",
     "messageCopied": "Copied to clipboard",
+    "readAloud": "Read aloud",
+    "readAloudPause": "Pause",
+    "readAloudResume": "Resume",
+    "readAloudStop": "Stop",
+    "dictate": "Dictate",
+    "dictateStop": "Stop dictation",
     "agents": {
       "label": "Agent:",
       "tooltip": "Select agent",

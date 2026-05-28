@@ -6,6 +6,7 @@ import {
   type BotChatMode,
   type BotChatNodeRef,
 } from "@/composables/useBotChat"
+import { useDictation } from "@/composables/useDictation"
 import { isBuiltInAgentId } from "@/data/builtInAgents"
 import { BOT_NODE_TOOL_CATALOG, BOT_TOOL_CATALOG } from "@/data/botTools"
 import {
@@ -15,6 +16,7 @@ import {
   IconBot,
   IconFile,
   IconFolder,
+  IconMic,
   IconPlus,
   IconWrench,
   IconX,
@@ -63,6 +65,18 @@ const isActiveArchived = computed(
 const isReadOnly = computed(
   () => !!botChat?.sessionId.value && !canEditActive.value
 )
+
+// ── Voice dictation (Web Speech API) ──────────────────────────────────────
+// Appends spoken words to the composer input; see `useDictation`. The mic
+// button (left of Send) toggles it and is hidden when the browser has no
+// SpeechRecognition. `handleSend` stops it so a trailing result can't
+// repopulate the just-cleared field.
+const {
+  isSupported: isDictationSupported,
+  isListening: isDictating,
+  toggleDictation,
+  stopDictation,
+} = useDictation(userInput)
 
 // ── Attached node context ────────────────────────────────────────────────────
 //
@@ -499,6 +513,7 @@ const isDisabled = computed(
 
 const handleSend = async () => {
   if (isDisabled.value || !botChat) return
+  stopDictation()
   const text = userInput.value
   userInput.value = ""
   await botChat.sendMessage(text)
@@ -782,7 +797,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
 </script>
 
 <template>
-  <div class="m-2 grid gap-2">
+  <div class="mx-2 mb-2 grid gap-2">
     <InputGroup class="bg-background">
       <InputGroupTextarea
         ref="textareaRef"
@@ -1194,6 +1209,25 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           </SelectContent>
         </Select>
         <Separator orientation="vertical" class="my-2" />
+        <TooltipProvider v-if="isDictationSupported">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <InputGroupButton
+                variant="ghost"
+                size="icon-xs"
+                :class="isDictating ? 'text-destructive animate-pulse' : ''"
+                :disabled="isReadOnly || isSending"
+                :aria-pressed="isDictating"
+                @click="toggleDictation"
+              >
+                <IconMic />
+              </InputGroupButton>
+            </TooltipTrigger>
+            <TooltipContent>
+              {{ isDictating ? t("ai.dictateStop") : t("ai.dictate") }}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>

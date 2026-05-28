@@ -160,6 +160,7 @@ import IconLucideMaximize from "~icons/lucide/maximize"
 import IconLucideMenu from "~icons/lucide/menu"
 import IconLucideMessageCircle from "~icons/lucide/message-circle"
 import IconLucideMessageCircleMore from "~icons/lucide/message-circle-more"
+import IconLucideMic from "~icons/lucide/mic"
 import IconLucideMinimize from "~icons/lucide/minimize"
 import IconLucideMinus from "~icons/lucide/minus"
 import IconLucideMinusCircle from "~icons/lucide/minus-circle"
@@ -176,6 +177,7 @@ import IconLucidePanelLeft from "~icons/lucide/panel-left"
 import IconLucidePanelLeftClose from "~icons/lucide/panel-left-close"
 import IconLucidePanelRight from "~icons/lucide/panel-right"
 import IconLucidePanelRightClose from "~icons/lucide/panel-right-close"
+import IconLucidePause from "~icons/lucide/pause"
 import IconLucidePauseCircle from "~icons/lucide/pause-circle"
 import IconLucidePenLine from "~icons/lucide/pen-line"
 import IconLucidePencil from "~icons/lucide/pencil"
@@ -184,6 +186,7 @@ import IconLucidePictureInPicture from "~icons/lucide/picture-in-picture"
 import IconLucidePictureInPicture2 from "~icons/lucide/picture-in-picture-2"
 import IconLucidePin from "~icons/lucide/pin"
 import IconLucidePinOff from "~icons/lucide/pin-off"
+import IconLucidePlay from "~icons/lucide/play"
 import IconLucidePlug from "~icons/lucide/plug"
 import IconLucidePlus from "~icons/lucide/plus"
 import IconLucidePlusSquare from "~icons/lucide/plus-square"
@@ -244,6 +247,7 @@ import IconLucideUserRoundMinus from "~icons/lucide/user-round-minus"
 import IconLucideUserRoundPlus from "~icons/lucide/user-round-plus"
 import IconLucideUsers from "~icons/lucide/users"
 import IconLucideUsersRound from "~icons/lucide/users-round"
+import IconLucideVolume2 from "~icons/lucide/volume-2"
 import IconLucideWorkflow from "~icons/lucide/workflow"
 import IconLucideWrench from "~icons/lucide/wrench"
 import IconLucideX from "~icons/lucide/x"
@@ -492,6 +496,7 @@ export {
   IconLucideMenu as IconMenu,
   IconLucideMessageCircle as IconMessageCircle,
   IconLucideMessageCircleMore as IconMessageCircleMore,
+  IconLucideMic as IconMic,
   IconMdiMicrosoft as IconMicrosoft,
   IconLogosMicrosoftIcon as IconMicrosoftIcon,
   IconLucideMinimize as IconMinimize,
@@ -509,6 +514,7 @@ export {
   IconLucidePanelLeftClose as IconPanelLeftClose,
   IconLucidePanelRight as IconPanelRight,
   IconLucidePanelRightClose as IconPanelRightClose,
+  IconLucidePause as IconPause,
   IconLucidePauseCircle as IconPauseCircle,
   IconLucidePencil as IconPencil,
   IconLucidePencilRuler as IconPencilRuler,
@@ -517,6 +523,7 @@ export {
   IconLucidePictureInPicture2 as IconPictureInPicture2,
   IconLucidePin as IconPin,
   IconLucidePinOff as IconPinOff,
+  IconLucidePlay as IconPlay,
   IconLucidePlug as IconPlug,
   IconLucidePlus as IconPlus,
   IconLucidePlusSquare as IconPlusSquare,
@@ -581,6 +588,7 @@ export {
   IconLucideUserRoundPlus as IconUserRoundPlus,
   IconLucideUsers as IconUsers,
   IconLucideUsersRound as IconUsersRound,
+  IconLucideVolume2 as IconVolume2,
   IconLucideWorkflow as IconWorkflow,
   IconLucideWrench as IconWrench,
   IconLucideX as IconX,
