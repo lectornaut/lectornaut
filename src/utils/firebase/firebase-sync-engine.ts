@@ -21,6 +21,14 @@ import {
   optimisticUpdater,
   type PendingCollection,
 } from "@/utils/firebase/firebase-optimistic"
+import {
+  compareByCreatedOrder,
+  mergeOutboxSnapshots,
+  outboxSnapshotsEqual,
+  pruneExpiredOperations,
+  selectNextOperation,
+  shouldDeadLetter,
+} from "@/utils/firebase/firebase-sync-queue"
 import { onIdTokenChanged } from "firebase/auth"
 import type { DocumentReference } from "firebase/firestore"
 import {
@@ -41,7 +49,11 @@ import type { ComputedRef } from "vue"
 const OUTBOX_STORAGE_KEY = "lectornaut.sync.outbox.v1"
 const OUTBOX_QUARANTINE_STORAGE_KEY = "lectornaut.sync.outbox.quarantine.v1"
 const CLIENT_ID_STORAGE_KEY = "lectornaut.sync.client.v1"
-const OUTBOX_SETTLED_RETENTION_MS = 60 * 60 * 1000
+// Per-user Web Locks name. One tab per signed-in user holds this lock and acts
+// as the sole sender for that user, so multiple open tabs don't double-submit
+// the same operation. Scoped by user so distinct accounts in different tabs
+// each get their own leader instead of starving one another.
+const SYNC_LEADER_LOCK_PREFIX = "lectornaut.sync.leader.v1:"
 const OUTBOX_MAX_PENDING_PER_USER = 2_000
 const RETRY_BASE_DELAY_MS = 1_000
 // Canonical wait kept as a safety net for stragglers — but never blocks the
@@ -199,11 +211,20 @@ const readOutbox = (): SyncOutboxOperation[] => {
   if (invalid.length > 0) {
     appendQuarantinedOutboxEntries(invalid)
   }
-  return valid.sort(byCreatedOrder)
+  return valid.sort(compareByCreatedOrder)
 }
 
 let pendingPersistTimer: ReturnType<typeof setTimeout> | null = null
 let pendingPersistSnapshot: SyncOutboxOperation[] | null = null
+
+/**
+ * Read the outbox a peer tab may have written to the shared localStorage key.
+ * Backs the read-modify-write persist and the cross-tab storage listener.
+ */
+const readStoredOutbox = (): SyncOutboxOperation[] => {
+  if (!hasWindow()) return []
+  return parseOutbox(window.localStorage.getItem(OUTBOX_STORAGE_KEY)).valid
+}
 
 const flushOutboxPersist = () => {
   if (pendingPersistTimer) {
@@ -217,7 +238,16 @@ const flushOutboxPersist = () => {
   }
   pendingPersistSnapshot = null
   try {
-    window.localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(snapshot))
+    // Read-modify-write: the outbox key is shared across tabs, so union our
+    // snapshot with whatever a peer has written since we last read. A blind
+    // overwrite would drop a concurrent tab's pending ops and lose them on
+    // reload.
+    const merged = mergeOutboxSnapshots(
+      snapshot,
+      readStoredOutbox(),
+      Date.now()
+    )
+    window.localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(merged))
   } catch (error) {
     console.warn("[syncEngine] Failed to persist outbox", error)
   }
@@ -250,13 +280,6 @@ const getOrCreateClientId = (): string => {
   const generated = createId()
   window.localStorage.setItem(CLIENT_ID_STORAGE_KEY, generated)
   return generated
-}
-
-const byCreatedOrder = (a: SyncOutboxOperation, b: SyncOutboxOperation) => {
-  if (a.createdAt !== b.createdAt) {
-    return a.createdAt - b.createdAt
-  }
-  return a.id.localeCompare(b.id)
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -486,11 +509,16 @@ const canonicalSubscribers = new Set<CanonicalSubscriber>()
 const totalAckLatencyMs = ref(0)
 const totalAckCount = ref(0)
 const totalRetries = ref(0)
-const userScanCursor = new Map<string, number>()
 
 let authUnsubscribe: Unsubscribe | null = null
 let ackUnsubscribe: Unsubscribe | null = null
 let syncTimer: ReturnType<typeof setTimeout> | null = null
+let storageSyncCleanup: (() => void) | null = null
+// Per-user leader election (Web Locks). Only the leader tab for the active
+// user sends; other tabs enqueue + persist and the leader adopts those ops.
+let isLeader = false
+let leaderUserId: string | null = null
+let releaseLeaderLock: (() => void) | null = null
 
 const pendingCount = computed(() => {
   const userId = activeUserId.value
@@ -679,45 +707,10 @@ const rejectWaitersForUser = (userId: string, message: string) => {
 
 const pruneSettledOperations = () => {
   const now = Date.now()
-  updateOutbox((operations) =>
-    operations.filter((operation) => {
-      if (operation.status !== "acked" && operation.status !== "rejected") {
-        return true
-      }
-      const settledAt = operation.settledAt ?? operation.updatedAt
-      return now - settledAt <= OUTBOX_SETTLED_RETENTION_MS
-    })
-  )
-}
-
-const getNextOperation = (userId: string): SyncOutboxOperation | null => {
-  const operations = outbox.value
-  if (operations.length === 0) return null
-
-  const start = Math.min(
-    userScanCursor.get(userId) ?? 0,
-    Math.max(operations.length - 1, 0)
-  )
-  const isEligible = (operation: SyncOutboxOperation) =>
-    operation.userId === userId &&
-    (operation.status === "pending" || operation.status === "sent")
-
-  for (let index = start; index < operations.length; index++) {
-    const operation = operations[index]
-    if (!operation || !isEligible(operation)) continue
-    userScanCursor.set(userId, index)
-    return operation
-  }
-
-  for (let index = 0; index < start; index++) {
-    const operation = operations[index]
-    if (!operation || !isEligible(operation)) continue
-    userScanCursor.set(userId, index)
-    return operation
-  }
-
-  userScanCursor.set(userId, 0)
-  return null
+  // `pruneExpiredOperations` returns the same array reference when nothing
+  // expired, so `updateOutbox` short-circuits and avoids the per-ack reactive
+  // churn (this runs on every ack snapshot).
+  updateOutbox((operations) => pruneExpiredOperations(operations, now))
 }
 
 const getRetryDelay = (attempts: number): number =>
@@ -725,14 +718,6 @@ const getRetryDelay = (attempts: number): number =>
     RETRY_BASE_DELAY_MS,
     Math.round(getBackoffDelay(Math.max(attempts - 1, 0), RETRY_BASE_DELAY_MS))
   )
-
-const getRetryIn = (operation: SyncOutboxOperation): number => {
-  if (operation.status === "pending") return 0
-  if (operation.status !== "sent" || !operation.sentAt) return 0
-  const delay = getRetryDelay(operation.attempts)
-  const elapsed = Date.now() - operation.sentAt
-  return Math.max(0, delay - elapsed)
-}
 
 const scheduleSync = (delay = SYNC_BATCH_WINDOW_MS) => {
   if (!isRunning.value) return
@@ -800,6 +785,12 @@ const settleAckAfterCanonical = (
   outboxOperation?: SyncOutboxOperation
 ) => {
   settleWaiters(operationId)
+
+  // Canonical confirmation is purely observational — it exists only to notify
+  // canonical subscribers. When there are none, skip the per-ack onSnapshot +
+  // document read entirely; otherwise we'd open and tear down a Firestore
+  // listener for every acked operation just to emit an event nobody consumes.
+  if (canonicalSubscribers.size === 0) return
 
   const fireCanonical = (origin: "local") => {
     notifyCanonicalSubscribers({
@@ -1030,41 +1021,70 @@ const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
   }
 }
 
+const deadLetterOperation = (
+  operation: SyncOutboxOperation,
+  reason: string
+): void => {
+  const settledAt = Date.now()
+  upsertOperation(operation.id, (current) => ({
+    ...current,
+    status: "rejected",
+    updatedAt: settledAt,
+    settledAt,
+    errorMessage: reason,
+  }))
+  // Preserve the failed payload for inspection (mirrors corrupt-entry
+  // quarantine) and fail the caller's waiter with a terminal error instead of
+  // leaving it hanging forever.
+  appendQuarantinedOutboxEntries([{ ...operation, deadLetterReason: reason }])
+  settleWaiters(operation.id, new Error(reason))
+}
+
 const processSyncLoop = async () => {
   if (!isRunning.value || isSyncing.value) return
   const userId = activeUserId.value
   if (!userId || !isOnline.value) return
+  // Only the elected leader tab for this user sends, so multiple tabs never
+  // double-submit the same operation. Non-leaders still enqueue + persist; the
+  // leader adopts those ops via the storage listener.
+  if (!isLeader) return
 
-  const operation = getNextOperation(userId)
-  if (!operation) return
+  const { ready, nextRetryInMs } = selectNextOperation(
+    outbox.value,
+    userId,
+    Date.now(),
+    getRetryDelay
+  )
 
-  const retryIn = getRetryIn(operation)
-  if (retryIn > 0) {
-    scheduleSync(retryIn)
+  if (!ready) {
+    // Nothing ready now. If something is mid-backoff, wake when it is due
+    // rather than stalling the queue.
+    if (nextRetryInMs !== null) scheduleSync(nextRetryInMs)
+    return
+  }
+
+  // A write that has burned through its retry budget is dead-lettered rather
+  // than retried forever — which would also head-of-line-block its path.
+  if (shouldDeadLetter(ready)) {
+    deadLetterOperation(
+      ready,
+      `Sync operation failed after ${ready.attempts} attempts`
+    )
+    scheduleSync()
     return
   }
 
   isSyncing.value = true
   try {
-    await sendOperation(operation)
+    await sendOperation(ready)
   } catch (error) {
     console.error("[syncEngine] Failed to submit operation:", error)
   } finally {
     isSyncing.value = false
   }
 
-  const latest = outbox.value.find((candidate) => candidate.id === operation.id)
-  if (!latest) {
-    scheduleSync()
-    return
-  }
-
-  if (latest.status === "rejected" || latest.status === "acked") {
-    scheduleSync()
-    return
-  }
-
-  scheduleSync(getRetryIn(latest))
+  // Re-evaluate immediately; the next pass schedules a backoff wake if needed.
+  scheduleSync()
 }
 
 const handleUserChange = (nextUserId: string | null) => {
@@ -1081,8 +1101,12 @@ const handleUserChange = (nextUserId: string | null) => {
     ackUnsubscribe = null
   }
 
-  if (!isRunning.value || !nextUserId) return
+  if (!isRunning.value || !nextUserId) {
+    releaseLeadership()
+    return
+  }
   ensureAckListener(nextUserId)
+  ensureLeadership(nextUserId)
   scheduleSync()
 }
 
@@ -1143,6 +1167,84 @@ const ensureUnloadFlush = () => {
   }
 }
 
+const releaseLeadership = (): void => {
+  const release = releaseLeaderLock
+  releaseLeaderLock = null
+  isLeader = false
+  leaderUserId = null
+  // Resolving the held promise frees the Web Lock so a sibling tab can lead.
+  if (release) release()
+}
+
+const ensureLeadership = (userId: string): void => {
+  if (leaderUserId === userId) return
+  // Switching the user we lead for: drop the previous user's lock first.
+  releaseLeadership()
+  leaderUserId = userId
+
+  const locks =
+    hasWindow() && typeof navigator !== "undefined"
+      ? navigator.locks
+      : undefined
+  if (!locks?.request) {
+    // No Web Locks support (e.g. older Safari) → act as the sole writer. This
+    // matches prior single-writer behavior; any cross-tab duplicate sends are
+    // safe because the server already tolerates op-id-idempotent retries.
+    isLeader = true
+    scheduleSync()
+    return
+  }
+
+  void locks
+    .request(SYNC_LEADER_LOCK_PREFIX + userId, () => {
+      // Lock acquired. Bail if the active user changed while we were queued.
+      if (leaderUserId !== userId) return Promise.resolve()
+      isLeader = true
+      scheduleSync()
+      // Hold the lock until we explicitly release (sign-out / user switch) or
+      // the tab is destroyed — at which point the browser frees it and a queued
+      // sibling tab becomes leader automatically.
+      return new Promise<void>((resolve) => {
+        releaseLeaderLock = resolve
+      })
+    })
+    .catch((error: unknown) => {
+      if (leaderUserId !== userId) return
+      console.warn("[syncEngine] Leader lock acquisition failed:", error)
+      // Degrade to sole-writer so sync still runs in this tab.
+      isLeader = true
+      scheduleSync()
+    })
+}
+
+const ensureStorageSyncListener = (): void => {
+  if (!hasWindow() || storageSyncCleanup) return
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== OUTBOX_STORAGE_KEY) return
+    // A peer tab rewrote the shared outbox. Merge its view into ours so we
+    // converge — adopting ops it enqueued and the send/ack progress it
+    // recorded — without dropping our own in-flight operations.
+    const merged = mergeOutboxSnapshots(
+      outbox.value,
+      parseOutbox(event.newValue).valid,
+      Date.now()
+    )
+    if (outboxSnapshotsEqual(merged, outbox.value)) return
+    // Assign directly (not via `updateOutbox`) so we don't re-persist what the
+    // peer already wrote; the equality guard above stops storage-event
+    // ping-pong between tabs.
+    outbox.value = merged
+    pathIndexDirty = true
+    scheduleSync()
+  }
+
+  window.addEventListener("storage", onStorage)
+  storageSyncCleanup = () => {
+    window.removeEventListener("storage", onStorage)
+  }
+}
+
 let initialized = false
 
 const ensureInitialized = () => {
@@ -1151,6 +1253,7 @@ const ensureInitialized = () => {
   ensureAuthListener()
   ensureOnlineListeners()
   ensureUnloadFlush()
+  ensureStorageSyncListener()
   pruneSettledOperations()
 }
 
@@ -1168,7 +1271,6 @@ const clearOutboxForUser = (userId: string) => {
   updateOutbox((operations) =>
     operations.filter((operation) => operation.userId !== userId)
   )
-  userScanCursor.delete(userId)
 }
 
 const enqueueOperation = (operation: SyncOutboxOperation) => {
@@ -1279,6 +1381,7 @@ export function stopSync(): void {
     onlineCleanup()
     onlineCleanup = null
   }
+  releaseLeadership()
   if (activeUserId.value) {
     rejectWaitersForUser(activeUserId.value, "Sync stopped")
   }

@@ -182,6 +182,17 @@ export function useLocalHydration<T>(
   // user closes or navigates the tab before the debounce fires.
   pendingFlushCallbacks.add(flushToStorage)
   ensureUnloadListener()
+
+  // Release the registration when the owning scope (typically a Pinia store)
+  // is disposed — flushing one last time so no pending write is dropped.
+  // Without this, repeated setups across HMR reloads or test lifecycles
+  // accumulate stale flush closures that all re-fire on every page unload.
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      flushToStorage()
+      pendingFlushCallbacks.delete(flushToStorage)
+    })
+  }
 }
 
 /**

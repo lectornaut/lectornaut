@@ -55,11 +55,11 @@ console.error = (...data: unknown[]): void => {
  * L3 `firebase-optimistic.ts` (`withOptimisticUpdate`, pending-id sets)
  *    Pinia-aware optimistic updates with rollback, snapshot guards, retry/backoff.
  *
- * L4 `firebase-sync-engine.ts` + `firebase-mutation-coordinator.ts`
- *    (`mutateWithCoordinator`) — custom mutation outbox with per-op server
- *    ACKs, `baseVersion` optimistic locking, and observable queue metrics for
- *    `SyncIndicator.vue`. Use for ALL writes; do NOT call
- *    `setDoc`/`updateDoc`/`deleteDoc` directly from stores.
+ * L4 `firebase-sync-engine.ts` (`mutateWithCoordinator`) — custom mutation
+ *    outbox with per-op server ACKs, `baseVersion` optimistic locking, and
+ *    observable queue metrics for `SyncIndicator.vue`. Its pure scheduling and
+ *    cross-tab merge logic lives in `firebase-sync-queue.ts`. Use for ALL
+ *    writes; do NOT call `setDoc`/`updateDoc`/`deleteDoc` directly from stores.
  */
 export const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
